@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Database, Shield, Zap, Sparkles, Activity, Layers } from 'lucide-react';
 
 export default function App() {
