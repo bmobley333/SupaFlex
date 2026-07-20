@@ -10,6 +10,7 @@ node_modules
 .env.test.local
 .env.production.local
 env.json
+.streamlit/
 
 # IDEs and System
 .vscode/
