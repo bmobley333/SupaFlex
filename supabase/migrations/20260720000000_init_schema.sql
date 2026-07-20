@@ -1,22 +1,28 @@
 -- 20260720000000_init_schema.sql
--- SupaFlex RPG Core Schema Initialization
+-- Exact replica schema from legacy FlexWeb Supabase Database
 
--- Enable standard cryptographic extension
+-- Enable extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- DROP EXISTING TABLES (to start clean)
+DROP TABLE IF EXISTS public.characters CASCADE;
+DROP TABLE IF EXISTS public.players CASCADE;
+DROP TABLE IF EXISTS public.powers CASCADE;
+DROP TABLE IF EXISTS public.magic_items CASCADE;
+DROP TABLE IF EXISTS public.skillsets CASCADE;
 
 -- ==========================================
 -- 1. PLAYERS TABLE
 -- ==========================================
-CREATE TABLE IF NOT EXISTS public.players (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email TEXT UNIQUE NOT NULL,
+CREATE TABLE public.players (
+    email TEXT PRIMARY KEY,
     first_name TEXT,
     last_name TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Enable RLS on Players
+-- Enable RLS
 ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
 
 -- Players Policies
@@ -24,31 +30,31 @@ CREATE POLICY "Allow select for authenticated players" ON public.players
     FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Allow players to update their own profile" ON public.players
-    FOR UPDATE TO authenticated USING (auth.uid() = id);
+    FOR UPDATE TO authenticated USING (auth.jwt()->>'email' = email);
 
 -- ==========================================
 -- 2. CHARACTERS TABLE
 -- ==========================================
-CREATE TABLE IF NOT EXISTS public.characters (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    player_id UUID REFERENCES public.players(id) ON DELETE CASCADE,
+CREATE TABLE public.characters (
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    campaign_id TEXT,
-    level INTEGER DEFAULT 1 NOT NULL,
     class TEXT,
     race TEXT,
-    vitality_max INTEGER DEFAULT 10 NOT NULL,
-    wounds INTEGER DEFAULT 0 NOT NULL,
-    attributes JSONB DEFAULT '{}'::jsonb NOT NULL,
-    powers JSONB DEFAULT '[]'::jsonb NOT NULL,
-    magic_items JSONB DEFAULT '[]'::jsonb NOT NULL,
-    skillsets JSONB DEFAULT '[]'::jsonb NOT NULL,
-    general_notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    hp INTEGER DEFAULT 10 NOT NULL,
+    inventory JSONB DEFAULT '[]'::jsonb NOT NULL,
+    log JSONB DEFAULT '[]'::jsonb NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    might TEXT,
+    motion TEXT,
+    mind TEXT,
+    magic TEXT,
+    moxie TEXT,
+    skills JSONB DEFAULT '[]'::jsonb NOT NULL,
+    owner_email TEXT REFERENCES public.players(email) ON DELETE CASCADE,
+    sheet_data JSONB DEFAULT '{}'::jsonb NOT NULL
 );
 
--- Enable RLS on Characters
+-- Enable RLS
 ALTER TABLE public.characters ENABLE ROW LEVEL SECURITY;
 
 -- Characters Policies
@@ -56,52 +62,65 @@ CREATE POLICY "Allow players to view all characters in active playtests" ON publ
     FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Allow players to manage their own characters" ON public.characters
-    FOR ALL TO authenticated USING (auth.uid() = player_id);
+    FOR ALL TO authenticated USING (auth.jwt()->>'email' = owner_email);
 
 -- Performance Indexes
-CREATE INDEX IF NOT EXISTS idx_characters_player_id ON public.characters(player_id);
-CREATE INDEX IF NOT EXISTS idx_characters_campaign_id ON public.characters(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_characters_owner_email ON public.characters(owner_email);
 
 -- ==========================================
--- 3. RULES & ABILITIES DICTIONARY (Powers, Items, Skillsets)
+-- 3. POWERS TABLE
 -- ==========================================
-
--- Powers Catalog
-CREATE TABLE IF NOT EXISTS public.powers (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE public.powers (
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    type TEXT,
-    action TEXT,
     usage TEXT,
+    action TEXT,
     effect TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    source TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    dropdown TEXT,
+    sub TEXT,
+    table_name TEXT
 );
 
--- Magic Items Catalog
-CREATE TABLE IF NOT EXISTS public.magic_items (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+-- Enable RLS
+ALTER TABLE public.powers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow read-only select on powers" ON public.powers FOR SELECT TO authenticated USING (true);
+
+-- ==========================================
+-- 4. MAGIC ITEMS TABLE
+-- ==========================================
+CREATE TABLE public.magic_items (
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    slot TEXT,
-    action TEXT,
     usage TEXT,
+    action TEXT,
     effect TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    source TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    dropdown TEXT,
+    sub TEXT,
+    table_name TEXT
 );
 
--- Skillsets Catalog
-CREATE TABLE IF NOT EXISTS public.skillsets (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+-- Enable RLS
+ALTER TABLE public.magic_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow read-only select on magic_items" ON public.magic_items FOR SELECT TO authenticated USING (true);
+
+-- ==========================================
+-- 5. SKILLSETS TABLE
+-- ==========================================
+CREATE TABLE public.skillsets (
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     skills JSONB DEFAULT '[]'::jsonb NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    source TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    dropdown TEXT,
+    sub TEXT,
+    table_name TEXT
 );
 
--- Enable RLS on Catalog Tables
-ALTER TABLE public.powers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.magic_items ENABLE ROW LEVEL SECURITY;
+-- Enable RLS
 ALTER TABLE public.skillsets ENABLE ROW LEVEL SECURITY;
-
--- Read-only select policies for all authenticated users
-CREATE POLICY "Allow read-only select on powers" ON public.powers FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow read-only select on magic_items" ON public.magic_items FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Allow read-only select on skillsets" ON public.skillsets FOR SELECT TO authenticated USING (true);
