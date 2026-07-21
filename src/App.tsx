@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Database, Shield, Zap, Activity, BookOpen, Plus, Save, UserCheck, Loader2 } from 'lucide-react';
+import { Database, Shield, Zap, Activity, BookOpen, Users, Plus, Save, UserCheck, Loader2 } from 'lucide-react';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { ActionConsoleView } from './components/rolls/ActionConsoleView';
 import { CodexView } from './components/codex/CodexView';
+import { AdventureLogs } from './components/logs/AdventureLogs';
+import { PlayerDirectoryView } from './components/directory/PlayerDirectoryView';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'sheet' | 'rolls' | 'codex' | 'logs'>('sheet');
+  const [activeTab, setActiveTab] = useState<'sheet' | 'rolls' | 'codex' | 'logs' | 'directory'>('sheet');
   const [newCharName, setNewCharName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -105,10 +107,10 @@ export default function App() {
         ) : (
           <>
             {/* Navigation Tabs Bar */}
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-px">
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-px flex-wrap">
               <button
                 onClick={() => setActiveTab('sheet')}
-                className={`px-5 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+                className={`px-4 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
                   activeTab === 'sheet'
                     ? 'border-indigo-500 text-indigo-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -119,7 +121,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setActiveTab('rolls')}
-                className={`px-5 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+                className={`px-4 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
                   activeTab === 'rolls'
                     ? 'border-indigo-500 text-indigo-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -130,7 +132,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setActiveTab('codex')}
-                className={`px-5 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+                className={`px-4 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
                   activeTab === 'codex'
                     ? 'border-indigo-500 text-indigo-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -141,7 +143,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setActiveTab('logs')}
-                className={`px-5 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+                className={`px-4 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
                   activeTab === 'logs'
                     ? 'border-indigo-500 text-indigo-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -150,6 +152,17 @@ export default function App() {
                 <Activity className="w-4 h-4" />
                 Adventure Logs
               </button>
+              <button
+                onClick={() => setActiveTab('directory')}
+                className={`px-4 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+                  activeTab === 'directory'
+                    ? 'border-indigo-500 text-indigo-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                Party Directory
+              </button>
             </div>
 
             {/* Tab Panels */}
@@ -157,15 +170,8 @@ export default function App() {
               {activeTab === 'sheet' && <CharacterSheetView />}
               {activeTab === 'rolls' && <ActionConsoleView />}
               {activeTab === 'codex' && <CodexView />}
-
-              {activeTab === 'logs' && (
-                <div className="bg-slate-900/60 rounded-xl border border-slate-800 p-6 flex flex-col gap-4">
-                  <h2 className="font-outfit font-bold text-base text-slate-200">Adventure Logs</h2>
-                  <p className="text-xs text-slate-400">
-                    Session logs and quest notes will be integrated in Phase 5.
-                  </p>
-                </div>
-              )}
+              {activeTab === 'logs' && <AdventureLogs />}
+              {activeTab === 'directory' && <PlayerDirectoryView />}
             </div>
           </>
         )}
