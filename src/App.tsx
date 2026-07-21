@@ -3,6 +3,7 @@ import { Database, Shield, Zap, Activity, BookOpen, Plus, Save, UserCheck, Loade
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { ActionConsoleView } from './components/rolls/ActionConsoleView';
+import { CodexView } from './components/codex/CodexView';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'sheet' | 'rolls' | 'codex' | 'logs'>('sheet');
@@ -155,15 +156,7 @@ export default function App() {
             <div className="flex-1">
               {activeTab === 'sheet' && <CharacterSheetView />}
               {activeTab === 'rolls' && <ActionConsoleView />}
-
-              {activeTab === 'codex' && (
-                <div className="bg-slate-900/60 rounded-xl border border-slate-800 p-6 flex flex-col gap-4">
-                  <h2 className="font-outfit font-bold text-base text-slate-200">Codex Search</h2>
-                  <p className="text-xs text-slate-400">
-                    Searchable game codex for skillsets, powers, and magic items will be integrated in Phase 4.
-                  </p>
-                </div>
-              )}
+              {activeTab === 'codex' && <CodexView />}
 
               {activeTab === 'logs' && (
                 <div className="bg-slate-900/60 rounded-xl border border-slate-800 p-6 flex flex-col gap-4">
