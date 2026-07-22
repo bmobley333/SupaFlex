@@ -138,6 +138,7 @@ export interface RollResult {
   attributeRoll: ExplodingRoll;
   focusRoll?: ExplodingRoll;
   newFocusDie?: DieRating;
+  focusPreserved?: boolean;
   total: number;
   margin: number;
   outcome: OutcomeTier;
@@ -157,10 +158,21 @@ export const executeHybridRoll = (request: RollRequest): RollResult => {
   // 3. Roll Focus Die if spent
   let focusRoll: ExplodingRoll | undefined = undefined;
   let newFocusDie: DieRating | undefined = undefined;
+  let focusPreserved: boolean | undefined = undefined;
 
   if (request.spendFocus && request.currentFocusDie && request.currentFocusDie !== 'Exhausted') {
     focusRoll = rollExplodingDie(request.currentFocusDie, isComparison);
-    newFocusDie = stepDownDie(request.currentFocusDie);
+    const firstFocusRoll = focusRoll.baseRolls[0];
+    const maxFocusVal = getDieMax(request.currentFocusDie);
+
+    // Focus Preservation Rule: Remains same if first roll is 1 or Max
+    if (firstFocusRoll === 1 || firstFocusRoll === maxFocusVal) {
+      newFocusDie = request.currentFocusDie;
+      focusPreserved = true;
+    } else {
+      newFocusDie = stepDownDie(request.currentFocusDie);
+      focusPreserved = false;
+    }
   }
 
   const focusTotal = focusRoll ? focusRoll.total : 0;
@@ -189,7 +201,8 @@ export const executeHybridRoll = (request: RollRequest): RollResult => {
   const modText = request.modifier !== 0 ? ` (${request.modifier > 0 ? '+' : ''}${request.modifier} Mod)` : '';
   const abilityText = request.abilityName ? ` using ${request.abilityName}` : '';
   const expText = atrRoll.exploded ? ` 💥💥 [EXPLODED ${atrRoll.explosionCount}x: +${atrRoll.total - atrRoll.baseRolls[0]}]` : '';
-  const focusText = focusRoll ? ` 🔮 [Focus ${request.currentFocusDie}: +${focusRoll.total}${focusRoll.exploded ? ' 💥' : ''}]` : '';
+  const focusPreserveTag = focusRoll ? (focusPreserved ? ' 🛡️ Focus Preserved!' : ' 📉 Stepped Down') : '';
+  const focusText = focusRoll ? ` 🔮 [Focus ${request.currentFocusDie}: +${focusRoll.total}${focusRoll.exploded ? ' 💥' : ''}${focusPreserveTag}]` : '';
 
   const summary = `${request.attributeName} Roll${abilityText}: d20s [${d20Res.d20Rolls.join(', ')}] (kept ${d20Res.keptD20}) + d(${request.dieRating}: ${atrRoll.baseRolls.join('+')})${expText}${focusText}${skillText}${modText} = Total ${total} vs DC ${request.difficultyTarget} ➔ ${outcome}`;
 
@@ -202,6 +215,7 @@ export const executeHybridRoll = (request: RollRequest): RollResult => {
     attributeRoll: atrRoll,
     focusRoll,
     newFocusDie,
+    focusPreserved,
     total,
     margin,
     outcome,

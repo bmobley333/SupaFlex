@@ -271,7 +271,9 @@ export const RollConsole: React.FC<RollConsoleProps> = ({ onRollComplete }) => {
           </span>
         </label>
         {currentFocusDie !== 'Exhausted' && (
-          <span className="text-[10px] font-mono text-slate-400 italic">Will step down after roll</span>
+          <span className="text-[10px] font-mono text-purple-300/80 italic font-semibold">
+            Remains same on 1 or Max; steps down otherwise
+          </span>
         )}
       </div>
 
