@@ -32,13 +32,24 @@ export default function App() {
     fetchInitialData();
   }, [fetchInitialData]);
 
-  const displayedCharacters = characters.filter((c) => {
-    if (filterMode === 'all_heroes') return true;
+  const myHeroes = characters.filter((c) => {
     if (!playerEmail.trim()) return true;
     const owner = (c.owner_email || '').toLowerCase().trim();
     const current = playerEmail.toLowerCase().trim();
     return owner === current || !c.owner_email;
   });
+
+  const displayedCharacters = filterMode === 'all_heroes' ? characters : myHeroes;
+
+  // Auto-sync active character when switching filter mode or email
+  useEffect(() => {
+    if (displayedCharacters.length > 0) {
+      const activeInDisplayed = activeCharacter && displayedCharacters.some((c) => c.id === activeCharacter.id);
+      if (!activeInDisplayed) {
+        selectCharacter(displayedCharacters[0].id);
+      }
+    }
+  }, [filterMode, playerEmail, characters]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +89,7 @@ export default function App() {
             />
           </div>
 
-          {/* Dyslexia-Friendly Side-Labeled Filter Toggle */}
+          {/* Dyslexia-Friendly Side-Labeled Filter Toggle with Counts */}
           <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
             <button
               onClick={() => setFilterMode('my_heroes')}
@@ -88,7 +99,7 @@ export default function App() {
                   : 'text-slate-500 border border-transparent opacity-50 hover:opacity-80'
               }`}
             >
-              My Heroes
+              My Heroes ({myHeroes.length})
             </button>
             <button
               onClick={() => setFilterMode('all_heroes')}
@@ -98,26 +109,34 @@ export default function App() {
                   : 'text-slate-500 border border-transparent opacity-50 hover:opacity-80'
               }`}
             >
-              All Heroes
+              All Heroes ({characters.length})
             </button>
           </div>
 
-          {/* Active Character Selector */}
-          {activeCharacter && (
-            <div className="flex items-center gap-2 bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-              <select
-                value={activeCharacter.id}
-                onChange={(e) => selectCharacter(Number(e.target.value))}
-                className="bg-transparent text-sm font-semibold text-slate-200 border-none outline-none cursor-pointer pr-2"
-              >
-                {displayedCharacters.map((c) => (
+          {/* Active Character Selector Dropdown (Always Rendered) */}
+          <div className="flex items-center gap-2 bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
+            <Shield className="w-4 h-4 text-indigo-400 ml-1 shrink-0" />
+            <select
+              value={activeCharacter && displayedCharacters.some((c) => c.id === activeCharacter.id) ? activeCharacter.id : ''}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                if (val) selectCharacter(val);
+              }}
+              className="bg-transparent text-sm font-semibold text-slate-200 border-none outline-none cursor-pointer pr-2"
+            >
+              {displayedCharacters.length > 0 ? (
+                displayedCharacters.map((c) => (
                   <option key={c.id} value={c.id} className="bg-slate-900 text-slate-100">
                     {c.name} ({c.class || 'Adventurer'}) {c.owner_email ? `— ${c.owner_email}` : ''}
                   </option>
-                ))}
-              </select>
-            </div>
-          )}
+                ))
+              ) : (
+                <option value="" className="bg-slate-900 text-amber-300 italic">
+                  No heroes for {playerEmail || 'this player'} (Click + New Hero)
+                </option>
+              )}
+            </select>
+          </div>
 
           <button
             onClick={() => setShowCreateModal(true)}
