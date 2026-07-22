@@ -1,5 +1,7 @@
 // src/components/sheet/CharacterSheetView.tsx
 import React from 'react';
+import { useCharacterStore } from '../../store/useCharacterStore';
+import { HeroIdentityHeader } from './HeroIdentityHeader';
 import { VitalsHeader } from './VitalsHeader';
 import { AttributesPanel } from './AttributesPanel';
 import { SkillsetsPanel } from './SkillsetsPanel';
@@ -7,8 +9,14 @@ import { AbilitySlotsGrid } from './AbilitySlotsGrid';
 import { EquipmentGrid } from './EquipmentGrid';
 
 export const CharacterSheetView: React.FC = () => {
+  const { activeCharacter } = useCharacterStore();
+  const heroKey = activeCharacter?.id ? `hero_${activeCharacter.id}` : 'no_hero';
+
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[2500px] mx-auto">
+    <div key={heroKey} className="flex flex-col gap-6 w-full max-w-[2500px] mx-auto">
+      {/* Hero Identity Banner: Name, Class, Race, Owner */}
+      <HeroIdentityHeader />
+
       {/* Top Banner: Vitals & Level Math */}
       <VitalsHeader />
 

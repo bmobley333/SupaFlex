@@ -92,10 +92,21 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     }
   },
 
-  selectCharacter: (id: number) => {
+  selectCharacter: async (id: number) => {
     const found = get().characters.find((c) => c.id === id);
     if (found) {
-      set({ activeCharacter: found });
+      set({ activeCharacter: { ...found } });
+    }
+    try {
+      const fresh = await gameApi.getCharacterById(id);
+      if (fresh) {
+        set((state) => ({
+          activeCharacter: fresh,
+          characters: state.characters.map((c) => (c.id === id ? fresh : c)),
+        }));
+      }
+    } catch (err) {
+      console.warn('[selectCharacter] Hydration fallback to cached hero:', err);
     }
   },
 
