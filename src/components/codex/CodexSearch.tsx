@@ -23,6 +23,7 @@ export const CodexSearch: React.FC = () => {
   const { powers, magicItems, skillsets } = useCharacterStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState<CategoryFilter>('all');
+  const [usageFilter, setUsageFilter] = useState<'all' | 'meta' | '1-enc' | '1-rnd' | '1-luck'>('all');
   const [selectedItem, setSelectedItem] = useState<UnifiedCodexItem | null>(null);
 
   // Unify item collections
@@ -60,7 +61,7 @@ export const CodexSearch: React.FC = () => {
     })),
   ];
 
-  // Filter items based on search term and category
+  // Filter items based on search term, category, and usage
   const filteredItems = unifiedItems.filter((item) => {
     const matchesCategory =
       category === 'all' ||
@@ -68,16 +69,27 @@ export const CodexSearch: React.FC = () => {
       (category === 'items' && item.type === 'item') ||
       (category === 'skillsets' && item.type === 'skillset');
 
+    const uLower = (item.usage || '').toLowerCase();
+    const matchesUsage =
+      usageFilter === 'all' ||
+      (usageFilter === 'meta' && (uLower.includes('⚡') || uLower.includes('meta'))) ||
+      (usageFilter === '1-enc' && uLower.includes('enc')) ||
+      (usageFilter === '1-rnd' && uLower.includes('rnd')) ||
+      (usageFilter === '1-luck' && uLower.includes('luck'));
+
     const termLower = searchTerm.toLowerCase().trim();
-    if (!termLower) return matchesCategory;
+    if (!termLower) return matchesCategory && matchesUsage;
 
     const matchesSearch =
       item.name.toLowerCase().includes(termLower) ||
+      (item.sub && item.sub.toLowerCase().includes(termLower)) ||
+      (item.usage && item.usage.toLowerCase().includes(termLower)) ||
+      (item.action && item.action.toLowerCase().includes(termLower)) ||
       (item.effect && item.effect.toLowerCase().includes(termLower)) ||
       (item.source && item.source.toLowerCase().includes(termLower)) ||
       (item.skills && item.skills.some((sk) => sk.toLowerCase().includes(termLower)));
 
-    return matchesCategory && matchesSearch;
+    return matchesCategory && matchesUsage && matchesSearch;
   });
 
   return (
@@ -112,29 +124,58 @@ export const CodexSearch: React.FC = () => {
         </div>
       </div>
 
-      {/* Category Filter Chips */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-bold text-slate-400 flex items-center gap-1 mr-1">
-          <Filter className="w-3.5 h-3.5" /> Filter:
-        </span>
-        {[
-          { key: 'all', label: `All (${unifiedItems.length})` },
-          { key: 'powers', label: `Powers ✨ (${powers.length})` },
-          { key: 'items', label: `Magic Items 🔮 (${magicItems.length})` },
-          { key: 'skillsets', label: `Skillsets 📚 (${skillsets.length})` },
-        ].map((cat) => (
-          <button
-            key={cat.key}
-            onClick={() => setCategory(cat.key as CategoryFilter)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-              category === cat.key
-                ? 'bg-indigo-600/25 border-indigo-500 text-indigo-300 shadow-sm shadow-indigo-600/20'
-                : 'bg-slate-950/60 border-slate-850 text-slate-400 hover:border-slate-750 hover:text-slate-200'
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
+      {/* Category & Usage Filter Chips Bar */}
+      <div className="flex flex-col gap-2.5 bg-slate-950/40 p-3 rounded-lg border border-slate-850">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold text-slate-400 flex items-center gap-1 mr-1">
+            <Filter className="w-3.5 h-3.5" /> Category:
+          </span>
+          {[
+            { key: 'all', label: `All (${unifiedItems.length})` },
+            { key: 'powers', label: `Powers ✨ (${powers.length})` },
+            { key: 'items', label: `Magic Items 🔮 (${magicItems.length})` },
+            { key: 'skillsets', label: `Skillsets 📚 (${skillsets.length})` },
+          ].map((cat) => (
+            <button
+              key={cat.key}
+              onClick={() => setCategory(cat.key as CategoryFilter)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                category === cat.key
+                  ? 'bg-indigo-600/25 border-indigo-500 text-indigo-300 shadow-sm shadow-indigo-600/20'
+                  : 'bg-slate-950/60 border-slate-850 text-slate-400 hover:border-slate-750 hover:text-slate-200'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap border-t border-slate-850/60 pt-2">
+          <span className="text-xs font-bold text-slate-400 flex items-center gap-1 mr-1">
+            ⚡ Usage Type:
+          </span>
+          {[
+            { key: 'all', label: 'All Usages' },
+            { key: 'meta', label: '⚡ Meta Burst (1-⚡)' },
+            { key: '1-enc', label: '1-Enc / Encounter' },
+            { key: '1-rnd', label: '1-Rnd / Round' },
+            { key: '1-luck', label: '1-Luck Chit' },
+          ].map((u) => (
+            <button
+              key={u.key}
+              onClick={() => setUsageFilter(u.key as any)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                usageFilter === u.key
+                  ? u.key === 'meta'
+                    ? 'bg-amber-500/25 border-amber-500 text-amber-300 shadow-sm shadow-amber-500/20'
+                    : 'bg-indigo-600/25 border-indigo-500 text-indigo-300 shadow-sm shadow-indigo-600/20'
+                  : 'bg-slate-950/60 border-slate-850 text-slate-400 hover:border-slate-750 hover:text-slate-200'
+              }`}
+            >
+              {u.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Results Count & Grid */}
