@@ -18,15 +18,27 @@ export default function App() {
     isLoading,
     isSaving,
     dbConnected,
+    playerEmail,
+    filterMode,
     fetchInitialData,
     selectCharacter,
     createNewCharacter,
     saveActiveCharacter,
+    setPlayerEmail,
+    setFilterMode,
   } = useCharacterStore();
 
   useEffect(() => {
     fetchInitialData();
   }, [fetchInitialData]);
+
+  const displayedCharacters = characters.filter((c) => {
+    if (filterMode === 'all_heroes') return true;
+    if (!playerEmail.trim()) return true;
+    const owner = (c.owner_email || '').toLowerCase().trim();
+    const current = playerEmail.toLowerCase().trim();
+    return owner === current || !c.owner_email;
+  });
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,19 +62,57 @@ export default function App() {
           </div>
         </div>
 
-        {/* Active Character Selector & Actions */}
+        {/* Player Email Login Bar & Active Character Selector */}
         <div className="flex items-center gap-3 flex-wrap">
+          {/* Low-Security Player Email Login Input */}
+          <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800">
+            <UserCheck className="w-4 h-4 text-indigo-400" />
+            <span className="text-[10px] font-bold text-slate-400 uppercase">Player:</span>
+            <input
+              type="email"
+              value={playerEmail}
+              onChange={(e) => setPlayerEmail(e.target.value)}
+              placeholder="player@email.com"
+              className="bg-transparent text-xs font-mono font-bold text-indigo-300 outline-none w-44 focus:text-indigo-200"
+              title="Low-Security Playtest Player Email (saved to localStorage)"
+            />
+          </div>
+
+          {/* Dyslexia-Friendly Side-Labeled Filter Toggle */}
+          <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+            <button
+              onClick={() => setFilterMode('my_heroes')}
+              className={`px-2.5 py-1 rounded text-[11px] font-extrabold transition-all ${
+                filterMode === 'my_heroes'
+                  ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 shadow-sm shadow-indigo-600/20 opacity-100'
+                  : 'text-slate-500 border border-transparent opacity-50 hover:opacity-80'
+              }`}
+            >
+              My Heroes
+            </button>
+            <button
+              onClick={() => setFilterMode('all_heroes')}
+              className={`px-2.5 py-1 rounded text-[11px] font-extrabold transition-all ${
+                filterMode === 'all_heroes'
+                  ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 shadow-sm shadow-indigo-600/20 opacity-100'
+                  : 'text-slate-500 border border-transparent opacity-50 hover:opacity-80'
+              }`}
+            >
+              All Heroes
+            </button>
+          </div>
+
+          {/* Active Character Selector */}
           {activeCharacter && (
             <div className="flex items-center gap-2 bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-              <UserCheck className="w-4 h-4 text-indigo-400 ml-1.5" />
               <select
                 value={activeCharacter.id}
                 onChange={(e) => selectCharacter(Number(e.target.value))}
                 className="bg-transparent text-sm font-semibold text-slate-200 border-none outline-none cursor-pointer pr-2"
               >
-                {characters.map((c) => (
+                {displayedCharacters.map((c) => (
                   <option key={c.id} value={c.id} className="bg-slate-900 text-slate-100">
-                    {c.name} ({c.class || 'Adventurer'})
+                    {c.name} ({c.class || 'Adventurer'}) {c.owner_email ? `— ${c.owner_email}` : ''}
                   </option>
                 ))}
               </select>

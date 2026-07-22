@@ -17,6 +17,10 @@ interface CharacterStore {
   dbConnected: boolean;
   error: string | null;
 
+  // Player Login & Filtering State
+  playerEmail: string;
+  filterMode: 'my_heroes' | 'all_heroes';
+
   // Actions
   fetchInitialData: () => Promise<void>;
   selectCharacter: (id: number) => void;
@@ -28,6 +32,8 @@ interface CharacterStore {
   addSpark: (amount?: number) => void;
   spendMeta: () => void;
   resetSparks: () => void;
+  setPlayerEmail: (email: string) => void;
+  setFilterMode: (mode: 'my_heroes' | 'all_heroes') => void;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
@@ -40,6 +46,9 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   isSaving: false,
   dbConnected: false,
   error: null,
+
+  playerEmail: localStorage.getItem('supaflex_player_email') || 'TheBMobley@gmail.com',
+  filterMode: (localStorage.getItem('supaflex_filter_mode') as any) || 'my_heroes',
 
   fetchInitialData: async () => {
     set({ isLoading: true, error: null });
@@ -93,7 +102,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   createNewCharacter: async (name: string, characterClass = 'Adventurer', race = 'Human') => {
     set({ isSaving: true, error: null });
     try {
-      const newChar = await gameApi.createCharacter(name, characterClass, race);
+      const email = get().playerEmail || 'TheBMobley@gmail.com';
+      const newChar = await gameApi.createCharacter(name, characterClass, race, email);
       set((state) => ({
         characters: [newChar, ...state.characters],
         activeCharacter: newChar,
@@ -104,6 +114,17 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       set({ isSaving: false, error: err.message || 'Failed to create character.' });
       return null;
     }
+  },
+
+  setPlayerEmail: (email: string) => {
+    const trimmed = email.trim();
+    localStorage.setItem('supaflex_player_email', trimmed);
+    set({ playerEmail: trimmed });
+  },
+
+  setFilterMode: (mode: 'my_heroes' | 'all_heroes') => {
+    localStorage.setItem('supaflex_filter_mode', mode);
+    set({ filterMode: mode });
   },
 
   updateActiveSheetData: (updater) => {

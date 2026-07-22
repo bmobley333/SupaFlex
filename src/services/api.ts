@@ -81,7 +81,7 @@ export const gameApi = {
     return data as Character;
   },
 
-  async createCharacter(name: string, characterClass = 'Adventurer', race = 'Human'): Promise<Character> {
+  async createCharacter(name: string, characterClass = 'Adventurer', race = 'Human', ownerEmail = 'TheBMobley@gmail.com'): Promise<Character> {
     const defaultSheet = createDefaultSheetData();
     const { data, error } = await supabase
       .from('characters')
@@ -98,6 +98,7 @@ export const gameApi = {
         skills: [],
         inventory: [],
         log: [],
+        owner_email: ownerEmail,
         sheet_data: defaultSheet,
       })
       .select()
