@@ -129,12 +129,31 @@ export const VitalsHeader: React.FC = () => {
         </div>
 
         {/* Total Armor */}
-        <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-850 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-cyan-400" />
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Armor</span>
-            <span className="font-outfit font-extrabold text-sm text-cyan-300">+{sheet.armor || 0}</span>
+        <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-850 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Armor</span>
+              <span className="font-outfit font-extrabold text-sm text-cyan-300">+{sheet.armor || 0}</span>
+            </div>
           </div>
+          <select
+            value={sheet.armor || 0}
+            onChange={(e) => {
+              const val = parseInt(e.target.value) || 0;
+              updateActiveSheetData((prev) => ({ ...prev, armor: val }));
+              saveActiveCharacter();
+            }}
+            className="bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-xs font-mono font-bold text-cyan-300 outline-none focus:border-cyan-400"
+            title="Armor Rating (Allowed values: 0, 4, 6, 8, 10, 12)"
+          >
+            <option value={0}>0</option>
+            <option value={4}>4</option>
+            <option value={6}>6</option>
+            <option value={8}>8</option>
+            <option value={10}>10</option>
+            <option value={12}>12</option>
+          </select>
         </div>
 
         {/* Focus Die Tracker */}

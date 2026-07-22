@@ -146,6 +146,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   className="bg-slate-900 text-slate-200 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-800 outline-none w-full focus:border-indigo-500"
                 >
                   <option value="">Custom Ability / Select DB...</option>
+                  {slot.name && !powers.some((p) => p.name === slot.name) && (
+                    <option value={slot.name} className="bg-slate-900 text-indigo-300 font-bold">
+                      {slot.name}
+                    </option>
+                  )}
                   {powers.map((p) => (
                     <option key={p.id} value={p.name} className="bg-slate-900 text-slate-100">
                       {p.name} [{p.action || 'Custom'}]
