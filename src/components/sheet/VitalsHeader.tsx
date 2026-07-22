@@ -10,13 +10,14 @@ export const VitalsHeader: React.FC = () => {
 
   if (!sheet) return null;
 
-  const currentHp = sheet.current_vitality;
-  const maxHp = sheet.vitality_max;
-  const wounds = sheet.wounds;
+  const maxHp = sheet.vitality_max || activeCharacter?.hp || 10;
+  const currentHp = sheet.current_vitality ?? maxHp;
+  const wounds = sheet.wounds || 0;
   const maxWounds = sheet.max_wounds || 3;
   const level = sheet.level || 1;
   const focusCurrent = sheet.focus_die_current || 'd4';
   const focusMax = sheet.focus_die_max || 'd4';
+  const hpPercent = maxHp > 0 ? Math.min(100, Math.max(0, (currentHp / maxHp) * 100)) : 100;
 
   const handleHpChange = (delta: number) => {
     updateActiveSheetData((prev) => {
@@ -70,8 +71,6 @@ export const VitalsHeader: React.FC = () => {
     });
     saveActiveCharacter();
   };
-
-  const hpPercent = Math.min(100, Math.max(0, (currentHp / maxHp) * 100));
 
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">

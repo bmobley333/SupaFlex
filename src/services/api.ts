@@ -2,7 +2,7 @@
 // Supabase Data Access Gateway for SupaFlex
 
 import { supabase } from '../lib/supabase';
-import { Character, Power, MagicItem, Skillset, CharacterSheetData } from '../types/game';
+import { Character, Power, MagicItem, Skillset, CharacterSheetData, DieRating } from '../types/game';
 
 export const createDefaultSheetData = (): CharacterSheetData => ({
   level: 1,
@@ -52,6 +52,40 @@ export const createDefaultSheetData = (): CharacterSheetData => ({
   },
 });
 
+export const normalizeCharacterData = (c: Character): Character => {
+  const defaultSheet = createDefaultSheetData();
+  const rawSheet = (c.sheet_data || {}) as Partial<CharacterSheetData>;
+
+  const vitalityMax = rawSheet.vitality_max ?? c.hp ?? 10;
+  const currentVitality = rawSheet.current_vitality ?? c.hp ?? vitalityMax;
+
+  const normalizedSheet: CharacterSheetData = {
+    ...defaultSheet,
+    ...rawSheet,
+    vitality_max: vitalityMax,
+    current_vitality: currentVitality,
+    attribute_dice: {
+      might: ((rawSheet.attribute_dice?.might || c.might || 'd4') as DieRating),
+      motion: ((rawSheet.attribute_dice?.motion || c.motion || 'd4') as DieRating),
+      mind: ((rawSheet.attribute_dice?.mind || c.mind || 'd4') as DieRating),
+      magic: ((rawSheet.attribute_dice?.magic || c.magic || 'd4') as DieRating),
+      moxie: ((rawSheet.attribute_dice?.moxie || c.moxie || 'd4') as DieRating),
+    },
+    known_skillsets: rawSheet.known_skillsets?.length ? rawSheet.known_skillsets : c.skills || [],
+  };
+
+  return {
+    ...c,
+    hp: vitalityMax,
+    might: normalizedSheet.attribute_dice.might,
+    motion: normalizedSheet.attribute_dice.motion,
+    mind: normalizedSheet.attribute_dice.mind,
+    magic: normalizedSheet.attribute_dice.magic,
+    moxie: normalizedSheet.attribute_dice.moxie,
+    sheet_data: normalizedSheet,
+  };
+};
+
 export const gameApi = {
   // --- CHARACTERS ---
   async getCharacters(): Promise<Character[]> {
@@ -64,7 +98,7 @@ export const gameApi = {
       console.error('[gameApi] Error fetching characters:', error);
       throw error;
     }
-    return (data || []) as Character[];
+    return (data || []).map((c: any) => normalizeCharacterData(c as Character));
   },
 
   async getCharacterById(id: number): Promise<Character | null> {
@@ -78,7 +112,7 @@ export const gameApi = {
       console.error(`[gameApi] Error fetching character ${id}:`, error);
       return null;
     }
-    return data as Character;
+    return data ? normalizeCharacterData(data as Character) : null;
   },
 
   async createCharacter(name: string, characterClass = 'Adventurer', race = 'Human', ownerEmail = 'TheBMobley@gmail.com'): Promise<Character> {
