@@ -8,25 +8,11 @@ export const EquipmentGrid: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
   const gearSlots: EquipmentSlot[] = activeCharacter?.sheet_data?.gear_slots || [];
 
-  const recalculateArmorDefense = (slots: EquipmentSlot[]) => {
-    let totalArmor = 0;
-    let totalDefenseBonus = 0;
-
-    slots.forEach((s) => {
-      totalArmor += s.armor_bonus || 0;
-      totalDefenseBonus += s.defense_bonus || 0;
-    });
-
-    const baseDefense = 10;
-    return { totalArmor, totalDefense: baseDefense + totalDefenseBonus };
-  };
-
   const handleGearChange = (index: number, updates: Partial<EquipmentSlot>) => {
     updateActiveSheetData((prev) => {
       const updatedSlots = [...(prev.gear_slots || [])];
       updatedSlots[index] = { ...updatedSlots[index], ...updates };
-      const { totalArmor, totalDefense } = recalculateArmorDefense(updatedSlots);
-      return { ...prev, gear_slots: updatedSlots, armor: totalArmor, defense: totalDefense };
+      return { ...prev, gear_slots: updatedSlots };
     });
     saveActiveCharacter();
   };
@@ -37,8 +23,7 @@ export const EquipmentGrid: React.FC = () => {
         ...(prev.gear_slots || []),
         { name: '', type: 'gear', armor_bonus: 0, defense_bonus: 0, usage: '', effect: '', checked: [false, false, false] },
       ];
-      const { totalArmor, totalDefense } = recalculateArmorDefense(updatedSlots);
-      return { ...prev, gear_slots: updatedSlots, armor: totalArmor, defense: totalDefense };
+      return { ...prev, gear_slots: updatedSlots };
     });
     saveActiveCharacter();
   };
@@ -47,8 +32,7 @@ export const EquipmentGrid: React.FC = () => {
     updateActiveSheetData((prev) => {
       const updatedSlots = [...(prev.gear_slots || [])];
       updatedSlots.splice(index, 1);
-      const { totalArmor, totalDefense } = recalculateArmorDefense(updatedSlots);
-      return { ...prev, gear_slots: updatedSlots, armor: totalArmor, defense: totalDefense };
+      return { ...prev, gear_slots: updatedSlots };
     });
     saveActiveCharacter();
   };

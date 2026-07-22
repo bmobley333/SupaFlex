@@ -146,12 +146,28 @@ export const gameApi = {
   },
 
   async updateCharacter(id: number, updates: Partial<Character>): Promise<Character> {
+    const payload: any = {
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updates.sheet_data) {
+      const sd = updates.sheet_data as CharacterSheetData;
+      if (sd.vitality_max !== undefined) payload.hp = sd.vitality_max;
+      if (sd.attribute_dice) {
+        if (sd.attribute_dice.might) payload.might = sd.attribute_dice.might;
+        if (sd.attribute_dice.motion) payload.motion = sd.attribute_dice.motion;
+        if (sd.attribute_dice.mind) payload.mind = sd.attribute_dice.mind;
+        if (sd.attribute_dice.magic) payload.magic = sd.attribute_dice.magic;
+        if (sd.attribute_dice.moxie) payload.moxie = sd.attribute_dice.moxie;
+      }
+      if (sd.known_skillsets) payload.skills = sd.known_skillsets;
+      if (sd.gear_slots) payload.inventory = sd.gear_slots;
+    }
+
     const { data, error } = await supabase
       .from('characters')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq('id', id)
       .select()
       .single();
@@ -160,7 +176,7 @@ export const gameApi = {
       console.error(`[gameApi] Error updating character ${id}:`, error);
       throw error;
     }
-    return data as Character;
+    return normalizeCharacterData(data as Character);
   },
 
   async deleteCharacter(id: number): Promise<void> {

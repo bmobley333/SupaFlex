@@ -192,15 +192,16 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         mind: active.mind,
         magic: active.magic,
         moxie: active.moxie,
-        sheet_data: active.sheet_data,
+        skills: active.skills,
         inventory: active.inventory,
-        log: active.log,
+        owner_email: active.owner_email,
+        sheet_data: active.sheet_data,
       });
 
       set((state) => ({
-        isSaving: false,
         activeCharacter: saved,
         characters: state.characters.map((c) => (c.id === saved.id ? saved : c)),
+        isSaving: false,
       }));
     } catch (err: any) {
       set({ isSaving: false, error: err.message || 'Failed to save character.' });
