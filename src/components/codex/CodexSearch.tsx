@@ -176,12 +176,24 @@ export const CodexSearch: React.FC = () => {
                     </span>
                   </div>
 
-                  {item.action && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 text-indigo-300 border border-slate-800">
-                        {item.action}
-                      </span>
-                      {item.usage && <span className="text-[11px] text-slate-400 truncate">{item.usage}</span>}
+                  {(item.action || item.usage) && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {item.action && (
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 text-indigo-300 border border-slate-800">
+                          {item.action}
+                        </span>
+                      )}
+                      {item.usage && (
+                        <span
+                          className={`text-[10px] font-semibold truncate px-1.5 py-0.5 rounded border ${
+                            item.usage.includes('⚡') || item.usage.toLowerCase().includes('meta')
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold shadow-sm shadow-amber-500/10'
+                              : 'text-slate-400 bg-slate-900/50 border-slate-800'
+                          }`}
+                        >
+                          {item.usage}
+                        </span>
+                      )}
                     </div>
                   )}
 

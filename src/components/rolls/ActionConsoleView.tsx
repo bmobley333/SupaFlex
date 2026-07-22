@@ -12,6 +12,19 @@ export const ActionConsoleView: React.FC = () => {
   const handleRollComplete = (result: RollResult) => {
     setRecentRolls((prev) => [result, ...prev]);
 
+    // Calculate earned Sparks from roll events per SupaFlex Rules SoT:
+    // 1 Spark for Tremendous (nat 20), 1 Spark for Critical (nat 1), +1 per Exploding Die
+    const isTremendous = result.keptD20 === 20 || result.d20Rolls.includes(20);
+    const isCritical = result.keptD20 === 1;
+    const atrExplosions = result.attributeRoll?.explosionCount || 0;
+    const focusExplosions = result.focusRoll?.explosionCount || 0;
+
+    const earnedSparks = (isTremendous ? 1 : 0) + (isCritical ? 1 : 0) + atrExplosions + focusExplosions;
+
+    if (earnedSparks > 0) {
+      useCharacterStore.getState().addSpark(earnedSparks);
+    }
+
     // Persist roll outcome to active character's log JSONB in Supabase
     if (activeCharacter) {
       const currentLog = Array.isArray(activeCharacter.log) ? activeCharacter.log : [];

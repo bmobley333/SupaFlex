@@ -1,6 +1,6 @@
 // src/components/rolls/RollConsole.tsx
 import React, { useState } from 'react';
-import { Dices, Sparkles, CheckSquare } from 'lucide-react';
+import { Dices, Sparkles, CheckSquare, Zap } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, DieRating } from '../../types/game';
 import { executeHybridRoll, RollResult } from '../../lib/dice';
@@ -41,11 +41,13 @@ export const RollConsole: React.FC<RollConsoleProps> = ({ onRollComplete }) => {
   const [dcTarget, setDcTarget] = useState<number>(12);
   const [selectedAbilitySlotIndex, setSelectedAbilitySlotIndex] = useState<number | null>(null);
   const [consumeUsageBox, setConsumeUsageBox] = useState<boolean>(true);
+  const [spendFocus, setSpendFocus] = useState<boolean>(false);
   const [lastRoll, setLastRoll] = useState<RollResult | null>(null);
   const [isRolling, setIsRolling] = useState<boolean>(false);
 
   const activeAttr = ATTRIBUTES.find((a) => a.key === selectedAttrKey) || ATTRIBUTES[0];
   const dieRating: DieRating = diceRatings[selectedAttrKey] || 'd4';
+  const currentFocusDie = sheet?.focus_die_current || 'd4';
 
   // Compile active character abilities (powers + spells)
   const populatedPowers = (sheet?.power_slots || []).map((s, idx) => ({ ...s, slotType: 'power' as const, index: idx }));
@@ -58,19 +60,32 @@ export const RollConsole: React.FC<RollConsoleProps> = ({ onRollComplete }) => {
     setIsRolling(true);
 
     setTimeout(() => {
+      const mode = skillBonus === 4 ? 'advantage' : skillBonus === 2 ? 'skilled' : 'unskilled';
       const result = executeHybridRoll({
         attribute: selectedAttrKey,
         attributeName: activeAttr.name,
         dieRating,
+        mode,
         skillBonus,
         modifier,
         difficultyTarget: dcTarget,
         abilityName: selectedAbility?.name,
+        spendFocus,
+        currentFocusDie,
       });
 
       setLastRoll(result);
       setIsRolling(false);
       onRollComplete(result);
+
+      // Auto-step down Focus Die if spent
+      if (result.newFocusDie) {
+        updateActiveSheetData((prev) => ({
+          ...prev,
+          focus_die_current: result.newFocusDie,
+        }));
+        saveActiveCharacter();
+      }
 
       // Auto-consume usage box on character sheet if selected
       if (selectedAbility && consumeUsageBox) {
@@ -239,6 +254,26 @@ export const RollConsole: React.FC<RollConsoleProps> = ({ onRollComplete }) => {
           )}
         </div>
       )}
+
+      {/* Focus Die Spend Option */}
+      <div className="p-3 bg-slate-950/60 rounded-lg border border-purple-500/30 flex items-center justify-between">
+        <label className="flex items-center gap-2 text-xs font-bold text-purple-300 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={spendFocus}
+            disabled={currentFocusDie === 'Exhausted'}
+            onChange={(e) => setSpendFocus(e.target.checked)}
+            className="w-4 h-4 rounded border-purple-700 bg-slate-900 text-purple-500 focus:ring-0 cursor-pointer"
+          />
+          <span className="flex items-center gap-1.5">
+            <Zap className="w-4 h-4 text-purple-400" />
+            Spend Focus Die on this roll ({currentFocusDie !== 'Exhausted' ? `Current: ${currentFocusDie}` : 'EXHAUSTED'})
+          </span>
+        </label>
+        {currentFocusDie !== 'Exhausted' && (
+          <span className="text-[10px] font-mono text-slate-400 italic">Will step down after roll</span>
+        )}
+      </div>
 
       {/* Roll Action Button */}
       <button

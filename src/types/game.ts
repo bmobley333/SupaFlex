@@ -2,7 +2,7 @@
 // Strongly typed TypeScript models for SupaFlex DB tables & sheet JSONB data
 
 export type AttributeKey = 'might' | 'motion' | 'mind' | 'magic' | 'moxie';
-export type DieRating = 'd4' | 'd6' | 'd8' | 'd10' | 'd12';
+export type DieRating = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'Exhausted';
 
 export interface AbilitySlot {
   select: boolean;
@@ -42,6 +42,10 @@ export interface CharacterSheetData {
   max_powers: number;
   max_spells: number;
   attribute_dice: Record<AttributeKey, DieRating>;
+  focus_die_current?: DieRating;
+  focus_die_max?: DieRating;
+  sparks?: number; // 0-5 Kinetic Sparks (5 Sparks = 1 Meta)
+  is_charged?: boolean; // True when sparks === 5 (+1 to ALL rolls)
   known_skillsets: string[];
   power_slots: AbilitySlot[];
   spell_slots: AbilitySlot[];

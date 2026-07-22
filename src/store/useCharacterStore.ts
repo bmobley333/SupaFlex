@@ -25,6 +25,9 @@ interface CharacterStore {
   updateActiveCharacterMeta: (updates: Partial<Character>) => void;
   saveActiveCharacter: () => Promise<void>;
   deleteCharacter: (id: number) => Promise<void>;
+  addSpark: (amount?: number) => void;
+  spendMeta: () => void;
+  resetSparks: () => void;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
@@ -188,4 +191,33 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       set({ isSaving: false, error: err.message || 'Failed to delete character.' });
     }
   },
+
+  addSpark: (amount = 1) => {
+    get().updateActiveSheetData((prev) => {
+      const currentSparks = prev.sparks || 0;
+      const nextSparks = Math.min(5, currentSparks + amount);
+      return {
+        ...prev,
+        sparks: nextSparks,
+        is_charged: nextSparks === 5,
+      };
+    });
+  },
+
+  spendMeta: () => {
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      sparks: 0,
+      is_charged: false,
+    }));
+  },
+
+  resetSparks: () => {
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      sparks: 0,
+      is_charged: false,
+    }));
+  },
 }));
+

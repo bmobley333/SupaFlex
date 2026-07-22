@@ -1,7 +1,8 @@
 // src/components/sheet/VitalsHeader.tsx
 import React from 'react';
-import { Heart, Shield, Award, Sparkles, Activity } from 'lucide-react';
+import { Heart, Shield, Award, Sparkles, Activity, Zap, ArrowDown, ArrowUp } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { stepDownDie, stepUpDie } from '../../lib/dice';
 
 export const VitalsHeader: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
@@ -14,6 +15,8 @@ export const VitalsHeader: React.FC = () => {
   const wounds = sheet.wounds;
   const maxWounds = sheet.max_wounds || 3;
   const level = sheet.level || 1;
+  const focusCurrent = sheet.focus_die_current || 'd4';
+  const focusMax = sheet.focus_die_max || 'd4';
 
   const handleHpChange = (delta: number) => {
     updateActiveSheetData((prev) => {
@@ -28,6 +31,23 @@ export const VitalsHeader: React.FC = () => {
       ...prev,
       current_vitality: prev.vitality_max,
       wounds: 0,
+      focus_die_current: prev.focus_die_max || 'd4',
+    }));
+    saveActiveCharacter();
+  };
+
+  const handleFocusStepDown = () => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      focus_die_current: stepDownDie(prev.focus_die_current || 'd4'),
+    }));
+    saveActiveCharacter();
+  };
+
+  const handleFocusFlood = () => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      focus_die_current: stepUpDie(prev.focus_die_current || 'd4', prev.focus_die_max || 'd4'),
     }));
     saveActiveCharacter();
   };
@@ -44,7 +64,7 @@ export const VitalsHeader: React.FC = () => {
     updateActiveSheetData((prev) => {
       const nextVal = Math.max(0, val);
       if (field === 'level') {
-        return { ...prev, level: nextVal, ap: nextVal }; // AP matches level in Flex system
+        return { ...prev, level: nextVal, ap: nextVal * 2 }; // 2 AP per level in new blueprint
       }
       return { ...prev, ap: nextVal };
     });
@@ -55,15 +75,15 @@ export const VitalsHeader: React.FC = () => {
 
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">
-      {/* Top Banner: Level, AP, Defense, Armor */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Top Banner: Level, AP, Vitality, Defense, Armor, Focus Die */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {/* Level & AP */}
         <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-850 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="w-4 h-4 text-amber-400" />
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Level & AP</span>
-              <span className="font-outfit font-extrabold text-sm text-slate-100">Level {level}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Level (AP: {sheet.ap ?? level * 2})</span>
+              <span className="font-outfit font-extrabold text-sm text-slate-100">Lvl {level}</span>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -115,6 +135,35 @@ export const VitalsHeader: React.FC = () => {
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Armor</span>
             <span className="font-outfit font-extrabold text-sm text-cyan-300">+{sheet.armor || 0}</span>
+          </div>
+        </div>
+
+        {/* Focus Die Tracker */}
+        <div className="p-3 bg-slate-950/60 rounded-lg border border-purple-500/30 flex items-center justify-between col-span-2 sm:col-span-1">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-purple-400" />
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 block">Focus Die</span>
+              <span className="font-mono font-extrabold text-xs text-purple-200">
+                {focusCurrent} <span className="text-[10px] text-slate-500">(Max: {focusMax})</span>
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleFocusStepDown}
+              title="Spend / Step Down Focus Die"
+              className="p-1 bg-purple-950/60 hover:bg-purple-900 text-purple-300 rounded border border-purple-800"
+            >
+              <ArrowDown className="w-3 h-3" />
+            </button>
+            <button
+              onClick={handleFocusFlood}
+              title="Flood / +1 Step Focus Die"
+              className="p-1 bg-purple-950/60 hover:bg-purple-900 text-purple-300 rounded border border-purple-800"
+            >
+              <ArrowUp className="w-3 h-3" />
+            </button>
           </div>
         </div>
       </div>
@@ -199,6 +248,107 @@ export const VitalsHeader: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* ⚡ Kinetic Spark Engine & Charged State Banner */}
+      <div className={`p-3.5 rounded-lg border transition-all flex flex-wrap items-center justify-between gap-3 ${
+        (sheet.sparks || 0) === 5
+          ? 'bg-amber-500/10 border-amber-500/50 shadow-md shadow-amber-500/10'
+          : 'bg-slate-950/80 border-slate-850'
+      }`}>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <Zap className={`w-4 h-4 ${(sheet.sparks || 0) === 5 ? 'text-amber-400 animate-pulse' : 'text-amber-400'}`} />
+            <span className="font-outfit font-extrabold text-xs tracking-wide text-slate-200">
+              Spark Engine (⚡):
+            </span>
+          </div>
+
+          {/* 5-Peg Spark Meter */}
+          <div className="flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800">
+            {Array.from({ length: 5 }).map((_, idx) => {
+              const isFilled = idx < (sheet.sparks || 0);
+              return (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    const store = useCharacterStore.getState();
+                    if (isFilled && idx === (sheet.sparks || 0) - 1) {
+                      store.updateActiveSheetData((prev) => ({
+                        ...prev,
+                        sparks: idx,
+                        is_charged: false,
+                      }));
+                    } else {
+                      store.updateActiveSheetData((prev) => ({
+                        ...prev,
+                        sparks: idx + 1,
+                        is_charged: idx + 1 === 5,
+                      }));
+                    }
+                    store.saveActiveCharacter();
+                  }}
+                  className={`w-6 h-6 rounded-md font-mono text-xs font-extrabold flex items-center justify-center transition-all ${
+                    isFilled
+                      ? 'bg-amber-500 text-slate-950 border border-amber-400 shadow-sm shadow-amber-500/40 opacity-100'
+                      : 'bg-slate-950 text-slate-600 border border-slate-800 hover:border-amber-500/50 opacity-40'
+                  }`}
+                  title={`Spark peg ${idx + 1}`}
+                >
+                  ⚡
+                </button>
+              );
+            })}
+            <span className="text-[11px] font-mono font-bold text-slate-400 ml-1">
+              {sheet.sparks || 0}/5
+            </span>
+          </div>
+
+          {/* Charged State Banner */}
+          {(sheet.sparks || 0) === 5 && (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500 text-slate-950 font-outfit font-black text-xs rounded-lg shadow-md shadow-amber-500/30 animate-bounce">
+              <span>⚡ CHARGED! (+1 to ALL rolls)</span>
+            </div>
+          )}
+        </div>
+
+        {/* Spark Actions */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const store = useCharacterStore.getState();
+              store.addSpark(1);
+              store.saveActiveCharacter();
+            }}
+            className="px-2.5 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold rounded border border-amber-500/30 transition-all flex items-center gap-1"
+          >
+            +1 Spark ⚡
+          </button>
+
+          <button
+            onClick={() => {
+              const store = useCharacterStore.getState();
+              store.spendMeta();
+              store.saveActiveCharacter();
+            }}
+            disabled={(sheet.sparks || 0) < 5}
+            className="px-2.5 py-1 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 text-xs font-semibold rounded border border-indigo-500/30 transition-all disabled:opacity-40"
+          >
+            Spend Meta (1-⚡)
+          </button>
+
+          <button
+            onClick={() => {
+              const store = useCharacterStore.getState();
+              store.resetSparks();
+              store.saveActiveCharacter();
+            }}
+            className="px-2 py-1 bg-slate-850 hover:bg-slate-800 text-slate-400 text-xs font-mono rounded border border-slate-750"
+            title="Reset Sparks to 0"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
+
