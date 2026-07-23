@@ -64,18 +64,18 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* 🌌 Navigation & Persistent HUD Header Bar */}
-      <header className="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 px-4 py-2 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🌌</span>
-            <h1 className="font-outfit text-lg font-extrabold tracking-wider bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              SUPAFLEX
-            </h1>
-          </div>
+      <header className="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 px-4 py-2 flex flex-col gap-2">
+        {/* Top Header Row (Brand/Hero Left, Centered Tab Bar, Actions Right) */}
+        <div className="w-full flex items-center justify-between gap-4 flex-wrap">
+          {/* Left Zone: Logo & Hero Selector */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🌌</span>
+              <h1 className="font-outfit text-lg font-extrabold tracking-wider bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                SUPAFLEX
+              </h1>
+            </div>
 
-          {/* Compact Active Hero Selector Trigger */}
-          <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSelectorBar(!showSelectorBar)}
               className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-lg text-xs font-semibold text-indigo-300 transition-all"
@@ -92,28 +92,93 @@ export default function App() {
             </button>
           </div>
 
-          {/* Persistent Header HUD Ribbon (Attributes, Focus, Spark) */}
-          <PersistentHeaderHUD />
-        </div>
+          {/* Center Zone: S-Tier Glassmorphic Pill Tab Navigation Bar */}
+          <nav className="flex-1 flex justify-center min-w-[280px]">
+            <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl shadow-inner backdrop-blur-md">
+              <button
+                onClick={() => setActiveTab('sheet')}
+                className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+                  activeTab === 'sheet'
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                Sheet
+              </button>
+              <button
+                onClick={() => setActiveTab('rolls')}
+                className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+                  activeTab === 'rolls'
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Rolls
+              </button>
+              <button
+                onClick={() => setActiveTab('codex')}
+                className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+                  activeTab === 'codex'
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                Codex
+              </button>
+              <button
+                onClick={() => setActiveTab('logs')}
+                className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+                  activeTab === 'logs'
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                Logs
+              </button>
+              <button
+                onClick={() => setActiveTab('directory')}
+                className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+                  activeTab === 'directory'
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                Directory
+              </button>
+            </div>
+          </nav>
 
-        {/* Global Save & Database Indicator */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={saveActiveCharacter}
-            disabled={isSaving || !activeCharacter}
-            className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-semibold rounded-lg border border-emerald-500/30 transition-all flex items-center gap-1.5 disabled:opacity-50"
-          >
-            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
+          {/* Right Zone: Global Save & Database Indicator */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={saveActiveCharacter}
+              disabled={isSaving || !activeCharacter}
+              className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-semibold rounded-lg border border-emerald-500/30 transition-all flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
 
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-950/80 rounded-lg border border-slate-800 text-[11px] font-semibold">
-            <Database className={`w-3.5 h-3.5 ${dbConnected ? 'text-emerald-400' : 'text-rose-400'}`} />
-            <span className={dbConnected ? 'text-emerald-400' : 'text-rose-400'}>
-              {dbConnected ? 'Online' : 'Offline'}
-            </span>
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-950/80 rounded-lg border border-slate-800 text-[11px] font-semibold">
+              <Database className={`w-3.5 h-3.5 ${dbConnected ? 'text-emerald-400' : 'text-rose-400'}`} />
+              <span className={dbConnected ? 'text-emerald-400' : 'text-rose-400'}>
+                {dbConnected ? 'Online' : 'Offline'}
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* Persistent Header HUD Ribbon - Sub-Header Row 2 (Only visible when on Sheet tab) */}
+        {activeTab === 'sheet' && (
+          <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
+            <PersistentHeaderHUD />
+          </div>
+        )}
 
         {/* Collapsible Hero & Player Selector Drawer */}
         {showSelectorBar && (
@@ -200,65 +265,6 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* Minimalist Navigation Tabs Bar */}
-            <div className="flex items-center gap-1.5 border-b border-slate-800 pb-px flex-wrap">
-              <button
-                onClick={() => setActiveTab('sheet')}
-                className={`px-3 py-1.5 font-outfit font-bold text-xs tracking-wide border-b-2 transition-all flex items-center gap-1.5 ${
-                  activeTab === 'sheet'
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5" />
-                Sheet
-              </button>
-              <button
-                onClick={() => setActiveTab('rolls')}
-                className={`px-3 py-1.5 font-outfit font-bold text-xs tracking-wide border-b-2 transition-all flex items-center gap-1.5 ${
-                  activeTab === 'rolls'
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                Rolls
-              </button>
-              <button
-                onClick={() => setActiveTab('codex')}
-                className={`px-3 py-1.5 font-outfit font-bold text-xs tracking-wide border-b-2 transition-all flex items-center gap-1.5 ${
-                  activeTab === 'codex'
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                Codex
-              </button>
-              <button
-                onClick={() => setActiveTab('logs')}
-                className={`px-3 py-1.5 font-outfit font-bold text-xs tracking-wide border-b-2 transition-all flex items-center gap-1.5 ${
-                  activeTab === 'logs'
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                Logs
-              </button>
-              <button
-                onClick={() => setActiveTab('directory')}
-                className={`px-3 py-1.5 font-outfit font-bold text-xs tracking-wide border-b-2 transition-all flex items-center gap-1.5 ${
-                  activeTab === 'directory'
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                Directory
-              </button>
-            </div>
-
             {/* Tab Panels */}
             <div className="flex-1">
               {activeTab === 'sheet' && <CharacterSheetView />}

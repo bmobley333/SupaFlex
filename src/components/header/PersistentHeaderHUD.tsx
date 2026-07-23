@@ -8,15 +8,16 @@ import { stepDownDie, stepUpDie } from '../../lib/dice';
 interface AttributeConfig {
   key: AttributeKey;
   name: string;
+  abbr: string;
   emoji: string;
 }
 
 const ATTRIBUTES: AttributeConfig[] = [
-  { key: 'might', name: 'Might', emoji: '💪' },
-  { key: 'motion', name: 'Motion', emoji: '🏃' },
-  { key: 'mind', name: 'Mind', emoji: '👁️' },
-  { key: 'magic', name: 'Magic', emoji: '✨' },
-  { key: 'moxie', name: 'Moxie', emoji: '🫀' },
+  { key: 'magic', name: 'Magic', abbr: 'MAG', emoji: '✨' },
+  { key: 'might', name: 'Might', abbr: 'MGT', emoji: '💪' },
+  { key: 'mind', name: 'Mind', abbr: 'MND', emoji: '👁️' },
+  { key: 'motion', name: 'Motion', abbr: 'MOT', emoji: '🏃' },
+  { key: 'moxie', name: 'Moxie', abbr: 'MOX', emoji: '🫀' },
 ];
 
 const DIE_OPTIONS: DieRating[] = ['d4', 'd6', 'd8', 'd10', 'd12'];
@@ -95,7 +96,7 @@ export const PersistentHeaderHUD: React.FC = () => {
     <div className="flex flex-col gap-2 w-full sm:w-auto">
       {/* Persistent Header Ribbon */}
       <div className="flex items-center gap-2.5 flex-wrap">
-        {/* 5 Core Attributes Ribbon (Numbers Only) */}
+        {/* 5 Core Attributes Ribbon (Alphabetical + 3-letter Abbrs) */}
         <div className="flex items-center gap-2 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-xs">
           {ATTRIBUTES.map((attr, idx) => {
             const dieVal = dieToNum(dice[attr.key]);
@@ -106,6 +107,7 @@ export const PersistentHeaderHUD: React.FC = () => {
                   className="flex items-center gap-1 cursor-default hover:text-indigo-300 transition-colors"
                   title={`${attr.name}: ${dieVal}`}
                 >
+                  <span className="font-mono font-extrabold text-[11px] text-indigo-400">{attr.abbr}</span>
                   <span className="text-sm">{attr.emoji}</span>
                   <span className="font-mono font-extrabold text-slate-100">{dieVal}</span>
                 </div>

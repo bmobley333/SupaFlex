@@ -16,10 +16,10 @@ interface AttributeOpt {
 }
 
 const ATTRIBUTES: AttributeOpt[] = [
-  { key: 'might', name: 'Might', emoji: '💪' },
-  { key: 'motion', name: 'Motion', emoji: '🏃' },
-  { key: 'mind', name: 'Mind', emoji: '👁️' },
   { key: 'magic', name: 'Magic', emoji: '✨' },
+  { key: 'might', name: 'Might', emoji: '💪' },
+  { key: 'mind', name: 'Mind', emoji: '👁️' },
+  { key: 'motion', name: 'Motion', emoji: '🏃' },
   { key: 'moxie', name: 'Moxie', emoji: '🫀' },
 ];
 
