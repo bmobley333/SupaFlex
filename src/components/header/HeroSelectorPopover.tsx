@@ -1,6 +1,6 @@
 // src/components/header/HeroSelectorPopover.tsx
 import React, { useState, useEffect } from 'react';
-import { Shield, User, UserCheck, Plus, Check, Edit2 } from 'lucide-react';
+import { Shield, User, UserCheck, Plus, Check, Edit2, X } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 
 interface HeroSelectorPopoverProps {
@@ -70,6 +70,15 @@ export const HeroSelectorPopover: React.FC<HeroSelectorPopoverProps> = ({
       className="absolute top-full left-0 mt-2 z-50 w-[420px] max-w-[90vw] p-4 bg-slate-900/95 border border-indigo-500/40 rounded-2xl shadow-2xl shadow-indigo-950/60 backdrop-blur-xl animate-fadeIn flex flex-col gap-4 text-xs"
       onClick={(e) => e.stopPropagation()}
     >
+      {/* Top Right Close Button */}
+      <button
+        onClick={onClose}
+        className="absolute top-3 right-3 p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors"
+        title="Close popover"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+
       {/* Hero Identity Edit Banner */}
       {activeCharacter && (
         <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between gap-3">

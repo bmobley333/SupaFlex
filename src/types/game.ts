@@ -46,6 +46,8 @@ export interface CharacterSheetData {
   focus_die_max?: DieRating;
   sparks?: number; // 0-5 Kinetic Sparks (5 Sparks = 1 Meta)
   is_charged?: boolean; // True when sparks === 5 (+1 to ALL rolls)
+  luck?: number; // 0-5 Luck Pool (Default 3, Max 5)
+  max_luck?: number; // Default 5
   known_skillsets: string[];
   power_slots: AbilitySlot[];
   spell_slots: AbilitySlot[];

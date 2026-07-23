@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Database, Shield, Zap, Activity, BookOpen, Users, Save, Loader2, ChevronDown, ChevronUp, Award, Star } from 'lucide-react';
+import { Database, Shield, Zap, Activity, BookOpen, Users, Save, Loader2, ChevronDown, ChevronUp, Award, Star, X } from 'lucide-react';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { ActionConsoleView } from './components/rolls/ActionConsoleView';
@@ -175,9 +175,18 @@ export default function App() {
                       <Award className="w-4 h-4 text-amber-400" />
                       Hero Level & AP
                     </span>
-                    <span className="font-mono text-xs text-slate-400 font-semibold">
-                      AP: <span className="text-amber-300 font-bold">{currentAp}</span>
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-slate-400 font-semibold">
+                        AP: <span className="text-amber-300 font-bold">{currentAp}</span>
+                      </span>
+                      <button
+                        onClick={() => setShowLevelPopover(false)}
+                        className="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors"
+                        title="Close popover"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-3 bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
