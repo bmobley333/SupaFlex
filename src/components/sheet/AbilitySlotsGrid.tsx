@@ -167,11 +167,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   className={`text-xs font-mono font-bold px-2 py-1 rounded border outline-none cursor-pointer ${actionClass}`}
                 >
                   <option value="" className="bg-slate-900 text-slate-100">Act?</option>
-                  <option value="AM" className="bg-slate-900 text-amber-300">AM (Action+Move)</option>
-                  <option value="A" className="bg-slate-900 text-rose-300">A (Action)</option>
-                  <option value="M" className="bg-slate-900 text-indigo-300">M (Move)</option>
-                  <option value="P" className="bg-slate-900 text-emerald-300">P (Passive)</option>
-                  <option value="F" className="bg-slate-900 text-purple-300">F (Free)</option>
+                  <option value="AM" className="bg-slate-900 text-amber-300">AM</option>
+                  <option value="A" className="bg-slate-900 text-rose-300">A</option>
+                  <option value="M" className="bg-slate-900 text-indigo-300">M</option>
+                  <option value="P" className="bg-slate-900 text-emerald-300">P</option>
+                  <option value="F" className="bg-slate-900 text-purple-300">F</option>
                 </select>
               </div>
 

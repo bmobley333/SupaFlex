@@ -156,28 +156,28 @@ export const VitalsHeader: React.FC = () => {
           </select>
         </div>
 
-        {/* Focus Die Tracker */}
+        {/* Focus Tracker */}
         <div className="p-3 bg-slate-950/60 rounded-lg border border-purple-500/30 flex items-center justify-between col-span-2 sm:col-span-1">
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-purple-400" />
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 block">Focus Die</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 block">Focus</span>
               <span className="font-mono font-extrabold text-xs text-purple-200">
-                {focusCurrent} <span className="text-[10px] text-slate-500">(Max: {focusMax})</span>
+                {(focusCurrent || 'd4').replace(/^d/i, '')} <span className="text-[10px] text-slate-500">(Max: {(focusMax || 'd4').replace(/^d/i, '')})</span>
               </span>
             </div>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={handleFocusStepDown}
-              title="Spend / Step Down Focus Die"
+              title="Spend / Step Down Focus"
               className="p-1 bg-purple-950/60 hover:bg-purple-900 text-purple-300 rounded border border-purple-800"
             >
               <ArrowDown className="w-3 h-3" />
             </button>
             <button
               onClick={handleFocusFlood}
-              title="Flood / +1 Step Focus Die"
+              title="Flood / +1 Step Focus"
               className="p-1 bg-purple-950/60 hover:bg-purple-900 text-purple-300 rounded border border-purple-800"
             >
               <ArrowUp className="w-3 h-3" />
@@ -191,7 +191,7 @@ export const VitalsHeader: React.FC = () => {
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-slate-300 flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-rose-400" />
-            Current Vitality
+            Vitality
           </span>
           <span className="font-mono font-extrabold text-slate-100">
             {currentHp} / {maxHp} ({Math.round(hpPercent)}%)
@@ -330,17 +330,6 @@ export const VitalsHeader: React.FC = () => {
 
         {/* Spark Actions */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              const store = useCharacterStore.getState();
-              store.addSpark(1);
-              store.saveActiveCharacter();
-            }}
-            className="px-2.5 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold rounded border border-amber-500/30 transition-all flex items-center gap-1"
-          >
-            +1 Spark ⚡
-          </button>
-
           <button
             onClick={() => {
               const store = useCharacterStore.getState();

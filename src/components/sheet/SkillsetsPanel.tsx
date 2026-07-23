@@ -62,7 +62,7 @@ export const SkillsetsPanel: React.FC = () => {
       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
         <h3 className="font-outfit font-bold text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
           <BookOpen className="w-4 h-4 text-purple-400" />
-          Skillsets & Skilled-At List
+          Skillsets
         </h3>
         <span className="text-[11px] text-slate-400 font-mono">
           {knownSkillsetNames.length} Selected

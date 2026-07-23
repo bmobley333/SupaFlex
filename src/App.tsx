@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Database, Shield, Zap, Activity, BookOpen, Users, Plus, Save, UserCheck, Loader2 } from 'lucide-react';
+import { Database, Shield, Zap, Activity, BookOpen, Users, Plus, Save, UserCheck, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { ActionConsoleView } from './components/rolls/ActionConsoleView';
 import { CodexView } from './components/codex/CodexView';
 import { AdventureLogs } from './components/logs/AdventureLogs';
 import { PlayerDirectoryView } from './components/directory/PlayerDirectoryView';
+import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'sheet' | 'rolls' | 'codex' | 'logs' | 'directory'>('sheet');
   const [newCharName, setNewCharName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showSelectorBar, setShowSelectorBar] = useState(false);
 
   const {
     characters,
@@ -61,176 +63,199 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* 🌌 Navigation & Header Branding Bar */}
-      <header className="w-full bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 px-6 py-3 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🌌</span>
-          <div>
-            <h1 className="font-outfit text-xl font-extrabold tracking-wider bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+      {/* 🌌 Navigation & Persistent HUD Header Bar */}
+      <header className="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 px-4 py-2 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🌌</span>
+            <h1 className="font-outfit text-lg font-extrabold tracking-wider bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
               SUPAFLEX
             </h1>
-            <p className="text-[10px] text-slate-400 font-mono tracking-wide uppercase">MetaScape Playtest Suite v2.0</p>
           </div>
+
+          {/* Compact Active Hero Selector Trigger */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSelectorBar(!showSelectorBar)}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-lg text-xs font-semibold text-indigo-300 transition-all"
+              title="Click to switch hero or player email"
+            >
+              <Shield className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span className="font-extrabold text-slate-100">
+                {activeCharacter ? activeCharacter.name : 'Select Hero'}
+              </span>
+              {activeCharacter?.class && (
+                <span className="text-[10px] text-slate-400 font-mono">({activeCharacter.class})</span>
+              )}
+              {showSelectorBar ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
+            </button>
+          </div>
+
+          {/* Persistent Header HUD Ribbon (Attributes, Focus, Spark) */}
+          <PersistentHeaderHUD />
         </div>
 
-        {/* Player Email Login Bar & Active Character Selector */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Low-Security Player Email Login Input */}
-          <div className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800">
-            <UserCheck className="w-4 h-4 text-indigo-400" />
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Player:</span>
-            <input
-              type="email"
-              value={playerEmail}
-              onChange={(e) => setPlayerEmail(e.target.value)}
-              placeholder="player@email.com"
-              className="bg-transparent text-xs font-mono font-bold text-indigo-300 outline-none w-44 focus:text-indigo-200"
-              title="Low-Security Playtest Player Email (saved to localStorage)"
-            />
-          </div>
-
-          {/* Dyslexia-Friendly Side-Labeled Filter Toggle with Counts */}
-          <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
-            <button
-              onClick={() => setFilterMode('my_heroes')}
-              className={`px-2.5 py-1 rounded text-[11px] font-extrabold transition-all ${
-                filterMode === 'my_heroes'
-                  ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 shadow-sm shadow-indigo-600/20 opacity-100'
-                  : 'text-slate-500 border border-transparent opacity-50 hover:opacity-80'
-              }`}
-            >
-              My Heroes ({myHeroes.length})
-            </button>
-            <button
-              onClick={() => setFilterMode('all_heroes')}
-              className={`px-2.5 py-1 rounded text-[11px] font-extrabold transition-all ${
-                filterMode === 'all_heroes'
-                  ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 shadow-sm shadow-indigo-600/20 opacity-100'
-                  : 'text-slate-500 border border-transparent opacity-50 hover:opacity-80'
-              }`}
-            >
-              All Heroes ({characters.length})
-            </button>
-          </div>
-
-          {/* Active Character Selector Dropdown (Always Rendered) */}
-          <div className="flex items-center gap-2 bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-            <Shield className="w-4 h-4 text-indigo-400 ml-1 shrink-0" />
-            <select
-              value={activeCharacter && displayedCharacters.some((c) => c.id === activeCharacter.id) ? activeCharacter.id : ''}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                if (val) selectCharacter(val);
-              }}
-              className="bg-transparent text-sm font-semibold text-slate-200 border-none outline-none cursor-pointer pr-2"
-            >
-              {displayedCharacters.length > 0 ? (
-                displayedCharacters.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-slate-900 text-slate-100">
-                    {c.name} ({c.class || 'Adventurer'}) {c.owner_email ? `— ${c.owner_email}` : ''}
-                  </option>
-                ))
-              ) : (
-                <option value="" className="bg-slate-900 text-amber-300 italic">
-                  No heroes for {playerEmail || 'this player'} (Click + New Hero)
-                </option>
-              )}
-            </select>
-          </div>
-
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold rounded-lg border border-indigo-500/30 transition-all flex items-center gap-1.5"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New Hero
-          </button>
-
+        {/* Global Save & Database Indicator */}
+        <div className="flex items-center gap-2">
           <button
             onClick={saveActiveCharacter}
             disabled={isSaving || !activeCharacter}
-            className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-semibold rounded-lg border border-emerald-500/30 transition-all flex items-center gap-1.5 disabled:opacity-50"
+            className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-semibold rounded-lg border border-emerald-500/30 transition-all flex items-center gap-1.5 disabled:opacity-50"
           >
             {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             {isSaving ? 'Saving...' : 'Save'}
           </button>
 
-          {/* Database Connection Indicator */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 text-xs font-semibold">
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-950/80 rounded-lg border border-slate-800 text-[11px] font-semibold">
             <Database className={`w-3.5 h-3.5 ${dbConnected ? 'text-emerald-400' : 'text-rose-400'}`} />
-            <span className="text-slate-400">DB:</span>
             <span className={dbConnected ? 'text-emerald-400' : 'text-rose-400'}>
-              {dbConnected ? 'Connected' : 'Offline'}
+              {dbConnected ? 'Online' : 'Offline'}
             </span>
           </div>
         </div>
+
+        {/* Collapsible Hero & Player Selector Drawer */}
+        {showSelectorBar && (
+          <div className="w-full pt-2 pb-1 border-t border-slate-800/80 flex items-center gap-3 flex-wrap animate-fadeIn">
+            {/* Player Email Login Input */}
+            <div className="flex items-center gap-1.5 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800">
+              <UserCheck className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Player:</span>
+              <input
+                type="email"
+                value={playerEmail}
+                onChange={(e) => setPlayerEmail(e.target.value)}
+                placeholder="player@email.com"
+                className="bg-transparent text-xs font-mono font-bold text-indigo-300 outline-none w-40 focus:text-indigo-200"
+              />
+            </div>
+
+            {/* Filter Toggle */}
+            <div className="flex items-center gap-1 bg-slate-950/80 p-0.5 rounded-lg border border-slate-800">
+              <button
+                onClick={() => setFilterMode('my_heroes')}
+                className={`px-2 py-0.5 rounded text-[11px] font-extrabold transition-all ${
+                  filterMode === 'my_heroes'
+                    ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 opacity-100'
+                    : 'text-slate-500 border border-transparent opacity-50 hover:opacity-80'
+                }`}
+              >
+                My Heroes ({myHeroes.length})
+              </button>
+              <button
+                onClick={() => setFilterMode('all_heroes')}
+                className={`px-2 py-0.5 rounded text-[11px] font-extrabold transition-all ${
+                  filterMode === 'all_heroes'
+                    ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 opacity-100'
+                    : 'text-slate-500 border border-transparent opacity-50 hover:opacity-80'
+                }`}
+              >
+                All Heroes ({characters.length})
+              </button>
+            </div>
+
+            {/* Active Character Dropdown */}
+            <div className="flex items-center gap-1.5 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800">
+              <Shield className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <select
+                value={activeCharacter && displayedCharacters.some((c) => c.id === activeCharacter.id) ? activeCharacter.id : ''}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val) selectCharacter(val);
+                }}
+                className="bg-transparent text-xs font-semibold text-slate-200 border-none outline-none cursor-pointer pr-1"
+              >
+                {displayedCharacters.length > 0 ? (
+                  displayedCharacters.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-slate-900 text-slate-100">
+                      {c.name} ({c.class || 'Adventurer'}) {c.owner_email ? `— ${c.owner_email}` : ''}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" className="bg-slate-900 text-amber-300 italic">
+                    No heroes for {playerEmail || 'this player'}
+                  </option>
+                )}
+              </select>
+            </div>
+
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold rounded-lg border border-indigo-500/30 transition-all flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Hero
+            </button>
+          </div>
+        )}
       </header>
 
       {/* 🚀 Main Layout Shell */}
-      <main className="flex-1 w-full max-w-[2500px] mx-auto p-4 md:p-6 flex flex-col gap-6">
+      <main className="flex-1 w-full max-w-[2500px] mx-auto p-3 md:p-4 flex flex-col gap-4">
         {isLoading ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 min-h-[400px]">
-            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-            <p className="text-sm font-medium text-slate-400">Connecting to MetaScape Supabase Gateway...</p>
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 min-h-[300px]">
+            <Loader2 className="w-7 h-7 text-indigo-400 animate-spin" />
+            <p className="text-xs font-medium text-slate-400">Loading...</p>
           </div>
         ) : (
           <>
-            {/* Navigation Tabs Bar */}
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-px flex-wrap">
+            {/* Minimalist Navigation Tabs Bar */}
+            <div className="flex items-center gap-1.5 border-b border-slate-800 pb-px flex-wrap">
               <button
                 onClick={() => setActiveTab('sheet')}
-                className={`px-4 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+                className={`px-3 py-1.5 font-outfit font-bold text-xs tracking-wide border-b-2 transition-all flex items-center gap-1.5 ${
                   activeTab === 'sheet'
                     ? 'border-indigo-500 text-indigo-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Shield className="w-4 h-4" />
-                Character Sheet
+                <Shield className="w-3.5 h-3.5" />
+                Sheet
               </button>
               <button
                 onClick={() => setActiveTab('rolls')}
-                className={`px-4 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+                className={`px-3 py-1.5 font-outfit font-bold text-xs tracking-wide border-b-2 transition-all flex items-center gap-1.5 ${
                   activeTab === 'rolls'
                     ? 'border-indigo-500 text-indigo-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Zap className="w-4 h-4" />
-                Dice Roll Console
+                <Zap className="w-3.5 h-3.5" />
+                Rolls
               </button>
               <button
                 onClick={() => setActiveTab('codex')}
-                className={`px-4 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+                className={`px-3 py-1.5 font-outfit font-bold text-xs tracking-wide border-b-2 transition-all flex items-center gap-1.5 ${
                   activeTab === 'codex'
                     ? 'border-indigo-500 text-indigo-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <BookOpen className="w-4 h-4" />
-                Codex Search
+                <BookOpen className="w-3.5 h-3.5" />
+                Codex
               </button>
               <button
                 onClick={() => setActiveTab('logs')}
-                className={`px-4 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+                className={`px-3 py-1.5 font-outfit font-bold text-xs tracking-wide border-b-2 transition-all flex items-center gap-1.5 ${
                   activeTab === 'logs'
                     ? 'border-indigo-500 text-indigo-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Activity className="w-4 h-4" />
-                Adventure Logs
+                <Activity className="w-3.5 h-3.5" />
+                Logs
               </button>
               <button
                 onClick={() => setActiveTab('directory')}
-                className={`px-4 py-2.5 font-outfit font-semibold text-sm tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+                className={`px-3 py-1.5 font-outfit font-bold text-xs tracking-wide border-b-2 transition-all flex items-center gap-1.5 ${
                   activeTab === 'directory'
                     ? 'border-indigo-500 text-indigo-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Users className="w-4 h-4" />
-                Party Directory
+                <Users className="w-3.5 h-3.5" />
+                Directory
               </button>
             </div>
 

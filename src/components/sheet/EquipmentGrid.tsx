@@ -42,7 +42,7 @@ export const EquipmentGrid: React.FC = () => {
       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
         <h3 className="font-outfit font-bold text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-emerald-400" />
-          Equipment & Inventory Slots
+          Equipment
         </h3>
         <button
           onClick={handleAddGear}
