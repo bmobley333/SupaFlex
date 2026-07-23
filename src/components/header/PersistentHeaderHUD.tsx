@@ -116,167 +116,172 @@ export const PersistentHeaderHUD: React.FC = () => {
           })}
         </div>
 
-        {/* Focus Trigger Button */}
-        <button
-          onClick={() => toggleDrawer('focus')}
-          className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all ${
-            activeDrawer === 'focus'
-              ? 'bg-purple-900/60 border-purple-400 text-purple-100 shadow-sm shadow-purple-500/30'
-              : 'bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/30 text-purple-200'
-          }`}
-          title="Click to toggle Focus Drawer"
-        >
-          <span className="text-purple-400 font-bold">🎯 Focus:</span>
-          <span className="font-mono font-extrabold text-purple-100">{focusCurrent}</span>
-          <span className="text-[10px] text-purple-400 font-mono">({focusMax})</span>
-          {activeDrawer === 'focus' ? (
-            <ChevronUp className="w-3 h-3 text-purple-300" />
-          ) : (
-            <ChevronDown className="w-3 h-3 text-purple-400" />
-          )}
-        </button>
+        {/* Focus Relative Container & Floating Popover */}
+        <div className="relative">
+          <button
+            onClick={() => toggleDrawer('focus')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all ${
+              activeDrawer === 'focus'
+                ? 'bg-purple-900/60 border-purple-400 text-purple-100 shadow-sm shadow-purple-500/30'
+                : 'bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/30 text-purple-200'
+            }`}
+            title="Click to toggle Focus Drawer"
+          >
+            <span className="text-purple-400 font-bold">🎯 Focus:</span>
+            <span className="font-mono font-extrabold text-purple-100">{focusCurrent}</span>
+            <span className="text-[10px] text-purple-400 font-mono">({focusMax})</span>
+            {activeDrawer === 'focus' ? (
+              <ChevronUp className="w-3 h-3 text-purple-300" />
+            ) : (
+              <ChevronDown className="w-3 h-3 text-purple-400" />
+            )}
+          </button>
 
-        {/* Spark Trigger Button */}
-        <button
-          onClick={() => toggleDrawer('spark')}
-          className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all ${
-            activeDrawer === 'spark'
-              ? 'bg-amber-900/60 border-amber-400 text-amber-100 shadow-sm shadow-amber-500/30'
-              : 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-200'
-          }`}
-          title="Click to toggle Spark Drawer"
-        >
-          <span className="text-amber-400 font-bold uppercase text-[11px]">⚡ Spark:</span>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: 5 }).map((_, idx) => (
-              <span
-                key={idx}
-                className={`w-2.5 h-2.5 rounded-full border transition-all ${
-                  idx < sparks
-                    ? 'bg-amber-400 border-amber-300 shadow-sm shadow-amber-400/50'
-                    : 'bg-slate-950 border-slate-700'
-                }`}
-              />
-            ))}
-          </div>
-          {isCharged && (
-            <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 text-[10px] font-extrabold rounded border border-amber-400/40 animate-pulse">
-              +1 ALL
-            </span>
-          )}
-          {activeDrawer === 'spark' ? (
-            <ChevronUp className="w-3 h-3 text-amber-300" />
-          ) : (
-            <ChevronDown className="w-3 h-3 text-amber-400" />
-          )}
-        </button>
-      </div>
+          {/* 🎯 Focus Absolute Floating Glass Popover Card */}
+          {activeDrawer === 'focus' && (
+            <div className="absolute top-full left-0 mt-2 z-50 w-72 p-3 bg-slate-900/95 border border-purple-500/40 rounded-xl shadow-2xl shadow-purple-950/60 backdrop-blur-xl text-xs flex flex-col gap-2.5 animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-purple-500/20 pb-1.5">
+                <span className="font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-1 text-[11px]">
+                  🎯 Focus Ladder
+                </span>
+                <span className="font-mono text-xs text-purple-100 font-extrabold">
+                  {focusCurrent} <span className="text-[10px] text-slate-400 font-normal">(Max: {focusMax})</span>
+                </span>
+              </div>
 
-      {/* 🎯 Focus Collapsible Popout Drawer */}
-      {activeDrawer === 'focus' && (
-        <div className="w-full p-2.5 bg-slate-900/95 border border-purple-500/40 rounded-lg shadow-xl text-xs flex items-center justify-between gap-3 flex-wrap animate-fadeIn">
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-1 text-[11px]">
-              🎯 Focus
-            </span>
-            <span className="font-mono text-xs text-purple-100 font-extrabold">
-              {focusCurrent} <span className="text-[10px] text-slate-400 font-normal">(Max: {focusMax})</span>
-            </span>
-          </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={handleFocusStepDown}
+                    title="Spend / Step Down Focus"
+                    className="p-1 bg-purple-950/60 hover:bg-purple-900 text-purple-300 rounded border border-purple-800"
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={handleFocusFlood}
+                    title="Flood / +1 Step Focus"
+                    className="p-1 bg-purple-950/60 hover:bg-purple-900 text-purple-300 rounded border border-purple-800"
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleFocusStepDown}
-              title="Spend / Step Down Focus"
-              className="p-1 bg-purple-950/60 hover:bg-purple-900 text-purple-300 rounded border border-purple-800"
-            >
-              <ArrowDown className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={handleFocusFlood}
-              title="Flood / +1 Step Focus"
-              className="p-1 bg-purple-950/60 hover:bg-purple-900 text-purple-300 rounded border border-purple-800"
-            >
-              <ArrowUp className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="flex items-center gap-1 ml-2">
-              <span className="text-[10px] text-slate-400 font-mono">Max Rating:</span>
-              <select
-                value={focusMaxDie}
-                onChange={(e) => handleFocusMaxChange(e.target.value as DieRating)}
-                className="bg-slate-950 text-purple-300 font-mono font-bold text-xs px-2 py-0.5 rounded border border-purple-800 outline-none"
-              >
-                {DIE_OPTIONS.map((die) => (
-                  <option key={die} value={die} className="bg-slate-900 text-slate-100">
-                    {dieToNum(die)}
-                  </option>
-                ))}
-              </select>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-slate-400 font-mono">Max:</span>
+                  <select
+                    value={focusMaxDie}
+                    onChange={(e) => handleFocusMaxChange(e.target.value as DieRating)}
+                    className="bg-slate-950 text-purple-300 font-mono font-bold text-xs px-2 py-0.5 rounded border border-purple-800 outline-none"
+                  >
+                    {DIE_OPTIONS.map((die) => (
+                      <option key={die} value={die} className="bg-slate-900 text-slate-100">
+                        {dieToNum(die)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
 
-      {/* ⚡ Spark Collapsible Popout Drawer */}
-      {activeDrawer === 'spark' && (
-        <div className="w-full p-2.5 bg-slate-900/95 border border-amber-500/40 rounded-lg shadow-xl text-xs flex items-center justify-between gap-3 flex-wrap animate-fadeIn">
-          <div className="flex items-center gap-3">
-            <span className="font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1 text-[11px]">
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              Spark Engine ({sparks}/5)
-            </span>
-
-            {/* 5-Peg Spark Meter */}
-            <div className="flex items-center gap-1.5 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800">
+        {/* Spark Relative Container & Floating Popover */}
+        <div className="relative">
+          <button
+            onClick={() => toggleDrawer('spark')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all ${
+              activeDrawer === 'spark'
+                ? 'bg-amber-900/60 border-amber-400 text-amber-100 shadow-sm shadow-amber-500/30'
+                : 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-200'
+            }`}
+            title="Click to toggle Spark Drawer"
+          >
+            <span className="text-amber-400 font-bold uppercase text-[11px]">⚡ Spark:</span>
+            <div className="flex items-center gap-1">
               {Array.from({ length: 5 }).map((_, idx) => (
-                <button
+                <span
                   key={idx}
-                  onClick={() => handleSparkToggle(idx)}
-                  className={`w-5 h-5 rounded-md font-mono text-[10px] font-extrabold flex items-center justify-center transition-all ${
+                  className={`w-2.5 h-2.5 rounded-full border transition-all ${
                     idx < sparks
-                      ? 'bg-amber-500 text-slate-950 border border-amber-400 shadow-sm shadow-amber-500/40 opacity-100'
-                      : 'bg-slate-950 text-slate-600 border border-slate-800 hover:border-amber-500/50 opacity-40'
+                      ? 'bg-amber-400 border-amber-300 shadow-sm shadow-amber-400/50'
+                      : 'bg-slate-950 border-slate-700'
                   }`}
-                  title={`Toggle Spark peg ${idx + 1}`}
-                >
-                  ⚡
-                </button>
+                />
               ))}
             </div>
-
             {isCharged && (
-              <span className="px-2 py-0.5 bg-amber-500 text-slate-950 font-outfit font-black text-[11px] rounded shadow animate-bounce">
-                ⚡ CHARGED! (+1 ALL rolls)
+              <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 text-[10px] font-extrabold rounded border border-amber-400/40 animate-pulse">
+                +1 ALL
               </span>
             )}
-          </div>
+            {activeDrawer === 'spark' ? (
+              <ChevronUp className="w-3 h-3 text-amber-300" />
+            ) : (
+              <ChevronDown className="w-3 h-3 text-amber-400" />
+            )}
+          </button>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                spendMeta();
-                saveActiveCharacter();
-              }}
-              disabled={sparks < 5}
-              className="px-2.5 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-semibold rounded border border-indigo-500/30 transition-all disabled:opacity-40"
-            >
-              Spend Meta (1-⚡)
-            </button>
+          {/* ⚡ Spark Absolute Floating Glass Popover Card */}
+          {activeDrawer === 'spark' && (
+            <div className="absolute top-full left-0 mt-2 z-50 w-80 p-3 bg-slate-900/95 border border-amber-500/40 rounded-xl shadow-2xl shadow-amber-950/60 backdrop-blur-xl text-xs flex flex-col gap-2.5 animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5">
+                <span className="font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1 text-[11px]">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  Spark Engine ({sparks}/5)
+                </span>
+                {isCharged && (
+                  <span className="px-1.5 py-0.5 bg-amber-500 text-slate-950 font-outfit font-black text-[10px] rounded shadow animate-bounce">
+                    ⚡ CHARGED!
+                  </span>
+                )}
+              </div>
 
-            <button
-              onClick={() => {
-                resetSparks();
-                saveActiveCharacter();
-              }}
-              className="px-2 py-1 bg-slate-950 hover:bg-slate-800 text-slate-400 text-xs font-mono rounded border border-slate-800"
-              title="Reset Sparks to 0"
-            >
-              Reset
-            </button>
-          </div>
+              {/* 5-Peg Spark Meter */}
+              <div className="flex items-center justify-between gap-1.5 bg-slate-950/80 px-2 py-1.5 rounded-lg border border-slate-800">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSparkToggle(idx)}
+                    className={`w-6 h-6 rounded-md font-mono text-xs font-extrabold flex items-center justify-center transition-all ${
+                      idx < sparks
+                        ? 'bg-amber-500 text-slate-950 border border-amber-400 shadow-sm shadow-amber-500/40 opacity-100'
+                        : 'bg-slate-950 text-slate-600 border border-slate-800 hover:border-amber-500/50 opacity-40'
+                    }`}
+                    title={`Toggle Spark peg ${idx + 1}`}
+                  >
+                    ⚡
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-0.5">
+                <button
+                  onClick={() => {
+                    spendMeta();
+                    saveActiveCharacter();
+                  }}
+                  disabled={sparks < 5}
+                  className="px-2.5 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-semibold rounded border border-indigo-500/30 transition-all disabled:opacity-40"
+                >
+                  Spend Meta (1-⚡)
+                </button>
+
+                <button
+                  onClick={() => {
+                    resetSparks();
+                    saveActiveCharacter();
+                  }}
+                  className="px-2 py-1 bg-slate-950 hover:bg-slate-800 text-slate-400 text-xs font-mono rounded border border-slate-800"
+                  title="Reset Sparks to 0"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -1,7 +1,6 @@
 // src/components/sheet/CharacterSheetView.tsx
 import React from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { HeroIdentityHeader } from './HeroIdentityHeader';
 import { VitalsHeader } from './VitalsHeader';
 import { AttributesPanel } from './AttributesPanel';
 import { SkillsetsPanel } from './SkillsetsPanel';
@@ -14,9 +13,6 @@ export const CharacterSheetView: React.FC = () => {
 
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto">
-      {/* Hero Identity Banner: Name, Class, Race, Owner */}
-      <HeroIdentityHeader />
-
       {/* Top Banner: Vitals & Level Math */}
       <VitalsHeader />
 
