@@ -50,6 +50,7 @@ export interface CharacterSheetData {
   max_luck?: number; // Default 5
   known_skillsets: string[];
   known_individual_skills?: string[]; // Individually learned skills outside a skillset
+  favorite_power_tables?: string[]; // Favorited power tables (table_name strings)
   power_slots: AbilitySlot[];
   spell_slots: AbilitySlot[];
   gear_slots: EquipmentSlot[];
