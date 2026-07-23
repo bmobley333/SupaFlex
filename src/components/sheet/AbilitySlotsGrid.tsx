@@ -1,6 +1,6 @@
 // src/components/sheet/AbilitySlotsGrid.tsx
 import React from 'react';
-import { Zap, ArrowUpDown, Plus, Trash2 } from 'lucide-react';
+import { Zap, ArrowUpDown, Plus, Trash2, Sparkles } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AbilitySlot } from '../../types/game';
 
@@ -104,7 +104,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">
       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
         <h3 className="font-outfit font-bold text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
-          <Zap className={`w-4 h-4 ${type === 'powers' ? 'text-amber-400' : 'text-cyan-400'}`} />
+          {type === 'powers' ? (
+            <Zap className="w-4 h-4 text-amber-400" />
+          ) : (
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+          )}
           {title}
         </h3>
 

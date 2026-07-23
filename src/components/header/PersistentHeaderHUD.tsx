@@ -1,6 +1,6 @@
 // src/components/header/PersistentHeaderHUD.tsx
-import React, { useState } from 'react';
-import { ArrowDown, ArrowUp, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowDown, ArrowUp, Zap, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, DieRating } from '../../types/game';
 import { stepDownDie, stepUpDie } from '../../lib/dice';
@@ -13,11 +13,11 @@ interface AttributeConfig {
 }
 
 const ATTRIBUTES: AttributeConfig[] = [
-  { key: 'magic', name: 'Magic', abbr: 'MAG', emoji: '✨' },
-  { key: 'might', name: 'Might', abbr: 'MGT', emoji: '💪' },
-  { key: 'mind', name: 'Mind', abbr: 'MND', emoji: '👁️' },
-  { key: 'motion', name: 'Motion', abbr: 'MOT', emoji: '🏃' },
-  { key: 'moxie', name: 'Moxie', abbr: 'MOX', emoji: '🫀' },
+  { key: 'magic', name: 'Magic', abbr: 'Magic', emoji: '✨' },
+  { key: 'might', name: 'Might', abbr: 'Might', emoji: '💪' },
+  { key: 'mind', name: 'Mind', abbr: 'Mind', emoji: '👁️' },
+  { key: 'motion', name: 'Motion', abbr: 'Motion', emoji: '🏃' },
+  { key: 'moxie', name: 'Moxie', abbr: 'Moxie', emoji: '🫀' },
 ];
 
 const DIE_OPTIONS: DieRating[] = ['d4', 'd6', 'd8', 'd10', 'd12'];
@@ -29,7 +29,22 @@ const dieToNum = (die?: string): string => {
 
 export const PersistentHeaderHUD: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, spendMeta, resetSparks } = useCharacterStore();
-  const [activeDrawer, setActiveDrawer] = useState<'none' | 'focus' | 'spark'>('none');
+  const [activeDrawer, setActiveDrawer] = useState<'none' | 'attributes' | 'focus' | 'spark'>('none');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: PointerEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setActiveDrawer('none');
+      }
+    };
+    if (activeDrawer !== 'none') {
+      document.addEventListener('pointerdown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('pointerdown', handleClickOutside);
+    };
+  }, [activeDrawer]);
 
   if (!activeCharacter) return null;
 
@@ -73,6 +88,17 @@ export const PersistentHeaderHUD: React.FC = () => {
     saveActiveCharacter();
   };
 
+  const handleAttributeDieChange = (attrKey: AttributeKey, newDie: DieRating) => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      attribute_dice: {
+        ...prev.attribute_dice,
+        [attrKey]: newDie,
+      },
+    }));
+    saveActiveCharacter();
+  };
+
   const handleSparkToggle = (index: number) => {
     const isFilled = index < sparks;
     let newSparks = index + 1;
@@ -88,39 +114,92 @@ export const PersistentHeaderHUD: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const toggleDrawer = (target: 'focus' | 'spark') => {
+  const toggleDrawer = (target: 'attributes' | 'focus' | 'spark') => {
     setActiveDrawer((prev) => (prev === target ? 'none' : target));
   };
 
   return (
-    <div className="flex flex-col gap-2 w-full sm:w-auto">
-      {/* Persistent Header Ribbon */}
-      <div className="flex items-center gap-2.5 flex-wrap">
-        {/* 5 Core Attributes Ribbon (Alphabetical + 3-letter Abbrs) */}
-        <div className="flex items-center gap-2 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-xs">
+    <div className="w-full flex items-center justify-between gap-4 flex-wrap" ref={containerRef}>
+      {/* Left Zone: Prominent, High-Contrast Attributes Engine Ribbon */}
+      <div className="relative">
+        <div
+          onClick={() => toggleDrawer('attributes')}
+          className={`flex items-center gap-3 bg-slate-950 px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-lg ${
+            activeDrawer === 'attributes'
+              ? 'border-indigo-400 shadow-indigo-500/30 bg-slate-900'
+              : 'border-indigo-500/40 hover:border-indigo-400/60 shadow-indigo-950/40'
+          }`}
+          title="Click to configure attribute die ratings"
+        >
           {ATTRIBUTES.map((attr, idx) => {
             const dieVal = dieToNum(dice[attr.key]);
             return (
               <React.Fragment key={attr.key}>
-                {idx > 0 && <span className="text-slate-800 font-bold">|</span>}
-                <div
-                  className="flex items-center gap-1 cursor-default hover:text-indigo-300 transition-colors"
-                  title={`${attr.name}: ${dieVal}`}
-                >
-                  <span className="font-mono font-extrabold text-[11px] text-indigo-400">{attr.abbr}</span>
-                  <span className="text-sm">{attr.emoji}</span>
-                  <span className="font-mono font-extrabold text-slate-100">{dieVal}</span>
+                {idx > 0 && <span className="text-slate-800 font-bold text-sm">|</span>}
+                <div className="flex items-center gap-1.5 font-outfit">
+                  <span className="font-mono font-black text-xs text-indigo-300 tracking-wider">
+                    {attr.abbr}
+                  </span>
+                  <span className="text-base">{attr.emoji}</span>
+                  <span className="font-mono font-extrabold text-slate-100 text-sm">
+                    {dieVal}
+                  </span>
                 </div>
               </React.Fragment>
             );
           })}
+          <ChevronDown className="w-3.5 h-3.5 text-indigo-400 shrink-0 ml-1" />
         </div>
 
+        {/* 🔮 Attributes Die Rating Configuration Popover */}
+        {activeDrawer === 'attributes' && (
+          <div className="absolute top-full left-0 mt-2 z-50 w-80 p-3.5 bg-slate-900/95 border border-indigo-500/40 rounded-xl shadow-2xl shadow-indigo-950/60 backdrop-blur-xl animate-fadeIn flex flex-col gap-2.5 text-xs">
+            <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+              <h4 className="font-outfit font-bold text-xs tracking-wider text-indigo-300 uppercase flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                Attribute Die Ratings
+              </h4>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              {ATTRIBUTES.map((attr) => {
+                const currentDie = dice[attr.key] || 'd4';
+                return (
+                  <div
+                    key={attr.key}
+                    className="flex items-center justify-between px-2.5 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 hover:border-indigo-500/30 transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{attr.emoji}</span>
+                      <span className="font-outfit font-bold text-xs text-slate-100">{attr.name}</span>
+                    </div>
+
+                    <select
+                      value={currentDie}
+                      onChange={(e) => handleAttributeDieChange(attr.key, e.target.value as DieRating)}
+                      className="bg-slate-900 text-indigo-300 font-mono font-extrabold text-xs px-2.5 py-1 rounded-md border border-indigo-500/30 outline-none cursor-pointer focus:border-indigo-400"
+                    >
+                      {DIE_OPTIONS.map((die) => (
+                        <option key={die} value={die} className="bg-slate-900 text-slate-100">
+                          {dieToNum(die)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Center Zone: Centered Focus & Spark Buttons */}
+      <div className="flex-1 flex justify-center items-center gap-3">
         {/* Focus Relative Container & Floating Popover */}
         <div className="relative">
           <button
             onClick={() => toggleDrawer('focus')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1 border rounded-lg text-xs font-semibold transition-all ${
               activeDrawer === 'focus'
                 ? 'bg-purple-900/60 border-purple-400 text-purple-100 shadow-sm shadow-purple-500/30'
                 : 'bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/30 text-purple-200'
@@ -131,9 +210,9 @@ export const PersistentHeaderHUD: React.FC = () => {
             <span className="font-mono font-extrabold text-purple-100">{focusCurrent}</span>
             <span className="text-[10px] text-purple-400 font-mono">({focusMax})</span>
             {activeDrawer === 'focus' ? (
-              <ChevronUp className="w-3 h-3 text-purple-300" />
+              <ChevronUp className="w-3.5 h-3.5 text-purple-300" />
             ) : (
-              <ChevronDown className="w-3 h-3 text-purple-400" />
+              <ChevronDown className="w-3.5 h-3.5 text-purple-400" />
             )}
           </button>
 
@@ -190,7 +269,7 @@ export const PersistentHeaderHUD: React.FC = () => {
         <div className="relative">
           <button
             onClick={() => toggleDrawer('spark')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1 border rounded-lg text-xs font-semibold transition-all ${
               activeDrawer === 'spark'
                 ? 'bg-amber-900/60 border-amber-400 text-amber-100 shadow-sm shadow-amber-500/30'
                 : 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-200'
@@ -216,9 +295,9 @@ export const PersistentHeaderHUD: React.FC = () => {
               </span>
             )}
             {activeDrawer === 'spark' ? (
-              <ChevronUp className="w-3 h-3 text-amber-300" />
+              <ChevronUp className="w-3.5 h-3.5 text-amber-300" />
             ) : (
-              <ChevronDown className="w-3 h-3 text-amber-400" />
+              <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
             )}
           </button>
 
@@ -282,6 +361,10 @@ export const PersistentHeaderHUD: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Right Zone: Spacer for symmetry */}
+      <div className="w-10 hidden md:block shrink-0" />
     </div>
   );
 };
+

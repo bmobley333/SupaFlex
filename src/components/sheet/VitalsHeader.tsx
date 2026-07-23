@@ -1,6 +1,6 @@
 // src/components/sheet/VitalsHeader.tsx
 import React from 'react';
-import { Heart, Shield, Award, Sparkles, Activity } from 'lucide-react';
+import { Shield, Sparkles, Activity } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 
 export const VitalsHeader: React.FC = () => {
@@ -13,7 +13,6 @@ export const VitalsHeader: React.FC = () => {
   const currentHp = sheet.current_vitality ?? maxHp;
   const wounds = sheet.wounds || 0;
   const maxWounds = sheet.max_wounds || 3;
-  const level = sheet.level || 1;
   const hpPercent = maxHp > 0 ? Math.min(100, Math.max(0, (currentHp / maxHp) * 100)) : 100;
 
   const handleHpChange = (delta: number) => {
@@ -42,62 +41,10 @@ export const VitalsHeader: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const handleLevelApChange = (field: 'level' | 'ap', val: number) => {
-    updateActiveSheetData((prev) => {
-      const nextVal = Math.max(0, val);
-      if (field === 'level') {
-        return { ...prev, level: nextVal, ap: nextVal * 2 };
-      }
-      return { ...prev, ap: nextVal };
-    });
-    saveActiveCharacter();
-  };
-
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-3 flex flex-col gap-3">
-      {/* Top Grid: Level, Vitality Max, Defense, Armor */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        {/* Level & AP */}
-        <div className="p-2.5 bg-slate-950/60 rounded-lg border border-slate-850 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Award className="w-4 h-4 text-amber-400" />
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Level (AP: {sheet.ap ?? level * 2})</span>
-              <span className="font-outfit font-extrabold text-xs text-slate-100">Lvl {level}</span>
-            </div>
-          </div>
-          <input
-            type="number"
-            min={1}
-            max={250}
-            value={level}
-            onChange={(e) => handleLevelApChange('level', parseInt(e.target.value) || 1)}
-            className="w-11 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-xs font-mono font-bold text-amber-300 text-center outline-none focus:border-amber-400"
-          />
-        </div>
-
-        {/* Vitality Max */}
-        <div className="p-2.5 bg-slate-950/60 rounded-lg border border-slate-850 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Heart className="w-4 h-4 text-emerald-400" />
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Vitality Max</span>
-              <span className="font-outfit font-extrabold text-xs text-emerald-400">{maxHp} HP</span>
-            </div>
-          </div>
-          <input
-            type="number"
-            min={1}
-            value={maxHp}
-            onChange={(e) => {
-              const val = parseInt(e.target.value) || 10;
-              updateActiveSheetData((prev) => ({ ...prev, vitality_max: val }));
-              saveActiveCharacter();
-            }}
-            className="w-11 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-xs font-mono font-bold text-emerald-300 text-center outline-none focus:border-emerald-400"
-          />
-        </div>
-
+      {/* Top Grid: Defense & Armor */}
+      <div className="grid grid-cols-2 gap-2.5">
         {/* Total Defense */}
         <div className="p-2.5 bg-slate-950/60 rounded-lg border border-slate-850 flex items-center gap-2">
           <Shield className="w-4 h-4 text-indigo-400" />
