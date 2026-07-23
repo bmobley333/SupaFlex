@@ -49,6 +49,7 @@ export interface CharacterSheetData {
   luck?: number; // 0-5 Luck Pool (Default 3, Max 5)
   max_luck?: number; // Default 5
   known_skillsets: string[];
+  known_individual_skills?: string[]; // Individually learned skills outside a skillset
   power_slots: AbilitySlot[];
   spell_slots: AbilitySlot[];
   gear_slots: EquipmentSlot[];
