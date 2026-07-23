@@ -15,20 +15,17 @@ export const CharacterSheetView: React.FC = () => {
       {/* Top Banner: Vitals & Level Math */}
       <VitalsHeader />
 
-      {/* Main Grid Layout: Left Column (Skillsets), Right Column (Powers, Spells, Equipment) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left Column (1/3) */}
-        <div className="flex flex-col gap-4">
-          <SkillsetsPanel />
-        </div>
+      {/* Screen-Wide Top Section: Skillsets & Derived Skills Registry */}
+      <SkillsetsPanel />
 
-        {/* Right Column (2/3) */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
-          <AbilitySlotsGrid title="Powers" type="powers" />
-          <AbilitySlotsGrid title="✨ Magic Items" type="spells" />
-          <EquipmentGrid />
-        </div>
+      {/* 2-Column Responsive Section: 🔥 POWERS & ✨ MAGIC ITEMS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <AbilitySlotsGrid title="POWERS" type="powers" />
+        <AbilitySlotsGrid title="✨ Magic Items" type="spells" />
       </div>
+
+      {/* Equipment Grid */}
+      <EquipmentGrid />
     </div>
   );
 };
