@@ -25,6 +25,33 @@ export interface EquipmentSlot {
   checked: boolean[];
 }
 
+export interface WeaponSlot {
+  id: string;
+  name: string;
+  sk: boolean;
+  mhs: 'M' | 'H' | 'S';
+  atk: string;
+  dmg: string;
+  max_blk: string;
+  effect?: string;
+}
+
+export interface ArmorData {
+  name: string;
+  block: number;
+  dodge: number;
+  ar: number;
+  effect?: string;
+}
+
+export interface ShieldData {
+  equipped: boolean;
+  name: string;
+  sk: boolean;
+  max_block: number;
+  effect?: string;
+}
+
 export interface CharacterBio {
   backstory?: string;
   personality?: string;
@@ -60,6 +87,9 @@ export interface CharacterSheetData {
   power_slots: AbilitySlot[];
   spell_slots: AbilitySlot[];
   gear_slots: EquipmentSlot[];
+  weapons?: WeaponSlot[];
+  armor_slot?: ArmorData;
+  shield_slot?: ShieldData;
   bio: CharacterBio;
 }
 
