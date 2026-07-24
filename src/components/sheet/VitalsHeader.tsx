@@ -97,7 +97,7 @@ export const VitalsHeader: React.FC = () => {
           </h3>
           {currentHp < 0 && (
             <span className="text-[10px] font-mono px-2 py-0.5 bg-rose-950 text-rose-300 rounded-full border border-rose-500/40 font-bold animate-pulse">
-              Unconscious / Negative
+              Death Check / Negative
             </span>
           )}
         </div>
@@ -180,8 +180,8 @@ export const VitalsHeader: React.FC = () => {
             </button>
           </div>
 
-          {/* Custom Math Inputs: Wounded by & Healed by */}
-          <div className="flex items-center gap-3">
+          {/* Custom Math Inputs: Wounded by & Healed by (UI DRY: Enter key submit, hidden spinners, no Apply buttons, expanded gap-6) */}
+          <div className="flex items-center gap-6">
             {/* Wounded by Input */}
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-bold text-slate-400">Wounded by:</span>
@@ -192,15 +192,9 @@ export const VitalsHeader: React.FC = () => {
                 value={damageInput}
                 onChange={(e) => setDamageInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleApplyDamage()}
-                className="w-14 bg-slate-900 text-rose-300 text-xs font-mono font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none text-center focus:border-rose-500"
+                className="w-14 bg-slate-900 text-rose-300 text-xs font-mono font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none text-center focus:border-rose-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                title="Type number and press Enter to apply damage"
               />
-              <button
-                onClick={handleApplyDamage}
-                disabled={!damageInput || parseInt(damageInput, 10) <= 0}
-                className="px-2 py-1 bg-rose-600/30 hover:bg-rose-600/40 text-rose-200 text-xs font-bold rounded-lg border border-rose-500/40 disabled:opacity-40 transition-all"
-              >
-                Apply
-              </button>
             </div>
 
             {/* Healed by Input */}
@@ -213,15 +207,9 @@ export const VitalsHeader: React.FC = () => {
                 value={healInput}
                 onChange={(e) => setHealInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleApplyHeal()}
-                className="w-14 bg-slate-900 text-emerald-300 text-xs font-mono font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none text-center focus:border-emerald-500"
+                className="w-14 bg-slate-900 text-emerald-300 text-xs font-mono font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none text-center focus:border-emerald-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                title="Type number and press Enter to apply healing"
               />
-              <button
-                onClick={handleApplyHeal}
-                disabled={!healInput || parseInt(healInput, 10) <= 0}
-                className="px-2 py-1 bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-200 text-xs font-bold rounded-lg border border-emerald-500/40 disabled:opacity-40 transition-all"
-              >
-                Apply
-              </button>
             </div>
           </div>
         </div>
