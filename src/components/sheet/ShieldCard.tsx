@@ -4,10 +4,12 @@ import { ChevronDown, ChevronUp, X, ShieldAlert, Plus, Trash2 } from 'lucide-rea
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ShieldData } from '../../types/game';
 
+const SHIELD_BLOCK_OPTIONS = [12, 16, 20, 24, 28];
+
 const STOCK_SHIELDS: Omit<ShieldData, 'equipped'>[] = [
-  { name: 'Wooden Buckler', sk: false, max_block: 4, effect: 'Light Parry Shield' },
-  { name: 'Iron Heater Shield', sk: true, max_block: 6, effect: 'Standard Combat Shield' },
-  { name: 'Tower Shield', sk: true, max_block: 10, effect: 'Heavy Coverage Greatshield' },
+  { name: 'Wooden Buckler', sk: false, max_block: 12, effect: 'Light Parry Shield' },
+  { name: 'Iron Heater Shield', sk: true, max_block: 16, effect: 'Standard Combat Shield' },
+  { name: 'Tower Shield', sk: true, max_block: 24, effect: 'Heavy Coverage Greatshield' },
 ];
 
 export const ShieldCard: React.FC = () => {
@@ -16,7 +18,7 @@ export const ShieldCard: React.FC = () => {
     equipped: false,
     name: 'Iron Shield',
     sk: true,
-    max_block: 6,
+    max_block: 16,
   };
 
   const [showManageModal, setShowManageModal] = useState(false);
@@ -192,20 +194,20 @@ export const ShieldCard: React.FC = () => {
             className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none flex-1 focus:border-cyan-500"
           />
 
-          {/* Max Block Dropdown (Right side) */}
+          {/* Max Block Dropdown (Right side: 12, 16, 20, 24, 28) */}
           <div className="p-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2 shrink-0">
             <span className="text-xs font-bold text-slate-300">Max Block</span>
             <span className="text-sm">🛡️</span>
             <select
-              value={shield.max_block || 4}
-              onChange={(e) => handleShieldUpdate({ max_block: parseInt(e.target.value) || 4 })}
+              value={shield.max_block || 16}
+              onChange={(e) => handleShieldUpdate({ max_block: parseInt(e.target.value) || 16 })}
               className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs font-mono font-extrabold text-cyan-300 text-center outline-none focus:border-cyan-400 cursor-pointer"
             >
-              <option value={4}>4</option>
-              <option value={6}>6</option>
-              <option value={8}>8</option>
-              <option value={10}>10</option>
-              <option value={12}>12</option>
+              {SHIELD_BLOCK_OPTIONS.map((val) => (
+                <option key={val} value={val}>
+                  {val}
+                </option>
+              ))}
             </select>
           </div>
         </div>

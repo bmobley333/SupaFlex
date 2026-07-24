@@ -5,6 +5,7 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { WeaponSlot } from '../../types/game';
 
 const DIE_SCALE = [4, 6, 8, 10, 12];
+const MAX_BLK_OPTIONS = ['n/a', '6', '8', '12', '16', '20', '24'];
 
 const getDieNum = (dieRating?: string): number => {
   if (!dieRating) return 4;
@@ -18,7 +19,24 @@ const getStepDownDie = (num: number): number => {
   return 4; // minimum 4
 };
 
-const calculateWeaponAtk = (mhsCategory: string, attributeDice: Record<string, string>): number => {
+const calculateWeaponAtk = (name: string, mhsCategory: string, attributeDice: Record<string, string>): number => {
+  const cleanName = (name || '').toLowerCase();
+  let baseVal = getDieNum(attributeDice?.might);
+  const cat = (mhsCategory || '').trim().toLowerCase();
+  if (cat.startsWith('h')) {
+    baseVal = getDieNum(attributeDice?.motion);
+  } else if (cat.startsWith('s')) {
+    baseVal = getDieNum(attributeDice?.mind);
+  }
+
+  // Brawl / Improvised weapons step down Atk by -1d (minimum 4)
+  if (cleanName.includes('brawl') || cleanName.includes('improvised')) {
+    return getStepDownDie(baseVal);
+  }
+  return baseVal;
+};
+
+const calculateWeaponDmg = (mhsCategory: string, attributeDice: Record<string, string>): number => {
   const cat = (mhsCategory || '').trim().toLowerCase();
   if (cat.startsWith('h')) {
     return getDieNum(attributeDice?.motion);
@@ -26,27 +44,18 @@ const calculateWeaponAtk = (mhsCategory: string, attributeDice: Record<string, s
   if (cat.startsWith('s')) {
     return getDieNum(attributeDice?.mind);
   }
-  // Default Melee (M) -> Might
   return getDieNum(attributeDice?.might);
 };
 
-const calculateWeaponDmg = (name: string, atkVal: number): number => {
-  const clean = (name || '').toLowerCase();
-  if (clean.includes('brawl') || clean.includes('improvised')) {
-    return getStepDownDie(atkVal);
-  }
-  return atkVal;
-};
-
 const STOCK_WEAPONS: Omit<WeaponSlot, 'id'>[] = [
-  { name: 'Shortsword', sk: true, mhs: 'M', atk: '8', dmg: '8', max_blk: '4', effect: 'Light Melee Weapon' },
-  { name: 'Broadsword', sk: true, mhs: 'M', atk: '8', dmg: '8', max_blk: '6', effect: 'Standard One-Handed Sword' },
-  { name: 'Greatsword', sk: true, mhs: 'M', atk: '8', dmg: '8', max_blk: '8', effect: 'Two-Handed Heavy Cleaver' },
-  { name: 'Dagger', sk: false, mhs: 'M', atk: '8', dmg: '8', max_blk: '2', effect: 'Concealable Finesse Blade' },
-  { name: 'Brawl / Unarmed', sk: false, mhs: 'M', atk: '8', dmg: '6', max_blk: '4', effect: 'Unarmed Combat (-1d Dmg)' },
-  { name: 'Javelin', sk: true, mhs: 'H', atk: '8', dmg: '8', max_blk: '4', effect: 'Hurled Spear' },
-  { name: 'Longbow', sk: true, mhs: 'S', atk: '6', dmg: '6', max_blk: '0', effect: 'Shot Ranged Bow' },
-  { name: 'Improvised Weapon', sk: false, mhs: 'M', atk: '8', dmg: '6', max_blk: '4', effect: 'Ad-lib Object (-1d Dmg)' },
+  { name: 'Shortsword', sk: true, mhs: 'M', atk: '8', dmg: '8', max_blk: '6', effect: 'Light Melee Sword' },
+  { name: 'Broadsword', sk: true, mhs: 'M', atk: '8', dmg: '8', max_blk: '8', effect: 'Standard One-Handed Sword' },
+  { name: 'Greatsword', sk: true, mhs: 'M', atk: '8', dmg: '8', max_blk: '16', effect: 'Two-Handed Heavy Cleaver' },
+  { name: 'Dagger', sk: false, mhs: 'M', atk: '8', dmg: '8', max_blk: '6', effect: 'Concealable Finesse Blade' },
+  { name: 'Brawl / Unarmed', sk: false, mhs: 'M', atk: '6', dmg: '8', max_blk: '6', effect: 'Unarmed Combat (-1d Atk)' },
+  { name: 'Javelin', sk: true, mhs: 'H', atk: '8', dmg: '8', max_blk: '6', effect: 'Hurled Spear' },
+  { name: 'Longbow', sk: true, mhs: 'S', atk: '6', dmg: '6', max_blk: 'n/a', effect: 'Shot Ranged Bow' },
+  { name: 'Improvised Weapon', sk: false, mhs: 'M', atk: '6', dmg: '8', max_blk: '6', effect: 'Ad-lib Object (-1d Atk)' },
 ];
 
 export const WeaponsCard: React.FC = () => {
@@ -63,7 +72,7 @@ export const WeaponsCard: React.FC = () => {
   const [showManageModal, setShowManageModal] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customMhs, setCustomMhs] = useState<'M' | 'H' | 'S'>('M');
-  const [customMaxBlk, setCustomMaxBlk] = useState('4');
+  const [customMaxBlk, setCustomMaxBlk] = useState('6');
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -110,8 +119,8 @@ export const WeaponsCard: React.FC = () => {
 
   const handleCreateCustom = () => {
     if (!customName.trim()) return;
-    const atkVal = calculateWeaponAtk(customMhs, attributeDice);
-    const dmgVal = calculateWeaponDmg(customName, atkVal);
+    const atkVal = calculateWeaponAtk(customName.trim(), customMhs, attributeDice);
+    const dmgVal = calculateWeaponDmg(customMhs, attributeDice);
     handleAddWeapon({
       name: customName.trim(),
       sk: true,
@@ -121,7 +130,7 @@ export const WeaponsCard: React.FC = () => {
       max_blk: customMaxBlk,
     });
     setCustomName('');
-    setCustomMaxBlk('4');
+    setCustomMaxBlk('6');
   };
 
   return (
@@ -201,12 +210,11 @@ export const WeaponsCard: React.FC = () => {
                         onChange={(e) => setCustomMaxBlk(e.target.value)}
                         className="bg-slate-900 text-slate-300 text-xs px-2 py-1.5 rounded-lg border border-slate-700 font-mono outline-none"
                       >
-                        <option value="0">Max Blk: 0</option>
-                        <option value="4">Max Blk: 4</option>
-                        <option value="6">Max Blk: 6</option>
-                        <option value="8">Max Blk: 8</option>
-                        <option value="10">Max Blk: 10</option>
-                        <option value="12">Max Blk: 12</option>
+                        {MAX_BLK_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            Max Blk: {opt}
+                          </option>
+                        ))}
                       </select>
                       <button
                         onClick={handleCreateCustom}
@@ -224,8 +232,8 @@ export const WeaponsCard: React.FC = () => {
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Standard Weapons Arsenal</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {STOCK_WEAPONS.map((wep, idx) => {
-                        const calculatedAtk = calculateWeaponAtk(wep.mhs, attributeDice);
-                        const calculatedDmg = calculateWeaponDmg(wep.name, calculatedAtk);
+                        const calculatedAtk = calculateWeaponAtk(wep.name, wep.mhs, attributeDice);
+                        const calculatedDmg = calculateWeaponDmg(wep.mhs, attributeDice);
                         return (
                           <div
                             key={idx}
@@ -291,8 +299,8 @@ export const WeaponsCard: React.FC = () => {
 
           {/* Weapons Rows */}
           {weapons.map((item) => {
-            const calculatedAtk = calculateWeaponAtk(item.mhs, attributeDice);
-            const calculatedDmg = calculateWeaponDmg(item.name, calculatedAtk);
+            const calculatedAtk = calculateWeaponAtk(item.name, item.mhs, attributeDice);
+            const calculatedDmg = calculateWeaponDmg(item.mhs, attributeDice);
 
             return (
               <div
@@ -329,34 +337,33 @@ export const WeaponsCard: React.FC = () => {
                   className="bg-slate-900 text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-800 outline-none focus:border-rose-500 w-full"
                 />
 
-                {/* Atk Cell (Auto-Updated derived from Attribute) */}
+                {/* Atk Cell (Auto-Updated derived from Attribute, -1d for Brawl/Improvised) */}
                 <div
                   className="bg-slate-950 border border-slate-800 text-rose-200 text-xs font-mono font-extrabold text-center py-1 rounded"
-                  title="Auto-updated from character attributes (Melee=Might, Hurled=Motion, Shot=Mind)"
+                  title="Auto-updated from character attributes (-1d for Brawl / Improvised)"
                 >
                   {calculatedAtk}
                 </div>
 
-                {/* Dmg Cell (Auto-Updated derived from Atk & Brawl/Improvised rules) */}
+                {/* Dmg Cell (Auto-Updated derived from Attribute) */}
                 <div
                   className="bg-slate-950 border border-slate-800 text-rose-300 text-xs font-mono font-extrabold text-center py-1 rounded"
-                  title="Auto-updated matching Atk (or -1d scale for Brawl / Improvised)"
+                  title="Auto-updated from character attributes (Melee=Might, Hurled=Motion, Shot=Mind)"
                 >
                   {calculatedDmg}
                 </div>
 
                 {/* Max Blk Dropdown */}
                 <select
-                  value={item.max_blk ?? '4'}
+                  value={item.max_blk ?? '6'}
                   onChange={(e) => handleWeaponChange(item.id, { max_blk: e.target.value })}
                   className="bg-slate-900 text-slate-200 text-xs font-mono font-extrabold px-1 py-1 rounded border border-slate-800 outline-none text-center focus:border-rose-500 cursor-pointer"
                 >
-                  <option value="0">0</option>
-                  <option value="4">4</option>
-                  <option value="6">6</option>
-                  <option value="8">8</option>
-                  <option value="10">10</option>
-                  <option value="12">12</option>
+                  {MAX_BLK_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
                 </select>
 
                 {/* Delete Button */}
