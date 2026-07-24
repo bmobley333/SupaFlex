@@ -32,18 +32,11 @@ const HUD_ITEMS: HUDItem[] = [
     borderColorClass: 'hover:border-rose-500/50 hover:bg-rose-950/40 text-slate-300',
   },
   {
-    id: 'section-powers',
-    label: 'Powers',
-    icons: '🔥',
+    id: 'section-powers-magic',
+    label: 'Powers & Magic Items',
+    icons: '🔥 ✨',
     activeColorClass: 'bg-amber-900/60 text-amber-200 border-amber-400 shadow-amber-500/30',
     borderColorClass: 'hover:border-amber-500/50 hover:bg-amber-950/40 text-slate-300',
-  },
-  {
-    id: 'section-magic-items',
-    label: 'Magic Items',
-    icons: '✨',
-    activeColorClass: 'bg-cyan-900/60 text-cyan-200 border-cyan-400 shadow-cyan-500/30',
-    borderColorClass: 'hover:border-cyan-500/50 hover:bg-cyan-950/40 text-slate-300',
   },
 ];
 
@@ -54,7 +47,7 @@ export const SectionJumpHUD: React.FC = () => {
   useEffect(() => {
     const observerOptions: IntersectionObserverInit = {
       root: null,
-      rootMargin: '-20% 0px -60% 0px',
+      rootMargin: '-20% 0px -50% 0px',
       threshold: 0,
     };
 
@@ -96,7 +89,7 @@ export const SectionJumpHUD: React.FC = () => {
       )}
 
       {/* Glassmorphic Pill Dock */}
-      <div className="pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-slate-800 shadow-2xl rounded-full px-3 py-1.5 flex items-center gap-1.5 transition-all">
+      <div className="pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-slate-800 shadow-2xl rounded-full px-3.5 py-1.5 flex items-center gap-2 transition-all">
         {HUD_ITEMS.map((item) => {
           const isActive = activeSection === item.id;
           return (
