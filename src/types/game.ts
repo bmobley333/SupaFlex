@@ -88,6 +88,102 @@ export const getArFromRequirement = (reqStr: string): string => {
   return '🧥4';
 };
 
+export interface SupabaseWeapon {
+  id?: number;
+  name: string;
+  type: string;
+  requirement: string;
+  atk: string;
+  dmg: string;
+  max_block: string;
+  cost: string;
+  created_at?: string;
+}
+
+export interface WeaponVariantOption {
+  weaponId?: number;
+  name: string;
+  variantType: 'Melee' | 'Hurled' | 'Shot';
+  mhs: 'M' | 'H' | 'S';
+  requirementEmoji: string;
+  requirementNumber: number;
+  requirementStr: string;
+  atkEmoji: string;
+  dmgEmoji: string;
+  max_block: string;
+  cost: string;
+  rawType: string;
+}
+
+const parseAttributeNum = (dieRating?: string): number => {
+  if (!dieRating) return 4;
+  const num = parseInt(dieRating.replace('d', ''), 10);
+  return isNaN(num) ? 4 : num;
+};
+
+export const isWeaponVariantLearnable = (
+  variant: WeaponVariantOption,
+  attributeDice: Record<string, string>
+): boolean => {
+  const reqNum = variant.requirementNumber;
+  if (variant.variantType === 'Melee') {
+    return parseAttributeNum(attributeDice.might) >= reqNum;
+  }
+  if (variant.variantType === 'Hurled') {
+    return parseAttributeNum(attributeDice.motion) >= reqNum;
+  }
+  if (variant.variantType === 'Shot') {
+    return parseAttributeNum(attributeDice.mind) >= reqNum;
+  }
+  return true;
+};
+
+export const splitWeaponIntoVariants = (weapon: SupabaseWeapon): WeaponVariantOption[] => {
+  const types = (weapon.type || 'Melee').split(',').map((t) => t.trim());
+  const reqParts = (weapon.requirement || '').split(',').map((r) => r.trim());
+
+  return types.map((t, idx) => {
+    let variantType: 'Melee' | 'Hurled' | 'Shot' = 'Melee';
+    let mhs: 'M' | 'H' | 'S' = 'M';
+    let emoji = '💪';
+
+    if (t.toLowerCase() === 'hurled') {
+      variantType = 'Hurled';
+      mhs = 'H';
+      emoji = '🏃';
+    } else if (t.toLowerCase() === 'shot') {
+      variantType = 'Shot';
+      mhs = 'S';
+      emoji = '👁️';
+    }
+
+    const specificReqStr = reqParts[idx] || reqParts[0] || `${emoji} 4`;
+    const matchNum = specificReqStr.match(/\d+/);
+    const reqNum = matchNum ? parseInt(matchNum[0], 10) : 4;
+
+    let blockVal = weapon.max_block || 'n/a';
+    if (variantType !== 'Melee') {
+      blockVal = 'n/a';
+    }
+
+    return {
+      weaponId: weapon.id,
+      name: weapon.name,
+      variantType,
+      mhs,
+      requirementEmoji: emoji,
+      requirementNumber: reqNum,
+      requirementStr: `${emoji} ${reqNum}`,
+      atkEmoji: emoji,
+      dmgEmoji: emoji,
+      max_block: blockVal,
+      cost: weapon.cost || '1g',
+      rawType: weapon.type,
+    };
+  });
+};
+
+
 
 export interface ShieldData {
   equipped: boolean;
