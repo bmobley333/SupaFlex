@@ -60,7 +60,7 @@ export const MovementRateCard: React.FC = () => {
         {/* Shield Field */}
         <div className="p-2.5 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center justify-between">
           <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-            Shield
+            Shield Drawn
           </span>
           <select
             value={mrData.shield ?? 0}
