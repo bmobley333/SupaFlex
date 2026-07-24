@@ -2,7 +2,7 @@
 // Supabase Data Access Gateway for SupaFlex
 
 import { supabase } from '../lib/supabase';
-import { Character, Power, MagicItem, Skillset, CharacterSheetData, DieRating, SupabaseArmor, SupabaseWeapon } from '../types/game';
+import { Character, Power, MagicItem, Skillset, CharacterSheetData, DieRating, SupabaseArmor, SupabaseWeapon, SupabaseShield } from '../types/game';
 
 export const createDefaultSheetData = (): CharacterSheetData => ({
   level: 1,
@@ -282,6 +282,34 @@ export const gameApi = {
       throw error;
     }
     return data as SupabaseWeapon;
+  },
+
+  // --- SHIELDS CATALOG ---
+  async getShields(): Promise<SupabaseShield[]> {
+    const { data, error } = await supabase
+      .from('shields')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('[gameApi] Error fetching shields catalog:', error);
+      return [];
+    }
+    return (data || []) as SupabaseShield[];
+  },
+
+  async createShield(newShield: Omit<SupabaseShield, 'id' | 'created_at'>): Promise<SupabaseShield> {
+    const { data, error } = await supabase
+      .from('shields')
+      .insert(newShield)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[gameApi] Error creating custom shield:', error);
+      throw error;
+    }
+    return data as SupabaseShield;
   },
 
   // --- HEALTH CHECK ---

@@ -88,6 +88,59 @@ export const getArFromRequirement = (reqStr: string): string => {
   return '🧥4';
 };
 
+export interface SupabaseShield {
+  id?: number;
+  name: string;
+  requirement: string;
+  max_block: string;
+  mr: string;
+  description?: string;
+  cost: string;
+  created_at?: string;
+}
+
+export const REQUIREMENT_TO_SHIELD_MR_MAP: Record<number, string> = {
+  4: '👣0',
+  6: '👣-1',
+  8: '👣-2',
+  10: '👣-3',
+  12: '👣-4',
+};
+
+export const REQUIREMENT_TO_SHIELD_MAX_BLOCK_MAP: Record<number, string> = {
+  4: '🛡️12',
+  6: '🛡️16',
+  8: '🛡️20',
+  10: '🛡️24',
+  12: '🛡️28',
+};
+
+export const getShieldMrFromRequirement = (reqStr: string): string => {
+  const match = reqStr.match(/\d+/);
+  if (match) {
+    const num = parseInt(match[0], 10);
+    return REQUIREMENT_TO_SHIELD_MR_MAP[num] || '👣0';
+  }
+  return '👣0';
+};
+
+export const getShieldMaxBlockFromRequirement = (reqStr: string): string => {
+  const match = reqStr.match(/\d+/);
+  if (match) {
+    const num = parseInt(match[0], 10);
+    return REQUIREMENT_TO_SHIELD_MAX_BLOCK_MAP[num] || '🛡️12';
+  }
+  return '🛡️12';
+};
+
+export const isRequirementLearnable = (reqStr: string, attributeDice: Record<string, string>): boolean => {
+  const match = reqStr.match(/\d+/);
+  if (!match) return true;
+  const reqNum = parseInt(match[0], 10);
+  const mightRating = attributeDice?.might ? parseInt(attributeDice.might.replace('d', ''), 10) : 4;
+  return mightRating >= reqNum;
+};
+
 export interface SupabaseWeapon {
   id?: number;
   name: string;
