@@ -7,6 +7,21 @@ import { WeaponSlot } from '../../types/game';
 const DIE_SCALE = [4, 6, 8, 10, 12];
 const MAX_BLK_OPTIONS = ['n/a', '6', '8', '12', '16', '20', '24'];
 
+const MHS_COLORS: Record<string, { select: string; badge: string }> = {
+  M: {
+    select: 'bg-rose-950/80 text-rose-300 border-rose-500/40 focus:border-rose-400',
+    badge: 'bg-rose-950/70 text-rose-300 border-rose-500/40',
+  },
+  H: {
+    select: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40 focus:border-emerald-400',
+    badge: 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40',
+  },
+  S: {
+    select: 'bg-amber-950/80 text-amber-300 border-amber-500/40 focus:border-amber-400',
+    badge: 'bg-amber-950/70 text-amber-300 border-amber-500/40',
+  },
+};
+
 const getDieNum = (dieRating?: string): number => {
   if (!dieRating) return 4;
   const num = parseInt(dieRating.replace('d', ''), 10);
@@ -205,11 +220,13 @@ export const WeaponsCard: React.FC = () => {
                       <select
                         value={customMhs}
                         onChange={(e) => setCustomMhs(e.target.value as any)}
-                        className="bg-slate-900 text-rose-300 text-xs px-2 py-1.5 rounded-lg border border-slate-700 font-mono font-bold outline-none"
+                        className={`text-xs px-2 py-1.5 rounded-lg border font-mono font-bold outline-none cursor-pointer transition-all ${
+                          MHS_COLORS[customMhs]?.select || MHS_COLORS.M.select
+                        }`}
                       >
-                        <option value="M">Melee (Might)</option>
-                        <option value="H">Hurled (Motion)</option>
-                        <option value="S">Shot (Mind)</option>
+                        <option value="M" className="bg-slate-900 text-rose-300">Melee (Might)</option>
+                        <option value="H" className="bg-slate-900 text-emerald-300">Hurled (Motion)</option>
+                        <option value="S" className="bg-slate-900 text-amber-300">Shot (Mind)</option>
                       </select>
                       <select
                         value={customMaxBlk}
@@ -240,6 +257,9 @@ export const WeaponsCard: React.FC = () => {
                       {STOCK_WEAPONS.map((wep, idx) => {
                         const calculatedAtk = calculateWeaponAtk(wep.name, wep.mhs, attributeDice);
                         const calculatedDmg = calculateWeaponDmg(wep.name, wep.mhs, attributeDice);
+                        const catKey = wep.mhs.startsWith('H') ? 'H' : wep.mhs.startsWith('S') ? 'S' : 'M';
+                        const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
+
                         return (
                           <div
                             key={idx}
@@ -248,7 +268,7 @@ export const WeaponsCard: React.FC = () => {
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="font-bold text-xs text-slate-100">{wep.name}</span>
-                                <span className="text-[10px] font-mono px-1.5 py-0.2 bg-rose-950/60 text-rose-300 rounded border border-rose-500/30">
+                                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border font-semibold ${badgeClass}`}>
                                   {wep.mhs === 'M' ? 'Melee' : wep.mhs === 'H' ? 'Hurled' : 'Shot'}
                                 </span>
                               </div>
@@ -307,6 +327,12 @@ export const WeaponsCard: React.FC = () => {
           {weapons.map((item) => {
             const calculatedAtk = calculateWeaponAtk(item.name, item.mhs, attributeDice);
             const calculatedDmg = calculateWeaponDmg(item.name, item.mhs, attributeDice);
+            const catKey = (item.mhs as string).startsWith('H') || (item.mhs as string) === 'Hurled'
+              ? 'H'
+              : (item.mhs as string).startsWith('S') || (item.mhs as string) === 'Shot'
+              ? 'S'
+              : 'M';
+            const selectClass = MHS_COLORS[catKey]?.select || MHS_COLORS.M.select;
 
             return (
               <div
@@ -324,15 +350,15 @@ export const WeaponsCard: React.FC = () => {
                   />
                 </div>
 
-                {/* M/H/S Full-Name Dropdown */}
+                {/* Color-Coded M/H/S Full-Name Dropdown */}
                 <select
-                  value={(item.mhs as string) === 'M' || (item.mhs as string) === 'Melee' ? 'M' : (item.mhs as string) === 'H' || (item.mhs as string) === 'Hurled' ? 'H' : 'S'}
+                  value={catKey}
                   onChange={(e) => handleWeaponChange(item.id, { mhs: e.target.value as 'M' | 'H' | 'S' })}
-                  className="bg-slate-900 text-rose-300 text-xs font-semibold px-1 py-1 rounded border border-slate-800 outline-none text-center focus:border-rose-500 cursor-pointer"
+                  className={`text-xs font-bold px-1 py-1 rounded border outline-none text-center cursor-pointer transition-all ${selectClass}`}
                 >
-                  <option value="M">Melee</option>
-                  <option value="H">Hurled</option>
-                  <option value="S">Shot</option>
+                  <option value="M" className="bg-slate-900 text-rose-300">Melee</option>
+                  <option value="H" className="bg-slate-900 text-emerald-300">Hurled</option>
+                  <option value="S" className="bg-slate-900 text-amber-300">Shot</option>
                 </select>
 
                 {/* Weapon Name Input */}
