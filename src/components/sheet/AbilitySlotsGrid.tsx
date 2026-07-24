@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, Search, X, Check, Star, Plus, Edit2, Lock, Save, GitBranch, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, X, Check, Star, Plus, Edit2, Lock, Save, GitBranch, Sparkles, Trash2 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AbilitySlot, Power, MagicItem } from '../../types/game';
 
@@ -155,6 +155,52 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setIsCreatingCustom(true);
   };
 
+  // Custom Power Table Creation State (Powers Mode Only)
+  const [isCreatingTable, setIsCreatingTable] = useState(false);
+  const [newTableName, setNewTableName] = useState('');
+  const [newTableSub, setNewTableSub] = useState('class');
+
+  const handleOpenTableCreation = () => {
+    setNewTableName('');
+    const validSub = ['class', 'racial', 'combat_styles', 'luck'].includes(selectedCategory.toLowerCase())
+      ? selectedCategory.toLowerCase()
+      : 'class';
+    setNewTableSub(validSub);
+    setIsCreatingTable(true);
+  };
+
+  const handleSaveCustomTable = () => {
+    if (!newTableName.trim()) return;
+    const rawClean = newTableName.trim();
+    const cleanTblName = rawClean.startsWith('📁') ? rawClean : `📁 ${rawClean}`;
+
+    updateActiveSheetData((prev) => {
+      const existing = prev.custom_power_tables || [];
+      const updated = [...existing.filter((t) => t.name !== cleanTblName), { name: cleanTblName, sub: newTableSub }];
+      return { ...prev, custom_power_tables: updated };
+    });
+    saveActiveCharacter();
+
+    setActiveTableName(cleanTblName);
+    setIsCreatingTable(false);
+    setNewTableName('');
+    
+    // Auto-open custom power creation drawer pre-filled
+    handleOpenCustomCreation();
+  };
+
+  const handleDeleteCustomTable = (tableName: string) => {
+    updateActiveSheetData((prev) => {
+      const existingTables = prev.custom_power_tables || [];
+      const updatedTables = existingTables.filter((t) => t.name !== tableName);
+      return { ...prev, custom_power_tables: updatedTables };
+    });
+    saveActiveCharacter();
+    if (activeTableName === tableName) {
+      setActiveTableName(null);
+    }
+  };
+
   // Cursor-aware icon insertion helper
   const handleInsertIcon = (
     emoji: string,
@@ -183,6 +229,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       ? activeCharacter?.sheet_data?.custom_powers || []
       : activeCharacter?.sheet_data?.custom_magic_items || [];
 
+  const customPowerTables = activeCharacter?.sheet_data?.custom_power_tables || [];
   const abilityOverrides = activeCharacter?.sheet_data?.ability_overrides || {};
 
   // Combine stock catalog with custom created items and apply overrides
@@ -239,6 +286,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     const { baseName, version } = parseAbilityVersion(rawClean);
     const versionedName = `${baseName} v${version}`;
 
+    const targetTable = activeTableName || (type === 'powers' ? '📁 Custom Powers' : '📁 Custom Magic Items');
+
     const newItem: Power | MagicItem = {
       id: Date.now(),
       name: versionedName,
@@ -251,7 +300,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       created_at: new Date().toISOString(),
       dropdown: null,
       sub: type === 'powers' ? 'class' : null,
-      table_name: type === 'powers' ? '📁 Custom Powers' : '📁 Custom Magic Items',
+      table_name: targetTable,
     };
 
     updateActiveSheetData((prev) => {
@@ -292,7 +341,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setCreateEffect('');
     setIsVersionUpgrade(false);
     setIsCreatingCustom(false);
-    setActiveTableName(type === 'powers' ? '📁 Custom Powers' : '📁 Custom Magic Items');
   };
 
   // 1-Click Version Upgrade Handler (Pre-fills creation form with v{N+1} and locks name)
@@ -379,13 +427,27 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return true;
   });
 
-  // 2. Group items under category by table_name
+  // 2. Group items under category by table_name (including empty custom power tables)
   const groupedTables = categoryFilteredCatalog.reduce((acc, item) => {
     const tableName = item.table_name || (type === 'powers' ? 'General Powers' : 'General Magic Items');
     if (!acc[tableName]) acc[tableName] = [];
     acc[tableName].push(item);
     return acc;
   }, {} as Record<string, (Power | MagicItem)[]>);
+
+  if (type === 'powers') {
+    customPowerTables.forEach((tbl) => {
+      if (selectedCategory === 'favorites') {
+        if (favoriteTables.includes(tbl.name) && !groupedTables[tbl.name]) {
+          groupedTables[tbl.name] = [];
+        }
+      } else if (selectedCategory === 'all' || tbl.sub.toLowerCase().includes(selectedCategory.toLowerCase())) {
+        if (!groupedTables[tbl.name]) {
+          groupedTables[tbl.name] = [];
+        }
+      }
+    });
+  }
 
   // 3. Extract table names and filter by left pane tableSearchQuery
   const allTableNames = Object.keys(groupedTables);
@@ -539,21 +601,80 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   <div className="flex flex-col md:flex-row gap-3 min-h-[380px] max-h-[440px]">
                     {/* LEFT MASTER PANE: Table Selection Index (Auto-Wrapping Table Names) */}
                     <div className="w-full md:w-64 shrink-0 flex flex-col gap-2 border-b md:border-b-0 md:border-r border-slate-800 pb-2 md:pb-0 md:pr-3">
-                      <div className="flex items-center gap-2 bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800 focus-within:border-indigo-500/50">
-                        <Search className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                        <input
-                          type="text"
-                          value={tableSearchQuery}
-                          onChange={(e) => setTableSearchQuery(e.target.value)}
-                          placeholder="Search tables..."
-                          className="bg-transparent text-xs font-semibold text-slate-200 outline-none w-full placeholder:text-slate-500"
-                        />
-                        {tableSearchQuery && (
-                          <button onClick={() => setTableSearchQuery('')} className="text-slate-500 hover:text-slate-300">
-                            <X className="w-3 h-3" />
+                      {/* Search Bar & 📁 + Table Button */}
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex-1 flex items-center gap-2 bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800 focus-within:border-indigo-500/50 min-w-0">
+                          <Search className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                          <input
+                            type="text"
+                            value={tableSearchQuery}
+                            onChange={(e) => setTableSearchQuery(e.target.value)}
+                            placeholder="Search tables..."
+                            className="bg-transparent text-xs font-semibold text-slate-200 outline-none w-full placeholder:text-slate-500"
+                          />
+                          {tableSearchQuery && (
+                            <button onClick={() => setTableSearchQuery('')} className="text-slate-500 hover:text-slate-300">
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                        {type === 'powers' && (
+                          <button
+                            onClick={handleOpenTableCreation}
+                            className="px-2 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-500/40 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 shrink-0 transition-colors flex items-center gap-1 shadow-sm"
+                            title="Create new power table in category"
+                          >
+                            <Plus className="w-3 h-3" />
+                            Table
                           </button>
                         )}
                       </div>
+
+                      {/* Inline Custom Table Creation Drawer Form */}
+                      {type === 'powers' && isCreatingTable && (
+                        <div className="p-2.5 bg-slate-950/90 rounded-xl border border-indigo-500/40 flex flex-col gap-2 shadow-md animate-fadeIn">
+                          <div className="flex items-center justify-between border-b border-indigo-500/20 pb-1">
+                            <span className="font-outfit font-bold text-[11px] text-indigo-300 flex items-center gap-1">
+                              📁 Create Custom Power Table
+                            </span>
+                            <button onClick={() => setIsCreatingTable(false)} className="text-slate-400 hover:text-slate-200">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            value={newTableName}
+                            onChange={(e) => setNewTableName(e.target.value)}
+                            placeholder="Table Name (e.g. Shadow Powers)..."
+                            className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-100 outline-none focus:border-indigo-400"
+                          />
+                          <div className="flex items-center gap-1.5">
+                            <label className="text-[10px] text-slate-400 font-bold">Category:</label>
+                            <select
+                              value={newTableSub}
+                              onChange={(e) => setNewTableSub(e.target.value)}
+                              className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 text-[10px] text-indigo-300 outline-none flex-1 font-semibold"
+                            >
+                              <option value="class">👤 Class</option>
+                              <option value="racial">🧬 Racial</option>
+                              <option value="combat_styles">⚔️ Combat Styles</option>
+                              <option value="luck">🍀 Luck</option>
+                            </select>
+                          </div>
+                          <div className="flex items-center justify-end gap-1.5 pt-1">
+                            <button onClick={() => setIsCreatingTable(false)} className="px-2 py-0.5 text-[10px] text-slate-400 hover:text-slate-200">
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleSaveCustomTable}
+                              disabled={!newTableName.trim()}
+                              className="px-2.5 py-0.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-[10px] rounded transition-all shadow-sm"
+                            >
+                              Save Table
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1">
                         {filteredTableNames.length > 0 ? (
@@ -564,6 +685,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             ).length;
                             const isSelected = effectiveActiveTable === tblName;
                             const isFavorited = favoriteTables.includes(tblName);
+                            const isCustomTable = customPowerTables.some((t) => t.name === tblName);
 
                             return (
                               <div
@@ -600,6 +722,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           isFavorited ? 'fill-amber-400 text-amber-400' : 'text-slate-500 hover:text-amber-400'
                                         }`}
                                       />
+                                    </button>
+                                  )}
+                                  {type === 'powers' && isCustomTable && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteCustomTable(tblName);
+                                      }}
+                                      className="p-1 hover:bg-rose-950 rounded text-slate-500 hover:text-rose-400 transition-colors"
+                                      title="Delete custom table"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
                                     </button>
                                   )}
                                 </div>
