@@ -29,22 +29,28 @@ const calculateWeaponAtk = (name: string, mhsCategory: string, attributeDice: Re
     baseVal = getDieNum(attributeDice?.mind);
   }
 
-  // Brawl / Improvised weapons step down Atk by -1d (minimum 4)
-  if (cleanName.includes('brawl') || cleanName.includes('improvised')) {
+  // Improvised weapons step down Atk by -1d (minimum 4)
+  if (cleanName.includes('improvised')) {
     return getStepDownDie(baseVal);
   }
   return baseVal;
 };
 
-const calculateWeaponDmg = (mhsCategory: string, attributeDice: Record<string, string>): number => {
+const calculateWeaponDmg = (name: string, mhsCategory: string, attributeDice: Record<string, string>): number => {
+  const cleanName = (name || '').toLowerCase();
+  let baseVal = getDieNum(attributeDice?.might);
   const cat = (mhsCategory || '').trim().toLowerCase();
   if (cat.startsWith('h')) {
-    return getDieNum(attributeDice?.motion);
+    baseVal = getDieNum(attributeDice?.motion);
+  } else if (cat.startsWith('s')) {
+    baseVal = getDieNum(attributeDice?.mind);
   }
-  if (cat.startsWith('s')) {
-    return getDieNum(attributeDice?.mind);
+
+  // Brawl / Unarmed weapons step down Dmg by -1d (minimum 4)
+  if (cleanName.includes('brawl') || cleanName.includes('unarmed')) {
+    return getStepDownDie(baseVal);
   }
-  return getDieNum(attributeDice?.might);
+  return baseVal;
 };
 
 const STOCK_WEAPONS: Omit<WeaponSlot, 'id'>[] = [
@@ -52,7 +58,7 @@ const STOCK_WEAPONS: Omit<WeaponSlot, 'id'>[] = [
   { name: 'Broadsword', sk: true, mhs: 'M', atk: '8', dmg: '8', max_blk: '8', effect: 'Standard One-Handed Sword' },
   { name: 'Greatsword', sk: true, mhs: 'M', atk: '8', dmg: '8', max_blk: '16', effect: 'Two-Handed Heavy Cleaver' },
   { name: 'Dagger', sk: false, mhs: 'M', atk: '8', dmg: '8', max_blk: '6', effect: 'Concealable Finesse Blade' },
-  { name: 'Brawl / Unarmed', sk: false, mhs: 'M', atk: '6', dmg: '8', max_blk: '6', effect: 'Unarmed Combat (-1d Atk)' },
+  { name: 'Brawl / Unarmed', sk: false, mhs: 'M', atk: '8', dmg: '6', max_blk: '6', effect: 'Unarmed Combat (-1d Dmg)' },
   { name: 'Javelin', sk: true, mhs: 'H', atk: '8', dmg: '8', max_blk: '6', effect: 'Hurled Spear' },
   { name: 'Longbow', sk: true, mhs: 'S', atk: '6', dmg: '6', max_blk: 'n/a', effect: 'Shot Ranged Bow' },
   { name: 'Improvised Weapon', sk: false, mhs: 'M', atk: '6', dmg: '8', max_blk: '6', effect: 'Ad-lib Object (-1d Atk)' },
@@ -120,7 +126,7 @@ export const WeaponsCard: React.FC = () => {
   const handleCreateCustom = () => {
     if (!customName.trim()) return;
     const atkVal = calculateWeaponAtk(customName.trim(), customMhs, attributeDice);
-    const dmgVal = calculateWeaponDmg(customMhs, attributeDice);
+    const dmgVal = calculateWeaponDmg(customName.trim(), customMhs, attributeDice);
     handleAddWeapon({
       name: customName.trim(),
       sk: true,
@@ -233,7 +239,7 @@ export const WeaponsCard: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {STOCK_WEAPONS.map((wep, idx) => {
                         const calculatedAtk = calculateWeaponAtk(wep.name, wep.mhs, attributeDice);
-                        const calculatedDmg = calculateWeaponDmg(wep.mhs, attributeDice);
+                        const calculatedDmg = calculateWeaponDmg(wep.name, wep.mhs, attributeDice);
                         return (
                           <div
                             key={idx}
@@ -300,7 +306,7 @@ export const WeaponsCard: React.FC = () => {
           {/* Weapons Rows */}
           {weapons.map((item) => {
             const calculatedAtk = calculateWeaponAtk(item.name, item.mhs, attributeDice);
-            const calculatedDmg = calculateWeaponDmg(item.mhs, attributeDice);
+            const calculatedDmg = calculateWeaponDmg(item.name, item.mhs, attributeDice);
 
             return (
               <div
@@ -337,18 +343,18 @@ export const WeaponsCard: React.FC = () => {
                   className="bg-slate-900 text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-800 outline-none focus:border-rose-500 w-full"
                 />
 
-                {/* Atk Cell (Auto-Updated derived from Attribute, -1d for Brawl/Improvised) */}
+                {/* Atk Cell (Auto-Updated: Might -1d for Improvised, full rating otherwise) */}
                 <div
                   className="bg-slate-950 border border-slate-800 text-rose-200 text-xs font-mono font-extrabold text-center py-1 rounded"
-                  title="Auto-updated from character attributes (-1d for Brawl / Improvised)"
+                  title="Auto-updated from character attributes (-1d for Improvised Weapon)"
                 >
                   {calculatedAtk}
                 </div>
 
-                {/* Dmg Cell (Auto-Updated derived from Attribute) */}
+                {/* Dmg Cell (Auto-Updated: Might -1d for Brawl / Unarmed, full rating otherwise) */}
                 <div
                   className="bg-slate-950 border border-slate-800 text-rose-300 text-xs font-mono font-extrabold text-center py-1 rounded"
-                  title="Auto-updated from character attributes (Melee=Might, Hurled=Motion, Shot=Mind)"
+                  title="Auto-updated from character attributes (-1d for Brawl / Unarmed)"
                 >
                   {calculatedDmg}
                 </div>
