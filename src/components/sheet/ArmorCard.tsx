@@ -2,13 +2,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, X, Check, Shirt } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { ArmorData } from '../../types/game';
+import { ArmorData, MovementRateData } from '../../types/game';
 
 const getDieNum = (dieRating?: string): number => {
   if (!dieRating) return 4;
   const num = parseInt(dieRating.replace('d', ''), 10);
   return isNaN(num) ? 4 : num;
 };
+
+const ARMORED_OPTIONS = Array.from({ length: 13 }, (_, i) => i); // 0 to 12
+const SHIELD_OPTIONS: (number | string)[] = ['n/a', ...Array.from({ length: 13 }, (_, i) => i)];
 
 const STOCK_ARMOR: ArmorData[] = [
   { name: 'Leather Coat / Jerkin', block: 8, dodge: 8, ar: 4, effect: 'Light Armor' },
@@ -24,6 +27,11 @@ export const ArmorCard: React.FC = () => {
     block: 8,
     dodge: 8,
     ar: 6,
+  };
+
+  const mrData: MovementRateData = activeCharacter?.sheet_data?.movement_rate || {
+    armored: 6,
+    shield: 'n/a',
   };
 
   const attributeDice = (activeCharacter?.sheet_data?.attribute_dice || {
@@ -65,6 +73,17 @@ export const ArmorCard: React.FC = () => {
         armor: updatedAr ?? prev.armor,
       };
     });
+    saveActiveCharacter();
+  };
+
+  const handleMrUpdate = (updates: Partial<MovementRateData>) => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      movement_rate: {
+        ...(prev.movement_rate || mrData),
+        ...updates,
+      },
+    }));
     saveActiveCharacter();
   };
 
@@ -156,7 +175,7 @@ export const ArmorCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Armor Row 1: Name */}
+      {/* Armor Row 1: Name (Bounded max width to prevent stretching) */}
       <div className="flex items-center gap-3">
         <span className="text-xs font-bold text-slate-300 tracking-wide w-12 shrink-0">Name</span>
         <input
@@ -164,20 +183,20 @@ export const ArmorCard: React.FC = () => {
           value={armor.name}
           onChange={(e) => handleArmorUpdate({ name: e.target.value })}
           placeholder="Armor Name (e.g. Studded Leather)"
-          className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none flex-1 focus:border-amber-500"
+          className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none w-full max-w-[240px] focus:border-amber-500"
         />
       </div>
 
       {/* Armor Row 2: Block 💪 (Might), Dodge 🏃 (Motion), AR 🧥 (Dropdown) */}
-      <div className="grid grid-cols-3 gap-3 pt-1">
+      <div className="flex flex-wrap items-center gap-3 pt-1">
         {/* Block Cell (Auto-Updated from Might) */}
-        <div className="p-2.5 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center justify-between">
+        <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-bold text-slate-300">Block</span>
             <span className="text-sm">💪</span>
           </div>
           <div
-            className="w-12 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
+            className="w-10 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
             title="Auto-updated matching Character Might rating"
           >
             {derivedBlock}
@@ -185,13 +204,13 @@ export const ArmorCard: React.FC = () => {
         </div>
 
         {/* Dodge Cell (Auto-Updated from Motion) */}
-        <div className="p-2.5 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center justify-between">
+        <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-bold text-slate-300">Dodge</span>
             <span className="text-sm">🏃</span>
           </div>
           <div
-            className="w-12 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
+            className="w-10 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
             title="Auto-updated matching Character Motion rating"
           >
             {derivedDodge}
@@ -199,7 +218,7 @@ export const ArmorCard: React.FC = () => {
         </div>
 
         {/* AR Cell (Player Selectable Dropdown) */}
-        <div className="p-2.5 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center justify-between">
+        <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-bold text-slate-300">AR</span>
             <span className="text-sm">🧥</span>
@@ -207,7 +226,7 @@ export const ArmorCard: React.FC = () => {
           <select
             value={armor.ar}
             onChange={(e) => handleArmorUpdate({ ar: parseInt(e.target.value) || 0 })}
-            className="bg-slate-900 border border-slate-700 rounded px-1 py-1 text-xs font-mono font-extrabold text-amber-300 text-center outline-none focus:border-amber-400 cursor-pointer"
+            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs font-mono font-extrabold text-amber-300 text-center outline-none focus:border-amber-400 cursor-pointer"
           >
             <option value={0}>0</option>
             <option value={4}>4</option>
@@ -216,6 +235,46 @@ export const ArmorCard: React.FC = () => {
             <option value={10}>10</option>
             <option value={12}>12</option>
           </select>
+        </div>
+      </div>
+
+      {/* Integrated Movement Rate (MR) Footer */}
+      <div className="pt-2 mt-1 border-t border-slate-800/80 flex items-center justify-between gap-2">
+        <span className="font-outfit font-bold text-teal-300 flex items-center gap-1.5 uppercase tracking-wider text-xs">
+          <span>👣</span> MR <span className="text-[10px] text-slate-400 normal-case font-normal">(Movement Rate)</span>
+        </span>
+        <div className="flex items-center gap-2">
+          <div className="px-2.5 py-1 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-bold text-slate-300">Armored</span>
+            <select
+              value={mrData.armored ?? 6}
+              onChange={(e) => handleMrUpdate({ armored: parseInt(e.target.value, 10) || 0 })}
+              className="bg-slate-900 border border-slate-700 text-teal-300 text-xs font-mono font-extrabold px-1.5 py-0.5 rounded outline-none focus:border-teal-400 cursor-pointer text-center"
+            >
+              {ARMORED_OPTIONS.map((val) => (
+                <option key={val} value={val}>
+                  {val}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="px-2.5 py-1 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-bold text-slate-300">Shield Drawn</span>
+            <select
+              value={mrData.shield ?? 'n/a'}
+              onChange={(e) => {
+                const val = e.target.value;
+                handleMrUpdate({ shield: val === 'n/a' ? 'n/a' : parseInt(val, 10) || 0 });
+              }}
+              className="bg-slate-900 border border-slate-700 text-teal-300 text-xs font-mono font-extrabold px-1.5 py-0.5 rounded outline-none focus:border-teal-400 cursor-pointer text-center"
+            >
+              {SHIELD_OPTIONS.map((val) => (
+                <option key={val} value={val}>
+                  {val}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 // src/components/sheet/WeaponsCard.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Plus, Trash2, X, Swords } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Minus, X, Swords } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { WeaponSlot } from '../../types/game';
 
@@ -155,7 +155,7 @@ export const WeaponsCard: React.FC = () => {
   };
 
   return (
-    <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3">
+    <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3 h-fit">
       {/* Card Header */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
         <h3 className="font-outfit font-bold text-sm tracking-widest text-rose-300 uppercase flex items-center gap-2">
@@ -259,6 +259,9 @@ export const WeaponsCard: React.FC = () => {
                         const calculatedDmg = calculateWeaponDmg(wep.name, wep.mhs, attributeDice);
                         const catKey = wep.mhs.startsWith('H') ? 'H' : wep.mhs.startsWith('S') ? 'S' : 'M';
                         const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
+                        const equippedItem = weapons.find(
+                          (w) => w.name.toLowerCase() === wep.name.toLowerCase()
+                        );
 
                         return (
                           <div
@@ -280,19 +283,29 @@ export const WeaponsCard: React.FC = () => {
                                 <span>Blk: {wep.max_blk}</span>
                               </div>
                             </div>
-                            <button
-                              onClick={() =>
-                                handleAddWeapon({
-                                  ...wep,
-                                  atk: String(calculatedAtk),
-                                  dmg: String(calculatedDmg),
-                                })
-                              }
-                              className="px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 text-xs font-bold rounded-lg border border-rose-500/40 flex items-center gap-1 transition-all"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              Equip
-                            </button>
+                            {equippedItem ? (
+                              <button
+                                onClick={() => handleRemoveWeapon(equippedItem.id)}
+                                className="px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 text-xs font-bold rounded-lg border border-rose-500/40 flex items-center gap-1 transition-all"
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                                - Drop
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  handleAddWeapon({
+                                    ...wep,
+                                    atk: String(calculatedAtk),
+                                    dmg: String(calculatedDmg),
+                                  })
+                                }
+                                className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-bold rounded-lg border border-emerald-500/40 flex items-center gap-1 transition-all"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                + Equip
+                              </button>
+                            )}
                           </div>
                         );
                       })}
@@ -313,14 +326,13 @@ export const WeaponsCard: React.FC = () => {
       ) : (
         <div className="flex flex-col gap-1.5 overflow-x-auto">
           {/* Table Header Row */}
-          <div className="grid grid-cols-[36px_92px_1fr_54px_54px_68px_32px] gap-2 items-center px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80">
+          <div className="grid grid-cols-[36px_92px_1fr_54px_54px_68px] gap-2 items-center px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80">
             <span className="text-center">Sk</span>
             <span className="text-center">M/H/S</span>
             <span>Weapon Name</span>
             <span className="text-center">Atk</span>
             <span className="text-center">Dmg</span>
             <span className="text-center">Max Blk</span>
-            <span></span>
           </div>
 
           {/* Weapons Rows */}
@@ -337,7 +349,7 @@ export const WeaponsCard: React.FC = () => {
             return (
               <div
                 key={item.id}
-                className="grid grid-cols-[36px_92px_1fr_54px_54px_68px_32px] gap-2 items-center px-2 py-1.5 bg-slate-950/60 rounded-lg border border-slate-850 hover:border-slate-750 transition-all"
+                className="grid grid-cols-[36px_92px_1fr_54px_54px_68px] gap-2 items-center px-2 py-1.5 bg-slate-950/60 rounded-lg border border-slate-850 hover:border-slate-750 transition-all"
               >
                 {/* Sk Checkbox */}
                 <div className="flex justify-center">
@@ -361,12 +373,12 @@ export const WeaponsCard: React.FC = () => {
                   <option value="S" className="bg-slate-900 text-amber-300">Shot</option>
                 </select>
 
-                {/* Weapon Name Input */}
+                {/* Weapon Name Input (Bounded max width to prevent stretching) */}
                 <input
                   type="text"
                   value={item.name}
                   onChange={(e) => handleWeaponChange(item.id, { name: e.target.value })}
-                  className="bg-slate-900 text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-800 outline-none focus:border-rose-500 w-full"
+                  className="bg-slate-900 text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-800 outline-none focus:border-rose-500 w-full max-w-[240px]"
                 />
 
                 {/* Atk Cell (Auto-Updated: Might -1d for Improvised, full rating otherwise) */}
@@ -397,15 +409,6 @@ export const WeaponsCard: React.FC = () => {
                     </option>
                   ))}
                 </select>
-
-                {/* Delete Button */}
-                <button
-                  onClick={() => handleRemoveWeapon(item.id)}
-                  className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all flex justify-center"
-                  title="Remove Weapon"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
               </div>
             );
           })}

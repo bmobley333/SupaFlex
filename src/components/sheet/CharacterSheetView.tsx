@@ -8,7 +8,6 @@ import { SkillsetsPanel } from './SkillsetsPanel';
 import { WeaponsCard } from './WeaponsCard';
 import { ArmorCard } from './ArmorCard';
 import { ShieldCard } from './ShieldCard';
-import { MovementRateCard } from './MovementRateCard';
 import { VitalsHeader } from './VitalsHeader';
 import { AbilitySlotsGrid } from './AbilitySlotsGrid';
 import { SectionJumpHUD } from './SectionJumpHUD';
@@ -19,11 +18,17 @@ export const CharacterSheetView: React.FC = () => {
 
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-16 relative">
-      {/* 3-Column Top Section: Traits (Left), Money (Center), Gear (Right) */}
-      <div id="section-top-cards" className="grid grid-cols-1 md:grid-cols-3 gap-4 scroll-mt-32">
-        <TraitsCard />
-        <MoneyCard />
-        <GearCard />
+      {/* Collision-Free Responsive Top Section: Traits (Left), Money (Center), Gear (Right) */}
+      <div id="section-top-cards" className="flex flex-wrap items-center gap-4 scroll-mt-32">
+        <div className="flex-1 min-w-[200px]">
+          <TraitsCard />
+        </div>
+        <div className="flex-[2] min-w-[380px]">
+          <MoneyCard />
+        </div>
+        <div className="flex-1 min-w-[200px]">
+          <GearCard />
+        </div>
       </div>
 
       {/* Screen-Wide Section: Skillsets & Derived Skills Registry */}
@@ -31,13 +36,19 @@ export const CharacterSheetView: React.FC = () => {
         <SkillsetsPanel />
       </div>
 
-      {/* 2-Column Responsive Section: Weapons (Left) vs. Armor, Shield, Movement Rate & Vitality (Right Stack) */}
-      <div id="section-combat-vitals" className="grid grid-cols-1 lg:grid-cols-2 gap-4 scroll-mt-32">
+      {/* Responsive Combat & Protection Matrix: 2-Column (1366px Laptops) vs 3-Column (1920px+ Widescreen) */}
+      <div id="section-combat-vitals" className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 scroll-mt-32">
+        {/* Column 1: Offense (Weapons) */}
         <WeaponsCard />
+
+        {/* Column 2: Protection (Armor with integrated MR & Shield) */}
         <div className="flex flex-col gap-4">
           <ArmorCard />
           <ShieldCard />
-          <MovementRateCard />
+        </div>
+
+        {/* Column 3: Survival (Vitality & Health Controls) */}
+        <div className="lg:col-span-2 xl:col-span-1 flex flex-col gap-4">
           <VitalsHeader />
         </div>
       </div>

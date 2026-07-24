@@ -430,10 +430,6 @@ export const SkillsetsPanel: React.FC = () => {
 
       {/* Currently Known Skillsets Pills (Main Canvas View) */}
       <div className="flex flex-col gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          Known Skillsets ({knownSkillsetNames.length}):
-        </span>
-
         {knownSkillsetNames.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {knownSkillsetNames.map((ksName) => (
@@ -458,7 +454,7 @@ export const SkillsetsPanel: React.FC = () => {
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            Derived Skills Registry ({sortedActiveSkills.length})
+            Derived Skills ({sortedActiveSkills.length})
           </span>
         </div>
 

@@ -185,17 +185,17 @@ export const ShieldCard: React.FC = () => {
             />
           </div>
 
-          {/* Name Text Input (Center) */}
+          {/* Name Text Input (Center - Bounded max width to prevent stretching) */}
           <input
             type="text"
             value={shield.name}
             onChange={(e) => handleShieldUpdate({ name: e.target.value })}
             placeholder="Shield Name (e.g. Wooden Buckler)"
-            className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none flex-1 focus:border-cyan-500"
+            className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none w-full max-w-[240px] focus:border-cyan-500"
           />
 
           {/* Max Block Dropdown (Right side: 12, 16, 20, 24, 28) */}
-          <div className="p-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2 shrink-0">
+          <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">
             <span className="text-xs font-bold text-slate-300">Max Block</span>
             <span className="text-sm">🛡️</span>
             <select

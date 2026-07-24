@@ -39,16 +39,16 @@ export const MovementRateCard: React.FC = () => {
       </div>
 
       {/* Card Content: Armored & Shield Movement Rate Fields */}
-      <div className="grid grid-cols-2 gap-4 pt-1">
+      <div className="flex flex-wrap items-center gap-3 pt-1">
         {/* Armored Field */}
-        <div className="p-2.5 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center justify-between">
+        <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
           <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
             Armored
           </span>
           <select
             value={mrData.armored ?? 6}
             onChange={(e) => handleUpdate({ armored: parseInt(e.target.value, 10) || 0 })}
-            className="bg-slate-900 border border-slate-700 text-teal-300 text-xs font-mono font-extrabold px-3 py-1.5 rounded-lg outline-none focus:border-teal-400 cursor-pointer text-center"
+            className="bg-slate-900 border border-slate-700 text-teal-300 text-xs font-mono font-extrabold px-2 py-1 rounded-lg outline-none focus:border-teal-400 cursor-pointer text-center"
           >
             {ARMORED_OPTIONS.map((val) => (
               <option key={val} value={val}>
@@ -59,7 +59,7 @@ export const MovementRateCard: React.FC = () => {
         </div>
 
         {/* Shield Drawn Field */}
-        <div className="p-2.5 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center justify-between">
+        <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
           <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
             Shield Drawn
           </span>
@@ -69,7 +69,7 @@ export const MovementRateCard: React.FC = () => {
               const val = e.target.value;
               handleUpdate({ shield: val === 'n/a' ? 'n/a' : parseInt(val, 10) || 0 });
             }}
-            className="bg-slate-900 border border-slate-700 text-teal-300 text-xs font-mono font-extrabold px-3 py-1.5 rounded-lg outline-none focus:border-teal-400 cursor-pointer text-center"
+            className="bg-slate-900 border border-slate-700 text-teal-300 text-xs font-mono font-extrabold px-2 py-1 rounded-lg outline-none focus:border-teal-400 cursor-pointer text-center"
           >
             {SHIELD_OPTIONS.map((val) => (
               <option key={val} value={val}>

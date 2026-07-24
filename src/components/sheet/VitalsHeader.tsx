@@ -127,13 +127,13 @@ export const VitalsHeader: React.FC = () => {
             </span>
           </div>
 
-          {/* Interactive S-Tier Draggable HP Bar */}
+          {/* Interactive S-Tier Draggable HP Bar (Bounded max-width to prevent over-expansion) */}
           <div
             ref={barRef}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            className="relative w-full h-4 bg-slate-900 rounded-full overflow-hidden border border-slate-800 cursor-ew-resize select-none touch-none group transition-all hover:border-emerald-500/50"
+            className="relative w-full max-w-[280px] h-4 bg-slate-900 rounded-full overflow-hidden border border-slate-800 cursor-ew-resize select-none touch-none group transition-all hover:border-emerald-500/50"
             title="Click or drag left/right to adjust Vitality level"
           >
             <div
