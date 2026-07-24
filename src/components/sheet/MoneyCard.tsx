@@ -1,6 +1,6 @@
 // src/components/sheet/MoneyCard.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Plus, Trash2, X, Coins } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, X, Coins } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { TreasureItem } from '../../types/game';
 
@@ -245,33 +245,33 @@ export const MoneyCard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Treasure List */}
+                {/* Alphabetical Treasure Pills */}
                 {treasure.length === 0 ? (
                   <p className="text-xs text-slate-500 italic py-2 text-center">
                     No extra treasure recorded yet. Add gems, statues, or relics above.
                   </p>
                 ) : (
-                  <div className="flex flex-col gap-2">
-                    {treasure.map((item) => (
-                      <div
-                        key={item.id}
-                        className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex items-center justify-between hover:border-amber-500/40 transition-all"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-slate-100">{item.name}</span>
-                          <span className="text-xs font-mono font-bold text-amber-300 px-2 py-0.5 bg-slate-900 rounded border border-slate-750">
-                            {item.value} {item.currency}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveTreasure(item.id)}
-                          className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all"
-                          title="Remove Treasure"
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {[...treasure]
+                      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                      .map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950/80 rounded-full border border-amber-500/30 text-xs font-semibold hover:border-amber-400/60 transition-all shadow-sm"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                          <span className="text-slate-100 font-bold">{item.name}</span>
+                          <span className="font-mono font-extrabold text-amber-300 text-[11px]">
+                            ({item.value} {item.currency})
+                          </span>
+                          <button
+                            onClick={() => handleRemoveTreasure(item.id)}
+                            className="p-0.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded-full ml-1 transition-all"
+                            title="Remove Treasure"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
                   </div>
                 )}
               </div>

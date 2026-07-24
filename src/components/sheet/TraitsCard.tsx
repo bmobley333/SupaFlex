@@ -181,6 +181,18 @@ export const TraitsCard: React.FC = () => {
                       className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-amber-500 w-full resize-none"
                     />
                   </div>
+
+                  {/* Notes */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-bold text-cyan-300 uppercase tracking-wider">Notes</label>
+                    <textarea
+                      rows={3}
+                      placeholder="General campaign notes, secrets, contacts, and personal logs..."
+                      value={bio.notes || ''}
+                      onChange={(e) => handleBioChange('notes', e.target.value)}
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-cyan-500 w-full resize-none"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
