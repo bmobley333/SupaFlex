@@ -4,7 +4,6 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { VitalsHeader } from './VitalsHeader';
 import { SkillsetsPanel } from './SkillsetsPanel';
 import { AbilitySlotsGrid } from './AbilitySlotsGrid';
-import { EquipmentGrid } from './EquipmentGrid';
 
 export const CharacterSheetView: React.FC = () => {
   const { activeCharacter } = useCharacterStore();
@@ -21,11 +20,8 @@ export const CharacterSheetView: React.FC = () => {
       {/* 2-Column Responsive Section: 🔥 POWERS & ✨ MAGIC ITEMS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <AbilitySlotsGrid title="POWERS" type="powers" />
-        <AbilitySlotsGrid title="✨ Magic Items" type="spells" />
+        <AbilitySlotsGrid title="MAGIC ITEMS" type="spells" />
       </div>
-
-      {/* Equipment Grid */}
-      <EquipmentGrid />
     </div>
   );
 };
