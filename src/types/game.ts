@@ -52,6 +52,11 @@ export interface ShieldData {
   effect?: string;
 }
 
+export interface MovementRateData {
+  armored: number;
+  shield: number;
+}
+
 export interface CharacterBio {
   backstory?: string;
   personality?: string;
@@ -90,6 +95,7 @@ export interface CharacterSheetData {
   weapons?: WeaponSlot[];
   armor_slot?: ArmorData;
   shield_slot?: ShieldData;
+  movement_rate?: MovementRateData;
   bio: CharacterBio;
 }
 

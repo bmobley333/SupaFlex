@@ -6,6 +6,7 @@ import { SkillsetsPanel } from './SkillsetsPanel';
 import { WeaponsCard } from './WeaponsCard';
 import { ArmorCard } from './ArmorCard';
 import { ShieldCard } from './ShieldCard';
+import { MovementRateCard } from './MovementRateCard';
 import { AbilitySlotsGrid } from './AbilitySlotsGrid';
 
 export const CharacterSheetView: React.FC = () => {
@@ -17,12 +18,13 @@ export const CharacterSheetView: React.FC = () => {
       {/* Screen-Wide Top Section: Skillsets & Derived Skills Registry */}
       <SkillsetsPanel />
 
-      {/* 2-Column Responsive Section: Weapons (Left) vs. Armor, Shield & Vitality (Right Stack) */}
+      {/* 2-Column Responsive Section: Weapons (Left) vs. Armor, Shield, Movement Rate & Vitality (Right Stack) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <WeaponsCard />
         <div className="flex flex-col gap-4">
           <ArmorCard />
           <ShieldCard />
+          <MovementRateCard />
           <VitalsHeader />
         </div>
       </div>
