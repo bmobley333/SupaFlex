@@ -27,7 +27,7 @@ const HUD_ITEMS: HUDItem[] = [
   {
     id: 'section-combat-vitals',
     label: 'Combat & Vitality',
-    icons: '⚔️ 🧥 🛡️ ❤️',
+    icons: '⚔️ 🧥 👣 🛡️ ❤️',
     activeColorClass: 'bg-rose-900/60 text-rose-200 border-rose-400 shadow-rose-500/30',
     borderColorClass: 'hover:border-rose-500/50 hover:bg-rose-950/40 text-slate-300',
   },
