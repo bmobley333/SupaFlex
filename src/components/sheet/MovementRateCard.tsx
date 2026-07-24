@@ -4,7 +4,6 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { MovementRateData } from '../../types/game';
 
 const ARMORED_OPTIONS = Array.from({ length: 13 }, (_, i) => i); // 0 to 12
-const SHIELD_OPTIONS: (number | string)[] = ['n/a', ...Array.from({ length: 13 }, (_, i) => i)];
 
 export const MovementRateCard: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
@@ -13,6 +12,18 @@ export const MovementRateCard: React.FC = () => {
     armored: 6,
     shield: 'n/a',
   };
+
+  const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
+  const isShieldEquipped = shieldSlot?.equipped ?? false;
+  const armoredMR = mrData.armored ?? 6;
+
+  let derivedShieldDrawnMR: string | number = 'n/a';
+  if (isShieldEquipped) {
+    const mrStr = shieldSlot?.mr_adjustment || shieldSlot?.effect || '';
+    const match = mrStr.match(/-?\d+/);
+    const penalty = match ? parseInt(match[0], 10) : 0;
+    derivedShieldDrawnMR = Math.max(0, armoredMR + penalty);
+  }
 
   const handleUpdate = (updates: Partial<MovementRateData>) => {
     updateActiveSheetData((prev) => ({
@@ -47,7 +58,17 @@ export const MovementRateCard: React.FC = () => {
           </span>
           <select
             value={mrData.armored ?? 6}
-            onChange={(e) => handleUpdate({ armored: parseInt(e.target.value, 10) || 0 })}
+            onChange={(e) => {
+              const newArmored = parseInt(e.target.value, 10) || 0;
+              let newShieldMR: string | number = 'n/a';
+              if (isShieldEquipped) {
+                const mrStr = shieldSlot?.mr_adjustment || shieldSlot?.effect || '';
+                const match = mrStr.match(/-?\d+/);
+                const penalty = match ? parseInt(match[0], 10) : 0;
+                newShieldMR = Math.max(0, newArmored + penalty);
+              }
+              handleUpdate({ armored: newArmored, shield: newShieldMR });
+            }}
             className="bg-slate-900 border border-slate-700 text-teal-300 text-xs font-mono font-extrabold px-2 py-1 rounded-lg outline-none focus:border-teal-400 cursor-pointer text-center"
           >
             {ARMORED_OPTIONS.map((val) => (
@@ -58,25 +79,17 @@ export const MovementRateCard: React.FC = () => {
           </select>
         </div>
 
-        {/* Shield Drawn Field */}
+        {/* Shield Drawn Read-Only Display Box */}
         <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
           <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
             Shield Drawn 👣
           </span>
-          <select
-            value={mrData.shield ?? 'n/a'}
-            onChange={(e) => {
-              const val = e.target.value;
-              handleUpdate({ shield: val === 'n/a' ? 'n/a' : parseInt(val, 10) || 0 });
-            }}
-            className="bg-slate-900 border border-slate-700 text-teal-300 text-xs font-mono font-extrabold px-2 py-1 rounded-lg outline-none focus:border-teal-400 cursor-pointer text-center"
+          <div
+            className="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-xs font-mono font-extrabold text-teal-300 text-center"
+            title="Auto-calculated Armored MR reduced by shield MR penalty (min 0)"
           >
-            {SHIELD_OPTIONS.map((val) => (
-              <option key={val} value={val}>
-                {val}
-              </option>
-            ))}
-          </select>
+            {derivedShieldDrawnMR}
+          </div>
         </div>
       </div>
     </div>

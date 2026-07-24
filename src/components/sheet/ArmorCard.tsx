@@ -132,8 +132,17 @@ export const ArmorCard: React.FC = () => {
     const mrMatch = item.mr ? item.mr.match(/\d+/) : null;
     const numericMr = mrMatch ? parseInt(mrMatch[0], 10) : 6;
 
+    const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
+    let newShieldMR: string | number = 'n/a';
+    if (shieldSlot?.equipped) {
+      const mrStr = shieldSlot?.mr_adjustment || shieldSlot?.effect || '';
+      const match = mrStr.match(/-?\d+/);
+      const penalty = match ? parseInt(match[0], 10) : 0;
+      newShieldMR = Math.max(0, numericMr + penalty);
+    }
+
     handleArmorUpdate({ name: item.name, ar: numericAr });
-    handleMrUpdate({ armored: numericMr });
+    handleMrUpdate({ armored: numericMr, shield: newShieldMR });
     setShowManageModal(false);
   };
 
@@ -182,6 +191,16 @@ export const ArmorCard: React.FC = () => {
     }
     return true;
   });
+
+  const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
+  const isShieldEquipped = shieldSlot?.equipped ?? false;
+  let derivedShieldDrawn: string | number = 'n/a';
+  if (isShieldEquipped) {
+    const mrStr = shieldSlot?.mr_adjustment || shieldSlot?.effect || '';
+    const match = mrStr.match(/-?\d+/);
+    const penalty = match ? parseInt(match[0], 10) : 0;
+    derivedShieldDrawn = Math.max(0, (mrData.armored ?? 6) + penalty);
+  }
 
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3">
@@ -547,9 +566,9 @@ export const ArmorCard: React.FC = () => {
             <span className="text-[11px] font-bold text-slate-300">Shield Drawn 👣</span>
             <div
               className="px-2 bg-slate-900 border border-slate-800 rounded py-0.5 text-xs font-mono font-extrabold text-teal-300 text-center"
-              title="Auto-updated matching equipped shield Movement Rate adjustment"
+              title="Auto-calculated Armored MR reduced by shield MR penalty (min 0)"
             >
-              {mrData.shield ?? 'n/a'}
+              {derivedShieldDrawn}
             </div>
           </div>
         </div>

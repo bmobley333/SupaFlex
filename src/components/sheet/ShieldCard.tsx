@@ -111,14 +111,21 @@ export const ShieldCard: React.FC = () => {
     const blockMatch = item.max_block ? item.max_block.match(/\d+/) : null;
     const numericBlock = blockMatch ? parseInt(blockMatch[0], 10) : 12;
 
+    const mrMatch = item.mr ? item.mr.match(/-?\d+/) : null;
+    const penalty = mrMatch ? parseInt(mrMatch[0], 10) : 0;
+
+    const armoredMR = activeCharacter?.sheet_data?.movement_rate?.armored ?? 6;
+    const calculatedShieldDrawn = Math.max(0, armoredMR + penalty);
+
     handleShieldUpdate({
       name: item.name,
       sk: true,
       max_block: numericBlock,
       equipped: true,
       effect: item.description || `Shield (Req ${item.requirement}, Cost ${item.cost})`,
+      mr_adjustment: item.mr || '👣0',
     });
-    handleMrUpdate(item.mr || '👣0');
+    handleMrUpdate(String(calculatedShieldDrawn));
     setShowManageModal(false);
   };
 

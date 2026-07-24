@@ -244,6 +244,7 @@ export interface ShieldData {
   sk: boolean;
   max_block: number;
   effect?: string;
+  mr_adjustment?: string;
 }
 
 export interface MovementRateData {
