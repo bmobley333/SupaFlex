@@ -54,7 +54,7 @@ export interface ShieldData {
 
 export interface MovementRateData {
   armored: number;
-  shield: number;
+  shield: number | string;
 }
 
 export interface CharacterBio {

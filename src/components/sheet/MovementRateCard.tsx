@@ -3,14 +3,15 @@ import React from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { MovementRateData } from '../../types/game';
 
-const INTEGER_OPTIONS = Array.from({ length: 13 }, (_, i) => i); // 0 to 12
+const ARMORED_OPTIONS = Array.from({ length: 13 }, (_, i) => i); // 0 to 12
+const SHIELD_OPTIONS: (number | string)[] = ['n/a', ...Array.from({ length: 13 }, (_, i) => i)];
 
 export const MovementRateCard: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
 
   const mrData: MovementRateData = activeCharacter?.sheet_data?.movement_rate || {
     armored: 6,
-    shield: 0,
+    shield: 'n/a',
   };
 
   const handleUpdate = (updates: Partial<MovementRateData>) => {
@@ -49,7 +50,7 @@ export const MovementRateCard: React.FC = () => {
             onChange={(e) => handleUpdate({ armored: parseInt(e.target.value, 10) || 0 })}
             className="bg-slate-900 border border-slate-700 text-teal-300 text-xs font-mono font-extrabold px-3 py-1.5 rounded-lg outline-none focus:border-teal-400 cursor-pointer text-center"
           >
-            {INTEGER_OPTIONS.map((val) => (
+            {ARMORED_OPTIONS.map((val) => (
               <option key={val} value={val}>
                 {val}
               </option>
@@ -57,17 +58,20 @@ export const MovementRateCard: React.FC = () => {
           </select>
         </div>
 
-        {/* Shield Field */}
+        {/* Shield Drawn Field */}
         <div className="p-2.5 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center justify-between">
           <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
             Shield Drawn
           </span>
           <select
-            value={mrData.shield ?? 0}
-            onChange={(e) => handleUpdate({ shield: parseInt(e.target.value, 10) || 0 })}
+            value={mrData.shield ?? 'n/a'}
+            onChange={(e) => {
+              const val = e.target.value;
+              handleUpdate({ shield: val === 'n/a' ? 'n/a' : parseInt(val, 10) || 0 });
+            }}
             className="bg-slate-900 border border-slate-700 text-teal-300 text-xs font-mono font-extrabold px-3 py-1.5 rounded-lg outline-none focus:border-teal-400 cursor-pointer text-center"
           >
-            {INTEGER_OPTIONS.map((val) => (
+            {SHIELD_OPTIONS.map((val) => (
               <option key={val} value={val}>
                 {val}
               </option>
