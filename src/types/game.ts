@@ -11,6 +11,8 @@ export interface AbilitySlot {
   usage: string;
   effect: string;
   checked: boolean[];
+  version?: number;
+  base_name?: string;
 }
 
 export interface EquipmentSlot {
@@ -51,6 +53,9 @@ export interface CharacterSheetData {
   known_skillsets: string[];
   known_individual_skills?: string[]; // Individually learned skills outside a skillset
   favorite_power_tables?: string[]; // Favorited power tables (table_name strings)
+  custom_powers?: Power[]; // Custom user-created powers
+  custom_magic_items?: MagicItem[]; // Custom user-created magic items
+  ability_overrides?: Record<string, { action?: string; usage?: string; effect?: string }>; // Player edits for existing stock abilities
   power_slots: AbilitySlot[];
   spell_slots: AbilitySlot[];
   gear_slots: EquipmentSlot[];
@@ -94,6 +99,8 @@ export interface Power {
   dropdown: string | null;
   sub: string | null;
   table_name: string | null;
+  version?: number;
+  base_name?: string;
 }
 
 export interface MagicItem {
@@ -107,6 +114,8 @@ export interface MagicItem {
   dropdown: string | null;
   sub: string | null;
   table_name: string | null;
+  version?: number;
+  base_name?: string;
 }
 
 export interface Skillset {
