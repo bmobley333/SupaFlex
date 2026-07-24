@@ -172,110 +172,107 @@ export const MoneyCard: React.FC = () => {
           {showManageModal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
 
-        {/* Floating Manage Treasure Modal */}
+        {/* Floating Treasure Popover */}
         {showManageModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fadeIn">
-            <div
-              ref={modalRef}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
-            >
-              {/* Modal Header */}
-              <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-                <div className="flex items-center gap-2">
-                  <Coins className="w-5 h-5 text-amber-400" />
-                  <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide">
-                    Ad-Lib Treasure & Valuables
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setShowManageModal(false)}
-                  className="p-1 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+          <div
+            ref={modalRef}
+            className="absolute right-0 top-full mt-2 z-50 w-96 max-h-[480px] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-4 overflow-y-auto flex flex-col gap-3 animate-fadeIn"
+          >
+            {/* Popover Header */}
+            <div className="pb-2 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Coins className="w-4 h-4 text-amber-400" />
+                <h3 className="font-outfit font-bold text-sm text-slate-100 uppercase tracking-wide">
+                  Ad-Lib Treasure
+                </h3>
               </div>
+              <button
+                onClick={() => setShowManageModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-              {/* Modal Content */}
-              <div className="p-4 overflow-y-auto flex flex-col gap-4">
-                {/* Total Treasure Summary */}
-                <div className="p-3 bg-amber-950/40 rounded-xl border border-amber-500/30 flex items-center justify-between">
-                  <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">Total Extra Treasure Value:</span>
-                  <div className="text-xs font-mono font-extrabold flex items-center gap-3 text-slate-100">
-                    <span className="text-amber-300">{totalOtherGp} gp</span>
-                    <span>•</span>
-                    <span className="text-slate-300">{totalOtherSp} sp</span>
-                  </div>
-                </div>
-
-                {/* Add New Treasure Form */}
-                <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 flex flex-col gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-300">Add Valuable / Gem</span>
-                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-                    <input
-                      type="text"
-                      placeholder="Treasure Name (e.g. Ruby Statue)"
-                      value={newItemName}
-                      onChange={(e) => setNewItemName(e.target.value)}
-                      className="sm:col-span-2 bg-slate-900 text-slate-200 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Value"
-                      value={newItemValue}
-                      onChange={(e) => setNewItemValue(e.target.value)}
-                      className="bg-slate-900 text-amber-300 text-xs px-2 py-1.5 rounded-lg border border-slate-700 font-mono outline-none text-center"
-                    />
-                    <select
-                      value={newItemCurrency}
-                      onChange={(e) => setNewItemCurrency(e.target.value as 'gp' | 'sp')}
-                      className="bg-slate-900 text-slate-200 text-xs px-2 py-1.5 rounded-lg border border-slate-700 font-mono font-bold outline-none cursor-pointer"
-                    >
-                      <option value="gp">gp</option>
-                      <option value="sp">sp</option>
-                    </select>
-                    <button
-                      onClick={handleAddTreasure}
-                      disabled={!newItemName.trim()}
-                      className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-1.5 rounded-lg border border-amber-400 disabled:opacity-40 transition-all flex items-center justify-center gap-1"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Add
-                    </button>
-                  </div>
-                </div>
-
-                {/* Alphabetical Treasure Pills */}
-                {treasure.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic py-2 text-center">
-                    No extra treasure recorded yet. Add gems, statues, or relics above.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {[...treasure]
-                      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                      .map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950/80 rounded-full border border-amber-500/30 text-xs font-semibold hover:border-amber-400/60 transition-all shadow-sm"
-                        >
-                          <span className="text-slate-100 font-bold">{item.name}</span>
-                          <span className="font-mono font-extrabold text-amber-300 text-[11px]">
-                            ({item.value} {item.currency})
-                          </span>
-                          <button
-                            onClick={() => handleRemoveTreasure(item.id)}
-                            className="p-0.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded-full ml-1 transition-all"
-                            title="Remove Treasure"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                  </div>
-                )}
+            {/* Total Treasure Summary */}
+            <div className="p-2.5 bg-amber-950/40 rounded-xl border border-amber-500/30 flex items-center justify-between">
+              <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Total Value:</span>
+              <div className="text-xs font-mono font-extrabold flex items-center gap-2 text-slate-100">
+                <span className="text-amber-300">{totalOtherGp} gp</span>
+                <span>•</span>
+                <span className="text-slate-300">{totalOtherSp} sp</span>
               </div>
             </div>
+
+            {/* Add New Treasure Form */}
+            <div className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800 flex flex-col gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">Add Valuable / Gem</span>
+              <div className="flex flex-col gap-1.5">
+                <input
+                  type="text"
+                  placeholder="Treasure Name (e.g. Ruby Statue)"
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  className="bg-slate-900 text-slate-200 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Value"
+                    value={newItemValue}
+                    onChange={(e) => setNewItemValue(e.target.value)}
+                    className="w-1/2 bg-slate-900 text-amber-300 text-xs px-2 py-1.5 rounded-lg border border-slate-700 font-mono outline-none text-center"
+                  />
+                  <select
+                    value={newItemCurrency}
+                    onChange={(e) => setNewItemCurrency(e.target.value as 'gp' | 'sp')}
+                    className="w-1/4 bg-slate-900 text-slate-200 text-xs px-2 py-1.5 rounded-lg border border-slate-700 font-mono font-bold outline-none cursor-pointer"
+                  >
+                    <option value="gp">gp</option>
+                    <option value="sp">sp</option>
+                  </select>
+                  <button
+                    onClick={handleAddTreasure}
+                    disabled={!newItemName.trim()}
+                    className="w-1/4 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-1.5 rounded-lg border border-amber-400 disabled:opacity-40 transition-all flex items-center justify-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Alphabetical Treasure Pills */}
+            {treasure.length === 0 ? (
+              <p className="text-xs text-slate-500 italic py-2 text-center">
+                No extra treasure recorded yet.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[...treasure]
+                  .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-950/80 rounded-full border border-amber-500/30 text-xs font-semibold hover:border-amber-400/60 transition-all shadow-sm"
+                    >
+                      <span className="text-slate-100 font-bold text-[11px]">{item.name}</span>
+                      <span className="font-mono font-extrabold text-amber-300 text-[10px]">
+                        ({item.value} {item.currency})
+                      </span>
+                      <button
+                        onClick={() => handleRemoveTreasure(item.id)}
+                        className="p-0.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded-full ml-0.5 transition-all"
+                        title="Remove Treasure"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         )}
       </div>
