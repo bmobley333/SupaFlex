@@ -43,7 +43,7 @@ export const MovementRateCard: React.FC = () => {
         {/* Armored Field */}
         <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
           <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-            Armored
+            Armored 👣
           </span>
           <select
             value={mrData.armored ?? 6}
@@ -61,7 +61,7 @@ export const MovementRateCard: React.FC = () => {
         {/* Shield Drawn Field */}
         <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
           <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-            Shield Drawn
+            Shield Drawn 👣
           </span>
           <select
             value={mrData.shield ?? 'n/a'}

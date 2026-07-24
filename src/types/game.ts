@@ -44,6 +44,51 @@ export interface ArmorData {
   effect?: string;
 }
 
+export interface SupabaseArmor {
+  id?: number;
+  name: string;
+  requirement: string;
+  ar: string;
+  mr: string;
+  cost: string;
+  created_at?: string;
+}
+
+export const REQUIREMENT_TO_MR_MAP: Record<number, string> = {
+  4: '👣8',
+  6: '👣7',
+  8: '👣6',
+  10: '👣6',
+  12: '👣5',
+};
+
+export const REQUIREMENT_TO_AR_MAP: Record<number, string> = {
+  4: '🧥4',
+  6: '🧥6',
+  8: '🧥8',
+  10: '🧥10',
+  12: '🧥12',
+};
+
+export const getMrFromRequirement = (reqStr: string): string => {
+  const match = reqStr.match(/\d+/);
+  if (match) {
+    const num = parseInt(match[0], 10);
+    return REQUIREMENT_TO_MR_MAP[num] || '👣8';
+  }
+  return '👣8';
+};
+
+export const getArFromRequirement = (reqStr: string): string => {
+  const match = reqStr.match(/\d+/);
+  if (match) {
+    const num = parseInt(match[0], 10);
+    return REQUIREMENT_TO_AR_MAP[num] || '🧥4';
+  }
+  return '🧥4';
+};
+
+
 export interface ShieldData {
   equipped: boolean;
   name: string;
