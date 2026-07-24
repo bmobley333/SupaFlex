@@ -57,11 +57,32 @@ export interface MovementRateData {
   shield: number | string;
 }
 
+export interface TreasureItem {
+  id: string;
+  name: string;
+  value: number;
+  currency: 'gp' | 'sp';
+}
+
+export interface SimpleGearItem {
+  id: string;
+  qty: number;
+  name: string;
+}
+
 export interface CharacterBio {
   backstory?: string;
   personality?: string;
   image_url?: string;
   notes?: string;
+  appearance?: string;
+  positive_trait?: string;
+  negative_trait?: string;
+  flair?: string;
+  adventuring_goal?: string;
+  height?: string;
+  weight?: string;
+  age?: string;
 }
 
 export interface CharacterSheetData {
@@ -82,6 +103,10 @@ export interface CharacterSheetData {
   is_charged?: boolean; // True when sparks === 5 (+1 to ALL rolls)
   luck?: number; // 0-5 Luck Pool (Default 3, Max 5)
   max_luck?: number; // Default 5
+  gold?: number;
+  silver?: number;
+  other_treasure?: TreasureItem[];
+  simple_gear?: SimpleGearItem[];
   known_skillsets: string[];
   known_individual_skills?: string[]; // Individually learned skills outside a skillset
   favorite_power_tables?: string[]; // Favorited power tables (table_name strings)

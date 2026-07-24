@@ -1,12 +1,15 @@
 // src/components/sheet/CharacterSheetView.tsx
 import React from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { VitalsHeader } from './VitalsHeader';
+import { TraitsCard } from './TraitsCard';
+import { MoneyCard } from './MoneyCard';
+import { GearCard } from './GearCard';
 import { SkillsetsPanel } from './SkillsetsPanel';
 import { WeaponsCard } from './WeaponsCard';
 import { ArmorCard } from './ArmorCard';
 import { ShieldCard } from './ShieldCard';
 import { MovementRateCard } from './MovementRateCard';
+import { VitalsHeader } from './VitalsHeader';
 import { AbilitySlotsGrid } from './AbilitySlotsGrid';
 
 export const CharacterSheetView: React.FC = () => {
@@ -15,7 +18,14 @@ export const CharacterSheetView: React.FC = () => {
 
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto">
-      {/* Screen-Wide Top Section: Skillsets & Derived Skills Registry */}
+      {/* 3-Column Top Section: Traits (Left), Money (Center), Gear (Right) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <TraitsCard />
+        <MoneyCard />
+        <GearCard />
+      </div>
+
+      {/* Screen-Wide Section: Skillsets & Derived Skills Registry */}
       <SkillsetsPanel />
 
       {/* 2-Column Responsive Section: Weapons (Left) vs. Armor, Shield, Movement Rate & Vitality (Right Stack) */}
