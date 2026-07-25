@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, Search, X, Check, Star, Plus, Edit2, Lock, Save, GitBranch, Sparkles, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Save, Sparkles, Globe, Flame } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AbilitySlot, Power, MagicItem } from '../../types/game';
 
@@ -26,39 +26,6 @@ const ACTION_ORDER: Record<string, number> = {
 
 const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
 const USAGE_OPTIONS = ['1-Enc', '2-Enc', '3-Enc', '1', '1-Luck🍀', '1-Charge⚡'];
-const PRIMARY_ATTRIBUTE_ICONS = [
-  { label: 'Might', icon: '💪' },
-  { label: 'Motion', icon: '🏃' },
-  { label: 'Mind', icon: '👁️' },
-  { label: 'Magic', icon: '✨' },
-  { label: 'Moxie', icon: '🫀' },
-];
-
-const cleanName = (name: string) => {
-  return name.replace(/\s*\[[A-Z]+\]$/i, '').trim();
-};
-
-const parseUsageCount = (usage?: string): number => {
-  if (!usage) return 0;
-  const match = usage.trim().match(/^([1-3])/);
-  return match ? parseInt(match[1], 10) : 0;
-};
-
-// Helper: Parse base name and version integer (e.g. "Deadeye Shot v2" -> { baseName: "Deadeye Shot", version: 2 })
-const parseAbilityVersion = (name: string): { baseName: string; version: number } => {
-  const cleaned = cleanName(name);
-  const match = cleaned.match(/^(.*?)(?:\s+v(\d+))$/i);
-  if (match) {
-    return {
-      baseName: match[1].trim(),
-      version: parseInt(match[2], 10),
-    };
-  }
-  return {
-    baseName: cleaned,
-    version: 1,
-  };
-};
 
 const POWER_CATEGORY_BUTTONS = [
   { id: 'class', label: 'Class', icon: '👤' },
@@ -69,6 +36,20 @@ const POWER_CATEGORY_BUTTONS = [
   { id: 'all', label: 'ALL', icon: '🌐' },
 ];
 
+const cleanName = (name: string) => name.replace(/\s*\[[A-Z]+\]$/i, '').trim();
+
+const parseUsageCount = (usage?: string): number => {
+  if (!usage) return 0;
+  const match = usage.trim().match(/^([1-3])/);
+  return match ? parseInt(match[1], 10) : 0;
+};
+
+const parseAbilityVersion = (name: string): { baseName: string; version: number } => {
+  const cleaned = cleanName(name);
+  const match = cleaned.match(/^(.*?)(?:\s+v(\d+))$/i);
+  return match ? { baseName: match[1].trim(), version: parseInt(match[2], 10) } : { baseName: cleaned, version: 1 };
+};
+
 export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type }) => {
   const { activeCharacter, powers, magicItems, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
   const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
@@ -76,21 +57,27 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const favoriteTables: string[] = activeCharacter?.sheet_data?.favorite_power_tables || [];
   const stockCatalog = type === 'powers' ? powers : magicItems;
 
-  const [showCatalogPopover, setShowCatalogPopover] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeTableName, setActiveTableName] = useState<string | null>(null);
-  const [tableSearchQuery, setTableSearchQuery] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const popoverRef = useRef<HTMLDivElement>(null);
+  
+  // Search Filters for Left and Right Panes
+  const [leftSearchQuery, setLeftSearchQuery] = useState('');
+  const [rightSearchQuery, setRightSearchQuery] = useState('');
+  
+  // Right Pane Active View: 'CATALOG' or 'CREATOR'
+  const [activeRightTab, setActiveRightTab] = useState<'CATALOG' | 'CREATOR'>('CATALOG');
+
+  // Dyslexia-Friendly Peg-Slider Toggle: Default set to Learnable Only (true)
+  const [learnableOnly, setLearnableOnly] = useState<boolean>(true);
+
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Creation Form State
-  const [isCreatingCustom, setIsCreatingCustom] = useState(false);
-  const [isVersionUpgrade, setIsVersionUpgrade] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createAction, setCreateAction] = useState('A');
   const [createUsage, setCreateUsage] = useState('1-Enc');
   const [createEffect, setCreateEffect] = useState('');
-  const createEffectRef = useRef<HTMLTextAreaElement>(null);
 
   // Inline Editing Form State
   const [editingAbilityName, setEditingAbilityName] = useState<string | null>(null);
@@ -99,22 +86,20 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [editEffect, setEditEffect] = useState('');
   const editEffectRef = useRef<HTMLTextAreaElement>(null);
 
-  // History Accordion Open State
-  const [expandedHistoryBases, setExpandedHistoryBases] = useState<string[]>([]);
+  // Custom Power Table Creation State (Powers Mode Only)
+  const [isCreatingTable, setIsCreatingTable] = useState(false);
+  const [newTableName, setNewTableName] = useState('');
+  const [newTableSub, setNewTableSub] = useState('class');
 
   useEffect(() => {
-    const handleClickOutside = (event: PointerEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-        setShowCatalogPopover(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        setShowManageModal(false);
       }
     };
-    if (showCatalogPopover) {
-      document.addEventListener('pointerdown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('pointerdown', handleClickOutside);
-    };
-  }, [showCatalogPopover]);
+    if (showManageModal) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showManageModal]);
 
   const handleCheckboxToggle = (slotIndex: number, checkIndex: number) => {
     updateActiveSheetData((prev) => {
@@ -127,46 +112,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       return { ...prev, [slotKey]: updatedSlots };
     });
     saveActiveCharacter();
-  };
-
-  const handleToggleFavoriteTable = (tableName: string) => {
-    updateActiveSheetData((prev) => {
-      const current = prev.favorite_power_tables || [];
-      const updated = current.includes(tableName)
-        ? current.filter((t) => t !== tableName)
-        : [...current, tableName];
-      return { ...prev, favorite_power_tables: updated };
-    });
-    saveActiveCharacter();
-  };
-
-  const toggleHistoryAccordion = (baseName: string) => {
-    setExpandedHistoryBases((prev) =>
-      prev.includes(baseName) ? prev.filter((b) => b !== baseName) : [...prev, baseName]
-    );
-  };
-
-  const handleOpenCustomCreation = () => {
-    setCreateName('');
-    setCreateAction('A');
-    setCreateUsage('1-Enc');
-    setCreateEffect('');
-    setIsVersionUpgrade(false);
-    setIsCreatingCustom(true);
-  };
-
-  // Custom Power Table Creation State (Powers Mode Only)
-  const [isCreatingTable, setIsCreatingTable] = useState(false);
-  const [newTableName, setNewTableName] = useState('');
-  const [newTableSub, setNewTableSub] = useState('class');
-
-  const handleOpenTableCreation = () => {
-    setNewTableName('');
-    const validSub = ['class', 'racial', 'combat_styles', 'luck'].includes(selectedCategory.toLowerCase())
-      ? selectedCategory.toLowerCase()
-      : 'class';
-    setNewTableSub(validSub);
-    setIsCreatingTable(true);
   };
 
   const handleSaveCustomTable = () => {
@@ -184,43 +129,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setActiveTableName(cleanTblName);
     setIsCreatingTable(false);
     setNewTableName('');
-    
-    // Auto-open custom power creation drawer pre-filled
-    handleOpenCustomCreation();
-  };
-
-  const handleDeleteCustomTable = (tableName: string) => {
-    updateActiveSheetData((prev) => {
-      const existingTables = prev.custom_power_tables || [];
-      const updatedTables = existingTables.filter((t) => t.name !== tableName);
-      return { ...prev, custom_power_tables: updatedTables };
-    });
-    saveActiveCharacter();
-    if (activeTableName === tableName) {
-      setActiveTableName(null);
-    }
-  };
-
-  // Cursor-aware icon insertion helper
-  const handleInsertIcon = (
-    emoji: string,
-    ref: React.RefObject<HTMLTextAreaElement>,
-    setter: React.Dispatch<React.SetStateAction<string>>
-  ) => {
-    if (!ref.current) return;
-    const { selectionStart, selectionEnd } = ref.current;
-    const val = ref.current.value;
-    const newText = val.slice(0, selectionStart) + emoji + val.slice(selectionEnd);
-    if (newText.length <= 450) {
-      setter(newText);
-      setTimeout(() => {
-        if (ref.current) {
-          ref.current.focus();
-          const newPos = selectionStart + emoji.length;
-          ref.current.setSelectionRange(newPos, newPos);
-        }
-      }, 0);
-    }
   };
 
   // Custom Items & Ability Overrides
@@ -233,44 +141,49 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const abilityOverrides = activeCharacter?.sheet_data?.ability_overrides || {};
 
   // Combine stock catalog with custom created items and apply overrides
-  const fullCatalog = [...stockCatalog, ...customItems].map((item) => {
-    const cleaned = cleanName(item.name);
-    const override = abilityOverrides[cleaned];
-    const { baseName, version } = parseAbilityVersion(cleaned);
-    const itemObj = {
-      ...item,
-      base_name: baseName,
-      version: version,
-    };
-    if (!override) return itemObj;
-    return {
-      ...itemObj,
-      action: override.action ?? itemObj.action,
-      usage: override.usage ?? itemObj.usage,
-      effect: override.effect ?? itemObj.effect,
-    };
-  });
+  const fullCatalog = useMemo(() => {
+    return [...stockCatalog, ...customItems].map((item) => {
+      const cleaned = cleanName(item.name);
+      const override = abilityOverrides[cleaned];
+      const { baseName, version } = parseAbilityVersion(cleaned);
+      const itemObj = {
+        ...item,
+        base_name: baseName,
+        version: version,
+      };
+      if (!override) return itemObj;
+      return {
+        ...itemObj,
+        action: override.action ?? itemObj.action,
+        usage: override.usage ?? itemObj.usage,
+        effect: override.effect ?? itemObj.effect,
+      };
+    });
+  }, [stockCatalog, customItems, abilityOverrides]);
 
-  const handleToggleCatalogAbility = (abilityName: string) => {
-    const foundItem = fullCatalog.find((p) => cleanName(p.name).toLowerCase() === cleanName(abilityName).toLowerCase());
+  // Set of lowercase known ability names for strict catalog deduplication
+  const knownAbilityNamesSet = useMemo(() => {
+    return new Set(slots.map((s) => cleanName(s.name).toLowerCase()));
+  }, [slots]);
+
+  // Learn an ability from catalog into active sheet slots
+  const handleLearnAbility = (item: Power | MagicItem) => {
+    const { baseName, version } = parseAbilityVersion(item.name);
     updateActiveSheetData((prev) => {
       const current = [...(prev[slotKey] || [])];
       const existingIndex = current.findIndex(
-        (s) => cleanName(s.name).toLowerCase() === cleanName(abilityName).toLowerCase()
+        (s) => cleanName(s.name).toLowerCase() === cleanName(item.name).toLowerCase()
       );
 
-      if (existingIndex >= 0) {
-        current.splice(existingIndex, 1);
-      } else if (foundItem) {
-        const { baseName, version } = parseAbilityVersion(foundItem.name);
+      if (existingIndex < 0) {
         current.push({
           select: true,
-          name: cleanName(foundItem.name),
+          name: cleanName(item.name),
           base_name: baseName,
           version: version,
-          action: (foundItem.action?.toUpperCase() as any) || '',
-          usage: foundItem.usage || '',
-          effect: foundItem.effect || '',
+          action: (item.action?.toUpperCase() as any) || 'A',
+          usage: item.usage || '1-Enc',
+          effect: item.effect || '',
           checked: [false, false, false],
         });
       }
@@ -279,13 +192,22 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     saveActiveCharacter();
   };
 
-  // Custom Creation Save Handler (Auto-Versions to v1 or keeps user v#)
+  // Drop / Un-learn an ability from the character's active roster
+  const handleForgetAbility = (abilityName: string) => {
+    updateActiveSheetData((prev) => {
+      const current = [...(prev[slotKey] || [])];
+      const updated = current.filter((s) => cleanName(s.name).toLowerCase() !== cleanName(abilityName).toLowerCase());
+      return { ...prev, [slotKey]: updated };
+    });
+    saveActiveCharacter();
+  };
+
+  // Custom Creation Save Handler
   const handleSaveCustomAbility = () => {
     if (!createName.trim()) return;
     const rawClean = cleanName(createName.trim());
     const { baseName, version } = parseAbilityVersion(rawClean);
     const versionedName = `${baseName} v${version}`;
-
     const targetTable = activeTableName || (type === 'powers' ? '📁 Custom Powers' : '📁 Custom Magic Items');
 
     const newItem: Power | MagicItem = {
@@ -308,7 +230,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const existingCustom = prev[customKey] || [];
       const updatedCustom = [...existingCustom, newItem];
 
-      // Auto-learn newly created custom ability
       const currentSlots = [...(prev[slotKey] || [])];
       const existingIndex = currentSlots.findIndex(
         (s) => cleanName(s.name).toLowerCase() === versionedName.toLowerCase()
@@ -334,29 +255,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     });
     saveActiveCharacter();
 
-    // Reset creation form
     setCreateName('');
     setCreateAction('A');
     setCreateUsage('1-Enc');
     setCreateEffect('');
-    setIsVersionUpgrade(false);
-    setIsCreatingCustom(false);
+    setActiveRightTab('CATALOG');
   };
 
-  // 1-Click Version Upgrade Handler (Pre-fills creation form with v{N+1} and locks name)
-  const handleStartUpgrade = (item: Power | MagicItem) => {
-    const { baseName, version } = parseAbilityVersion(item.name);
-    const nextVersion = version + 1;
-    setCreateName(`${baseName} v${nextVersion}`);
-    setCreateAction(item.action || 'A');
-    setCreateUsage(item.usage || '1-Enc');
-    setCreateEffect(item.effect || '');
-    setIsVersionUpgrade(true);
-    setIsCreatingCustom(true);
-  };
-
-  // Inline Edit Handlers
-  const handleStartEdit = (item: Power | MagicItem) => {
+  const handleStartEdit = (item: Power | MagicItem | AbilitySlot) => {
     const cleaned = cleanName(item.name);
     setEditingAbilityName(cleaned);
     setEditAction(item.action || 'A');
@@ -374,7 +280,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         effect: editEffect.trim(),
       };
 
-      // Also update in custom items if it's a custom created item
       const customKey = type === 'powers' ? 'custom_powers' : 'custom_magic_items';
       const existingCustom = [...(prev[customKey] || [])];
       const customIndex = existingCustom.findIndex(
@@ -389,7 +294,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         };
       }
 
-      // Also update active slots if currently learned
       const currentSlots = [...(prev[slotKey] || [])];
       const slotIndex = currentSlots.findIndex(
         (s) => cleanName(s.name).toLowerCase() === cleaned.toLowerCase()
@@ -414,902 +318,677 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setEditingAbilityName(null);
   };
 
-  // 1. Filter catalog items by selected Category (Powers mode)
-  const categoryFilteredCatalog = fullCatalog.filter((item) => {
-    if (type === 'powers') {
-      if (selectedCategory === 'favorites') {
-        return Boolean(item.table_name && favoriteTables.includes(item.table_name));
-      } else if (selectedCategory !== 'all') {
-        const itemSub = (item.sub || '').toLowerCase();
-        return itemSub.includes(selectedCategory.toLowerCase());
+  // Filter catalog items by Category & Deduplication
+  const categoryFilteredCatalog = useMemo(() => {
+    return fullCatalog.filter((item) => {
+      // 1. Deduplication: Filter out items already in the character's learned roster
+      if (knownAbilityNamesSet.has(cleanName(item.name).toLowerCase())) {
+        return false;
       }
-    }
-    return true;
-  });
 
-  // 2. Group items under category by table_name (including empty custom power tables)
-  const groupedTables = categoryFilteredCatalog.reduce((acc, item) => {
-    const tableName = item.table_name || (type === 'powers' ? 'General Powers' : 'General Magic Items');
-    if (!acc[tableName]) acc[tableName] = [];
-    acc[tableName].push(item);
-    return acc;
-  }, {} as Record<string, (Power | MagicItem)[]>);
-
-  if (type === 'powers') {
-    customPowerTables.forEach((tbl) => {
-      if (selectedCategory === 'favorites') {
-        if (favoriteTables.includes(tbl.name) && !groupedTables[tbl.name]) {
-          groupedTables[tbl.name] = [];
-        }
-      } else if (selectedCategory === 'all' || tbl.sub.toLowerCase().includes(selectedCategory.toLowerCase())) {
-        if (!groupedTables[tbl.name]) {
-          groupedTables[tbl.name] = [];
+      if (type === 'powers') {
+        if (selectedCategory === 'favorites') {
+          return Boolean(item.table_name && favoriteTables.includes(item.table_name));
+        } else if (selectedCategory !== 'all') {
+          const itemSub = (item.sub || '').toLowerCase();
+          return itemSub.includes(selectedCategory.toLowerCase());
         }
       }
+      return true;
     });
-  }
+  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, favoriteTables]);
 
-  // 3. Extract table names and filter by left pane tableSearchQuery
-  const allTableNames = Object.keys(groupedTables);
-  const filteredTableNames = allTableNames.filter((t) =>
-    t.toLowerCase().includes(tableSearchQuery.toLowerCase().trim())
-  );
+  const groupedTables = useMemo(() => {
+    const acc = categoryFilteredCatalog.reduce((map, item) => {
+      const tableName = item.table_name || (type === 'powers' ? 'General Powers' : 'General Magic Items');
+      if (!map[tableName]) map[tableName] = [];
+      map[tableName].push(item);
+      return map;
+    }, {} as Record<string, (Power | MagicItem)[]>);
 
-  // 4. Effective active table (auto-select first in list if activeTableName is invalid/unselected)
-  const effectiveActiveTable =
-    activeTableName && filteredTableNames.includes(activeTableName)
-      ? activeTableName
-      : filteredTableNames[0] || null;
+    if (type === 'powers') {
+      customPowerTables.forEach((tbl) => {
+        if (selectedCategory === 'favorites') {
+          if (favoriteTables.includes(tbl.name) && !acc[tbl.name]) {
+            acc[tbl.name] = [];
+          }
+        } else if (selectedCategory === 'all' || tbl.sub.toLowerCase().includes(selectedCategory.toLowerCase())) {
+          if (!acc[tbl.name]) {
+            acc[tbl.name] = [];
+          }
+        }
+      });
+    }
 
-  // 5. Abilities for active table filtered by right pane searchQuery
-  const activeTableAbilities = effectiveActiveTable ? groupedTables[effectiveActiveTable] || [] : [];
-  const filteredAbilities = activeTableAbilities.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase().trim();
-    const nameMatch = item.name.toLowerCase().includes(q);
-    const actionMatch = (item.action || '').toLowerCase().includes(q);
-    const usageMatch = (item.usage || '').toLowerCase().includes(q);
-    const effectMatch = (item.effect || '').toLowerCase().includes(q);
-    return nameMatch || actionMatch || usageMatch || effectMatch;
-  });
-
-  // 6. Master-Child Grouping by baseName for Popover View (Highest version as Master Row)
-  const groupedByBaseName = filteredAbilities.reduce((acc, item) => {
-    const { baseName } = parseAbilityVersion(item.name);
-    if (!acc[baseName]) acc[baseName] = [];
-    acc[baseName].push(item);
     return acc;
-  }, {} as Record<string, (Power | MagicItem)[]>);
+  }, [categoryFilteredCatalog, type, customPowerTables, selectedCategory, favoriteTables]);
+
+  const availableTableNames = useMemo(() => Object.keys(groupedTables), [groupedTables]);
+
+  const effectiveActiveTable = useMemo(() => {
+    if (activeTableName && availableTableNames.includes(activeTableName)) {
+      return activeTableName;
+    }
+    return availableTableNames[0] || null;
+  }, [activeTableName, availableTableNames]);
+
+  const activeTableAbilities = useMemo(() => {
+    return effectiveActiveTable ? groupedTables[effectiveActiveTable] || [] : [];
+  }, [effectiveActiveTable, groupedTables]);
+
+  const filteredCatalogAbilities = useMemo(() => {
+    return activeTableAbilities.filter((item) => {
+      if (!rightSearchQuery.trim()) return true;
+      const q = rightSearchQuery.toLowerCase().trim();
+      const nameMatch = item.name.toLowerCase().includes(q);
+      const actionMatch = (item.action || '').toLowerCase().includes(q);
+      const usageMatch = (item.usage || '').toLowerCase().includes(q);
+      const effectMatch = (item.effect || '').toLowerCase().includes(q);
+      return nameMatch || actionMatch || usageMatch || effectMatch;
+    });
+  }, [activeTableAbilities, rightSearchQuery]);
+
+  // Filtered learned roster for Left Column search
+  const filteredRoster = useMemo(() => {
+    if (!leftSearchQuery.trim()) return slots;
+    const q = leftSearchQuery.toLowerCase().trim();
+    return slots.filter((s) => cleanName(s.name).toLowerCase().includes(q) || (s.effect || '').toLowerCase().includes(q));
+  }, [slots, leftSearchQuery]);
 
   const sectionIcon = type === 'powers' ? '🔥' : '✨';
   const displayTitle = title || (type === 'powers' ? 'POWERS' : 'MAGIC ITEMS');
 
-  // Automatic Highest-Version Active Sheet Display (ALWAYS max(version) per baseName)
-  const highestVersionSlotsMap = slots.reduce((acc, slot) => {
-    const { baseName, version } = parseAbilityVersion(slot.name);
-    const existing = acc[baseName];
-    if (!existing || version > parseAbilityVersion(existing.name).version) {
-      acc[baseName] = slot;
-    }
-    return acc;
-  }, {} as Record<string, AbilitySlot>);
+  // Automatic Highest-Version Active Sheet Display (max version per baseName)
+  const activeDisplaySlots = useMemo(() => {
+    const highestMap = slots.reduce((acc, slot) => {
+      const { baseName, version } = parseAbilityVersion(slot.name);
+      const existing = acc[baseName];
+      if (!existing || version > parseAbilityVersion(existing.name).version) {
+        acc[baseName] = slot;
+      }
+      return acc;
+    }, {} as Record<string, AbilitySlot>);
+    return Object.values(highestMap);
+  }, [slots]);
 
-  const activeDisplaySlots = Object.values(highestVersionSlotsMap);
-
-  // Automatic Default Action Economy Sorting for Active Sheet
-  const sortedSlots = [...activeDisplaySlots].sort((a, b) => {
-    const orderA = ACTION_ORDER[a.action?.toUpperCase() || ''] ?? 99;
-    const orderB = ACTION_ORDER[b.action?.toUpperCase() || ''] ?? 99;
-    if (orderA !== orderB) return orderA - orderB;
-    return (a.name || '').localeCompare(b.name || '');
-  });
+  // Default Action Economy Sorting for Active Sheet
+  const sortedSlots = useMemo(() => {
+    return [...activeDisplaySlots].sort((a, b) => {
+      const orderA = ACTION_ORDER[a.action?.toUpperCase() || ''] ?? 99;
+      const orderB = ACTION_ORDER[b.action?.toUpperCase() || ''] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  }, [activeDisplaySlots]);
 
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">
-      {/* Header: Title, Icon, & Catalog Trigger */}
+      {/* Header: Title, Icon, & Master Manager Trigger Button */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
         <h3 className="font-outfit font-bold text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
           <span className="text-base">{sectionIcon}</span>
           {displayTitle}
         </h3>
 
-        <div className="flex items-center gap-2">
-          {/* Relative wrapper for Manage Catalog Popover */}
-          <div className="relative" ref={popoverRef}>
-            <button
-              onClick={() => setShowCatalogPopover(!showCatalogPopover)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
-                showCatalogPopover
-                  ? type === 'powers'
-                    ? 'bg-amber-600/30 text-amber-200 border-amber-400 shadow-amber-500/30'
-                    : 'bg-cyan-600/30 text-cyan-200 border-cyan-400 shadow-cyan-500/30'
-                  : type === 'powers'
-                  ? 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-300'
-                  : 'bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300'
-              }`}
-              title={`Click to browse and manage ${type}`}
-            >
-              <span className="font-outfit font-bold">
-                Manage {type === 'powers' ? 'Powers' : 'Magic Items'}
-              </span>
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
-                {sortedSlots.length}/{fullCatalog.length}
-              </span>
-              {showCatalogPopover ? (
-                <ChevronUp className="w-3.5 h-3.5 shrink-0" />
-              ) : (
-                <ChevronDown className="w-3.5 h-3.5 shrink-0" />
-              )}
-            </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowManageModal(!showManageModal)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
+              showManageModal
+                ? type === 'powers'
+                  ? 'bg-amber-600/30 text-amber-200 border-amber-400 shadow-amber-500/30'
+                  : 'bg-cyan-600/30 text-cyan-200 border-cyan-400 shadow-cyan-500/30'
+                : type === 'powers'
+                ? 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-300'
+                : 'bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300'
+            }`}
+            title={`Manage ${type === 'powers' ? 'powers' : 'magic items'} roster and catalog`}
+          >
+            <span className="font-outfit font-bold">
+              Manage {type === 'powers' ? 'Powers' : 'Magic Items'}
+            </span>
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
+              {slots.length} Learned
+            </span>
+            {showManageModal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
 
-            {/* Catalog Viewport-Centered Floating Glass Modal (Master-Detail Split Pane Option A - 960px Width, Zero Viewport Clipping) */}
-            {showCatalogPopover && (
+          {/* MASTER 2-COLUMN SPLIT-PANE MANAGER MODAL */}
+          {showManageModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
               <div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fadeIn overflow-y-auto"
-                onClick={() => setShowCatalogPopover(false)}
+                ref={modalRef}
+                className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-xs"
               >
-                <div
-                  className="w-[960px] max-w-[96vw] max-h-[90vh] p-4 bg-slate-900/95 border border-indigo-500/40 rounded-2xl shadow-2xl shadow-indigo-950/80 backdrop-blur-xl flex flex-col gap-3 text-xs overflow-x-hidden"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
-                    <span className="font-outfit font-extrabold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5 text-xs">
-                      <span className="text-sm">{sectionIcon}</span>
-                      {type === 'powers' ? 'Powers Catalog' : 'Magic Items Catalog'} ({sortedSlots.length} Active Learned)
-                    </span>
-                    <button
-                      onClick={() => setShowCatalogPopover(false)}
-                      className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors"
-                      title="Close popover"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                {/* Modal Top Bar */}
+                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-2 rounded-xl border flex items-center justify-center ${
+                      type === 'powers' ? 'bg-amber-950/80 border-amber-500/30 text-amber-300' : 'bg-cyan-950/80 border-cyan-500/30 text-cyan-300'
+                    }`}>
+                      <span className="text-lg leading-none">{sectionIcon}</span>
+                    </div>
+                    <div>
+                      <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                        {type === 'powers' ? 'Powers Manager' : 'Magic Items Manager'}
+                      </h3>
+                      <p className="text-xs text-slate-400 hidden sm:block">
+                        Manage character {type === 'powers' ? 'powers' : 'magic items'} side-by-side with the SupaFlex stock catalog and custom creator.
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Sub-Category Choice Buttons Row (Powers Mode Only) */}
-                  {type === 'powers' && (
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 border-b border-slate-800 pb-2.5">
-                      {POWER_CATEGORY_BUTTONS.map((cat) => {
-                        const isSelected = selectedCategory.toLowerCase() === cat.id.toLowerCase();
-                        return (
-                          <button
-                            key={cat.id}
-                            onClick={() => {
-                              setSelectedCategory(cat.id);
-                              setActiveTableName(null);
-                            }}
-                            className={`px-2 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1 shadow-sm ${
-                              isSelected
-                                ? 'bg-indigo-600/30 text-indigo-200 border-indigo-400 shadow-indigo-500/20'
-                                : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-200'
-                            }`}
-                          >
-                            <span className="text-sm">{cat.icon}</span>
-                            <span className="truncate">{cat.label}</span>
-                            {cat.id === 'favorites' && favoriteTables.length > 0 && (
-                              <span className="text-[10px] font-mono font-extrabold px-1 py-0.2 bg-slate-900 rounded text-amber-300">
-                                ({favoriteTables.length})
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                  <button
+                    onClick={() => setShowManageModal(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
 
-                  {/* Master-Detail Split Pane Container */}
-                  <div className="flex flex-col md:flex-row gap-3 min-h-[380px] max-h-[440px]">
-                    {/* LEFT MASTER PANE: Table Selection Index (Auto-Wrapping Table Names) */}
-                    <div className="w-full md:w-64 shrink-0 flex flex-col gap-2 border-b md:border-b-0 md:border-r border-slate-800 pb-2 md:pb-0 md:pr-3">
-                      {/* Search Bar & 📁 + Table Button */}
-                      <div className="flex items-center gap-1.5">
-                        <div className="flex-1 flex items-center gap-2 bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800 focus-within:border-indigo-500/50 min-w-0">
-                          <Search className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                          <input
-                            type="text"
-                            value={tableSearchQuery}
-                            onChange={(e) => setTableSearchQuery(e.target.value)}
-                            placeholder="Search tables..."
-                            className="bg-transparent text-xs font-semibold text-slate-200 outline-none w-full placeholder:text-slate-500"
-                          />
-                          {tableSearchQuery && (
-                            <button onClick={() => setTableSearchQuery('')} className="text-slate-500 hover:text-slate-300">
-                              <X className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                        {type === 'powers' && (
-                          <button
-                            onClick={handleOpenTableCreation}
-                            className="px-2 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-500/40 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 shrink-0 transition-colors flex items-center gap-1 shadow-sm"
-                            title="Create new power table in category"
-                          >
-                            <Plus className="w-3 h-3" />
-                            Table
-                          </button>
-                        )}
+                {/* 2-COLUMN SPLIT-PANE BODY */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
+                  
+                  {/* --- LEFT COLUMN: LEARNED ABILITIES ROSTER --- */}
+                  <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                    {/* Pane Header */}
+                    <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Flame className={`w-4 h-4 ${type === 'powers' ? 'text-amber-400' : 'text-cyan-400'}`} />
+                        <span className={`text-xs font-outfit font-bold uppercase tracking-wider ${type === 'powers' ? 'text-amber-300' : 'text-cyan-300'}`}>
+                          Learned {type === 'powers' ? 'Powers' : 'Magic Items'}
+                        </span>
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
+                          {slots.length}
+                        </span>
                       </div>
 
-                      {/* Inline Custom Table Creation Drawer Form */}
-                      {type === 'powers' && isCreatingTable && (
-                        <div className="p-2.5 bg-slate-950/90 rounded-xl border border-indigo-500/40 flex flex-col gap-2 shadow-md animate-fadeIn">
-                          <div className="flex items-center justify-between border-b border-indigo-500/20 pb-1">
-                            <span className="font-outfit font-bold text-[11px] text-indigo-300 flex items-center gap-1">
-                              📁 Create Custom Power Table
-                            </span>
-                            <button onClick={() => setIsCreatingTable(false)} className="text-slate-400 hover:text-slate-200">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                          <input
-                            type="text"
-                            value={newTableName}
-                            onChange={(e) => setNewTableName(e.target.value)}
-                            placeholder="Table Name (e.g. Shadow Powers)..."
-                            className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-100 outline-none focus:border-indigo-400"
-                          />
-                          <div className="flex items-center gap-1.5">
-                            <label className="text-[10px] text-slate-400 font-bold">Category:</label>
-                            <select
-                              value={newTableSub}
-                              onChange={(e) => setNewTableSub(e.target.value)}
-                              className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 text-[10px] text-indigo-300 outline-none flex-1 font-semibold"
-                            >
-                              <option value="class">👤 Class</option>
-                              <option value="racial">🧬 Racial</option>
-                              <option value="combat_styles">⚔️ Combat Styles</option>
-                              <option value="luck">🍀 Luck</option>
-                            </select>
-                          </div>
-                          <div className="flex items-center justify-end gap-1.5 pt-1">
-                            <button onClick={() => setIsCreatingTable(false)} className="px-2 py-0.5 text-[10px] text-slate-400 hover:text-slate-200">
-                              Cancel
-                            </button>
-                            <button
-                              onClick={handleSaveCustomTable}
-                              disabled={!newTableName.trim()}
-                              className="px-2.5 py-0.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-[10px] rounded transition-all shadow-sm"
-                            >
-                              Save Table
-                            </button>
-                          </div>
+                      {/* Roster Search Filter */}
+                      <div className="relative">
+                        <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search learned..."
+                          value={leftSearchQuery}
+                          onChange={(e) => setLeftSearchQuery(e.target.value)}
+                          className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-amber-500 w-24 sm:w-28"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Scrollable Learned Abilities List */}
+                    <div className="flex-1 overflow-y-auto pr-1 mt-2.5 flex flex-col gap-2.5 min-h-0">
+                      {filteredRoster.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
+                          <Flame className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
+                          {leftSearchQuery ? (
+                            <span>No abilities matching "{leftSearchQuery}"</span>
+                          ) : (
+                            <span>No {type} learned yet. Select from catalog on the right.</span>
+                          )}
                         </div>
-                      )}
+                      ) : (
+                        filteredRoster.map((item, idx) => {
+                          const cleaned = cleanName(item.name);
+                          const { baseName, version } = parseAbilityVersion(cleaned);
+                          const actionUpper = (item.action || '').toUpperCase();
+                          const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+                          const isEditing = editingAbilityName?.toLowerCase() === cleaned.toLowerCase();
 
-                      <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1">
-                        {filteredTableNames.length > 0 ? (
-                          filteredTableNames.map((tblName) => {
-                            const itemsInTbl = groupedTables[tblName] || [];
-                            const learnedCount = itemsInTbl.filter((item) =>
-                              slots.some((s) => cleanName(s.name).toLowerCase() === cleanName(item.name).toLowerCase())
-                            ).length;
-                            const isSelected = effectiveActiveTable === tblName;
-                            const isFavorited = favoriteTables.includes(tblName);
-                            const isCustomTable = customPowerTables.some((t) => t.name === tblName);
-
+                          if (isEditing) {
                             return (
-                              <div
-                                key={tblName}
-                                onClick={() => setActiveTableName(tblName)}
-                                className={`p-2 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-2 text-xs ${
-                                  isSelected
-                                    ? 'bg-indigo-950/80 border-indigo-500/60 text-indigo-200 shadow-sm font-bold'
-                                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                                }`}
-                              >
-                                <div className="flex items-start gap-1.5 flex-1 min-w-0">
-                                  <span className="shrink-0 text-xs mt-0.5">📁</span>
-                                  <span className="font-outfit text-xs whitespace-normal break-words leading-tight text-left">
-                                    {tblName}
+                              <div key={item.name + idx} className="p-3 bg-slate-950/90 rounded-xl border border-amber-500/40 flex flex-col gap-2.5 shadow-md shrink-0">
+                                <div className="flex items-center justify-between border-b border-amber-500/20 pb-1">
+                                  <span className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1.5">
+                                    <Lock className="w-3.5 h-3.5 text-amber-400" />
+                                    {cleaned}
                                   </span>
+                                  <button onClick={() => setEditingAbilityName(null)} className="text-slate-400 hover:text-slate-200">
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
 
-                                <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                                  <span className="text-[10px] font-mono text-slate-400">
-                                    ({learnedCount}/{itemsInTbl.length})
-                                  </span>
-                                  {type === 'powers' && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleToggleFavoriteTable(tblName);
-                                      }}
-                                      className="p-1 hover:bg-slate-800 rounded transition-colors"
-                                      title={isFavorited ? 'Remove from Favorite Tables' : 'Add to Favorite Tables'}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="flex items-center gap-1">
+                                    <label className="text-[10px] text-slate-400 font-bold">Action:</label>
+                                    <select
+                                      value={editAction}
+                                      onChange={(e) => setEditAction(e.target.value)}
+                                      className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-amber-300 font-mono outline-none"
                                     >
-                                      <Star
-                                        className={`w-3 h-3 ${
-                                          isFavorited ? 'fill-amber-400 text-amber-400' : 'text-slate-500 hover:text-amber-400'
-                                        }`}
-                                      />
-                                    </button>
-                                  )}
-                                  {type === 'powers' && isCustomTable && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteCustomTable(tblName);
-                                      }}
-                                      className="p-1 hover:bg-rose-950 rounded text-slate-500 hover:text-rose-400 transition-colors"
-                                      title="Delete custom table"
+                                      {ACTION_OPTIONS.map((a) => (
+                                        <option key={a} value={a}>{a}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+
+                                  <div className="flex items-center gap-1">
+                                    <label className="text-[10px] text-slate-400 font-bold">Usage:</label>
+                                    <select
+                                      value={editUsage}
+                                      onChange={(e) => setEditUsage(e.target.value)}
+                                      className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-300 font-mono outline-none"
                                     >
-                                      <Trash2 className="w-3 h-3" />
-                                    </button>
-                                  )}
+                                      {USAGE_OPTIONS.map((u) => (
+                                        <option key={u} value={u}>{u}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+
+                                <textarea
+                                  ref={editEffectRef}
+                                  value={editEffect}
+                                  onChange={(e) => setEditEffect(e.target.value.slice(0, 450))}
+                                  rows={2}
+                                  className="bg-slate-900 p-2 rounded-lg border border-slate-700 text-xs text-slate-200 outline-none focus:border-amber-400 resize-none"
+                                />
+
+                                <div className="flex items-center justify-end gap-1.5 pt-1">
+                                  <button onClick={() => setEditingAbilityName(null)} className="px-2 py-0.5 text-slate-400 hover:text-slate-200">
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => handleSaveEdit(cleaned)}
+                                    className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm"
+                                  >
+                                    <Save className="w-3 h-3" /> Save Changes
+                                  </button>
                                 </div>
                               </div>
                             );
-                          })
-                        ) : (
-                          <div className="p-3 text-center text-slate-500 italic text-xs">
-                            {selectedCategory === 'favorites'
-                              ? 'No favorite tables starred.'
-                              : `No tables match "${tableSearchQuery}"`}
-                          </div>
-                        )}
+                          }
+
+                          return (
+                            <div
+                              key={item.name + idx}
+                              className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
+                            >
+                              {/* Header Row: Name, Action, Usage, Drop Button */}
+                              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-outfit font-bold text-sm text-slate-100">{baseName}</span>
+                                  {version > 1 && (
+                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
+                                      v{version}
+                                    </span>
+                                  )}
+                                  {actionUpper && (
+                                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${actionClass}`}>
+                                      {actionUpper}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    onClick={() => handleStartEdit(item)}
+                                    className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors"
+                                    title="Edit ability"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleForgetAbility(item.name)}
+                                    className="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0"
+                                    title="Forget ability"
+                                  >
+                                    - Forget
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Sub-Row: Usage & Effect */}
+                              <div className="flex flex-col gap-1 text-xs">
+                                {item.usage && (
+                                  <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-2 py-0.5 rounded border border-slate-800 w-fit">
+                                    {item.usage}
+                                  </span>
+                                )}
+                                <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                                  {item.effect || 'No description'}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* --- RIGHT COLUMN: STOCK CATALOG & CUSTOM CREATOR PANE --- */}
+                  <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                    {/* Pane Sub-Tab Header */}
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
+                      <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800 w-full">
+                        <button
+                          onClick={() => setActiveRightTab('CATALOG')}
+                          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'CATALOG'
+                              ? type === 'powers'
+                                ? 'bg-amber-600/30 text-amber-200 border border-amber-500/40 shadow-sm'
+                                : 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <Globe className="w-3.5 h-3.5 text-amber-400" />
+                          Stock Catalog ({filteredCatalogAbilities.length})
+                        </button>
+
+                        <button
+                          onClick={() => setActiveRightTab('CREATOR')}
+                          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'CREATOR'
+                              ? type === 'powers'
+                                ? 'bg-amber-600/30 text-amber-200 border border-amber-500/40 shadow-sm'
+                                : 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <Plus className="w-3.5 h-3.5 text-amber-400" />
+                          Custom Creator
+                        </button>
                       </div>
                     </div>
 
-                    {/* RIGHT DETAIL PANE: Active Table Ability Work Area & Version Tree */}
-                    <div className="flex-1 flex flex-col gap-2 min-w-0 pl-0 md:pl-1">
-                      {/* Active Table Header Bar with ➕ Create Custom Button */}
-                      <div className="flex items-center justify-between bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 shadow-sm gap-2">
-                        <span className="font-outfit font-extrabold text-xs uppercase tracking-wider text-indigo-300 flex items-center gap-2 flex-1 min-w-0">
-                          <span className="shrink-0">📁</span>
-                          <span className="whitespace-normal break-words leading-tight">
-                            {effectiveActiveTable || (type === 'powers' ? 'Powers' : 'Magic Items')}
-                          </span>
-                          {effectiveActiveTable && groupedTables[effectiveActiveTable] && (
-                            <span className="text-slate-400 text-[10px] font-mono shrink-0">
-                              ({Object.keys(groupedByBaseName).length} Master Abilities)
-                            </span>
-                          )}
-                        </span>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            onClick={handleOpenCustomCreation}
-                            className="px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 shadow-sm bg-indigo-950/40 hover:bg-indigo-900/50 border-indigo-500/30 text-indigo-300"
-                            title={`Create custom ${type === 'powers' ? 'power' : 'magic item'}`}
-                          >
-                            <Plus className="w-3 h-3" />
-                            Custom
-                          </button>
-
-                          {type === 'powers' && effectiveActiveTable && (
-                            <button
-                              onClick={() => handleToggleFavoriteTable(effectiveActiveTable)}
-                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 ${
-                                favoriteTables.includes(effectiveActiveTable)
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-amber-500/10'
-                                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-amber-300 hover:border-amber-500/30'
-                              }`}
-                              title={
-                                favoriteTables.includes(effectiveActiveTable)
-                                  ? 'Remove from Favorite Tables'
-                                  : 'Add to Favorite Tables'
-                              }
-                            >
-                              <Star
-                                className={`w-3 h-3 ${
-                                  favoriteTables.includes(effectiveActiveTable) ? 'fill-amber-400 text-amber-400' : ''
-                                }`}
-                              />
-                              {favoriteTables.includes(effectiveActiveTable) ? 'Favorite' : 'Favorite'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Custom Ability Creation Drawer Form */}
-                      {isCreatingCustom && (
-                        <div className="p-3 bg-slate-950/90 rounded-xl border border-indigo-500/40 flex flex-col gap-2.5 shadow-lg">
-                          <div className="flex items-center justify-between border-b border-indigo-500/20 pb-1.5">
-                            <span className="font-outfit font-extrabold text-xs text-indigo-300 flex items-center gap-1.5">
-                              ➕ {isVersionUpgrade ? 'Upgrade Ability Version' : `Create Custom ${type === 'powers' ? 'Power' : 'Magic Item'}`}
-                            </span>
-                            <button onClick={() => setIsCreatingCustom(false)} className="text-slate-400 hover:text-slate-200">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                            {isVersionUpgrade ? (
-                              <div className="bg-slate-950 px-2.5 py-1 rounded-lg border border-indigo-500/40 text-xs font-bold text-slate-100 flex items-center gap-1.5 flex-1 select-none">
-                                <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                <span>{createName}</span>
-                                <span className="text-[10px] text-amber-300 font-mono font-normal">(Auto-Generated Version)</span>
-                              </div>
-                            ) : (
-                              <input
-                                type="text"
-                                value={createName}
-                                onChange={(e) => setCreateName(e.target.value)}
-                                placeholder="Custom Name (e.g. Arcane Bolt)..."
-                                className="bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-700 text-xs text-slate-100 outline-none focus:border-indigo-400 flex-1"
-                              />
-                            )}
-
-                            <div className="flex items-center gap-1.5">
-                              <select
-                                value={createAction}
-                                onChange={(e) => setCreateAction(e.target.value)}
-                                className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-indigo-300 font-mono outline-none"
-                              >
-                                {ACTION_OPTIONS.map((a) => (
-                                  <option key={a} value={a}>{a}</option>
-                                ))}
-                              </select>
-                              <select
-                                value={createUsage}
-                                onChange={(e) => setCreateUsage(e.target.value)}
-                                className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-300 font-mono outline-none"
-                              >
-                                {USAGE_OPTIONS.map((u) => (
-                                  <option key={u} value={u}>{u}</option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Primary Icon Insertion Bar */}
-                          <div className="flex items-center gap-1 bg-slate-900/60 p-1 rounded-lg border border-slate-800">
-                            <span className="text-[10px] text-slate-400 font-bold px-1">Insert Icon:</span>
-                            {PRIMARY_ATTRIBUTE_ICONS.map(({ label, icon }) => (
-                              <button
-                                key={label}
-                                type="button"
-                                onClick={() => handleInsertIcon(icon, createEffectRef, setCreateEffect)}
-                                className="px-1.5 py-0.5 bg-slate-950 hover:bg-indigo-950/80 text-xs rounded border border-slate-800 text-slate-200 transition-colors flex items-center gap-1"
-                                title={`Insert ${label} (${icon})`}
-                              >
-                                <span>{icon}</span>
-                                <span className="text-[10px] hidden sm:inline">{label}</span>
-                              </button>
-                            ))}
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <textarea
-                              ref={createEffectRef}
-                              value={createEffect}
-                              onChange={(e) => setCreateEffect(e.target.value.slice(0, 450))}
-                              placeholder="Effect description..."
-                              rows={2}
-                              className="bg-slate-900 p-2 rounded-lg border border-slate-700 text-xs text-slate-200 outline-none focus:border-indigo-400 resize-none"
-                            />
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span className={createEffect.length >= 450 ? 'text-rose-400 font-bold' : createEffect.length >= 360 ? 'text-amber-400' : 'text-slate-500'}>
-                                {createEffect.length} / 450 max chars
-                              </span>
-                              <button
-                                onClick={handleSaveCustomAbility}
-                                disabled={!createName.trim()}
-                                className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm"
-                              >
-                                <Save className="w-3 h-3" /> Save Version
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Ability Search Filter Bar inside Active Table */}
-                      <div className="flex items-center gap-2 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 focus-within:border-indigo-500/50">
-                        <Search className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                        <input
-                          type="text"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          placeholder={`Search abilities in ${effectiveActiveTable || 'catalog'}...`}
-                          className="bg-transparent text-xs font-semibold text-slate-200 outline-none w-full placeholder:text-slate-500"
-                        />
-                        {searchQuery && (
-                          <button onClick={() => setSearchQuery('')} className="text-slate-500 hover:text-slate-300">
-                            <X className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Scrollable Ability List for Active Table (Optimized Card Proportions & Read-Only Version Names) */}
-                      <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2">
-                        {effectiveActiveTable && groupedTables[effectiveActiveTable] ? (
-                          Object.keys(groupedByBaseName).length > 0 ? (
-                            Object.entries(groupedByBaseName).map(([baseName, baseItems]) => {
-                              // Sort versions descending (v3, v2, v1)
-                              const sortedVersions = [...baseItems].sort((a, b) => {
-                                const vA = parseAbilityVersion(a.name).version;
-                                const vB = parseAbilityVersion(b.name).version;
-                                return vB - vA;
-                              });
-
-                              const masterItem = sortedVersions[0];
-                              const masterVer = parseAbilityVersion(masterItem.name).version;
-                              const historyItems = sortedVersions.slice(1);
-                              const isHistoryExpanded = expandedHistoryBases.includes(baseName);
-
-                              const masterCleaned = cleanName(masterItem.name);
-                              const isMasterLearned = slots.some(
-                                (s) => cleanName(s.name).toLowerCase() === masterCleaned.toLowerCase()
+                    {/* TAB 1: STOCK CATALOG VIEW */}
+                    {activeRightTab === 'CATALOG' && (
+                      <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
+                        {/* Category Pills (Powers Mode Only) */}
+                        {type === 'powers' && (
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 shrink-0">
+                            {POWER_CATEGORY_BUTTONS.map((cat) => {
+                              const isSelected = selectedCategory.toLowerCase() === cat.id.toLowerCase();
+                              return (
+                                <button
+                                  key={cat.id}
+                                  onClick={() => {
+                                    setSelectedCategory(cat.id);
+                                    setActiveTableName(null);
+                                  }}
+                                  className={`px-1.5 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center justify-center gap-1 ${
+                                    isSelected
+                                      ? 'bg-amber-600/30 text-amber-200 border-amber-400 shadow-sm'
+                                      : 'bg-slate-900/90 text-slate-400 border-slate-800 hover:text-slate-200'
+                                  }`}
+                                >
+                                  <span>{cat.icon}</span>
+                                  <span className="truncate">{cat.label}</span>
+                                </button>
                               );
-                              const isEditingMaster = editingAbilityName?.toLowerCase() === masterCleaned.toLowerCase();
-                              const masterActionUpper = (masterItem.action || '').toUpperCase();
-                              const masterActionClass =
-                                ACTION_COLORS[masterActionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+                            })}
+                          </div>
+                        )}
+
+                        {/* Table Selector Dropdown & + Table Button */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs font-bold text-slate-400 shrink-0">Table:</span>
+                          <select
+                            value={effectiveActiveTable || ''}
+                            onChange={(e) => setActiveTableName(e.target.value)}
+                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 truncate"
+                          >
+                            {availableTableNames.map((tblName) => (
+                              <option key={tblName} value={tblName}>
+                                📁 {tblName} ({groupedTables[tblName]?.length || 0})
+                              </option>
+                            ))}
+                          </select>
+                          {type === 'powers' && (
+                            <button
+                              onClick={() => setIsCreatingTable(true)}
+                              className="px-2 py-1 rounded-lg text-[10px] font-bold border border-amber-500/40 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 shrink-0 transition-colors flex items-center gap-1 shadow-sm"
+                              title="Create custom table"
+                            >
+                              <Plus className="w-3 h-3" />
+                              Table
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Inline Table Creator Drawer */}
+                        {type === 'powers' && isCreatingTable && (
+                          <div className="p-2.5 bg-slate-950/90 rounded-xl border border-amber-500/40 flex flex-col gap-2 shadow-md shrink-0">
+                            <div className="flex items-center justify-between border-b border-amber-500/20 pb-1">
+                              <span className="font-outfit font-bold text-[11px] text-amber-300 flex items-center gap-1">
+                                📁 Create Custom Table
+                              </span>
+                              <button onClick={() => setIsCreatingTable(false)} className="text-slate-400 hover:text-slate-200">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              value={newTableName}
+                              onChange={(e) => setNewTableName(e.target.value)}
+                              placeholder="Table Name..."
+                              className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-100 outline-none focus:border-amber-400"
+                            />
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-[10px] text-slate-400 font-bold">Category:</label>
+                              <select
+                                value={newTableSub}
+                                onChange={(e) => setNewTableSub(e.target.value)}
+                                className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 text-[10px] text-amber-300 outline-none flex-1 font-semibold"
+                              >
+                                <option value="class">👤 Class</option>
+                                <option value="racial">🧬 Racial</option>
+                                <option value="combat_styles">⚔️ Combat Styles</option>
+                                <option value="luck">🍀 Luck</option>
+                              </select>
+                            </div>
+                            <div className="flex items-center justify-end gap-1.5 pt-1">
+                              <button onClick={() => setIsCreatingTable(false)} className="px-2 py-0.5 text-[10px] text-slate-400 hover:text-slate-200">
+                                Cancel
+                              </button>
+                              <button
+                                onClick={handleSaveCustomTable}
+                                disabled={!newTableName.trim()}
+                                className="px-2.5 py-0.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-[10px] rounded transition-all shadow-sm"
+                              >
+                                Save Table
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Search Bar & Peg-Slider Toggle */}
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <div className="relative">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              placeholder={`Search catalog ${type}...`}
+                              value={rightSearchQuery}
+                              onChange={(e) => setRightSearchQuery(e.target.value)}
+                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
+                            />
+                          </div>
+
+                          {/* Dyslexia-Friendly Peg-Slider Toggle */}
+                          <div className="flex items-center justify-between bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
+                            <span className="text-[11px] font-bold text-slate-400">Filter Mode:</span>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setLearnableOnly(false)}
+                                className={`text-xs font-bold cursor-pointer select-none ${
+                                  !learnableOnly ? 'text-amber-300 opacity-100 font-extrabold' : 'text-slate-400 opacity-50'
+                                }`}
+                              >
+                                All Abilities
+                              </button>
+                              <div
+                                onClick={() => setLearnableOnly(!learnableOnly)}
+                                className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors p-0.5 border border-slate-700 ${
+                                  learnableOnly ? 'bg-amber-600 border-amber-400' : 'bg-slate-800'
+                                }`}
+                              >
+                                <div
+                                  className={`w-5 h-5 rounded-full bg-slate-100 shadow-md transform transition-transform ${
+                                    learnableOnly ? 'translate-x-5' : 'translate-x-0'
+                                  }`}
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLearnableOnly(true)}
+                                className={`text-xs font-bold cursor-pointer select-none ${
+                                  learnableOnly ? 'text-amber-300 opacity-100 font-extrabold' : 'text-slate-400 opacity-50'
+                                }`}
+                              >
+                                Learnable Only
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Scrollable Catalog Abilities List */}
+                        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
+                          {filteredCatalogAbilities.length > 0 ? (
+                            filteredCatalogAbilities.map((item, idx) => {
+                              const { baseName, version } = parseAbilityVersion(item.name);
+                              const actionUpper = (item.action || '').toUpperCase();
 
                               return (
-                                <div key={baseName} className="flex flex-col gap-1 rounded-xl bg-slate-950/40 p-1 border border-slate-850">
-                                  {/* MASTER ROW (Highest Version) */}
-                                  {isEditingMaster ? (
-                                    <div className="p-3 bg-slate-950/90 rounded-xl border border-amber-500/40 flex flex-col gap-2.5 shadow-md">
-                                      <div className="flex items-center justify-between border-b border-amber-500/20 pb-1">
-                                        <div className="flex items-center gap-1.5">
-                                          <Lock className="w-3.5 h-3.5 text-amber-400" />
-                                          <span className="font-outfit font-bold text-xs text-slate-100">
-                                            {masterCleaned} <span className="text-[10px] text-slate-400 font-normal">(Name Locked)</span>
-                                          </span>
-                                        </div>
-                                        <button onClick={() => setEditingAbilityName(null)} className="text-slate-400 hover:text-slate-200">
-                                          <X className="w-3.5 h-3.5" />
-                                        </button>
-                                      </div>
-
-                                      <div className="flex items-center gap-2">
-                                        <label className="text-[10px] text-slate-400 font-bold">Action:</label>
-                                        <select
-                                          value={editAction}
-                                          onChange={(e) => setEditAction(e.target.value)}
-                                          className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-indigo-300 font-mono outline-none"
-                                        >
-                                          {ACTION_OPTIONS.map((a) => (
-                                            <option key={a} value={a}>{a}</option>
-                                          ))}
-                                        </select>
-
-                                        <label className="text-[10px] text-slate-400 font-bold ml-2">Usage:</label>
-                                        <select
-                                          value={editUsage}
-                                          onChange={(e) => setEditUsage(e.target.value)}
-                                          className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-300 font-mono outline-none"
-                                        >
-                                          {USAGE_OPTIONS.map((u) => (
-                                            <option key={u} value={u}>{u}</option>
-                                          ))}
-                                        </select>
-                                      </div>
-
-                                      {/* Primary Icon Insertion Bar */}
-                                      <div className="flex items-center gap-1 bg-slate-900/60 p-1 rounded-lg border border-slate-800">
-                                        <span className="text-[10px] text-slate-400 font-bold px-1">Insert Icon:</span>
-                                        {PRIMARY_ATTRIBUTE_ICONS.map(({ label, icon }) => (
-                                          <button
-                                            key={label}
-                                            type="button"
-                                            onClick={() => handleInsertIcon(icon, editEffectRef, setEditEffect)}
-                                            className="px-1.5 py-0.5 bg-slate-950 hover:bg-indigo-950/80 text-xs rounded border border-slate-800 text-slate-200 transition-colors flex items-center gap-1"
-                                            title={`Insert ${label} (${icon})`}
-                                          >
-                                            <span>{icon}</span>
-                                            <span className="text-[10px] hidden sm:inline">{label}</span>
-                                          </button>
-                                        ))}
-                                      </div>
-
-                                      <div className="flex flex-col gap-1">
-                                        <textarea
-                                          ref={editEffectRef}
-                                          value={editEffect}
-                                          onChange={(e) => setEditEffect(e.target.value.slice(0, 450))}
-                                          rows={2}
-                                          className="bg-slate-900 p-2 rounded-lg border border-slate-700 text-xs text-slate-200 outline-none focus:border-amber-400 resize-none"
-                                        />
-                                        <div className="flex items-center justify-between text-[10px]">
-                                          <span className={editEffect.length >= 450 ? 'text-rose-400 font-bold' : editEffect.length >= 360 ? 'text-amber-400' : 'text-slate-500'}>
-                                            {editEffect.length} / 450 max chars
-                                          </span>
-                                          <div className="flex items-center gap-1.5">
-                                            <button onClick={() => setEditingAbilityName(null)} className="px-2.5 py-1 text-slate-400 hover:text-slate-200">
-                                              Cancel
-                                            </button>
-                                            <button
-                                              onClick={() => handleSaveEdit(masterCleaned)}
-                                              className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm"
-                                            >
-                                              <Save className="w-3 h-3" /> Save Changes
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
+                                <div
+                                  key={item.id || idx}
+                                  className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-amber-500/40 transition-all shrink-0"
+                                >
+                                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-bold text-sm text-slate-100">{baseName}</span>
+                                      {version > 1 && (
+                                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
+                                          v{version}
+                                        </span>
+                                      )}
+                                      {actionUpper && (
+                                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${ACTION_COLORS[actionUpper] || 'bg-slate-800'}`}>
+                                          {actionUpper}
+                                        </span>
+                                      )}
                                     </div>
-                                  ) : (
-                                    <div
-                                      className={`p-2.5 rounded-xl border transition-all flex items-start justify-between gap-2 ${
-                                        isMasterLearned
-                                          ? 'bg-indigo-950/50 border-indigo-500/50 text-indigo-100 shadow-sm'
-                                          : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
-                                      }`}
+
+                                    <button
+                                      onClick={() => handleLearnAbility(item)}
+                                      className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 flex items-center gap-1 transition-all shrink-0"
                                     >
-                                      {/* Slimmed Name Column (w-28 sm:w-32) with Version Badge */}
-                                      <div className="w-28 sm:w-32 shrink-0 flex items-start gap-1">
-                                        {isMasterLearned && <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />}
-                                        <div className="flex flex-col gap-0.5 min-w-0">
-                                          <span className="font-outfit font-bold text-xs text-slate-100 whitespace-normal break-words leading-tight">
-                                            {baseName}
-                                          </span>
-                                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
-                                            <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                                            v{masterVer} Active
-                                          </span>
-                                        </div>
-                                      </div>
+                                      <Plus className="w-3.5 h-3.5" />
+                                      + Learn
+                                    </button>
+                                  </div>
 
-                                      {/* Action Badge */}
-                                      <div className="w-8 shrink-0 flex justify-center mt-0.5">
-                                        {masterActionUpper ? (
-                                          <span className={`text-[10px] font-mono font-bold px-1 py-0.2 rounded border ${masterActionClass}`}>
-                                            {masterActionUpper}
-                                          </span>
-                                        ) : (
-                                          <span className="text-[10px] text-slate-700 font-mono">-</span>
-                                        )}
-                                      </div>
-
-                                      {/* Usage Pill */}
-                                      <div className="w-14 shrink-0 flex justify-start mt-0.5">
-                                        {masterItem.usage ? (
-                                          <span
-                                            className="bg-slate-900 text-[10px] font-mono text-slate-300 px-1 py-0.2 rounded border border-slate-800 truncate"
-                                            title={masterItem.usage}
-                                          >
-                                            {masterItem.usage}
-                                          </span>
-                                        ) : (
-                                          <span className="text-[10px] text-slate-700 font-mono">-</span>
-                                        )}
-                                      </div>
-
-                                      {/* Expanded Effect Description Column (flex-1 min-w-0 pr-2) */}
-                                      <div className="flex-1 min-w-0 text-[11px] text-slate-300 leading-relaxed whitespace-normal break-words pr-2">
-                                        {masterItem.effect || 'No effect description'}
-                                      </div>
-
-                                      {/* Action Buttons */}
-                                      <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                                        <button
-                                          onClick={() => handleStartUpgrade(masterItem)}
-                                          className="px-1.5 py-0.5 bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-500/30 rounded text-[9px] font-bold transition-colors flex items-center gap-0.5"
-                                          title={`Upgrade to v${masterVer + 1}`}
-                                        >
-                                          <Plus className="w-2.5 h-2.5" />
-                                          v{masterVer + 1}
-                                        </button>
-                                        <button
-                                          onClick={() => handleStartEdit(masterItem)}
-                                          className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors"
-                                          title="Edit Master Version"
-                                        >
-                                          <Edit2 className="w-3 h-3" />
-                                        </button>
-                                        <button
-                                          onClick={() => handleToggleCatalogAbility(masterItem.name)}
-                                          className={`px-2 py-0.5 text-[10px] font-extrabold rounded-lg border transition-all ${
-                                            isMasterLearned
-                                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30'
-                                              : 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50'
-                                          }`}
-                                        >
-                                          {isMasterLearned ? 'Forget' : '+ Learn'}
-                                        </button>
-                                        {historyItems.length > 0 && (
-                                          <button
-                                            onClick={() => toggleHistoryAccordion(baseName)}
-                                            className={`p-1 rounded text-[10px] font-bold border transition-colors flex items-center gap-0.5 ${
-                                              isHistoryExpanded
-                                                ? 'bg-indigo-900/60 text-indigo-200 border-indigo-400'
-                                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-                                            }`}
-                                            title="View historical versions"
-                                          >
-                                            <GitBranch className="w-3 h-3 text-indigo-400" />
-                                            <span>{historyItems.length}</span>
-                                            {isHistoryExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* HISTORICAL VERSION SUB-ROWS (Indented Tree Branch) */}
-                                  {historyItems.length > 0 && isHistoryExpanded && (
-                                    <div className="pl-4 border-l-2 border-indigo-500/30 ml-3 py-1 flex flex-col gap-1.5">
-                                      {historyItems.map((histItem) => {
-                                        const histCleaned = cleanName(histItem.name);
-                                        const histVer = parseAbilityVersion(histItem.name).version;
-                                        const isHistLearned = slots.some(
-                                          (s) => cleanName(s.name).toLowerCase() === histCleaned.toLowerCase()
-                                        );
-                                        const isEditingHist = editingAbilityName?.toLowerCase() === histCleaned.toLowerCase();
-                                        const histActionUpper = (histItem.action || '').toUpperCase();
-                                        const histActionClass =
-                                          ACTION_COLORS[histActionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
-
-                                        if (isEditingHist) {
-                                          return (
-                                            <div key={histItem.id} className="p-3 bg-slate-950/90 rounded-xl border border-amber-500/40 flex flex-col gap-2.5 shadow-md">
-                                              <div className="flex items-center justify-between border-b border-amber-500/20 pb-1">
-                                                <div className="flex items-center gap-1.5">
-                                                  <Lock className="w-3.5 h-3.5 text-amber-400" />
-                                                  <span className="font-outfit font-bold text-xs text-slate-100">
-                                                    {histCleaned} <span className="text-[10px] text-slate-400 font-normal">(Name Locked)</span>
-                                                  </span>
-                                                </div>
-                                                <button onClick={() => setEditingAbilityName(null)} className="text-slate-400 hover:text-slate-200">
-                                                  <X className="w-3.5 h-3.5" />
-                                                </button>
-                                              </div>
-
-                                              <div className="flex items-center gap-2">
-                                                <label className="text-[10px] text-slate-400 font-bold">Action:</label>
-                                                <select
-                                                  value={editAction}
-                                                  onChange={(e) => setEditAction(e.target.value)}
-                                                  className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-indigo-300 font-mono outline-none"
-                                                >
-                                                  {ACTION_OPTIONS.map((a) => (
-                                                    <option key={a} value={a}>{a}</option>
-                                                  ))}
-                                                </select>
-
-                                                <label className="text-[10px] text-slate-400 font-bold ml-2">Usage:</label>
-                                                <select
-                                                  value={editUsage}
-                                                  onChange={(e) => setEditUsage(e.target.value)}
-                                                  className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-300 font-mono outline-none"
-                                                >
-                                                  {USAGE_OPTIONS.map((u) => (
-                                                    <option key={u} value={u}>{u}</option>
-                                                  ))}
-                                                </select>
-                                              </div>
-
-                                              <div className="flex items-center gap-1 bg-slate-900/60 p-1 rounded-lg border border-slate-800">
-                                                <span className="text-[10px] text-slate-400 font-bold px-1">Insert Icon:</span>
-                                                {PRIMARY_ATTRIBUTE_ICONS.map(({ label, icon }) => (
-                                                  <button
-                                                    key={label}
-                                                    type="button"
-                                                    onClick={() => handleInsertIcon(icon, editEffectRef, setEditEffect)}
-                                                    className="px-1.5 py-0.5 bg-slate-950 hover:bg-indigo-950/80 text-xs rounded border border-slate-800 text-slate-200 transition-colors flex items-center gap-1"
-                                                  >
-                                                    <span>{icon}</span>
-                                                    <span className="text-[10px] hidden sm:inline">{label}</span>
-                                                  </button>
-                                                ))}
-                                              </div>
-
-                                              <div className="flex flex-col gap-1">
-                                                <textarea
-                                                  ref={editEffectRef}
-                                                  value={editEffect}
-                                                  onChange={(e) => setEditEffect(e.target.value.slice(0, 450))}
-                                                  rows={2}
-                                                  className="bg-slate-900 p-2 rounded-lg border border-slate-700 text-xs text-slate-200 outline-none focus:border-amber-400 resize-none"
-                                                />
-                                                <div className="flex items-center justify-between text-[10px]">
-                                                  <span className={editEffect.length >= 450 ? 'text-rose-400 font-bold' : 'text-slate-500'}>
-                                                    {editEffect.length} / 450 max chars
-                                                  </span>
-                                                  <div className="flex items-center gap-1.5">
-                                                    <button onClick={() => setEditingAbilityName(null)} className="px-2.5 py-1 text-slate-400 hover:text-slate-200">
-                                                      Cancel
-                                                    </button>
-                                                    <button
-                                                      onClick={() => handleSaveEdit(histCleaned)}
-                                                      className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm"
-                                                    >
-                                                      <Save className="w-3 h-3" /> Save Changes
-                                                    </button>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          );
-                                        }
-
-                                        return (
-                                          <div
-                                            key={histItem.id}
-                                            className={`p-2 rounded-lg border transition-all flex items-start justify-between gap-2 opacity-85 hover:opacity-100 ${
-                                              isHistLearned
-                                                ? 'bg-indigo-950/30 border-indigo-500/30 text-indigo-200'
-                                                : 'bg-slate-950/60 border-slate-850 text-slate-400 hover:border-slate-750'
-                                            }`}
-                                          >
-                                            <div className="w-28 sm:w-32 shrink-0 flex items-start gap-1">
-                                              <span className="text-slate-500 text-xs mt-0.5">└─</span>
-                                              <div className="flex items-center gap-1">
-                                                <span className="text-[9px] font-mono font-semibold px-1 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-800">
-                                                  v{histVer}
-                                                </span>
-                                              </div>
-                                            </div>
-
-                                            <div className="w-8 shrink-0 flex justify-center mt-0.5">
-                                              {histActionUpper ? (
-                                                <span className={`text-[10px] font-mono font-bold px-1 py-0.2 rounded border ${histActionClass}`}>
-                                                  {histActionUpper}
-                                                </span>
-                                              ) : (
-                                                <span className="text-[10px] text-slate-700 font-mono">-</span>
-                                              )}
-                                            </div>
-
-                                            <div className="w-14 shrink-0 flex justify-start mt-0.5">
-                                              {histItem.usage ? (
-                                                <span className="bg-slate-900 text-[10px] font-mono text-slate-400 px-1 py-0.2 rounded border border-slate-800 truncate" title={histItem.usage}>
-                                                  {histItem.usage}
-                                                </span>
-                                              ) : (
-                                                <span className="text-[10px] text-slate-700 font-mono">-</span>
-                                              )}
-                                            </div>
-
-                                            <div className="flex-1 min-w-0 text-[10px] text-slate-400 leading-normal whitespace-normal break-words pr-2">
-                                              {histItem.effect || 'No effect description'}
-                                            </div>
-
-                                            <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                                              <button
-                                                onClick={() => handleStartEdit(histItem)}
-                                                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors"
-                                                title="Edit Historical Version"
-                                              >
-                                                <Edit2 className="w-3 h-3" />
-                                              </button>
-                                              <button
-                                                onClick={() => handleToggleCatalogAbility(histItem.name)}
-                                                className={`px-1.5 py-0.5 text-[9px] font-bold rounded border transition-all ${
-                                                  isHistLearned
-                                                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30'
-                                                    : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
-                                                }`}
-                                              >
-                                                {isHistLearned ? 'Forget' : '+ Learn'}
-                                              </button>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
+                                  <div className="flex flex-col gap-1 text-xs text-slate-300">
+                                    {item.usage && (
+                                      <span className="bg-slate-900 text-[10px] font-mono text-slate-400 px-1.5 py-0.5 rounded border border-slate-800 w-fit">
+                                        {item.usage}
+                                      </span>
+                                    )}
+                                    <p className="text-[11px] leading-relaxed font-sans">{item.effect || 'No description'}</p>
+                                  </div>
                                 </div>
                               );
                             })
                           ) : (
-                            <div className="p-4 text-center text-slate-500 italic text-xs">
-                              No abilities match "{searchQuery}" in {effectiveActiveTable}.
-                            </div>
-                          )
-                        ) : (
-                          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 italic text-xs">
-                            {selectedCategory === 'favorites' && favoriteTables.length === 0 ? (
-                              <p>No favorite tables starred yet. Star any table in Class, Racial, or Combat Styles to add it here!</p>
-                            ) : (
-                              <p>Select a table from the list on the left to view its abilities or click ➕ Custom to create one.</p>
-                            )}
-                          </div>
-                        )}
+                            <p className="text-xs text-slate-500 italic py-6 text-center">
+                              No catalog abilities match search/filters in {effectiveActiveTable || 'catalog'}.
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* TAB 2: CUSTOM CREATOR VIEW */}
+                    {activeRightTab === 'CREATOR' && (
+                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-y-auto">
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            handleSaveCustomAbility();
+                          }}
+                          className="p-3 bg-amber-950/20 border border-amber-500/30 rounded-xl flex flex-col gap-3"
+                        >
+                          <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5">
+                            <span className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                              <Plus className="w-3.5 h-3.5" />
+                              Custom Creator
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs font-bold text-slate-300">Ability Name</span>
+                              <input
+                                type="text"
+                                placeholder="e.g. Arcane Surge v1"
+                                value={createName}
+                                onChange={(e) => setCreateName(e.target.value)}
+                                className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400"
+                                required
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-300 shrink-0">Action:</span>
+                                <select
+                                  value={createAction}
+                                  onChange={(e) => setCreateAction(e.target.value)}
+                                  className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full"
+                                >
+                                  {ACTION_OPTIONS.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-300 shrink-0">Usage:</span>
+                                <select
+                                  value={createUsage}
+                                  onChange={(e) => setCreateUsage(e.target.value)}
+                                  className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full"
+                                >
+                                  {USAGE_OPTIONS.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1 pt-1">
+                              <span className="text-xs font-bold text-slate-300">Effect Description</span>
+                              <textarea
+                                value={createEffect}
+                                onChange={(e) => setCreateEffect(e.target.value)}
+                                placeholder="Describe the mechanical effects of this custom ability..."
+                                rows={3}
+                                className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400 resize-none"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            type="submit"
+                            className="w-full mt-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Save & Learn Custom Ability</span>
+                          </button>
+                        </form>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Invariant Column Alignment Active Slots Table View (Automatically Displays Highest Version for Active Play) */}
+      {/* Main Character Sheet Card View: Entire List of Learned Abilities */}
       <div className="flex flex-col gap-2">
         {sortedSlots.length > 0 ? (
           sortedSlots.map((slot, index) => {
@@ -1324,7 +1003,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 key={index}
                 className="p-3 bg-slate-950/60 rounded-xl border border-slate-850 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm hover:border-slate-800 transition-all"
               >
-                {/* 1. Fixed Clean Name Column with Auto-Wrapping and Version Badge */}
+                {/* 1. Name Column with Version Badge */}
                 <div className="w-36 sm:w-44 shrink-0 flex flex-col gap-0.5">
                   <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
                     {baseName}
@@ -1337,7 +1016,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   )}
                 </div>
 
-                {/* 2. Invariant Action Badge Column (Fixed w-12 for 'AM' alignment) */}
+                {/* 2. Action Badge Column */}
                 <div className="w-12 shrink-0 flex items-center justify-center">
                   {actionUpper ? (
                     <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${actionClass}`}>
@@ -1348,7 +1027,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   )}
                 </div>
 
-                {/* 3. Invariant Uses Text Column (Fixed w-20 for '1-Luck🍀' alignment) */}
+                {/* 3. Uses Text Column */}
                 <div className="w-20 shrink-0 flex items-center justify-start">
                   {slot.usage ? (
                     <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[11px] font-mono text-slate-300 truncate" title={slot.usage}>
@@ -1359,7 +1038,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   )}
                 </div>
 
-                {/* 4. Invariant Checkboxes Column (Fixed w-16 for 3 checkboxes with spacer fallback) */}
+                {/* 4. Checkboxes Column */}
                 <div className="w-16 shrink-0 flex items-center gap-1 min-w-[64px]">
                   {usageCount > 0 ? (
                     Array.from({ length: usageCount }).map((_, bIdx) => {
@@ -1380,7 +1059,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   )}
                 </div>
 
-                {/* 5. Invariant Effect Description Column */}
+                {/* 5. Effect Description Column */}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate-300 whitespace-normal break-words leading-relaxed">
                     {slot.effect || 'No effect description'}
