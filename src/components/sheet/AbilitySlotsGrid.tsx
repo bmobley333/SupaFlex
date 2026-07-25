@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Save, Sparkles, Globe, Flame, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Globe, Flame, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AbilitySlot, Power, MagicItem } from '../../types/game';
 
@@ -28,7 +28,6 @@ const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
 const USAGE_OPTIONS = ['1-Enc', '2-Enc', '3-Enc', '1', '1-Luck🍀', '1-Charge⚡'];
 
 const POWER_CATEGORY_BUTTONS = [
-  { id: 'all', label: 'ALL Categories', icon: '🌐' },
   { id: 'class', label: 'Class', icon: '👤' },
   { id: 'race', label: 'Racial', icon: '🧬' },
   { id: 'combat style', label: 'Combat Styles', icon: '⚔️' },
@@ -67,7 +66,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const stockCatalog = type === 'powers' ? powers : magicItems;
 
   const [showManageModal, setShowManageModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('class');
   const [activeTableName, setActiveTableName] = useState<string | null>(null);
   
   // Search Filters for Left and Right Panes
@@ -79,12 +78,17 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Creation Form State
+  // Custom / Version Creation Form State
   const [createName, setCreateName] = useState('');
   const [createAction, setCreateAction] = useState('A');
   const [createUsage, setCreateUsage] = useState('1-Enc');
   const [createEffect, setCreateEffect] = useState('');
   const createEffectRef = useRef<HTMLTextAreaElement>(null);
+
+  // Version Editor Mode State
+  const [isVersionEditMode, setIsVersionEditMode] = useState(false);
+  const [versionEditBaseName, setVersionEditBaseName] = useState('');
+  const [versionEditNextVersion, setVersionEditNextVersion] = useState(1);
 
   const insertIconAtCursor = (iconStr: string) => {
     const textarea = createEffectRef.current;
@@ -103,6 +107,24 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     });
   };
 
+  const handleLaunchVersionEditor = (item: Power | MagicItem | AbilitySlot) => {
+    const cleaned = cleanName(item.name);
+    const { baseName, version } = parseAbilityVersion(cleaned);
+    const nextVer = version + 1;
+    const nextVersionedName = `${baseName} v${nextVer}`;
+
+    setIsVersionEditMode(true);
+    setVersionEditBaseName(baseName);
+    setVersionEditNextVersion(nextVer);
+
+    setCreateName(nextVersionedName);
+    setCreateAction(item.action || 'A');
+    setCreateUsage(item.usage || '1-Enc');
+    setCreateEffect(item.effect || '');
+
+    setActiveRightTab('CREATOR');
+  };
+
   const handleToggleFavoriteTable = (tableName: string) => {
     if (!tableName) return;
     updateActiveSheetData((prev) => {
@@ -118,13 +140,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     });
     saveActiveCharacter();
   };
-
-  // Inline Editing Form State
-  const [editingAbilityName, setEditingAbilityName] = useState<string | null>(null);
-  const [editAction, setEditAction] = useState('A');
-  const [editUsage, setEditUsage] = useState('1-Enc');
-  const [editEffect, setEditEffect] = useState('');
-  const editEffectRef = useRef<HTMLTextAreaElement>(null);
 
   // Custom Power Table Creation State (Powers Mode Only)
   const [isCreatingTable, setIsCreatingTable] = useState(false);
@@ -299,63 +314,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setCreateAction('A');
     setCreateUsage('1-Enc');
     setCreateEffect('');
+    setIsVersionEditMode(false);
     setActiveRightTab('CATALOG');
-  };
-
-  const handleStartEdit = (item: Power | MagicItem | AbilitySlot) => {
-    const cleaned = cleanName(item.name);
-    setEditingAbilityName(cleaned);
-    setEditAction(item.action || 'A');
-    setEditUsage(item.usage || '1-Enc');
-    setEditEffect(item.effect || '');
-  };
-
-  const handleSaveEdit = (originalName: string) => {
-    const cleaned = cleanName(originalName);
-    updateActiveSheetData((prev) => {
-      const overrides = { ...(prev.ability_overrides || {}) };
-      overrides[cleaned] = {
-        action: editAction,
-        usage: editUsage,
-        effect: editEffect.trim(),
-      };
-
-      const customKey = type === 'powers' ? 'custom_powers' : 'custom_magic_items';
-      const existingCustom = [...(prev[customKey] || [])];
-      const customIndex = existingCustom.findIndex(
-        (c) => cleanName(c.name).toLowerCase() === cleaned.toLowerCase()
-      );
-      if (customIndex >= 0) {
-        existingCustom[customIndex] = {
-          ...existingCustom[customIndex],
-          action: editAction,
-          usage: editUsage,
-          effect: editEffect.trim(),
-        };
-      }
-
-      const currentSlots = [...(prev[slotKey] || [])];
-      const slotIndex = currentSlots.findIndex(
-        (s) => cleanName(s.name).toLowerCase() === cleaned.toLowerCase()
-      );
-      if (slotIndex >= 0) {
-        currentSlots[slotIndex] = {
-          ...currentSlots[slotIndex],
-          action: (editAction.toUpperCase() as any) || '',
-          usage: editUsage,
-          effect: editEffect.trim(),
-        };
-      }
-
-      return {
-        ...prev,
-        ability_overrides: overrides,
-        [customKey]: existingCustom,
-        [slotKey]: currentSlots,
-      };
-    });
-    saveActiveCharacter();
-    setEditingAbilityName(null);
   };
 
   // Filter catalog items by Category & Deduplication
@@ -573,71 +533,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           const { baseName, version } = parseAbilityVersion(cleaned);
                           const actionUpper = (item.action || '').toUpperCase();
                           const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
-                          const isEditing = editingAbilityName?.toLowerCase() === cleaned.toLowerCase();
-
-                          if (isEditing) {
-                            return (
-                              <div key={item.name + idx} className="p-3 bg-slate-950/90 rounded-xl border border-amber-500/40 flex flex-col gap-2.5 shadow-md shrink-0">
-                                <div className="flex items-center justify-between border-b border-amber-500/20 pb-1">
-                                  <span className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1.5">
-                                    <Lock className="w-3.5 h-3.5 text-amber-400" />
-                                    {cleaned}
-                                  </span>
-                                  <button onClick={() => setEditingAbilityName(null)} className="text-slate-400 hover:text-slate-200">
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <div className="flex items-center gap-1">
-                                    <label className="text-[10px] text-slate-400 font-bold">Action:</label>
-                                    <select
-                                      value={editAction}
-                                      onChange={(e) => setEditAction(e.target.value)}
-                                      className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-amber-300 font-mono outline-none"
-                                    >
-                                      {ACTION_OPTIONS.map((a) => (
-                                        <option key={a} value={a}>{a}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-
-                                  <div className="flex items-center gap-1">
-                                    <label className="text-[10px] text-slate-400 font-bold">Usage:</label>
-                                    <select
-                                      value={editUsage}
-                                      onChange={(e) => setEditUsage(e.target.value)}
-                                      className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-300 font-mono outline-none"
-                                    >
-                                      {USAGE_OPTIONS.map((u) => (
-                                        <option key={u} value={u}>{u}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                </div>
-
-                                <textarea
-                                  ref={editEffectRef}
-                                  value={editEffect}
-                                  onChange={(e) => setEditEffect(e.target.value.slice(0, 450))}
-                                  rows={2}
-                                  className="bg-slate-900 p-2 rounded-lg border border-slate-700 text-xs text-slate-200 outline-none focus:border-amber-400 resize-none"
-                                />
-
-                                <div className="flex items-center justify-end gap-1.5 pt-1">
-                                  <button onClick={() => setEditingAbilityName(null)} className="px-2 py-0.5 text-slate-400 hover:text-slate-200">
-                                    Cancel
-                                  </button>
-                                  <button
-                                    onClick={() => handleSaveEdit(cleaned)}
-                                    className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm"
-                                  >
-                                    <Save className="w-3 h-3" /> Save Changes
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          }
 
                           return (
                             <div
@@ -662,9 +557,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
                                 <div className="flex items-center gap-1 shrink-0">
                                   <button
-                                    onClick={() => handleStartEdit(item)}
+                                    onClick={() => handleLaunchVersionEditor(item)}
                                     className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors"
-                                    title="Edit ability"
+                                    title={`Create version ${version + 1} of ${baseName}`}
                                   >
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
@@ -716,7 +611,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         </button>
 
                         <button
-                          onClick={() => setActiveRightTab('CREATOR')}
+                          onClick={() => {
+                            if (activeRightTab === 'CREATOR' && isVersionEditMode) {
+                              setIsVersionEditMode(false);
+                              setCreateName('');
+                              setCreateAction('A');
+                              setCreateUsage('1-Enc');
+                              setCreateEffect('');
+                            }
+                            setActiveRightTab('CREATOR');
+                          }}
                           className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                             activeRightTab === 'CREATOR'
                               ? type === 'powers'
@@ -726,7 +630,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           }`}
                         >
                           <Plus className="w-3.5 h-3.5 text-amber-400" />
-                          Custom Creator
+                          {isVersionEditMode ? `Version Editor (v${versionEditNextVersion})` : 'Custom Creator'}
                         </button>
                       </div>
                     </div>
@@ -923,22 +827,43 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         >
                           <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5">
                             <span className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-                              <Plus className="w-3.5 h-3.5" />
-                              Custom Creator
+                              {isVersionEditMode ? (
+                                <>
+                                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                                  Version Editor: {versionEditBaseName} v{versionEditNextVersion}
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="w-3.5 h-3.5 text-amber-400" />
+                                  Custom Creator
+                                </>
+                              )}
                             </span>
                           </div>
 
                           <div className="flex flex-col gap-2">
                             <div className="flex flex-col gap-1">
                               <span className="text-xs font-bold text-slate-300">Ability Name</span>
-                              <input
-                                type="text"
-                                placeholder="e.g. Arcane Surge v1"
-                                value={createName}
-                                onChange={(e) => setCreateName(e.target.value)}
-                                className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400"
-                                required
-                              />
+                              {isVersionEditMode ? (
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    value={createName}
+                                    readOnly
+                                    className="bg-slate-900/90 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-lg border border-slate-800 outline-none cursor-not-allowed w-full pl-8"
+                                  />
+                                  <Lock className="w-3.5 h-3.5 text-amber-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Arcane Surge v1"
+                                  value={createName}
+                                  onChange={(e) => setCreateName(e.target.value)}
+                                  className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400"
+                                  required
+                                />
+                              )}
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
@@ -1005,7 +930,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             className="w-full mt-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
                           >
                             <Plus className="w-4 h-4" />
-                            <span>Save & Learn Custom Ability</span>
+                            <span>{isVersionEditMode ? `Save & Learn ${createName}` : 'Save & Learn Custom Ability'}</span>
                           </button>
                         </form>
                       </div>
