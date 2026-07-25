@@ -1,6 +1,6 @@
 // src/components/sheet/WeaponsCard.tsx
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Plus, Minus, X, Swords, AlertCircle, Loader2, Check } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { ChevronDown, ChevronUp, Plus, X, Swords, AlertCircle, Loader2, Search, Globe } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import {
@@ -87,6 +87,13 @@ export const WeaponsCard: React.FC = () => {
   const [showManageModal, setShowManageModal] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Search filter states for split panes
+  const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
+  const [rightSearchQuery, setRightSearchQuery] = useState<string>('');
+
+  // Right Pane View Tab: 'CATALOG' or 'CREATOR'
+  const [activeRightTab, setActiveRightTab] = useState<'CATALOG' | 'CREATOR'>('CATALOG');
+
   // Supabase Weapons Catalog State
   const [supabaseWeapons, setSupabaseWeapons] = useState<SupabaseWeapon[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
@@ -95,7 +102,6 @@ export const WeaponsCard: React.FC = () => {
   const [learnableOnly, setLearnableOnly] = useState<boolean>(true);
 
   // Custom Weapon Creator Form State
-  const [showCreator, setShowCreator] = useState<boolean>(false);
   const [customName, setCustomName] = useState<string>('');
   const [customTypeMode, setCustomTypeMode] = useState<'Melee' | 'Hurled' | 'Shot' | 'Melee, Hurled'>('Melee');
   const [customReqNum, setCustomReqNum] = useState<number>(4);
@@ -121,6 +127,11 @@ export const WeaponsCard: React.FC = () => {
 
   const derivedAtkDmg = getDerivedAtkDmg(customTypeMode);
   const derivedMaxBlock = getDerivedMaxBlock(customTypeMode, customReqNum);
+
+  // Helper to extract base name from slot name like "Hand Axe (Melee)" -> "Hand Axe"
+  const getBaseWeaponName = (slotName: string): string => {
+    return (slotName || '').replace(/\s*\([^)]+\)$/, '').trim();
+  };
 
   // Fetch weapons catalog from Supabase on modal opening
   useEffect(() => {
@@ -157,22 +168,24 @@ export const WeaponsCard: React.FC = () => {
   const handleWeaponChange = (id: string, updates: Partial<WeaponSlot>) => {
     updateActiveSheetData((prev) => {
       const updated = (prev.weapons || []).map((w) => (w.id === id ? { ...w, ...updates } : w));
-      return { ...prev, weapons: updated };
+      return { ...prev, updates: updated };
     });
     saveActiveCharacter();
   };
 
-  // Equip all qualifying variants for a weapon
-  const handleEquipWeapon = (weapon: SupabaseWeapon, qualifyingVariants: WeaponVariantOption[]) => {
-    const newSlots: WeaponSlot[] = qualifyingVariants.map((variant) => {
+  // Equip all variants of a weapon to the character sheet
+  const handleEquipWeapon = (weapon: SupabaseWeapon, variantsToEquip: WeaponVariantOption[]) => {
+    const newSlots: WeaponSlot[] = variantsToEquip.map((variant) => {
       const calculatedAtk = calculateWeaponAtk(variant.name, variant.mhs, attributeDice);
       const calculatedDmg = calculateWeaponDmg(variant.name, variant.mhs, attributeDice);
       const cleanBlockNum = variant.max_block ? variant.max_block.replace('🛡️', '') : 'n/a';
+      const isLearnable = isWeaponVariantLearnable(variant, attributeDice);
+      const slotName = weapon.type.includes(',') ? `${variant.name} (${variant.variantType})` : variant.name;
 
       return {
         id: `wep_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        name: weapon.type.includes(',') ? `${variant.name} (${variant.variantType})` : variant.name,
-        sk: true,
+        name: slotName,
+        sk: isLearnable, // Skilled if learnable, Unskilled if requirements unmet
         mhs: variant.mhs,
         atk: String(calculatedAtk),
         dmg: String(calculatedDmg),
@@ -181,19 +194,23 @@ export const WeaponsCard: React.FC = () => {
       };
     });
 
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      weapons: [...(prev.weapons || []), ...newSlots].sort((a, b) => a.name.localeCompare(b.name)),
-    }));
+    updateActiveSheetData((prev) => {
+      const existingNames = new Set((prev.weapons || []).map((w) => w.name.toLowerCase()));
+      const filteredNewSlots = newSlots.filter((s) => !existingNames.has(s.name.toLowerCase()));
+      return {
+        ...prev,
+        weapons: [...(prev.weapons || []), ...filteredNewSlots].sort((a, b) => a.name.localeCompare(b.name)),
+      };
+    });
     saveActiveCharacter();
   };
 
-  // Un-equip all variants of a weapon
-  const handleDropWeapon = (weaponName: string) => {
+  // Un-equip all variants matching a base weapon name
+  const handleDropWeapon = (baseWeaponName: string) => {
     updateActiveSheetData((prev) => ({
       ...prev,
       weapons: (prev.weapons || [])
-        .filter((w) => !w.name.toLowerCase().startsWith(weaponName.toLowerCase()))
+        .filter((w) => getBaseWeaponName(w.name).toLowerCase() !== baseWeaponName.toLowerCase())
         .sort((a, b) => a.name.localeCompare(b.name)),
     }));
     saveActiveCharacter();
@@ -231,11 +248,10 @@ export const WeaponsCard: React.FC = () => {
 
       setSupabaseWeapons((prev) => [...prev, created]);
 
-      // Equip qualifying variants
+      // Equip all variants of newly created weapon
       const variants = splitWeaponIntoVariants(created);
-      const qualifying = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
-      if (qualifying.length > 0) {
-        handleEquipWeapon(created, qualifying);
+      if (variants.length > 0) {
+        handleEquipWeapon(created, variants);
       }
 
       setCustomName('');
@@ -243,24 +259,79 @@ export const WeaponsCard: React.FC = () => {
       setCustomReqNum(4);
       setCustomCostVal(1);
       setCustomCostUnit('g');
-      setShowCreator(false);
+      setActiveRightTab('CATALOG');
     } catch (err: any) {
       console.error('Error creating custom weapon:', err);
-      setFormError(err.message || 'Failed to create custom weapon in Supabase.');
+      setFormError(err.message || 'Failed to create custom weapon.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Filter weapons list for display
-  const displayedWeapons = supabaseWeapons.filter((weapon) => {
-    const variants = splitWeaponIntoVariants(weapon);
-    const qualifying = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
-    if (learnableOnly) {
-      return qualifying.length > 0;
-    }
-    return true;
-  });
+  // Group active equipped weapon slots by base weapon name for Left Column pane
+  const groupedEquippedWeapons = useMemo(() => {
+    const map = new Map<string, { baseName: string; slots: WeaponSlot[] }>();
+
+    weapons.forEach((slot) => {
+      const baseName = getBaseWeaponName(slot.name);
+      const key = baseName.toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, { baseName, slots: [] });
+      }
+      map.get(key)!.slots.push(slot);
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.baseName.localeCompare(b.baseName));
+  }, [weapons]);
+
+  // Filtered grouped equipped weapons for Left Column search
+  const filteredGroupedEquippedWeapons = useMemo(() => {
+    if (!leftSearchQuery.trim()) return groupedEquippedWeapons;
+    const q = leftSearchQuery.toLowerCase().trim();
+    return groupedEquippedWeapons.filter(
+      (g) =>
+        g.baseName.toLowerCase().includes(q) ||
+        g.slots.some((s) => s.name.toLowerCase().includes(q))
+    );
+  }, [groupedEquippedWeapons, leftSearchQuery]);
+
+  // Set of lowercase equipped base weapon names for strict deduplication
+  const equippedBaseNamesSet = useMemo(() => {
+    const set = new Set<string>();
+    weapons.forEach((w) => {
+      const base = getBaseWeaponName(w.name).toLowerCase();
+      if (base) set.add(base);
+    });
+    return set;
+  }, [weapons]);
+
+  // Filter stock catalog weapons for Right Column pane (strict deduplication)
+  const filteredCatalogWeapons = useMemo(() => {
+    return supabaseWeapons.filter((weapon) => {
+      // 1. Strict Deduplication: If already equipped in arsenal, filter out of Stock Catalog
+      if (equippedBaseNamesSet.has(weapon.name.toLowerCase())) {
+        return false;
+      }
+
+      const variants = splitWeaponIntoVariants(weapon);
+      const qualifying = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
+
+      // 2. Learnable toggle filter
+      if (learnableOnly && qualifying.length === 0) {
+        return false;
+      }
+
+      // 3. Search filter
+      if (rightSearchQuery.trim()) {
+        const q = rightSearchQuery.toLowerCase().trim();
+        const matchesName = weapon.name.toLowerCase().includes(q);
+        const matchesType = (weapon.type || '').toLowerCase().includes(q);
+        return matchesName || matchesType;
+      }
+
+      return true;
+    });
+  }, [supabaseWeapons, equippedBaseNamesSet, learnableOnly, rightSearchQuery, attributeDice]);
 
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3 h-fit">
@@ -289,313 +360,469 @@ export const WeaponsCard: React.FC = () => {
             {showManageModal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
 
-          {/* Manage Weapons Floating Modal */}
+          {/* Manage Weapons Master 2-Column Split-Pane Modal */}
           {showManageModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fadeIn">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
               <div
                 ref={modalRef}
-                className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+                className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden"
               >
-                {/* Modal Header */}
-                <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Swords className="w-5 h-5 text-rose-400" />
-                    <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide">
-                      Manage Weapons Catalog
-                    </h3>
+                {/* Modal Top Bar */}
+                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-rose-950/80 border border-rose-500/30 text-rose-300 flex items-center justify-center">
+                      <span className="text-lg leading-none">⚔️</span>
+                    </div>
+                    <div>
+                      <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                        Weapons Manager
+                      </h3>
+                      <p className="text-xs text-slate-400 hidden sm:block">
+                        Manage character weapons and arsenal side-by-side with the SupaFlex stock catalog and custom creator.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowCreator(!showCreator)}
-                      className="px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 text-xs font-bold rounded-lg border border-rose-500/40 flex items-center gap-1 transition-all"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      {showCreator ? 'Hide Creator' : 'Create Custom Weapon'}
-                    </button>
-                    <button
-                      onClick={() => setShowManageModal(false)}
-                      className="p-1 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
+
+                  <button
+                    onClick={() => setShowManageModal(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
-                {/* Modal Scrollable Content */}
-                <div className="p-4 overflow-y-auto flex flex-col gap-4">
-                  {/* Custom Weapon Creator Form */}
-                  {showCreator && (
-                    <form
-                      onSubmit={handleCreateCustomWeapon}
-                      className="p-3.5 bg-rose-950/20 border border-rose-500/30 rounded-xl flex flex-col gap-3 animate-fadeIn"
-                    >
-                      <div className="flex items-center justify-between border-b border-rose-500/20 pb-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-rose-300 flex items-center gap-1.5">
-                          <Plus className="w-3.5 h-3.5" />
-                          Create Custom Ad-Lib Weapon
+                {/* 2-COLUMN SPLIT-PANE BODY */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
+                  
+                  {/* --- LEFT COLUMN: EQUIPPED ARSENAL PANE --- */}
+                  <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                    {/* Pane Header */}
+                    <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Swords className="w-4 h-4 text-rose-400" />
+                        <span className="text-xs font-outfit font-bold uppercase tracking-wider text-rose-300">
+                          Equipped Arsenal
                         </span>
-                        <span className="text-[10px] text-rose-400/70">Guardrails Enforced</span>
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
+                          {groupedEquippedWeapons.length}
+                        </span>
                       </div>
 
-                      {/* Line 1: Name & Two-Cell Cost Inputs */}
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-2 flex-1 min-w-[180px]">
-                          <span className="text-xs font-bold text-slate-300 shrink-0">Name</span>
-                          <input
-                            type="text"
-                            placeholder="e.g. Sunfire Glaive"
-                            value={customName}
-                            onChange={(e) => setCustomName(e.target.value)}
-                            className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none w-full focus:border-rose-400"
-                            required
-                          />
-                        </div>
-                        {/* Two-Cell Cost Input */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-xs font-bold text-slate-300">Cost</span>
-                          <input
-                            type="number"
-                            min="1"
-                            value={customCostVal}
-                            onChange={(e) => setCustomCostVal(parseInt(e.target.value, 10) || 1)}
-                            className="bg-slate-950 text-slate-100 text-xs font-mono font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none w-14 text-center focus:border-rose-400"
-                            required
-                          />
-                          <select
-                            value={customCostUnit}
-                            onChange={(e) => setCustomCostUnit(e.target.value as 'g' | 's')}
-                            className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1.5 rounded-lg outline-none focus:border-amber-400 cursor-pointer"
-                          >
-                            <option value="g">g (Gold 🪙)</option>
-                            <option value="s">s (Silver 🥈)</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* Line 2: Type Mode Select & Req Number Select */}
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-300 shrink-0">Type</span>
-                          <select
-                            value={customTypeMode}
-                            onChange={(e) => setCustomTypeMode(e.target.value as any)}
-                            className="bg-slate-950 border border-slate-700 text-rose-300 text-xs font-semibold px-2 py-1.5 rounded-lg outline-none focus:border-rose-400 cursor-pointer"
-                          >
-                            <option value="Melee">Melee (Might 💪)</option>
-                            <option value="Hurled">Hurled (Motion 🏃)</option>
-                            <option value="Shot">Shot (Mind 👁️)</option>
-                            <option value="Melee, Hurled">Melee & Hurled (💪 & 🏃)</option>
-                          </select>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-300 shrink-0">Req #</span>
-                          <select
-                            value={customReqNum}
-                            onChange={(e) => setCustomReqNum(parseInt(e.target.value, 10))}
-                            className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1.5 rounded-lg outline-none focus:border-amber-400 cursor-pointer"
-                          >
-                            {REQ_NUMBERS.map((num) => (
-                              <option key={num} value={num}>
-                                {num}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Read-Only Atk / Dmg Cell */}
-                        <div
-                          className="px-2.5 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center gap-1.5 shrink-0"
-                          title="Auto-filled read-only Atk & Dmg matching type emoji"
-                        >
-                          <span className="text-[11px] font-bold text-slate-400">Atk/Dmg</span>
-                          <span className="text-xs font-mono font-extrabold text-rose-300">{derivedAtkDmg}</span>
-                          <span className="text-[9px] font-semibold text-slate-500 uppercase ml-1">(Auto)</span>
-                        </div>
-
-                        {/* Read-Only Max Block Cell */}
-                        <div
-                          className="px-2.5 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center gap-1.5 shrink-0"
-                          title="Auto-filled read-only Max Block (2x Requirement # for Melee)"
-                        >
-                          <span className="text-[11px] font-bold text-slate-400">Max Blk</span>
-                          <span className="text-xs font-mono font-extrabold text-amber-300">{derivedMaxBlock}</span>
-                          <span className="text-[9px] font-semibold text-slate-500 uppercase ml-1">(Auto)</span>
-                        </div>
-                      </div>
-
-                      {/* Form Error Message */}
-                      {formError && (
-                        <div className="p-2 bg-rose-950/40 border border-rose-500/30 rounded-lg text-rose-300 text-xs flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                          <span>{formError}</span>
-                        </div>
-                      )}
-
-                      {/* Submit Button */}
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full py-1.5 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
-                      >
-                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Plus className="w-4 h-4" />}
-                        <span>Save & Equip Custom Weapon</span>
-                      </button>
-                    </form>
-                  )}
-
-                  {/* Catalog Utility Row: Dyslexia-Friendly Peg-Slider Toggle & Count */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-2.5">
-                    {/* Dyslexia-Friendly UI Peg-Slider Toggle */}
-                    <div className="flex items-center gap-3 bg-slate-950/80 px-3.5 py-2 rounded-xl border border-slate-800 shadow-inner">
-                      <button
-                        type="button"
-                        onClick={() => setLearnableOnly(false)}
-                        className={`text-xs font-bold transition-all cursor-pointer select-none ${
-                          !learnableOnly ? 'text-amber-300 opacity-100 font-extrabold scale-105' : 'text-slate-400 opacity-50 hover:opacity-80'
-                        }`}
-                      >
-                        All Weapons
-                      </button>
-                      <div
-                        onClick={() => setLearnableOnly(!learnableOnly)}
-                        className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors p-0.5 border border-slate-700 ${
-                          learnableOnly ? 'bg-amber-600 border-amber-400' : 'bg-slate-800'
-                        }`}
-                        title="Toggle weapon learnability filter"
-                      >
-                        <div
-                          className={`w-5 h-5 rounded-full bg-slate-100 shadow-md transform transition-transform ${
-                            learnableOnly ? 'translate-x-5' : 'translate-x-0'
-                          }`}
+                      {/* Arsenal Search Filter */}
+                      <div className="relative">
+                        <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search..."
+                          value={leftSearchQuery}
+                          onChange={(e) => setLeftSearchQuery(e.target.value)}
+                          className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-rose-500 w-24 sm:w-28"
                         />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setLearnableOnly(true)}
-                        className={`text-xs font-bold transition-all cursor-pointer select-none ${
-                          learnableOnly ? 'text-amber-300 opacity-100 font-extrabold scale-105' : 'text-slate-400 opacity-50 hover:opacity-80'
-                        }`}
-                      >
-                        Learnable Only
-                      </button>
                     </div>
 
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                      <span>Weapons ({displayedWeapons.length})</span>
-                      {isLoadingCatalog && <Loader2 className="w-4 h-4 animate-spin text-rose-400" />}
-                    </span>
+                    {/* Scrollable Arsenal Items List */}
+                    <div className="flex-1 overflow-y-auto pr-1 mt-2.5 flex flex-col gap-2.5 min-h-0">
+                      {filteredGroupedEquippedWeapons.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
+                          <Swords className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
+                          {leftSearchQuery ? (
+                            <span>No weapons matching "{leftSearchQuery}"</span>
+                          ) : (
+                            <span>No weapons equipped yet. Select from catalog on the right.</span>
+                          )}
+                        </div>
+                      ) : (
+                        filteredGroupedEquippedWeapons.map((group) => {
+                          const rawTypesList = Array.from(
+                            new Set(
+                              group.slots.map((s) =>
+                                s.mhs === 'H' ? 'Hurled' : s.mhs === 'S' ? 'Shot' : 'Melee'
+                              )
+                            )
+                          );
+
+                          return (
+                            <div
+                              key={group.baseName}
+                              className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-rose-500/40 transition-all shrink-0"
+                            >
+                              {/* Card Header Row: Base Name, Type Badges, SINGLE - Drop Button */}
+                              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-outfit font-bold text-sm text-slate-100">{group.baseName}</span>
+                                  {rawTypesList.map((t) => {
+                                    const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
+                                    const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
+                                    return (
+                                      <span
+                                        key={t}
+                                        className={`text-[10px] font-mono px-1.5 py-0.2 rounded border font-semibold ${badgeClass}`}
+                                      >
+                                        {t}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+
+                                <button
+                                  onClick={() => handleDropWeapon(group.baseName)}
+                                  className="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1"
+                                  title="Drop Weapon Arsenal"
+                                >
+                                  - Drop
+                                </button>
+                              </div>
+
+                              {/* Variant Sub-Rows */}
+                              <div className="flex flex-col gap-1.5 pt-0.5">
+                                {group.slots.map((item) => {
+                                  const calculatedAtk = calculateWeaponAtk(item.name, item.mhs, attributeDice);
+                                  const calculatedDmg = calculateWeaponDmg(item.name, item.mhs, attributeDice);
+                                  const variantLabel = item.name.includes('(')
+                                    ? item.name.substring(item.name.indexOf('(') + 1, item.name.indexOf(')'))
+                                    : item.mhs === 'H' ? 'Hurled' : item.mhs === 'S' ? 'Shot' : 'Melee';
+
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      className="p-2 rounded-lg border bg-slate-950/60 border-slate-850 flex items-center justify-between text-xs font-mono"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold text-slate-300 w-16">{variantLabel}:</span>
+                                        {item.sk ? (
+                                          <span className="text-[10px] font-sans font-bold text-emerald-400">Skilled</span>
+                                        ) : (
+                                          <span className="text-[10px] font-sans font-semibold text-amber-400">Unskilled</span>
+                                        )}
+                                      </div>
+
+                                      <div className="flex items-center gap-3 text-[10px] text-slate-400 font-mono">
+                                        <span>Atk: <strong className="text-rose-300">{calculatedAtk}</strong></span>
+                                        <span>•</span>
+                                        <span>Dmg: <strong className="text-rose-300">{calculatedDmg}</strong></span>
+                                        <span>•</span>
+                                        <span>Blk: <strong className="text-amber-300">{item.max_blk ?? 'n/a'}</strong></span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
 
-                  {/* Catalog Cards List (1 Card Per Full-Width Row) */}
-                  <div className="flex flex-col gap-2.5">
-                    {displayedWeapons.map((weapon, idx) => {
-                      const variants = splitWeaponIntoVariants(weapon);
-                      const qualifyingVariants = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
-
-                      const isAnyEquipped = weapons.some((w) =>
-                        w.name.toLowerCase().startsWith(weapon.name.toLowerCase())
-                      );
-
-                      const rawTypesList = (weapon.type || 'Melee').split(',').map((t) => t.trim());
-
-                      return (
-                        <div
-                          key={weapon.id || idx}
-                          className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-rose-500/40 transition-all"
+                  {/* --- RIGHT COLUMN: STOCK CATALOG & CUSTOM CREATOR PANE --- */}
+                  <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                    {/* Pane Sub-Tab Selector Header */}
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
+                      <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800 w-full">
+                        <button
+                          onClick={() => setActiveRightTab('CATALOG')}
+                          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'CATALOG'
+                              ? 'bg-rose-600/30 text-rose-200 border border-rose-500/40 shadow-sm'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
                         >
-                          {/* Card Header Row: Name, Type Badges, Cost, Equip/Drop Button */}
-                          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-sm text-slate-100">{weapon.name}</span>
-                              {rawTypesList.map((t) => {
-                                const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
-                                const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
-                                return (
-                                  <span
-                                    key={t}
-                                    className={`text-[10px] font-mono px-1.5 py-0.2 rounded border font-semibold ${badgeClass}`}
-                                  >
-                                    {t}
-                                  </span>
-                                );
-                              })}
-                              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
-                                {weapon.cost}
-                              </span>
-                            </div>
+                          <Globe className="w-3.5 h-3.5 text-rose-400" />
+                          Stock Catalog ({filteredCatalogWeapons.length})
+                        </button>
 
-                            {isAnyEquipped ? (
-                              <button
-                                onClick={() => handleDropWeapon(weapon.name)}
-                                className="px-3 py-1 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 text-xs font-bold rounded-lg border border-rose-500/40 flex items-center gap-1 transition-all shrink-0"
-                              >
-                                <Minus className="w-3.5 h-3.5" />
-                                - Drop
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleEquipWeapon(weapon, qualifyingVariants)}
-                                disabled={qualifyingVariants.length === 0}
-                                className="px-3 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-bold rounded-lg border border-emerald-500/40 disabled:opacity-40 flex items-center gap-1 transition-all shrink-0"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                                + Equip
-                              </button>
-                            )}
+                        <button
+                          onClick={() => setActiveRightTab('CREATOR')}
+                          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'CREATOR'
+                              ? 'bg-rose-600/30 text-rose-200 border border-rose-500/40 shadow-sm'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <Plus className="w-3.5 h-3.5 text-rose-400" />
+                          Custom Creator
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* TAB 1: STOCK CATALOG VIEW */}
+                    {activeRightTab === 'CATALOG' && (
+                      <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
+                        {/* Search Filter Bar & Dyslexia-Friendly Peg-Slider Toggle */}
+                        <div className="flex flex-col gap-2 shrink-0">
+                          {/* Search Filter Bar */}
+                          <div className="relative">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              placeholder="Search weapons catalog..."
+                              value={rightSearchQuery}
+                              onChange={(e) => setRightSearchQuery(e.target.value)}
+                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-rose-500 w-full"
+                            />
                           </div>
 
-                          {/* Variant Stats Sub-Rows */}
-                          <div className="flex flex-col gap-1.5 pt-0.5">
-                            {variants.map((v) => {
-                              const calculatedAtk = calculateWeaponAtk(v.name, v.mhs, attributeDice);
-                              const calculatedDmg = calculateWeaponDmg(v.name, v.mhs, attributeDice);
-                              const qualifies = isWeaponVariantLearnable(v, attributeDice);
+                          {/* Dyslexia-Friendly UI Peg-Slider Toggle */}
+                          <div className="flex items-center justify-between bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
+                            <span className="text-[11px] font-bold text-slate-400">Filter Mode:</span>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setLearnableOnly(false)}
+                                className={`text-xs font-bold transition-all cursor-pointer select-none ${
+                                  !learnableOnly ? 'text-amber-300 opacity-100 font-extrabold scale-105' : 'text-slate-400 opacity-50 hover:opacity-80'
+                                }`}
+                              >
+                                All Weapons
+                              </button>
+                              <div
+                                onClick={() => setLearnableOnly(!learnableOnly)}
+                                className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors p-0.5 border border-slate-700 ${
+                                  learnableOnly ? 'bg-amber-600 border-amber-400' : 'bg-slate-800'
+                                }`}
+                                title="Toggle weapon learnability filter"
+                              >
+                                <div
+                                  className={`w-5 h-5 rounded-full bg-slate-100 shadow-md transform transition-transform ${
+                                    learnableOnly ? 'translate-x-5' : 'translate-x-0'
+                                  }`}
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLearnableOnly(true)}
+                                className={`text-xs font-bold transition-all cursor-pointer select-none ${
+                                  learnableOnly ? 'text-amber-300 opacity-100 font-extrabold scale-105' : 'text-slate-400 opacity-50 hover:opacity-80'
+                                }`}
+                              >
+                                Learnable Only
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Scrollable Catalog List */}
+                        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
+                          {isLoadingCatalog ? (
+                            <div className="h-full flex items-center justify-center p-6 text-slate-400 text-xs gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
+                              <span>Loading SupaFlex weapons catalog...</span>
+                            </div>
+                          ) : filteredCatalogWeapons.length > 0 ? (
+                            filteredCatalogWeapons.map((weapon, idx) => {
+                              const variants = splitWeaponIntoVariants(weapon);
+                              const qualifyingVariants = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
+                              const isAnyLearnable = qualifyingVariants.length > 0;
+                              const rawTypesList = (weapon.type || 'Melee').split(',').map((t) => t.trim());
 
                               return (
                                 <div
-                                  key={v.variantType}
-                                  className={`p-2 rounded-lg border flex items-center justify-between text-xs font-mono transition-all ${
-                                    qualifies
-                                      ? 'bg-slate-900/80 border-slate-800'
-                                      : 'bg-slate-950/40 border-slate-850 opacity-60'
-                                  }`}
+                                  key={weapon.id || idx}
+                                  className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-rose-500/40 transition-all shrink-0"
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-slate-300 w-16">{v.variantType}:</span>
-                                    <span>Req: <strong className="text-slate-200">{v.requirementStr}</strong></span>
+                                  {/* Card Header Row: Name, Type Badges, Cost, SINGLE + Equip Button */}
+                                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-bold text-sm text-slate-100">{weapon.name}</span>
+                                      {rawTypesList.map((t) => {
+                                        const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
+                                        const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
+                                        return (
+                                          <span
+                                            key={t}
+                                            className={`text-[10px] font-mono px-1.5 py-0.2 rounded border font-semibold ${badgeClass}`}
+                                          >
+                                            {t}
+                                          </span>
+                                        );
+                                      })}
+                                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
+                                        {weapon.cost}
+                                      </span>
+                                    </div>
+
+                                    <button
+                                      onClick={() => handleEquipWeapon(weapon, variants)}
+                                      className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
+                                        isAnyLearnable
+                                          ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
+                                          : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
+                                      }`}
+                                      title={isAnyLearnable ? 'Equip as Trained/Skilled' : 'Equip as Unskilled'}
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                      + Equip
+                                    </button>
                                   </div>
 
-                                  <div className="flex items-center gap-3">
-                                    <span>Atk: <strong className="text-rose-200">{calculatedAtk}</strong></span>
-                                    <span>•</span>
-                                    <span>Dmg: <strong className="text-rose-300">{calculatedDmg}</strong></span>
-                                    <span>•</span>
-                                    <span>Blk: <strong className="text-amber-300">{v.max_block}</strong></span>
-                                    {qualifies ? (
-                                      <span className="text-[10px] text-emerald-400 font-sans font-bold flex items-center gap-0.5 ml-1">
-                                        <Check className="w-3 h-3 text-emerald-400" />
-                                        Qualified
-                                      </span>
-                                    ) : (
-                                      <span className="text-[10px] text-rose-400/80 font-sans font-semibold ml-1">
-                                        Req Unmet
-                                      </span>
-                                    )}
+                                  {/* Variant Stats Sub-Rows */}
+                                  <div className="flex flex-col gap-1.5 pt-0.5">
+                                    {variants.map((v) => {
+                                      const calculatedAtk = calculateWeaponAtk(v.name, v.mhs, attributeDice);
+                                      const calculatedDmg = calculateWeaponDmg(v.name, v.mhs, attributeDice);
+                                      const qualifies = isWeaponVariantLearnable(v, attributeDice);
+
+                                      return (
+                                        <div
+                                          key={v.variantType}
+                                          className={`p-2 rounded-lg border flex items-center justify-between text-xs font-mono transition-all ${
+                                            qualifies
+                                              ? 'bg-slate-900/80 border-slate-800'
+                                              : 'bg-slate-950/40 border-slate-850 opacity-60'
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-bold text-slate-300 w-16">{v.variantType}:</span>
+                                            <span>Req: <strong className="text-slate-200">{v.requirementStr}</strong></span>
+                                          </div>
+
+                                          <div className="flex items-center gap-3">
+                                            <span>Atk: <strong className="text-rose-200">{calculatedAtk}</strong></span>
+                                            <span>•</span>
+                                            <span>Dmg: <strong className="text-rose-300">{calculatedDmg}</strong></span>
+                                            <span>•</span>
+                                            <span>Blk: <strong className="text-amber-300">{v.max_block}</strong></span>
+                                            {qualifies ? (
+                                              <span className="text-[10px] text-emerald-400 font-sans font-bold flex items-center gap-0.5 ml-1">
+                                                Qualified
+                                              </span>
+                                            ) : (
+                                              <span className="text-[10px] text-amber-400/80 font-sans font-semibold ml-1">
+                                                Unskilled Fallback
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               );
-                            })}
-                          </div>
+                            })
+                          ) : (
+                            <p className="text-xs text-slate-500 italic py-6 text-center">
+                              No weapons match "{rightSearchQuery}"
+                            </p>
+                          )}
                         </div>
-                      );
-                    })}
+                      </div>
+                    )}
 
-                    {!isLoadingCatalog && displayedWeapons.length === 0 && (
-                      <div className="text-center py-6 text-xs text-slate-500">
-                        {learnableOnly
-                          ? 'No learnable weapons meet your current attribute ratings.'
-                          : 'No weapons found in Supabase catalog.'}
+                    {/* TAB 2: CUSTOM CREATOR VIEW */}
+                    {activeRightTab === 'CREATOR' && (
+                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-y-auto">
+                        <form
+                          onSubmit={handleCreateCustomWeapon}
+                          className="p-3 bg-rose-950/20 border border-rose-500/30 rounded-xl flex flex-col gap-3"
+                        >
+                          <div className="flex items-center justify-between border-b border-rose-500/20 pb-1.5">
+                            <span className="text-xs font-bold uppercase tracking-wider text-rose-300 flex items-center gap-1.5">
+                              <Plus className="w-3.5 h-3.5" />
+                              Create Custom Weapon
+                            </span>
+                            <span className="text-[10px] text-rose-400/70 font-mono">Guardrails Active</span>
+                          </div>
+
+                          {/* Line 1: Name & Two-Cell Cost Inputs */}
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs font-bold text-slate-300">Weapon Name</span>
+                              <input
+                                type="text"
+                                placeholder="e.g. Sunfire Glaive"
+                                value={customName}
+                                onChange={(e) => setCustomName(e.target.value)}
+                                className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none w-full focus:border-rose-400"
+                                required
+                              />
+                            </div>
+
+                            {/* Two-Cell Cost Input */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-300 shrink-0">Cost:</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={customCostVal}
+                                onChange={(e) => setCustomCostVal(parseInt(e.target.value, 10) || 1)}
+                                className="bg-slate-950 text-slate-100 text-xs font-mono font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none w-16 text-center focus:border-rose-400"
+                                required
+                              />
+                              <select
+                                value={customCostUnit}
+                                onChange={(e) => setCustomCostUnit(e.target.value as 'g' | 's')}
+                                className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none focus:border-amber-400 cursor-pointer"
+                              >
+                                <option value="g">g (Gold 🪙)</option>
+                                <option value="s">s (Silver 🥈)</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Line 2: Type Mode Select & Req Number Select */}
+                          <div className="flex flex-col gap-2 pt-1 border-t border-slate-800">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-slate-300">Type Category</span>
+                              <select
+                                value={customTypeMode}
+                                onChange={(e) => setCustomTypeMode(e.target.value as 'Melee' | 'Hurled' | 'Shot' | 'Melee, Hurled')}
+                                className="bg-slate-950 border border-slate-700 text-rose-300 text-xs font-semibold px-2 py-1 rounded-lg outline-none focus:border-rose-400 cursor-pointer"
+                              >
+                                <option value="Melee">Melee (Might 💪)</option>
+                                <option value="Hurled">Hurled (Motion 🏃)</option>
+                                <option value="Shot">Shot (Mind 👁️)</option>
+                                <option value="Melee, Hurled">Melee & Hurled (💪 & 🏃)</option>
+                              </select>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-slate-300">Req Rating #</span>
+                              <select
+                                value={customReqNum}
+                                onChange={(e) => setCustomReqNum(parseInt(e.target.value, 10))}
+                                className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none focus:border-amber-400 cursor-pointer"
+                              >
+                                {REQ_NUMBERS.map((num) => (
+                                  <option key={num} value={num}>
+                                    {num}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Line 3: Read-Only Calculated Cells */}
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <div className="px-2.5 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-slate-400">Atk/Dmg:</span>
+                              <span className="text-xs font-mono font-extrabold text-rose-300">{derivedAtkDmg}</span>
+                            </div>
+
+                            <div className="px-2.5 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-slate-400">Max Blk:</span>
+                              <span className="text-xs font-mono font-extrabold text-amber-300">{derivedMaxBlock}</span>
+                            </div>
+                          </div>
+
+                          {/* Form Error Message */}
+                          {formError && (
+                            <div className="p-2 bg-rose-950/40 border border-rose-500/30 rounded-lg text-rose-300 text-xs flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                              <span>{formError}</span>
+                            </div>
+                          )}
+
+                          {/* Submit Button */}
+                          <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="w-full mt-1 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
+                          >
+                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Plus className="w-4 h-4" />}
+                            <span>Save & Equip Custom Weapon</span>
+                          </button>
+                        </form>
                       </div>
                     )}
                   </div>
@@ -652,23 +879,21 @@ export const WeaponsCard: React.FC = () => {
                     />
                   </div>
 
-                  {/* Color-Coded M/H/S Full-Name Dropdown */}
-                  <select
-                    value={catKey}
-                    onChange={(e) => handleWeaponChange(item.id, { mhs: e.target.value as 'M' | 'H' | 'S' })}
-                    className={`text-xs font-bold px-1 py-1 rounded border outline-none text-center cursor-pointer transition-all ${selectClass}`}
+                  {/* Color-Coded M/H/S Category Display Box (Read-Only) */}
+                  <div
+                    className={`text-xs font-bold px-1 py-1 rounded border text-center cursor-default transition-all ${selectClass}`}
+                    title="Weapon category set via Manage Weapons modal"
                   >
-                    <option value="M" className="bg-slate-900 text-rose-300">Melee</option>
-                    <option value="H" className="bg-slate-900 text-emerald-300">Hurled</option>
-                    <option value="S" className="bg-slate-900 text-amber-300">Shot</option>
-                  </select>
+                    {catKey === 'M' ? 'Melee' : catKey === 'H' ? 'Hurled' : 'Shot'}
+                  </div>
 
-                  {/* Weapon Name Input */}
+                  {/* Weapon Name Input (Read-Only) */}
                   <input
                     type="text"
                     value={item.name}
-                    onChange={(e) => handleWeaponChange(item.id, { name: e.target.value })}
-                    className="bg-slate-900 text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-800 outline-none focus:border-rose-500 w-full max-w-[240px]"
+                    readOnly
+                    className="bg-slate-900 text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-800 outline-none w-full max-w-[240px] cursor-default"
+                    title="Weapon name set via Manage Weapons modal"
                   />
 
                   {/* Atk Cell */}
@@ -702,3 +927,5 @@ export const WeaponsCard: React.FC = () => {
     </div>
   );
 };
+
+

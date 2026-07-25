@@ -37,10 +37,15 @@ export interface WeaponSlot {
 }
 
 export interface ArmorData {
+  id?: string;
   name: string;
-  block: number;
-  dodge: number;
+  sk?: boolean;
+  block?: number;
+  dodge?: number;
   ar: number;
+  requirement?: string;
+  mr?: string;
+  cost?: string;
   effect?: string;
 }
 
@@ -247,10 +252,13 @@ export const splitWeaponIntoVariants = (weapon: SupabaseWeapon): WeaponVariantOp
 
 
 export interface ShieldData {
+  id?: string;
   equipped: boolean;
   name: string;
   sk: boolean;
   max_block: number;
+  requirement?: string;
+  cost?: string;
   effect?: string;
   mr_adjustment?: string;
 }
@@ -326,7 +334,9 @@ export interface CharacterSheetData {
   gear_slots: EquipmentSlot[];
   weapons?: WeaponSlot[];
   armor_slot?: ArmorData;
+  wardrobe?: ArmorData[];
   shield_slot?: ShieldData;
+  armory?: ShieldData[];
   movement_rate?: MovementRateData;
   bio: CharacterBio;
 }

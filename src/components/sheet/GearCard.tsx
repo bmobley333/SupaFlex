@@ -263,7 +263,7 @@ export const GearCard: React.FC = () => {
       setActiveRightTab('CATALOG');
     } catch (err: any) {
       console.error('Error creating custom gear:', err);
-      setFormError(err.message || 'Failed to create custom gear in Supabase.');
+      setFormError(err.message || 'Failed to create custom gear.');
     } finally {
       setIsSubmitting(false);
     }
@@ -324,7 +324,7 @@ export const GearCard: React.FC = () => {
                         Gear Manager
                       </h3>
                       <p className="text-xs text-slate-400 hidden sm:block">
-                        Manage character equipment side-by-side with the Supabase stock catalog and custom creator.
+                        Manage character equipment side-by-side with the SupaFlex stock catalog and custom creator.
                       </p>
                     </div>
                   </div>
@@ -496,7 +496,7 @@ export const GearCard: React.FC = () => {
                           {isLoadingCatalog ? (
                             <div className="h-full flex items-center justify-center text-xs text-slate-400 gap-2">
                               <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
-                              Loading stock gear from Supabase...
+                              Loading stock gear from SupaFlex catalog...
                             </div>
                           ) : filteredCatalog.length === 0 ? (
                             <p className="text-xs text-slate-500 italic py-6 text-center">

@@ -87,7 +87,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     } catch (err: any) {
       set({
         isLoading: false,
-        error: err.message || 'Failed to fetch data from Supabase.',
+        error: err.message || 'Failed to fetch character data.',
       });
     }
   },
