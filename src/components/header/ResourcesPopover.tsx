@@ -1,11 +1,12 @@
 import React from 'react';
-import { ExternalLink, BookOpen, Brain, X } from 'lucide-react';
+import { ExternalLink, BookOpen, Brain, Dices, X } from 'lucide-react';
 
 interface ResourcesPopoverProps {
   onClose: () => void;
+  onOpenLootGenerator?: () => void;
 }
 
-export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({ onClose }) => {
+export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({ onClose, onOpenLootGenerator }) => {
   return (
     <div className="absolute top-full right-0 mt-2 z-50 w-72 p-3.5 bg-slate-900/95 border border-indigo-500/40 rounded-xl shadow-2xl shadow-indigo-950/60 backdrop-blur-xl animate-fadeIn flex flex-col gap-3 text-xs">
       {/* Popover Header */}
@@ -23,8 +24,36 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({ onClose }) =
         </button>
       </div>
 
-      {/* Links List */}
+      {/* Links & Tools List */}
       <div className="flex flex-col gap-2">
+        {/* Tool 1: Random Loot Generator */}
+        {onOpenLootGenerator && (
+          <button
+            onClick={() => {
+              onOpenLootGenerator();
+              onClose();
+            }}
+            className="group flex items-start gap-3 p-2.5 rounded-lg bg-amber-950/30 hover:bg-amber-900/40 border border-amber-500/40 hover:border-amber-400 transition-all text-left w-full cursor-pointer"
+          >
+            <div className="p-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 group-hover:bg-amber-500/30 group-hover:text-amber-200 transition-colors shrink-0">
+              <Dices className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-outfit font-bold text-amber-200 group-hover:text-amber-100 transition-colors truncate">
+                  Loot Generator
+                </span>
+                <span className="text-[10px] font-bold text-amber-950 bg-amber-400 px-1.5 py-0.5 rounded uppercase shrink-0">
+                  Tool
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-200/70 group-hover:text-amber-100 transition-colors leading-tight mt-0.5">
+                Roll master & targeted loot + 1-click sheet claim.
+              </p>
+            </div>
+          </button>
+        )}
+
         {/* Link 1: SupaFlex Gemini Notebook */}
         <a
           href="https://notebooklm.google.com/notebook/8a1b90e8-17e0-44a2-a926-667dc08234a7"

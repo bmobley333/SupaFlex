@@ -9,6 +9,7 @@ import { PlayerDirectoryView } from './components/directory/PlayerDirectoryView'
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { HeroSelectorPopover } from './components/header/HeroSelectorPopover';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
+import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'sheet' | 'rolls' | 'codex' | 'logs' | 'directory'>('sheet');
@@ -17,6 +18,7 @@ export default function App() {
   const [showSelectorBar, setShowSelectorBar] = useState(false);
   const [showLevelPopover, setShowLevelPopover] = useState(false);
   const [showResourcesPopover, setShowResourcesPopover] = useState(false);
+  const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
   const selectorRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
@@ -78,7 +80,63 @@ export default function App() {
         selectCharacter(displayedCharacters[0].id);
       }
     }
-  }, [filterMode, playerEmail, characters]);
+  }, [displayedCharacters, activeCharacter, selectCharacter]);
+
+  const handleClaimCoins = async (addSilver: number, addGold: number): Promise<boolean> => {
+    if (!activeCharacter) return false;
+    try {
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        silver: (prev.silver || 0) + addSilver,
+        gold: (prev.gold || 0) + addGold
+      }));
+      await saveActiveCharacter();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleClaimMagicItem = async (item: any, autoEquip: boolean): Promise<boolean> => {
+    if (!activeCharacter) return false;
+    try {
+      const newItem = {
+        id: `mi-${Date.now()}`,
+        name: item.name || 'Magic Item',
+        category: item.category || 'Lesser',
+        description: item.description || '',
+        equipped: autoEquip
+      };
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        custom_magic_items: [...(prev.custom_magic_items || []), newItem as any]
+      }));
+      await saveActiveCharacter();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleClaimValuable = async (name: string, _val: string): Promise<boolean> => {
+    if (!activeCharacter) return false;
+    try {
+      const newVal = {
+        id: `val-${Date.now()}`,
+        name,
+        value: 1,
+        currency: 'gp' as const
+      };
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        other_treasure: [...(prev.other_treasure || []), newVal]
+      }));
+      await saveActiveCharacter();
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,7 +358,10 @@ export default function App() {
 
               {/* 📚 Resources Floating Glass Popover Card */}
               {showResourcesPopover && (
-                <ResourcesPopover onClose={() => setShowResourcesPopover(false)} />
+                <ResourcesPopover 
+                  onClose={() => setShowResourcesPopover(false)} 
+                  onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
+                />
               )}
             </div>
 
@@ -392,6 +453,18 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* 💰 Random Loot Generator Modal */}
+      <LootGeneratorModal
+        isOpen={showLootGeneratorModal}
+        onClose={() => setShowLootGeneratorModal(false)}
+        characterName={activeCharacter?.name || 'Hero'}
+        currentSilver={activeCharacter?.sheet_data?.silver || 0}
+        currentGold={activeCharacter?.sheet_data?.gold || 0}
+        onClaimCoins={handleClaimCoins}
+        onClaimMagicItem={handleClaimMagicItem}
+        onClaimValuable={handleClaimValuable}
+      />
 
       {/* Footer */}
       <footer className="w-full py-3 px-6 border-t border-slate-900 text-center text-xs text-slate-600 font-medium">
