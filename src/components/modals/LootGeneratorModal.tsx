@@ -28,6 +28,18 @@ export interface RollResult {
   claimed?: boolean;
 }
 
+export const CATEGORY_OPTIONS = [
+  { key: 'coins', label: '🪙 Coins (s/g)' },
+  { key: 'magic_Minor', label: '🍺 Minor Magic Item' },
+  { key: 'magic_Lesser', label: '🪄 Lesser Magic Item' },
+  { key: 'magic_Greater', label: '✨ Greater Magic Item' },
+  { key: 'magic_Artifact', label: '💫 Artifact Magic Item' },
+  { key: 'gear_quality', label: '🧰 Gear Quality + Item' },
+  { key: 'art_gems', label: '🎨 Art & Gems' },
+  { key: 'curios', label: '📜 Curios & Documents' },
+  { key: 'junk', label: '🗑️ Junk & One-Offs' }
+];
+
 export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   isOpen,
   onClose,
@@ -39,6 +51,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   onClaimValuable
 }) => {
   const [isGmMode, setIsGmMode] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('coins');
   const [isRolling, setIsRolling] = useState(false);
   const [results, setResults] = useState<RollResult[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -50,10 +63,9 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Helper dice roller
   const rollDice = (sides: number) => Math.floor(Math.random() * sides) + 1;
 
-  // Dice parser for coin formulas like 1d6, 1d20, 1d100, 2d6x10s+1d4g
+  // Dice parser for coin formulas
   const evaluateCoins = (formula: string): { silver: number; gold: number; breakdown: string } => {
     let s = 0;
     let g = 0;
@@ -95,7 +107,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     return { silver: s, gold: g, breakdown: desc };
   };
 
-  // Fetch random magic item by rarity
+  // Fetch random magic item
   const fetchRandomMagicItem = async (rarity: string) => {
     try {
       const { data, error } = await supabase
@@ -104,7 +116,6 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         .ilike('category', `%${rarity}%`);
       
       if (error || !data || data.length === 0) {
-        // Fallback fetch all
         const { data: allData } = await supabase.from('magic_items').select('*');
         if (allData && allData.length > 0) {
           return allData[Math.floor(Math.random() * allData.length)];
@@ -114,11 +125,26 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 
       return data[Math.floor(Math.random() * data.length)];
     } catch {
-      return { name: `${rarity} Magic Wand`, category: rarity, description: 'Enchanted magic focus.' };
+      return { name: `${rarity} Magic Focus`, category: rarity, description: 'Enchanted magic focus.' };
     }
   };
 
-  // Execute Master d100 Loot Roll
+  // Fetch random gear item from Supabase gear table for Quality combination
+  const fetchRandomGearItem = async () => {
+    try {
+      const { data } = await supabase.from('gear').select('*');
+      if (data && data.length > 0) {
+        const filtered = data.filter(g => !g.category.includes('💰') && !g.category.includes('Quality') && !g.category.includes('Art') && !g.category.includes('Curios') && !g.category.includes('Junk'));
+        const pool = filtered.length > 0 ? filtered : data;
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+    } catch {
+      // Fallback
+    }
+    return { name: 'Iron Lantern', cost: '5s' };
+  };
+
+  // Master d100 Roll Handler
   const handleRollMasterD100 = async () => {
     setIsRolling(true);
     const d100 = rollDice(100);
@@ -207,7 +233,6 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           });
         } else if (rType === 'special') {
           if (entry.range_min >= 96 && entry.range_min <= 99) {
-            // Double Roll
             const r1 = await handleTargetedRoll('art_gems', false);
             const r2 = await fetchRandomMagicItem('Lesser');
             if (r1) resList.push(r1);
@@ -222,7 +247,6 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
               magicItem: r2
             });
           } else {
-            // Epic Hoard
             const artItem = await fetchRandomMagicItem('Artifact');
             const evalC = evaluateCoins('1d100g');
             resList.push({
@@ -258,13 +282,41 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     }
   };
 
-  // Execute Targeted Subtable Roll
+  // Targeted Subtable Roll Handler with Gear Quality Combination
   const handleTargetedRoll = async (tableKey: string, append = true) => {
     setIsRolling(true);
     try {
       let diceMax = 8;
       if (tableKey === 'curios' || tableKey === 'junk') diceMax = 6;
-      if (tableKey.startsWith('magic_')) {
+      
+      if (tableKey === 'gear_quality') {
+        // Quality + Supabase Gear combination
+        const gearItem = await fetchRandomGearItem();
+        const dVal = rollDice(8);
+        const { data: entries } = await supabase
+          .from('treasure_entries')
+          .select('*')
+          .eq('table_key', 'gear_quality')
+          .lte('range_min', dVal)
+          .gte('range_max', dVal);
+
+        const qEntry = entries && entries.length > 0 ? entries[0] : { result_name: 'Normal', val_formula: '1.0x', notes: 'Standard condition' };
+        const combinedName = `${qEntry.result_name} ${gearItem.name} (${qEntry.val_formula} value)`;
+        
+        const resObj: RollResult = {
+          id: `res-${Date.now()}`,
+          tableKey: 'gear_quality',
+          tableName: 'Gear Quality Roll',
+          rollVal: dVal,
+          title: `🧰 ${combinedName}`,
+          description: `Base Item: ${gearItem.name} (Base Cost: ${gearItem.cost || '1g'}) | Condition: ${qEntry.notes || qEntry.result_name}`,
+          type: 'art_gem',
+          valuableName: combinedName,
+          valuableVal: gearItem.cost || '1g'
+        };
+        if (append) setResults(prev => [resObj, ...prev]);
+        return resObj;
+      } else if (tableKey.startsWith('magic_')) {
         const rarity = tableKey.replace('magic_', '');
         const item = await fetchRandomMagicItem(rarity);
         const resObj: RollResult = {
@@ -326,7 +378,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     }
   };
 
-  // GM Hoard Generator Presets
+  // GM Hoard Presets
   const handleGmHoardPreset = async (preset: 'minion' | 'boss' | 'dragon') => {
     setIsRolling(true);
     try {
@@ -347,7 +399,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     }
   };
 
-  // Action Claim Handlers
+  // Claim Handlers
   const claimCoins = async (res: RollResult) => {
     if (res.claimed) return;
     const s = res.coinsSilver || 0;
@@ -389,8 +441,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden text-slate-100">
         
         {/* Toast Alert */}
         {toastMessage && (
@@ -400,32 +452,13 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         )}
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90 shrink-0">
           <div className="flex items-center gap-3">
             <span className="text-2xl">💰</span>
             <div>
               <h2 className="text-xl font-bold text-amber-400">Random Loot & Treasure Generator</h2>
-              <p className="text-xs text-slate-400">1-Click Automated Treasure Roll & Sheet Claim Engine</p>
+              <p className="text-xs text-slate-400">Master Blueprint Two-Pane Interactive Loot Engine</p>
             </div>
-          </div>
-          
-          {/* Dyslexic-Friendly Side-Labeled Peg Slider */}
-          <div className="flex items-center gap-3 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
-            <span className={`text-xs font-bold transition-opacity ${!isGmMode ? 'text-amber-400 opacity-100' : 'text-slate-500 opacity-50'}`}>
-              Player Single Roll
-            </span>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={isGmMode} 
-                onChange={() => setIsGmMode(!isGmMode)}
-                className="sr-only peer" 
-              />
-              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-amber-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-            </label>
-            <span className={`text-xs font-bold transition-opacity ${isGmMode ? 'text-indigo-400 opacity-100' : 'text-slate-500 opacity-50'}`}>
-              GM Hoard Mode
-            </span>
           </div>
 
           <button 
@@ -436,108 +469,30 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-900/40">
+        {/* Modal Body: Two-Pane Master Blueprint Grid */}
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-900/40 grid grid-cols-1 md:grid-cols-12 gap-6 min-h-0">
           
-          {/* GM Hoard Selector Bar */}
-          {isGmMode ? (
-            <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-indigo-300">👑 GM Hoard Generator Presets:</span>
-                <span className="text-xs text-slate-400">Generate multi-item loot hoards instantly</span>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <button
-                  disabled={isRolling}
-                  onClick={() => handleGmHoardPreset('minion')}
-                  className="bg-indigo-900/50 hover:bg-indigo-800/70 border border-indigo-700 text-indigo-200 py-2.5 px-3 rounded-lg font-semibold text-xs transition-all flex items-center justify-center gap-2"
-                >
-                  🐀 Minion Corpse (Coins + Junk)
-                </button>
-                <button
-                  disabled={isRolling}
-                  onClick={() => handleGmHoardPreset('boss')}
-                  className="bg-indigo-900/70 hover:bg-indigo-700/80 border border-indigo-600 text-indigo-100 py-2.5 px-3 rounded-lg font-semibold text-xs transition-all flex items-center justify-center gap-2"
-                >
-                  🛡️ Elite Boss Chest (Coins + Gem + Lesser)
-                </button>
-                <button
-                  disabled={isRolling}
-                  onClick={() => handleGmHoardPreset('dragon')}
-                  className="bg-amber-600/30 hover:bg-amber-500/40 border border-amber-500/60 text-amber-200 py-2.5 px-3 rounded-lg font-semibold text-xs transition-all flex items-center justify-center gap-2"
-                >
-                  🐉 Dragon Vault (Master + Greater + Artifact)
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* Player Target Chips Bar */
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-amber-400">🎲 Master & Targeted Roll Launchers:</span>
-                <span className="text-xs text-slate-400">Click any chip to trigger instant loot roll</span>
-              </div>
-              
-              <div className="flex flex-wrap gap-2">
-                <button
-                  disabled={isRolling}
-                  onClick={handleRollMasterD100}
-                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-lg text-sm transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5"
-                >
-                  🎲 Roll Master d100
-                </button>
-
-                <button disabled={isRolling} onClick={() => handleTargetedRoll('coins')} className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                  🪙 Coins
-                </button>
-                <button disabled={isRolling} onClick={() => handleTargetedRoll('magic_Minor')} className="bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                  🍺 Minor Magic
-                </button>
-                <button disabled={isRolling} onClick={() => handleTargetedRoll('magic_Lesser')} className="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                  🪄 Lesser Magic
-                </button>
-                <button disabled={isRolling} onClick={() => handleTargetedRoll('magic_Greater')} className="bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                  ✨ Greater Magic
-                </button>
-                <button disabled={isRolling} onClick={() => handleTargetedRoll('magic_Artifact')} className="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-400/30 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                  💫 Artifact
-                </button>
-                <button disabled={isRolling} onClick={() => handleTargetedRoll('gear_quality')} className="bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                  🧰 Quality
-                </button>
-                <button disabled={isRolling} onClick={() => handleTargetedRoll('art_gems')} className="bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                  🎨 Art & Gems
-                </button>
-                <button disabled={isRolling} onClick={() => handleTargetedRoll('curios')} className="bg-slate-800 hover:bg-slate-700 text-teal-300 border border-teal-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                  📜 Curios
-                </button>
-                <button disabled={isRolling} onClick={() => handleTargetedRoll('junk')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                  🗑️ Junk
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Results Output List */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Generated Loot Results ({results.length})
+          {/* LEFT PANE (md:col-span-7): Generated Loot Results Stream */}
+          <div className="md:col-span-7 flex flex-col space-y-4 border-b md:border-b-0 md:border-r border-slate-800/80 md:pr-6">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                <span>📜</span> Generated Loot Stream ({results.length})
               </span>
               {results.length > 0 && (
-                <button onClick={() => setResults([])} className="text-xs text-slate-500 hover:text-slate-300">
+                <button onClick={() => setResults([])} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
                   Clear History
                 </button>
               )}
             </div>
 
             {results.length === 0 ? (
-              <div className="text-center py-12 text-slate-500 border border-dashed border-slate-800 rounded-xl bg-slate-950/30">
-                <span className="text-3xl block mb-2">🎲</span>
-                <p className="text-sm">No loot generated yet. Click any button above to roll!</p>
+              <div className="flex-1 flex flex-col items-center justify-center py-16 text-slate-500 border border-dashed border-slate-800 rounded-xl bg-slate-950/30">
+                <span className="text-4xl mb-3">🎲</span>
+                <p className="text-sm font-semibold text-slate-400">No loot generated yet.</p>
+                <p className="text-xs text-slate-500 mt-1">Use the control panel on the right to roll!</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 overflow-y-auto pr-1 flex-1">
                 {results.map((res) => (
                   <div 
                     key={res.id} 
@@ -562,31 +517,31 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                       {/* 1-Click Claim Action Buttons */}
                       <div className="flex items-center gap-2 shrink-0">
                         {res.claimed ? (
-                          <span className="text-xs font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-3 py-1.5 rounded-lg">
-                            ✓ Claimed to Sheet
+                          <span className="text-xs font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-3 py-1 rounded-lg">
+                            ✓ Claimed
                           </span>
                         ) : (
                           <>
                             {res.type === 'coins' && (
                               <button
                                 onClick={() => claimCoins(res)}
-                                className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3 py-2 rounded-lg transition-all"
+                                className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-md shadow-amber-500/20"
                               >
-                                🪙 +Add Coins to Wallet
+                                🪙 +Add Coins
                               </button>
                             )}
 
                             {res.type === 'magic_item' && (
-                              <div className="flex gap-2">
+                              <div className="flex flex-col gap-1.5">
                                 <button
                                   onClick={() => claimMagicItem(res, false)}
-                                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-all"
+                                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition-all"
                                 >
-                                  🎒 Add to Inventory
+                                  🎒 Add Inventory
                                 </button>
                                 <button
                                   onClick={() => claimMagicItem(res, true)}
-                                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-all"
+                                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition-all"
                                 >
                                   ⚔️ Add & Equip
                                 </button>
@@ -596,9 +551,9 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                             {(res.type === 'art_gem' || res.type === 'junk' || res.type === 'document') && (
                               <button
                                 onClick={() => claimValuable(res)}
-                                className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-all"
+                                className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
                               >
-                                💎 +Add to Valuables
+                                💎 +Add Valuables
                               </button>
                             )}
                           </>
@@ -610,16 +565,115 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* RIGHT PANE (md:col-span-5): Control Panel & Roll Launchers */}
+          <div className="md:col-span-5 flex flex-col space-y-6">
+            
+            {/* Mode Switcher Peg Slider */}
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+              <span className={`text-xs font-bold transition-opacity ${!isGmMode ? 'text-amber-400 opacity-100' : 'text-slate-500 opacity-50'}`}>
+                Player Single Roll
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={isGmMode} 
+                  onChange={() => setIsGmMode(!isGmMode)}
+                  className="sr-only peer" 
+                />
+                <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-amber-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+              <span className={`text-xs font-bold transition-opacity ${isGmMode ? 'text-indigo-400 opacity-100' : 'text-slate-500 opacity-50'}`}>
+                GM Hoard Mode
+              </span>
+            </div>
+
+            {/* GM Hoard Mode Section */}
+            {isGmMode && (
+              <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-indigo-300">👑 GM Hoard Generator Presets:</span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button
+                    disabled={isRolling}
+                    onClick={() => handleGmHoardPreset('minion')}
+                    className="bg-indigo-900/50 hover:bg-indigo-800/70 border border-indigo-700 text-indigo-200 py-2 px-3 rounded-lg font-semibold text-xs transition-all text-left"
+                  >
+                    🐀 Minion Corpse (Coins + Junk)
+                  </button>
+                  <button
+                    disabled={isRolling}
+                    onClick={() => handleGmHoardPreset('boss')}
+                    className="bg-indigo-900/70 hover:bg-indigo-700/80 border border-indigo-600 text-indigo-100 py-2 px-3 rounded-lg font-semibold text-xs transition-all text-left"
+                  >
+                    🛡️ Elite Boss Chest (Coins + Gem + Lesser)
+                  </button>
+                  <button
+                    disabled={isRolling}
+                    onClick={() => handleGmHoardPreset('dragon')}
+                    className="bg-amber-600/30 hover:bg-amber-500/40 border border-amber-500/60 text-amber-200 py-2 px-3 rounded-lg font-semibold text-xs transition-all text-left"
+                  >
+                    🐉 Dragon Vault (Master + Greater + Artifact)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Primary Action Button: Image 1 Style "🎲 Random Loot" */}
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">
+                Primary Master Engine
+              </span>
+              <button
+                disabled={isRolling}
+                onClick={handleRollMasterD100}
+                className="w-full bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-extrabold py-3.5 px-6 rounded-xl text-base transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 border border-amber-300/40 cursor-pointer"
+              >
+                <span className="text-xl">🎲</span>
+                <span>Random Loot</span>
+              </button>
+            </div>
+
+            {/* Category Dropdown & Adjacent "Roll" Button */}
+            <div className="space-y-2 pt-2 border-t border-slate-800">
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                Targeted Sub-Table Launcher
+              </span>
+              <div className="flex gap-2">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-100 font-semibold focus:outline-none focus:border-amber-400"
+                >
+                  {CATEGORY_OPTIONS.map((opt) => (
+                    <option key={opt.key} value={opt.key}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  disabled={isRolling}
+                  onClick={() => handleTargetedRoll(selectedCategory)}
+                  className="bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-md flex items-center gap-1.5 shrink-0"
+                >
+                  <span>🎲</span>
+                  <span>Roll</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
         </div>
 
         {/* Modal Footer Status Bar */}
-        <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400">
+        <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
           <div className="flex items-center gap-3">
             <span>Hero: <strong className="text-slate-200">{characterName}</strong></span>
             <span>•</span>
             <span>Wallet: <strong className="text-amber-300">{currentSilver}s</strong>, <strong className="text-amber-400">{currentGold}g</strong></span>
           </div>
-          <button onClick={onClose} className="hover:text-slate-200 transition-colors">
+          <button onClick={onClose} className="hover:text-slate-200 transition-colors font-semibold">
             Close Modal
           </button>
         </div>
