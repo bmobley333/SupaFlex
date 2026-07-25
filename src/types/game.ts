@@ -264,7 +264,9 @@ export interface TreasureItem {
   id: string;
   name: string;
   value: number;
-  currency: 'gp' | 'sp';
+  currency: 'gp' | 'sp' | 'g' | 's';
+  qty?: number;
+  category?: string;
 }
 
 export interface SimpleGearItem {

@@ -6,7 +6,6 @@ import {
   Plus,
   Trash2,
   X,
-  Wrench,
   Search,
   Check,
   AlertCircle,
@@ -317,12 +316,12 @@ export const GearCard: React.FC = () => {
                 {/* Modal Top Bar */}
                 <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">
-                      <Wrench className="w-5 h-5" />
+                    <div className="p-2 rounded-xl bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 flex items-center justify-center">
+                      <span className="text-lg leading-none">🧰</span>
                     </div>
                     <div>
                       <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                        Adventuring Gear Manager
+                        Gear Manager
                       </h3>
                       <p className="text-xs text-slate-400 hidden sm:block">
                         Manage character equipment side-by-side with the Supabase stock catalog and custom creator.
