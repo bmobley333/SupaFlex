@@ -523,8 +523,29 @@ export const PersistentHeaderHUD: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Zone: Spacer for symmetry */}
-      <div className="w-10 hidden md:block shrink-0" />
+      {/* Right Zone: Micro External Resource Links */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <a
+          href="https://notebooklm.google.com/notebook/8a1b90e8-17e0-44a2-a926-667dc08234a7"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-300 text-xs font-semibold flex items-center gap-1 transition-all"
+          title="Open SupaFlex Gemini Notebook in NotebookLM"
+        >
+          <span className="text-xs">🧠</span>
+          <span className="hidden lg:inline text-[11px] font-outfit">Notebook</span>
+        </a>
+        <a
+          href="https://bmobley333.github.io/MetaScape-VitePress-GitHub-Pages/player-guide/supaflex/rules.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-300 text-xs font-semibold flex items-center gap-1 transition-all"
+          title="Open SupaFlex Official Rules Website"
+        >
+          <span className="text-xs">🌐</span>
+          <span className="hidden lg:inline text-[11px] font-outfit">Guide</span>
+        </a>
+      </div>
     </div>
   );
 };

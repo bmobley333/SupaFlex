@@ -8,6 +8,7 @@ import { AdventureLogs } from './components/logs/AdventureLogs';
 import { PlayerDirectoryView } from './components/directory/PlayerDirectoryView';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { HeroSelectorPopover } from './components/header/HeroSelectorPopover';
+import { ResourcesPopover } from './components/header/ResourcesPopover';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'sheet' | 'rolls' | 'codex' | 'logs' | 'directory'>('sheet');
@@ -15,8 +16,10 @@ export default function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSelectorBar, setShowSelectorBar] = useState(false);
   const [showLevelPopover, setShowLevelPopover] = useState(false);
+  const [showResourcesPopover, setShowResourcesPopover] = useState(false);
   const selectorRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef<HTMLDivElement>(null);
+  const resourcesRef = useRef<HTMLDivElement>(null);
 
   const {
     characters,
@@ -37,7 +40,7 @@ export default function App() {
     fetchInitialData();
   }, [fetchInitialData]);
 
-  // Click-outside listener for Hero Selector popover
+  // Click-outside listener for popovers
   useEffect(() => {
     const handleClickOutside = (event: PointerEvent) => {
       if (selectorRef.current && !selectorRef.current.contains(event.target as Node)) {
@@ -46,14 +49,17 @@ export default function App() {
       if (levelRef.current && !levelRef.current.contains(event.target as Node)) {
         setShowLevelPopover(false);
       }
+      if (resourcesRef.current && !resourcesRef.current.contains(event.target as Node)) {
+        setShowResourcesPopover(false);
+      }
     };
-    if (showSelectorBar || showLevelPopover) {
+    if (showSelectorBar || showLevelPopover || showResourcesPopover) {
       document.addEventListener('pointerdown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('pointerdown', handleClickOutside);
     };
-  }, [showSelectorBar, showLevelPopover]);
+  }, [showSelectorBar, showLevelPopover, showResourcesPopover]);
 
   const myHeroes = characters.filter((c) => {
     if (!playerEmail.trim()) return true;
@@ -270,8 +276,34 @@ export default function App() {
             </div>
           </nav>
 
-          {/* Right Zone: Global Save & Database Indicator */}
+          {/* Right Zone: Resources Popover, Global Save & Database Indicator */}
           <div className="flex items-center gap-2">
+            {/* 📚 Resources Popover Trigger */}
+            <div className="relative" ref={resourcesRef}>
+              <button
+                onClick={() => setShowResourcesPopover(!showResourcesPopover)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm ${
+                  showResourcesPopover
+                    ? 'bg-indigo-500/20 border-indigo-400 text-indigo-200 shadow-indigo-500/30'
+                    : 'bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/35 text-indigo-300 shadow-indigo-950/40'
+                }`}
+                title="SupaFlex Gemini Notebook & Official Rules Website"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span className="font-outfit font-extrabold tracking-wide">Resources</span>
+                {showResourcesPopover ? (
+                  <ChevronUp className="w-3 h-3 text-indigo-300 shrink-0" />
+                ) : (
+                  <ChevronDown className="w-3 h-3 text-indigo-400 shrink-0" />
+                )}
+              </button>
+
+              {/* 📚 Resources Floating Glass Popover Card */}
+              {showResourcesPopover && (
+                <ResourcesPopover onClose={() => setShowResourcesPopover(false)} />
+              )}
+            </div>
+
             <button
               onClick={saveActiveCharacter}
               disabled={isSaving || !activeCharacter}
