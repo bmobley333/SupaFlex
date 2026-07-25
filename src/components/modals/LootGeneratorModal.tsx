@@ -63,48 +63,36 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  const handleModeToggle = (gmMode: boolean) => {
+    setIsGmMode(gmMode);
+    setResults([]); // Auto-clear history on mode switch per blueprint directive
+  };
+
   const rollDice = (sides: number) => Math.floor(Math.random() * sides) + 1;
 
-  // Dice parser for coin formulas
-  const evaluateCoins = (formula: string): { silver: number; gold: number; breakdown: string } => {
+  // Evaluates coin rolls cleanly without generating raw formula strings
+  const evaluateCoins = (formula: string): { silver: number; gold: number } => {
     let s = 0;
     let g = 0;
-    let desc = formula;
 
     if (formula === '1d6s') {
-      const r = rollDice(6);
-      s = r;
-      desc = `1d6(s) = ${r}s`;
+      s = rollDice(6);
     } else if (formula === '1d20s') {
-      const r = rollDice(20);
-      s = r;
-      desc = `1d20(s) = ${r}s`;
+      s = rollDice(20);
     } else if (formula === '1d100s') {
-      const r = rollDice(100);
-      s = r;
-      desc = `1d100(s) = ${r}s`;
+      s = rollDice(100);
     } else if (formula === '1d4g') {
-      const r = rollDice(4);
-      g = r;
-      desc = `1d4(g) = ${r}g`;
+      g = rollDice(4);
     } else if (formula === '2d6x10s+1d4g') {
-      const d1 = rollDice(6);
-      const d2 = rollDice(6);
-      const sVal = (d1 + d2) * 10;
-      const gVal = rollDice(4);
-      s = sVal;
-      g = gVal;
-      desc = `2d6(${d1}+${d2}=${d1+d2}) × 10 = ${sVal}s + 1d4(${gVal}) = ${gVal}g`;
+      s = (rollDice(6) + rollDice(6)) * 10;
+      g = rollDice(4);
     } else if (formula === '1d100g') {
-      const r = rollDice(100);
-      g = r;
-      desc = `1d100(g) = ${r}g`;
+      g = rollDice(100);
     } else {
       s = rollDice(10);
-      desc = `Standard pouch = ${s}s`;
     }
 
-    return { silver: s, gold: g, breakdown: desc };
+    return { silver: s, gold: g };
   };
 
   // Fetch random magic item
@@ -164,7 +152,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         resList.push({
           id: `res-${Date.now()}`,
           tableKey: 'master_d100',
-          tableName: 'Master d100 Table',
+          tableName: 'Nothing Found',
           rollVal: d100,
           title: 'Nothing Found',
           description: 'No loot present in this container.',
@@ -177,7 +165,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           resList.push({
             id: `res-${Date.now()}`,
             tableKey: 'master_d100',
-            tableName: 'Master d100 Table',
+            tableName: 'Nothing Found',
             rollVal: d100,
             title: entry.result_name,
             description: entry.notes || 'Empty container.',
@@ -185,13 +173,14 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           });
         } else if (rType === 'currency') {
           const evalC = evaluateCoins(entry.val_formula || '1d6s');
+          const coinText = [evalC.silver > 0 ? `${evalC.silver}s` : '', evalC.gold > 0 ? `${evalC.gold}g` : ''].filter(Boolean).join(', ');
           resList.push({
             id: `res-${Date.now()}`,
             tableKey: 'master_d100',
-            tableName: 'Master d100 Table',
+            tableName: '🪙 Coins',
             rollVal: d100,
-            title: `Coins 💰 (${evalC.silver > 0 ? evalC.silver + 's' : ''} ${evalC.gold > 0 ? evalC.gold + 'g' : ''})`,
-            description: `Formula: ${evalC.breakdown}`,
+            title: `Coins 💰 (${coinText || '0s'})`,
+            description: 'A small leather pouch containing minted currency.',
             type: 'coins',
             coinsSilver: evalC.silver,
             coinsGold: evalC.gold
@@ -202,10 +191,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           resList.push({
             id: `res-${Date.now()}`,
             tableKey: 'master_d100',
-            tableName: 'Master d100 Table',
+            tableName: `✨ ${rarity} Magic Item`,
             rollVal: d100,
-            title: `${entry.result_name}: ${item.name}`,
-            description: item.description || item.notes || `Category: ${item.category}`,
+            title: `${item.name}`,
+            description: item.description || item.notes || `Mystical ${item.category} item.`,
             type: 'magic_item',
             magicItem: item
           });
@@ -220,13 +209,15 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             .gte('range_max', subRoll);
 
           const subEntry = subEntries && subEntries.length > 0 ? subEntries[0] : null;
+          const badgeLabel = subKey === 'art_gems' ? '🎨 Art & Gems' : subKey === 'curios' ? '📜 Curio' : '🗑️ Junk';
+          const cleanDesc = subEntry ? (subEntry.notes || subEntry.result_name) : (entry.notes || 'A rare collectible item.');
           resList.push({
             id: `res-${Date.now()}`,
             tableKey: 'master_d100',
-            tableName: 'Master d100 Table',
+            tableName: badgeLabel,
             rollVal: d100,
             title: subEntry ? subEntry.result_name : entry.result_name,
-            description: subEntry ? `Value/Formula: ${subEntry.val_formula || '—'} (${subEntry.notes || ''})` : entry.notes,
+            description: cleanDesc,
             type: rType === 'art_gem' ? 'art_gem' : 'junk',
             valuableName: subEntry ? subEntry.result_name : entry.result_name,
             valuableVal: subEntry ? subEntry.val_formula : '1g'
@@ -239,10 +230,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             resList.push({
               id: `res-${Date.now()}-2`,
               tableKey: 'master_d100',
-              tableName: 'Master d100 Table',
+              tableName: '🪄 Double Roll Magic',
               rollVal: d100,
-              title: `Double Roll Magic: ${r2.name}`,
-              description: r2.description || `Category: ${r2.category}`,
+              title: `${r2.name}`,
+              description: r2.description || `Enchanted magic item.`,
               type: 'magic_item',
               magicItem: r2
             });
@@ -252,9 +243,9 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             resList.push({
               id: `res-${Date.now()}-epic1`,
               tableKey: 'master_d100',
-              tableName: 'Epic Hoard 👑',
+              tableName: '💫 Epic Artifact',
               rollVal: 100,
-              title: `Artifact 💫: ${artItem.name}`,
+              title: `${artItem.name}`,
               description: artItem.description || 'Legendary artifact of massive power.',
               type: 'magic_item',
               magicItem: artItem
@@ -262,10 +253,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             resList.push({
               id: `res-${Date.now()}-epic2`,
               tableKey: 'master_d100',
-              tableName: 'Epic Hoard 👑',
+              tableName: '👑 Gold Hoard',
               rollVal: 100,
               title: `Gold Hoard 💰 (${evalC.gold}g)`,
-              description: `Rolled 1d100 Gold = ${evalC.gold}g`,
+              description: 'A overflowing chest of sparkling gold coins.',
               type: 'coins',
               coinsSilver: 0,
               coinsGold: evalC.gold
@@ -282,7 +273,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     }
   };
 
-  // Targeted Subtable Roll Handler with Gear Quality Combination
+  // Targeted Subtable Roll Handler with Clean Flavor Texts
   const handleTargetedRoll = async (tableKey: string, append = true) => {
     setIsRolling(true);
     try {
@@ -290,7 +281,6 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       if (tableKey === 'curios' || tableKey === 'junk') diceMax = 6;
       
       if (tableKey === 'gear_quality') {
-        // Quality + Supabase Gear combination
         const gearItem = await fetchRandomGearItem();
         const dVal = rollDice(8);
         const { data: entries } = await supabase
@@ -300,16 +290,17 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           .lte('range_min', dVal)
           .gte('range_max', dVal);
 
-        const qEntry = entries && entries.length > 0 ? entries[0] : { result_name: 'Normal', val_formula: '1.0x', notes: 'Standard condition' };
-        const combinedName = `${qEntry.result_name} ${gearItem.name} (${qEntry.val_formula} value)`;
+        const qEntry = entries && entries.length > 0 ? entries[0] : { result_name: 'Standard Quality', notes: 'Standard condition' };
+        const combinedName = `${qEntry.result_name} ${gearItem.name}`;
+        const cleanDesc = `${qEntry.notes || 'Crafted with distinct detail.'} Base item: ${gearItem.name}.`;
         
         const resObj: RollResult = {
           id: `res-${Date.now()}`,
           tableKey: 'gear_quality',
-          tableName: 'Gear Quality Roll',
+          tableName: '🧰 Gear Quality',
           rollVal: dVal,
-          title: `🧰 ${combinedName}`,
-          description: `Base Item: ${gearItem.name} (Base Cost: ${gearItem.cost || '1g'}) | Condition: ${qEntry.notes || qEntry.result_name}`,
+          title: `${combinedName}`,
+          description: cleanDesc,
           type: 'art_gem',
           valuableName: combinedName,
           valuableVal: gearItem.cost || '1g'
@@ -319,13 +310,14 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       } else if (tableKey.startsWith('magic_')) {
         const rarity = tableKey.replace('magic_', '');
         const item = await fetchRandomMagicItem(rarity);
+        const badgeLabel = rarity === 'Minor' ? '🍺 Minor Magic' : rarity === 'Lesser' ? '🪄 Lesser Magic' : rarity === 'Greater' ? '✨ Greater Magic' : '💫 Artifact';
         const resObj: RollResult = {
           id: `res-${Date.now()}`,
           tableKey,
-          tableName: `${rarity} Magic Item`,
+          tableName: badgeLabel,
           rollVal: 1,
-          title: `${rarity} Magic Item: ${item.name}`,
-          description: item.description || `Category: ${item.category}`,
+          title: `${item.name}`,
+          description: item.description || `Mystical ${rarity.toLowerCase()} magic item.`,
           type: 'magic_item',
           magicItem: item
         };
@@ -333,13 +325,14 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         return resObj;
       } else if (tableKey === 'coins') {
         const evalC = evaluateCoins('2d6x10s+1d4g');
+        const coinText = [evalC.silver > 0 ? `${evalC.silver}s` : '', evalC.gold > 0 ? `${evalC.gold}g` : ''].filter(Boolean).join(', ');
         const resObj: RollResult = {
           id: `res-${Date.now()}`,
           tableKey: 'coins',
-          tableName: 'Coins Purse',
+          tableName: '🪙 Coins',
           rollVal: 1,
-          title: `Coins 💰 (${evalC.silver}s + ${evalC.gold}g)`,
-          description: `Breakdown: ${evalC.breakdown}`,
+          title: `Coins 💰 (${coinText})`,
+          description: 'A heavy leather coin pouch found among the loot.',
           type: 'coins',
           coinsSilver: evalC.silver,
           coinsGold: evalC.gold
@@ -356,13 +349,15 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           .gte('range_max', dVal);
 
         const entry = entries && entries.length > 0 ? entries[0] : null;
+        const badgeLabel = tableKey === 'art_gems' ? '🎨 Art & Gems' : tableKey === 'curios' ? '📜 Curios' : '🗑️ Junk';
+        const cleanDesc = entry ? (entry.notes || entry.result_name) : 'An interesting item found in the container.';
         const resObj: RollResult = {
           id: `res-${Date.now()}`,
           tableKey,
-          tableName: tableKey.toUpperCase(),
+          tableName: badgeLabel,
           rollVal: dVal,
-          title: entry ? entry.result_name : 'Targeted Result',
-          description: entry ? `Value: ${entry.val_formula || '—'} (${entry.notes || ''})` : 'Result found.',
+          title: entry ? entry.result_name : 'Targeted Item',
+          description: cleanDesc,
           type: tableKey === 'art_gems' ? 'art_gem' : tableKey === 'curios' ? 'document' : 'junk',
           valuableName: entry ? entry.result_name : 'Targeted Item',
           valuableVal: entry ? entry.val_formula : '1g'
@@ -442,11 +437,11 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden text-slate-100">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden text-slate-100">
         
         {/* Toast Alert */}
         {toastMessage && (
-          <div className="bg-amber-500/90 text-slate-950 px-4 py-2 text-sm font-bold text-center animate-bounce">
+          <div className="bg-amber-500/90 text-slate-950 px-4 py-2 text-sm font-bold text-center animate-bounce shrink-0">
             {toastMessage}
           </div>
         )}
@@ -456,7 +451,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           <div className="flex items-center gap-3">
             <span className="text-2xl">💰</span>
             <div>
-              <h2 className="text-xl font-bold text-amber-400">Random Loot & Treasure Generator</h2>
+              <h2 className="text-xl font-bold text-amber-400">Loot Generator</h2>
               <p className="text-xs text-slate-400">Master Blueprint Two-Pane Interactive Loot Engine</p>
             </div>
           </div>
@@ -469,18 +464,21 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body: Two-Pane Master Blueprint Grid */}
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-900/40 grid grid-cols-1 md:grid-cols-12 gap-6 min-h-0">
+        {/* Modal Body: Two-Pane Master Blueprint Grid with Independent Pane Scrollbars */}
+        <div className="flex-1 p-6 bg-slate-900/40 grid grid-cols-1 md:grid-cols-12 gap-6 overflow-hidden min-h-0">
           
-          {/* LEFT PANE (md:col-span-7): Generated Loot Results Stream */}
-          <div className="md:col-span-7 flex flex-col space-y-4 border-b md:border-b-0 md:border-r border-slate-800/80 md:pr-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          {/* LEFT PANE (md:col-span-7): Generated Loot Results Stream (Independent Scroll) */}
+          <div className="md:col-span-7 flex flex-col h-full border-b md:border-b-0 md:border-r border-slate-800/80 md:pr-6 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 shrink-0 mb-3">
               <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
                 <span>📜</span> Generated Loot Stream ({results.length})
               </span>
               {results.length > 0 && (
-                <button onClick={() => setResults([])} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
-                  Clear History
+                <button 
+                  onClick={() => setResults([])} 
+                  className="bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-700/50 font-semibold text-xs px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <span>🗑️</span> Clear History
                 </button>
               )}
             </div>
@@ -492,7 +490,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                 <p className="text-xs text-slate-500 mt-1">Use the control panel on the right to roll!</p>
               </div>
             ) : (
-              <div className="space-y-3 overflow-y-auto pr-1 flex-1">
+              <div className="flex-1 overflow-y-auto space-y-3 pr-2">
                 {results.map((res) => (
                   <div 
                     key={res.id} 
@@ -504,11 +502,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-400">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-md bg-slate-950 border border-slate-700 text-amber-400 shadow-sm">
                             {res.tableName}
                           </span>
-                          <span className="text-xs text-slate-400">Rolled: {res.rollVal}</span>
                         </div>
                         <h4 className="text-base font-bold text-slate-100">{res.title}</h4>
                         <p className="text-xs text-slate-300 mt-1 leading-relaxed">{res.description}</p>
@@ -566,11 +563,11 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             )}
           </div>
 
-          {/* RIGHT PANE (md:col-span-5): Control Panel & Roll Launchers */}
-          <div className="md:col-span-5 flex flex-col space-y-6">
+          {/* RIGHT PANE (md:col-span-5): Control Panel & Roll Launchers (Independent Scroll) */}
+          <div className="md:col-span-5 flex flex-col h-full space-y-5 overflow-y-auto pr-1">
             
             {/* Mode Switcher Peg Slider */}
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between shrink-0">
               <span className={`text-xs font-bold transition-opacity ${!isGmMode ? 'text-amber-400 opacity-100' : 'text-slate-500 opacity-50'}`}>
                 Player Single Roll
               </span>
@@ -578,7 +575,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                 <input 
                   type="checkbox" 
                   checked={isGmMode} 
-                  onChange={() => setIsGmMode(!isGmMode)}
+                  onChange={(e) => handleModeToggle(e.target.checked)}
                   className="sr-only peer" 
                 />
                 <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-amber-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
@@ -590,7 +587,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 
             {/* GM Hoard Mode Section */}
             {isGmMode && (
-              <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-4 space-y-3">
+              <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-4 space-y-3 shrink-0">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-indigo-300">👑 GM Hoard Generator Presets:</span>
                 </div>
@@ -621,7 +618,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             )}
 
             {/* Primary Action Button: Image 1 Style "🎲 Random Loot" */}
-            <div className="space-y-2">
+            <div className="space-y-2 shrink-0">
               <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">
                 Primary Master Engine
               </span>
@@ -636,7 +633,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             </div>
 
             {/* Category Dropdown & Adjacent "Roll" Button */}
-            <div className="space-y-2 pt-2 border-t border-slate-800">
+            <div className="space-y-2 pt-2 border-t border-slate-800 shrink-0">
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
                 Targeted Sub-Table Launcher
               </span>
@@ -666,15 +663,20 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Footer Status Bar */}
+        {/* Modal Footer Status Bar with Standardized "Done" Button */}
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
           <div className="flex items-center gap-3">
             <span>Hero: <strong className="text-slate-200">{characterName}</strong></span>
             <span>•</span>
             <span>Wallet: <strong className="text-amber-300">{currentSilver}s</strong>, <strong className="text-amber-400">{currentGold}g</strong></span>
           </div>
-          <button onClick={onClose} className="hover:text-slate-200 transition-colors font-semibold">
-            Close Modal
+          
+          {/* Standardized Master Blueprint Done Footer Button */}
+          <button 
+            onClick={onClose} 
+            className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
+          >
+            Done
           </button>
         </div>
 
