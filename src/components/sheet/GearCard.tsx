@@ -19,6 +19,52 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { SimpleGearItem, SupabaseGear } from '../../types/game';
 
+/**
+ * Parses cost string into silver value.
+ * Gold (g/gp) = 100 silver. Silver (s/sp) = 1 silver.
+ * Examples: "5s" -> 5, "10g" -> 1000, "1g 50s" -> 150, "100s" -> 100.
+ */
+export const parseCostToSilver = (costStr?: string): number => {
+  if (!costStr || !costStr.trim()) return 0;
+  const str = costStr.toLowerCase().trim();
+
+  let totalSilver = 0;
+
+  const goldMatch = str.match(/(\d+)\s*(g|gp|gold)/);
+  if (goldMatch) {
+    totalSilver += parseInt(goldMatch[1], 10) * 100;
+  }
+
+  const silverMatch = str.match(/(\d+)\s*(s|sp|silver)/);
+  if (silverMatch) {
+    totalSilver += parseInt(silverMatch[1], 10);
+  }
+
+  if (!goldMatch && !silverMatch) {
+    const rawNum = str.match(/\d+/);
+    if (rawNum) {
+      totalSilver += parseInt(rawNum[0], 10);
+    }
+  }
+
+  return totalSilver;
+};
+
+/**
+ * Calculates total gold and silver inventory value for equipped gear items.
+ * Enforces 100s = 1g rule so silver never exceeds 99s.
+ */
+export const calculateInventoryValue = (gearList: SimpleGearItem[]) => {
+  let totalSilver = 0;
+  for (const item of gearList) {
+    const qty = Math.max(1, item.qty || 1);
+    totalSilver += qty * parseCostToSilver(item.cost);
+  }
+  const gold = Math.floor(totalSilver / 100);
+  const silver = totalSilver % 100; // Guaranteed 0 - 99
+  return { gold, silver, totalSilver };
+};
+
 export const GearCard: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
   const gearList: SimpleGearItem[] = activeCharacter?.sheet_data?.simple_gear || [];
@@ -46,6 +92,9 @@ export const GearCard: React.FC = () => {
   const [customCostUnit, setCustomCostUnit] = useState<'s' | 'g'>('s');
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Calculate total inventory value (gold & silver, 100s = 1g)
+  const inventoryValue = useMemo(() => calculateInventoryValue(gearList), [gearList]);
 
   // Fetch Supabase Gear Catalog on modal open
   useEffect(() => {
@@ -229,404 +278,419 @@ export const GearCard: React.FC = () => {
         Gear
       </h3>
 
-      {/* Manage Gear Trigger Button */}
-      <div className="relative">
-        <button
-          onClick={() => setShowManageModal(!showManageModal)}
-          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
-            showManageModal
-              ? 'bg-cyan-600/30 text-cyan-200 border-cyan-400 shadow-cyan-500/30'
-              : 'bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300'
-          }`}
-          title="Manage gear inventory and catalog"
-        >
-          <span className="font-outfit font-bold">Manage Gear</span>
-          <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
-            {gearList.length}
-          </span>
-          {showManageModal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-        </button>
+      {/* Manage Gear Trigger Button & Value Summary */}
+      <div className="flex items-center gap-2">
+        {inventoryValue.totalSilver > 0 && (
+          <div
+            className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-0.5 bg-slate-950/80 rounded-md border border-slate-800 text-amber-300"
+            title="Total Inventory Value (100s = 1g)"
+          >
+            <span>🪙 {inventoryValue.gold}g</span>
+            <span>🥈 {inventoryValue.silver}s</span>
+          </div>
+        )}
 
-        {/* 2-Column Split-Pane Glassmorphic Modal */}
-        {showManageModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-            <div
-              ref={modalRef}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden"
-            >
-              {/* Modal Top Bar */}
-              <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">
-                    <Wrench className="w-5 h-5" />
+        <div className="relative">
+          <button
+            onClick={() => setShowManageModal(!showManageModal)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
+              showManageModal
+                ? 'bg-cyan-600/30 text-cyan-200 border-cyan-400 shadow-cyan-500/30'
+                : 'bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300'
+            }`}
+            title="Manage gear inventory and catalog"
+          >
+            <span className="font-outfit font-bold">Manage Gear</span>
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
+              {gearList.length}
+            </span>
+            {showManageModal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+
+          {/* 2-Column Split-Pane Glassmorphic Modal */}
+          {showManageModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+              <div
+                ref={modalRef}
+                className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden"
+              >
+                {/* Modal Top Bar */}
+                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">
+                      <Wrench className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                        Adventuring Gear Manager
+                      </h3>
+                      <p className="text-xs text-slate-400 hidden sm:block">
+                        Manage character equipment side-by-side with the Supabase stock catalog and custom creator.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                      Adventuring Gear Manager
-                    </h3>
-                    <p className="text-xs text-slate-400 hidden sm:block">
-                      Manage character equipment side-by-side with the Supabase stock catalog and custom creator.
-                    </p>
-                  </div>
+
+                  <button
+                    onClick={() => setShowManageModal(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
-                <button
-                  onClick={() => setShowManageModal(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* 2-COLUMN SPLIT-PANE BODY */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
-                
-                {/* --- LEFT COLUMN: CHARACTER INVENTORY PANE --- */}
-                <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                  {/* Pane Header */}
-                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
-                    <div className="flex items-center gap-1.5">
-                      <Package className="w-4 h-4 text-cyan-400" />
-                      <span className="text-xs font-outfit font-bold uppercase tracking-wider text-cyan-300">
-                        Character Inventory
-                      </span>
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
-                        {gearList.length}
-                      </span>
-                    </div>
-
-                    {/* Inventory Search Filter */}
-                    <div className="relative">
-                      <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Search..."
-                        value={inventorySearchQuery}
-                        onChange={(e) => setInventorySearchQuery(e.target.value)}
-                        className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-cyan-500 w-24 sm:w-28"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Scrollable Inventory Items List */}
-                  <div className="flex-1 overflow-y-auto pr-1 mt-2.5 flex flex-col gap-1.5 min-h-0">
-                    {filteredInventory.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
-                        <Package className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
-                        {inventorySearchQuery ? (
-                          <span>No items matching "{inventorySearchQuery}"</span>
-                        ) : (
-                          <span>No specific gear listed. Standard adventuring kit assumed.</span>
-                        )}
+                {/* 2-COLUMN SPLIT-PANE BODY */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
+                  
+                  {/* --- LEFT COLUMN: CHARACTER INVENTORY PANE --- */}
+                  <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                    {/* Pane Header */}
+                    <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Package className="w-4 h-4 text-cyan-400" />
+                        <span className="text-xs font-outfit font-bold uppercase tracking-wider text-cyan-300">
+                          Inventory
+                        </span>
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
+                          {gearList.length}
+                        </span>
                       </div>
-                    ) : (
-                      filteredInventory.map((item) => (
-                        <div
-                          key={item.id}
-                          className="p-2 bg-slate-900/90 rounded-lg border border-slate-800/90 flex items-center justify-between gap-2 hover:border-cyan-500/40 transition-all shrink-0"
-                        >
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <input
-                              type="number"
-                              min="1"
-                              value={item.qty}
-                              onChange={(e) =>
-                                handleUpdateGear(item.id, {
-                                  qty: Math.max(1, parseInt(e.target.value, 10) || 1),
-                                })
-                              }
-                              className="w-11 bg-slate-950 text-cyan-300 text-xs font-mono font-extrabold px-1 py-1 rounded border border-slate-800 text-center outline-none focus:border-cyan-500 shrink-0"
-                            />
-                            <div className="flex flex-col min-w-0 flex-1">
-                              <span className="text-xs font-semibold text-slate-100 truncate">
-                                {item.name}
-                              </span>
-                              {(item.category || item.cost) && (
-                                <div className="flex items-center gap-1.5 text-[10px]">
-                                  {item.category && (
-                                    <span className="text-slate-400 bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800/80 truncate max-w-[130px]">
-                                      {item.category}
-                                    </span>
-                                  )}
-                                  {item.cost && (
-                                    <span className="text-amber-400 font-mono font-bold">
-                                      {item.cost}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
 
-                          <button
-                            onClick={() => handleRemoveGear(item.id)}
-                            className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all shrink-0"
-                            title="Remove Item"
+                      {/* Inventory Search Filter */}
+                      <div className="relative">
+                        <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search..."
+                          value={inventorySearchQuery}
+                          onChange={(e) => setInventorySearchQuery(e.target.value)}
+                          className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-cyan-500 w-24 sm:w-28"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Scrollable Inventory Items List */}
+                    <div className="flex-1 overflow-y-auto pr-1 mt-2.5 flex flex-col gap-1.5 min-h-0">
+                      {filteredInventory.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
+                          <Package className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
+                          {inventorySearchQuery ? (
+                            <span>No items matching "{inventorySearchQuery}"</span>
+                          ) : (
+                            <span>No specific gear listed. Standard adventuring kit assumed.</span>
+                          )}
+                        </div>
+                      ) : (
+                        filteredInventory.map((item) => (
+                          <div
+                            key={item.id}
+                            className="p-2 bg-slate-900/90 rounded-lg border border-slate-800/90 flex items-center justify-between gap-2 hover:border-cyan-500/40 transition-all shrink-0"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* --- RIGHT COLUMN: CATALOG & CREATOR PANE --- */}
-                <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                  {/* Pane Sub-Tab Selector Header */}
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
-                    <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800">
-                      <button
-                        onClick={() => setActiveRightTab('CATALOG')}
-                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
-                          activeRightTab === 'CATALOG'
-                            ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                        Stock Catalog ({gearCatalog.length})
-                      </button>
-
-                      <button
-                        onClick={() => setActiveRightTab('CUSTOM')}
-                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
-                          activeRightTab === 'CUSTOM'
-                            ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        <Plus className="w-3.5 h-3.5 text-cyan-400" />
-                        + Custom Gear
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* TAB 1: STOCK CATALOG VIEW */}
-                  {activeRightTab === 'CATALOG' && (
-                    <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-hidden">
-                      {/* Catalog Search & Category Filter Bar */}
-                      <div className="flex items-center gap-2 pb-2 shrink-0">
-                        <div className="relative flex-1">
-                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            placeholder="Search catalog..."
-                            value={catalogSearchQuery}
-                            onChange={(e) => setCatalogSearchQuery(e.target.value)}
-                            className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 w-full"
-                          />
-                        </div>
-
-                        <select
-                          value={selectedCategoryFilter}
-                          onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                          className="bg-slate-900 text-slate-200 text-xs px-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 max-w-[130px]"
-                        >
-                          <option value="ALL">All Categories</option>
-                          {availableCategories.map((cat) => (
-                            <option key={cat} value={cat}>
-                              {cat}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Catalog Items Scrollable Grid */}
-                      <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1.5 min-h-0">
-                        {isLoadingCatalog ? (
-                          <div className="h-full flex items-center justify-center text-xs text-slate-400 gap-2">
-                            <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
-                            Loading stock gear from Supabase...
-                          </div>
-                        ) : filteredCatalog.length === 0 ? (
-                          <p className="text-xs text-slate-500 italic py-6 text-center">
-                            No matching items found in catalog.
-                          </p>
-                        ) : (
-                          filteredCatalog.map((item) => {
-                            const inInventory = gearList.find(
-                              (g) => g.name.toLowerCase() === item.name.toLowerCase()
-                            );
-                            return (
-                              <div
-                                key={item.id || item.name}
-                                className="p-2 bg-slate-900/90 rounded-lg border border-slate-800/90 flex items-center justify-between gap-2 hover:border-cyan-500/40 transition-all shrink-0"
-                              >
-                                <div className="flex flex-col min-w-0 flex-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-semibold text-slate-100 truncate">
-                                      {item.name}
-                                    </span>
-                                    {inInventory && (
-                                      <span className="text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 px-1.5 py-0.2 rounded border border-cyan-500/40">
-                                        {inInventory.qty}x
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.qty}
+                                onChange={(e) =>
+                                  handleUpdateGear(item.id, {
+                                    qty: Math.max(1, parseInt(e.target.value, 10) || 1),
+                                  })
+                                }
+                                className="w-11 bg-slate-950 text-cyan-300 text-xs font-mono font-extrabold px-1 py-1 rounded border border-slate-800 text-center outline-none focus:border-cyan-500 shrink-0"
+                              />
+                              <div className="flex flex-col min-w-0 flex-1">
+                                <span className="text-xs font-semibold text-slate-100 truncate">
+                                  {item.name}
+                                </span>
+                                {(item.category || item.cost) && (
+                                  <div className="flex items-center gap-1.5 text-[10px]">
+                                    {item.category && (
+                                      <span className="text-slate-400 bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800/80 truncate max-w-[130px]">
+                                        {item.category}
+                                      </span>
+                                    )}
+                                    {item.cost && (
+                                      <span className="text-amber-400 font-mono font-bold">
+                                        {item.cost}
                                       </span>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-2 text-[10px]">
-                                    <span className="text-slate-400 bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800/80 truncate max-w-[130px]">
-                                      {item.category || 'Adventuring'}
-                                    </span>
-                                    <span className="text-amber-400 font-mono font-bold">
-                                      {item.cost}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <button
-                                  onClick={() => handleAddStockGear(item)}
-                                  className="px-2.5 py-1 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0"
-                                  title="Add 1x to character sheet"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                  Add
-                                </button>
+                                )}
                               </div>
-                            );
-                          })
-                        )}
+                            </div>
+
+                            <button
+                              onClick={() => handleRemoveGear(item.id)}
+                              className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all shrink-0"
+                              title="Remove Item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* --- RIGHT COLUMN: CATALOG & CREATOR PANE --- */}
+                  <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                    {/* Pane Sub-Tab Selector Header */}
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
+                      <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800">
+                        <button
+                          onClick={() => setActiveRightTab('CATALOG')}
+                          className={`px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            activeRightTab === 'CATALOG'
+                              ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                          Stock Catalog ({gearCatalog.length})
+                        </button>
+
+                        <button
+                          onClick={() => setActiveRightTab('CUSTOM')}
+                          className={`px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            activeRightTab === 'CUSTOM'
+                              ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <Plus className="w-3.5 h-3.5 text-cyan-400" />
+                          + Custom Gear
+                        </button>
                       </div>
                     </div>
-                  )}
 
-                  {/* TAB 2: CUSTOM GEAR FORM VIEW */}
-                  {activeRightTab === 'CUSTOM' && (
-                    <form
-                      onSubmit={handleCreateCustomGear}
-                      className="flex-1 flex flex-col justify-between mt-2.5 overflow-y-auto pr-1 animate-fadeIn gap-3"
-                    >
-                      <div className="flex flex-col gap-3">
-                        <span className="text-xs font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
-                          <Sparkles className="w-4 h-4 text-cyan-400" />
-                          Add Unique Custom Gear
-                        </span>
-
-                        {formError && (
-                          <div className="p-2 bg-rose-950/60 border border-rose-500/40 rounded-lg text-rose-300 text-xs flex items-center gap-1.5">
-                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                            <span>{formError}</span>
+                    {/* TAB 1: STOCK CATALOG VIEW */}
+                    {activeRightTab === 'CATALOG' && (
+                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-hidden">
+                        {/* Catalog Search & Category Filter Bar */}
+                        <div className="flex items-center gap-2 pb-2 shrink-0">
+                          <div className="relative flex-1">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              placeholder="Search catalog..."
+                              value={catalogSearchQuery}
+                              onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 w-full"
+                            />
                           </div>
-                        )}
 
-                        {/* Guardrail 1: Item Name */}
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
-                            Item Name <span className="text-rose-400">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Grappling Hook"
-                            value={customName}
-                            onChange={(e) => setCustomName(e.target.value)}
-                            className="bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500"
-                            required
-                          />
-                        </div>
-
-                        {/* Guardrail 2: Category Dropdown / Custom Category */}
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
-                            Category <span className="text-rose-400">*</span>
-                          </label>
                           <select
-                            value={customCategorySelect}
-                            onChange={(e) => setCustomCategorySelect(e.target.value)}
-                            className="bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500"
+                            value={selectedCategoryFilter}
+                            onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                            className="bg-slate-900 text-slate-200 text-xs px-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 max-w-[130px]"
                           >
+                            <option value="ALL">All Categories</option>
                             {availableCategories.map((cat) => (
                               <option key={cat} value={cat}>
                                 {cat}
                               </option>
                             ))}
-                            <option value="CUSTOM_NEW">+ Add to new "Custom" category...</option>
                           </select>
                         </div>
 
-                        {/* Custom Category Input if selected */}
-                        {customCategorySelect === 'CUSTOM_NEW' && (
-                          <div className="flex flex-col gap-1 animate-fadeIn">
-                            <label className="text-[11px] font-bold text-cyan-300 uppercase tracking-wide">
-                              New Custom Category Name <span className="text-rose-400">*</span>
+                        {/* Catalog Items Scrollable Grid */}
+                        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1.5 min-h-0">
+                          {isLoadingCatalog ? (
+                            <div className="h-full flex items-center justify-center text-xs text-slate-400 gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                              Loading stock gear from Supabase...
+                            </div>
+                          ) : filteredCatalog.length === 0 ? (
+                            <p className="text-xs text-slate-500 italic py-6 text-center">
+                              No matching items found in catalog.
+                            </p>
+                          ) : (
+                            filteredCatalog.map((item) => {
+                              const inInventory = gearList.find(
+                                (g) => g.name.toLowerCase() === item.name.toLowerCase()
+                              );
+                              return (
+                                <div
+                                  key={item.id || item.name}
+                                  className="p-2 bg-slate-900/90 rounded-lg border border-slate-800/90 flex items-center justify-between gap-2 hover:border-cyan-500/40 transition-all shrink-0"
+                                >
+                                  <div className="flex flex-col min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs font-semibold text-slate-100 truncate">
+                                        {item.name}
+                                      </span>
+                                      {inInventory && (
+                                        <span className="text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 px-1.5 py-0.2 rounded border border-cyan-500/40">
+                                          {inInventory.qty}x
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px]">
+                                      <span className="text-slate-400 bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800/80 truncate max-w-[130px]">
+                                        {item.category || 'Adventuring'}
+                                      </span>
+                                      <span className="text-amber-400 font-mono font-bold">
+                                        {item.cost}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    onClick={() => handleAddStockGear(item)}
+                                    className="px-2.5 py-1 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0"
+                                    title="Add 1x to character sheet"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    Add
+                                  </button>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* TAB 2: CUSTOM GEAR FORM VIEW */}
+                    {activeRightTab === 'CUSTOM' && (
+                      <form
+                        onSubmit={handleCreateCustomGear}
+                        className="flex-1 flex flex-col justify-between mt-2.5 overflow-y-auto pr-1 animate-fadeIn gap-3"
+                      >
+                        <div className="flex flex-col gap-3">
+                          <span className="text-xs font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4 text-cyan-400" />
+                            Add Unique Custom Gear
+                          </span>
+
+                          {formError && (
+                            <div className="p-2 bg-rose-950/60 border border-rose-500/40 rounded-lg text-rose-300 text-xs flex items-center gap-1.5">
+                              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                              <span>{formError}</span>
+                            </div>
+                          )}
+
+                          {/* Guardrail 1: Item Name */}
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                              Item Name <span className="text-rose-400">*</span>
                             </label>
                             <input
                               type="text"
-                              placeholder="e.g. Alchemy & Elixirs"
-                              value={customCategoryNewText}
-                              onChange={(e) => setCustomCategoryNewText(e.target.value)}
-                              className="bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-cyan-500/50 outline-none focus:border-cyan-400"
+                              placeholder="e.g. Grappling Hook"
+                              value={customName}
+                              onChange={(e) => setCustomName(e.target.value)}
+                              className="bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500"
                               required
                             />
                           </div>
-                        )}
 
-                        {/* Guardrail 3: Cost (Positive Integer + s/g Currency Selector) */}
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
-                            Cost (Positive Integer) <span className="text-rose-400">*</span>
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min="1"
-                              value={customCostVal}
-                              onChange={(e) =>
-                                setCustomCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))
-                              }
-                              className="w-24 bg-slate-900 text-cyan-300 text-xs font-mono font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 text-center"
-                              required
-                            />
+                          {/* Guardrail 2: Category Dropdown / Custom Category */}
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                              Category <span className="text-rose-400">*</span>
+                            </label>
                             <select
-                              value={customCostUnit}
-                              onChange={(e) => setCustomCostUnit(e.target.value as 's' | 'g')}
-                              className="bg-slate-900 text-amber-300 font-mono font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500"
+                              value={customCategorySelect}
+                              onChange={(e) => setCustomCategorySelect(e.target.value)}
+                              className="bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500"
                             >
-                              <option value="s">s (silver)</option>
-                              <option value="g">g (gold)</option>
+                              {availableCategories.map((cat) => (
+                                <option key={cat} value={cat}>
+                                  {cat}
+                                </option>
+                              ))}
+                              <option value="CUSTOM_NEW">+ Add to new "Custom" category...</option>
                             </select>
-                            <span className="text-xs text-slate-400 font-mono ml-2">
-                              Combined: <strong className="text-amber-400">{customCostVal}{customCostUnit}</strong>
-                            </span>
+                          </div>
+
+                          {/* Custom Category Input if selected */}
+                          {customCategorySelect === 'CUSTOM_NEW' && (
+                            <div className="flex flex-col gap-1 animate-fadeIn">
+                              <label className="text-[11px] font-bold text-cyan-300 uppercase tracking-wide">
+                                New Custom Category Name <span className="text-rose-400">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Alchemy & Elixirs"
+                                value={customCategoryNewText}
+                                onChange={(e) => setCustomCategoryNewText(e.target.value)}
+                                className="bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-cyan-500/50 outline-none focus:border-cyan-400"
+                                required
+                              />
+                            </div>
+                          )}
+
+                          {/* Guardrail 3: Cost (Positive Integer + s/g Currency Selector) */}
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                              Cost (Positive Integer) <span className="text-rose-400">*</span>
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={customCostVal}
+                                onChange={(e) =>
+                                  setCustomCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))
+                                }
+                                className="w-24 bg-slate-900 text-cyan-300 text-xs font-mono font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 text-center"
+                                required
+                              />
+                              <select
+                                value={customCostUnit}
+                                onChange={(e) => setCustomCostUnit(e.target.value as 's' | 'g')}
+                                className="bg-slate-900 text-amber-300 font-mono font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500"
+                              >
+                                <option value="s">s (silver)</option>
+                                <option value="g">g (gold)</option>
+                              </select>
+                              <span className="text-xs text-slate-400 font-mono ml-2">
+                                Combined: <strong className="text-amber-400">{customCostVal}{customCostUnit}</strong>
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Custom Form Action Button */}
-                      <div className="pt-3 border-t border-slate-800 flex items-center justify-end">
-                        <button
-                          type="submit"
-                          disabled={isSubmitting || !customName.trim()}
-                          className="bg-cyan-600 hover:bg-cyan-500 text-white font-outfit font-bold text-xs px-4 py-2 rounded-lg border border-cyan-400 disabled:opacity-40 transition-all flex items-center gap-1.5 shadow-md shadow-cyan-950"
-                        >
-                          {isSubmitting ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Check className="w-4 h-4" />
-                          )}
-                          Save Custom Gear & Add to Sheet
-                        </button>
-                      </div>
-                    </form>
-                  )}
+                        {/* Custom Form Action Button */}
+                        <div className="pt-3 border-t border-slate-800 flex items-center justify-end">
+                          <button
+                            type="submit"
+                            disabled={isSubmitting || !customName.trim()}
+                            className="bg-cyan-600 hover:bg-cyan-500 text-white font-outfit font-bold text-xs px-4 py-2 rounded-lg border border-cyan-400 disabled:opacity-40 transition-all flex items-center gap-1.5 shadow-md shadow-cyan-950"
+                          >
+                            {isSubmitting ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
+                            Save Custom Gear & Add to Sheet
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+
                 </div>
 
-              </div>
+                {/* Modal Footer */}
+                <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-amber-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                    <span className="text-slate-400 font-sans font-semibold text-[11px]">Total Gear Value:</span>
+                    <span>🪙 {inventoryValue.gold}g</span>
+                    <span>🥈 {inventoryValue.silver}s</span>
+                  </div>
 
-              {/* Modal Footer */}
-              <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
-                <span className="text-[11px] text-slate-500 font-mono">
-                  SupaFlex Adventuring Gear Engine • 2-Column Split-Pane Mode
-                </span>
-                <button
-                  onClick={() => setShowManageModal(false)}
-                  className="px-4 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold transition-all"
-                >
-                  Done
-                </button>
+                  <button
+                    onClick={() => setShowManageModal(false)}
+                    className="px-4 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold transition-all"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
