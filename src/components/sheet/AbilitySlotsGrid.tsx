@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Save, Sparkles, Globe, Flame } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Save, Sparkles, Globe, Flame, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AbilitySlot, Power, MagicItem } from '../../types/game';
 
@@ -28,12 +28,21 @@ const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
 const USAGE_OPTIONS = ['1-Enc', '2-Enc', '3-Enc', '1', '1-Luck🍀', '1-Charge⚡'];
 
 const POWER_CATEGORY_BUTTONS = [
+  { id: 'all', label: 'ALL Categories', icon: '🌐' },
   { id: 'class', label: 'Class', icon: '👤' },
   { id: 'race', label: 'Racial', icon: '🧬' },
   { id: 'combat style', label: 'Combat Styles', icon: '⚔️' },
   { id: 'luck', label: 'Luck', icon: '🍀' },
   { id: 'favorites', label: 'Favorites', icon: '⭐' },
-  { id: 'all', label: 'ALL', icon: '🌐' },
+];
+
+const MAIN_ABILITY_ICONS = [
+  { icon: '✨', label: 'Magic' },
+  { icon: '💪', label: 'Might' },
+  { icon: '👁️', label: 'Mind' },
+  { icon: '🏃', label: 'Motion' },
+  { icon: '🫀', label: 'Moxie' },
+  { icon: '🍀', label: 'Luck' },
 ];
 
 const cleanName = (name: string) => name.replace(/\s*\[[A-Z]+\]$/i, '').trim();
@@ -68,9 +77,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   // Right Pane Active View: 'CATALOG' or 'CREATOR'
   const [activeRightTab, setActiveRightTab] = useState<'CATALOG' | 'CREATOR'>('CATALOG');
 
-  // Dyslexia-Friendly Peg-Slider Toggle: Default set to Learnable Only (true)
-  const [learnableOnly, setLearnableOnly] = useState<boolean>(true);
-
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Creation Form State
@@ -78,6 +84,40 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [createAction, setCreateAction] = useState('A');
   const [createUsage, setCreateUsage] = useState('1-Enc');
   const [createEffect, setCreateEffect] = useState('');
+  const createEffectRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertIconAtCursor = (iconStr: string) => {
+    const textarea = createEffectRef.current;
+    if (!textarea) {
+      setCreateEffect((prev) => (prev ? prev + ' ' + iconStr : iconStr));
+      return;
+    }
+    const start = textarea.selectionStart || 0;
+    const end = textarea.selectionEnd || 0;
+    const updated = createEffect.substring(0, start) + iconStr + createEffect.substring(end);
+    setCreateEffect(updated);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const newPos = start + iconStr.length;
+      textarea.setSelectionRange(newPos, newPos);
+    });
+  };
+
+  const handleToggleFavoriteTable = (tableName: string) => {
+    if (!tableName) return;
+    updateActiveSheetData((prev) => {
+      const currentFavs: string[] = prev.favorite_power_tables || [];
+      const isFav = currentFavs.includes(tableName);
+      const updatedFavs = isFav
+        ? currentFavs.filter((t) => t !== tableName)
+        : [...currentFavs, tableName];
+      return {
+        ...prev,
+        favorite_power_tables: updatedFavs,
+      };
+    });
+    saveActiveCharacter();
+  };
 
   // Inline Editing Form State
   const [editingAbilityName, setEditingAbilityName] = useState<string | null>(null);
@@ -448,7 +488,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
               Manage {type === 'powers' ? 'Powers' : 'Magic Items'}
             </span>
             <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
-              {slots.length} Learned
+              {slots.length}
             </span>
             {showManageModal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
@@ -458,7 +498,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
               <div
                 ref={modalRef}
-                className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-xs"
+                className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-xs"
               >
                 {/* Modal Top Bar */}
                 <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
@@ -694,29 +734,24 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     {/* TAB 1: STOCK CATALOG VIEW */}
                     {activeRightTab === 'CATALOG' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
-                        {/* Category Pills (Powers Mode Only) */}
+                        {/* Category Dropdown (Powers Mode Only) */}
                         {type === 'powers' && (
-                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 shrink-0">
-                            {POWER_CATEGORY_BUTTONS.map((cat) => {
-                              const isSelected = selectedCategory.toLowerCase() === cat.id.toLowerCase();
-                              return (
-                                <button
-                                  key={cat.id}
-                                  onClick={() => {
-                                    setSelectedCategory(cat.id);
-                                    setActiveTableName(null);
-                                  }}
-                                  className={`px-1.5 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center justify-center gap-1 ${
-                                    isSelected
-                                      ? 'bg-amber-600/30 text-amber-200 border-amber-400 shadow-sm'
-                                      : 'bg-slate-900/90 text-slate-400 border-slate-800 hover:text-slate-200'
-                                  }`}
-                                >
-                                  <span>{cat.icon}</span>
-                                  <span className="truncate">{cat.label}</span>
-                                </button>
-                              );
-                            })}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs font-bold text-slate-400 shrink-0">Category:</span>
+                            <select
+                              value={selectedCategory}
+                              onChange={(e) => {
+                                setSelectedCategory(e.target.value);
+                                setActiveTableName(null);
+                              }}
+                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
+                            >
+                              {POWER_CATEGORY_BUTTONS.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                  {cat.icon} {cat.label}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         )}
 
@@ -726,7 +761,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           <select
                             value={effectiveActiveTable || ''}
                             onChange={(e) => setActiveTableName(e.target.value)}
-                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 truncate"
+                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
                           >
                             {availableTableNames.map((tblName) => (
                               <option key={tblName} value={tblName}>
@@ -734,6 +769,20 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               </option>
                             ))}
                           </select>
+                          {type === 'powers' && effectiveActiveTable && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleFavoriteTable(effectiveActiveTable)}
+                              className={`p-1.5 rounded-lg border transition-colors flex items-center justify-center shrink-0 ${
+                                favoriteTables.includes(effectiveActiveTable)
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
+                                  : 'bg-slate-900 text-slate-500 border-slate-700 hover:text-amber-400'
+                              }`}
+                              title={favoriteTables.includes(effectiveActiveTable) ? 'Remove table from Favorites' : 'Save table to Favorites'}
+                            >
+                              <Star className={`w-3.5 h-3.5 ${favoriteTables.includes(effectiveActiveTable) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                            </button>
+                          )}
                           {type === 'powers' && (
                             <button
                               onClick={() => setIsCreatingTable(true)}
@@ -792,8 +841,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           </div>
                         )}
 
-                        {/* Search Bar & Peg-Slider Toggle */}
-                        <div className="flex flex-col gap-2 shrink-0">
+                        {/* Search Bar */}
+                        <div className="shrink-0">
                           <div className="relative">
                             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                             <input
@@ -803,43 +852,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               onChange={(e) => setRightSearchQuery(e.target.value)}
                               className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
                             />
-                          </div>
-
-                          {/* Dyslexia-Friendly Peg-Slider Toggle */}
-                          <div className="flex items-center justify-between bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
-                            <span className="text-[11px] font-bold text-slate-400">Filter Mode:</span>
-                            <div className="flex items-center gap-3">
-                              <button
-                                type="button"
-                                onClick={() => setLearnableOnly(false)}
-                                className={`text-xs font-bold cursor-pointer select-none ${
-                                  !learnableOnly ? 'text-amber-300 opacity-100 font-extrabold' : 'text-slate-400 opacity-50'
-                                }`}
-                              >
-                                All Abilities
-                              </button>
-                              <div
-                                onClick={() => setLearnableOnly(!learnableOnly)}
-                                className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors p-0.5 border border-slate-700 ${
-                                  learnableOnly ? 'bg-amber-600 border-amber-400' : 'bg-slate-800'
-                                }`}
-                              >
-                                <div
-                                  className={`w-5 h-5 rounded-full bg-slate-100 shadow-md transform transition-transform ${
-                                    learnableOnly ? 'translate-x-5' : 'translate-x-0'
-                                  }`}
-                                />
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => setLearnableOnly(true)}
-                                className={`text-xs font-bold cursor-pointer select-none ${
-                                  learnableOnly ? 'text-amber-300 opacity-100 font-extrabold' : 'text-slate-400 opacity-50'
-                                }`}
-                              >
-                                Learnable Only
-                              </button>
-                            </div>
                           </div>
                         </div>
 
@@ -958,8 +970,26 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             </div>
 
                             <div className="flex flex-col gap-1 pt-1">
-                              <span className="text-xs font-bold text-slate-300">Effect Description</span>
+                              <div className="flex items-center justify-between flex-wrap gap-1">
+                                <span className="text-xs font-bold text-slate-300">Effect Description</span>
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <span className="text-[10px] text-slate-400 font-bold mr-0.5">Insert Icon:</span>
+                                  {MAIN_ABILITY_ICONS.map((item) => (
+                                    <button
+                                      key={item.label}
+                                      type="button"
+                                      onClick={() => insertIconAtCursor(item.icon)}
+                                      className="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded text-[11px] font-bold text-slate-200 transition-colors flex items-center gap-1 shadow-sm cursor-pointer"
+                                      title={`Insert ${item.icon} (${item.label}) at cursor`}
+                                    >
+                                      <span>{item.icon}</span>
+                                      <span className="hidden sm:inline text-[9px] text-slate-300">{item.label}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                               <textarea
+                                ref={createEffectRef}
                                 value={createEffect}
                                 onChange={(e) => setCreateEffect(e.target.value)}
                                 placeholder="Describe the mechanical effects of this custom ability..."
