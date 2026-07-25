@@ -54,6 +54,14 @@ export interface SupabaseArmor {
   created_at?: string;
 }
 
+export interface SupabaseGear {
+  id?: number;
+  category: string;
+  name: string;
+  cost: string;
+  created_at?: string;
+}
+
 export const REQUIREMENT_TO_MR_MAP: Record<number, string> = {
   4: '👣8',
   6: '👣7',
@@ -263,6 +271,8 @@ export interface SimpleGearItem {
   id: string;
   qty: number;
   name: string;
+  category?: string;
+  cost?: string;
 }
 
 export interface CharacterBio {

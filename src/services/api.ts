@@ -2,7 +2,7 @@
 // Supabase Data Access Gateway for SupaFlex
 
 import { supabase } from '../lib/supabase';
-import { Character, Power, MagicItem, Skillset, CharacterSheetData, DieRating, SupabaseArmor, SupabaseWeapon, SupabaseShield } from '../types/game';
+import { Character, Power, MagicItem, Skillset, CharacterSheetData, DieRating, SupabaseArmor, SupabaseWeapon, SupabaseShield, SupabaseGear } from '../types/game';
 
 export const createDefaultSheetData = (): CharacterSheetData => ({
   level: 1,
@@ -310,6 +310,35 @@ export const gameApi = {
       throw error;
     }
     return data as SupabaseShield;
+  },
+
+  // --- GEAR CATALOG ---
+  async getGear(): Promise<SupabaseGear[]> {
+    const { data, error } = await supabase
+      .from('gear')
+      .select('*')
+      .order('category', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('[gameApi] Error fetching gear catalog:', error);
+      return [];
+    }
+    return (data || []) as SupabaseGear[];
+  },
+
+  async createGear(newGear: Omit<SupabaseGear, 'id' | 'created_at'>): Promise<SupabaseGear> {
+    const { data, error } = await supabase
+      .from('gear')
+      .insert(newGear)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[gameApi] Error creating custom gear:', error);
+      throw error;
+    }
+    return data as SupabaseGear;
   },
 
   // --- HEALTH CHECK ---
