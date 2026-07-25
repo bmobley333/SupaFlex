@@ -937,6 +937,23 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     )}
                   </div>
                 </div>
+
+                {/* Modal Footer Status Bar with Standardized "Done" Button */}
+                <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <span className="font-outfit font-bold text-slate-300">
+                      {type === 'powers' ? '⚡ Powers Manager' : '✨ Magic Items Manager'}
+                    </span>
+                  </div>
+                  
+                  {/* Standardized Master Blueprint Done Footer Button */}
+                  <button 
+                    onClick={() => setShowManageModal(false)} 
+                    className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             </div>
           )}

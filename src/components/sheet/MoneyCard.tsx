@@ -455,7 +455,7 @@ export const MoneyCard: React.FC = () => {
 
                 <button
                   onClick={() => setShowManageModal(false)}
-                  className="px-4 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold transition-all"
+                  className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer text-xs"
                 >
                   Done
                 </button>
