@@ -99,8 +99,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const apSpent = Math.max(0, totalPowerUnits - 3);
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
-    activeCharacter?.sheet_data?.ap_log || [],
-    activeCharacter?.sheet_data?.ap
+    activeCharacter?.sheet_data
   );
 
   const [showManageModal, setShowManageModal] = useState(false);

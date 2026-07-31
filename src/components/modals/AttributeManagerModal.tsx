@@ -148,9 +148,8 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
   // Character Sheet Data
   const sheetData: any = activeCharacter?.sheet_data || {};
   const level = sheetData.level || 1;
-  const apLog = Array.isArray(sheetData.ap_log) ? sheetData.ap_log : [];
 
-  const availableAp = calculateAvailableAp(level, apLog, sheetData.ap);
+  const availableAp = calculateAvailableAp(level, sheetData);
 
   // Baseline Saved Assignments
   const savedAttributeDice: Record<AttributeKey, DieRating> = useMemo(() => {
@@ -384,13 +383,18 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
-            title="Close Manager"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="px-3.5 py-1.5 bg-purple-950/80 border border-purple-500/40 rounded-full font-mono text-xs font-bold text-slate-200 shadow-md">
+              Available <strong className="text-emerald-400 font-bold">{availableAp} AP</strong>
+            </span>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
+              title="Close Manager"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* 2-Column Split Body (Blueprint Section 2) */}

@@ -199,8 +199,7 @@ export const WeaponsCard: React.FC = () => {
   const weaponApSpent = Math.max(0, skilledWeaponsCount - 1);
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
-    activeCharacter?.sheet_data?.ap_log || [],
-    activeCharacter?.sheet_data?.ap
+    activeCharacter?.sheet_data
   );
 
   // Equip all variants of a weapon to the character sheet

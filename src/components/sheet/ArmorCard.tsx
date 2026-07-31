@@ -75,8 +75,7 @@ export const ArmorCard: React.FC = () => {
   const armorApSpent = Math.max(0, skilledArmorCount - 1);
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
-    activeCharacter?.sheet_data?.ap_log || [],
-    activeCharacter?.sheet_data?.ap
+    activeCharacter?.sheet_data
   );
 
   const [showManageModal, setShowManageModal] = useState(false);

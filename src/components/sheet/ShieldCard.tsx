@@ -59,8 +59,7 @@ export const ShieldCard: React.FC = () => {
   const shieldApSpent = skilledShieldCount;
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
-    activeCharacter?.sheet_data?.ap_log || [],
-    activeCharacter?.sheet_data?.ap
+    activeCharacter?.sheet_data
   );
 
   const [showManageModal, setShowManageModal] = useState(false);

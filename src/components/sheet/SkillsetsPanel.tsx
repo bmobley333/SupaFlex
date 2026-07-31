@@ -60,8 +60,7 @@ export const SkillsetsPanel: React.FC = () => {
   const totalApSpent = skillsetsApSpent + individualSkillsApSpent;
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
-    activeCharacter?.sheet_data?.ap_log || [],
-    activeCharacter?.sheet_data?.ap
+    activeCharacter?.sheet_data
   );
 
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
