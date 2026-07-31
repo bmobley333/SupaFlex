@@ -23,6 +23,7 @@ interface ApManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenAttributeManager?: () => void;
+  onOpenVitalityManager?: () => void;
 }
 
 type RightSubTab = 'FOCUS' | 'VITALITY' | 'CAPSTONES' | 'GM_BONUS';
@@ -41,7 +42,12 @@ const normalizeDie = (die?: string): string => {
   return `d${clean}`;
 };
 
-export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose }) => {
+export const ApManagerModal: React.FC<ApManagerModalProps> = ({
+  isOpen,
+  onClose,
+  onOpenAttributeManager: _onOpenAttributeManager,
+  onOpenVitalityManager,
+}) => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, revertApExpenditure } =
     useCharacterStore();
 
@@ -600,6 +606,27 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
                       Buy +2 Vit (1 AP)
                     </button>
                   </div>
+
+                  {onOpenVitalityManager && (
+                    <div className="p-4 rounded-xl bg-slate-950/90 border border-rose-500/30 flex items-center justify-between">
+                      <div>
+                        <h4 className="font-outfit font-bold text-rose-300 text-sm flex items-center gap-2">
+                          <span>🎲</span> Open Full Vitality Manager
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-0.5">Access Level Vit rolls, auto-roll calculator, and restoration controls.</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          onClose();
+                          onOpenVitalityManager();
+                        }}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 font-outfit font-bold text-white transition-all shadow-md text-xs cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>Open Manager</span>
+                        <span>❤️</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

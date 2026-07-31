@@ -12,6 +12,7 @@ import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
 import { ApManagerModal } from './components/modals/ApManagerModal';
 import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
+import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
   const [showApManagerModal, setShowApManagerModal] = useState(false);
   const [showAttributeManagerModal, setShowAttributeManagerModal] = useState(false);
+  const [showVitalityManagerModal, setShowVitalityManagerModal] = useState(false);
   const selectorRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
@@ -398,7 +400,9 @@ export default function App() {
           <>
             {/* Tab Panels */}
             <div className="flex-1">
-              {activeTab === 'sheet' && <CharacterSheetView />}
+              {activeTab === 'sheet' && (
+                <CharacterSheetView onOpenVitalityManager={() => setShowVitalityManagerModal(true)} />
+              )}
               {activeTab === 'rolls' && <ActionConsoleView />}
               {activeTab === 'codex' && <CodexView />}
               {activeTab === 'logs' && <AdventureLogs />}
@@ -468,6 +472,7 @@ export default function App() {
           isOpen={showApManagerModal}
           onClose={() => setShowApManagerModal(false)}
           onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
+          onOpenVitalityManager={() => setShowVitalityManagerModal(true)}
         />
       </ErrorBoundary>
 
@@ -476,6 +481,14 @@ export default function App() {
         <AttributeManagerModal
           isOpen={showAttributeManagerModal}
           onClose={() => setShowAttributeManagerModal(false)}
+        />
+      </ErrorBoundary>
+
+      {/* ❤️ Vitality Manager Modal */}
+      <ErrorBoundary fallbackTitle="Vitality Manager Error" onClose={() => setShowVitalityManagerModal(false)}>
+        <VitalityManagerModal
+          isOpen={showVitalityManagerModal}
+          onClose={() => setShowVitalityManagerModal(false)}
         />
       </ErrorBoundary>
 

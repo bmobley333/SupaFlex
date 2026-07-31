@@ -2,7 +2,11 @@
 import React, { useState, useRef } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 
-export const VitalsHeader: React.FC = () => {
+interface VitalsHeaderProps {
+  onOpenVitalityManager?: () => void;
+}
+
+export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManager }) => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
   const sheet = activeCharacter?.sheet_data;
 
@@ -23,14 +27,6 @@ export const VitalsHeader: React.FC = () => {
       const nextHp = Math.min(prev.vitality_max, (prev.current_vitality ?? prev.vitality_max) + delta);
       return { ...prev, current_vitality: nextHp };
     });
-    saveActiveCharacter();
-  };
-
-  const handleFullHeal = () => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      current_vitality: prev.vitality_max,
-    }));
     saveActiveCharacter();
   };
 
@@ -88,7 +84,7 @@ export const VitalsHeader: React.FC = () => {
 
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3">
-      {/* Header: Title & Full Heal Button */}
+      {/* Header: Title & Manage Vitality Button */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
         <div className="flex items-center gap-2">
           <h3 className="font-outfit font-bold text-sm tracking-widest text-emerald-300 uppercase flex items-center gap-2">
@@ -103,12 +99,12 @@ export const VitalsHeader: React.FC = () => {
         </div>
 
         <button
-          onClick={handleFullHeal}
-          className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-semibold rounded-lg border border-emerald-500/30 flex items-center gap-1 transition-all"
-          title="Instantly restore Vitality to maximum"
+          onClick={onOpenVitalityManager}
+          className="px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 text-xs font-semibold rounded-lg border border-rose-500/30 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-rose-500/50"
+          title="Manage Max Vitality Rolls, AP Boosts, and Restoration"
         >
-          <span>Full Heal</span>
-          <span className="text-xs">💖</span>
+          <span className="text-xs">❤️</span>
+          <span>Manage Vitality</span>
         </button>
       </div>
 

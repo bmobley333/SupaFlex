@@ -12,7 +12,11 @@ import { VitalsHeader } from './VitalsHeader';
 import { AbilitySlotsGrid } from './AbilitySlotsGrid';
 import { SectionJumpHUD } from './SectionJumpHUD';
 
-export const CharacterSheetView: React.FC = () => {
+interface CharacterSheetViewProps {
+  onOpenVitalityManager?: () => void;
+}
+
+export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({ onOpenVitalityManager }) => {
   const { activeCharacter } = useCharacterStore();
   const heroKey = activeCharacter?.id ? `hero_${activeCharacter.id}` : 'no_hero';
 
@@ -49,7 +53,7 @@ export const CharacterSheetView: React.FC = () => {
 
         {/* Column 3: Survival (Vitality & Health Controls) */}
         <div className="lg:col-span-2 xl:col-span-1 flex flex-col gap-4">
-          <VitalsHeader />
+          <VitalsHeader onOpenVitalityManager={onOpenVitalityManager} />
         </div>
       </div>
 
