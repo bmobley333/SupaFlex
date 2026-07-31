@@ -24,7 +24,7 @@ interface ApManagerModalProps {
   onOpenAttributeManager?: () => void;
 }
 
-type RightSubTab = 'FOCUS_VIT' | 'CAPSTONES' | 'GM_BONUS';
+type RightSubTab = 'FOCUS' | 'VITALITY' | 'CAPSTONES' | 'GM_BONUS';
 
 const FOCUS_STEP_UP_COSTS: Record<string, { next: DieRating; cost: number; levelGate: number }> = {
   d4: { next: 'd6', cost: 2, levelGate: 1 },
@@ -44,7 +44,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } =
     useCharacterStore();
 
-  const [activeTab, setActiveTab] = useState<RightSubTab>('FOCUS_VIT');
+  const [activeTab, setActiveTab] = useState<RightSubTab>('FOCUS');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // GM Bonus Form State
@@ -468,20 +468,32 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
             {/* Right Pane Navigation Sub-Tabs */}
             <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-4 shrink-0 overflow-x-auto">
               <button
-                onClick={() => setActiveTab('FOCUS_VIT')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                  activeTab === 'FOCUS_VIT'
+                onClick={() => setActiveTab('FOCUS')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  activeTab === 'FOCUS'
                     ? 'bg-purple-600 text-white shadow'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Focus & Vit
+                Focus Die
+              </button>
+
+              <button
+                onClick={() => setActiveTab('VITALITY')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  activeTab === 'VITALITY'
+                    ? 'bg-purple-600 text-white shadow'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Heart className="w-3.5 h-3.5 text-rose-400" />
+                Vitality
               </button>
 
               <button
                 onClick={() => setActiveTab('CAPSTONES')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                   activeTab === 'CAPSTONES'
                     ? 'bg-purple-600 text-white shadow'
                     : 'text-slate-400 hover:text-slate-200'
@@ -493,7 +505,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
 
               <button
                 onClick={() => setActiveTab('GM_BONUS')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                   activeTab === 'GM_BONUS'
                     ? 'bg-purple-600 text-white shadow'
                     : 'text-slate-400 hover:text-slate-200'
@@ -506,10 +518,9 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
 
             {/* Sub-Tab Content Viewport */}
             <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
-              {/* TAB 1: FOCUS DIE & VIT UPGRADES */}
-              {activeTab === 'FOCUS_VIT' && (
+              {/* TAB 1: FOCUS DIE STEP-UP */}
+              {activeTab === 'FOCUS' && (
                 <div className="space-y-4">
-                  {/* Focus Die Step-Up */}
                   <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
@@ -555,8 +566,12 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
 
-                  {/* Vitality Boost */}
+              {/* TAB 2: VITALITY BOOST */}
+              {activeTab === 'VITALITY' && (
+                <div className="space-y-4">
                   <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
                     <div>
                       <h4 className="font-outfit font-bold text-slate-100 text-sm flex items-center gap-2">
