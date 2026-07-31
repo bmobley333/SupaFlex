@@ -243,9 +243,17 @@ export const gameApi = {
   },
 
   async createArmor(newArmor: Omit<SupabaseArmor, 'id' | 'created_at'>): Promise<SupabaseArmor> {
+    const { data: maxRows } = await supabase
+      .from('armor')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1);
+
+    const nextId = maxRows && maxRows.length > 0 && maxRows[0].id ? maxRows[0].id + 1 : 1;
+
     const { data, error } = await supabase
       .from('armor')
-      .insert(newArmor)
+      .insert({ ...newArmor, id: nextId })
       .select()
       .single();
 
@@ -271,9 +279,17 @@ export const gameApi = {
   },
 
   async createWeapon(newWeapon: Omit<SupabaseWeapon, 'id' | 'created_at'>): Promise<SupabaseWeapon> {
+    const { data: maxRows } = await supabase
+      .from('weapons')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1);
+
+    const nextId = maxRows && maxRows.length > 0 && maxRows[0].id ? maxRows[0].id + 1 : 1;
+
     const { data, error } = await supabase
       .from('weapons')
-      .insert(newWeapon)
+      .insert({ ...newWeapon, id: nextId })
       .select()
       .single();
 
@@ -299,9 +315,17 @@ export const gameApi = {
   },
 
   async createShield(newShield: Omit<SupabaseShield, 'id' | 'created_at'>): Promise<SupabaseShield> {
+    const { data: maxRows } = await supabase
+      .from('shields')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1);
+
+    const nextId = maxRows && maxRows.length > 0 && maxRows[0].id ? maxRows[0].id + 1 : 1;
+
     const { data, error } = await supabase
       .from('shields')
-      .insert(newShield)
+      .insert({ ...newShield, id: nextId })
       .select()
       .single();
 

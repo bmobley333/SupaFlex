@@ -433,8 +433,11 @@ export const WeaponsCard: React.FC = () => {
                   <div className="px-3.5 py-1 bg-purple-950/70 border border-purple-500/40 rounded-full font-mono font-bold text-xs text-purple-200 flex items-center gap-2 shadow-md">
                     <span>
                       Skilled <strong className="text-purple-300">{skilledWeaponsCount}</strong>; Used{' '}
-                      <strong className="text-rose-300">{weaponApSpent} AP</strong>; Available{' '}
-                      <strong className="text-emerald-400">{availableAp} AP</strong>
+                      <strong className="text-rose-300">
+                        {weaponApSpent}
+                        {skilledWeaponsCount >= 1 ? '+1Free' : ''} AP
+                      </strong>
+                      ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
                     </span>
                   </div>
 

@@ -60,9 +60,16 @@ export const ArmorCard: React.FC = () => {
   const derivedBlock = getDieNum(attributeDice.might);
   const derivedDodge = getDieNum(attributeDice.motion);
 
+  const isArmorSkilled = (item: ArmorData): boolean => {
+    if (!item || item.id === 'arm_none') return false;
+    if (item.sk === true) return true;
+    if (item.sk === false) return false;
+    return isRequirementLearnable(item.requirement || '💪 4', attributeDice);
+  };
+
   const skilledArmorList = useMemo(() => {
-    return wardrobe.filter((w) => w.sk);
-  }, [wardrobe]);
+    return wardrobe.filter(isArmorSkilled);
+  }, [wardrobe, attributeDice]);
 
   const skilledArmorCount = skilledArmorList.length;
   const armorApSpent = Math.max(0, skilledArmorCount - 1);
@@ -206,7 +213,7 @@ export const ArmorCard: React.FC = () => {
 
   const handleDropFromWardrobe = (armorName: string) => {
     const targetArmor = wardrobe.find((w) => w.name.toLowerCase() === armorName.toLowerCase());
-    const wasSkilled = targetArmor ? targetArmor.sk : false;
+    const wasSkilled = targetArmor ? isArmorSkilled(targetArmor) : false;
 
     updateActiveSheetData((prev) => {
       const existingWardrobe = prev.wardrobe || wardrobe;
@@ -336,8 +343,11 @@ export const ArmorCard: React.FC = () => {
                   <div className="px-3.5 py-1 bg-amber-950/70 border border-amber-500/40 rounded-full font-mono font-bold text-xs text-amber-200 flex items-center gap-2 shadow-md">
                     <span>
                       Skilled <strong className="text-amber-300">{skilledArmorCount}</strong>; Used{' '}
-                      <strong className="text-rose-300">{armorApSpent} AP</strong>; Available{' '}
-                      <strong className="text-emerald-400">{availableAp} AP</strong>
+                      <strong className="text-rose-300">
+                        {armorApSpent}
+                        {skilledArmorCount >= 1 ? '+1Free' : ''} AP
+                      </strong>
+                      ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
                     </span>
                   </div>
 
