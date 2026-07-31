@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Database, Shield, Zap, Activity, BookOpen, Users, Save, Loader2, ChevronDown, ChevronUp, Award, Star, X } from 'lucide-react';
+import { Database, Shield, Zap, Activity, BookOpen, Users, Loader2, ChevronDown, ChevronUp, Award, Star, X } from 'lucide-react';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { ActionConsoleView } from './components/rolls/ActionConsoleView';
@@ -32,7 +32,6 @@ export default function App() {
     characters,
     activeCharacter,
     isLoading,
-    isSaving,
     dbConnected,
     playerEmail,
     filterMode,
@@ -371,21 +370,12 @@ export default function App() {
               )}
             </div>
 
-            <button
-              onClick={saveActiveCharacter}
-              disabled={isSaving || !activeCharacter}
-              className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-semibold rounded-lg border border-emerald-500/30 transition-all flex items-center gap-1.5 disabled:opacity-50"
-            >
-              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              {isSaving ? 'Saving...' : 'Save'}
-            </button>
-
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-950/80 rounded-lg border border-slate-800 text-[11px] font-semibold">
-              <Database className={`w-3.5 h-3.5 ${dbConnected ? 'text-emerald-400' : 'text-rose-400'}`} />
-              <span className={dbConnected ? 'text-emerald-400' : 'text-rose-400'}>
-                {dbConnected ? 'Online' : 'Offline'}
-              </span>
-            </div>
+            {!dbConnected && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-950/80 rounded-lg border border-rose-500/50 text-rose-300 text-xs font-semibold animate-pulse shadow-md shadow-rose-950/50">
+                <Database className="w-3.5 h-3.5 text-rose-400" />
+                <span>Offline</span>
+              </div>
+            )}
           </div>
         </div>
 

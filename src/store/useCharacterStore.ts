@@ -64,6 +64,18 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       const isConnected = await gameApi.checkConnection();
       set({ dbConnected: isConnected });
 
+      // Register window network status listeners for dynamic offline warning popups
+      if (typeof window !== 'undefined' && !(window as any)._supaflex_network_listeners_bound) {
+        (window as any)._supaflex_network_listeners_bound = true;
+        window.addEventListener('online', async () => {
+          const reconnected = await gameApi.checkConnection();
+          set({ dbConnected: reconnected });
+        });
+        window.addEventListener('offline', () => {
+          set({ dbConnected: false });
+        });
+      }
+
       if (!isConnected) {
         set({ isLoading: false, error: 'Database connection offline.' });
         return;
