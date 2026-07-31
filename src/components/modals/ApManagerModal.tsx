@@ -14,9 +14,8 @@ import {
   DieRating,
   ApLogEntry,
   calculateLifetimeAp,
-  calculateSpentAp,
+  calculateLiveSheetSpentAp,
   calculateAvailableAp,
-  calculateGmBonusAp,
 } from '../../types/game';
 
 interface ApManagerModalProps {
@@ -74,9 +73,10 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
   const apLog: ApLogEntry[] = Array.isArray(sheetData.ap_log) ? sheetData.ap_log : [];
 
   const lifetimeAp = calculateLifetimeAp(level);
-  const spentAp = calculateSpentAp(apLog);
-  const gmBonusAp = calculateGmBonusAp(apLog);
-  const availableAp = calculateAvailableAp(level, apLog, sheetData.ap);
+  const liveApData = calculateLiveSheetSpentAp(sheetData);
+  const spentAp = liveApData.totalSpent;
+  const gmBonusAp = liveApData.gmBonus;
+  const availableAp = calculateAvailableAp(level, sheetData);
 
   const rawFocus = sheetData.focus_die_max || sheetData.focus_die_current || 'd4';
   const focusDie = normalizeDie(rawFocus);
@@ -86,7 +86,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Compute live current sheet cost details for each category
+  // Compute live current sheet cost details for each category in ALPHABETICAL order
   const categoryBreakdownList = useMemo(() => {
     const knownSkillsets = Array.isArray(sheetData.known_skillsets) ? sheetData.known_skillsets : [];
     const knownIndivSkills = Array.isArray(sheetData.known_individual_skills) ? sheetData.known_individual_skills : [];
@@ -95,15 +95,15 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
     const skillsNet = skillsetCost + indivCost;
 
     const weapons = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
-    const skilledWeapons = weapons.filter((w: any) => w.sk);
+    const skilledWeapons = weapons.filter((w: any) => w && w.sk);
     const weaponsNet = Math.max(0, (skilledWeapons.length - 1) * 1);
 
     const wardrobe = Array.isArray(sheetData.wardrobe) ? sheetData.wardrobe : [];
-    const skilledArmor = wardrobe.filter((a: any) => a.sk);
+    const skilledArmor = wardrobe.filter((a: any) => a && a.sk);
     const armorNet = Math.max(0, (skilledArmor.length - 1) * 1);
 
     const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
-    const skilledShields = armory.filter((s: any) => s.sk);
+    const skilledShields = armory.filter((s: any) => s && s.sk);
     const shieldsNet = Math.max(0, (skilledShields.length - 1) * 1);
 
     const powerSlots = (sheetData.power_slots || []).filter(Boolean);
@@ -113,37 +113,15 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
     const magicItems = Array.isArray(sheetData.custom_magic_items) ? sheetData.custom_magic_items : [];
     const magicItemsNet = magicItems.length * 1;
 
-    // Derived from log entries for Categories
     const sumLogCategory = (cat: string) =>
       apLog.reduce((sum, e) => (e && e.category === cat ? sum + (e.cost || 0) : sum), 0);
 
-    const attributesNet = sumLogCategory('Attributes');
-    const focusNet = sumLogCategory('Focus Die');
-    const vitalityNet = sumLogCategory('Vitality');
-    const capstonesNet = sumLogCategory('Capstones');
+    const attributesNet = Math.max(0, sumLogCategory('Attributes'));
+    const focusNet = Math.max(0, sumLogCategory('Focus Die'));
+    const vitalityNet = Math.max(0, sumLogCategory('Vitality'));
+    const capstonesNet = Math.max(0, sumLogCategory('Capstones'));
 
     return [
-      {
-        id: 'skills',
-        name: 'Skills',
-        emoji: '🥋',
-        netAp: skillsNet,
-        badgeColor: 'text-indigo-300 bg-indigo-950/60 border-indigo-500/30',
-        details: [
-          { label: `SkillSets (${knownSkillsets.length} learned)`, value: `${skillsetCost} AP (1st Free)` },
-          { label: `Individual Skills (${knownIndivSkills.length} learned)`, value: `${indivCost} AP (1 AP each)` },
-        ],
-      },
-      {
-        id: 'weapons',
-        name: 'Weapons',
-        emoji: '⚔️',
-        netAp: weaponsNet,
-        badgeColor: 'text-purple-300 bg-purple-950/60 border-purple-500/30',
-        details: [
-          { label: `Skilled Weapons Equipped (${skilledWeapons.length})`, value: `${weaponsNet} AP (1st Free)` },
-        ],
-      },
       {
         id: 'armor',
         name: 'Armor',
@@ -155,13 +133,53 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
         ],
       },
       {
-        id: 'shields',
-        name: 'Shields',
-        emoji: '🛡️',
-        netAp: shieldsNet,
-        badgeColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-500/30',
+        id: 'attributes',
+        name: 'Attributes',
+        emoji: '✨',
+        netAp: attributesNet,
+        badgeColor: 'text-indigo-400 bg-indigo-950/60 border-indigo-500/30',
         details: [
-          { label: `Skilled Shields in Armory (${skilledShields.length})`, value: `${shieldsNet} AP (1st Free)` },
+          { label: `Die Pool Upgrades (Attribute Manager)`, value: `${attributesNet} AP` },
+        ],
+      },
+      {
+        id: 'capstones',
+        name: 'Capstones',
+        emoji: '🏆',
+        netAp: capstonesNet,
+        badgeColor: 'text-amber-300 bg-amber-950/60 border-amber-500/30',
+        details: [
+          { label: `Heroic Capstones Unlocked`, value: `${capstonesNet} AP` },
+        ],
+      },
+      {
+        id: 'focus',
+        name: 'Focus',
+        emoji: '🎯',
+        netAp: focusNet,
+        badgeColor: 'text-purple-400 bg-purple-950/60 border-purple-500/30',
+        details: [
+          { label: `Focus Die Rating (${focusDie})`, value: `${focusNet} AP` },
+        ],
+      },
+      {
+        id: 'gmBonus',
+        name: 'GM Bonus',
+        emoji: '🎁',
+        netAp: gmBonusAp,
+        badgeColor: 'text-emerald-300 bg-emerald-950/60 border-emerald-500/30',
+        details: [
+          { label: `Active GM Grants & Adjustments`, value: `${gmBonusAp > 0 ? '+' : ''}${gmBonusAp} AP` },
+        ],
+      },
+      {
+        id: 'magicItems',
+        name: 'Magic Items',
+        emoji: '💎',
+        netAp: magicItemsNet,
+        badgeColor: 'text-pink-300 bg-pink-950/60 border-pink-500/30',
+        details: [
+          { label: `Minor Magic Items & Upgrades (${magicItems.length})`, value: `${magicItemsNet} AP` },
         ],
       },
       {
@@ -176,33 +194,24 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
         ],
       },
       {
-        id: 'magicItems',
-        name: 'Magic Items',
-        emoji: '💎',
-        netAp: magicItemsNet,
-        badgeColor: 'text-pink-300 bg-pink-950/60 border-pink-500/30',
+        id: 'shields',
+        name: 'Shields',
+        emoji: '🛡️',
+        netAp: shieldsNet,
+        badgeColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-500/30',
         details: [
-          { label: `Minor Magic Items & Upgrades (${magicItems.length})`, value: `${magicItemsNet} AP` },
+          { label: `Skilled Shields in Armory (${skilledShields.length})`, value: `${shieldsNet} AP (1st Free)` },
         ],
       },
       {
-        id: 'attributes',
-        name: 'Attributes',
-        emoji: '✨',
-        netAp: attributesNet,
-        badgeColor: 'text-indigo-400 bg-indigo-950/60 border-indigo-500/30',
+        id: 'skills',
+        name: 'Skills',
+        emoji: '🥋',
+        netAp: skillsNet,
+        badgeColor: 'text-indigo-300 bg-indigo-950/60 border-indigo-500/30',
         details: [
-          { label: `Die Pool Upgrades (Attribute Manager)`, value: `${attributesNet} AP` },
-        ],
-      },
-      {
-        id: 'focus',
-        name: 'Focus',
-        emoji: '🎯',
-        netAp: focusNet,
-        badgeColor: 'text-purple-400 bg-purple-950/60 border-purple-500/30',
-        details: [
-          { label: `Focus Die Rating (${focusDie})`, value: `${focusNet} AP` },
+          { label: `SkillSets (${knownSkillsets.length} learned)`, value: `${skillsetCost} AP (1st Free)` },
+          { label: `Individual Skills (${knownIndivSkills.length} learned)`, value: `${indivCost} AP (1 AP each)` },
         ],
       },
       {
@@ -216,23 +225,13 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
         ],
       },
       {
-        id: 'capstones',
-        name: 'Capstones',
-        emoji: '🏆',
-        netAp: capstonesNet,
-        badgeColor: 'text-amber-300 bg-amber-950/60 border-amber-500/30',
+        id: 'weapons',
+        name: 'Weapons',
+        emoji: '⚔️',
+        netAp: weaponsNet,
+        badgeColor: 'text-purple-300 bg-purple-950/60 border-purple-500/30',
         details: [
-          { label: `Heroic Capstones Unlocked`, value: `${capstonesNet} AP` },
-        ],
-      },
-      {
-        id: 'gmBonus',
-        name: 'GM Bonus',
-        emoji: '🎁',
-        netAp: gmBonusAp,
-        badgeColor: 'text-emerald-300 bg-emerald-950/60 border-emerald-500/30',
-        details: [
-          { label: `Active GM Grants & Adjustments`, value: `${gmBonusAp > 0 ? '+' : ''}${gmBonusAp} AP` },
+          { label: `Skilled Weapons Equipped (${skilledWeapons.length})`, value: `${weaponsNet} AP (1st Free)` },
         ],
       },
     ];

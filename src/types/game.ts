@@ -358,34 +358,116 @@ export const calculateLifetimeAp = (level: number): number => {
   return Math.max(2, numLevel * 2);
 };
 
-export const calculateSpentAp = (log?: ApLogEntry[]): number => {
-  if (!log || !Array.isArray(log)) return 0;
-  return log.reduce((sum, entry) => {
-    if (!entry) return sum;
-    if (entry.category === 'GM Bonus' || entry.category === 'Manual') return sum;
-    const cost = typeof entry.cost === 'number' && !isNaN(entry.cost) ? entry.cost : 0;
-    return sum + cost;
-  }, 0);
+export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number; gmBonus: number; categories: Record<string, number> } => {
+  if (!sheetData) return { totalSpent: 0, gmBonus: 0, categories: {} };
+
+  const apLog: ApLogEntry[] = Array.isArray(sheetData.ap_log) ? sheetData.ap_log : [];
+
+  const wardrobe = Array.isArray(sheetData.wardrobe) ? sheetData.wardrobe : [];
+  const skilledArmor = wardrobe.filter((a: any) => a && a.sk);
+  const armorNet = Math.max(0, (skilledArmor.length - 1) * 1);
+
+  const sumLogCategory = (cat: string) =>
+    apLog.reduce((sum, e) => (e && e.category === cat ? sum + (e.cost || 0) : sum), 0);
+
+  const attributesNet = Math.max(0, sumLogCategory('Attributes'));
+  const capstonesNet = Math.max(0, sumLogCategory('Capstones'));
+  const focusNet = Math.max(0, sumLogCategory('Focus Die'));
+  const gmBonus = apLog.reduce((sum, e) => (e && (e.category === 'GM Bonus' || e.category === 'Manual') ? sum + (e.cost || 0) : sum), 0);
+
+  const magicItems = Array.isArray(sheetData.custom_magic_items) ? sheetData.custom_magic_items : [];
+  const magicItemsNet = magicItems.length * 1;
+
+  const powerSlots = (sheetData.power_slots || []).filter(Boolean);
+  const totalPowerUnits = powerSlots.reduce((sum: number, slot: any) => sum + (slot?.version || 1), 0);
+  const powersNet = Math.max(0, totalPowerUnits - 3);
+
+  const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
+  const skilledShields = armory.filter((s: any) => s && s.sk);
+  const shieldsNet = Math.max(0, (skilledShields.length - 1) * 1);
+
+  const knownSkillsets = Array.isArray(sheetData.known_skillsets) ? sheetData.known_skillsets : [];
+  const knownIndivSkills = Array.isArray(sheetData.known_individual_skills) ? sheetData.known_individual_skills : [];
+  const skillsetCost = Math.max(0, (knownSkillsets.length - 1) * 2);
+  const indivCost = knownIndivSkills.length * 1;
+  const skillsNet = skillsetCost + indivCost;
+
+  const vitalityNet = Math.max(0, sumLogCategory('Vitality'));
+
+  const weapons = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
+  const skilledWeapons = weapons.filter((w: any) => w && w.sk);
+  const weaponsNet = Math.max(0, (skilledWeapons.length - 1) * 1);
+
+  const categories = {
+    Armor: armorNet,
+    Attributes: attributesNet,
+    Capstones: capstonesNet,
+    Focus: focusNet,
+    'GM Bonus': gmBonus,
+    'Magic Items': magicItemsNet,
+    Powers: powersNet,
+    Shields: shieldsNet,
+    Skills: skillsNet,
+    Vitality: vitalityNet,
+    Weapons: weaponsNet,
+  };
+
+  const totalSpent =
+    armorNet +
+    attributesNet +
+    capstonesNet +
+    focusNet +
+    magicItemsNet +
+    powersNet +
+    shieldsNet +
+    skillsNet +
+    vitalityNet +
+    weaponsNet;
+
+  return { totalSpent, gmBonus, categories };
 };
 
-export const calculateGmBonusAp = (log?: ApLogEntry[]): number => {
-  if (!log || !Array.isArray(log)) return 0;
-  return log.reduce((sum, entry) => {
-    if (!entry || (entry.category !== 'GM Bonus' && entry.category !== 'Manual')) return sum;
-    const bonus = typeof entry.cost === 'number' && !isNaN(entry.cost) ? entry.cost : 0;
-    return sum + bonus;
-  }, 0);
-};
-
-export const calculateAvailableAp = (level: number, log?: ApLogEntry[], rawApField?: number): number => {
-  const lifetime = calculateLifetimeAp(level);
-  const spent = calculateSpentAp(log);
-  const gmBonus = calculateGmBonusAp(log);
-  const calculated = lifetime + gmBonus - spent;
-  if (log && Array.isArray(log) && log.length > 0) {
-    return Math.max(0, calculated);
+export const calculateSpentAp = (logOrSheet?: any): number => {
+  if (!logOrSheet) return 0;
+  if (Array.isArray(logOrSheet)) {
+    return logOrSheet.reduce((sum, entry) => {
+      if (!entry) return sum;
+      if (entry.category === 'GM Bonus' || entry.category === 'Manual') return sum;
+      const cost = typeof entry.cost === 'number' && !isNaN(entry.cost) ? entry.cost : 0;
+      return sum + cost;
+    }, 0);
   }
-  return typeof rawApField === 'number' && !isNaN(rawApField) ? rawApField : Math.max(0, calculated);
+  return calculateLiveSheetSpentAp(logOrSheet).totalSpent;
+};
+
+export const calculateGmBonusAp = (logOrSheet?: any): number => {
+  if (!logOrSheet) return 0;
+  if (Array.isArray(logOrSheet)) {
+    return logOrSheet.reduce((sum, entry) => {
+      if (!entry || (entry.category !== 'GM Bonus' && entry.category !== 'Manual')) return sum;
+      const bonus = typeof entry.cost === 'number' && !isNaN(entry.cost) ? entry.cost : 0;
+      return sum + bonus;
+    }, 0);
+  }
+  return calculateLiveSheetSpentAp(logOrSheet).gmBonus;
+};
+
+export const calculateAvailableAp = (level: number, logOrSheet?: any, _rawApField?: number): number => {
+  const lifetime = calculateLifetimeAp(level);
+  let spent = 0;
+  let gmBonus = 0;
+
+  if (logOrSheet && typeof logOrSheet === 'object' && !Array.isArray(logOrSheet)) {
+    const liveData = calculateLiveSheetSpentAp(logOrSheet);
+    spent = liveData.totalSpent;
+    gmBonus = liveData.gmBonus;
+  } else {
+    spent = calculateSpentAp(logOrSheet);
+    gmBonus = calculateGmBonusAp(logOrSheet);
+  }
+
+  const calculated = lifetime + gmBonus - spent;
+  return Math.max(0, calculated);
 };
 
 
