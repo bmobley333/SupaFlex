@@ -6,6 +6,7 @@ import {
   Award,
   Heart,
   Gift,
+  RotateCcw,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -41,14 +42,14 @@ const normalizeDie = (die?: string): string => {
 };
 
 export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose }) => {
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } =
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, revertApExpenditure } =
     useCharacterStore();
 
   const [activeTab, setActiveTab] = useState<RightSubTab>('FOCUS');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // GM Bonus Form State
-  const [gmBonusAmount, setGmBonusAmount] = useState<number>(1);
+  const [gmBonusAmountInput, setGmBonusAmountInput] = useState<string>('1');
   const [gmBonusNote, setGmBonusNote] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -300,16 +301,17 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
   };
 
   // Handle GM Bonus Submission
-  const handleApplyGmBonus = (amount: number) => {
-    if (amount === 0) return;
+  const handleApplyGmBonus = () => {
+    const parsedAmount = parseInt(gmBonusAmountInput, 10);
+    if (isNaN(parsedAmount) || parsedAmount === 0) return;
     const desc = gmBonusNote.trim()
-      ? `GM Bonus: ${gmBonusNote.trim()} (${amount > 0 ? '+' : ''}${amount} AP)`
-      : `GM AP Adjustment (${amount > 0 ? '+' : ''}${amount} AP)`;
+      ? `GM Bonus: ${gmBonusNote.trim()} (${parsedAmount > 0 ? '+' : ''}${parsedAmount} AP)`
+      : `GM AP Adjustment (${parsedAmount > 0 ? '+' : ''}${parsedAmount} AP)`;
 
-    recordApExpenditure(amount, 'GM Bonus', desc, 'Manual', 'GM Grant');
+    recordApExpenditure(parsedAmount, 'GM Bonus', desc, 'Manual', 'GM Grant');
     saveActiveCharacter();
     setGmBonusNote('');
-    showToast(`Applied GM Bonus adjustment (${amount > 0 ? '+' : ''}${amount} AP)!`);
+    showToast(`Applied GM Bonus adjustment (${parsedAmount > 0 ? '+' : ''}${parsedAmount} AP)!`);
   };
 
   return (
@@ -572,6 +574,17 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
               {/* TAB 2: VITALITY BOOST */}
               {activeTab === 'VITALITY' && (
                 <div className="space-y-4">
+                  {/* Vitality Running Total Read-Only Box */}
+                  <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/40 flex items-center justify-between text-xs">
+                    <span className="font-bold text-rose-300 flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-rose-400" />
+                      TOTAL +Vit Gained:
+                    </span>
+                    <span className="font-black text-rose-300 font-mono text-sm px-3 py-1 bg-rose-950 rounded-lg border border-rose-500/40">
+                      +{liveApData.categories.Vitality * 2} Max Vit ({liveApData.categories.Vitality} AP spent)
+                    </span>
+                  </div>
+
                   <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
                     <div>
                       <h4 className="font-outfit font-bold text-slate-100 text-sm flex items-center gap-2">
@@ -590,7 +603,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
                 </div>
               )}
 
-              {/* TAB 2: HEROIC CAPSTONES */}
+              {/* TAB 3: HEROIC CAPSTONES */}
               {activeTab === 'CAPSTONES' && (
                 <div className="space-y-3">
                   <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 text-xs text-purple-200">
@@ -647,7 +660,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
                 </div>
               )}
 
-              {/* TAB 3: GM BONUS */}
+              {/* TAB 4: GM BONUS */}
               {activeTab === 'GM_BONUS' && (
                 <div className="space-y-4">
                   <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 text-xs text-purple-200">
@@ -657,47 +670,15 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
                     </p>
                   </div>
 
-                  {/* Preset Buttons */}
-                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
-                    <span className="text-xs font-bold text-slate-300 block">Quick Presets:</span>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        onClick={() => handleApplyGmBonus(1)}
-                        className="px-3 py-2 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 font-bold text-xs cursor-pointer transition-all"
-                      >
-                        +1 Bonus AP
-                      </button>
-                      <button
-                        onClick={() => handleApplyGmBonus(2)}
-                        className="px-3 py-2 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 font-bold text-xs cursor-pointer transition-all"
-                      >
-                        +2 Bonus AP
-                      </button>
-                      <button
-                        onClick={() => handleApplyGmBonus(5)}
-                        className="px-3 py-2 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 font-bold text-xs cursor-pointer transition-all"
-                      >
-                        +5 Bonus AP
-                      </button>
-                      <button
-                        onClick={() => handleApplyGmBonus(-1)}
-                        className="px-3 py-2 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-500/40 text-rose-300 font-bold text-xs cursor-pointer transition-all"
-                      >
-                        -1 AP Penalty
-                      </button>
-                      <button
-                        onClick={() => handleApplyGmBonus(-2)}
-                        className="px-3 py-2 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-500/40 text-rose-300 font-bold text-xs cursor-pointer transition-all"
-                      >
-                        -2 AP Penalty
-                      </button>
-                      <button
-                        onClick={() => handleApplyGmBonus(-5)}
-                        className="px-3 py-2 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-500/40 text-rose-300 font-bold text-xs cursor-pointer transition-all"
-                      >
-                        -5 AP Penalty
-                      </button>
-                    </div>
+                  {/* TOTAL AP Adjustment Read-Only Box */}
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs">
+                    <span className="font-bold text-amber-200 flex items-center gap-2">
+                      <Gift className="w-4 h-4 text-amber-400" />
+                      TOTAL AP Adjustment:
+                    </span>
+                    <span className="font-black font-mono text-amber-300 text-sm px-3 py-1 bg-amber-950 rounded-lg border border-amber-500/40">
+                      {gmBonusAp > 0 ? `+${gmBonusAp}` : gmBonusAp} AP
+                    </span>
                   </div>
 
                   {/* Custom Note Adjustment Form */}
@@ -705,9 +686,9 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
                     <span className="text-xs font-bold text-slate-300 block">Custom Adjustment & Note:</span>
                     <div className="flex items-center gap-2">
                       <input
-                        type="number"
-                        value={gmBonusAmount}
-                        onChange={(e) => setGmBonusAmount(parseInt(e.target.value) || 0)}
+                        type="text"
+                        value={gmBonusAmountInput}
+                        onChange={(e) => setGmBonusAmountInput(e.target.value)}
                         placeholder="AP (+/-)"
                         className="w-24 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-amber-300 font-mono font-bold outline-none focus:border-purple-500"
                       />
@@ -720,12 +701,58 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
                       />
                     </div>
                     <button
-                      onClick={() => handleApplyGmBonus(gmBonusAmount)}
-                      disabled={gmBonusAmount === 0}
+                      onClick={handleApplyGmBonus}
+                      disabled={!gmBonusAmountInput || isNaN(parseInt(gmBonusAmountInput, 10)) || parseInt(gmBonusAmountInput, 10) === 0}
                       className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white font-outfit font-bold text-xs rounded-lg transition-all shadow cursor-pointer disabled:opacity-40"
                     >
-                      Apply GM Adjustment ({gmBonusAmount > 0 ? '+' : ''}{gmBonusAmount} AP)
+                      Apply GM Adjustment
                     </button>
+                  </div>
+
+                  {/* Quick Log of GM Entries */}
+                  <div className="space-y-2 pt-2 border-t border-slate-800">
+                    <span className="text-xs font-bold text-slate-300 block">GM Adjustment History:</span>
+                    {apLog.filter((e) => e && (e.category === 'GM Bonus' || e.category === 'Manual')).length === 0 ? (
+                      <div className="p-4 text-center bg-slate-950/40 rounded-xl border border-dashed border-slate-800 text-slate-500 text-xs">
+                        No GM AP adjustments logged yet.
+                      </div>
+                    ) : (
+                      apLog
+                        .filter((e) => e && (e.category === 'GM Bonus' || e.category === 'Manual'))
+                        .map((entry) => (
+                          <div
+                            key={entry.id || Math.random().toString()}
+                            className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-3 text-xs"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-slate-200 truncate">{entry.description || 'GM AP Adjustment'}</p>
+                              <span className="text-[10px] text-slate-500 font-mono">
+                                {entry.timestamp ? new Date(entry.timestamp).toLocaleDateString() : ''}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`font-mono font-bold px-2 py-0.5 rounded text-xs border ${
+                                entry.cost > 0
+                                  ? 'bg-emerald-950 text-emerald-300 border-emerald-500/30'
+                                  : 'bg-rose-950 text-rose-300 border-rose-500/30'
+                              }`}>
+                                {entry.cost > 0 ? `+${entry.cost}` : entry.cost} AP
+                              </span>
+                              <button
+                                onClick={() => {
+                                  revertApExpenditure(entry.id);
+                                  saveActiveCharacter();
+                                  showToast('Reverted GM adjustment!');
+                                }}
+                                className="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 transition-colors cursor-pointer"
+                                title="Revert & Delete GM Adjustment"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                    )}
                   </div>
                 </div>
               )}
