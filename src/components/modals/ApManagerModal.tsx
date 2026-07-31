@@ -26,6 +26,7 @@ import {
 interface ApManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenAttributeManager?: () => void;
 }
 
 type RightSubTab = 'STEP_UPS' | 'FOCUS_VIT' | 'CAPSTONES' | 'AUGMENTS' | 'MANUAL';
@@ -84,7 +85,7 @@ const formatDate = (ts?: string): string => {
   }
 };
 
-export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose }) => {
+export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose, onOpenAttributeManager }) => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, revertApExpenditure } =
     useCharacterStore();
 
@@ -693,17 +694,25 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
                     <div>
                       <h4 className="font-outfit font-bold text-slate-100 text-sm flex items-center gap-2">
                         <RotateCcw className="w-4 h-4 text-indigo-400" />
-                        Attribute Reshuffle (Tier 1)
+                        Attribute Manager & Reshuffle (Tier 1)
                       </h4>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        Swap or reassign your attribute die array during milestone downtime.
+                        Swap or reassign your attribute die array, step up die pools, and view milestone ceilings.
                       </p>
                     </div>
                     <button
-                      onClick={handleAtrReshuffle}
-                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-outfit font-bold text-white transition-all shadow-md text-xs cursor-pointer"
+                      onClick={() => {
+                        if (onOpenAttributeManager) {
+                          onClose();
+                          onOpenAttributeManager();
+                        } else {
+                          handleAtrReshuffle();
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-outfit font-bold text-white transition-all shadow-md text-xs cursor-pointer flex items-center gap-1.5"
                     >
-                      Reshuffle (1 AP)
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Open Attribute Manager
                     </button>
                   </div>
                 </div>

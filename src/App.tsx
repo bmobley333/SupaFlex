@@ -11,6 +11,7 @@ import { HeroSelectorPopover } from './components/header/HeroSelectorPopover';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
 import { ApManagerModal } from './components/modals/ApManagerModal';
+import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
   const [showResourcesPopover, setShowResourcesPopover] = useState(false);
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
   const [showApManagerModal, setShowApManagerModal] = useState(false);
+  const [showAttributeManagerModal, setShowAttributeManagerModal] = useState(false);
   const selectorRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
@@ -390,7 +392,7 @@ export default function App() {
         {/* Persistent Header HUD Ribbon - Sub-Header Row 2 (Only visible when on Sheet tab) */}
         {activeTab === 'sheet' && (
           <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
-            <PersistentHeaderHUD />
+            <PersistentHeaderHUD onOpenAttributeManager={() => setShowAttributeManagerModal(true)} />
           </div>
         )}
       </header>
@@ -475,6 +477,15 @@ export default function App() {
         <ApManagerModal
           isOpen={showApManagerModal}
           onClose={() => setShowApManagerModal(false)}
+          onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
+        />
+      </ErrorBoundary>
+
+      {/* ✨ Attribute Manager Modal */}
+      <ErrorBoundary fallbackTitle="Attribute Manager Error" onClose={() => setShowAttributeManagerModal(false)}>
+        <AttributeManagerModal
+          isOpen={showAttributeManagerModal}
+          onClose={() => setShowAttributeManagerModal(false)}
         />
       </ErrorBoundary>
 

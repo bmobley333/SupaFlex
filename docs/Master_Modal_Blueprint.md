@@ -2,7 +2,7 @@
 
 **Scope:** SupaFlex Technical UI/UX Architecture  
 **Target File Path:** `c:\Repos\Projects\SupaFlex\docs\Master_Modal_Blueprint.md`  
-**Governed Components:** *Treasure Manager*, *Manage Gear*, *Manage Skillsets*, *Manage Weapons*, *Manage Armor*, *Manage Shields*, *Manage Powers*, *Manage Magic Items*, and *Loot Generator*.
+**Governed Components:** *Attribute Manager*, *AP Manager*, *Treasure Manager*, *Manage Gear*, *Manage Skillsets*, *Manage Weapons*, *Manage Armor*, *Manage Shields*, *Manage Powers*, *Manage Magic Items*, and *Loot Generator*.
 
 ---
 

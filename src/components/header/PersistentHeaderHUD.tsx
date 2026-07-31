@@ -27,7 +27,11 @@ const dieToNum = (die?: string): string => {
   return die.replace(/^d/i, '');
 };
 
-export const PersistentHeaderHUD: React.FC = () => {
+interface PersistentHeaderHUDProps {
+  onOpenAttributeManager?: () => void;
+}
+
+export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({ onOpenAttributeManager }) => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, spendMeta, resetSparks } = useCharacterStore();
   const [activeDrawer, setActiveDrawer] = useState<'none' | 'attributes' | 'focus' | 'spark' | 'luck'>('none');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -133,13 +137,19 @@ export const PersistentHeaderHUD: React.FC = () => {
       {/* Left Zone: Prominent Attributes Engine Ribbon */}
       <div className="relative">
         <div
-          onClick={() => toggleDrawer('attributes')}
+          onClick={() => {
+            if (onOpenAttributeManager) {
+              onOpenAttributeManager();
+            } else {
+              toggleDrawer('attributes');
+            }
+          }}
           className={`flex items-center gap-3 bg-slate-950 px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-lg ${
             activeDrawer === 'attributes'
               ? 'border-indigo-400 shadow-indigo-500/30 bg-slate-900'
               : 'border-indigo-500/40 hover:border-indigo-400/60 shadow-indigo-950/40'
           }`}
-          title="Click to configure attribute die ratings"
+          title="Click to open Attribute Manager"
         >
           {ATTRIBUTES.map((attr, idx) => {
             const dieVal = dieToNum(dice[attr.key]);
@@ -206,6 +216,18 @@ export const PersistentHeaderHUD: React.FC = () => {
                 );
               })}
             </div>
+
+            {onOpenAttributeManager && (
+              <button
+                onClick={() => {
+                  setActiveDrawer('none');
+                  onOpenAttributeManager();
+                }}
+                className="w-full mt-1 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg font-outfit font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                ✨ Launch Full Attribute Manager
+              </button>
+            )}
           </div>
         )}
       </div>

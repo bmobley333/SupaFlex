@@ -96,7 +96,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return calculateTotalPowerUnits(slots);
   }, [slots]);
 
-  const learnedPowersCount = activeDisplaySlots.length;
   const apSpent = Math.max(0, totalPowerUnits - 3);
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
