@@ -74,7 +74,7 @@ const calculateWeaponDmg = (name: string, mhsCategory: string, attributeDice: Re
 };
 
 export const WeaponsCard: React.FC = () => {
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
   const weapons: WeaponSlot[] = activeCharacter?.sheet_data?.weapons || [];
   const attributeDice = (activeCharacter?.sheet_data?.attribute_dice || {
     might: 'd8',
@@ -197,6 +197,9 @@ export const WeaponsCard: React.FC = () => {
     updateActiveSheetData((prev) => {
       const existingNames = new Set((prev.weapons || []).map((w) => w.name.toLowerCase()));
       const filteredNewSlots = newSlots.filter((s) => !existingNames.has(s.name.toLowerCase()));
+      if (filteredNewSlots.length > 0) {
+        recordApExpenditure(1, 'Weapons', `Learned Weapon Skill: ${weapon.name}`, 1, 'Manage Weapons');
+      }
       return {
         ...prev,
         weapons: [...(prev.weapons || []), ...filteredNewSlots].sort((a, b) => a.name.localeCompare(b.name)),

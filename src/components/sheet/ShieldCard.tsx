@@ -14,7 +14,7 @@ import {
 const REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
 
 export const ShieldCard: React.FC = () => {
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
 
   const shield: ShieldData = activeCharacter?.sheet_data?.shield_slot || {
     id: 'shd_default',
@@ -120,23 +120,31 @@ export const ShieldCard: React.FC = () => {
   };
 
   const handleAddToArmory = (item: SupabaseShield) => {
-    const blockMatch = item.max_block ? item.max_block.match(/\d+/) : null;
-    const numericBlock = blockMatch ? parseInt(blockMatch[0], 10) : 12;
+    const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
     const newShieldItem: ShieldData = {
       id: `shd_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       equipped: true,
       name: item.name,
-      sk: isRequirementLearnable(item.requirement, attributeDice),
+      sk: isLearnable,
+      max_block: parseInt((item.max_block || '12').replace(/\D/g, ''), 10) || 12,
       requirement: item.requirement,
-      max_block: numericBlock,
-      mr_adjustment: item.mr || '👣0',
+      mr_adjustment: item.mr,
       cost: item.cost,
     };
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      shield_slot: newShieldItem,
-      armory: [...(prev.armory || armory).filter((s) => s.name.toLowerCase() !== item.name.toLowerCase()), newShieldItem],
-    }));
+    updateActiveSheetData((prev) => {
+      const existingArmory = prev.armory || armory;
+      const isAlreadyInArmory = existingArmory.some(
+        (s) => s.name.toLowerCase() === item.name.toLowerCase()
+      );
+      if (!isAlreadyInArmory) {
+        recordApExpenditure(1, 'Shields', `Learned Shield Skill: ${item.name}`, 1, 'Manage Shields');
+      }
+      return {
+        ...prev,
+        shield_slot: newShieldItem,
+        armory: [...(prev.armory || armory).filter((s) => s.name.toLowerCase() !== item.name.toLowerCase()), newShieldItem],
+      };
+    });
     updateMovementForShield(item.mr, true);
     saveActiveCharacter();
   };

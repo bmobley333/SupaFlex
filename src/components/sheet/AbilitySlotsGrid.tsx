@@ -59,7 +59,7 @@ const parseAbilityVersion = (name: string): { baseName: string; version: number 
 };
 
 export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type }) => {
-  const { activeCharacter, powers, magicItems, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+  const { activeCharacter, powers, magicItems, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
   const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
   const slots: AbilitySlot[] = activeCharacter?.sheet_data?.[slotKey] || [];
   const favoriteTables: string[] = activeCharacter?.sheet_data?.favorite_power_tables || [];
@@ -241,6 +241,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           effect: item.effect || '',
           checked: [false, false, false],
         });
+        const category = type === 'powers' ? 'Powers' : 'Magic Items';
+        const label = type === 'powers' ? 'Learned Power' : 'Acquired Magic Item';
+        const sourceLabel = type === 'powers' ? 'Manage Powers' : 'Manage Magic Items';
+        recordApExpenditure(1, category, `${label}: ${cleanName(item.name)}`, 1, sourceLabel);
       }
       return { ...prev, [slotKey]: current };
     });

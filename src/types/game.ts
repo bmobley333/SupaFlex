@@ -285,6 +285,16 @@ export interface SimpleGearItem {
   cost?: string;
 }
 
+export interface ApLogEntry {
+  id: string;
+  timestamp: string;
+  category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'Manual';
+  cost: number;
+  description: string;
+  tier: 1 | 2 | 3 | 'Creation' | 'Manual';
+  source: string;
+}
+
 export interface CharacterBio {
   backstory?: string;
   personality?: string;
@@ -303,6 +313,8 @@ export interface CharacterBio {
 export interface CharacterSheetData {
   level: number;
   ap: number;
+  free_augment_tokens?: number;
+  ap_log?: ApLogEntry[];
   vitality_max: number;
   current_vitality: number;
   wounds: number;
@@ -340,6 +352,31 @@ export interface CharacterSheetData {
   movement_rate?: MovementRateData;
   bio: CharacterBio;
 }
+
+export const calculateLifetimeAp = (level: number): number => {
+  const numLevel = typeof level === 'number' && !isNaN(level) && level > 0 ? level : 1;
+  return Math.max(2, numLevel * 2);
+};
+
+export const calculateSpentAp = (log?: ApLogEntry[]): number => {
+  if (!log || !Array.isArray(log)) return 0;
+  return log.reduce((sum, entry) => {
+    if (!entry) return sum;
+    const cost = typeof entry.cost === 'number' && !isNaN(entry.cost) ? entry.cost : 0;
+    return sum + cost;
+  }, 0);
+};
+
+export const calculateAvailableAp = (level: number, log?: ApLogEntry[], rawApField?: number): number => {
+  const lifetime = calculateLifetimeAp(level);
+  const spent = calculateSpentAp(log);
+  const calculated = lifetime - spent;
+  if (log && Array.isArray(log) && log.length > 0) {
+    return Math.max(0, calculated);
+  }
+  return typeof rawApField === 'number' && !isNaN(rawApField) ? rawApField : Math.max(0, calculated);
+};
+
 
 export interface Player {
   email: string;

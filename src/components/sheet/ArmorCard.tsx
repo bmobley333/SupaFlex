@@ -21,7 +21,7 @@ const getDieNum = (dieRating?: string): number => {
 const REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
 
 export const ArmorCard: React.FC = () => {
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
 
   const armor: ArmorData = activeCharacter?.sheet_data?.armor_slot || {
     id: 'arm_default',
@@ -167,6 +167,9 @@ export const ArmorCard: React.FC = () => {
       const isAlreadyInWardrobe = existingWardrobe.some(
         (w) => w.name.toLowerCase() === item.name.toLowerCase()
       );
+      if (!isAlreadyInWardrobe) {
+        recordApExpenditure(1, 'Armor', `Learned Armor Skill: ${item.name}`, 1, 'Manage Armor');
+      }
       const updatedWardrobe = isAlreadyInWardrobe ? existingWardrobe : [...existingWardrobe, newArmorItem];
       return {
         ...prev,

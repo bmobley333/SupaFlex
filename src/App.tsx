@@ -10,6 +10,8 @@ import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { HeroSelectorPopover } from './components/header/HeroSelectorPopover';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
+import { ApManagerModal } from './components/modals/ApManagerModal';
+import { ErrorBoundary } from './components/modals/ErrorBoundary';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'sheet' | 'rolls' | 'codex' | 'logs' | 'directory'>('sheet');
@@ -19,6 +21,7 @@ export default function App() {
   const [showLevelPopover, setShowLevelPopover] = useState(false);
   const [showResourcesPopover, setShowResourcesPopover] = useState(false);
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
+  const [showApManagerModal, setShowApManagerModal] = useState(false);
   const selectorRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
@@ -361,6 +364,7 @@ export default function App() {
                 <ResourcesPopover 
                   onClose={() => setShowResourcesPopover(false)} 
                   onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
+                  onOpenApManager={() => setShowApManagerModal(true)}
                 />
               )}
             </div>
@@ -465,6 +469,14 @@ export default function App() {
         onClaimMagicItem={handleClaimMagicItem}
         onClaimValuable={handleClaimValuable}
       />
+
+      {/* 🧩 AP Manager Modal */}
+      <ErrorBoundary fallbackTitle="AP Manager Error" onClose={() => setShowApManagerModal(false)}>
+        <ApManagerModal
+          isOpen={showApManagerModal}
+          onClose={() => setShowApManagerModal(false)}
+        />
+      </ErrorBoundary>
 
       {/* Footer */}
       <footer className="w-full py-3 px-6 border-t border-slate-900 text-center text-xs text-slate-600 font-medium">

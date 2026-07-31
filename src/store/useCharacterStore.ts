@@ -34,6 +34,14 @@ interface CharacterStore {
   resetSparks: () => void;
   setPlayerEmail: (email: string) => void;
   setFilterMode: (mode: 'my_heroes' | 'all_heroes') => void;
+  recordApExpenditure: (
+    cost: number,
+    category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'Manual',
+    description: string,
+    tier: 1 | 2 | 3 | 'Creation' | 'Manual',
+    source: string
+  ) => void;
+  revertApExpenditure: (entryId: string) => void;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
@@ -252,5 +260,48 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       is_charged: false,
     }));
   },
+
+  recordApExpenditure: (cost, category, description, tier, source) => {
+    get().updateActiveSheetData((prev) => {
+      const log = prev.ap_log || [];
+      const newEntry = {
+        id: `ap_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        timestamp: new Date().toISOString(),
+        category,
+        cost,
+        description,
+        tier,
+        source,
+      };
+      const updatedLog = [newEntry, ...log];
+      const currentAp = typeof prev.ap === 'number' ? prev.ap : 1;
+      const nextAp = Math.max(0, currentAp - cost);
+
+      return {
+        ...prev,
+        ap: nextAp,
+        ap_log: updatedLog,
+      };
+    });
+  },
+
+  revertApExpenditure: (entryId: string) => {
+    get().updateActiveSheetData((prev) => {
+      const log = prev.ap_log || [];
+      const target = log.find((e) => e.id === entryId);
+      if (!target) return prev;
+
+      const updatedLog = log.filter((e) => e.id !== entryId);
+      const currentAp = typeof prev.ap === 'number' ? prev.ap : 0;
+      const nextAp = currentAp + target.cost;
+
+      return {
+        ...prev,
+        ap: nextAp,
+        ap_log: updatedLog,
+      };
+    });
+  },
 }));
+
 

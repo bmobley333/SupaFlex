@@ -33,7 +33,7 @@ const dieToNum = (die?: string): string => {
 };
 
 export const SkillsetsPanel: React.FC = () => {
-  const { activeCharacter, skillsets, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+  const { activeCharacter, skillsets, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
   const knownSkillsetNames = activeCharacter?.sheet_data?.known_skillsets || [];
   const knownIndividualSkills = activeCharacter?.sheet_data?.known_individual_skills || [];
   const attributeDice = activeCharacter?.sheet_data?.attribute_dice || {
@@ -65,6 +65,7 @@ export const SkillsetsPanel: React.FC = () => {
   }, [showManageModal]);
 
   const handleToggleSkillset = (name: string) => {
+    const isLearning = !knownSkillsetNames.includes(name);
     updateActiveSheetData((prev) => {
       const current = prev.known_skillsets || [];
       const updated = current.includes(name)
@@ -72,10 +73,14 @@ export const SkillsetsPanel: React.FC = () => {
         : [...current, name];
       return { ...prev, known_skillsets: updated };
     });
+    if (isLearning) {
+      recordApExpenditure(2, 'Skills', `Learned Skill Set: ${name}`, 1, 'Manage Skills');
+    }
     saveActiveCharacter();
   };
 
   const handleToggleIndividualSkill = (skillName: string) => {
+    const isLearning = !knownIndividualSkills.includes(skillName);
     updateActiveSheetData((prev) => {
       const current = prev.known_individual_skills || [];
       const updated = current.includes(skillName)
@@ -83,6 +88,9 @@ export const SkillsetsPanel: React.FC = () => {
         : [...current, skillName];
       return { ...prev, known_individual_skills: updated };
     });
+    if (isLearning) {
+      recordApExpenditure(1, 'Skills', `Learned Skill: ${skillName}`, 1, 'Manage Skills');
+    }
     saveActiveCharacter();
   };
 

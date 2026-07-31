@@ -4,9 +4,10 @@ import { ExternalLink, BookOpen, Brain, Dices, X } from 'lucide-react';
 interface ResourcesPopoverProps {
   onClose: () => void;
   onOpenLootGenerator?: () => void;
+  onOpenApManager?: () => void;
 }
 
-export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({ onClose, onOpenLootGenerator }) => {
+export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({ onClose, onOpenLootGenerator, onOpenApManager }) => {
   return (
     <div className="absolute top-full right-0 mt-2 z-50 w-72 p-3.5 bg-slate-900/95 border border-indigo-500/40 rounded-xl shadow-2xl shadow-indigo-950/60 backdrop-blur-xl animate-fadeIn flex flex-col gap-3 text-xs">
       {/* Popover Header */}
@@ -26,6 +27,34 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({ onClose, onO
 
       {/* Links & Tools List */}
       <div className="flex flex-col gap-2">
+        {/* Tool 0: Manage AP (Action Points) */}
+        {onOpenApManager && (
+          <button
+            onClick={() => {
+              onOpenApManager();
+              onClose();
+            }}
+            className="group flex items-start gap-3 p-2.5 rounded-lg bg-purple-950/30 hover:bg-purple-900/40 border border-purple-500/40 hover:border-purple-400 transition-all text-left w-full cursor-pointer"
+          >
+            <div className="p-2 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-300 group-hover:bg-purple-500/30 group-hover:text-purple-200 transition-colors shrink-0 font-bold">
+              🧩
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-outfit font-bold text-purple-200 group-hover:text-purple-100 transition-colors truncate">
+                  Manage AP
+                </span>
+                <span className="text-[10px] font-bold text-purple-950 bg-purple-400 px-1.5 py-0.5 rounded uppercase shrink-0">
+                  AP Log
+                </span>
+              </div>
+              <p className="text-[11px] text-purple-200/70 group-hover:text-purple-100 transition-colors leading-tight mt-0.5">
+                Audit expenditures, step-up stats, & spend AP.
+              </p>
+            </div>
+          </button>
+        )}
+
         {/* Tool 1: Random Loot Generator */}
         {onOpenLootGenerator && (
           <button
