@@ -1,6 +1,6 @@
 // src/components/sheet/ArmorCard.tsx
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronUp, X, Shirt, Plus, Search, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, Check, Shirt, Plus, Search, Loader2, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import {
@@ -535,19 +535,27 @@ export const ArmorCard: React.FC = () => {
       <div className="flex flex-col gap-3">
         {/* Armor Row 1: Sk Checkbox & Read-Only Name */}
         <div className="flex items-center gap-3">
-          {/* Sk Checkbox */}
+          {/* Sk Checkbox / Red X Toggle */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <label htmlFor="armor-sk" className="text-xs font-bold text-slate-300 cursor-pointer">
+            <label className="text-xs font-bold text-slate-300 cursor-pointer">
               Sk
             </label>
-            <input
-              type="checkbox"
-              checked={armor.sk ?? true}
-              onChange={(e) => handleSkToggle(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-700 text-amber-500 focus:ring-amber-500/20 bg-slate-900 cursor-pointer"
-              id="armor-sk"
-              title="Trained / Skill Check"
-            />
+            <button
+              type="button"
+              onClick={() => handleSkToggle(!(armor.sk ?? true))}
+              className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-pointer shrink-0 ${
+                (armor.sk ?? true)
+                  ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm hover:bg-cyan-600/50'
+                  : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md hover:bg-rose-900/90'
+              }`}
+              title={(armor.sk ?? true) ? 'Skilled (Click to mark Unskilled)' : 'Unskilled (Click to mark Skilled)'}
+            >
+              {(armor.sk ?? true) ? (
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+              ) : (
+                <X className="w-3.5 h-3.5 stroke-[3]" />
+              )}
+            </button>
           </div>
 
           {/* Armor Name Input (Read-Only) */}

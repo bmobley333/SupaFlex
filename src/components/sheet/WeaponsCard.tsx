@@ -1,6 +1,6 @@
 // src/components/sheet/WeaponsCard.tsx
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Plus, X, Swords, AlertCircle, Loader2, Search, Globe } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, X, Check, Swords, AlertCircle, Loader2, Search, Globe } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import {
@@ -941,15 +941,24 @@ export const WeaponsCard: React.FC = () => {
                   key={item.id}
                   className="grid grid-cols-[36px_92px_1fr_54px_54px_68px] gap-2 items-center px-2 py-1.5 bg-slate-950/60 rounded-lg border border-slate-850 hover:border-slate-750 transition-all"
                 >
-                  {/* Sk Checkbox */}
+                  {/* Sk Checkbox / Red X Toggle */}
                   <div className="flex justify-center">
-                    <input
-                      type="checkbox"
-                      checked={item.sk}
-                      onChange={(e) => handleWeaponChange(item.id, { sk: e.target.checked })}
-                      className="w-4 h-4 rounded border-slate-700 text-rose-500 focus:ring-rose-500/20 bg-slate-900 cursor-pointer"
-                      title="Trained / Skill Check"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => handleWeaponChange(item.id, { sk: !item.sk })}
+                      className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-pointer shrink-0 ${
+                        item.sk
+                          ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm hover:bg-cyan-600/50'
+                          : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md hover:bg-rose-900/90'
+                      }`}
+                      title={item.sk ? 'Skilled (Click to mark Unskilled)' : 'Unskilled (Click to mark Skilled)'}
+                    >
+                      {item.sk ? (
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      ) : (
+                        <X className="w-3.5 h-3.5 stroke-[3]" />
+                      )}
+                    </button>
                   </div>
 
                   {/* Color-Coded M/H/S Category Display Box (Read-Only) */}

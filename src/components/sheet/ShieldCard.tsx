@@ -1,6 +1,6 @@
 // src/components/sheet/ShieldCard.tsx
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronUp, X, Plus, Search, Globe, ShieldAlert, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, Check, Plus, Search, Globe, ShieldAlert, Loader2, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import {
@@ -9,6 +9,7 @@ import {
   getShieldMrFromRequirement,
   getShieldMaxBlockFromRequirement,
   isRequirementLearnable,
+  calculateAvailableAp,
 } from '../../types/game';
 
 const REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
@@ -42,6 +43,25 @@ export const ShieldCard: React.FC = () => {
     magic: 'd4',
     moxie: 'd4',
   }) as Record<string, string>;
+
+  const isShieldSkilled = (item: ShieldData): boolean => {
+    if (!item || item.id === 'shd_none') return false;
+    if (item.sk === true) return true;
+    if (item.sk === false) return false;
+    return isRequirementLearnable(item.requirement || '💪 4', attributeDice);
+  };
+
+  const skilledShieldList = useMemo(() => {
+    return armory.filter(isShieldSkilled);
+  }, [armory, attributeDice]);
+
+  const skilledShieldCount = skilledShieldList.length;
+  const shieldApSpent = skilledShieldCount;
+  const availableAp = calculateAvailableAp(
+    activeCharacter?.sheet_data?.level || 1,
+    activeCharacter?.sheet_data?.ap_log || [],
+    activeCharacter?.sheet_data?.ap
+  );
 
   const [showManageModal, setShowManageModal] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -102,7 +122,14 @@ export const ShieldCard: React.FC = () => {
 
   const handleSelectActiveShield = (selectedShield: ShieldData) => {
     const equippedShield = { ...selectedShield, equipped: true };
-    updateActiveSheetData((prev) => ({ ...prev, shield_slot: equippedShield }));
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      shield_slot: equippedShield,
+      armory: (prev.armory || armory).map((s) => ({
+        ...s,
+        equipped: s.name.toLowerCase() === selectedShield.name.toLowerCase(),
+      })),
+    }));
     updateMovementForShield(selectedShield.mr_adjustment, true);
     saveActiveCharacter();
   };
@@ -137,7 +164,11 @@ export const ShieldCard: React.FC = () => {
         (s) => s.name.toLowerCase() === item.name.toLowerCase()
       );
       if (!isAlreadyInArmory) {
-        recordApExpenditure(1, 'Shields', `Learned Shield Skill: ${item.name}`, 1, 'Manage Shields');
+        if (isLearnable) {
+          recordApExpenditure(1, 'Shields', `Learned Skilled Shield: ${item.name} (1 AP)`, 1, 'Manage Shields');
+        } else {
+          recordApExpenditure(0, 'Shields', `Added Unskilled Shield: ${item.name} (0 AP - Unskilled)`, 1, 'Manage Shields');
+        }
       }
       return {
         ...prev,
@@ -150,6 +181,9 @@ export const ShieldCard: React.FC = () => {
   };
 
   const handleDropFromArmory = (shieldName: string) => {
+    const targetShield = armory.find((s) => s.name.toLowerCase() === shieldName.toLowerCase());
+    const wasSkilled = targetShield ? isShieldSkilled(targetShield) : false;
+
     updateActiveSheetData((prev) => {
       const updatedArmory = (prev.armory || armory).filter((s) => s.name.toLowerCase() !== shieldName.toLowerCase());
       let nextActiveShield = prev.shield_slot;
@@ -158,6 +192,13 @@ export const ShieldCard: React.FC = () => {
           ? { ...updatedArmory[0], equipped: true }
           : { id: 'shd_none', equipped: false, name: 'None', sk: true, max_block: 0 };
       }
+
+      if (wasSkilled) {
+        recordApExpenditure(-1, 'Shields', `Unlearned Skilled Shield: ${shieldName} (-1 AP Refunded)`, 1, 'Manage Shields');
+      } else {
+        recordApExpenditure(0, 'Shields', `Dropped Unskilled Shield: ${shieldName} (0 AP)`, 1, 'Manage Shields');
+      }
+
       return {
         ...prev,
         shield_slot: nextActiveShield,
@@ -168,12 +209,6 @@ export const ShieldCard: React.FC = () => {
       const nextShield = armory.find((s) => s.name.toLowerCase() !== shieldName.toLowerCase());
       updateMovementForShield(nextShield?.mr_adjustment, !!nextShield);
     }
-    saveActiveCharacter();
-  };
-
-  const handleUnequipCurrentShield = () => {
-    updateActiveSheetData((prev) => ({ ...prev, shield_slot: { ...shield, equipped: false } }));
-    updateMovementForShield('n/a', false);
     saveActiveCharacter();
   };
 
@@ -263,21 +298,31 @@ export const ShieldCard: React.FC = () => {
               className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden"
             >
               {/* Top Bar */}
-              <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-2.5">
+              <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
+                <div className="flex items-center gap-2.5 shrink-0">
                   <div className="p-2 rounded-xl bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">🛡️</div>
                   <div>
                     <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide">
                       Shields Manager
                     </h3>
                     <p className="text-xs text-slate-400 hidden sm:block">
-                      Manage character shield armory side-by-side with the SupaFlex stock catalog and custom creator.
+                      Manage character shield armory side-by-side with stock catalog.
                     </p>
                   </div>
                 </div>
+
+                {/* KISS Top-Center Header Status Pill */}
+                <div className="px-3.5 py-1 bg-cyan-950/70 border border-cyan-500/40 rounded-full font-mono font-bold text-xs text-cyan-200 flex items-center gap-2 shadow-md">
+                  <span>
+                    Skilled <strong className="text-cyan-300">{skilledShieldCount}</strong>; Used{' '}
+                    <strong className="text-rose-300">{shieldApSpent} AP</strong>; Available{' '}
+                    <strong className="text-emerald-400">{availableAp} AP</strong>
+                  </span>
+                </div>
+
                 <button
                   onClick={() => setShowManageModal(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800"
+                  className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -338,13 +383,13 @@ export const ShieldCard: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleSelectActiveShield(item)}
-                                  className={`px-2.5 py-0.5 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all ${
+                                  className={`px-2 py-0.5 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all ${
                                     isActive
                                       ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 shadow-sm'
                                       : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-slate-200'
                                   }`}
                                 >
-                                  <span className="text-xs">{isActive ? '●' : '○'}</span>
+                                  <span className="text-[10px]">{isActive ? '●' : '○'}</span>
                                   <span>{isActive ? 'Active' : 'Equip'}</span>
                                 </button>
                                 <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
@@ -373,18 +418,6 @@ export const ShieldCard: React.FC = () => {
                       })
                     )}
                   </div>
-
-                  {shield.equipped && (
-                    <div className="pt-2 border-t border-slate-800 shrink-0 mt-2">
-                      <button
-                        type="button"
-                        onClick={handleUnequipCurrentShield}
-                        className="w-full py-1.5 bg-slate-900 hover:bg-slate-850 text-rose-300 border border-slate-800 rounded-lg text-xs font-bold transition-all"
-                      >
-                        Unequip Shield (Hands Free)
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 {/* --- RIGHT COLUMN: STOCK CATALOG & CREATOR PANE --- */}
@@ -615,21 +648,22 @@ export const ShieldCard: React.FC = () => {
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Modal Footer Status Bar with Standardized "Done" Button */}
-                <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
-                  <div className="flex items-center gap-3">
-                    <span className="font-outfit font-bold text-slate-300">🛡️ Shield Manager</span>
-                  </div>
-                  
-                  {/* Standardized Master Blueprint Done Footer Button */}
-                  <button 
-                    onClick={() => setShowManageModal(false)} 
-                    className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
-                  >
-                    Done
-                  </button>
+              {/* Modal Footer Status Bar with Standardized "Done" Button (Full Width) */}
+              <div className="px-4 py-3 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-400 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">🛡️</span>
+                  <span className="font-outfit font-bold text-slate-300">Shields Manager</span>
                 </div>
+                
+                {/* Standardized Master Blueprint Done Footer Button */}
+                <button 
+                  onClick={() => setShowManageModal(false)} 
+                  className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
+                >
+                  Done
+                </button>
               </div>
             </div>
           </div>
@@ -639,19 +673,27 @@ export const ShieldCard: React.FC = () => {
       {/* Main Character Sheet Card View */}
       {shield.equipped ? (
         <div className="flex items-center gap-3 pt-1 animate-fadeIn">
-          {/* Sk Checkbox */}
+          {/* Sk Checkbox / Red X Toggle */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <label htmlFor="shield-sk" className="text-xs font-bold text-slate-300 cursor-pointer">
+            <label className="text-xs font-bold text-slate-300 cursor-pointer">
               Sk
             </label>
-            <input
-              type="checkbox"
-              checked={shield.sk}
-              onChange={(e) => handleSkToggle(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-700 text-cyan-500 focus:ring-cyan-500/20 bg-slate-900 cursor-pointer"
-              id="shield-sk"
-              title="Trained / Skill Check"
-            />
+            <button
+              type="button"
+              onClick={() => handleSkToggle(!shield.sk)}
+              className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-pointer shrink-0 ${
+                shield.sk
+                  ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm hover:bg-cyan-600/50'
+                  : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md hover:bg-rose-900/90'
+              }`}
+              title={shield.sk ? 'Skilled (Click to mark Unskilled)' : 'Unskilled (Click to mark Skilled)'}
+            >
+              {shield.sk ? (
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+              ) : (
+                <X className="w-3.5 h-3.5 stroke-[3]" />
+              )}
+            </button>
           </div>
 
           {/* Name Text Input (Read-Only) */}
