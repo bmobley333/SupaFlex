@@ -1,6 +1,6 @@
 // src/components/sheet/SkillsetsPanel.tsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Check, ChevronDown, ChevronUp, Search, X, Sparkles, BookOpen, Scroll, GraduationCap } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Search, X, Sparkles, BookOpen, Scroll, GraduationCap, Plus, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, calculateAvailableAp } from '../../types/game';
 
@@ -26,6 +26,14 @@ const EMOJI_MAP: Record<string, { key: AttributeKey; label: string; icon: string
   '✨': { key: 'magic', label: 'Magic', icon: '✨' },
   '🫀': { key: 'moxie', label: 'Moxie', icon: '🫀' },
 };
+
+const ATTRIBUTE_OPTIONS: { key: AttributeKey; label: string; icon: string }[] = [
+  { key: 'might', label: 'Might', icon: '💪' },
+  { key: 'motion', label: 'Motion', icon: '🏃' },
+  { key: 'mind', label: 'Mind', icon: '👁️' },
+  { key: 'magic', label: 'Magic', icon: '✨' },
+  { key: 'moxie', label: 'Moxie', icon: '🫀' },
+];
 
 const dieToNum = (die?: string): string => {
   if (!die) return '4';
@@ -57,9 +65,12 @@ export const SkillsetsPanel: React.FC = () => {
   );
 
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
-  const [activeRightTab, setActiveRightTab] = useState<'skillsets' | 'individual'>('skillsets');
+  const [activeRightTab, setActiveRightTab] = useState<'skillsets' | 'individual' | 'creator'>('skillsets');
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
   const [rightSearchQuery, setRightSearchQuery] = useState<string>('');
+  const [newSkillName, setNewSkillName] = useState<string>('');
+  const [newSkillAttribute, setNewSkillAttribute] = useState<AttributeKey>('might');
+  const [customSkillError, setCustomSkillError] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,6 +86,54 @@ export const SkillsetsPanel: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showManageModal]);
+
+  const handleCreateCustomSkill = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCustomSkillError(null);
+
+    const cleanName = newSkillName.trim();
+    if (!cleanName) {
+      setCustomSkillError('Please enter a valid skill name.');
+      return;
+    }
+
+    // Check if already learned
+    const isAlreadyLearned = knownIndividualSkills.some((s) => {
+      let sName = s;
+      for (const emoji of Object.keys(EMOJI_MAP)) {
+        if (s.includes(emoji)) {
+          sName = s.replace(emoji, '').trim();
+          break;
+        }
+      }
+      return sName.toLowerCase() === cleanName.toLowerCase();
+    });
+
+    if (isAlreadyLearned) {
+      setCustomSkillError(`Skill "${cleanName}" is already learned!`);
+      return;
+    }
+
+    const foundAttr = ATTRIBUTE_OPTIONS.find((a) => a.key === newSkillAttribute);
+    const emojiToUse = foundAttr ? foundAttr.icon : '✨';
+    const formattedSkillString = `${emojiToUse} ${cleanName}`;
+
+    updateActiveSheetData((prev) => {
+      const current = prev.known_individual_skills || [];
+      return {
+        ...prev,
+        known_individual_skills: [...current, formattedSkillString],
+      };
+    });
+
+    recordApExpenditure(1, 'Skills', `Learned Custom Skill: ${cleanName} (1 AP)`, 1, 'Manage Skills');
+    saveActiveCharacter();
+
+    setNewSkillName('');
+    setNewSkillAttribute('might');
+    setCustomSkillError(null);
+    setActiveRightTab('individual');
+  };
 
   const handleToggleSkillset = (name: string) => {
     const uniqueCurrent = Array.from(new Set(knownSkillsetNames));
@@ -307,7 +366,7 @@ export const SkillsetsPanel: React.FC = () => {
           Skillsets
         </h3>
 
-        {/* Manage Skillsets Trigger Button */}
+        {/* Manage Skills Trigger Button */}
         <div className="relative">
           <button
             onClick={() => setShowManageModal(!showManageModal)}
@@ -316,9 +375,9 @@ export const SkillsetsPanel: React.FC = () => {
                 ? 'bg-purple-600/30 text-purple-200 border-purple-400 shadow-purple-500/30'
                 : 'bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/30 text-purple-300'
             }`}
-            title="Manage character skillsets and individual skills"
+            title="Manage character skills, skillsets, and custom skills"
           >
-            <span className="font-outfit font-bold">Manage Skillsets</span>
+            <span className="font-outfit font-bold">Manage Skills</span>
             <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-purple-900/80 rounded text-purple-200">
               {uniqueKnownSkillsetNames.length}/{skillsets.length}
             </span>
@@ -344,7 +403,7 @@ export const SkillsetsPanel: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                        Skillsets Manager
+                        Skills Manager
                       </h3>
                       <p className="text-xs text-slate-400 hidden sm:block">
                         Manage character skillsets and derived skills side-by-side with the skillset catalog.
@@ -483,6 +542,7 @@ export const SkillsetsPanel: React.FC = () => {
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
                       <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800 w-full">
                         <button
+                          type="button"
                           onClick={() => setActiveRightTab('skillsets')}
                           className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                             activeRightTab === 'skillsets'
@@ -491,10 +551,11 @@ export const SkillsetsPanel: React.FC = () => {
                           }`}
                         >
                           <BookOpen className="w-3.5 h-3.5 text-purple-400" />
-                          Skillsets Catalog ({skillsets.length})
+                          Skillsets ({skillsets.length})
                         </button>
 
                         <button
+                          type="button"
                           onClick={() => setActiveRightTab('individual')}
                           className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                             activeRightTab === 'individual'
@@ -503,7 +564,20 @@ export const SkillsetsPanel: React.FC = () => {
                           }`}
                         >
                           <Scroll className="w-3.5 h-3.5 text-indigo-400" />
-                          Individual Skills ({sortedAllCatalogSkills.length})
+                          Catalog ({sortedAllCatalogSkills.length})
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setActiveRightTab('creator')}
+                          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'creator'
+                              ? 'bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                          Creator
                         </button>
                       </div>
                     </div>
@@ -654,6 +728,61 @@ export const SkillsetsPanel: React.FC = () => {
                         </div>
                       </div>
                     )}
+
+                    {/* TAB 3: CUSTOM CREATOR VIEW */}
+                    {activeRightTab === 'creator' && (
+                      <form onSubmit={handleCreateCustomSkill} className="mt-2.5 p-3 bg-purple-950/20 rounded-xl border border-purple-500/30 flex flex-col gap-3">
+                        <div className="flex items-center justify-between border-b border-purple-500/20 pb-1 flex-wrap">
+                          <span className="text-xs font-bold text-purple-300 flex items-center gap-1">
+                            <Plus className="w-3.5 h-3.5 text-purple-400" /> Create Custom Skill
+                          </span>
+                        </div>
+
+                        <input
+                          type="text"
+                          placeholder="Skill Name (e.g. Dragon Riding)"
+                          value={newSkillName}
+                          onChange={(e) => setNewSkillName(e.target.value)}
+                          className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-purple-400"
+                          required
+                        />
+
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-slate-300">Attribute</span>
+                          <select
+                            value={newSkillAttribute}
+                            onChange={(e) => setNewSkillAttribute(e.target.value as AttributeKey)}
+                            className="bg-slate-950 text-xs px-2.5 py-1 rounded border border-slate-700 text-purple-200 outline-none"
+                          >
+                            {ATTRIBUTE_OPTIONS.map((opt) => (
+                              <option key={opt.key} value={opt.key}>
+                                {opt.icon} {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between text-xs font-mono">
+                          <span className="text-slate-400">AP Cost:</span>
+                          <strong className="text-amber-300">1 AP (Individually Learned)</strong>
+                        </div>
+
+                        {customSkillError && (
+                          <div className="p-2 bg-rose-950/40 border border-rose-500/30 rounded text-rose-300 text-xs flex items-center gap-1.5">
+                            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                            <span>{customSkillError}</span>
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Save & Learn Skill</span>
+                        </button>
+                      </form>
+                    )}
                   </div>
 
                 </div>
@@ -696,7 +825,7 @@ export const SkillsetsPanel: React.FC = () => {
           </div>
         ) : (
           <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
-            No skillsets learned yet. Click "Manage Skillsets" above to select skillsets.
+            No skillsets learned yet. Click "Manage Skills" above to select skillsets or create custom skills.
           </div>
         )}
       </div>
