@@ -2,13 +2,12 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   X,
-  Search,
   Sparkles,
-  RotateCcw,
-  BookOpen,
   Award,
   Heart,
   Gift,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import {
@@ -35,21 +34,6 @@ const FOCUS_STEP_UP_COSTS: Record<string, { next: DieRating; cost: number; level
   d10: { next: 'd12', cost: 8, levelGate: 60 },
 };
 
-const CATEGORIES = [
-  'ALL',
-  'Skills',
-  'Weapons',
-  'Armor',
-  'Shields',
-  'Powers',
-  'Magic Items',
-  'Attributes',
-  'Focus Die',
-  'Capstones',
-  'Vitality',
-  'GM Bonus',
-];
-
 const normalizeDie = (die?: string): string => {
   if (!die) return 'd4';
   const clean = die.toString().trim().toLowerCase();
@@ -57,23 +41,12 @@ const normalizeDie = (die?: string): string => {
   return `d${clean}`;
 };
 
-const formatDate = (ts?: string): string => {
-  if (!ts) return 'N/A';
-  try {
-    const d = new Date(ts);
-    return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
-  } catch {
-    return 'N/A';
-  }
-};
-
-export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose, onOpenAttributeManager }) => {
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, revertApExpenditure } =
+export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose }) => {
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } =
     useCharacterStore();
 
   const [activeTab, setActiveTab] = useState<RightSubTab>('FOCUS_VIT');
-  const [logSearchQuery, setLogSearchQuery] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // GM Bonus Form State
   const [gmBonusAmount, setGmBonusAmount] = useState<number>(1);
@@ -113,54 +86,157 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose,
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Calculate AP totals per category for summary grid
-  const categoryTotals = useMemo(() => {
-    const totals: Record<string, number> = {
-      Skills: 0,
-      Weapons: 0,
-      Armor: 0,
-      Shields: 0,
-      Powers: 0,
-      'Magic Items': 0,
-      Attributes: 0,
-      'Focus Die': 0,
-      Capstones: 0,
-      'GM Bonus': 0,
-    };
+  // Compute live current sheet cost details for each category
+  const categoryBreakdownList = useMemo(() => {
+    const knownSkillsets = Array.isArray(sheetData.known_skillsets) ? sheetData.known_skillsets : [];
+    const knownIndivSkills = Array.isArray(sheetData.known_individual_skills) ? sheetData.known_individual_skills : [];
+    const skillsetCost = Math.max(0, (knownSkillsets.length - 1) * 2);
+    const indivCost = knownIndivSkills.length * 1;
+    const skillsNet = skillsetCost + indivCost;
 
-    if (Array.isArray(apLog)) {
-      apLog.forEach((e) => {
-        if (!e) return;
-        const cat = e.category || 'Manual';
-        const cost = typeof e.cost === 'number' && !isNaN(e.cost) ? e.cost : 0;
-        if (cat === 'GM Bonus' || cat === 'Manual') {
-          totals['GM Bonus'] = (totals['GM Bonus'] || 0) + cost;
-        } else {
-          totals[cat] = (totals[cat] || 0) + cost;
-        }
-      });
-    }
-    return totals;
-  }, [apLog]);
+    const weapons = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
+    const skilledWeapons = weapons.filter((w: any) => w.sk);
+    const weaponsNet = Math.max(0, (skilledWeapons.length - 1) * 1);
 
-  // Filtered AP Log
-  const filteredLog = useMemo(() => {
-    if (!Array.isArray(apLog)) return [];
-    return apLog.filter((entry) => {
-      if (!entry) return false;
-      const cat = entry.category || 'Manual';
-      const desc = entry.description || '';
-      const src = entry.source || '';
-      const matchesCat =
-        selectedCategory === 'ALL' ||
-        cat === selectedCategory ||
-        (selectedCategory === 'GM Bonus' && (cat === 'GM Bonus' || cat === 'Manual'));
-      const matchesSearch =
-        desc.toLowerCase().includes((logSearchQuery || '').toLowerCase()) ||
-        src.toLowerCase().includes((logSearchQuery || '').toLowerCase());
-      return matchesCat && matchesSearch;
-    });
-  }, [apLog, selectedCategory, logSearchQuery]);
+    const wardrobe = Array.isArray(sheetData.wardrobe) ? sheetData.wardrobe : [];
+    const skilledArmor = wardrobe.filter((a: any) => a.sk);
+    const armorNet = Math.max(0, (skilledArmor.length - 1) * 1);
+
+    const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
+    const skilledShields = armory.filter((s: any) => s.sk);
+    const shieldsNet = Math.max(0, (skilledShields.length - 1) * 1);
+
+    const powerSlots = (sheetData.power_slots || []).filter(Boolean);
+    const totalPowerUnits = powerSlots.reduce((sum: number, slot: any) => sum + (slot?.version || 1), 0);
+    const powersNet = Math.max(0, totalPowerUnits - 3);
+
+    const magicItems = Array.isArray(sheetData.custom_magic_items) ? sheetData.custom_magic_items : [];
+    const magicItemsNet = magicItems.length * 1;
+
+    // Derived from log entries for Categories
+    const sumLogCategory = (cat: string) =>
+      apLog.reduce((sum, e) => (e && e.category === cat ? sum + (e.cost || 0) : sum), 0);
+
+    const attributesNet = sumLogCategory('Attributes');
+    const focusNet = sumLogCategory('Focus Die');
+    const vitalityNet = sumLogCategory('Vitality');
+    const capstonesNet = sumLogCategory('Capstones');
+
+    return [
+      {
+        id: 'skills',
+        name: 'Skills',
+        emoji: '🥋',
+        netAp: skillsNet,
+        badgeColor: 'text-indigo-300 bg-indigo-950/60 border-indigo-500/30',
+        details: [
+          { label: `SkillSets (${knownSkillsets.length} learned)`, value: `${skillsetCost} AP (1st Free)` },
+          { label: `Individual Skills (${knownIndivSkills.length} learned)`, value: `${indivCost} AP (1 AP each)` },
+        ],
+      },
+      {
+        id: 'weapons',
+        name: 'Weapons',
+        emoji: '⚔️',
+        netAp: weaponsNet,
+        badgeColor: 'text-purple-300 bg-purple-950/60 border-purple-500/30',
+        details: [
+          { label: `Skilled Weapons Equipped (${skilledWeapons.length})`, value: `${weaponsNet} AP (1st Free)` },
+        ],
+      },
+      {
+        id: 'armor',
+        name: 'Armor',
+        emoji: '🧥',
+        netAp: armorNet,
+        badgeColor: 'text-amber-300 bg-amber-950/60 border-amber-500/30',
+        details: [
+          { label: `Skilled Armor in Wardrobe (${skilledArmor.length})`, value: `${armorNet} AP (1st Free)` },
+        ],
+      },
+      {
+        id: 'shields',
+        name: 'Shields',
+        emoji: '🛡️',
+        netAp: shieldsNet,
+        badgeColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-500/30',
+        details: [
+          { label: `Skilled Shields in Armory (${skilledShields.length})`, value: `${shieldsNet} AP (1st Free)` },
+        ],
+      },
+      {
+        id: 'powers',
+        name: 'Powers',
+        emoji: '⚡',
+        netAp: powersNet,
+        badgeColor: 'text-amber-400 bg-amber-950/60 border-amber-500/30',
+        details: [
+          { label: `Learned Powers (${powerSlots.length})`, value: `${totalPowerUnits} Total Power Units` },
+          { label: `Free Power Allowance`, value: `-3 AP Free` },
+        ],
+      },
+      {
+        id: 'magicItems',
+        name: 'Magic Items',
+        emoji: '💎',
+        netAp: magicItemsNet,
+        badgeColor: 'text-pink-300 bg-pink-950/60 border-pink-500/30',
+        details: [
+          { label: `Minor Magic Items & Upgrades (${magicItems.length})`, value: `${magicItemsNet} AP` },
+        ],
+      },
+      {
+        id: 'attributes',
+        name: 'Attributes',
+        emoji: '✨',
+        netAp: attributesNet,
+        badgeColor: 'text-indigo-400 bg-indigo-950/60 border-indigo-500/30',
+        details: [
+          { label: `Die Pool Upgrades (Attribute Manager)`, value: `${attributesNet} AP` },
+        ],
+      },
+      {
+        id: 'focus',
+        name: 'Focus',
+        emoji: '🎯',
+        netAp: focusNet,
+        badgeColor: 'text-purple-400 bg-purple-950/60 border-purple-500/30',
+        details: [
+          { label: `Focus Die Rating (${focusDie})`, value: `${focusNet} AP` },
+        ],
+      },
+      {
+        id: 'vitality',
+        name: 'Vitality',
+        emoji: '❤️',
+        netAp: vitalityNet,
+        badgeColor: 'text-rose-400 bg-rose-950/60 border-rose-500/30',
+        details: [
+          { label: `Permanent +2 Max Vit Boosts (${vitalityNet} purchases)`, value: `${vitalityNet} AP (+${vitalityNet * 2} Vit)` },
+        ],
+      },
+      {
+        id: 'capstones',
+        name: 'Capstones',
+        emoji: '🏆',
+        netAp: capstonesNet,
+        badgeColor: 'text-amber-300 bg-amber-950/60 border-amber-500/30',
+        details: [
+          { label: `Heroic Capstones Unlocked`, value: `${capstonesNet} AP` },
+        ],
+      },
+      {
+        id: 'gmBonus',
+        name: 'GM Bonus',
+        emoji: '🎁',
+        netAp: gmBonusAp,
+        badgeColor: 'text-emerald-300 bg-emerald-950/60 border-emerald-500/30',
+        details: [
+          { label: `Active GM Grants & Adjustments`, value: `${gmBonusAp > 0 ? '+' : ''}${gmBonusAp} AP` },
+        ],
+      },
+    ];
+  }, [sheetData, apLog, focusDie, gmBonusAp]);
 
   if (!isOpen || !activeCharacter) return null;
 
@@ -260,7 +336,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose,
                 🧩 Manage AP
               </h2>
               <p className="text-xs text-slate-400">
-                Audit character progression, AP logs, and capstones for{' '}
+                Audit character progression, AP costs, and capstones for{' '}
                 <strong className="text-purple-300">{activeCharacter.name || 'Hero'}</strong>
               </p>
             </div>
@@ -277,7 +353,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose,
         {/* 2-Column Split Body */}
         <div className="flex-1 flex min-h-0 overflow-hidden divide-x divide-slate-800">
           {/* ========================================================================= */}
-          {/* LEFT COLUMN: HERO AP STATUS & CATEGORY BREAKDOWN LOG                      */}
+          {/* LEFT COLUMN: HERO AP STATUS BANNER & INTERACTIVE CATEGORY BREAKDOWN       */}
           {/* ========================================================================= */}
           <div className="w-1/2 flex flex-col p-5 bg-slate-900/60 overflow-hidden">
             {/* Status Banner */}
@@ -325,143 +401,64 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose,
               )}
             </div>
 
-            {/* Category AP Breakdown Grid */}
-            <div className="mb-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800 shrink-0">
-              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-2">
+            {/* Category AP Breakdown Title & Subtitle */}
+            <div className="flex items-center justify-between mb-2 shrink-0">
+              <span className="font-outfit font-extrabold text-xs uppercase tracking-wider text-purple-300">
                 Category AP Breakdown
               </span>
-              <div className="grid grid-cols-5 gap-1.5 text-[11px] text-center">
-                <div className="p-1.5 rounded bg-slate-900 border border-slate-800">
-                  <span className="text-[9px] text-slate-400 block truncate">🥋 Skills</span>
-                  <span className="font-mono font-bold text-slate-200">{categoryTotals.Skills || 0}</span>
-                </div>
-                <div className="p-1.5 rounded bg-slate-900 border border-slate-800">
-                  <span className="text-[9px] text-slate-400 block truncate">⚔️ Weapons</span>
-                  <span className="font-mono font-bold text-slate-200">{categoryTotals.Weapons || 0}</span>
-                </div>
-                <div className="p-1.5 rounded bg-slate-900 border border-slate-800">
-                  <span className="text-[9px] text-slate-400 block truncate">🧥 Armor</span>
-                  <span className="font-mono font-bold text-slate-200">{categoryTotals.Armor || 0}</span>
-                </div>
-                <div className="p-1.5 rounded bg-slate-900 border border-slate-800">
-                  <span className="text-[9px] text-slate-400 block truncate">🛡️ Shields</span>
-                  <span className="font-mono font-bold text-slate-200">{categoryTotals.Shields || 0}</span>
-                </div>
-                <div className="p-1.5 rounded bg-slate-900 border border-slate-800">
-                  <span className="text-[9px] text-slate-400 block truncate">⚡ Powers</span>
-                  <span className="font-mono font-bold text-slate-200">{categoryTotals.Powers || 0}</span>
-                </div>
-                <div className="p-1.5 rounded bg-slate-900 border border-slate-800">
-                  <span className="text-[9px] text-slate-400 block truncate">✨ Attr</span>
-                  <span className="font-mono font-bold text-slate-200">{categoryTotals.Attributes || 0}</span>
-                </div>
-                <div className="p-1.5 rounded bg-slate-900 border border-slate-800">
-                  <span className="text-[9px] text-slate-400 block truncate">🎯 Focus</span>
-                  <span className="font-mono font-bold text-slate-200">{categoryTotals['Focus Die'] || 0}</span>
-                </div>
-                <div className="p-1.5 rounded bg-slate-900 border border-slate-800">
-                  <span className="text-[9px] text-slate-400 block truncate">🏆 Capstones</span>
-                  <span className="font-mono font-bold text-slate-200">{categoryTotals.Capstones || 0}</span>
-                </div>
-                <div className="p-1.5 rounded bg-slate-900 border border-slate-800 col-span-2">
-                  <span className="text-[9px] text-amber-400 block truncate">🎁 GM Bonus</span>
-                  <span className="font-mono font-bold text-amber-300">
-                    {categoryTotals['GM Bonus'] > 0 ? `+${categoryTotals['GM Bonus']}` : categoryTotals['GM Bonus'] || 0} AP
-                  </span>
-                </div>
-              </div>
+              <span className="text-[11px] text-slate-400">Click a category card for cost details</span>
             </div>
 
-            {/* Filter & Search Bar */}
-            <div className="flex flex-col gap-2 mb-3 shrink-0">
-              <div className="flex items-center justify-between">
-                <span className="font-outfit font-extrabold text-xs uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
-                  <BookOpen className="w-4 h-4 text-purple-400" />
-                  AP Log ({filteredLog.length})
-                </span>
-                <span className="text-[11px] text-slate-400">Click ↺ to revert & refund spend</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
-                  <input
-                    type="text"
-                    value={logSearchQuery}
-                    onChange={(e) => setLogSearchQuery(e.target.value)}
-                    placeholder="Search AP log..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-purple-500"
-                  />
-                </div>
-
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-purple-500"
-                >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Log Scrollable Container */}
+            {/* Interactive Category Line-Card List */}
             <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
-              {filteredLog.length === 0 ? (
-                <div className="p-8 text-center bg-slate-950/40 rounded-xl border border-dashed border-slate-800 text-slate-500 text-xs">
-                  No AP expenditures logged matching criteria.
-                </div>
-              ) : (
-                filteredLog.map((entry) => (
+              {categoryBreakdownList.map((cat) => {
+                const isExpanded = expandedCategory === cat.id;
+
+                return (
                   <div
-                    key={entry.id || Math.random().toString()}
-                    className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-slate-700 transition-all flex items-center justify-between gap-3 text-xs"
+                    key={cat.id}
+                    className={`rounded-xl border transition-all overflow-hidden ${
+                      isExpanded
+                        ? 'bg-slate-950 border-purple-500/60 shadow-md shadow-purple-950/40'
+                        : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
+                    }`}
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-950 text-purple-300 border border-purple-500/30 uppercase">
-                          {entry.category || 'Manual'}
-                        </span>
-                        <span className="text-[10px] text-slate-500 font-mono">
-                          {formatDate(entry.timestamp)}
-                        </span>
-                        <span className="text-[10px] text-slate-500 truncate">({entry.source || 'Manage AP'})</span>
+                    {/* Line-Card Header Bar */}
+                    <div
+                      onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
+                      className="p-3 flex items-center justify-between gap-3 cursor-pointer select-none"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-lg">{cat.emoji}</span>
+                        <span className="font-outfit font-bold text-sm text-slate-100">{cat.name}</span>
                       </div>
-                      <p className="font-medium text-slate-200 truncate">{entry.description || 'AP Expenditure'}</p>
+
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-0.5 rounded-lg border font-mono font-bold text-xs ${cat.badgeColor}`}>
+                          {cat.id === 'gmBonus' && cat.netAp > 0 ? `+${cat.netAp}` : cat.netAp} AP
+                        </span>
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-purple-400 shrink-0" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-3 shrink-0">
-                      {entry.cost < 0 ? (
-                        <span className="font-outfit font-black text-xs text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                          +{Math.abs(entry.cost)} AP Refund
-                        </span>
-                      ) : entry.cost === 0 ? (
-                        <span className="font-outfit font-black text-xs text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/30">
-                          0 AP (Free)
-                        </span>
-                      ) : (
-                        <span className="font-outfit font-black text-sm text-purple-300 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-500/30">
-                          {entry.cost} AP
-                        </span>
-                      )}
-                      <button
-                        onClick={() => {
-                          revertApExpenditure(entry.id);
-                          saveActiveCharacter();
-                          showToast(`Reverted entry & refunded ${entry.cost || 0} AP!`);
-                        }}
-                        className="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 transition-colors cursor-pointer"
-                        title="Revert entry and refund AP"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    {/* Inline Expanded Cost Details */}
+                    {isExpanded && (
+                      <div className="px-3.5 pb-3.5 pt-1 border-t border-slate-800/80 bg-slate-900/50 space-y-1.5 text-xs text-slate-300">
+                        {cat.details.map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-850">
+                            <span className="text-slate-400 font-medium">{item.label}</span>
+                            <span className="font-mono font-bold text-indigo-300">{item.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ))
-              )}
+                );
+              })}
             </div>
           </div>
 
@@ -576,31 +573,6 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose,
                       Buy +2 Vit (1 AP)
                     </button>
                   </div>
-
-                  {/* Attribute Manager Launcher Link */}
-                  {onOpenAttributeManager && (
-                    <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
-                      <div>
-                        <h4 className="font-outfit font-bold text-slate-100 text-sm flex items-center gap-2">
-                          <RotateCcw className="w-4 h-4 text-indigo-400" />
-                          Attribute Manager & Reshuffle
-                        </h4>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          Configure attribute die assignments, step up die pools, and view milestone ceilings.
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          onClose();
-                          onOpenAttributeManager();
-                        }}
-                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-outfit font-bold text-white transition-all shadow-md text-xs cursor-pointer flex items-center gap-1.5"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        Attribute Manager
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
 
