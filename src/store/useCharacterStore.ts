@@ -36,7 +36,7 @@ interface CharacterStore {
   setFilterMode: (mode: 'my_heroes' | 'all_heroes') => void;
   recordApExpenditure: (
     cost: number,
-    category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'Manual',
+    category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual',
     description: string,
     tier: 1 | 2 | 3 | 'Creation' | 'Manual',
     source: string

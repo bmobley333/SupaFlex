@@ -288,7 +288,7 @@ export interface SimpleGearItem {
 export interface ApLogEntry {
   id: string;
   timestamp: string;
-  category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'Manual';
+  category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual';
   cost: number;
   description: string;
   tier: 1 | 2 | 3 | 'Creation' | 'Manual';
@@ -362,15 +362,26 @@ export const calculateSpentAp = (log?: ApLogEntry[]): number => {
   if (!log || !Array.isArray(log)) return 0;
   return log.reduce((sum, entry) => {
     if (!entry) return sum;
+    if (entry.category === 'GM Bonus' || entry.category === 'Manual') return sum;
     const cost = typeof entry.cost === 'number' && !isNaN(entry.cost) ? entry.cost : 0;
     return sum + cost;
+  }, 0);
+};
+
+export const calculateGmBonusAp = (log?: ApLogEntry[]): number => {
+  if (!log || !Array.isArray(log)) return 0;
+  return log.reduce((sum, entry) => {
+    if (!entry || (entry.category !== 'GM Bonus' && entry.category !== 'Manual')) return sum;
+    const bonus = typeof entry.cost === 'number' && !isNaN(entry.cost) ? entry.cost : 0;
+    return sum + bonus;
   }, 0);
 };
 
 export const calculateAvailableAp = (level: number, log?: ApLogEntry[], rawApField?: number): number => {
   const lifetime = calculateLifetimeAp(level);
   const spent = calculateSpentAp(log);
-  const calculated = lifetime - spent;
+  const gmBonus = calculateGmBonusAp(log);
+  const calculated = lifetime + gmBonus - spent;
   if (log && Array.isArray(log) && log.length > 0) {
     return Math.max(0, calculated);
   }
