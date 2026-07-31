@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Globe, Flame, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { AbilitySlot, Power, MagicItem } from '../../types/game';
+import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
 
 interface AbilitySlotsGridProps {
   title: string;
@@ -58,12 +58,51 @@ const parseAbilityVersion = (name: string): { baseName: string; version: number 
   return match ? { baseName: match[1].trim(), version: parseInt(match[2], 10) } : { baseName: cleaned, version: 1 };
 };
 
+const pruneLesserPowerVersions = (abilitySlots: AbilitySlot[]): AbilitySlot[] => {
+  const highestMap = abilitySlots.reduce((acc, slot) => {
+    const { baseName, version } = parseAbilityVersion(slot.name);
+    const key = baseName.toLowerCase();
+    const existing = acc[key];
+    if (!existing || version > parseAbilityVersion(existing.name).version) {
+      acc[key] = slot;
+    }
+    return acc;
+  }, {} as Record<string, AbilitySlot>);
+  return Object.values(highestMap);
+};
+
+const calculateTotalPowerUnits = (abilitySlots: AbilitySlot[]): number => {
+  const pruned = pruneLesserPowerVersions(abilitySlots);
+  return pruned.reduce((sum, slot) => {
+    const { version } = parseAbilityVersion(slot.name);
+    return sum + (version || 1);
+  }, 0);
+};
+
 export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type }) => {
   const { activeCharacter, powers, magicItems, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
   const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
   const slots: AbilitySlot[] = activeCharacter?.sheet_data?.[slotKey] || [];
   const favoriteTables: string[] = activeCharacter?.sheet_data?.favorite_power_tables || [];
   const stockCatalog = type === 'powers' ? powers : magicItems;
+
+  // Active Highest-Version Display Slots (max version per baseName)
+  const activeDisplaySlots = useMemo(() => {
+    return pruneLesserPowerVersions(slots);
+  }, [slots]);
+
+  // Powers AP Metrics (Version-based cumulative AP units: v1=1 AP, v2=2 AP, v5=5 AP; 3 Free AP Allowance)
+  const totalPowerUnits = useMemo(() => {
+    return calculateTotalPowerUnits(slots);
+  }, [slots]);
+
+  const learnedPowersCount = activeDisplaySlots.length;
+  const apSpent = Math.max(0, totalPowerUnits - 3);
+  const availableAp = calculateAvailableAp(
+    activeCharacter?.sheet_data?.level || 1,
+    activeCharacter?.sheet_data?.ap_log || [],
+    activeCharacter?.sheet_data?.ap
+  );
 
   const [showManageModal, setShowManageModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('class');
@@ -226,12 +265,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     const { baseName, version } = parseAbilityVersion(item.name);
     updateActiveSheetData((prev) => {
       const current = [...(prev[slotKey] || [])];
-      const existingIndex = current.findIndex(
-        (s) => cleanName(s.name).toLowerCase() === cleanName(item.name).toLowerCase()
-      );
 
-      if (existingIndex < 0) {
-        current.push({
+      if (type === 'powers') {
+        const oldTotalUnits = calculateTotalPowerUnits(current);
+        const oldApSpent = Math.max(0, oldTotalUnits - 3);
+
+        const existingIndex = current.findIndex(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+        );
+
+        const newSlot: AbilitySlot = {
           select: true,
           name: cleanName(item.name),
           base_name: baseName,
@@ -240,23 +283,89 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           usage: item.usage || '1-Enc',
           effect: item.effect || '',
           checked: [false, false, false],
-        });
-        const category = type === 'powers' ? 'Powers' : 'Magic Items';
-        const label = type === 'powers' ? 'Learned Power' : 'Acquired Magic Item';
-        const sourceLabel = type === 'powers' ? 'Manage Powers' : 'Manage Magic Items';
-        recordApExpenditure(1, category, `${label}: ${cleanName(item.name)}`, 1, sourceLabel);
+        };
+
+        if (existingIndex >= 0) {
+          const oldVersion = parseAbilityVersion(current[existingIndex].name).version;
+          if (version > oldVersion) {
+            current[existingIndex] = newSlot;
+          } else {
+            return prev;
+          }
+        } else {
+          current.push(newSlot);
+        }
+
+        const prunedCurrent = pruneLesserPowerVersions(current);
+        const newTotalUnits = calculateTotalPowerUnits(prunedCurrent);
+        const newApSpent = Math.max(0, newTotalUnits - 3);
+        const apDiff = newApSpent - oldApSpent;
+
+        const isUpgrade = existingIndex >= 0;
+        const logAction = isUpgrade ? 'Upgraded Power' : 'Learned Power';
+
+        if (apDiff > 0) {
+          recordApExpenditure(apDiff, 'Powers', `${logAction}: ${cleanName(item.name)} (+${apDiff} AP)`, 1, 'Manage Powers');
+        } else {
+          recordApExpenditure(0, 'Powers', `${logAction}: ${cleanName(item.name)} (0 AP - Covered by Free AP)`, 1, 'Manage Powers');
+        }
+
+        return { ...prev, [slotKey]: prunedCurrent };
+      } else {
+        const existingIndex = current.findIndex(
+          (s) => cleanName(s.name).toLowerCase() === cleanName(item.name).toLowerCase()
+        );
+        if (existingIndex < 0) {
+          current.push({
+            select: true,
+            name: cleanName(item.name),
+            base_name: baseName,
+            version: version,
+            action: (item.action?.toUpperCase() as any) || 'A',
+            usage: item.usage || '1-Enc',
+            effect: item.effect || '',
+            checked: [false, false, false],
+          });
+          recordApExpenditure(1, 'Magic Items', `Acquired Magic Item: ${cleanName(item.name)}`, 1, 'Manage Magic Items');
+        }
+        return { ...prev, [slotKey]: current };
       }
-      return { ...prev, [slotKey]: current };
     });
     saveActiveCharacter();
   };
 
   // Drop / Un-learn an ability from the character's active roster
   const handleForgetAbility = (abilityName: string) => {
+    const { baseName: targetBaseName } = parseAbilityVersion(abilityName);
     updateActiveSheetData((prev) => {
       const current = [...(prev[slotKey] || [])];
-      const updated = current.filter((s) => cleanName(s.name).toLowerCase() !== cleanName(abilityName).toLowerCase());
-      return { ...prev, [slotKey]: updated };
+
+      if (type === 'powers') {
+        const oldTotalUnits = calculateTotalPowerUnits(current);
+        const oldApSpent = Math.max(0, oldTotalUnits - 3);
+
+        const updated = current.filter(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
+        );
+        const prunedUpdated = pruneLesserPowerVersions(updated);
+
+        const newTotalUnits = calculateTotalPowerUnits(prunedUpdated);
+        const newApSpent = Math.max(0, newTotalUnits - 3);
+        const apRefund = oldApSpent - newApSpent;
+
+        if (apRefund > 0) {
+          recordApExpenditure(-apRefund, 'Powers', `Unlearned Power: ${cleanName(abilityName)} (-${apRefund} AP Refunded)`, 1, 'Manage Powers');
+        } else {
+          recordApExpenditure(0, 'Powers', `Unlearned Power: ${cleanName(abilityName)} (0 AP - Free Slot Freed)`, 1, 'Manage Powers');
+        }
+
+        return { ...prev, [slotKey]: prunedUpdated };
+      } else {
+        const updated = current.filter(
+          (s) => cleanName(s.name).toLowerCase() !== cleanName(abilityName).toLowerCase()
+        );
+        return { ...prev, [slotKey]: updated };
+      }
     });
     saveActiveCharacter();
   };
@@ -290,11 +399,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const updatedCustom = [...existingCustom, newItem];
 
       const currentSlots = [...(prev[slotKey] || [])];
-      const existingIndex = currentSlots.findIndex(
-        (s) => cleanName(s.name).toLowerCase() === versionedName.toLowerCase()
-      );
-      if (existingIndex < 0) {
-        currentSlots.push({
+
+      if (type === 'powers') {
+        const oldTotalUnits = calculateTotalPowerUnits(currentSlots);
+        const oldApSpent = Math.max(0, oldTotalUnits - 3);
+
+        const existingIndex = currentSlots.findIndex(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+        );
+
+        const newSlot: AbilitySlot = {
           select: true,
           name: versionedName,
           base_name: baseName,
@@ -303,14 +417,55 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           usage: createUsage,
           effect: createEffect.trim(),
           checked: [false, false, false],
-        });
-      }
+        };
 
-      return {
-        ...prev,
-        [customKey]: updatedCustom,
-        [slotKey]: currentSlots,
-      };
+        if (existingIndex >= 0) {
+          currentSlots[existingIndex] = newSlot;
+        } else {
+          currentSlots.push(newSlot);
+        }
+
+        const prunedSlots = pruneLesserPowerVersions(currentSlots);
+        const newTotalUnits = calculateTotalPowerUnits(prunedSlots);
+        const newApSpent = Math.max(0, newTotalUnits - 3);
+        const apDiff = newApSpent - oldApSpent;
+
+        const isUpgrade = existingIndex >= 0;
+        const logAction = isUpgrade ? 'Upgraded Power' : 'Created & Learned Power';
+
+        if (apDiff > 0) {
+          recordApExpenditure(apDiff, 'Powers', `${logAction}: ${versionedName} (+${apDiff} AP)`, 1, 'Manage Powers');
+        } else {
+          recordApExpenditure(0, 'Powers', `${logAction}: ${versionedName} (0 AP - Covered by Free AP)`, 1, 'Manage Powers');
+        }
+
+        return {
+          ...prev,
+          [customKey]: updatedCustom,
+          [slotKey]: prunedSlots,
+        };
+      } else {
+        const existingIndex = currentSlots.findIndex(
+          (s) => cleanName(s.name).toLowerCase() === versionedName.toLowerCase()
+        );
+        if (existingIndex < 0) {
+          currentSlots.push({
+            select: true,
+            name: versionedName,
+            base_name: baseName,
+            version: version,
+            action: (createAction.toUpperCase() as any) || 'A',
+            usage: createUsage,
+            effect: createEffect.trim(),
+            checked: [false, false, false],
+          });
+        }
+        return {
+          ...prev,
+          [customKey]: updatedCustom,
+          [slotKey]: currentSlots,
+        };
+      }
     });
     saveActiveCharacter();
 
@@ -392,28 +547,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     });
   }, [activeTableAbilities, rightSearchQuery]);
 
-  // Filtered learned roster for Left Column search
+  // Filtered learned roster for Left Column search (Highest Version Only)
   const filteredRoster = useMemo(() => {
-    if (!leftSearchQuery.trim()) return slots;
+    const roster = type === 'powers' ? activeDisplaySlots : slots;
+    if (!leftSearchQuery.trim()) return roster;
     const q = leftSearchQuery.toLowerCase().trim();
-    return slots.filter((s) => cleanName(s.name).toLowerCase().includes(q) || (s.effect || '').toLowerCase().includes(q));
-  }, [slots, leftSearchQuery]);
+    return roster.filter((s) => cleanName(s.name).toLowerCase().includes(q) || (s.effect || '').toLowerCase().includes(q));
+  }, [type, activeDisplaySlots, slots, leftSearchQuery]);
 
   const sectionIcon = type === 'powers' ? '🔥' : '✨';
   const displayTitle = title || (type === 'powers' ? 'POWERS' : 'MAGIC ITEMS');
-
-  // Automatic Highest-Version Active Sheet Display (max version per baseName)
-  const activeDisplaySlots = useMemo(() => {
-    const highestMap = slots.reduce((acc, slot) => {
-      const { baseName, version } = parseAbilityVersion(slot.name);
-      const existing = acc[baseName];
-      if (!existing || version > parseAbilityVersion(existing.name).version) {
-        acc[baseName] = slot;
-      }
-      return acc;
-    }, {} as Record<string, AbilitySlot>);
-    return Object.values(highestMap);
-  }, [slots]);
 
   // Default Action Economy Sorting for Active Sheet
   const sortedSlots = useMemo(() => {
@@ -465,8 +608,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-xs"
               >
                 {/* Modal Top Bar */}
-                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2.5">
+                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
+                  <div className="flex items-center gap-2.5 shrink-0">
                     <div className={`p-2 rounded-xl border flex items-center justify-center ${
                       type === 'powers' ? 'bg-amber-950/80 border-amber-500/30 text-amber-300' : 'bg-cyan-950/80 border-cyan-500/30 text-cyan-300'
                     }`}>
@@ -482,9 +625,23 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     </div>
                   </div>
 
+                  {/* Center: KISS Top-Center Header Status Pill */}
+                  {type === 'powers' && (
+                    <div className="px-3.5 py-1 bg-amber-950/70 border border-amber-500/40 rounded-full font-mono font-bold text-xs text-amber-200 flex items-center gap-2 shadow-md">
+                      <span>
+                        Learned <strong className="text-amber-300">{totalPowerUnits}</strong>; Used{' '}
+                        <strong className="text-rose-300">
+                          {apSpent}
+                          {totalPowerUnits > 0 ? `+${Math.min(3, totalPowerUnits)}Free` : ''} AP
+                        </strong>
+                        ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
+                      </span>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => setShowManageModal(false)}
-                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
+                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -503,7 +660,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           Learned {type === 'powers' ? 'Powers' : 'Magic Items'}
                         </span>
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
-                          {slots.length}
+                          {type === 'powers' ? activeDisplaySlots.length : slots.length}
                         </span>
                       </div>
 
