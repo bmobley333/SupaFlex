@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Check, ChevronDown, ChevronUp, Search, X, Sparkles, BookOpen, Scroll, GraduationCap } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { AttributeKey } from '../../types/game';
+import { AttributeKey, calculateAvailableAp } from '../../types/game';
 
 interface DerivedSkill {
   name: string;
@@ -44,6 +44,18 @@ export const SkillsetsPanel: React.FC = () => {
     moxie: 'd8',
   };
 
+  // Skillsets & Skills AP Metrics (1 Free SkillSet; 2 AP per additional SkillSet; 1 AP per Individual Skill)
+  const skillsetCount = useMemo(() => Array.from(new Set(knownSkillsetNames)).length, [knownSkillsetNames]);
+  const individualSkillCount = knownIndividualSkills.length;
+  const skillsetsApSpent = Math.max(0, (skillsetCount - 1) * 2);
+  const individualSkillsApSpent = individualSkillCount * 1;
+  const totalApSpent = skillsetsApSpent + individualSkillsApSpent;
+  const availableAp = calculateAvailableAp(
+    activeCharacter?.sheet_data?.level || 1,
+    activeCharacter?.sheet_data?.ap_log || [],
+    activeCharacter?.sheet_data?.ap
+  );
+
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
   const [activeRightTab, setActiveRightTab] = useState<'skillsets' | 'individual'>('skillsets');
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
@@ -65,7 +77,9 @@ export const SkillsetsPanel: React.FC = () => {
   }, [showManageModal]);
 
   const handleToggleSkillset = (name: string) => {
-    const isLearning = !knownSkillsetNames.includes(name);
+    const uniqueCurrent = Array.from(new Set(knownSkillsetNames));
+    const isLearning = !uniqueCurrent.includes(name);
+
     updateActiveSheetData((prev) => {
       const current = prev.known_skillsets || [];
       const updated = current.includes(name)
@@ -73,8 +87,21 @@ export const SkillsetsPanel: React.FC = () => {
         : [...current, name];
       return { ...prev, known_skillsets: updated };
     });
+
     if (isLearning) {
-      recordApExpenditure(2, 'Skills', `Learned Skill Set: ${name}`, 1, 'Manage Skills');
+      const currentCount = uniqueCurrent.length;
+      if (currentCount === 0) {
+        recordApExpenditure(0, 'Skills', `Learned Skill Set: ${name} (1st Free SkillSet)`, 1, 'Manage Skills');
+      } else {
+        recordApExpenditure(2, 'Skills', `Learned Skill Set: ${name} (2 AP)`, 1, 'Manage Skills');
+      }
+    } else {
+      const previousCount = uniqueCurrent.length;
+      if (previousCount > 1) {
+        recordApExpenditure(-2, 'Skills', `Unlearned Skill Set: ${name} (-2 AP Refunded)`, 1, 'Manage Skills');
+      } else {
+        recordApExpenditure(0, 'Skills', `Unlearned Skill Set: ${name} (0 AP - Free Slot Freed)`, 1, 'Manage Skills');
+      }
     }
     saveActiveCharacter();
   };
@@ -88,8 +115,11 @@ export const SkillsetsPanel: React.FC = () => {
         : [...current, skillName];
       return { ...prev, known_individual_skills: updated };
     });
+
     if (isLearning) {
-      recordApExpenditure(1, 'Skills', `Learned Skill: ${skillName}`, 1, 'Manage Skills');
+      recordApExpenditure(1, 'Skills', `Learned Individual Skill: ${skillName} (1 AP)`, 1, 'Manage Skills');
+    } else {
+      recordApExpenditure(-1, 'Skills', `Unlearned Individual Skill: ${skillName} (-1 AP Refunded)`, 1, 'Manage Skills');
     }
     saveActiveCharacter();
   };
@@ -307,8 +337,8 @@ export const SkillsetsPanel: React.FC = () => {
                 className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-left"
               >
                 {/* Pillar 1: Header Architecture & Exact Icon Parity */}
-                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2.5">
+                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
+                  <div className="flex items-center gap-2.5 shrink-0">
                     <div className="p-2 rounded-xl bg-purple-950/80 border border-purple-500/30 text-purple-300 flex items-center justify-center">
                       <span className="text-lg leading-none">🎓</span>
                     </div>
@@ -322,9 +352,22 @@ export const SkillsetsPanel: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Center: KISS Top-Center Header Status Pill */}
+                  <div className="px-3.5 py-1 bg-purple-950/70 border border-purple-500/40 rounded-full font-mono font-bold text-xs text-purple-200 flex items-center gap-2 shadow-md">
+                    <span>
+                      SkillSets <strong className="text-purple-300">{skillsetCount}</strong>
+                      {individualSkillCount > 0 && <>; Skills <strong className="text-purple-300">{individualSkillCount}</strong></>}; Used{' '}
+                      <strong className="text-rose-300">
+                        {totalApSpent}
+                        {skillsetCount >= 1 ? '+2Free' : ''} AP
+                      </strong>
+                      ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
+                    </span>
+                  </div>
+
                   <button
                     onClick={() => setShowManageModal(false)}
-                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
+                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0"
                   >
                     <X className="w-5 h-5" />
                   </button>
