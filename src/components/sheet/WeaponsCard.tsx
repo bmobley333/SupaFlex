@@ -9,6 +9,7 @@ import {
   WeaponVariantOption,
   splitWeaponIntoVariants,
   isWeaponVariantLearnable,
+  calculateAvailableAp,
 } from '../../types/game';
 
 const DIE_SCALE = [4, 6, 8, 10, 12];
@@ -173,6 +174,35 @@ export const WeaponsCard: React.FC = () => {
     saveActiveCharacter();
   };
 
+  // Group active equipped weapon slots by base weapon name for Left Column pane
+  const groupedEquippedWeapons = useMemo(() => {
+    const map = new Map<string, { baseName: string; slots: WeaponSlot[] }>();
+
+    weapons.forEach((slot) => {
+      const baseName = getBaseWeaponName(slot.name);
+      const key = baseName.toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, { baseName, slots: [] });
+      }
+      map.get(key)!.slots.push(slot);
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.baseName.localeCompare(b.baseName));
+  }, [weapons]);
+
+  // Skilled weapon groups (groups containing at least 1 slot with sk === true)
+  const skilledWeaponGroups = useMemo(() => {
+    return groupedEquippedWeapons.filter((g) => g.slots.some((s) => s.sk));
+  }, [groupedEquippedWeapons]);
+
+  const skilledWeaponsCount = skilledWeaponGroups.length;
+  const weaponApSpent = Math.max(0, skilledWeaponsCount - 1);
+  const availableAp = calculateAvailableAp(
+    activeCharacter?.sheet_data?.level || 1,
+    activeCharacter?.sheet_data?.ap_log || [],
+    activeCharacter?.sheet_data?.ap
+  );
+
   // Equip all variants of a weapon to the character sheet
   const handleEquipWeapon = (weapon: SupabaseWeapon, variantsToEquip: WeaponVariantOption[]) => {
     const newSlots: WeaponSlot[] = variantsToEquip.map((variant) => {
@@ -194,11 +224,22 @@ export const WeaponsCard: React.FC = () => {
       };
     });
 
+    const isEquippedAsSkilled = newSlots.some((s) => s.sk);
+
     updateActiveSheetData((prev) => {
       const existingNames = new Set((prev.weapons || []).map((w) => w.name.toLowerCase()));
       const filteredNewSlots = newSlots.filter((s) => !existingNames.has(s.name.toLowerCase()));
       if (filteredNewSlots.length > 0) {
-        recordApExpenditure(1, 'Weapons', `Learned Weapon Skill: ${weapon.name}`, 1, 'Manage Weapons');
+        if (isEquippedAsSkilled) {
+          const currentSkilledCount = skilledWeaponsCount;
+          if (currentSkilledCount === 0) {
+            recordApExpenditure(0, 'Weapons', `Learned Skilled Weapon: ${weapon.name} (1st Free Weapon)`, 1, 'Manage Weapons');
+          } else {
+            recordApExpenditure(1, 'Weapons', `Learned Skilled Weapon: ${weapon.name} (1 AP)`, 1, 'Manage Weapons');
+          }
+        } else {
+          recordApExpenditure(0, 'Weapons', `Equipped Unskilled Weapon: ${weapon.name} (0 AP - Unskilled)`, 1, 'Manage Weapons');
+        }
       }
       return {
         ...prev,
@@ -210,12 +251,28 @@ export const WeaponsCard: React.FC = () => {
 
   // Un-equip all variants matching a base weapon name
   const handleDropWeapon = (baseWeaponName: string) => {
+    const targetGroup = groupedEquippedWeapons.find(
+      (g) => g.baseName.toLowerCase() === baseWeaponName.toLowerCase()
+    );
+    const wasSkilled = targetGroup ? targetGroup.slots.some((s) => s.sk) : false;
+
     updateActiveSheetData((prev) => ({
       ...prev,
       weapons: (prev.weapons || [])
         .filter((w) => getBaseWeaponName(w.name).toLowerCase() !== baseWeaponName.toLowerCase())
         .sort((a, b) => a.name.localeCompare(b.name)),
     }));
+
+    if (wasSkilled) {
+      if (skilledWeaponsCount > 1) {
+        recordApExpenditure(-1, 'Weapons', `Unlearned Skilled Weapon: ${baseWeaponName} (-1 AP Refunded)`, 1, 'Manage Weapons');
+      } else {
+        recordApExpenditure(0, 'Weapons', `Unlearned Skilled Weapon: ${baseWeaponName} (0 AP - Free Slot Freed)`, 1, 'Manage Weapons');
+      }
+    } else {
+      recordApExpenditure(0, 'Weapons', `Dropped Unskilled Weapon: ${baseWeaponName} (0 AP)`, 1, 'Manage Weapons');
+    }
+
     saveActiveCharacter();
   };
 
@@ -271,21 +328,7 @@ export const WeaponsCard: React.FC = () => {
     }
   };
 
-  // Group active equipped weapon slots by base weapon name for Left Column pane
-  const groupedEquippedWeapons = useMemo(() => {
-    const map = new Map<string, { baseName: string; slots: WeaponSlot[] }>();
 
-    weapons.forEach((slot) => {
-      const baseName = getBaseWeaponName(slot.name);
-      const key = baseName.toLowerCase();
-      if (!map.has(key)) {
-        map.set(key, { baseName, slots: [] });
-      }
-      map.get(key)!.slots.push(slot);
-    });
-
-    return Array.from(map.values()).sort((a, b) => a.baseName.localeCompare(b.baseName));
-  }, [weapons]);
 
   // Filtered grouped equipped weapons for Left Column search
   const filteredGroupedEquippedWeapons = useMemo(() => {
@@ -371,8 +414,8 @@ export const WeaponsCard: React.FC = () => {
                 className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden"
               >
                 {/* Modal Top Bar */}
-                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2.5">
+                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
+                  <div className="flex items-center gap-2.5 shrink-0">
                     <div className="p-2 rounded-xl bg-rose-950/80 border border-rose-500/30 text-rose-300 flex items-center justify-center">
                       <span className="text-lg leading-none">⚔️</span>
                     </div>
@@ -381,14 +424,23 @@ export const WeaponsCard: React.FC = () => {
                         Weapons Manager
                       </h3>
                       <p className="text-xs text-slate-400 hidden sm:block">
-                        Manage character weapons and arsenal side-by-side with the SupaFlex stock catalog and custom creator.
+                        Manage character weapons and arsenal side-by-side with stock catalog.
                       </p>
                     </div>
                   </div>
 
+                  {/* KISS Top-Center Header Status Pill */}
+                  <div className="px-3.5 py-1 bg-purple-950/70 border border-purple-500/40 rounded-full font-mono font-bold text-xs text-purple-200 flex items-center gap-2 shadow-md">
+                    <span>
+                      Skilled <strong className="text-purple-300">{skilledWeaponsCount}</strong>; Used{' '}
+                      <strong className="text-rose-300">{weaponApSpent} AP</strong>; Available{' '}
+                      <strong className="text-emerald-400">{availableAp} AP</strong>
+                    </span>
+                  </div>
+
                   <button
                     onClick={() => setShowManageModal(false)}
-                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
+                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0"
                   >
                     <X className="w-5 h-5" />
                   </button>

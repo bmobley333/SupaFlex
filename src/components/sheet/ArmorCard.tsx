@@ -10,6 +10,7 @@ import {
   getMrFromRequirement,
   getArFromRequirement,
   isRequirementLearnable,
+  calculateAvailableAp,
 } from '../../types/game';
 
 const getDieNum = (dieRating?: string): number => {
@@ -58,6 +59,18 @@ export const ArmorCard: React.FC = () => {
 
   const derivedBlock = getDieNum(attributeDice.might);
   const derivedDodge = getDieNum(attributeDice.motion);
+
+  const skilledArmorList = useMemo(() => {
+    return wardrobe.filter((w) => w.sk);
+  }, [wardrobe]);
+
+  const skilledArmorCount = skilledArmorList.length;
+  const armorApSpent = Math.max(0, skilledArmorCount - 1);
+  const availableAp = calculateAvailableAp(
+    activeCharacter?.sheet_data?.level || 1,
+    activeCharacter?.sheet_data?.ap_log || [],
+    activeCharacter?.sheet_data?.ap
+  );
 
   const [showManageModal, setShowManageModal] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -168,7 +181,16 @@ export const ArmorCard: React.FC = () => {
         (w) => w.name.toLowerCase() === item.name.toLowerCase()
       );
       if (!isAlreadyInWardrobe) {
-        recordApExpenditure(1, 'Armor', `Learned Armor Skill: ${item.name}`, 1, 'Manage Armor');
+        if (isLearnable) {
+          const currentSkilledCount = skilledArmorCount;
+          if (currentSkilledCount === 0) {
+            recordApExpenditure(0, 'Armor', `Learned Skilled Armor: ${item.name} (1st Free Armor)`, 1, 'Manage Armor');
+          } else {
+            recordApExpenditure(1, 'Armor', `Learned Skilled Armor: ${item.name} (1 AP)`, 1, 'Manage Armor');
+          }
+        } else {
+          recordApExpenditure(0, 'Armor', `Added Unskilled Armor: ${item.name} (0 AP - Unskilled)`, 1, 'Manage Armor');
+        }
       }
       const updatedWardrobe = isAlreadyInWardrobe ? existingWardrobe : [...existingWardrobe, newArmorItem];
       return {
@@ -183,6 +205,9 @@ export const ArmorCard: React.FC = () => {
   };
 
   const handleDropFromWardrobe = (armorName: string) => {
+    const targetArmor = wardrobe.find((w) => w.name.toLowerCase() === armorName.toLowerCase());
+    const wasSkilled = targetArmor ? targetArmor.sk : false;
+
     updateActiveSheetData((prev) => {
       const existingWardrobe = prev.wardrobe || wardrobe;
       const updatedWardrobe = existingWardrobe.filter((w) => w.name.toLowerCase() !== armorName.toLowerCase());
@@ -197,6 +222,17 @@ export const ArmorCard: React.FC = () => {
           mr: '👣8',
         };
       }
+
+      if (wasSkilled) {
+        if (skilledArmorCount > 1) {
+          recordApExpenditure(-1, 'Armor', `Unlearned Skilled Armor: ${armorName} (-1 AP Refunded)`, 1, 'Manage Armor');
+        } else {
+          recordApExpenditure(0, 'Armor', `Unlearned Skilled Armor: ${armorName} (0 AP - Free Slot Freed)`, 1, 'Manage Armor');
+        }
+      } else {
+        recordApExpenditure(0, 'Armor', `Dropped Unskilled Armor: ${armorName} (0 AP)`, 1, 'Manage Armor');
+      }
+
       return {
         ...prev,
         armor_slot: nextActiveArmor,
@@ -288,14 +324,24 @@ export const ArmorCard: React.FC = () => {
           {showManageModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
               <div ref={modalRef} className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
+                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
+                  <div className="flex items-center gap-2.5 shrink-0">
                     <div className="p-2 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-300">🧥</div>
                     <div>
                       <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide">Armor Manager</h3>
                     </div>
                   </div>
-                  <button onClick={() => setShowManageModal(false)} className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800"><X className="w-5 h-5" /></button>
+
+                  {/* KISS Top-Center Header Status Pill */}
+                  <div className="px-3.5 py-1 bg-amber-950/70 border border-amber-500/40 rounded-full font-mono font-bold text-xs text-amber-200 flex items-center gap-2 shadow-md">
+                    <span>
+                      Skilled <strong className="text-amber-300">{skilledArmorCount}</strong>; Used{' '}
+                      <strong className="text-rose-300">{armorApSpent} AP</strong>; Available{' '}
+                      <strong className="text-emerald-400">{availableAp} AP</strong>
+                    </span>
+                  </div>
+
+                  <button onClick={() => setShowManageModal(false)} className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 shrink-0"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden">

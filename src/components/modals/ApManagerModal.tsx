@@ -461,9 +461,19 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({ isOpen, onClose 
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="font-outfit font-black text-sm text-purple-300 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-500/30">
-                        {entry.cost || 0} AP
-                      </span>
+                      {entry.cost < 0 ? (
+                        <span className="font-outfit font-black text-xs text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
+                          +{Math.abs(entry.cost)} AP Refund
+                        </span>
+                      ) : entry.cost === 0 ? (
+                        <span className="font-outfit font-black text-xs text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/30">
+                          0 AP (Free)
+                        </span>
+                      ) : (
+                        <span className="font-outfit font-black text-sm text-purple-300 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-500/30">
+                          {entry.cost} AP
+                        </span>
+                      )}
                       <button
                         onClick={() => {
                           revertApExpenditure(entry.id);
