@@ -317,6 +317,7 @@ export interface CharacterSheetData {
   ap_log?: ApLogEntry[];
   vitality_max: number;
   current_vitality: number;
+  last_vit_roll_level?: number;
   wounds: number;
   max_wounds: number;
   defense: number;

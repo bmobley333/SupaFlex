@@ -279,22 +279,6 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
     showToast(`Focus die upgraded to ${upgrade.next}!`);
   };
 
-  // Handle Vit +2 Purchase
-  const handleBuyVit = () => {
-    if (availableAp < 1) {
-      showToast('Insufficient AP! Required: 1 AP.');
-      return;
-    }
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      vitality_max: (prev.vitality_max || 10) + 2,
-      current_vitality: (prev.current_vitality || 10) + 2,
-    }));
-    recordApExpenditure(1, 'Vitality', 'Purchased +2 Max Vitality', 1, 'Manage AP');
-    saveActiveCharacter();
-    showToast('Gained +2 Max Vitality!');
-  };
-
   // Handle Tier 3 Capstones
   const handleBuyCapstone = (title: string, cost: number) => {
     if (availableAp < cost) {
@@ -580,53 +564,29 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
               {/* TAB 2: VITALITY BOOST */}
               {activeTab === 'VITALITY' && (
                 <div className="space-y-4">
-                  {/* Vitality Running Total Read-Only Box */}
-                  <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/40 flex items-center justify-between text-xs">
-                    <span className="font-bold text-rose-300 flex items-center gap-2">
-                      <Heart className="w-4 h-4 text-rose-400" />
-                      TOTAL +Vit Gained:
-                    </span>
-                    <span className="font-black text-rose-300 font-mono text-sm px-3 py-1 bg-rose-950 rounded-lg border border-rose-500/40">
-                      +{liveApData.categories.Vitality * 2} Max Vit ({liveApData.categories.Vitality} AP spent)
-                    </span>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
-                    <div>
-                      <h4 className="font-outfit font-bold text-slate-100 text-sm flex items-center gap-2">
+                  <div className="p-5 rounded-2xl bg-slate-950/90 border border-rose-500/30 flex items-center justify-between shadow-xl">
+                    <div className="space-y-1">
+                      <h4 className="font-outfit font-bold text-rose-300 text-sm flex items-center gap-2">
                         <Heart className="w-4 h-4 text-rose-400" />
-                        Gain +2 Max Vitality
+                        Open Vitality Manager
                       </h4>
-                      <p className="text-xs text-slate-400 mt-0.5">Permanently increases your maximum Vit by +2.</p>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Access Level Vit rolls, AP boosts (+2 Vit for 1 AP), auto-roll calculator, and restoration controls.
+                      </p>
                     </div>
-                    <button
-                      onClick={handleBuyVit}
-                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 font-outfit font-bold text-white transition-all shadow-md text-xs cursor-pointer"
-                    >
-                      Buy +2 Vit (1 AP)
-                    </button>
-                  </div>
-
-                  {onOpenVitalityManager && (
-                    <div className="p-4 rounded-xl bg-slate-950/90 border border-rose-500/30 flex items-center justify-between">
-                      <div>
-                        <h4 className="font-outfit font-bold text-rose-300 text-sm flex items-center gap-2">
-                          <span>🎲</span> Open Full Vitality Manager
-                        </h4>
-                        <p className="text-xs text-slate-400 mt-0.5">Access Level Vit rolls, auto-roll calculator, and restoration controls.</p>
-                      </div>
+                    {onOpenVitalityManager && (
                       <button
                         onClick={() => {
                           onClose();
                           onOpenVitalityManager();
                         }}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 font-outfit font-bold text-white transition-all shadow-md text-xs cursor-pointer flex items-center gap-1.5"
+                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 font-outfit font-bold text-white transition-all shadow-lg text-xs cursor-pointer flex items-center gap-2 shrink-0 active:scale-95"
                       >
                         <span>Open Manager</span>
                         <span>❤️</span>
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
 
