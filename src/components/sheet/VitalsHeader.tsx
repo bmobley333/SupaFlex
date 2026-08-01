@@ -1,6 +1,6 @@
-// src/components/sheet/VitalsHeader.tsx
 import React, { useState, useRef } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { CardHelpButton } from '../common/CardHelpButton';
 
 interface VitalsHeaderProps {
   onOpenVitalityManager?: () => void;
@@ -91,6 +91,7 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
             <span className="text-base">❤️</span>
             Vitality
           </h3>
+          <CardHelpButton ruleKey="vitality.death_checks" />
           {currentHp < 0 && (
             <span className="text-[10px] font-mono px-2 py-0.5 bg-rose-950 text-rose-300 rounded-full border border-rose-500/40 font-bold animate-pulse">
               Death Check / Negative

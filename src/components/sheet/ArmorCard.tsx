@@ -3,6 +3,8 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp, X, Check, Shirt, Plus, Search, Loader2, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
+import { CardHelpButton } from '../common/CardHelpButton';
+import { RuleTooltip } from '../common/RuleTooltip';
 import {
   ArmorData,
   MovementRateData,
@@ -310,9 +312,12 @@ export const ArmorCard: React.FC = () => {
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-        <h3 className="font-outfit font-bold text-sm tracking-widest text-amber-300 uppercase flex items-center gap-2">
-          <span className="text-base">🧥</span> Armor
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-outfit font-bold text-sm tracking-widest text-amber-300 uppercase flex items-center gap-2">
+            <span className="text-base">🧥</span> Armor
+          </h3>
+          <CardHelpButton ruleKey="col.armor.ar" />
+        </div>
         <div className="relative">
           <button
             onClick={() => setShowManageModal(!showManageModal)}
@@ -367,7 +372,7 @@ export const ArmorCard: React.FC = () => {
                               <div className="flex items-center gap-2"><button type="button" onClick={() => handleSelectActiveArmor(item)} className={`px-2 py-0.5 text-xs font-bold rounded-lg border ${isActive ? 'bg-emerald-600/30 text-emerald-200' : 'bg-slate-950 text-slate-400'}`}>{isActive ? '● Active' : '○ Wear'}</button><span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span></div>
                               <button onClick={() => handleDropFromWardrobe(item.name)} className="px-2 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold rounded-lg">- Drop</button>
                             </div>
-                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400"><span>AR: {item.ar} | MR: {item.mr}</span></div>
+                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400"><span><RuleTooltip ruleKey="col.armor.ar">AR</RuleTooltip>: {item.ar} | MR: {item.mr}</span></div>
                           </div>
                         );
                       })}

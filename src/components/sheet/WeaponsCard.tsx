@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Plus, X, Check, Swords, AlertCircle, Loader2, Search, Globe } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
+import { RuleTooltip } from '../common/RuleTooltip';
 import {
   WeaponSlot,
   SupabaseWeapon,
@@ -557,9 +558,9 @@ export const WeaponsCard: React.FC = () => {
                                       <div className="flex items-center gap-3 text-[10px] text-slate-400 font-mono">
                                         <span>Atk: <strong className="text-rose-300">{calculatedAtk}</strong></span>
                                         <span>•</span>
-                                        <span>Dmg: <strong className="text-rose-300">{calculatedDmg}</strong></span>
+                                        <span><RuleTooltip ruleKey="col.weapons.dmg">Dmg</RuleTooltip>: <strong className="text-rose-300">{calculatedDmg}</strong></span>
                                         <span>•</span>
-                                        <span>Blk: <strong className="text-amber-300">{item.max_blk ?? 'n/a'}</strong></span>
+                                        <span><RuleTooltip ruleKey="col.shields.block">Blk</RuleTooltip>: <strong className="text-amber-300">{item.max_blk ?? 'n/a'}</strong></span>
                                       </div>
                                     </div>
                                   );

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Check, ChevronDown, ChevronUp, Search, X, Sparkles, BookOpen, Scroll, GraduationCap, Plus, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, calculateAvailableAp } from '../../types/game';
+import { CardHelpButton } from '../common/CardHelpButton';
 
 interface DerivedSkill {
   name: string;
@@ -360,10 +361,13 @@ export const SkillsetsPanel: React.FC = () => {
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">
       {/* Main Sheet Card Header */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-        <h3 className="font-outfit font-bold text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
-          <span className="text-base">🎓</span>
-          Skillsets
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-outfit font-bold text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
+            <span className="text-base">🎓</span>
+            Skillsets
+          </h3>
+          <CardHelpButton ruleKey="skills.basics" />
+        </div>
 
         {/* Manage Skills Trigger Button */}
         <div className="relative">

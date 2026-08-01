@@ -11,6 +11,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { CardHelpButton } from '../common/CardHelpButton';
 import {
   DieRating,
   ApLogEntry,
@@ -325,6 +326,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
             <div>
               <h2 className="font-outfit font-black text-xl text-slate-100 tracking-wide flex items-center gap-2">
                 🧩 Manage AP
+                <CardHelpButton ruleKey="leveling.advancement_steps" />
               </h2>
               <p className="text-xs text-slate-400">
                 Audit character progression, AP costs, and capstones for{' '}
