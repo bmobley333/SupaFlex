@@ -30,7 +30,10 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
 
   if (!rule) return null;
 
-  const playerGuideUrl = `https://bmobley333.github.io/JodarMonoRepo/player_guide.html${rule.anchor || ''}`;
+  const BASE_PLAYER_GUIDE_URL = 'https://bmobley333.github.io/MetaScape-VitePress-GitHub-Pages/player-guide/supaflex/rules.html';
+  const rawAnchor = rule.anchor || '';
+  const formattedAnchor = rawAnchor ? (rawAnchor.startsWith('#') ? rawAnchor : `#${rawAnchor}`) : '';
+  const playerGuideUrl = `${BASE_PLAYER_GUIDE_URL}${formattedAnchor}`;
 
   return (
     <div className="relative inline-block text-left" ref={popoverRef}>

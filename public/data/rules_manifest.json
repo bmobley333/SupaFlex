@@ -7,76 +7,76 @@
   "vitality.healing": {
     "title": "Rest & Natural Healing",
     "summary": "Post-combat rest (max 1/encounter) restores 1d4 Vit. A full Day rest (sleep/new day) restores 2d4 Vit and resets all daily abilities.",
-    "anchor": "-roleplaying-encounter-rest-recovery"
+    "anchor": "#roleplaying-encounter-rest-recovery"
   },
   "leveling.creation_steps": {
     "title": "Character Creation Steps",
     "summary": "1. Traits & Concept. 2. Attributes: Assign 2x d4, 2x d6, 1x d8 across Might, Motion, Mind, Magic, Moxie. 3. Starting Vit: 10 + 1d(Moxie). 4. Starting Focus Die: d4. 5. Select 2 Skilled sets and 1 Power.",
-    "anchor": "-character-creation"
+    "anchor": "#character-creation"
   },
   "leveling.advancement_steps": {
     "title": "Leveling & AP Advancement",
     "summary": "At each Level up, gain AP to spend across 3 Tiers: Tier 1 (Utility/Traits 1-2 AP), Tier 2 (Atr/Focus Die upgrades 2-8 AP), Tier 3 (Heroic Capstones 5-8 AP). Vit increases by rolling Vit Max.",
-    "anchor": "-levelingadvancement"
+    "anchor": "#levelingadvancement"
   },
   "skills.basics": {
     "title": "Skilled vs. Unskilled Rolls",
     "summary": "ANY character can attempt ANY skill roll. Unskilled rolls use 1d20 + Atr Die. Skilled rolls (learned with AP) use 2H20 (keep highest of 2d20) + Atr Die.",
-    "anchor": "-skills"
+    "anchor": "#skills"
   },
   "col.weapons.dmg": {
     "title": "Damage (💥)",
     "summary": "Total damage dealt on a successful attack hit. Calculated as Weapon Dice + Attribute Die.",
-    "anchor": "-weapon-rules"
+    "anchor": "#weapon-rules"
   },
   "col.weapons.range": {
     "title": "Range (🎯)",
     "summary": "Maximum effective distance for weapon attacks: Touch, Melee, Short (up to 30ft), Long (up to 120ft).",
-    "anchor": "-weapon-rules"
+    "anchor": "#weapon-rules"
   },
   "col.weapons.atr": {
     "title": "Attribute (✅)",
     "summary": "The Attribute governing rolls with this weapon: Might for melee/heavy, Motion for ranged/finesse.",
-    "anchor": "-weapon-rules"
+    "anchor": "#weapon-rules"
   },
   "col.armor.ar": {
     "title": "Armor Rating (🧥)",
     "summary": "Damage reduction die rolled when hit by an attack. Reduces incoming Wounds by the AR roll result.",
-    "anchor": "armor-shields"
+    "anchor": "#armor-shields"
   },
   "col.shields.block": {
     "title": "Block Rating (🛡️)",
     "summary": "Defense bonus or active Block die rolled to negate incoming physical attacks.",
-    "anchor": "-shields"
+    "anchor": "#shields"
   },
   "col.powers.usage": {
     "title": "Usage Frequency (🔄)",
     "summary": "How often the Power can be activated: At-Will, 1-Round, 1-Encounter, or 1-Day.",
-    "anchor": "-usage-the-meta-engine-"
+    "anchor": "#usage-the-meta-engine"
   },
   "col.powers.action": {
     "title": "Action Cost (🔷)",
     "summary": "Action budget required to activate: Action (A), Move (M), Power (P), or Free (F).",
-    "anchor": "-actions"
+    "anchor": "#actions"
   },
   "col.powers.duration": {
     "title": "Duration (⏳)",
     "summary": "How long the effect lasts: Instant, 1-Round, Encounter, or Sustained.",
-    "anchor": "-duration"
+    "anchor": "#duration"
   },
   "col.powers.range": {
     "title": "Range (🎯)",
     "summary": "Targeting distance: Self, Touch, Short, Long, or Zone.",
-    "anchor": "-range"
+    "anchor": "#range"
   },
   "col.powers.ap": {
     "title": "AP Cost (🧩)",
     "summary": "Advancement Points required to unlock and learn this Power.",
-    "anchor": "-levelingadvancement"
+    "anchor": "#levelingadvancement"
   },
   "col.magic_items.category": {
     "title": "Item Category (💫)",
     "summary": "Item tier and type: Minor, Lesser, Greater, or Relic.",
-    "anchor": "abilities-powers-magic-items-skills"
+    "anchor": "#abilities-powers-magic-items-skills"
   }
 }
