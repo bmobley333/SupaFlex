@@ -578,7 +578,7 @@ export const ArmorCard: React.FC = () => {
           {/* Block Cell (Auto-Updated from Might) */}
           <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-300">Block</span>
+              <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.shields.block">Block</RuleTooltip></span>
               <span className="text-sm">💪</span>
             </div>
             <div
@@ -592,7 +592,7 @@ export const ArmorCard: React.FC = () => {
           {/* Dodge Cell (Auto-Updated from Motion) */}
           <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-300">Dodge</span>
+              <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.weapons.range">Dodge</RuleTooltip></span>
               <span className="text-sm">🏃</span>
             </div>
             <div
@@ -606,7 +606,7 @@ export const ArmorCard: React.FC = () => {
           {/* AR Cell (Auto-Updated Read-Only Display Box) */}
           <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-300">AR</span>
+              <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.armor.ar">AR</RuleTooltip></span>
               <span className="text-sm">🧥</span>
             </div>
             <div
@@ -622,12 +622,12 @@ export const ArmorCard: React.FC = () => {
       {/* Integrated Movement Rate (MR) Footer Sub-Card */}
       <div className="pt-2.5 mt-1 border-t border-slate-800/80 flex flex-col gap-2">
         <span className="font-outfit font-bold text-teal-300 flex items-center gap-1.5 uppercase tracking-wider text-xs">
-          <span>👣</span> MR <span className="text-[10px] text-slate-400 normal-case font-normal">(Movement Rate)</span>
+          <span>👣</span> <RuleTooltip ruleKey="col.weapons.range">MR</RuleTooltip> <span className="text-[10px] text-slate-400 normal-case font-normal">(Movement Rate)</span>
         </span>
         <div className="flex flex-wrap items-center gap-3">
           {/* Armored MR Box */}
           <div className="px-3 py-1.5 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center gap-2 w-fit">
-            <span className="text-[11px] font-bold text-slate-300">Armored 👣</span>
+            <span className="text-[11px] font-bold text-slate-300"><RuleTooltip ruleKey="col.armor.ar">Armored</RuleTooltip> 👣</span>
             <div
               className="w-9 bg-slate-900 border border-slate-800 rounded py-0.5 text-xs font-mono font-extrabold text-teal-300 text-center"
               title="Auto-updated matching equipped armor Armored Movement Rate"

@@ -3,6 +3,8 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp, X, Check, Plus, Search, Globe, ShieldAlert, Loader2, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
+import { CardHelpButton } from '../common/CardHelpButton';
+import { RuleTooltip } from '../common/RuleTooltip';
 import {
   ShieldData,
   SupabaseShield,
@@ -266,6 +268,7 @@ export const ShieldCard: React.FC = () => {
           <h3 className="font-outfit font-bold text-sm tracking-widest text-cyan-300 uppercase flex items-center gap-2">
             <span className="text-base">🛡️</span> Shield
           </h3>
+          <CardHelpButton ruleKey="col.shields.block" />
           {!shield.equipped && (
             <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-950 text-slate-400 rounded-full border border-slate-800">
               No Shield Equipped
@@ -707,7 +710,7 @@ export const ShieldCard: React.FC = () => {
 
           {/* Max Block Read-Only Display Box */}
           <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">
-            <span className="text-xs font-bold text-slate-300">Max Block</span>
+            <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.shields.block">Max Block</RuleTooltip></span>
             <div
               className="w-10 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
               title="Auto-updated matching equipped shield Max Block"

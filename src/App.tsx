@@ -15,6 +15,7 @@ import { ApManagerModal } from './components/modals/ApManagerModal';
 import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
 import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
+import { CardHelpButton } from './components/common/CardHelpButton';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'sheet' | 'rolls' | 'codex' | 'logs' | 'directory'>('sheet');
@@ -220,7 +221,7 @@ export default function App() {
             </div>
 
             {/* ⭐ Stylized Level Popover Trigger (Header Row 1) */}
-            <div className="relative" ref={levelRef}>
+            <div className="flex items-center gap-1.5 relative" ref={levelRef}>
               <button
                 onClick={() => setShowLevelPopover(!showLevelPopover)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all border shadow-sm ${
@@ -238,6 +239,7 @@ export default function App() {
                   <ChevronDown className="w-3 h-3 text-amber-400 shrink-0" />
                 )}
               </button>
+              <CardHelpButton ruleKey="leveling.advancement_steps" />
 
               {/* 🌟 Level Edit Absolute Floating Glass Popover Card */}
               {showLevelPopover && (
@@ -275,6 +277,18 @@ export default function App() {
                       onChange={(e) => handleLevelChange(parseInt(e.target.value) || 1)}
                       className="w-16 bg-slate-900 border border-amber-500/40 rounded-lg px-2 py-1 text-sm font-mono font-extrabold text-amber-300 text-center outline-none focus:border-amber-400 shadow-inner"
                     />
+                  </div>
+
+                  <div className="pt-1 flex flex-col gap-1.5">
+                    <button
+                      onClick={() => {
+                        setShowLevelPopover(false);
+                        setShowApManagerModal(true);
+                      }}
+                      className="w-full py-1.5 bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 rounded-lg font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>🧩 Manage AP & Progression</span>
+                    </button>
                   </div>
                 </div>
               )}

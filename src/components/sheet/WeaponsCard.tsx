@@ -917,10 +917,10 @@ export const WeaponsCard: React.FC = () => {
           <div className="grid grid-cols-[36px_92px_1fr_54px_54px_68px] gap-2 items-center px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80">
             <span className="text-center">Sk</span>
             <span className="text-center">M/H/S</span>
-            <span>Weapon Name</span>
-            <span className="text-center">Atk</span>
-            <span className="text-center">Dmg</span>
-            <span className="text-center">Max Blk</span>
+            <span><RuleTooltip ruleKey="col.weapons.atr">Weapon Name</RuleTooltip></span>
+            <span className="text-center"><RuleTooltip ruleKey="col.weapons.atr">Atk</RuleTooltip></span>
+            <span className="text-center"><RuleTooltip ruleKey="col.weapons.dmg">Dmg</RuleTooltip></span>
+            <span className="text-center"><RuleTooltip ruleKey="col.shields.block">Max Blk</RuleTooltip></span>
           </div>
 
           {/* Weapons Rows (Sorted Alphabetically) */}
