@@ -10,6 +10,7 @@ import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { HeroSelectorPopover } from './components/header/HeroSelectorPopover';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
+import { NishTcModal } from './components/modals/NishTcModal';
 import { ApManagerModal } from './components/modals/ApManagerModal';
 import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
 import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
@@ -23,6 +24,7 @@ export default function App() {
   const [showLevelPopover, setShowLevelPopover] = useState(false);
   const [showResourcesPopover, setShowResourcesPopover] = useState(false);
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
+  const [showNishTcModal, setShowNishTcModal] = useState(false);
   const [showApManagerModal, setShowApManagerModal] = useState(false);
   const [showAttributeManagerModal, setShowAttributeManagerModal] = useState(false);
   const [showVitalityManagerModal, setShowVitalityManagerModal] = useState(false);
@@ -367,6 +369,7 @@ export default function App() {
                 <ResourcesPopover 
                   onClose={() => setShowResourcesPopover(false)} 
                   onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
+                  onOpenNishTcGenerator={() => setShowNishTcModal(true)}
                   onOpenApManager={() => setShowApManagerModal(true)}
                 />
               )}
@@ -481,6 +484,15 @@ export default function App() {
         <AttributeManagerModal
           isOpen={showAttributeManagerModal}
           onClose={() => setShowAttributeManagerModal(false)}
+        />
+      </ErrorBoundary>
+
+      {/* 🌟 Nish Tremendous & Critical Generator Modal */}
+      <ErrorBoundary fallbackTitle="Nish T/C Generator Error" onClose={() => setShowNishTcModal(false)}>
+        <NishTcModal
+          isOpen={showNishTcModal}
+          onClose={() => setShowNishTcModal(false)}
+          characterName={activeCharacter?.name || 'Active Hero'}
         />
       </ErrorBoundary>
 

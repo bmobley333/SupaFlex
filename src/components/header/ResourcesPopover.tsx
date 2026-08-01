@@ -5,9 +5,15 @@ interface ResourcesPopoverProps {
   onClose: () => void;
   onOpenLootGenerator?: () => void;
   onOpenApManager?: () => void;
+  onOpenNishTcGenerator?: () => void;
 }
 
-export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({ onClose, onOpenLootGenerator, onOpenApManager }) => {
+export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({ 
+  onClose, 
+  onOpenLootGenerator, 
+  onOpenApManager,
+  onOpenNishTcGenerator 
+}) => {
   return (
     <div className="absolute top-full right-0 mt-2 z-50 w-72 p-3.5 bg-slate-900/95 border border-indigo-500/40 rounded-xl shadow-2xl shadow-indigo-950/60 backdrop-blur-xl animate-fadeIn flex flex-col gap-3 text-xs">
       {/* Popover Header */}
@@ -55,7 +61,35 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({ onClose, onO
           </button>
         )}
 
-        {/* Tool 1: Random Loot Generator */}
+        {/* Tool 1: Nish T/C Generator */}
+        {onOpenNishTcGenerator && (
+          <button
+            onClick={() => {
+              onOpenNishTcGenerator();
+              onClose();
+            }}
+            className="group flex items-start gap-3 p-2.5 rounded-lg bg-rose-950/30 hover:bg-rose-900/40 border border-rose-500/40 hover:border-rose-400 transition-all text-left w-full cursor-pointer"
+          >
+            <div className="p-2 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-300 group-hover:bg-rose-500/30 group-hover:text-rose-200 transition-colors shrink-0">
+              🌟
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-outfit font-bold text-rose-200 group-hover:text-rose-100 transition-colors truncate">
+                  Nish T/C Generator
+                </span>
+                <span className="text-[10px] font-bold text-rose-950 bg-rose-400 px-1.5 py-0.5 rounded uppercase shrink-0">
+                  Nish
+                </span>
+              </div>
+              <p className="text-[11px] text-rose-200/70 group-hover:text-rose-100 transition-colors leading-tight mt-0.5">
+                Roll secret Tremendous or Critical Nish effects.
+              </p>
+            </div>
+          </button>
+        )}
+
+        {/* Tool 2: Random Loot Generator */}
         {onOpenLootGenerator && (
           <button
             onClick={() => {
@@ -82,6 +116,7 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({ onClose, onO
             </div>
           </button>
         )}
+
 
         {/* Link 1: SupaFlex Gemini Notebook */}
         <a
