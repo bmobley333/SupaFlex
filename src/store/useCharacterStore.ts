@@ -19,6 +19,7 @@ interface CharacterStore {
 
   // Player Login & Filtering State
   playerEmail: string;
+  playerName: string;
   filterMode: 'my_heroes' | 'all_heroes';
 
   // Actions
@@ -33,6 +34,7 @@ interface CharacterStore {
   spendMeta: () => void;
   resetSparks: () => void;
   setPlayerEmail: (email: string) => void;
+  setPlayerName: (name: string) => void;
   setFilterMode: (mode: 'my_heroes' | 'all_heroes') => void;
   recordApExpenditure: (
     cost: number,
@@ -56,6 +58,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   error: null,
 
   playerEmail: localStorage.getItem('supaflex_player_email') || 'TheBMobley@gmail.com',
+  playerName: localStorage.getItem('supaflex_player_name') || '',
   filterMode: (localStorage.getItem('supaflex_filter_mode') as any) || 'my_heroes',
 
   fetchInitialData: async () => {
@@ -158,6 +161,12 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const trimmed = email.trim();
     localStorage.setItem('supaflex_player_email', trimmed);
     set({ playerEmail: trimmed });
+  },
+
+  setPlayerName: (name: string) => {
+    const trimmed = name.trim();
+    localStorage.setItem('supaflex_player_name', trimmed);
+    set({ playerName: trimmed });
   },
 
   setFilterMode: (mode: 'my_heroes' | 'all_heroes') => {

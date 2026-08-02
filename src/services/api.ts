@@ -376,11 +376,11 @@ export const gameApi = {
   },
 
   // --- USER PROFILE & PRIVACY ---
-  async getUserProfile(email: string): Promise<{ email: string; allow_cloning: boolean }> {
+  async getUserProfile(email: string): Promise<{ email: string; allow_cloning: boolean; player_name?: string }> {
     const cleanEmail = email.trim().toLowerCase();
     const { data, error } = await supabase
       .from('players')
-      .select('email, allow_cloning')
+      .select('email, allow_cloning, player_name')
       .eq('email', cleanEmail)
       .maybeSingle();
 
@@ -389,14 +389,14 @@ export const gameApi = {
     }
 
     if (data) {
-      return { email: data.email, allow_cloning: data.allow_cloning ?? true };
+      return { email: data.email, allow_cloning: data.allow_cloning ?? true, player_name: data.player_name || '' };
     }
 
     // Auto-create profile if missing
     const { data: created, error: createError } = await supabase
       .from('players')
       .insert({ email: cleanEmail, allow_cloning: true })
-      .select('email, allow_cloning')
+      .select('email, allow_cloning, player_name')
       .single();
 
     if (createError) {
@@ -404,7 +404,7 @@ export const gameApi = {
       return { email: cleanEmail, allow_cloning: true };
     }
 
-    return { email: created.email, allow_cloning: created.allow_cloning ?? true };
+    return { email: created.email, allow_cloning: created.allow_cloning ?? true, player_name: created.player_name || '' };
   },
 
   async updateProfilePrivacy(email: string, allowCloning: boolean): Promise<boolean> {
@@ -415,6 +415,19 @@ export const gameApi = {
 
     if (error) {
       console.error('[gameApi] Error updating profile privacy:', error);
+      return false;
+    }
+    return true;
+  },
+
+  async updatePlayerName(email: string, playerName: string): Promise<boolean> {
+    const cleanEmail = email.trim().toLowerCase();
+    const { error } = await supabase
+      .from('players')
+      .upsert({ email: cleanEmail, player_name: playerName.trim() }, { onConflict: 'email' });
+
+    if (error) {
+      console.error('[gameApi] Error updating player name:', error);
       return false;
     }
     return true;

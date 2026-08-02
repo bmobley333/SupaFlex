@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
 import { Character, Party, PartySessionMember, AuthMode } from '../../types/game';
+import { useCharacterStore } from '../../store/useCharacterStore';
 
 interface UnifiedLaunchHubModalProps {
   isOpen: boolean;
@@ -43,6 +44,32 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
+  const [playerNameInput, setPlayerNameInput] = useState(useCharacterStore.getState().playerName || '');
+  const [nameSaveSuccess, setNameSaveSuccess] = useState(false);
+  const [isSavingName, setIsSavingName] = useState(false);
+
+  useEffect(() => {
+    const storeName = useCharacterStore.getState().playerName;
+    if (storeName) {
+      setPlayerNameInput(storeName);
+    }
+  }, [currentEmail]);
+
+  const handleSavePlayerName = async () => {
+    if (!currentEmail) return;
+    const trimmed = playerNameInput.trim();
+    setIsSavingName(true);
+    try {
+      await gameApi.updatePlayerName(currentEmail, trimmed);
+      useCharacterStore.getState().setPlayerName(trimmed);
+      setNameSaveSuccess(true);
+      setTimeout(() => setNameSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to update player name:', err);
+    } finally {
+      setIsSavingName(false);
+    }
+  };
 
   // Create Hero State
   const [isCreatingHero, setIsCreatingHero] = useState(false);
@@ -124,6 +151,10 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     try {
       const profile = await gameApi.getUserProfile(targetEmail);
       setAllowCloning(profile.allow_cloning);
+      if (profile.player_name) {
+        setPlayerNameInput(profile.player_name);
+        useCharacterStore.getState().setPlayerName(profile.player_name);
+      }
     } catch (err) {
       console.error('Error loading profile:', err);
     }
@@ -742,9 +773,56 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 <div className="space-y-4">
                   {currentEmail ? (
                     <div className="space-y-4">
+                      {/* Static Active Account Section */}
                       <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
                         <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Active Account</div>
                         <div className="text-base font-mono font-bold text-amber-300 truncate">{currentEmail}</div>
+                      </div>
+
+                      {/* Dedicated Editable Player Human Name Section */}
+                      <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label htmlFor="player-human-name-input" className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
+                            Player Name
+                          </label>
+                          {nameSaveSuccess && (
+                            <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                              ✓ Saved
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="player-human-name-input"
+                            type="text"
+                            value={playerNameInput}
+                            onChange={(e) => {
+                              setPlayerNameInput(e.target.value);
+                              setNameSaveSuccess(false);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleSavePlayerName();
+                              }
+                            }}
+                            onBlur={() => {
+                              handleSavePlayerName();
+                            }}
+                            placeholder="e.g. Steve Tobin"
+                            className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm font-mono font-bold text-indigo-300 focus:outline-none focus:border-indigo-400 transition-colors"
+                          />
+                          <button
+                            onClick={handleSavePlayerName}
+                            disabled={isSavingName}
+                            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-xs rounded-lg transition-all shadow-sm shrink-0 cursor-pointer"
+                          >
+                            {isSavingName ? 'Saving...' : 'Save Name'}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-slate-400 italic">
+                          Enter your actual human name (e.g. Steve Tobin). This name is linked to your player profile across party rosters.
+                        </p>
                       </div>
 
                       {/* Dyslexia-Friendly Peg-Slider Toggle for Vault Privacy */}

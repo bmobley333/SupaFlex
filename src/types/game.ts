@@ -543,6 +543,7 @@ export interface UserProfile {
   email: string;
   first_name?: string;
   last_name?: string;
+  player_name?: string;
   allow_cloning: boolean;
   created_at?: string;
 }
