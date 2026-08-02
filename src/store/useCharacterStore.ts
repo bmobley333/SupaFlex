@@ -21,6 +21,7 @@ interface CharacterStore {
   playerEmail: string;
   playerName: string;
   filterMode: 'my_heroes' | 'all_heroes';
+  activeRole: 'player' | 'gm';
 
   // Actions
   fetchInitialData: () => Promise<void>;
@@ -36,6 +37,7 @@ interface CharacterStore {
   setPlayerEmail: (email: string) => void;
   setPlayerName: (name: string) => void;
   setFilterMode: (mode: 'my_heroes' | 'all_heroes') => void;
+  setActiveRole: (role: 'player' | 'gm') => void;
   recordApExpenditure: (
     cost: number,
     category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual',
@@ -60,6 +62,12 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   playerEmail: localStorage.getItem('supaflex_player_email') || 'TheBMobley@gmail.com',
   playerName: localStorage.getItem('supaflex_player_name') || '',
   filterMode: (localStorage.getItem('supaflex_filter_mode') as any) || 'my_heroes',
+  activeRole: (sessionStorage.getItem('supaflex_active_role') as 'player' | 'gm') || 'player',
+
+  setActiveRole: (role: 'player' | 'gm') => {
+    sessionStorage.setItem('supaflex_active_role', role);
+    set({ activeRole: role });
+  },
 
   fetchInitialData: async () => {
     set({ isLoading: true, error: null });

@@ -540,18 +540,22 @@ export const gameApi = {
 
   async joinPartySession(partyId: string, playerEmail: string, characterId: number, tabSessionId: string) {
     const cleanEmail = playerEmail.trim().toLowerCase();
+
+    // First delete any previous session membership for this tab to avoid ON CONFLICT index errors
+    await supabase
+      .from('party_session_members')
+      .delete()
+      .eq('tab_session_id', tabSessionId);
+
     const { data, error } = await supabase
       .from('party_session_members')
-      .upsert(
-        {
-          party_id: partyId,
-          player_email: cleanEmail,
-          character_id: characterId,
-          tab_session_id: tabSessionId,
-          last_seen: new Date().toISOString(),
-        },
-        { onConflict: 'party_id,tab_session_id' }
-      )
+      .insert({
+        party_id: partyId,
+        player_email: cleanEmail,
+        character_id: characterId,
+        tab_session_id: tabSessionId,
+        last_seen: new Date().toISOString(),
+      })
       .select()
       .single();
 
@@ -586,6 +590,73 @@ export const gameApi = {
     }
 
     return data || [];
+  },
+
+  // --- MONSTER ROSTER SYNC & BROADCAST ---
+  async getSupabaseMonsters() {
+    try {
+      const { data, error } = await supabase
+        .from('monsters')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.warn('[gameApi] Notice fetching master monsters table:', error.message);
+        return [];
+      }
+
+      return data || [];
+    } catch (e) {
+      console.error('[gameApi] Error in getSupabaseMonsters:', e);
+      return [];
+    }
+  },
+
+  async getPartyMonsters(partyId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('parties')
+        .select('active_monsters')
+        .eq('id', partyId)
+        .single();
+
+      if (error) {
+        console.warn('[gameApi] Notice fetching party active monsters:', error.message);
+        const fallback = localStorage.getItem(`supaflex_gm_monsters_${partyId}`);
+        return fallback ? JSON.parse(fallback) : [];
+      }
+
+      return data?.active_monsters || [];
+    } catch (e) {
+      console.error('[gameApi] Error in getPartyMonsters:', e);
+      return [];
+    }
+  },
+
+  async savePartyMonsters(partyId: string, monsters: any[]) {
+    try {
+      localStorage.setItem(`supaflex_gm_monsters_${partyId}`, JSON.stringify(monsters));
+      localStorage.setItem('supaflex_gm_monster_stats', JSON.stringify(monsters));
+
+      const { error } = await supabase
+        .from('parties')
+        .update({ active_monsters: monsters })
+        .eq('id', partyId);
+
+      if (error) {
+        console.warn('[gameApi] Supabase active_monsters update warning:', error.message);
+      }
+
+      // Send Realtime Broadcast event to all party members
+      const channel = supabase.channel(`party:${partyId}`);
+      await channel.send({
+        type: 'broadcast',
+        event: 'monster_roster_updated',
+        payload: { monsters },
+      });
+    } catch (e) {
+      console.error('[gameApi] Error saving party monsters:', e);
+    }
   },
 };
 

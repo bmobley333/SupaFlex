@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { Database, Shield, Zap, Activity, BookOpen, Users, Loader2, ChevronDown, ChevronUp, Award, Star, X } from 'lucide-react';
+import { supabase } from './lib/supabase';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { ActionConsoleView } from './components/rolls/ActionConsoleView';
 import { CodexView } from './components/codex/CodexView';
 import { AdventureLogs } from './components/logs/AdventureLogs';
 import { PlayerDirectoryView } from './components/directory/PlayerDirectoryView';
+import { GmWorkspaceView } from './components/directory/GmWorkspaceView';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
@@ -55,6 +57,7 @@ export default function App() {
     isLoading,
     dbConnected,
     playerEmail,
+    activeRole,
     fetchInitialData,
     selectCharacter,
     createNewCharacter,
@@ -65,7 +68,23 @@ export default function App() {
 
   useEffect(() => {
     fetchInitialData();
-  }, [fetchInitialData]);
+
+    // Supabase Auth State Change Listener & URL Fragment Cleanup
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.email) {
+        setPlayerEmail(session.user.email);
+        useCharacterStore.getState().setPlayerEmail(session.user.email);
+        localStorage.setItem('supaflex_player_email', session.user.email);
+      }
+      if (typeof window !== 'undefined' && window.location.hash && window.location.hash.includes('access_token')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, [fetchInitialData, setPlayerEmail]);
 
   // Click-outside listener for popovers
   useEffect(() => {
@@ -453,15 +472,25 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* Tab Panels */}
+            {/* Main View Shell: GM Workspace vs Player Sheet & Tabs */}
             <div className="flex-1">
-              {activeTab === 'sheet' && (
-                <CharacterSheetView onOpenVitalityManager={() => setShowVitalityManagerModal(true)} />
+              {activeRole === 'gm' ? (
+                <GmWorkspaceView
+                  activeParty={null}
+                  currentEmail={playerEmail}
+                  onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
+                />
+              ) : (
+                <>
+                  {activeTab === 'sheet' && (
+                    <CharacterSheetView onOpenVitalityManager={() => setShowVitalityManagerModal(true)} />
+                  )}
+                  {activeTab === 'rolls' && <ActionConsoleView />}
+                  {activeTab === 'codex' && <CodexView />}
+                  {activeTab === 'logs' && <AdventureLogs />}
+                  {activeTab === 'directory' && <PlayerDirectoryView />}
+                </>
               )}
-              {activeTab === 'rolls' && <ActionConsoleView />}
-              {activeTab === 'codex' && <CodexView />}
-              {activeTab === 'logs' && <AdventureLogs />}
-              {activeTab === 'directory' && <PlayerDirectoryView />}
             </div>
           </>
         )}
@@ -557,32 +586,34 @@ export default function App() {
       </ErrorBoundary>
 
       {/* 🌌 Unified Launch & Account Hub Modal */}
-      <UnifiedLaunchHubModal
-        isOpen={showUnifiedLaunchHubModal}
-        onClose={() => setShowUnifiedLaunchHubModal(false)}
-        currentEmail={playerEmail}
-        activeCharacter={activeCharacter}
-        userCharacters={myHeroes}
-        tabSessionId={tabSessionId}
-        onSelectCharacter={selectCharacter}
-        onCreateNewCharacter={createNewCharacter}
-        onLoginSuccess={(email) => {
-          setPlayerEmail(email);
-          localStorage.setItem('supaflex_player_email', email);
-          fetchInitialData();
-        }}
-        onLogout={() => {
-          setPlayerEmail('');
-          localStorage.removeItem('supaflex_player_email');
-          useCharacterStore.setState({ activeCharacter: null });
-          setShowUnifiedLaunchHubModal(true);
-        }}
-        onCharacterCloned={(clonedChar) => {
-          fetchInitialData();
-          selectCharacter(clonedChar.id);
-        }}
-        onRefreshCharacters={fetchInitialData}
-      />
+      <ErrorBoundary fallbackTitle="Launch Hub Error" onClose={() => setShowUnifiedLaunchHubModal(false)}>
+        <UnifiedLaunchHubModal
+          isOpen={showUnifiedLaunchHubModal}
+          onClose={() => setShowUnifiedLaunchHubModal(false)}
+          currentEmail={playerEmail}
+          activeCharacter={activeCharacter}
+          userCharacters={myHeroes}
+          tabSessionId={tabSessionId}
+          onSelectCharacter={selectCharacter}
+          onCreateNewCharacter={createNewCharacter}
+          onLoginSuccess={(email) => {
+            setPlayerEmail(email);
+            localStorage.setItem('supaflex_player_email', email);
+            fetchInitialData();
+          }}
+          onLogout={() => {
+            setPlayerEmail('');
+            localStorage.removeItem('supaflex_player_email');
+            useCharacterStore.setState({ activeCharacter: null });
+            setShowUnifiedLaunchHubModal(true);
+          }}
+          onCharacterCloned={(clonedChar) => {
+            fetchInitialData();
+            selectCharacter(clonedChar.id);
+          }}
+          onRefreshCharacters={fetchInitialData}
+        />
+      </ErrorBoundary>
 
       {/* 🪄 Leveling / Progression Wizard */}
       {showLevelingWizard && (
