@@ -4,6 +4,7 @@ import { useRulesHelp } from '../../hooks/useRulesHelp';
 
 interface LevelingWizardProps {
   mode?: 'creation' | 'advancement' | 'both';
+  onClose?: () => void;
   onOpenApManager?: () => void;
   onOpenVitalityManager?: () => void;
   onOpenAttributeManager?: () => void;
@@ -21,6 +22,7 @@ interface StepInfo {
 
 export const LevelingWizard: React.FC<LevelingWizardProps> = ({
   mode = 'both',
+  onClose,
   onOpenApManager,
   onOpenVitalityManager,
   onOpenAttributeManager,
@@ -104,9 +106,8 @@ export const LevelingWizard: React.FC<LevelingWizardProps> = ({
 
   const currentSteps = activeTab === 'creation' ? creationSteps : advancementSteps;
   const currentStep = currentSteps[activeStepIndex] || currentSteps[0];
-
-  return (
-    <div className="bg-slate-950/90 border border-amber-500/40 rounded-xl p-3.5 shadow-2xl backdrop-blur-md flex flex-col gap-3">
+  const wizardContent = (
+    <div className="bg-slate-950/95 border border-amber-500/40 rounded-xl p-4 shadow-2xl backdrop-blur-md flex flex-col gap-3 max-w-lg w-full">
       {/* Mode Selector Header */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-2">
         <div className="flex items-center gap-2">
@@ -116,55 +117,65 @@ export const LevelingWizard: React.FC<LevelingWizardProps> = ({
           </span>
         </div>
 
-        {mode === 'both' && (
-          <div className="flex items-center p-0.5 bg-slate-900 rounded-lg border border-slate-800 text-[10.5px] font-bold">
+        <div className="flex items-center gap-2">
+          {mode === 'both' && (
+            <div className="flex items-center p-0.5 bg-slate-900 rounded-lg border border-slate-800 text-[10.5px] font-bold">
+              <button
+                onClick={() => { setActiveTab('creation'); setActiveStepIndex(0); }}
+                className={`px-2.5 py-0.5 rounded transition-all ${
+                  activeTab === 'creation' ? 'bg-amber-600/30 text-amber-200 border border-amber-500/30' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Character Creation
+              </button>
+              <button
+                onClick={() => { setActiveTab('advancement'); setActiveStepIndex(0); }}
+                className={`px-2.5 py-0.5 rounded transition-all ${
+                  activeTab === 'advancement' ? 'bg-amber-600/30 text-amber-200 border border-amber-500/30' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Level Advancement
+              </button>
+            </div>
+          )}
+
+          {onClose && (
             <button
-              onClick={() => { setActiveTab('creation'); setActiveStepIndex(0); }}
-              className={`px-2.5 py-0.5 rounded transition-all ${
-                activeTab === 'creation' ? 'bg-amber-600/30 text-amber-200 border border-amber-500/30' : 'text-slate-400 hover:text-slate-200'
-              }`}
+              onClick={onClose}
+              className="text-slate-400 hover:text-white font-bold text-lg px-2 rounded hover:bg-slate-800 transition cursor-pointer ml-1"
+              title="Close Wizard"
             >
-              Character Creation
+              ✕
             </button>
-            <button
-              onClick={() => { setActiveTab('advancement'); setActiveStepIndex(0); }}
-              className={`px-2.5 py-0.5 rounded transition-all ${
-                activeTab === 'advancement' ? 'bg-amber-600/30 text-amber-200 border border-amber-500/30' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Level Advancement
-            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Steps Navigation Bar */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-thin">
+        {currentSteps.map((step, idx) => (
+          <button
+            key={step.id}
+            onClick={() => setActiveStepIndex(idx)}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap flex items-center gap-1 shrink-0 ${
+              activeStepIndex === idx
+                ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40 shadow-sm'
+                : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+            }`}
+          >
+            <span>{step.icon}</span>
+            <span>{step.title}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Step Detail Card */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-lg p-3 flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="text-base">{currentStep.icon}</span>
+            <span className="font-outfit font-bold text-sm text-slate-100">{currentStep.title}</span>
           </div>
-        )}
-      </div>
-
-      {/* Horizontal Step Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-        {currentSteps.map((step, idx) => {
-          const isActive = idx === activeStepIndex;
-          return (
-            <button
-              key={step.id}
-              onClick={() => setActiveStepIndex(idx)}
-              className={`p-2 rounded-lg border text-left flex items-center gap-1.5 transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-amber-950/60 border-amber-400 text-amber-200 shadow-md'
-                  : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
-            >
-              <span className="text-sm shrink-0">{step.icon}</span>
-              <span className="text-[11px] font-bold font-outfit truncate">{step.title}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Selected Step Description Card */}
-      <div className="p-3 bg-slate-900/90 rounded-lg border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex flex-col gap-1 flex-1">
-          <span className="font-outfit font-bold text-xs text-amber-300 flex items-center gap-1.5">
-            <span>{currentStep.icon}</span> {currentStep.title}
-          </span>
           <p className="text-[11.5px] text-slate-300 leading-relaxed">
             {currentStep.summary}
           </p>
@@ -172,7 +183,10 @@ export const LevelingWizard: React.FC<LevelingWizardProps> = ({
 
         {currentStep.onAction && currentStep.actionText && (
           <button
-            onClick={currentStep.onAction}
+            onClick={() => {
+              if (onClose) onClose();
+              currentStep.onAction?.();
+            }}
             className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition-all shadow-md flex items-center gap-1 shrink-0 cursor-pointer"
           >
             <span>{currentStep.actionText}</span>
@@ -182,4 +196,14 @@ export const LevelingWizard: React.FC<LevelingWizardProps> = ({
       </div>
     </div>
   );
+
+  if (onClose) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+        {wizardContent}
+      </div>
+    );
+  }
+
+  return wizardContent;
 };

@@ -14,6 +14,7 @@ import { ApManagerModal } from './components/modals/ApManagerModal';
 import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
 import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
 import { UnifiedLaunchHubModal } from './components/modals/UnifiedLaunchHubModal';
+import { LevelingWizard } from './components/common/LevelingWizard';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { CardHelpButton } from './components/common/CardHelpButton';
 
@@ -23,6 +24,7 @@ export default function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSelectorBar, setShowSelectorBar] = useState(false);
   const [showLevelPopover, setShowLevelPopover] = useState(false);
+  const [showLevelingWizard, setShowLevelingWizard] = useState(false);
   const [showResourcesPopover, setShowResourcesPopover] = useState(false);
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
   const [showNishTcModal, setShowNishTcModal] = useState(false);
@@ -314,6 +316,16 @@ export default function App() {
                     >
                       <span>🧩 Manage AP & Progression</span>
                     </button>
+
+                    <button
+                      onClick={() => {
+                        setShowLevelPopover(false);
+                        setShowLevelingWizard(true);
+                      }}
+                      className="w-full py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>🪄 Guided Progression Wizard</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -571,6 +583,13 @@ export default function App() {
         }}
         onRefreshCharacters={fetchInitialData}
       />
+
+      {/* 🪄 Leveling / Progression Wizard */}
+      {showLevelingWizard && (
+        <LevelingWizard
+          onClose={() => setShowLevelingWizard(false)}
+        />
+      )}
 
 
 

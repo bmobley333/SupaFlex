@@ -1,7 +1,6 @@
 // src/components/sheet/CharacterSheetView.tsx
 import React from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { HeroIdentityHeader } from './HeroIdentityHeader';
 import { TraitsCard } from './TraitsCard';
 import { MoneyCard } from './MoneyCard';
 import { GearCard } from './GearCard';
@@ -23,8 +22,6 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({ onOpenVi
 
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-16 relative">
-      {/* Top Hero Identity & Guided Wizard Header */}
-      <HeroIdentityHeader />
 
       {/* Collision-Free Responsive Top Section: Traits (Left), Money (Center), Gear (Right) */}
       <div id="section-top-cards" className="flex flex-wrap items-center gap-4 scroll-mt-32">

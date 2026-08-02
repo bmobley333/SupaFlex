@@ -629,16 +629,11 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       ) : (
                         /* STRUCTURED 2-ROW DISPLAY CARD MODE */
                         <div className="space-y-2">
-                          {/* ROW 1: Name & Level (Left) | Load Hero / Active (Far Right) */}
+                          {/* ROW 1: Name (Left) | Load Hero / Active (Far Right) */}
                           <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <span className="font-outfit font-extrabold text-base text-slate-100">
-                                {char.name}
-                              </span>
-                              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
-                                Lvl {sheet?.level || 1}
-                              </span>
-                            </div>
+                            <span className="font-outfit font-extrabold text-base text-slate-100 truncate">
+                              {char.name}
+                            </span>
 
                             {isActive ? (
                               <span className="px-3 py-1 bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 font-bold text-xs rounded-lg flex items-center gap-1 shrink-0">
@@ -657,24 +652,27 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                             )}
                           </div>
 
-                          {/* ROW 2: Race & Class Pills (Left) | Pencil Edit & Trash Delete (Far Right) */}
+                          {/* ROW 2: Level Pill, Race & Class Pills (Left) | Pencil Edit & Trash Delete Icons (Far Right) */}
                           <div className="flex items-center justify-between gap-3 pt-0.5">
-                            <div className="flex items-center gap-1.5">
-                              <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10px] font-bold shrink-0">
+                                Lvl {sheet?.level || 1}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold shrink-0">
                                 {char.race || 'Human'}
                               </span>
-                              <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-[10px] font-semibold">
+                              <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-[10px] font-semibold shrink-0">
                                 {char.class || 'Adventurer'}
                               </span>
                             </div>
 
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex items-center gap-1 shrink-0">
                               <button
                                 onClick={() => handleStartEdit(char)}
-                                className="p-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs cursor-pointer px-2 py-0.5 flex items-center gap-1"
-                                title="Edit Character Name, Race & Class"
+                                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs cursor-pointer shadow-sm"
+                                title="Edit Character Identity"
                               >
-                                ✏️ <span className="text-[10px] font-semibold">Edit</span>
+                                ✏️
                               </button>
 
                               <button
@@ -682,10 +680,10 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                                   setDeleteTargetChar(char);
                                   setDeleteConfirmInput('');
                                 }}
-                                className="p-1 bg-red-950/60 hover:bg-red-900/80 border border-red-800/50 text-red-300 rounded-lg transition text-xs cursor-pointer px-2 py-0.5 flex items-center gap-1"
+                                className="p-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/50 text-red-300 rounded-lg transition text-xs cursor-pointer shadow-sm"
                                 title="Delete Character"
                               >
-                                🗑️ <span className="text-[10px] font-semibold">Delete</span>
+                                🗑️
                               </button>
                             </div>
                           </div>
