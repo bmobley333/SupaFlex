@@ -558,6 +558,7 @@ export default function App() {
           fetchInitialData();
           selectCharacter(clonedChar.id);
         }}
+        onRefreshCharacters={fetchInitialData}
       />
 
 

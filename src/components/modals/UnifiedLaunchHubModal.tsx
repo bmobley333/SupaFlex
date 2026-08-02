@@ -16,6 +16,7 @@ interface UnifiedLaunchHubModalProps {
   onLoginSuccess: (email: string) => void;
   onLogout: () => void;
   onCharacterCloned: (clonedChar: Character) => void;
+  onRefreshCharacters?: () => void;
 }
 
 export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
@@ -30,6 +31,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   onLoginSuccess,
   onLogout,
   onCharacterCloned,
+  onRefreshCharacters,
 }) => {
   const [rightSubTab, setRightSubTab] = useState<'account' | 'inspect' | 'party'>('account');
 
@@ -47,6 +49,18 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const [newHeroName, setNewHeroName] = useState('');
   const [newHeroClass, setNewHeroClass] = useState('Adventurer');
   const [newHeroRace, setNewHeroRace] = useState('Human');
+
+  // Inline Character Edit State
+  const [editingCharId, setEditingCharId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editRace, setEditRace] = useState('');
+  const [editClass, setEditClass] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  // Character Safety Delete Modal State
+  const [deleteTargetChar, setDeleteTargetChar] = useState<Character | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Inspect Sub-Tab State
   const [targetInspectEmail, setTargetInspectEmail] = useState('');
@@ -138,6 +152,63 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  // --- INLINE EDIT HANDLERS ---
+  const handleStartEdit = (char: Character) => {
+    setEditingCharId(char.id);
+    setEditName(char.name);
+    setEditRace(char.race || 'Human');
+    setEditClass(char.class || 'Adventurer');
+  };
+
+  const handleSaveEdit = async (char: Character) => {
+    if (!editName.trim()) return;
+    setIsSavingEdit(true);
+
+    try {
+      const updatedSheet = {
+        ...(char.sheet_data || {}),
+        identity: {
+          ...((char.sheet_data as any)?.identity || {}),
+          name: editName.trim(),
+          race: editRace.trim() || 'Human',
+          class: editClass.trim() || 'Adventurer',
+        },
+      };
+
+      await gameApi.updateCharacter(char.id, {
+        name: editName.trim(),
+        race: editRace.trim() || 'Human',
+        class: editClass.trim() || 'Adventurer',
+        sheet_data: updatedSheet as any,
+      });
+
+      setEditingCharId(null);
+      if (onRefreshCharacters) onRefreshCharacters();
+    } catch (err) {
+      console.error('Failed to update character identity:', err);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  // --- DELETE CONFIRMATION HANDLER ---
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetChar) return;
+    if (deleteConfirmInput.trim().toLowerCase() !== 'delete') return;
+
+    setIsDeleting(true);
+    try {
+      await gameApi.deleteCharacter(deleteTargetChar.id);
+      setDeleteTargetChar(null);
+      setDeleteConfirmInput('');
+      if (onRefreshCharacters) onRefreshCharacters();
+    } catch (err) {
+      console.error('Failed to delete character:', err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // --- AUTH HANDLERS ---
   const handleLogin = async (e: React.FormEvent) => {
@@ -381,16 +452,16 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
         <div className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-6 py-4 flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-xl font-extrabold text-amber-400 flex items-center gap-2 font-outfit tracking-wide">
-              <span>🌌</span> Launch & Account Hub
+              <span>🌌</span> Character & Party Selector
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Manage your character vault, party sessions, user security, and read-only inspection.
+              Manage your character vault, active party sessions, user account, and read-only inspection.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white text-2xl font-bold px-2.5 py-1 rounded-lg hover:bg-slate-800 transition-colors"
-            title="Close Hub"
+            className="text-slate-400 hover:text-white text-2xl font-bold px-2.5 py-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Close Selector"
           >
             ✕
           </button>
@@ -413,7 +484,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
               </h3>
               <button
                 onClick={() => setIsCreatingHero(!isCreatingHero)}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-sm"
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-sm cursor-pointer"
               >
                 {isCreatingHero ? '✕ Cancel' : '➕ Create New Hero'}
               </button>
@@ -459,7 +530,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 <button
                   type="submit"
                   disabled={!newHeroName.trim()}
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition cursor-pointer"
                 >
                   Save & Create Blank Hero
                 </button>
@@ -479,70 +550,133 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
               ) : (
                 userCharacters.map((char) => {
                   const isActive = activeCharacter?.id === char.id;
+                  const isEditing = editingCharId === char.id;
                   const sheet = char.sheet_data;
-                  const dice = sheet?.attribute_dice || {
-                    might: char.might || 'd6',
-                    motion: char.motion || 'd6',
-                    mind: char.mind || 'd4',
-                    magic: char.magic || 'd4',
-                    moxie: char.moxie || 'd8',
-                  };
 
                   return (
                     <div
                       key={char.id}
-                      className={`p-4 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
+                      className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-2.5 ${
                         isActive
                           ? 'bg-slate-900 border-amber-500/80 shadow-lg shadow-amber-950/40'
                           : 'bg-slate-900/60 hover:bg-slate-900 border-slate-800/80 hover:border-slate-700'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-outfit font-extrabold text-base text-slate-100">
-                              {char.name}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
-                              Lvl {sheet?.level || 1}
-                            </span>
+                      {isEditing ? (
+                        /* INLINE EDIT FORM */
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between text-xs font-bold text-indigo-300">
+                            <span>✏️ Edit Character Identity</span>
                           </div>
-
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold">
-                              {char.race || 'Human'}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-[10px] font-semibold">
-                              {char.class || 'Adventurer'}
-                            </span>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase">Name</label>
+                            <input
+                              type="text"
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded text-xs text-slate-100"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase">Race</label>
+                              <input
+                                type="text"
+                                value={editRace}
+                                onChange={(e) => setEditRace(e.target.value)}
+                                className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded text-xs text-slate-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase">Class</label>
+                              <input
+                                type="text"
+                                value={editClass}
+                                onChange={(e) => setEditClass(e.target.value)}
+                                className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded text-xs text-slate-100"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-1">
+                            <button
+                              onClick={() => setEditingCharId(null)}
+                              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded transition"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleSaveEdit(char)}
+                              disabled={isSavingEdit || !editName.trim()}
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-xs rounded transition"
+                            >
+                              {isSavingEdit ? 'Saving...' : 'Save'}
+                            </button>
                           </div>
                         </div>
+                      ) : (
+                        /* DISPLAY CARD MODE */
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-outfit font-extrabold text-base text-slate-100">
+                                {char.name}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
+                                Lvl {sheet?.level || 1}
+                              </span>
+                            </div>
 
-                        {isActive ? (
-                          <span className="px-3 py-1 bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 font-bold text-xs rounded-lg flex items-center gap-1 shrink-0">
-                            ● Active
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              onSelectCharacter(char.id);
-                              onClose();
-                            }}
-                            className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-lg transition shadow-sm shrink-0 cursor-pointer"
-                          >
-                            🛡️ Load Hero
-                          </button>
-                        )}
-                      </div>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold">
+                                {char.race || 'Human'}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-[10px] font-semibold">
+                                {char.class || 'Adventurer'}
+                              </span>
+                            </div>
+                          </div>
 
-                      {/* Key Attribute Summary Pills */}
-                      <div className="flex items-center justify-between bg-slate-950/70 p-2 rounded-lg border border-slate-800/80 text-[11px] font-mono text-slate-300">
-                        <span>💪 Mgt: <strong>{dice.might}</strong></span>
-                        <span>🏃 Mot: <strong>{dice.motion}</strong></span>
-                        <span>👁️ Mnd: <strong>{dice.mind}</strong></span>
-                        <span>✨ Mag: <strong>{dice.magic}</strong></span>
-                        <span>🫀 Mox: <strong>{dice.moxie}</strong></span>
-                      </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {/* Edit Button */}
+                            <button
+                              onClick={() => handleStartEdit(char)}
+                              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs"
+                              title="Edit Character Name, Race & Class"
+                            >
+                              ✏️
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              onClick={() => {
+                                setDeleteTargetChar(char);
+                                setDeleteConfirmInput('');
+                              }}
+                              className="p-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/50 text-red-300 rounded-lg transition text-xs"
+                              title="Delete Character"
+                            >
+                              🗑️
+                            </button>
+
+                            {/* Load / Active Action */}
+                            {isActive ? (
+                              <span className="px-3 py-1 bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 font-bold text-xs rounded-lg flex items-center gap-1">
+                                ● Active
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  onSelectCharacter(char.id);
+                                  onClose();
+                                }}
+                                className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-lg transition shadow-sm cursor-pointer"
+                              >
+                                🛡️ Load Hero
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -559,7 +693,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
             <div className="flex border-b border-slate-800 mb-4 shrink-0">
               <button
                 onClick={() => setRightSubTab('account')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
                   rightSubTab === 'account'
                     ? 'border-amber-400 text-amber-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -569,7 +703,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
               </button>
               <button
                 onClick={() => setRightSubTab('inspect')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
                   rightSubTab === 'inspect'
                     ? 'border-indigo-400 text-indigo-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -579,7 +713,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
               </button>
               <button
                 onClick={() => setRightSubTab('party')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
                   rightSubTab === 'party'
                     ? 'border-emerald-400 text-emerald-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -649,15 +783,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           When enabled, other players who enter your email address can view your characters in Read-Only mode and clone them.
                         </p>
                       </div>
-
-                      <div className="pt-2">
-                        <button
-                          onClick={onLogout}
-                          className="w-full py-2 bg-red-800/80 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition"
-                        >
-                          Sign Out
-                        </button>
-                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -694,7 +819,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                         <button
                           type="submit"
                           disabled={authLoading}
-                          className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 text-slate-950 font-bold text-xs rounded-lg transition"
+                          className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 text-slate-950 font-bold text-xs rounded-lg transition cursor-pointer"
                         >
                           {authLoading ? 'Processing...' : authMode === 'login' ? 'Sign In' : authMode === 'signup' ? 'Create Account' : 'Send Password Reset Link'}
                         </button>
@@ -722,7 +847,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                     <button
                       type="submit"
                       disabled={inspectLoading}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition cursor-pointer"
                     >
                       {inspectLoading ? '...' : '🔍 Inspect'}
                     </button>
@@ -744,7 +869,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           <button
                             onClick={() => handleCloneCharacter(char)}
                             disabled={cloningId === char.id}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-[11px] rounded-lg transition"
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-[11px] rounded-lg transition cursor-pointer"
                           >
                             {cloningId === char.id ? 'Cloning...' : '🧬 Clone'}
                           </button>
@@ -783,7 +908,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       <button
                         type="submit"
                         disabled={partyLoading}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition cursor-pointer"
                       >
                         Create Party
                       </button>
@@ -832,13 +957,13 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                             <button
                               onClick={handleJoinParty}
                               disabled={!partyJoinCharId}
-                              className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                              className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition cursor-pointer"
                             >
                               Join Session
                             </button>
                             <button
                               onClick={handleLeaveParty}
-                              className="px-3 py-1.5 bg-red-800/80 hover:bg-red-700 text-white font-bold text-xs rounded-lg transition"
+                              className="px-3 py-1.5 bg-red-800/80 hover:bg-red-700 text-white font-bold text-xs rounded-lg transition cursor-pointer"
                             >
                               Leave Session
                             </button>
@@ -869,10 +994,22 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
         {/* ======================================================== */}
         {/* FOOTER (Master Modal Blueprint Standard)                 */}
+        {/* Permanently Visible Sign Out & Account Context           */}
         {/* ======================================================== */}
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
-          <div>
-            Account: <strong className="text-amber-300">{currentEmail || 'Not Signed In'}</strong> • Heroes: <strong className="text-indigo-300">{userCharacters.length}</strong>
+          <div className="flex items-center gap-3">
+            <div>
+              Account: <strong className="text-amber-300">{currentEmail || 'Not Signed In'}</strong> • Heroes: <strong className="text-indigo-300">{userCharacters.length}</strong>
+            </div>
+            {currentEmail && (
+              <button
+                onClick={onLogout}
+                className="px-2.5 py-1 bg-red-950/80 hover:bg-red-900 border border-red-700/60 text-red-200 font-bold text-[11px] rounded-lg transition cursor-pointer flex items-center gap-1 shadow-sm"
+                title="Sign out of current account"
+              >
+                <span>🚪</span> Sign Out
+              </button>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -882,6 +1019,66 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* ======================================================== */}
+      {/* DELETE CHARACTER SAFETY CONFIRMATION MODAL               */}
+      {/* ======================================================== */}
+      {deleteTargetChar && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn">
+          <div className="bg-slate-900 border border-red-600/60 rounded-2xl max-w-[440px] w-full p-6 shadow-2xl space-y-4 text-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-red-400 flex items-center gap-2">
+                <span>🗑️</span> Delete Character
+              </h3>
+              <button
+                onClick={() => setDeleteTargetChar(null)}
+                className="text-slate-400 hover:text-white text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-3 bg-red-950/50 border border-red-800/60 rounded-xl space-y-1 text-xs">
+              <p className="font-bold text-red-200">
+                Are you sure you want to delete '{deleteTargetChar.name}'?
+              </p>
+              <p className="text-red-300/80 text-[11px]">
+                This action is permanent and cannot be recovered.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1.5">
+                Type <span className="font-mono text-amber-300 font-extrabold">"delete"</span> below to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmInput}
+                onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                placeholder="delete"
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-100 focus:outline-none focus:border-red-500"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setDeleteTargetChar(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting || deleteConfirmInput.trim().toLowerCase() !== 'delete'}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-xs rounded-lg transition cursor-pointer shadow-sm"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Character'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
