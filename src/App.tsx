@@ -53,7 +53,6 @@ export default function App() {
     isLoading,
     dbConnected,
     playerEmail,
-    filterMode,
     fetchInitialData,
     selectCharacter,
     createNewCharacter,
@@ -88,23 +87,33 @@ export default function App() {
   }, [showSelectorBar, showLevelPopover, showResourcesPopover]);
 
   const myHeroes = characters.filter((c) => {
-    if (!playerEmail.trim()) return true;
+    if (!playerEmail.trim()) return false;
     const owner = (c.owner_email || '').toLowerCase().trim();
     const current = playerEmail.toLowerCase().trim();
-    return owner === current || !c.owner_email;
+    return owner === current;
   });
 
-  const displayedCharacters = filterMode === 'all_heroes' ? characters : myHeroes;
-
-  // Auto-sync active character when switching filter mode or email
+  // Unauthenticated Login Guard: Auto-open modal and clear active character when signed out
   useEffect(() => {
-    if (displayedCharacters.length > 0) {
-      const activeInDisplayed = activeCharacter && displayedCharacters.some((c) => c.id === activeCharacter.id);
-      if (!activeInDisplayed) {
-        selectCharacter(displayedCharacters[0].id);
+    if (!playerEmail.trim()) {
+      setShowUnifiedLaunchHubModal(true);
+      if (activeCharacter !== null) {
+        useCharacterStore.setState({ activeCharacter: null });
       }
     }
-  }, [displayedCharacters, activeCharacter, selectCharacter]);
+  }, [playerEmail, activeCharacter]);
+
+  // Auto-sync active character when authenticated
+  useEffect(() => {
+    if (!playerEmail.trim()) return;
+
+    if (myHeroes.length > 0) {
+      const activeInMyHeroes = activeCharacter && myHeroes.some((c) => c.id === activeCharacter.id);
+      if (!activeInMyHeroes) {
+        selectCharacter(myHeroes[0].id);
+      }
+    }
+  }, [myHeroes, activeCharacter, playerEmail, selectCharacter]);
 
   const handleClaimCoins = async (addSilver: number, addGold: number): Promise<boolean> => {
     if (!activeCharacter) return false;
@@ -553,6 +562,8 @@ export default function App() {
         onLogout={() => {
           setPlayerEmail('');
           localStorage.removeItem('supaflex_player_email');
+          useCharacterStore.setState({ activeCharacter: null });
+          setShowUnifiedLaunchHubModal(true);
         }}
         onCharacterCloned={(clonedChar) => {
           fetchInitialData();

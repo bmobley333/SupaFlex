@@ -448,27 +448,35 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
               <span>🌌</span> Character & Party Selector
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Manage your character vault, active party sessions, user account, and read-only inspection.
+              {currentEmail
+                ? 'Manage your character vault, active party sessions, user account, and read-only inspection.'
+                : '🔒 Please sign in or create an account to access your character sheet.'}
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            {currentEmail && (
-              <button
-                onClick={onLogout}
-                className="px-3 py-1.5 bg-red-950/80 hover:bg-red-900 border border-red-700/60 text-red-200 font-bold text-xs rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-sm"
-                title="Sign out of current account"
-              >
-                <span>🚪</span> Sign Out
-              </button>
+            {currentEmail ? (
+              <>
+                <button
+                  onClick={onLogout}
+                  className="px-3 py-1.5 bg-red-950/80 hover:bg-red-900 border border-red-700/60 text-red-200 font-bold text-xs rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  title="Sign out of current account"
+                >
+                  <span>🚪</span> Sign Out
+                </button>
+                <button
+                  onClick={onClose}
+                  className="text-slate-400 hover:text-white text-2xl font-bold px-2.5 py-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Close Selector"
+                >
+                  ✕
+                </button>
+              </>
+            ) : (
+              <span className="text-amber-400 font-bold text-xs bg-amber-950/80 border border-amber-800/60 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                <span>🔒</span> Login Required
+              </span>
             )}
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-white text-2xl font-bold px-2.5 py-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-              title="Close Selector"
-            >
-              ✕
-            </button>
           </div>
         </div>
 
@@ -1075,12 +1083,18 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
           <div>
             Account: <strong className="text-amber-300">{currentEmail || 'Not Signed In'}</strong> • Heroes: <strong className="text-indigo-300">{userCharacters.length}</strong>
           </div>
-          <button
-            onClick={onClose}
-            className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-6 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
-          >
-            Done
-          </button>
+          {currentEmail ? (
+            <button
+              onClick={onClose}
+              className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-6 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
+            >
+              Done
+            </button>
+          ) : (
+            <span className="text-amber-400/90 font-semibold text-xs italic flex items-center gap-1">
+              <span>🔒</span> Sign in to access SupaFlex
+            </span>
+          )}
         </div>
       </div>
 
