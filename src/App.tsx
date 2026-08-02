@@ -202,13 +202,20 @@ export default function App() {
       <header className="sticky top-0 z-30 w-full bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-4 py-2.5">
         <div className="max-w-[2500px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="flex items-center justify-between w-full md:w-auto gap-3">
+            {/* 🌌 Stylized SupaFlex Brand Logo & Title */}
+            <div className="flex items-center gap-2 pr-1">
+              <span className="text-xl">🌌</span>
+              <h1 className="font-outfit text-lg font-extrabold tracking-wider bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                SUPAFLEX
+              </h1>
+            </div>
+
             {/* Consolidated KISS Launch & Account Hub Trigger */}
             <button
               onClick={() => setShowUnifiedLaunchHubModal(true)}
               className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-950/90 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-xl text-xs transition-all shadow-sm group cursor-pointer"
               title="Click to open Launch & Account Hub (Manage Characters, Auth, Inspect & Parties)"
             >
-              <span className="text-lg group-hover:scale-110 transition-transform">🌌</span>
               <span className="font-mono text-amber-300 font-bold truncate max-w-[180px]">
                 {playerEmail || 'Guest'}
               </span>
