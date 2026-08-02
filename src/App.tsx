@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Database, Shield, Zap, Activity, BookOpen, Users, Loader2, ChevronDown, ChevronUp, Award, Star, X, Lock, Eye, Users2 } from 'lucide-react';
+import { Database, Shield, Zap, Activity, BookOpen, Users, Loader2, ChevronDown, ChevronUp, Award, Star, X } from 'lucide-react';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { ActionConsoleView } from './components/rolls/ActionConsoleView';
@@ -7,16 +7,13 @@ import { CodexView } from './components/codex/CodexView';
 import { AdventureLogs } from './components/logs/AdventureLogs';
 import { PlayerDirectoryView } from './components/directory/PlayerDirectoryView';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
-import { HeroSelectorPopover } from './components/header/HeroSelectorPopover';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
 import { NishTcModal } from './components/modals/NishTcModal';
 import { ApManagerModal } from './components/modals/ApManagerModal';
 import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
 import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
-import { AuthModal } from './components/modals/AuthModal';
-import { AccountInspectorModal } from './components/modals/AccountInspectorModal';
-import { PartyManagerModal } from './components/modals/PartyManagerModal';
+import { UnifiedLaunchHubModal } from './components/modals/UnifiedLaunchHubModal';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { CardHelpButton } from './components/common/CardHelpButton';
 
@@ -33,10 +30,8 @@ export default function App() {
   const [showAttributeManagerModal, setShowAttributeManagerModal] = useState(false);
   const [showVitalityManagerModal, setShowVitalityManagerModal] = useState(false);
 
-  // New Modals & Read-Only / Party Session State
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showAccountInspectorModal, setShowAccountInspectorModal] = useState(false);
-  const [showPartyManagerModal, setShowPartyManagerModal] = useState(false);
+  // Unified Launch Hub & Read-Only / Party Session State
+  const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(false);
   const [readOnlyOwner, setReadOnlyOwner] = useState<string | null>(null);
 
   const [tabSessionId] = useState<string>(() => {
@@ -207,49 +202,32 @@ export default function App() {
       <header className="sticky top-0 z-30 w-full bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-4 py-2.5">
         <div className="max-w-[2500px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="flex items-center justify-between w-full md:w-auto gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🌌</span>
-              <h1 className="font-outfit text-lg font-extrabold tracking-wider bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                SUPAFLEX
-              </h1>
-            </div>
-
-            {/* Relative wrapper for Hero Selector Trigger & Floating Popover */}
-            <div className="relative" ref={selectorRef}>
-              <button
-                onClick={() => setShowSelectorBar(!showSelectorBar)}
-                className="flex items-center gap-2 px-3 py-1 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-lg text-xs font-semibold text-indigo-300 transition-all w-auto"
-                title="Click to switch hero or edit identity"
-              >
-                <Shield className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                <span className="font-outfit font-extrabold text-slate-100 whitespace-nowrap">
-                  {activeCharacter ? activeCharacter.name : 'Select Hero'}
-                </span>
-                {activeCharacter && (
-                  <div className="flex items-center gap-1">
-                    <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/35 text-purple-300 text-[10px] font-bold">
-                      {activeCharacter.race || 'Human'}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/35 text-indigo-300 text-[10px] font-bold">
-                      {activeCharacter.class || 'Adventurer'}
-                    </span>
-                  </div>
-                )}
-                {showSelectorBar ? (
-                  <ChevronUp className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-0.5" />
-                ) : (
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-0.5" />
-                )}
-              </button>
-
-              {/* Absolute Floating Glass Popover Card */}
-              {showSelectorBar && (
-                <HeroSelectorPopover
-                  onClose={() => setShowSelectorBar(false)}
-                  onOpenCreateModal={() => setShowCreateModal(true)}
-                />
+            {/* Consolidated KISS Launch & Account Hub Trigger */}
+            <button
+              onClick={() => setShowUnifiedLaunchHubModal(true)}
+              className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-950/90 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-xl text-xs transition-all shadow-sm group cursor-pointer"
+              title="Click to open Launch & Account Hub (Manage Characters, Auth, Inspect & Parties)"
+            >
+              <span className="text-lg group-hover:scale-110 transition-transform">🌌</span>
+              <span className="font-mono text-amber-300 font-bold truncate max-w-[180px]">
+                {playerEmail || 'Guest'}
+              </span>
+              <span className="text-slate-500 font-bold">,</span>
+              <span className="font-outfit font-extrabold text-slate-100 whitespace-nowrap flex items-center gap-1.5">
+                {activeCharacter ? activeCharacter.name : 'Select Hero'}
+              </span>
+              {activeCharacter && (
+                <div className="flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/35 text-purple-300 text-[10px] font-bold">
+                    {activeCharacter.race || 'Human'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/35 text-indigo-300 text-[10px] font-bold">
+                    {activeCharacter.class || 'Adventurer'}
+                  </span>
+                </div>
               )}
-            </div>
+              <span className="text-slate-400 group-hover:text-amber-400 transition-colors ml-1 text-xs">⚙️</span>
+            </button>
 
             {/* ⭐ Stylized Level Popover Trigger (Header Row 1) */}
             <div className="flex items-center gap-1.5 relative" ref={levelRef}>
@@ -387,36 +365,8 @@ export default function App() {
             </div>
           </nav>
 
-          {/* Right Zone: Auth, Inspect, Party, Resources Popover, Global Save & Database Indicator */}
+          {/* Right Zone: Resources Popover & Database Indicator */}
           <div className="flex items-center gap-2">
-            {/* 🔐 Auth, 👁️ Inspect, ⚔️ Party Action Buttons */}
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="flex items-center gap-1 px-2.5 py-1 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-lg text-xs font-semibold text-amber-300 transition-all"
-              title="Click to sign in, reset password, or manage profile privacy"
-            >
-              <Lock className="w-3.5 h-3.5 text-amber-400" />
-              <span className="truncate max-w-[100px]">{playerEmail || 'Sign In'}</span>
-            </button>
-
-            <button
-              onClick={() => setShowAccountInspectorModal(true)}
-              className="flex items-center gap-1 px-2.5 py-1 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-lg text-xs font-semibold text-indigo-300 transition-all"
-              title="Inspect another player's characters in Read-Only mode or clone them"
-            >
-              <Eye className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Inspect</span>
-            </button>
-
-            <button
-              onClick={() => setShowPartyManagerModal(true)}
-              className="flex items-center gap-1 px-2.5 py-1 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-lg text-xs font-semibold text-emerald-300 transition-all"
-              title="Manage parties and active party sessions"
-            >
-              <Users2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Party</span>
-            </button>
-
             {/* 📚 Resources Popover Trigger */}
             <div className="relative" ref={resourcesRef}>
 
@@ -578,11 +528,16 @@ export default function App() {
         />
       </ErrorBoundary>
 
-      {/* 🔐 Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
+      {/* 🌌 Unified Launch & Account Hub Modal */}
+      <UnifiedLaunchHubModal
+        isOpen={showUnifiedLaunchHubModal}
+        onClose={() => setShowUnifiedLaunchHubModal(false)}
         currentEmail={playerEmail}
+        activeCharacter={activeCharacter}
+        userCharacters={myHeroes}
+        tabSessionId={tabSessionId}
+        onSelectCharacter={selectCharacter}
+        onCreateNewCharacter={createNewCharacter}
         onLoginSuccess={(email) => {
           setPlayerEmail(email);
           localStorage.setItem('supaflex_player_email', email);
@@ -591,18 +546,6 @@ export default function App() {
         onLogout={() => {
           setPlayerEmail('');
           localStorage.removeItem('supaflex_player_email');
-          setShowAuthModal(false);
-        }}
-      />
-
-      {/* 👁️ Account Inspector Modal */}
-      <AccountInspectorModal
-        isOpen={showAccountInspectorModal}
-        onClose={() => setShowAccountInspectorModal(false)}
-        currentEmail={playerEmail}
-        onSelectReadOnlyCharacter={(char, ownerEmail) => {
-          setReadOnlyOwner(ownerEmail);
-          selectCharacter(char.id);
         }}
         onCharacterCloned={(clonedChar) => {
           fetchInitialData();
@@ -610,14 +553,6 @@ export default function App() {
         }}
       />
 
-      {/* ⚔️ Party Manager Modal */}
-      <PartyManagerModal
-        isOpen={showPartyManagerModal}
-        onClose={() => setShowPartyManagerModal(false)}
-        currentEmail={playerEmail}
-        userCharacters={myHeroes}
-        tabSessionId={tabSessionId}
-      />
 
 
       {/* Footer */}

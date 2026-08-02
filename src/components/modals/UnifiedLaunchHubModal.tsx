@@ -1,0 +1,887 @@
+// src/components/modals/UnifiedLaunchHubModal.tsx
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
+import { gameApi } from '../../services/api';
+import { Character, Party, PartySessionMember, AuthMode } from '../../types/game';
+
+interface UnifiedLaunchHubModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  currentEmail: string | null;
+  activeCharacter: Character | null;
+  userCharacters: Character[];
+  tabSessionId: string;
+  onSelectCharacter: (id: number) => void;
+  onCreateNewCharacter: (name: string, characterClass?: string, race?: string) => Promise<Character | null>;
+  onLoginSuccess: (email: string) => void;
+  onLogout: () => void;
+  onCharacterCloned: (clonedChar: Character) => void;
+}
+
+export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
+  isOpen,
+  onClose,
+  currentEmail,
+  activeCharacter,
+  userCharacters,
+  tabSessionId,
+  onSelectCharacter,
+  onCreateNewCharacter,
+  onLoginSuccess,
+  onLogout,
+  onCharacterCloned,
+}) => {
+  const [rightSubTab, setRightSubTab] = useState<'account' | 'inspect' | 'party'>('account');
+
+  // Account Sub-Tab State
+  const [authMode, setAuthMode] = useState<AuthMode>(currentEmail ? 'profile' : 'login');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [allowCloning, setAllowCloning] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authSuccess, setAuthSuccess] = useState<string | null>(null);
+
+  // Create Hero State
+  const [isCreatingHero, setIsCreatingHero] = useState(false);
+  const [newHeroName, setNewHeroName] = useState('');
+  const [newHeroClass, setNewHeroClass] = useState('Adventurer');
+  const [newHeroRace, setNewHeroRace] = useState('Human');
+
+  // Inspect Sub-Tab State
+  const [targetInspectEmail, setTargetInspectEmail] = useState('');
+  const [inspectLoading, setInspectLoading] = useState(false);
+  const [inspectError, setInspectError] = useState<string | null>(null);
+  const [inspectedOwner, setInspectedOwner] = useState<string | null>(null);
+  const [inspectedCharacters, setInspectedCharacters] = useState<Character[]>([]);
+  const [cloningId, setCloningId] = useState<number | null>(null);
+  const [cloneSuccessMsg, setCloneSuccessMsg] = useState<string | null>(null);
+
+  // Party Sub-Tab State
+  const [parties, setParties] = useState<Party[]>([]);
+  const [selectedParty, setSelectedParty] = useState<Party | null>(null);
+  const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
+  const [partyJoinCharId, setPartyJoinCharId] = useState<number | null>(null);
+  const [newPartyName, setNewPartyName] = useState('');
+  const [invitedEmails, setInvitedEmails] = useState('');
+  const [partyLoading, setPartyLoading] = useState(false);
+  const [partyError, setPartyError] = useState<string | null>(null);
+  const [partySuccessMsg, setPartySuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentEmail) {
+      setAuthMode('profile');
+      loadProfile(currentEmail);
+      if (isOpen) {
+        loadParties();
+      }
+    } else {
+      setAuthMode('login');
+    }
+  }, [currentEmail, isOpen]);
+
+  useEffect(() => {
+    if (!selectedParty || !isOpen) return;
+
+    loadSessionMembers(selectedParty.id);
+
+    const channel = supabase
+      .channel(`party:${selectedParty.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'party_session_members',
+          filter: `party_id=eq.${selectedParty.id}`,
+        },
+        () => {
+          loadSessionMembers(selectedParty.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedParty, isOpen]);
+
+  const loadProfile = async (targetEmail: string) => {
+    try {
+      const profile = await gameApi.getUserProfile(targetEmail);
+      setAllowCloning(profile.allow_cloning);
+    } catch (err) {
+      console.error('Error loading profile:', err);
+    }
+  };
+
+  const loadParties = async () => {
+    if (!currentEmail) return;
+    try {
+      const data = await gameApi.getPartiesForUser(currentEmail);
+      setParties(data as Party[]);
+      if (data.length > 0 && !selectedParty) {
+        setSelectedParty(data[0] as Party);
+      }
+    } catch (err) {
+      console.error('Error loading parties:', err);
+    }
+  };
+
+  const loadSessionMembers = async (partyId: string) => {
+    try {
+      const members = await gameApi.getPartySessionMembers(partyId);
+      setSessionMembers(members as PartySessionMember[]);
+    } catch (err) {
+      console.error('Error loading session members:', err);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  // --- AUTH HANDLERS ---
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthSuccess(null);
+    setAuthLoading(true);
+
+    try {
+      const cleanEmail = emailInput.trim().toLowerCase();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: passwordInput,
+      });
+
+      if (error) {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: passwordInput,
+        });
+
+        if (signUpError && !signUpError.message.includes('already registered')) {
+          setAuthError(error.message);
+          setAuthLoading(false);
+          return;
+        }
+      }
+
+      await gameApi.getUserProfile(cleanEmail);
+      onLoginSuccess(cleanEmail);
+      setAuthSuccess('Successfully signed in!');
+    } catch (err: any) {
+      setAuthError(err.message || 'Login failed.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthSuccess(null);
+    setAuthLoading(true);
+
+    try {
+      const cleanEmail = emailInput.trim().toLowerCase();
+      const { error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password: passwordInput,
+      });
+
+      if (error) {
+        setAuthError(error.message);
+        setAuthLoading(false);
+        return;
+      }
+
+      await gameApi.getUserProfile(cleanEmail);
+      onLoginSuccess(cleanEmail);
+      setAuthSuccess('Account created & logged in!');
+    } catch (err: any) {
+      setAuthError(err.message || 'Sign up failed.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthSuccess(null);
+
+    if (!emailInput.trim()) {
+      setAuthError('Please enter your email address to receive a password reset link.');
+      return;
+    }
+
+    setAuthLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(emailInput.trim().toLowerCase(), {
+        redirectTo: window.location.origin,
+      });
+
+      if (error) {
+        setAuthError(error.message);
+      } else {
+        setAuthSuccess(`If an account exists for ${emailInput.trim()}, a password reset link has been sent.`);
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Failed to send password reset email.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleToggleCloning = async (newVal: boolean) => {
+    if (!currentEmail) return;
+    const prevVal = allowCloning;
+    setAllowCloning(newVal);
+
+    const success = await gameApi.updateProfilePrivacy(currentEmail, newVal);
+    if (!success) {
+      setAllowCloning(prevVal);
+      setAuthError('Failed to update privacy setting. Rolled back.');
+    }
+  };
+
+  // --- HERO CREATION HANDLER ---
+  const handleCreateHeroSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newHeroName.trim()) return;
+
+    try {
+      const created = await onCreateNewCharacter(
+        newHeroName.trim(),
+        newHeroClass.trim() || 'Adventurer',
+        newHeroRace.trim() || 'Human'
+      );
+      if (created) {
+        onSelectCharacter(created.id);
+        setIsCreatingHero(false);
+        setNewHeroName('');
+      }
+    } catch (err) {
+      console.error('Error creating new hero:', err);
+    }
+  };
+
+  // --- INSPECT / CLONE HANDLERS ---
+  const handleSearchInspect = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInspectError(null);
+    setCloneSuccessMsg(null);
+    setInspectedCharacters([]);
+    setInspectedOwner(null);
+
+    const cleanEmail = targetInspectEmail.trim().toLowerCase();
+    if (!cleanEmail) return;
+
+    setInspectLoading(true);
+
+    try {
+      const profile = await gameApi.getUserProfile(cleanEmail);
+      if (!profile.allow_cloning && cleanEmail !== currentEmail?.toLowerCase()) {
+        setInspectError(`🔒 Player '${cleanEmail}' has set their character vault to Private.`);
+        setInspectLoading(false);
+        return;
+      }
+
+      const charList = await gameApi.getCharactersByOwner(cleanEmail);
+      if (charList.length === 0) {
+        setInspectError(`No characters found for player '${cleanEmail}'.`);
+      } else {
+        setInspectedCharacters(charList);
+        setInspectedOwner(cleanEmail);
+      }
+    } catch (err: any) {
+      setInspectError(err.message || 'Failed to inspect player account.');
+    } finally {
+      setInspectLoading(false);
+    }
+  };
+
+  const handleCloneCharacter = async (char: Character) => {
+    if (!currentEmail) {
+      setInspectError('You must be logged in to clone characters to your account.');
+      return;
+    }
+
+    setCloningId(char.id);
+    setInspectError(null);
+    setCloneSuccessMsg(null);
+
+    try {
+      const cloned = await gameApi.cloneCharacterToUser(char, currentEmail);
+      setCloneSuccessMsg(`🧬 Successfully cloned '${char.name}' as '${cloned.name}' in your vault!`);
+      onCharacterCloned(cloned);
+    } catch (err: any) {
+      setInspectError(err.message || 'Failed to clone character.');
+    } finally {
+      setCloningId(null);
+    }
+  };
+
+  // --- PARTY HANDLERS ---
+  const handleCreateParty = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentEmail) return;
+
+    setPartyError(null);
+    setPartySuccessMsg(null);
+    setPartyLoading(true);
+
+    try {
+      const emailList = invitedEmails.split(',').map((e) => e.trim()).filter(Boolean);
+      const newParty = await gameApi.createParty(newPartyName, currentEmail, emailList);
+      setPartySuccessMsg(`Party '${newPartyName}' created successfully!`);
+      setNewPartyName('');
+      setInvitedEmails('');
+      await loadParties();
+      setSelectedParty(newParty as Party);
+    } catch (err: any) {
+      setPartyError(err.message || 'Failed to create party.');
+    } finally {
+      setPartyLoading(false);
+    }
+  };
+
+  const handleJoinParty = async () => {
+    if (!selectedParty || !currentEmail || !partyJoinCharId) return;
+
+    setPartyError(null);
+    try {
+      await gameApi.joinPartySession(selectedParty.id, currentEmail, partyJoinCharId, tabSessionId);
+      setPartySuccessMsg('Joined party in this browser tab!');
+      await loadSessionMembers(selectedParty.id);
+    } catch (err: any) {
+      setPartyError(err.message || 'Failed to join party.');
+    }
+  };
+
+  const handleLeaveParty = async () => {
+    if (!selectedParty) return;
+    try {
+      await gameApi.leavePartySession(tabSessionId);
+      await loadSessionMembers(selectedParty.id);
+      setPartySuccessMsg('Left party session for this browser tab.');
+    } catch (err: any) {
+      setPartyError(err.message || 'Failed to leave party.');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fadeIn">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-[900px] w-full h-[85vh] shadow-2xl text-slate-100 flex flex-col overflow-hidden">
+        
+        {/* ======================================================== */}
+        {/* HEADER (Master Modal Blueprint)                          */}
+        {/* ======================================================== */}
+        <div className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-6 py-4 flex items-center justify-between shrink-0">
+          <div>
+            <h2 className="text-xl font-extrabold text-amber-400 flex items-center gap-2 font-outfit tracking-wide">
+              <span>🌌</span> Launch & Account Hub
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Manage your character vault, party sessions, user security, and read-only inspection.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white text-2xl font-bold px-2.5 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+            title="Close Hub"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* ======================================================== */}
+        {/* TWO-PANE GRID ARCHITECTURE (md:grid-cols-12)             */}
+        {/* ======================================================== */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 p-6 overflow-hidden bg-slate-950/40">
+          
+          {/* ------------------------------------------------------ */}
+          {/* PANE 1 (LEFT): My Character Vault Roster (col-span-6)   */}
+          {/* ------------------------------------------------------ */}
+          <div className="md:col-span-6 border-r border-slate-800/80 pr-6 flex flex-col h-full overflow-hidden">
+            
+            {/* Header & Create Button */}
+            <div className="flex items-center justify-between mb-3 shrink-0">
+              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                🛡️ Character Vault ({userCharacters.length})
+              </h3>
+              <button
+                onClick={() => setIsCreatingHero(!isCreatingHero)}
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-sm"
+              >
+                {isCreatingHero ? '✕ Cancel' : '➕ Create New Hero'}
+              </button>
+            </div>
+
+            {/* Inline Hero Creation Form */}
+            {isCreatingHero && (
+              <form onSubmit={handleCreateHeroSubmit} className="mb-4 p-3 bg-slate-900 border border-indigo-500/40 rounded-xl space-y-3 shrink-0">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Hero Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={newHeroName}
+                    onChange={(e) => setNewHeroName(e.target.value)}
+                    placeholder="e.g. Conan the Barbarian"
+                    className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-400"
+                    autoFocus
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Race</label>
+                    <input
+                      type="text"
+                      value={newHeroRace}
+                      onChange={(e) => setNewHeroRace(e.target.value)}
+                      placeholder="Human"
+                      className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Class</label>
+                    <input
+                      type="text"
+                      value={newHeroClass}
+                      onChange={(e) => setNewHeroClass(e.target.value)}
+                      placeholder="Adventurer"
+                      className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={!newHeroName.trim()}
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                >
+                  Save & Create Blank Hero
+                </button>
+              </form>
+            )}
+
+            {/* Character Cards Stream */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {userCharacters.length === 0 ? (
+                <div className="text-center py-12 bg-slate-900/60 rounded-xl border border-slate-800 p-6 space-y-3">
+                  <span className="text-3xl">⚔️</span>
+                  <h4 className="text-slate-200 font-bold text-sm">No Characters Found</h4>
+                  <p className="text-slate-400 text-xs">
+                    Click <strong>"Create New Hero"</strong> above to create your first blank character.
+                  </p>
+                </div>
+              ) : (
+                userCharacters.map((char) => {
+                  const isActive = activeCharacter?.id === char.id;
+                  const sheet = char.sheet_data;
+                  const dice = sheet?.attribute_dice || {
+                    might: char.might || 'd6',
+                    motion: char.motion || 'd6',
+                    mind: char.mind || 'd4',
+                    magic: char.magic || 'd4',
+                    moxie: char.moxie || 'd8',
+                  };
+
+                  return (
+                    <div
+                      key={char.id}
+                      className={`p-4 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
+                        isActive
+                          ? 'bg-slate-900 border-amber-500/80 shadow-lg shadow-amber-950/40'
+                          : 'bg-slate-900/60 hover:bg-slate-900 border-slate-800/80 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-outfit font-extrabold text-base text-slate-100">
+                              {char.name}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
+                              Lvl {sheet?.level || 1}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold">
+                              {char.race || 'Human'}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-[10px] font-semibold">
+                              {char.class || 'Adventurer'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {isActive ? (
+                          <span className="px-3 py-1 bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 font-bold text-xs rounded-lg flex items-center gap-1 shrink-0">
+                            ● Active
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              onSelectCharacter(char.id);
+                              onClose();
+                            }}
+                            className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-lg transition shadow-sm shrink-0 cursor-pointer"
+                          >
+                            🛡️ Load Hero
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Key Attribute Summary Pills */}
+                      <div className="flex items-center justify-between bg-slate-950/70 p-2 rounded-lg border border-slate-800/80 text-[11px] font-mono text-slate-300">
+                        <span>💪 Mgt: <strong>{dice.might}</strong></span>
+                        <span>🏃 Mot: <strong>{dice.motion}</strong></span>
+                        <span>👁️ Mnd: <strong>{dice.mind}</strong></span>
+                        <span>✨ Mag: <strong>{dice.magic}</strong></span>
+                        <span>🫀 Mox: <strong>{dice.moxie}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* ------------------------------------------------------ */}
+          {/* PANE 2 (RIGHT): Management Sub-Tabs (col-span-6)       */}
+          {/* ------------------------------------------------------ */}
+          <div className="md:col-span-6 flex flex-col h-full overflow-hidden">
+            
+            {/* Top Sub-Tab Selector */}
+            <div className="flex border-b border-slate-800 mb-4 shrink-0">
+              <button
+                onClick={() => setRightSubTab('account')}
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                  rightSubTab === 'account'
+                    ? 'border-amber-400 text-amber-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                👤 Account
+              </button>
+              <button
+                onClick={() => setRightSubTab('inspect')}
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                  rightSubTab === 'inspect'
+                    ? 'border-indigo-400 text-indigo-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                👁️ Inspect & Clone
+              </button>
+              <button
+                onClick={() => setRightSubTab('party')}
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                  rightSubTab === 'party'
+                    ? 'border-emerald-400 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                ⚔️ Party Sessions
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-1">
+              
+              {/* SUB-TAB 1: ACCOUNT & AUTH */}
+              {rightSubTab === 'account' && (
+                <div className="space-y-4">
+                  {currentEmail ? (
+                    <div className="space-y-4">
+                      <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                        <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Active Account</div>
+                        <div className="text-base font-mono font-bold text-amber-300 truncate">{currentEmail}</div>
+                      </div>
+
+                      {/* Dyslexia-Friendly Peg-Slider Toggle for Vault Privacy */}
+                      <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <label className="text-xs font-bold text-slate-200 block">
+                          Character Vault Privacy & Cloning
+                        </label>
+
+                        <div className="toggle-container flex items-center justify-between gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                          <span
+                            id="label-left"
+                            style={{
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              color: !allowCloning ? '#f87171' : '#94a3b8',
+                              opacity: !allowCloning ? 1.0 : 0.5,
+                              transition: 'all 0.3s ease',
+                            }}
+                          >
+                            🔒 Private Vault
+                          </span>
+
+                          <label className="switch relative inline-block w-[46px] h-[24px] m-0 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              id="slider-checkbox"
+                              checked={allowCloning}
+                              onChange={(e) => handleToggleCloning(e.target.checked)}
+                              className="opacity-0 w-0 h-0 peer"
+                            />
+                            <span className="slider absolute inset-0 bg-slate-800 peer-checked:bg-emerald-600 rounded-full transition-all duration-300 before:absolute before:content-[''] before:h-[18px] before:w-[18px] before:left-[3px] before:bottom-[3px] before:bg-white before:rounded-full before:transition-all before:duration-300 peer-checked:before:translate-x-[22px]"></span>
+                          </label>
+
+                          <span
+                            id="label-right"
+                            style={{
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              color: allowCloning ? '#34d399' : '#94a3b8',
+                              opacity: allowCloning ? 1.0 : 0.5,
+                              transition: 'all 0.3s ease',
+                            }}
+                          >
+                            🧬 Allow Cloning
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 italic">
+                          When enabled, other players who enter your email address can view your characters in Read-Only mode and clone them.
+                        </p>
+                      </div>
+
+                      <div className="pt-2">
+                        <button
+                          onClick={onLogout}
+                          className="w-full py-2 bg-red-800/80 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {authError && <div className="p-3 bg-red-900/60 border border-red-500/50 rounded text-red-200 text-xs">{authError}</div>}
+                      {authSuccess && <div className="p-3 bg-emerald-900/60 border border-emerald-500/50 rounded text-emerald-200 text-xs">{authSuccess}</div>}
+
+                      <form onSubmit={authMode === 'login' ? handleLogin : authMode === 'signup' ? handleSignUp : handleResetPassword} className="space-y-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Email Address</label>
+                          <input
+                            type="email"
+                            required
+                            value={emailInput}
+                            onChange={(e) => setEmailInput(e.target.value)}
+                            placeholder="player@example.com"
+                            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                          />
+                        </div>
+
+                        {authMode !== 'reset_password' && (
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Password</label>
+                            <input
+                              type="password"
+                              required
+                              value={passwordInput}
+                              onChange={(e) => setPasswordInput(e.target.value)}
+                              placeholder="••••••••"
+                              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                            />
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={authLoading}
+                          className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 text-slate-950 font-bold text-xs rounded-lg transition"
+                        >
+                          {authLoading ? 'Processing...' : authMode === 'login' ? 'Sign In' : authMode === 'signup' ? 'Create Account' : 'Send Password Reset Link'}
+                        </button>
+                      </form>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SUB-TAB 2: INSPECT & CLONE */}
+              {rightSubTab === 'inspect' && (
+                <div className="space-y-4">
+                  {inspectError && <div className="p-3 bg-red-900/60 border border-red-500/50 rounded text-red-200 text-xs">{inspectError}</div>}
+                  {cloneSuccessMsg && <div className="p-3 bg-emerald-900/60 border border-emerald-500/50 rounded text-emerald-200 text-xs font-semibold">{cloneSuccessMsg}</div>}
+
+                  <form onSubmit={handleSearchInspect} className="flex gap-2">
+                    <input
+                      type="email"
+                      required
+                      value={targetInspectEmail}
+                      onChange={(e) => setTargetInspectEmail(e.target.value)}
+                      placeholder="Search player email (e.g. friend@gmail.com)"
+                      className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                    />
+                    <button
+                      type="submit"
+                      disabled={inspectLoading}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                    >
+                      {inspectLoading ? '...' : '🔍 Inspect'}
+                    </button>
+                  </form>
+
+                  {inspectedOwner && (
+                    <div className="space-y-3">
+                      <div className="text-xs text-indigo-300 font-bold uppercase tracking-wider bg-slate-900 p-2 rounded-lg border border-slate-800 flex justify-between">
+                        <span>Viewing: {inspectedOwner}</span>
+                        <span>({inspectedCharacters.length} heroes)</span>
+                      </div>
+
+                      {inspectedCharacters.map((char) => (
+                        <div key={char.id} className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex items-center justify-between gap-3">
+                          <div>
+                            <div className="font-bold text-slate-100 text-xs">{char.name} (Lvl {char.sheet_data?.level || 1})</div>
+                            <div className="text-[10px] text-slate-400">{char.race} • {char.class}</div>
+                          </div>
+                          <button
+                            onClick={() => handleCloneCharacter(char)}
+                            disabled={cloningId === char.id}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-[11px] rounded-lg transition"
+                          >
+                            {cloningId === char.id ? 'Cloning...' : '🧬 Clone'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SUB-TAB 3: PARTY SESSIONS */}
+              {rightSubTab === 'party' && (
+                <div className="space-y-4">
+                  {partyError && <div className="p-3 bg-red-900/60 border border-red-500/50 rounded text-red-200 text-xs">{partyError}</div>}
+                  {partySuccessMsg && <div className="p-3 bg-emerald-900/60 border border-emerald-500/50 rounded text-emerald-200 text-xs font-semibold">{partySuccessMsg}</div>}
+
+                  {/* GM Create Party */}
+                  <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                    <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">👑 Create Party (GM)</h4>
+                    <form onSubmit={handleCreateParty} className="space-y-2">
+                      <input
+                        type="text"
+                        required
+                        value={newPartyName}
+                        onChange={(e) => setNewPartyName(e.target.value)}
+                        placeholder="Party Name (e.g. Friday Dungeon Crawl)"
+                        className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                      />
+                      <input
+                        type="text"
+                        value={invitedEmails}
+                        onChange={(e) => setInvitedEmails(e.target.value)}
+                        placeholder="Player emails (comma separated)"
+                        className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                      />
+                      <button
+                        type="submit"
+                        disabled={partyLoading}
+                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                      >
+                        Create Party
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Party Join & Active Session Roster */}
+                  {parties.length > 0 && (
+                    <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Active Parties</h4>
+                        {parties.length > 1 && (
+                          <select
+                            value={selectedParty?.id || ''}
+                            onChange={(e) => {
+                              const p = parties.find((pt) => pt.id === e.target.value);
+                              if (p) setSelectedParty(p);
+                            }}
+                            className="px-2 py-1 bg-slate-950 border border-slate-800 rounded text-xs text-slate-200"
+                          >
+                            {parties.map((p) => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      {selectedParty && (
+                        <>
+                          <h5 className="text-[11px] font-semibold text-amber-300">
+                            Joining '{selectedParty.name}' (This Tab)
+                          </h5>
+
+                          <select
+                            value={partyJoinCharId || ''}
+                            onChange={(e) => setPartyJoinCharId(Number(e.target.value))}
+                            className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                          >
+                            <option value="">-- Select Character to Join --</option>
+                            {userCharacters.map((c) => (
+                              <option key={c.id} value={c.id}>{c.name} (Lvl {c.sheet_data?.level || 1})</option>
+                            ))}
+                          </select>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleJoinParty}
+                              disabled={!partyJoinCharId}
+                              className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                            >
+                              Join Session
+                            </button>
+                            <button
+                              onClick={handleLeaveParty}
+                              className="px-3 py-1.5 bg-red-800/80 hover:bg-red-700 text-white font-bold text-xs rounded-lg transition"
+                            >
+                              Leave Session
+                            </button>
+                          </div>
+
+                          {/* Active Member Roster */}
+                          <div className="pt-2 border-t border-slate-800 space-y-1.5">
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex justify-between">
+                              <span>Active Roster</span>
+                              <span className="text-emerald-400 font-normal">● Live ({sessionMembers.length})</span>
+                            </div>
+                            {sessionMembers.map((m) => (
+                              <div key={m.id} className="p-2 bg-slate-950 rounded-lg border border-slate-800/80 flex justify-between items-center text-xs">
+                                <span>🛡️ {m.character?.name || `Hero #${m.character_id}`} {m.tab_session_id === tabSessionId && '(This Tab)'}</span>
+                                <span className="text-[10px] text-slate-400">{m.player_email}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ======================================================== */}
+        {/* FOOTER (Master Modal Blueprint Standard)                 */}
+        {/* ======================================================== */}
+        <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
+          <div>
+            Account: <strong className="text-amber-300">{currentEmail || 'Not Signed In'}</strong> • Heroes: <strong className="text-indigo-300">{userCharacters.length}</strong>
+          </div>
+          <button
+            onClick={onClose}
+            className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-6 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

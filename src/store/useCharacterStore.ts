@@ -88,12 +88,18 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         gameApi.getSkillsets(),
       ]);
 
-      let selectedChar = chars[0] || null;
+      const lastActiveIdStr = localStorage.getItem('supaflex_last_active_char_id');
+      const lastActiveId = lastActiveIdStr ? Number(lastActiveIdStr) : null;
+      let selectedChar = (lastActiveId ? chars.find((c) => c.id === lastActiveId) : null) || chars[0] || null;
 
       // If no character exists yet, auto-create a default Playtest hero
       if (!selectedChar && isConnected) {
         selectedChar = await gameApi.createCharacter('Hero of MetaScape', 'Vanguard', 'Human');
         chars.push(selectedChar);
+      }
+
+      if (selectedChar) {
+        localStorage.setItem('supaflex_last_active_char_id', String(selectedChar.id));
       }
 
       set({
@@ -113,6 +119,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   selectCharacter: async (id: number) => {
+    localStorage.setItem('supaflex_last_active_char_id', String(id));
     const found = get().characters.find((c) => c.id === id);
     if (found) {
       set({ activeCharacter: { ...found } });
