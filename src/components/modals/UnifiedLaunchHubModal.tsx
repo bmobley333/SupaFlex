@@ -225,16 +225,9 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       });
 
       if (error) {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password: passwordInput,
-        });
-
-        if (signUpError && !signUpError.message.includes('already registered')) {
-          setAuthError(error.message);
-          setAuthLoading(false);
-          return;
-        }
+        setAuthError(error.message);
+        setAuthLoading(false);
+        return;
       }
 
       await gameApi.getUserProfile(cleanEmail);
@@ -282,7 +275,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     setAuthSuccess(null);
 
     if (!emailInput.trim()) {
-      setAuthError('Please enter your email address to receive a password reset link.');
+      setAuthError('Please enter your email address above to receive a password reset link.');
       return;
     }
 
@@ -296,7 +289,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       if (error) {
         setAuthError(error.message);
       } else {
-        setAuthSuccess(`If an account exists for ${emailInput.trim()}, a password reset link has been sent.`);
+        setAuthSuccess(`If an account exists for '${emailInput.trim()}', a password reset link has been emailed to you!`);
       }
     } catch (err: any) {
       setAuthError(err.message || 'Failed to send password reset email.');
@@ -447,7 +440,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-[900px] w-full h-[85vh] shadow-2xl text-slate-100 flex flex-col overflow-hidden">
         
         {/* ======================================================== */}
-        {/* HEADER (Master Modal Blueprint)                          */}
+        {/* HEADER (Master Modal Blueprint with Sign Out Button)      */}
         {/* ======================================================== */}
         <div className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-6 py-4 flex items-center justify-between shrink-0">
           <div>
@@ -458,13 +451,25 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
               Manage your character vault, active party sessions, user account, and read-only inspection.
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white text-2xl font-bold px-2.5 py-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Close Selector"
-          >
-            ✕
-          </button>
+
+          <div className="flex items-center gap-3">
+            {currentEmail && (
+              <button
+                onClick={onLogout}
+                className="px-3 py-1.5 bg-red-950/80 hover:bg-red-900 border border-red-700/60 text-red-200 font-bold text-xs rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                title="Sign out of current account"
+              >
+                <span>🚪</span> Sign Out
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white text-2xl font-bold px-2.5 py-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Close Selector"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* ======================================================== */}
@@ -614,9 +619,10 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           </div>
                         </div>
                       ) : (
-                        /* DISPLAY CARD MODE */
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
+                        /* STRUCTURED 2-ROW DISPLAY CARD MODE */
+                        <div className="space-y-2">
+                          {/* ROW 1: Name & Level (Left) | Load Hero / Active (Far Right) */}
+                          <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
                               <span className="font-outfit font-extrabold text-base text-slate-100">
                                 {char.name}
@@ -626,41 +632,8 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                               </span>
                             </div>
 
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold">
-                                {char.race || 'Human'}
-                              </span>
-                              <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-[10px] font-semibold">
-                                {char.class || 'Adventurer'}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {/* Edit Button */}
-                            <button
-                              onClick={() => handleStartEdit(char)}
-                              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs"
-                              title="Edit Character Name, Race & Class"
-                            >
-                              ✏️
-                            </button>
-
-                            {/* Delete Button */}
-                            <button
-                              onClick={() => {
-                                setDeleteTargetChar(char);
-                                setDeleteConfirmInput('');
-                              }}
-                              className="p-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/50 text-red-300 rounded-lg transition text-xs"
-                              title="Delete Character"
-                            >
-                              🗑️
-                            </button>
-
-                            {/* Load / Active Action */}
                             {isActive ? (
-                              <span className="px-3 py-1 bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 font-bold text-xs rounded-lg flex items-center gap-1">
+                              <span className="px-3 py-1 bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 font-bold text-xs rounded-lg flex items-center gap-1 shrink-0">
                                 ● Active
                               </span>
                             ) : (
@@ -669,11 +642,44 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                                   onSelectCharacter(char.id);
                                   onClose();
                                 }}
-                                className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-lg transition shadow-sm cursor-pointer"
+                                className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-lg transition shadow-sm shrink-0 cursor-pointer"
                               >
                                 🛡️ Load Hero
                               </button>
                             )}
+                          </div>
+
+                          {/* ROW 2: Race & Class Pills (Left) | Pencil Edit & Trash Delete (Far Right) */}
+                          <div className="flex items-center justify-between gap-3 pt-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold">
+                                {char.race || 'Human'}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-[10px] font-semibold">
+                                {char.class || 'Adventurer'}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                onClick={() => handleStartEdit(char)}
+                                className="p-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs cursor-pointer px-2 py-0.5 flex items-center gap-1"
+                                title="Edit Character Name, Race & Class"
+                              >
+                                ✏️ <span className="text-[10px] font-semibold">Edit</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setDeleteTargetChar(char);
+                                  setDeleteConfirmInput('');
+                                }}
+                                className="p-1 bg-red-950/60 hover:bg-red-900/80 border border-red-800/50 text-red-300 rounded-lg transition text-xs cursor-pointer px-2 py-0.5 flex items-center gap-1"
+                                title="Delete Character"
+                              >
+                                🗑️ <span className="text-[10px] font-semibold">Delete</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -787,22 +793,65 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                   ) : (
                     <div className="space-y-4">
                       {authError && <div className="p-3 bg-red-900/60 border border-red-500/50 rounded text-red-200 text-xs">{authError}</div>}
-                      {authSuccess && <div className="p-3 bg-emerald-900/60 border border-emerald-500/50 rounded text-emerald-200 text-xs">{authSuccess}</div>}
+                      {authSuccess && <div className="p-3 bg-emerald-900/60 border border-emerald-500/50 rounded text-emerald-200 text-xs font-semibold">{authSuccess}</div>}
 
-                      <form onSubmit={authMode === 'login' ? handleLogin : authMode === 'signup' ? handleSignUp : handleResetPassword} className="space-y-3">
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Email Address</label>
-                          <input
-                            type="email"
-                            required
-                            value={emailInput}
-                            onChange={(e) => setEmailInput(e.target.value)}
-                            placeholder="player@example.com"
-                            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
-                          />
-                        </div>
+                      {authMode === 'reset_password' ? (
+                        /* PASSWORD RESET RECOVERY VIEW */
+                        <form onSubmit={handleResetPassword} className="space-y-3 bg-slate-900 p-4 rounded-xl border border-slate-800">
+                          <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                            🔑 Password Recovery
+                          </h4>
+                          <p className="text-xs text-slate-300">
+                            Enter your account email address below and we will send you a password recovery link.
+                          </p>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Email Address</label>
+                            <input
+                              type="email"
+                              required
+                              value={emailInput}
+                              onChange={(e) => setEmailInput(e.target.value)}
+                              placeholder="player@example.com"
+                              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                            />
+                          </div>
 
-                        {authMode !== 'reset_password' && (
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAuthMode('login');
+                                setAuthError(null);
+                                setAuthSuccess(null);
+                              }}
+                              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-lg transition"
+                            >
+                              ← Back to Sign In
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={authLoading || !emailInput.trim()}
+                              className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 text-slate-950 font-bold text-xs rounded-lg transition cursor-pointer"
+                            >
+                              {authLoading ? 'Sending...' : 'Send Recovery Email'}
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        /* SIGN IN / SIGN UP FORM */
+                        <form onSubmit={authMode === 'login' ? handleLogin : handleSignUp} className="space-y-3 bg-slate-900 p-4 rounded-xl border border-slate-800">
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Email Address</label>
+                            <input
+                              type="email"
+                              required
+                              value={emailInput}
+                              onChange={(e) => setEmailInput(e.target.value)}
+                              placeholder="player@example.com"
+                              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                            />
+                          </div>
+
                           <div>
                             <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Password</label>
                             <input
@@ -814,16 +863,43 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
                             />
                           </div>
-                        )}
 
-                        <button
-                          type="submit"
-                          disabled={authLoading}
-                          className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 text-slate-950 font-bold text-xs rounded-lg transition cursor-pointer"
-                        >
-                          {authLoading ? 'Processing...' : authMode === 'login' ? 'Sign In' : authMode === 'signup' ? 'Create Account' : 'Send Password Reset Link'}
-                        </button>
-                      </form>
+                          {/* Account Toggle & Forgot Password Links */}
+                          <div className="flex justify-between items-center text-[11px] pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAuthMode(authMode === 'signup' ? 'login' : 'signup');
+                                setAuthError(null);
+                                setAuthSuccess(null);
+                              }}
+                              className="text-indigo-400 hover:underline font-semibold"
+                            >
+                              {authMode === 'login' ? "Need an account? Sign Up" : "Already have an account? Sign In"}
+                            </button>
+                            
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAuthMode('reset_password');
+                                setAuthError(null);
+                                setAuthSuccess(null);
+                              }}
+                              className="text-amber-400 hover:underline font-semibold flex items-center gap-1"
+                            >
+                              🔑 Forgot Password?
+                            </button>
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={authLoading}
+                            className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 text-slate-950 font-bold text-xs rounded-lg transition cursor-pointer mt-2"
+                          >
+                            {authLoading ? 'Processing...' : authMode === 'login' ? 'Sign In' : 'Create Account'}
+                          </button>
+                        </form>
+                      )}
                     </div>
                   )}
                 </div>
@@ -994,22 +1070,10 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
         {/* ======================================================== */}
         {/* FOOTER (Master Modal Blueprint Standard)                 */}
-        {/* Permanently Visible Sign Out & Account Context           */}
         {/* ======================================================== */}
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
-          <div className="flex items-center gap-3">
-            <div>
-              Account: <strong className="text-amber-300">{currentEmail || 'Not Signed In'}</strong> • Heroes: <strong className="text-indigo-300">{userCharacters.length}</strong>
-            </div>
-            {currentEmail && (
-              <button
-                onClick={onLogout}
-                className="px-2.5 py-1 bg-red-950/80 hover:bg-red-900 border border-red-700/60 text-red-200 font-bold text-[11px] rounded-lg transition cursor-pointer flex items-center gap-1 shadow-sm"
-                title="Sign out of current account"
-              >
-                <span>🚪</span> Sign Out
-              </button>
-            )}
+          <div>
+            Account: <strong className="text-amber-300">{currentEmail || 'Not Signed In'}</strong> • Heroes: <strong className="text-indigo-300">{userCharacters.length}</strong>
           </div>
           <button
             onClick={onClose}
