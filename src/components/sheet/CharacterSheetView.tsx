@@ -1,4 +1,3 @@
-// src/components/sheet/CharacterSheetView.tsx
 import React from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { TraitsCard } from './TraitsCard';
@@ -11,13 +10,15 @@ import { ShieldCard } from './ShieldCard';
 import { VitalsHeader } from './VitalsHeader';
 import { AbilitySlotsGrid } from './AbilitySlotsGrid';
 import { SectionJumpHUD } from './SectionJumpHUD';
+import { GmMonsterTrackerHud } from '../hud/GmMonsterTrackerHud';
+import { PartyRosterHud } from '../hud/PartyRosterHud';
 
 interface CharacterSheetViewProps {
   onOpenVitalityManager?: () => void;
 }
 
 export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({ onOpenVitalityManager }) => {
-  const { activeCharacter } = useCharacterStore();
+  const { activeCharacter, playerEmail } = useCharacterStore();
   const heroKey = activeCharacter?.id ? `hero_${activeCharacter.id}` : 'no_hero';
 
   return (
@@ -43,8 +44,11 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({ onOpenVi
 
       {/* Responsive Combat & Protection Matrix: 2-Column (1366px Laptops) vs 3-Column (1920px+ Widescreen) */}
       <div id="section-combat-vitals" className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 scroll-mt-32">
-        {/* Column 1: Offense (Weapons) */}
-        <WeaponsCard />
+        {/* Column 1: Offense (Weapons & GM Monster Stats) */}
+        <div className="flex flex-col gap-4">
+          <WeaponsCard />
+          <GmMonsterTrackerHud />
+        </div>
 
         {/* Column 2: Protection (Armor with integrated MR & Shield) */}
         <div className="flex flex-col gap-4">
@@ -52,9 +56,10 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({ onOpenVi
           <ShieldCard />
         </div>
 
-        {/* Column 3: Survival (Vitality & Health Controls) */}
+        {/* Column 3: Survival (Vitality & Party Roster HUD) */}
         <div className="lg:col-span-2 xl:col-span-1 flex flex-col gap-4">
           <VitalsHeader onOpenVitalityManager={onOpenVitalityManager} />
+          <PartyRosterHud activeCharacter={activeCharacter} playerEmail={playerEmail} />
         </div>
       </div>
 
