@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Database, Shield, Zap, Activity, BookOpen, Users, Loader2, ChevronDown, ChevronUp, Award, Star, X } from 'lucide-react';
+import { Database, Shield, Zap, Activity, BookOpen, Users, Loader2, ChevronDown, ChevronUp, Award, Star, X, Lock, Eye, Users2 } from 'lucide-react';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { ActionConsoleView } from './components/rolls/ActionConsoleView';
@@ -14,6 +14,9 @@ import { NishTcModal } from './components/modals/NishTcModal';
 import { ApManagerModal } from './components/modals/ApManagerModal';
 import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
 import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
+import { AuthModal } from './components/modals/AuthModal';
+import { AccountInspectorModal } from './components/modals/AccountInspectorModal';
+import { PartyManagerModal } from './components/modals/PartyManagerModal';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { CardHelpButton } from './components/common/CardHelpButton';
 
@@ -29,6 +32,22 @@ export default function App() {
   const [showApManagerModal, setShowApManagerModal] = useState(false);
   const [showAttributeManagerModal, setShowAttributeManagerModal] = useState(false);
   const [showVitalityManagerModal, setShowVitalityManagerModal] = useState(false);
+
+  // New Modals & Read-Only / Party Session State
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAccountInspectorModal, setShowAccountInspectorModal] = useState(false);
+  const [showPartyManagerModal, setShowPartyManagerModal] = useState(false);
+  const [readOnlyOwner, setReadOnlyOwner] = useState<string | null>(null);
+
+  const [tabSessionId] = useState<string>(() => {
+    let existing = sessionStorage.getItem('supaflex_tab_session_id');
+    if (!existing) {
+      existing = crypto.randomUUID();
+      sessionStorage.setItem('supaflex_tab_session_id', existing);
+    }
+    return existing;
+  });
+
   const selectorRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
@@ -45,6 +64,7 @@ export default function App() {
     createNewCharacter,
     saveActiveCharacter,
     updateActiveSheetData,
+    setPlayerEmail,
   } = useCharacterStore();
 
   useEffect(() => {
@@ -170,12 +190,23 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* 🌌 Navigation & Persistent HUD Header Bar */}
-      <header className="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 px-4 py-2 flex flex-col gap-2">
-        {/* Top Header Row (Brand/Hero Left, Centered Tab Bar, Actions Right) */}
-        <div className="w-full flex items-center justify-between gap-4 flex-wrap">
-          {/* Left Zone: Logo, Hero Selector Trigger, & Level Popover Trigger */}
-          <div className="flex items-center gap-3">
+      {/* 👁️ Read-Only Mode Warning Banner */}
+      {readOnlyOwner && (
+        <div className="w-full bg-amber-600 text-slate-950 font-bold px-4 py-2 text-center text-xs flex items-center justify-center gap-4 shadow-md z-40 border-b border-amber-400 animate-fadeIn">
+          <span>👁️ READ-ONLY MODE — Viewing character owned by: <span className="underline font-mono">{readOnlyOwner}</span></span>
+          <button
+            onClick={() => setReadOnlyOwner(null)}
+            className="px-3 py-1 bg-slate-950 text-amber-300 hover:bg-slate-900 rounded text-xs font-bold transition"
+          >
+            Exit Read-Only Mode
+          </button>
+        </div>
+      )}
+
+      {/* Persistent Header */}
+      <header className="sticky top-0 z-30 w-full bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-4 py-2.5">
+        <div className="max-w-[2500px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex items-center justify-between w-full md:w-auto gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xl">🌌</span>
               <h1 className="font-outfit text-lg font-extrabold tracking-wider bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -356,10 +387,39 @@ export default function App() {
             </div>
           </nav>
 
-          {/* Right Zone: Resources Popover, Global Save & Database Indicator */}
+          {/* Right Zone: Auth, Inspect, Party, Resources Popover, Global Save & Database Indicator */}
           <div className="flex items-center gap-2">
+            {/* 🔐 Auth, 👁️ Inspect, ⚔️ Party Action Buttons */}
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="flex items-center gap-1 px-2.5 py-1 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-lg text-xs font-semibold text-amber-300 transition-all"
+              title="Click to sign in, reset password, or manage profile privacy"
+            >
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              <span className="truncate max-w-[100px]">{playerEmail || 'Sign In'}</span>
+            </button>
+
+            <button
+              onClick={() => setShowAccountInspectorModal(true)}
+              className="flex items-center gap-1 px-2.5 py-1 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-lg text-xs font-semibold text-indigo-300 transition-all"
+              title="Inspect another player's characters in Read-Only mode or clone them"
+            >
+              <Eye className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Inspect</span>
+            </button>
+
+            <button
+              onClick={() => setShowPartyManagerModal(true)}
+              className="flex items-center gap-1 px-2.5 py-1 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-lg text-xs font-semibold text-emerald-300 transition-all"
+              title="Manage parties and active party sessions"
+            >
+              <Users2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Party</span>
+            </button>
+
             {/* 📚 Resources Popover Trigger */}
             <div className="relative" ref={resourcesRef}>
+
               <button
                 onClick={() => setShowResourcesPopover(!showResourcesPopover)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm ${
@@ -517,6 +577,48 @@ export default function App() {
           onClose={() => setShowVitalityManagerModal(false)}
         />
       </ErrorBoundary>
+
+      {/* 🔐 Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        currentEmail={playerEmail}
+        onLoginSuccess={(email) => {
+          setPlayerEmail(email);
+          localStorage.setItem('supaflex_player_email', email);
+          fetchInitialData();
+        }}
+        onLogout={() => {
+          setPlayerEmail('');
+          localStorage.removeItem('supaflex_player_email');
+          setShowAuthModal(false);
+        }}
+      />
+
+      {/* 👁️ Account Inspector Modal */}
+      <AccountInspectorModal
+        isOpen={showAccountInspectorModal}
+        onClose={() => setShowAccountInspectorModal(false)}
+        currentEmail={playerEmail}
+        onSelectReadOnlyCharacter={(char, ownerEmail) => {
+          setReadOnlyOwner(ownerEmail);
+          selectCharacter(char.id);
+        }}
+        onCharacterCloned={(clonedChar) => {
+          fetchInitialData();
+          selectCharacter(clonedChar.id);
+        }}
+      />
+
+      {/* ⚔️ Party Manager Modal */}
+      <PartyManagerModal
+        isOpen={showPartyManagerModal}
+        onClose={() => setShowPartyManagerModal(false)}
+        currentEmail={playerEmail}
+        userCharacters={myHeroes}
+        tabSessionId={tabSessionId}
+      />
+
 
       {/* Footer */}
       <footer className="w-full py-3 px-6 border-t border-slate-900 text-center text-xs text-slate-600 font-medium">

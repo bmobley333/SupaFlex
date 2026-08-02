@@ -374,4 +374,205 @@ export const gameApi = {
       return false;
     }
   },
+
+  // --- USER PROFILE & PRIVACY ---
+  async getUserProfile(email: string): Promise<{ email: string; allow_cloning: boolean }> {
+    const cleanEmail = email.trim().toLowerCase();
+    const { data, error } = await supabase
+      .from('players')
+      .select('email, allow_cloning')
+      .eq('email', cleanEmail)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[gameApi] Error fetching player profile:', error);
+    }
+
+    if (data) {
+      return { email: data.email, allow_cloning: data.allow_cloning ?? true };
+    }
+
+    // Auto-create profile if missing
+    const { data: created, error: createError } = await supabase
+      .from('players')
+      .insert({ email: cleanEmail, allow_cloning: true })
+      .select('email, allow_cloning')
+      .single();
+
+    if (createError) {
+      console.error('[gameApi] Error creating player profile:', createError);
+      return { email: cleanEmail, allow_cloning: true };
+    }
+
+    return { email: created.email, allow_cloning: created.allow_cloning ?? true };
+  },
+
+  async updateProfilePrivacy(email: string, allowCloning: boolean): Promise<boolean> {
+    const cleanEmail = email.trim().toLowerCase();
+    const { error } = await supabase
+      .from('players')
+      .upsert({ email: cleanEmail, allow_cloning: allowCloning }, { onConflict: 'email' });
+
+    if (error) {
+      console.error('[gameApi] Error updating profile privacy:', error);
+      return false;
+    }
+    return true;
+  },
+
+  // --- CHARACTERS BY OWNER ---
+  async getCharactersByOwner(ownerEmail: string): Promise<Character[]> {
+    const cleanEmail = ownerEmail.trim().toLowerCase();
+    const { data, error } = await supabase
+      .from('characters')
+      .select('*')
+      .eq('owner_email', cleanEmail)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('[gameApi] Error fetching characters for owner:', error);
+      throw error;
+    }
+
+    return (data || []).map(normalizeCharacterData);
+  },
+
+  // --- CHARACTER CLONING ---
+  async cloneCharacterToUser(sourceCharacter: Character, targetEmail: string): Promise<Character> {
+    const cleanEmail = targetEmail.trim().toLowerCase();
+
+    // 1. Check target user's existing character names to resolve collision
+    const existingChars = await this.getCharactersByOwner(cleanEmail);
+    const existingNames = new Set(existingChars.map(c => c.name.toLowerCase()));
+
+    let newName = sourceCharacter.name;
+    if (existingNames.has(newName.toLowerCase())) {
+      let candidate = `${sourceCharacter.name} (Copy)`;
+      let counter = 2;
+      while (existingNames.has(candidate.toLowerCase())) {
+        candidate = `${sourceCharacter.name} (Copy ${counter})`;
+        counter++;
+      }
+      newName = candidate;
+    }
+
+    // 2. Clone fields
+    const { data, error } = await supabase
+      .from('characters')
+      .insert({
+        name: newName,
+        class: sourceCharacter.class || '',
+        race: sourceCharacter.race || '',
+        hp: sourceCharacter.hp || 10,
+        might: sourceCharacter.might || 'd6',
+        motion: sourceCharacter.motion || 'd6',
+        mind: sourceCharacter.mind || 'd4',
+        magic: sourceCharacter.magic || 'd4',
+        moxie: sourceCharacter.moxie || 'd8',
+        skills: sourceCharacter.skills || [],
+        inventory: sourceCharacter.inventory || [],
+        log: sourceCharacter.log || [],
+        sheet_data: sourceCharacter.sheet_data || {},
+        owner_email: cleanEmail,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[gameApi] Error cloning character:', error);
+      throw error;
+    }
+
+    return normalizeCharacterData(data as Character);
+  },
+
+  // --- PARTIES & MULTI-TAB SESSIONS ---
+  async getPartiesForUser(userEmail: string) {
+    const cleanEmail = userEmail.trim().toLowerCase();
+    const { data, error } = await supabase
+      .from('parties')
+      .select('*')
+      .or(`gm_email.eq.${cleanEmail},invited_emails.cs.{${cleanEmail}}`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[gameApi] Error fetching parties:', error);
+      return [];
+    }
+
+    return data || [];
+  },
+
+  async createParty(name: string, gmEmail: string, invitedEmails: string[]) {
+    const cleanGm = gmEmail.trim().toLowerCase();
+    const cleanInvites = invitedEmails.map(e => e.trim().toLowerCase()).filter(Boolean);
+
+    const { data, error } = await supabase
+      .from('parties')
+      .insert({
+        name: name.trim(),
+        gm_email: cleanGm,
+        invited_emails: cleanInvites,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[gameApi] Error creating party:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  async joinPartySession(partyId: string, playerEmail: string, characterId: number, tabSessionId: string) {
+    const cleanEmail = playerEmail.trim().toLowerCase();
+    const { data, error } = await supabase
+      .from('party_session_members')
+      .upsert(
+        {
+          party_id: partyId,
+          player_email: cleanEmail,
+          character_id: characterId,
+          tab_session_id: tabSessionId,
+          last_seen: new Date().toISOString(),
+        },
+        { onConflict: 'party_id,tab_session_id' }
+      )
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[gameApi] Error joining party session:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  async leavePartySession(tabSessionId: string) {
+    const { error } = await supabase
+      .from('party_session_members')
+      .delete()
+      .eq('tab_session_id', tabSessionId);
+
+    if (error) {
+      console.error('[gameApi] Error leaving party session:', error);
+    }
+  },
+
+  async getPartySessionMembers(partyId: string) {
+    const { data, error } = await supabase
+      .from('party_session_members')
+      .select('*, character:characters(*)')
+      .eq('party_id', partyId);
+
+    if (error) {
+      console.error('[gameApi] Error fetching party session members:', error);
+      return [];
+    }
+
+    return data || [];
+  },
 };
+

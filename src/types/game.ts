@@ -538,3 +538,33 @@ export interface Skillset {
   sub: string | null;
   table_name: string | null;
 }
+
+export interface UserProfile {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  allow_cloning: boolean;
+  created_at?: string;
+}
+
+export interface Party {
+  id: string;
+  name: string;
+  gm_email: string;
+  invited_emails: string[];
+  created_at: string;
+}
+
+export interface PartySessionMember {
+  id: string;
+  party_id: string;
+  player_email: string;
+  character_id: number;
+  tab_session_id: string;
+  joined_at: string;
+  last_seen: string;
+  character?: Character;
+}
+
+export type AuthMode = 'login' | 'signup' | 'reset_password' | 'profile';
+
