@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
 import { Character, Party, PartySessionMember, AuthMode } from '../../types/game';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { RoleToggleSwitch } from '../common/RoleToggleSwitch';
 
 interface UnifiedLaunchHubModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   onCharacterCloned,
   onRefreshCharacters,
 }) => {
+  const activeRole = useCharacterStore((state) => state.activeRole);
   const setActiveRole = useCharacterStore((state) => state.setActiveRole);
   const [rightSubTab, setRightSubTab] = useState<'account' | 'inspect' | 'party'>('account');
 
@@ -55,6 +57,12 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       setPlayerNameInput(storeName);
     }
   }, [currentEmail]);
+
+  useEffect(() => {
+    if (activeRole === 'gm') {
+      setRightSubTab('party');
+    }
+  }, [activeRole]);
 
   const handleSavePlayerName = async () => {
     if (!currentEmail) return;
@@ -462,16 +470,12 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
           <div className="flex items-center gap-3">
             {currentEmail && (
-              <button
-                onClick={() => {
-                  setActiveRole('gm');
-                  onClose();
+              <RoleToggleSwitch
+                activeRole={activeRole}
+                onRoleChange={(newRole) => {
+                  setActiveRole(newRole);
                 }}
-                className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs rounded-xl shadow-md transition-all transform hover:scale-105 flex items-center gap-1.5 cursor-pointer"
-                title="Launch GM Command Console"
-              >
-                <span>👑</span> I'm GM
-              </button>
+              />
             )}
 
             {currentEmail ? (
@@ -508,211 +512,200 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
           {/* PANE 1 (LEFT): My Character Vault Roster (col-span-6)   */}
           {/* ------------------------------------------------------ */}
           <div className="md:col-span-6 border-r border-slate-800/80 pr-6 flex flex-col h-full overflow-hidden">
-            
-            {/* Header & Create Button */}
-            <div className="flex items-center justify-between mb-3 shrink-0">
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                🛡️ Character Vault ({userCharacters.length})
-              </h3>
-              <button
-                onClick={() => setIsCreatingHero(!isCreatingHero)}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-sm cursor-pointer"
-              >
-                {isCreatingHero ? '✕ Cancel' : '➕ Create New Hero'}
-              </button>
-            </div>
-
-            {/* Inline Hero Creation Form */}
-            {isCreatingHero && (
-              <form onSubmit={handleCreateHeroSubmit} className="mb-4 p-3 bg-slate-900 border border-indigo-500/40 rounded-xl space-y-3 shrink-0">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Hero Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={newHeroName}
-                    onChange={(e) => setNewHeroName(e.target.value)}
-                    placeholder="e.g. Conan the Barbarian"
-                    className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-400"
-                    autoFocus
-                  />
+            {activeRole === 'gm' ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-slate-900/80 rounded-2xl border border-amber-500/30 space-y-4 my-auto shadow-inner">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-3xl text-amber-400 shadow-md">
+                  👑
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Race</label>
-                    <input
-                      type="text"
-                      value={newHeroRace}
-                      onChange={(e) => setNewHeroRace(e.target.value)}
-                      placeholder="Human"
-                      className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Class</label>
-                    <input
-                      type="text"
-                      value={newHeroClass}
-                      onChange={(e) => setNewHeroClass(e.target.value)}
-                      placeholder="Adventurer"
-                      className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
-                    />
-                  </div>
-                </div>
-                <button
-                  type="submit"
-                  disabled={!newHeroName.trim()}
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition cursor-pointer"
-                >
-                  Save & Create Blank Hero
-                </button>
-              </form>
-            )}
-
-            {/* Character Cards Stream */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-              {userCharacters.length === 0 ? (
-                <div className="text-center py-12 bg-slate-900/60 rounded-xl border border-slate-800 p-6 space-y-3">
-                  <span className="text-3xl">⚔️</span>
-                  <h4 className="text-slate-200 font-bold text-sm">No Characters Found</h4>
-                  <p className="text-slate-400 text-xs">
-                    Click <strong>"Create New Hero"</strong> above to create your first blank character.
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-extrabold text-amber-400 font-outfit uppercase tracking-wider">
+                    Game Master Mode Active
+                  </h3>
+                  <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+                    Player hero selection is hidden while in GM Mode. Closing this selector or clicking <strong className="text-amber-300">Done</strong> will launch the GM Command Console.
                   </p>
                 </div>
-              ) : (
-                userCharacters.map((char) => {
-                  const isActive = activeCharacter?.id === char.id;
-                  const isEditing = editingCharId === char.id;
-                  const sheet = char.sheet_data;
+              </div>
+            ) : (
+              <>
+                {/* Header & Create Button */}
+                <div className="flex items-center justify-between mb-3 shrink-0">
+                  <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
+                    🛡️ Character Vault ({userCharacters.length})
+                  </h3>
+                  <button
+                    onClick={() => setIsCreatingHero(!isCreatingHero)}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-sm cursor-pointer"
+                  >
+                    {isCreatingHero ? '✕ Cancel' : '➕ Create New Hero'}
+                  </button>
+                </div>
 
-                  return (
-                    <div
-                      key={char.id}
-                      className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-2.5 ${
-                        isActive
-                          ? 'bg-slate-900 border-amber-500/80 shadow-lg shadow-amber-950/40'
-                          : 'bg-slate-900/60 hover:bg-slate-900 border-slate-800/80 hover:border-slate-700'
-                      }`}
-                    >
-                      {isEditing ? (
-                        /* INLINE EDIT FORM */
-                        <div className="space-y-2.5">
-                          <div className="flex items-center justify-between text-xs font-bold text-indigo-300">
-                            <span>✏️ Edit Character Identity</span>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase">Name</label>
-                            <input
-                              type="text"
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded text-xs text-slate-100"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase">Race</label>
-                              <input
-                                type="text"
-                                value={editRace}
-                                onChange={(e) => setEditRace(e.target.value)}
-                                className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded text-xs text-slate-100"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase">Class</label>
-                              <input
-                                type="text"
-                                value={editClass}
-                                onChange={(e) => setEditClass(e.target.value)}
-                                className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded text-xs text-slate-100"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex justify-end gap-2 pt-1">
-                            <button
-                              onClick={() => setEditingCharId(null)}
-                              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded transition"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={() => handleSaveEdit(char)}
-                              disabled={isSavingEdit || !editName.trim()}
-                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold text-xs rounded transition"
-                            >
-                              {isSavingEdit ? 'Saving...' : 'Save'}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        /* STRUCTURED 2-ROW DISPLAY CARD MODE */
-                        <div className="space-y-2">
-                          {/* ROW 1: Name (Left) | Load Hero / Active (Far Right) */}
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="font-outfit font-extrabold text-base text-slate-100 truncate">
-                              {char.name}
-                            </span>
-
-                            {isActive ? (
-                              <span className="px-3 py-1 bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 font-bold text-xs rounded-lg flex items-center gap-1 shrink-0">
-                                ● Active
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  onSelectCharacter(char.id);
-                                  onClose();
-                                }}
-                                className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-lg transition shadow-sm shrink-0 cursor-pointer"
-                              >
-                                🛡️ Load Hero
-                              </button>
-                            )}
-                          </div>
-
-                          {/* ROW 2: Level Pill, Race & Class Pills (Left) | Pencil Edit & Trash Delete Icons (Far Right) */}
-                          <div className="flex items-center justify-between gap-3 pt-0.5">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10px] font-bold shrink-0">
-                                Lvl {sheet?.level || 1}
-                              </span>
-                              <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold shrink-0">
-                                {char.race || 'Human'}
-                              </span>
-                              <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-[10px] font-semibold shrink-0">
-                                {char.class || 'Adventurer'}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={() => handleStartEdit(char)}
-                                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs cursor-pointer shadow-sm"
-                                title="Edit Character Identity"
-                              >
-                                ✏️
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setDeleteTargetChar(char);
-                                  setDeleteConfirmInput('');
-                                }}
-                                className="p-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/50 text-red-300 rounded-lg transition text-xs cursor-pointer shadow-sm"
-                                title="Delete Character"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                {/* Inline Hero Creation Form */}
+                {isCreatingHero && (
+                  <form onSubmit={handleCreateHeroSubmit} className="mb-4 p-3 bg-slate-900 border border-indigo-500/40 rounded-xl space-y-3 shrink-0">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Hero Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={newHeroName}
+                        onChange={(e) => setNewHeroName(e.target.value)}
+                        placeholder="e.g. Conan the Barbarian"
+                        className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-400"
+                        autoFocus
+                      />
                     </div>
-                  );
-                })
-              )}
-            </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Race</label>
+                        <input
+                          type="text"
+                          value={newHeroRace}
+                          onChange={(e) => setNewHeroRace(e.target.value)}
+                          placeholder="Human"
+                          className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Class</label>
+                        <input
+                          type="text"
+                          value={newHeroClass}
+                          onChange={(e) => setNewHeroClass(e.target.value)}
+                          placeholder="Adventurer"
+                          className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={!newHeroName.trim()}
+                      className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition shadow-sm cursor-pointer"
+                    >
+                      Save & Create Hero
+                    </button>
+                  </form>
+                )}
+
+                {/* Character Cards List */}
+                <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                  {userCharacters.length === 0 ? (
+                    <div className="p-6 bg-slate-900/60 border border-slate-800 rounded-xl text-center text-xs text-slate-400 space-y-2">
+                      <p className="font-semibold text-slate-300">You don't have any characters in your vault yet.</p>
+                      <p className="text-[11px]">Click "Create New Hero" above to make your first playtest hero!</p>
+                    </div>
+                  ) : (
+                    userCharacters.map((char) => {
+                      const isActive = activeCharacter?.id === char.id;
+                      const isEditing = editingCharId === char.id;
+
+                      return (
+                        <div
+                          key={char.id}
+                          onClick={() => {
+                            if (!isEditing) onSelectCharacter(char.id);
+                          }}
+                          className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-gradient-to-r from-indigo-950/80 to-slate-900 border-indigo-500/80 shadow-md shadow-indigo-950/50'
+                              : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
+                          }`}
+                        >
+                          {isEditing ? (
+                            <div className="space-y-2.5" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="text"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                className="w-full px-2.5 py-1 bg-slate-950 border border-indigo-500/60 rounded text-xs text-slate-100 font-bold"
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <input
+                                  type="text"
+                                  value={editRace}
+                                  onChange={(e) => setEditRace(e.target.value)}
+                                  placeholder="Race"
+                                  className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200"
+                                />
+                                <input
+                                  type="text"
+                                  value={editClass}
+                                  onChange={(e) => setEditClass(e.target.value)}
+                                  placeholder="Class"
+                                  className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200"
+                                />
+                              </div>
+                              <div className="flex justify-end gap-1.5 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingCharId(null)}
+                                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold rounded"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveEdit(char)}
+                                  disabled={isSavingEdit || !editName.trim()}
+                                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded"
+                                >
+                                  {isSavingEdit ? 'Saving...' : 'Save'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="space-y-1 overflow-hidden">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-sm text-slate-100 font-outfit truncate">
+                                    {char.name}
+                                  </span>
+                                  {isActive && (
+                                    <span className="text-[10px] font-bold text-indigo-400 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/80 shrink-0">
+                                      Active Hero
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold shrink-0">
+                                    {char.race || 'Human'}
+                                  </span>
+                                  <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-[10px] font-semibold shrink-0">
+                                    {char.class || 'Adventurer'}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    onClick={() => handleStartEdit(char)}
+                                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs cursor-pointer shadow-sm"
+                                    title="Edit Character Identity"
+                                  >
+                                    ✏️
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      setDeleteTargetChar(char);
+                                      setDeleteConfirmInput('');
+                                    }}
+                                    className="p-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/50 text-red-300 rounded-lg transition text-xs cursor-pointer shadow-sm"
+                                    title="Delete Character"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* ------------------------------------------------------ */}
@@ -721,38 +714,49 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
           <div className="md:col-span-6 flex flex-col h-full overflow-hidden">
             
             {/* Top Sub-Tab Selector */}
-            <div className="flex border-b border-slate-800 mb-4 shrink-0">
-              <button
-                onClick={() => setRightSubTab('account')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
-                  rightSubTab === 'account'
-                    ? 'border-amber-400 text-amber-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                👤 Account
-              </button>
-              <button
-                onClick={() => setRightSubTab('inspect')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
-                  rightSubTab === 'inspect'
-                    ? 'border-indigo-400 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                👁️ Inspect & Clone
-              </button>
-              <button
-                onClick={() => setRightSubTab('party')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
-                  rightSubTab === 'party'
-                    ? 'border-emerald-400 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                ⚔️ Party Sessions
-              </button>
-            </div>
+            {activeRole === 'gm' ? (
+              <div className="flex border-b border-slate-800 mb-4 shrink-0">
+                <button
+                  onClick={() => setRightSubTab('party')}
+                  className="flex-1 py-2 text-xs font-bold border-b-2 border-amber-400 text-amber-400 font-outfit transition cursor-pointer"
+                >
+                  👑 GM Party Setup
+                </button>
+              </div>
+            ) : (
+              <div className="flex border-b border-slate-800 mb-4 shrink-0">
+                <button
+                  onClick={() => setRightSubTab('account')}
+                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
+                    rightSubTab === 'account'
+                      ? 'border-amber-400 text-amber-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  👤 Account
+                </button>
+                <button
+                  onClick={() => setRightSubTab('inspect')}
+                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
+                    rightSubTab === 'inspect'
+                      ? 'border-indigo-400 text-indigo-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  👁️ Inspect & Clone
+                </button>
+                <button
+                  onClick={() => setRightSubTab('party')}
+                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
+                    rightSubTab === 'party'
+                      ? 'border-emerald-400 text-emerald-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  ⚔️ Party Sessions
+                </button>
+              </div>
+            )}
 
             <div className="flex-1 overflow-y-auto pr-1">
               
