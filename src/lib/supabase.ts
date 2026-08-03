@@ -10,8 +10,11 @@ const supabaseKey =
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
+    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+    storageKey: 'supaflex_auth_token',
     persistSession: true,
     autoRefreshToken: true,
   },
 });
+
 

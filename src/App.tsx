@@ -11,7 +11,6 @@ import { GmWorkspaceView } from './components/directory/GmWorkspaceView';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { AccountPillButton } from './components/header/AccountPillButton';
 import { GmHeaderHUD } from './components/header/GmHeaderHUD';
-import { gameApi } from './services/api';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
 import { NishTcModal } from './components/modals/NishTcModal';
@@ -22,6 +21,7 @@ import { UnifiedLaunchHubModal } from './components/modals/UnifiedLaunchHubModal
 import { LevelingWizard } from './components/common/LevelingWizard';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { CardHelpButton } from './components/common/CardHelpButton';
+import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'sheet' | 'rolls' | 'codex' | 'logs' | 'directory'>('sheet');
@@ -39,6 +39,7 @@ export default function App() {
 
   // Unified Launch Hub & Read-Only / Party Session State
   const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(false);
+  const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
   const [readOnlyOwner, setReadOnlyOwner] = useState<string | null>(null);
 
   // GM Screen Active Room Code State
@@ -75,14 +76,17 @@ export default function App() {
   useEffect(() => {
     fetchInitialData();
 
-    // Supabase Auth State Change Listener & URL Fragment Cleanup
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user?.email) {
-        setPlayerEmail(session.user.email);
-        useCharacterStore.getState().setPlayerEmail(session.user.email);
-        localStorage.setItem('supaflex_player_email', session.user.email);
+    // Auth state listener — ONLY handles PASSWORD_RECOVERY redirect & URL cleanup.
+    // Cross-tab session writes have been removed: login/logout are tab-local via
+    // sessionStorage and the onLoginSuccess/onLogout callbacks below.
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setShowUpdatePasswordModal(true);
       }
       if (typeof window !== 'undefined' && window.location.hash && window.location.hash.includes('access_token')) {
+        if (event === 'PASSWORD_RECOVERY' || window.location.hash.includes('type=recovery')) {
+          setShowUpdatePasswordModal(true);
+        }
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
       }
     });
@@ -90,19 +94,12 @@ export default function App() {
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, [fetchInitialData, setPlayerEmail]);
+  }, [fetchInitialData]);
 
-  // Room Code Checkout for GM Screen Mode
-  useEffect(() => {
-    if (playerEmail && activeRole === 'gm') {
-      gameApi
-        .checkoutPartyRoomCode(playerEmail)
-        .then(({ roomCode }) => {
-          setActiveRoomCode(roomCode);
-        })
-        .catch(console.error);
-    }
-  }, [playerEmail, activeRole]);
+  // NOTE: GM Room Code Checkout & Heartbeat have been moved entirely to GmWorkspaceView
+  // to eliminate the double-checkout race condition that caused the stale Party ID bug.
+  // GmWorkspaceView is the single authority: it checks out the room code on mount and
+  // reports it back via the onRoomCodeReady callback prop.
 
   // Click-outside listener for popovers
   useEffect(() => {
@@ -490,6 +487,7 @@ export default function App() {
                   activeParty={null}
                   currentEmail={playerEmail}
                   onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
+                  onRoomCodeReady={(code) => setActiveRoomCode(code)}
                 />
               ) : (
                 <>
@@ -609,12 +607,15 @@ export default function App() {
           onCreateNewCharacter={createNewCharacter}
           onLoginSuccess={(email) => {
             setPlayerEmail(email);
-            localStorage.setItem('supaflex_player_email', email);
+            sessionStorage.setItem('supaflex_player_email', email);
             fetchInitialData();
           }}
           onLogout={() => {
             setPlayerEmail('');
-            localStorage.removeItem('supaflex_player_email');
+            setActiveRoomCode(null);
+            sessionStorage.removeItem('supaflex_player_email');
+            sessionStorage.removeItem('supaflex_auth_token');
+            sessionStorage.removeItem('supaflex_tab_jwt');
             useCharacterStore.setState({ activeCharacter: null });
             setShowUnifiedLaunchHubModal(true);
           }}
@@ -633,7 +634,11 @@ export default function App() {
         />
       )}
 
-
+      {/* 🔐 Password Reset Modal */}
+      <UpdatePasswordModal
+        isOpen={showUpdatePasswordModal}
+        onClose={() => setShowUpdatePasswordModal(false)}
+      />
 
       {/* Footer */}
       <footer className="w-full py-3 px-6 border-t border-slate-900 text-center text-xs text-slate-600 font-medium">

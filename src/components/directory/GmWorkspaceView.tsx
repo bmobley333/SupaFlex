@@ -12,12 +12,15 @@ interface GmWorkspaceViewProps {
   currentEmail: string;
   onOpenLaunchHub?: () => void;
   onSelectActiveParty?: (party: Party) => void;
+  /** Called once the GM room code has been checked out from the DB so the header HUD can display it. */
+  onRoomCodeReady?: (code: string) => void;
 }
 
 export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   activeParty: propActiveParty,
   currentEmail,
   onSelectActiveParty,
+  onRoomCodeReady,
 }) => {
   // GM Party State
   const [selectedParty, setSelectedParty] = useState<Party | null>(propActiveParty);
@@ -84,7 +87,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
     const initRoom = async () => {
       try {
-        await gameApi.checkoutPartyRoomCode(selectedParty.id);
+        const { roomCode } = await gameApi.checkoutPartyRoomCode(selectedParty.id);
+        // Report the authoritative room code up to App so the GM HUD always shows
+        // the same code that is written to the DB (eliminates the stale-code bug).
+        if (onRoomCodeReady) onRoomCodeReady(roomCode);
       } catch (err) {
         console.error('Failed to checkout room code:', err);
       }

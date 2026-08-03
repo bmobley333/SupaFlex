@@ -8,13 +8,12 @@ const UNAMBIGUOUS_CHARSET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
  * Generate a random 4-character room code using unambiguous characters.
  */
 export const generateRoomId = (): string => {
-  let result = '';
-  const len = UNAMBIGUOUS_CHARSET.length;
-  for (let i = 0; i < 4; i++) {
-    const randomIndex = Math.floor(Math.random() * len);
-    result += UNAMBIGUOUS_CHARSET[randomIndex];
-  }
-  return result;
+  const charset = UNAMBIGUOUS_CHARSET;
+  const len = charset.length;
+  // Use cryptographically secure random values to prevent predictable room codes.
+  const randomBytes = new Uint32Array(4);
+  crypto.getRandomValues(randomBytes);
+  return Array.from(randomBytes, (byte) => charset[byte % len]).join('');
 };
 
 /**

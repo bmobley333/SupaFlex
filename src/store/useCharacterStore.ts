@@ -59,9 +59,9 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   dbConnected: false,
   error: null,
 
-  playerEmail: localStorage.getItem('supaflex_player_email') || 'TheBMobley@gmail.com',
-  playerName: localStorage.getItem('supaflex_player_name') || '',
-  filterMode: (localStorage.getItem('supaflex_filter_mode') as any) || 'my_heroes',
+  playerEmail: sessionStorage.getItem('supaflex_player_email') || localStorage.getItem('supaflex_player_email') || '',
+  playerName: sessionStorage.getItem('supaflex_player_name') || localStorage.getItem('supaflex_player_name') || '',
+  filterMode: (sessionStorage.getItem('supaflex_filter_mode') as any) || (localStorage.getItem('supaflex_filter_mode') as any) || 'my_heroes',
   activeRole: (sessionStorage.getItem('supaflex_active_role') as 'player' | 'gm') || 'player',
 
   setActiveRole: (role: 'player' | 'gm') => {
@@ -99,7 +99,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         gameApi.getSkillsets(),
       ]);
 
-      const lastActiveIdStr = localStorage.getItem('supaflex_last_active_char_id');
+      const lastActiveIdStr = sessionStorage.getItem('supaflex_last_active_char_id') || localStorage.getItem('supaflex_last_active_char_id');
       const lastActiveId = lastActiveIdStr ? Number(lastActiveIdStr) : null;
       let selectedChar = (lastActiveId ? chars.find((c) => c.id === lastActiveId) : null) || chars[0] || null;
 
@@ -110,7 +110,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       }
 
       if (selectedChar) {
-        localStorage.setItem('supaflex_last_active_char_id', String(selectedChar.id));
+        sessionStorage.setItem('supaflex_last_active_char_id', String(selectedChar.id));
       }
 
       set({
@@ -130,7 +130,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   selectCharacter: async (id: number) => {
-    localStorage.setItem('supaflex_last_active_char_id', String(id));
+    sessionStorage.setItem('supaflex_last_active_char_id', String(id));
     const found = get().characters.find((c) => c.id === id);
     if (found) {
       set({ activeCharacter: { ...found } });
@@ -167,18 +167,18 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
   setPlayerEmail: (email: string) => {
     const trimmed = email.trim();
-    localStorage.setItem('supaflex_player_email', trimmed);
+    sessionStorage.setItem('supaflex_player_email', trimmed);
     set({ playerEmail: trimmed });
   },
 
   setPlayerName: (name: string) => {
     const trimmed = name.trim();
-    localStorage.setItem('supaflex_player_name', trimmed);
+    sessionStorage.setItem('supaflex_player_name', trimmed);
     set({ playerName: trimmed });
   },
 
   setFilterMode: (mode: 'my_heroes' | 'all_heroes') => {
-    localStorage.setItem('supaflex_filter_mode', mode);
+    sessionStorage.setItem('supaflex_filter_mode', mode);
     set({ filterMode: mode });
   },
 

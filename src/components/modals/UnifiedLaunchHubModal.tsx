@@ -122,7 +122,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
     const sanitized = sanitizeRoomCodeInput(roomCodeInput);
     if (!isValidRoomCodeFormat(sanitized)) {
-      setPartyError('Please enter a valid 4-character Room ID (e.g. K9X2).');
+      setPartyError('Please enter a valid 4-character Party ID (e.g. K9X2).');
       return;
     }
 
@@ -140,7 +140,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       const { party } = await gameApi.joinPartyByRoomCode(sanitized, currentEmail, targetCharId, tabSessionId);
       setSelectedParty(party);
       await loadSessionMembers(party.id);
-      setPartySuccessMsg(`Successfully joined party "${party.name}" (Room ID: ${sanitized})!`);
+      setPartySuccessMsg(`Successfully joined party "${party.name}" (Party ID: ${sanitized})!`);
       setRoomCodeInput('');
     } catch (err: any) {
       console.error('Error joining party by room code:', err);

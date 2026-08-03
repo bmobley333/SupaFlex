@@ -506,7 +506,7 @@ export const gameApi = {
     const { data, error } = await supabase
       .from('parties')
       .select('*')
-      .or(`gm_email.eq.${cleanEmail},invited_emails.cs.{${cleanEmail}}`)
+      .eq('gm_email', cleanEmail)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -517,16 +517,15 @@ export const gameApi = {
     return data || [];
   },
 
-  async createParty(name: string, gmEmail: string, invitedEmails: string[]) {
+  async createParty(name: string, gmEmail: string, _invitedEmails: string[] = []) {
     const cleanGm = gmEmail.trim().toLowerCase();
-    const cleanInvites = invitedEmails.map(e => e.trim().toLowerCase()).filter(Boolean);
+    const partyName = (name || 'GM Campaign').trim();
 
     const { data, error } = await supabase
       .from('parties')
       .insert({
-        name: name.trim(),
         gm_email: cleanGm,
-        invited_emails: cleanInvites,
+        name: partyName,
       })
       .select()
       .single();
@@ -594,6 +593,27 @@ export const gameApi = {
   },
 
   // --- ROOM CODES & DISCONNECT HEARTBEAT ---
+  async checkoutPartyRoomCodeForGmEmail(gmEmail: string): Promise<{ party: any; roomCode: string }> {
+    try {
+      const cleanEmail = gmEmail.trim().toLowerCase();
+      const existing = await this.getPartiesForUser(cleanEmail);
+      let party = existing.find((p: any) => (p.gm_email || '').toLowerCase() === cleanEmail);
+
+      if (!party) {
+        party = await this.createParty('MetaScape Campaign', cleanEmail, []);
+      }
+
+      return await this.checkoutPartyRoomCode(party.id);
+    } catch (err: any) {
+      console.warn('[gameApi] Room code checkout fallback:', err?.message || err);
+      const fallbackCode = generateRoomId();
+      return {
+        party: { id: 'fallback-party-id', gm_email: gmEmail },
+        roomCode: fallbackCode,
+      };
+    }
+  },
+
   async checkoutPartyRoomCode(partyId: string): Promise<{ party: any; roomCode: string }> {
     await this.cleanupStaleRooms();
 
@@ -657,7 +677,8 @@ export const gameApi = {
   },
 
   async cleanupStaleRooms() {
-    const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    // Extended to 10 minutes to tolerate browser JS interval throttling in background tabs.
+    const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     await supabase
       .from('parties')
       .update({
@@ -665,14 +686,17 @@ export const gameApi = {
         room_code: null,
       })
       .eq('is_active', true)
-      .lt('last_active_at', fiveMinsAgo);
+      .lt('last_active_at', tenMinsAgo);
   },
 
   async findActivePartyByRoomCode(rawCode: string) {
     const sanitized = sanitizeRoomCodeInput(rawCode);
     if (!sanitized || sanitized.length !== 4) return null;
 
-    await this.cleanupStaleRooms();
+    // NOTE: cleanupStaleRooms() has been intentionally removed from the player join path.
+    // Calling it here was nuking rooms at the exact moment a player tried to join if the
+    // GM heartbeat was even slightly late. Cleanup now only runs from checkoutPartyRoomCode
+    // (GM-side) where it is appropriate.
 
     const { data, error } = await supabase
       .from('parties')
@@ -692,7 +716,7 @@ export const gameApi = {
   async joinPartyByRoomCode(rawCode: string, playerEmail: string, characterId: number, tabSessionId: string) {
     const party = await this.findActivePartyByRoomCode(rawCode);
     if (!party) {
-      throw new Error(`Room ID "${rawCode.toUpperCase()}" not found or has been closed by the GM.`);
+      throw new Error(`Party ID "${rawCode.toUpperCase()}" not found or has been closed by the GM.`);
     }
 
     const sessionMember = await this.joinPartySession(party.id, playerEmail, characterId, tabSessionId);
