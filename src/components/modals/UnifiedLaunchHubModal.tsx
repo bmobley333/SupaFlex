@@ -490,19 +490,19 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
         {/* ======================================================== */}
         {/* HEADER (Master Modal Blueprint with Sign Out Button)      */}
         {/* ======================================================== */}
-        <div className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-6 py-4 flex items-center justify-between shrink-0 gap-4">
+        <div className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-6 py-4 flex items-start justify-between shrink-0 gap-4">
           <div className="min-w-0 flex-1 pr-2">
-            <h2 className="text-xl font-extrabold text-amber-400 flex items-center gap-2 font-outfit tracking-wide truncate">
+            <h2 className="text-xl font-extrabold text-amber-400 flex items-center gap-2 font-outfit tracking-wide">
               <span>🌌</span> Character & Party Selector
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5 truncate">
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
               {currentEmail
                 ? 'Manage your character vault, active party sessions, user account, and read-only inspection.'
                 : '🔒 Please sign in or create an account to access your character sheet.'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0 ml-auto">
+          <div className="flex items-center gap-2.5 shrink-0 ml-auto pt-0.5">
             {currentEmail && (
               <RoleToggleSwitch
                 activeRole={activeRole}
