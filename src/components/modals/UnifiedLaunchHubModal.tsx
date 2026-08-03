@@ -646,7 +646,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           onClick={() => {
                             if (!isEditing) onSelectCharacter(char.id);
                           }}
-                          className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                          className={`p-3.5 rounded-xl border transition-all cursor-pointer relative min-h-[76px] ${
                             isActive
                               ? 'bg-gradient-to-r from-indigo-950/80 to-slate-900 border-indigo-500/80 shadow-md shadow-indigo-950/50'
                               : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
@@ -695,19 +695,18 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="space-y-1 overflow-hidden">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-sm text-slate-100 font-outfit truncate">
+                            <div className="flex items-center justify-between gap-3">
+                              {/* Left Column: 2 Rows (Name, Badges) */}
+                              <div className="flex flex-col justify-between gap-1.5 min-w-0 flex-1">
+                                {/* Row 1: Character Name */}
+                                <div className="flex items-center min-h-[22px]">
+                                  <span className="font-bold text-sm text-slate-100 font-outfit truncate" title={char.name}>
                                     {char.name}
                                   </span>
-                                  {isActive && (
-                                    <span className="text-[10px] font-bold text-indigo-400 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/80 shrink-0">
-                                      Active Hero
-                                    </span>
-                                  )}
                                 </div>
-                                <div className="flex items-center gap-2">
+
+                                {/* Row 2: Race & Class Badges */}
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold shrink-0">
                                     {char.race || 'Human'}
                                   </span>
@@ -715,8 +714,24 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                                     {char.class || 'Adventurer'}
                                   </span>
                                 </div>
+                              </div>
 
-                                <div className="flex items-center gap-1 shrink-0">
+                              {/* Right Column: 2 Rows (Active Hero Badge, Edit/Delete Buttons) */}
+                              <div className="flex flex-col items-end justify-between gap-1.5 shrink-0">
+                                {/* Row 1: Upper-Right Active Hero Badge */}
+                                <div className="flex items-center justify-end min-h-[22px]">
+                                  {isActive && (
+                                    <span className="text-[10px] font-bold text-indigo-300 bg-indigo-950/90 px-2 py-0.5 rounded border border-indigo-700/80 shadow-sm shrink-0">
+                                      Active Hero
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Row 2: Lower-Right Edit / Delete Action Buttons */}
+                                <div
+                                  className="flex items-center gap-1 shrink-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                   <button
                                     onClick={() => handleStartEdit(char)}
                                     className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs cursor-pointer shadow-sm"
