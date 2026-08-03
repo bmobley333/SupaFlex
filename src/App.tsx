@@ -11,7 +11,6 @@ import { GmWorkspaceView } from './components/directory/GmWorkspaceView';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { AccountPillButton } from './components/header/AccountPillButton';
 import { GmHeaderHUD } from './components/header/GmHeaderHUD';
-import { Party } from './types/game';
 import { gameApi } from './services/api';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
@@ -42,9 +41,7 @@ export default function App() {
   const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(false);
   const [readOnlyOwner, setReadOnlyOwner] = useState<string | null>(null);
 
-  // GM Screen Parties & Active Room Code State
-  const [gmParties, setGmParties] = useState<Party[]>([]);
-  const [selectedGmParty, setSelectedGmParty] = useState<Party | null>(null);
+  // GM Screen Active Room Code State
   const [activeRoomCode, setActiveRoomCode] = useState<string | null>(null);
 
   const [tabSessionId] = useState<string>(() => {
@@ -95,33 +92,17 @@ export default function App() {
     };
   }, [fetchInitialData, setPlayerEmail]);
 
-  // Sync GM Screen Parties & Room Code Checkout
+  // Room Code Checkout for GM Screen Mode
   useEffect(() => {
     if (playerEmail && activeRole === 'gm') {
       gameApi
-        .getPartiesForUser(playerEmail)
-        .then((data) => {
-          const list = (data as Party[]).filter(
-            (p) => (p.gm_email || '').toLowerCase() === playerEmail.toLowerCase()
-          );
-          setGmParties(list);
-          if (list.length > 0 && !selectedGmParty) {
-            setSelectedGmParty(list[0]);
-          }
+        .checkoutPartyRoomCode(playerEmail)
+        .then(({ roomCode }) => {
+          setActiveRoomCode(roomCode);
         })
         .catch(console.error);
     }
   }, [playerEmail, activeRole]);
-
-  useEffect(() => {
-    if (!selectedGmParty?.id) return;
-    gameApi
-      .checkoutPartyRoomCode(selectedGmParty.id)
-      .then(({ roomCode }) => {
-        setActiveRoomCode(roomCode);
-      })
-      .catch(console.error);
-  }, [selectedGmParty?.id]);
 
   // Click-outside listener for popovers
   useEffect(() => {
@@ -465,6 +446,7 @@ export default function App() {
                   onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
                   onOpenNishTcGenerator={() => setShowNishTcModal(true)}
                   onOpenApManager={() => setShowApManagerModal(true)}
+                  isGmMode={activeRole === 'gm'}
                 />
               )}
             </div>
@@ -481,11 +463,7 @@ export default function App() {
         {/* Sub-Header Row 2: GM Header Ribbon vs Player Attribute HUD */}
         {activeRole === 'gm' ? (
           <GmHeaderHUD
-            parties={gmParties}
-            activeParty={selectedGmParty}
             activeRoomCode={activeRoomCode}
-            onSelectParty={(party) => setSelectedGmParty(party)}
-            onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
           />
         ) : (
           activeTab === 'sheet' && (
@@ -509,10 +487,9 @@ export default function App() {
             <div className="flex-1">
               {activeRole === 'gm' ? (
                 <GmWorkspaceView
-                  activeParty={selectedGmParty}
+                  activeParty={null}
                   currentEmail={playerEmail}
                   onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
-                  onSelectActiveParty={(p) => setSelectedGmParty(p)}
                 />
               ) : (
                 <>

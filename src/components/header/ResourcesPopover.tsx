@@ -6,13 +6,15 @@ interface ResourcesPopoverProps {
   onOpenLootGenerator?: () => void;
   onOpenApManager?: () => void;
   onOpenNishTcGenerator?: () => void;
+  isGmMode?: boolean;
 }
 
 export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({ 
   onClose, 
   onOpenLootGenerator, 
   onOpenApManager,
-  onOpenNishTcGenerator 
+  onOpenNishTcGenerator,
+  isGmMode = false,
 }) => {
   return (
     <div className="absolute top-full right-0 mt-2 z-50 w-72 p-3.5 bg-slate-900/95 border border-indigo-500/40 rounded-xl shadow-2xl shadow-indigo-950/60 backdrop-blur-xl animate-fadeIn flex flex-col gap-3 text-xs">
@@ -33,8 +35,8 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
 
       {/* Links & Tools List */}
       <div className="flex flex-col gap-2">
-        {/* Tool 0: Manage AP (Action Points) */}
-        {onOpenApManager && (
+        {/* Tool 0: Manage AP (Action Points - Player Mode Only) */}
+        {!isGmMode && onOpenApManager && (
           <button
             onClick={() => {
               onOpenApManager();

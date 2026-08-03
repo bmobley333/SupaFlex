@@ -25,7 +25,14 @@ export const AccountPillButton: React.FC<AccountPillButtonProps> = ({
         {email || 'Guest'}
       </span>
 
-      {!isGmMode && (
+      {isGmMode ? (
+        <>
+          <span className="text-slate-500 font-bold">,</span>
+          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-extrabold uppercase tracking-wider font-outfit">
+            GM Mode
+          </span>
+        </>
+      ) : (
         <>
           <span className="text-slate-500 font-bold">,</span>
           <span className="font-outfit font-extrabold text-slate-100 whitespace-nowrap flex items-center gap-1.5">
