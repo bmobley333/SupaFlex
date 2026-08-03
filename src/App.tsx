@@ -9,6 +9,10 @@ import { AdventureLogs } from './components/logs/AdventureLogs';
 import { PlayerDirectoryView } from './components/directory/PlayerDirectoryView';
 import { GmWorkspaceView } from './components/directory/GmWorkspaceView';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
+import { AccountPillButton } from './components/header/AccountPillButton';
+import { GmHeaderHUD } from './components/header/GmHeaderHUD';
+import { Party } from './types/game';
+import { gameApi } from './services/api';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
 import { NishTcModal } from './components/modals/NishTcModal';
@@ -37,6 +41,11 @@ export default function App() {
   // Unified Launch Hub & Read-Only / Party Session State
   const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(false);
   const [readOnlyOwner, setReadOnlyOwner] = useState<string | null>(null);
+
+  // GM Screen Parties & Active Room Code State
+  const [gmParties, setGmParties] = useState<Party[]>([]);
+  const [selectedGmParty, setSelectedGmParty] = useState<Party | null>(null);
+  const [activeRoomCode, setActiveRoomCode] = useState<string | null>(null);
 
   const [tabSessionId] = useState<string>(() => {
     let existing = sessionStorage.getItem('supaflex_tab_session_id');
@@ -85,6 +94,34 @@ export default function App() {
       authListener?.subscription?.unsubscribe();
     };
   }, [fetchInitialData, setPlayerEmail]);
+
+  // Sync GM Screen Parties & Room Code Checkout
+  useEffect(() => {
+    if (playerEmail && activeRole === 'gm') {
+      gameApi
+        .getPartiesForUser(playerEmail)
+        .then((data) => {
+          const list = (data as Party[]).filter(
+            (p) => (p.gm_email || '').toLowerCase() === playerEmail.toLowerCase()
+          );
+          setGmParties(list);
+          if (list.length > 0 && !selectedGmParty) {
+            setSelectedGmParty(list[0]);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [playerEmail, activeRole]);
+
+  useEffect(() => {
+    if (!selectedGmParty?.id) return;
+    gameApi
+      .checkoutPartyRoomCode(selectedGmParty.id)
+      .then(({ roomCode }) => {
+        setActiveRoomCode(roomCode);
+      })
+      .catch(console.error);
+  }, [selectedGmParty?.id]);
 
   // Click-outside listener for popovers
   useEffect(() => {
@@ -240,177 +277,163 @@ export default function App() {
               </h1>
             </div>
 
-            {/* Consolidated KISS Launch & Account Hub Trigger */}
-            <button
-              onClick={() => setShowUnifiedLaunchHubModal(true)}
-              className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-950/90 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-xl text-xs transition-all shadow-sm group cursor-pointer"
-              title="Click to open Launch & Account Hub (Manage Characters, Auth, Inspect & Parties)"
-            >
-              <span className="font-mono text-amber-300 font-bold truncate max-w-[180px]">
-                {playerEmail || 'Guest'}
-              </span>
-              <span className="text-slate-500 font-bold">,</span>
-              <span className="font-outfit font-extrabold text-slate-100 whitespace-nowrap flex items-center gap-1.5">
-                {activeCharacter ? activeCharacter.name : 'Select Hero'}
-              </span>
-              {activeCharacter && (
-                <div className="flex items-center gap-1">
-                  <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/35 text-purple-300 text-[10px] font-bold">
-                    {activeCharacter.race || 'Human'}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/35 text-indigo-300 text-[10px] font-bold">
-                    {activeCharacter.class || 'Adventurer'}
-                  </span>
-                </div>
-              )}
-              <span className="text-slate-400 group-hover:text-amber-400 transition-colors ml-1 text-xs">⚙️</span>
-            </button>
+            {/* Account Pill Button (Simplified in GM Mode) */}
+            <AccountPillButton
+              email={playerEmail}
+              activeCharacter={activeCharacter}
+              isGmMode={activeRole === 'gm'}
+              onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
+            />
 
-            {/* ⭐ Stylized Level Popover Trigger (Header Row 1) */}
-            <div className="flex items-center gap-1.5 relative" ref={levelRef}>
-              <button
-                onClick={() => setShowLevelPopover(!showLevelPopover)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all border shadow-sm ${
-                  showLevelPopover
-                    ? 'bg-amber-500/20 border-amber-400 text-amber-200 shadow-amber-500/30'
-                    : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/35 text-amber-300 shadow-amber-950/40'
-                }`}
-                title="Click to view or edit Hero Level and Action Points"
-              >
-                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30 shrink-0" />
-                <span className="font-outfit tracking-wide">Lvl {currentLevel}</span>
-                {showLevelPopover ? (
-                  <ChevronUp className="w-3 h-3 text-amber-300 shrink-0" />
-                ) : (
-                  <ChevronDown className="w-3 h-3 text-amber-400 shrink-0" />
-                )}
-              </button>
-              <CardHelpButton ruleKey="leveling.advancement_steps" />
+            {/* ⭐ Stylized Level Popover Trigger (Header Row 1 - Player Mode Only) */}
+            {activeRole !== 'gm' && (
+              <div className="flex items-center gap-1.5 relative" ref={levelRef}>
+                <button
+                  onClick={() => setShowLevelPopover(!showLevelPopover)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all border shadow-sm ${
+                    showLevelPopover
+                      ? 'bg-amber-500/20 border-amber-400 text-amber-200 shadow-amber-500/30'
+                      : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/35 text-amber-300 shadow-amber-950/40'
+                  }`}
+                  title="Click to view or edit Hero Level and Action Points"
+                >
+                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30 shrink-0" />
+                  <span className="font-outfit tracking-wide">Lvl {currentLevel}</span>
+                  {showLevelPopover ? (
+                    <ChevronUp className="w-3 h-3 text-amber-300 shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3 text-amber-400 shrink-0" />
+                  )}
+                </button>
+                <CardHelpButton ruleKey="leveling.advancement_steps" />
 
-              {/* 🌟 Level Edit Absolute Floating Glass Popover Card */}
-              {showLevelPopover && (
-                <div className="absolute top-full left-0 mt-2 z-50 w-64 p-3.5 bg-slate-900/95 border border-amber-500/40 rounded-xl shadow-2xl shadow-amber-950/60 backdrop-blur-xl animate-fadeIn flex flex-col gap-3 text-xs">
-                  <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
-                    <span className="font-outfit font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1.5 text-xs">
-                      <Award className="w-4 h-4 text-amber-400" />
-                      Hero Level & AP
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-slate-400 font-semibold">
-                        AP: <span className="text-amber-300 font-bold">{currentAp}</span>
+                {/* 🌟 Level Edit Absolute Floating Glass Popover Card */}
+                {showLevelPopover && (
+                  <div className="absolute top-full left-0 mt-2 z-50 w-64 p-3.5 bg-slate-900/95 border border-amber-500/40 rounded-xl shadow-2xl shadow-amber-950/60 backdrop-blur-xl animate-fadeIn flex flex-col gap-3 text-xs">
+                    <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
+                      <span className="font-outfit font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1.5 text-xs">
+                        <Award className="w-4 h-4 text-amber-400" />
+                        Hero Level & AP
                       </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-slate-400 font-semibold">
+                          AP: <span className="text-amber-300 font-bold">{currentAp}</span>
+                        </span>
+                        <button
+                          onClick={() => setShowLevelPopover(false)}
+                          className="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors"
+                          title="Close popover"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-bold text-slate-300">Level Rating</span>
+                        <span className="text-[10px] text-slate-400 font-mono">1 - 250 Lvl</span>
+                      </div>
+
+                      <input
+                        type="number"
+                        min={1}
+                        max={250}
+                        value={currentLevel}
+                        onChange={(e) => handleLevelChange(parseInt(e.target.value) || 1)}
+                        className="w-16 bg-slate-900 border border-amber-500/40 rounded-lg px-2 py-1 text-sm font-mono font-extrabold text-amber-300 text-center outline-none focus:border-amber-400 shadow-inner"
+                      />
+                    </div>
+
+                    <div className="pt-1 flex flex-col gap-1.5">
                       <button
-                        onClick={() => setShowLevelPopover(false)}
-                        className="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors"
-                        title="Close popover"
+                        onClick={() => {
+                          setShowLevelPopover(false);
+                          setShowApManagerModal(true);
+                        }}
+                        className="w-full py-1.5 bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 rounded-lg font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <span>🧩 Manage AP & Progression</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setShowLevelPopover(false);
+                          setShowLevelingWizard(true);
+                        }}
+                        className="w-full py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <span>🪄 Guided Progression Wizard</span>
                       </button>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between gap-3 bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
-                    <div className="flex flex-col">
-                      <span className="text-[11px] font-bold text-slate-300">Level Rating</span>
-                      <span className="text-[10px] text-slate-400 font-mono">1 - 250 Lvl</span>
-                    </div>
-
-                    <input
-                      type="number"
-                      min={1}
-                      max={250}
-                      value={currentLevel}
-                      onChange={(e) => handleLevelChange(parseInt(e.target.value) || 1)}
-                      className="w-16 bg-slate-900 border border-amber-500/40 rounded-lg px-2 py-1 text-sm font-mono font-extrabold text-amber-300 text-center outline-none focus:border-amber-400 shadow-inner"
-                    />
-                  </div>
-
-                  <div className="pt-1 flex flex-col gap-1.5">
-                    <button
-                      onClick={() => {
-                        setShowLevelPopover(false);
-                        setShowApManagerModal(true);
-                      }}
-                      className="w-full py-1.5 bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 rounded-lg font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <span>🧩 Manage AP & Progression</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowLevelPopover(false);
-                        setShowLevelingWizard(true);
-                      }}
-                      className="w-full py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <span>🪄 Guided Progression Wizard</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Center Zone: S-Tier Glassmorphic Pill Tab Navigation Bar */}
-          <nav className="flex-1 flex justify-center min-w-[280px]">
-            <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl shadow-inner backdrop-blur-md">
-              <button
-                onClick={() => setActiveTab('sheet')}
-                className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'sheet'
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5" />
-                Sheet
-              </button>
-              <button
-                onClick={() => setActiveTab('rolls')}
-                className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'rolls'
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                Rolls
-              </button>
-              <button
-                onClick={() => setActiveTab('codex')}
-                className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'codex'
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
-                }`}
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                Codex
-              </button>
-              <button
-                onClick={() => setActiveTab('logs')}
-                className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'logs'
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                Logs
-              </button>
-              <button
-                onClick={() => setActiveTab('directory')}
-                className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'directory'
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                Directory
-              </button>
-            </div>
-          </nav>
+          {/* Center Zone: S-Tier Glassmorphic Pill Tab Navigation Bar (Player Mode Only) */}
+          {activeRole !== 'gm' && (
+            <nav className="flex-1 flex justify-center min-w-[280px]">
+              <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl shadow-inner backdrop-blur-md">
+                <button
+                  onClick={() => setActiveTab('sheet')}
+                  className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+                    activeTab === 'sheet'
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                  }`}
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  Sheet
+                </button>
+                <button
+                  onClick={() => setActiveTab('rolls')}
+                  className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+                    activeTab === 'rolls'
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  Rolls
+                </button>
+                <button
+                  onClick={() => setActiveTab('codex')}
+                  className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+                    activeTab === 'codex'
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Codex
+                </button>
+                <button
+                  onClick={() => setActiveTab('logs')}
+                  className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+                    activeTab === 'logs'
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                  }`}
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  Logs
+                </button>
+                <button
+                  onClick={() => setActiveTab('directory')}
+                  className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
+                    activeTab === 'directory'
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  Directory
+                </button>
+              </div>
+            </nav>
+          )}
 
           {/* Right Zone: Resources Popover & Database Indicator */}
           <div className="flex items-center gap-2">
@@ -455,11 +478,21 @@ export default function App() {
           </div>
         </div>
 
-        {/* Persistent Header HUD Ribbon - Sub-Header Row 2 (Only visible when on Sheet tab) */}
-        {activeTab === 'sheet' && (
-          <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
-            <PersistentHeaderHUD onOpenAttributeManager={() => setShowAttributeManagerModal(true)} />
-          </div>
+        {/* Sub-Header Row 2: GM Header Ribbon vs Player Attribute HUD */}
+        {activeRole === 'gm' ? (
+          <GmHeaderHUD
+            parties={gmParties}
+            activeParty={selectedGmParty}
+            activeRoomCode={activeRoomCode}
+            onSelectParty={(party) => setSelectedGmParty(party)}
+            onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
+          />
+        ) : (
+          activeTab === 'sheet' && (
+            <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
+              <PersistentHeaderHUD onOpenAttributeManager={() => setShowAttributeManagerModal(true)} />
+            </div>
+          )
         )}
       </header>
 
@@ -476,9 +509,10 @@ export default function App() {
             <div className="flex-1">
               {activeRole === 'gm' ? (
                 <GmWorkspaceView
-                  activeParty={null}
+                  activeParty={selectedGmParty}
                   currentEmail={playerEmail}
                   onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
+                  onSelectActiveParty={(p) => setSelectedGmParty(p)}
                 />
               ) : (
                 <>

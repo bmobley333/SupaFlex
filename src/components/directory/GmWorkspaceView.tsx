@@ -21,8 +21,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 }) => {
   // GM Party State
   const [selectedParty, setSelectedParty] = useState<Party | null>(propActiveParty);
-  const [activeRoomCode, setActiveRoomCode] = useState<string | null>(null);
-  const [copiedCode, setCopiedCode] = useState(false);
 
   // Party Session Roster State
   const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
@@ -86,8 +84,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
     const initRoom = async () => {
       try {
-        const { roomCode } = await gameApi.checkoutPartyRoomCode(selectedParty.id);
-        setActiveRoomCode(roomCode);
+        await gameApi.checkoutPartyRoomCode(selectedParty.id);
       } catch (err) {
         console.error('Failed to checkout room code:', err);
       }
@@ -110,26 +107,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       if (heartbeatInterval) clearInterval(heartbeatInterval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       gameApi.closePartyRoom(selectedParty.id).catch(console.error);
-      setActiveRoomCode(null);
     };
   }, [selectedParty?.id]);
-
-  const handleResetRoomCode = async () => {
-    if (!selectedParty?.id) return;
-    try {
-      const { roomCode } = await gameApi.checkoutPartyRoomCode(selectedParty.id);
-      setActiveRoomCode(roomCode);
-    } catch (err) {
-      console.error('Failed to reset room code:', err);
-    }
-  };
-
-  const handleCopyRoomCode = () => {
-    if (!activeRoomCode) return;
-    navigator.clipboard.writeText(activeRoomCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
-  };
 
   // Load Session Members & Active Monsters on Selected Party Change
   useEffect(() => {
@@ -260,47 +239,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6">
-      {/* Top Banner Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-900/90 border border-amber-500/30 rounded-2xl shadow-xl backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xl text-amber-400 shadow-inner">
-            👑
-          </div>
-          <div>
-            <h1 className="text-xl font-black text-amber-400 uppercase tracking-wider font-outfit">
-              GM Screen
-            </h1>
-          </div>
-        </div>
-
-        {/* Active Room ID Badge (High Visibility Monospace Display) */}
-        {selectedParty && (
-          <div className="flex items-center gap-2 bg-slate-950/90 border border-amber-500/50 px-3.5 py-1.5 rounded-xl shadow-inner">
-            <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-wider font-outfit">
-              Party ID:
-            </span>
-            <span className="font-mono text-base font-black tracking-widest text-amber-300 bg-slate-900 px-2.5 py-0.5 rounded-lg border border-amber-500/40 shadow-sm">
-              {activeRoomCode || '....'}
-            </span>
-            <button
-              onClick={handleCopyRoomCode}
-              title="Copy Party ID to Clipboard"
-              className="p-1 text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 rounded transition-all"
-            >
-              {copiedCode ? '✅' : '📋'}
-            </button>
-            <button
-              onClick={handleResetRoomCode}
-              title="Generate New Party ID"
-              className="p-1 text-xs text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded transition-all"
-            >
-              🔄
-            </button>
-          </div>
-        )}
-      </div>
-
+    <div className="space-y-6 max-w-[2500px] mx-auto">
       {/* Main Grid: Party Roster (Left) vs Monster Roster (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Party Roster (4 cols) */}
