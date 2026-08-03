@@ -167,24 +167,34 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
     loadSessionMembers(selectedParty.id);
 
-    const channel = supabase
-      .channel(`party:${selectedParty.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'party_session_members',
-          filter: `party_id=eq.${selectedParty.id}`,
-        },
-        () => {
-          loadSessionMembers(selectedParty.id);
-        }
-      )
-      .subscribe();
+    // Use a unique channel topic for modal instances to prevent collision with GM Screen channels
+    const topic = `modal_party_${selectedParty.id}_${Math.random().toString(36).substring(7)}`;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    try {
+      channel = supabase
+        .channel(topic)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'party_session_members',
+            filter: `party_id=eq.${selectedParty.id}`,
+          },
+          () => {
+            loadSessionMembers(selectedParty.id);
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      console.error('[UnifiedLaunchHubModal] Realtime subscription error:', err);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [selectedParty, isOpen]);
 

@@ -278,7 +278,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         {selectedParty && (
           <div className="flex items-center gap-2 bg-slate-950/90 border border-amber-500/50 px-3.5 py-1.5 rounded-xl shadow-inner">
             <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-wider font-outfit">
-              Room ID:
+              Party ID:
             </span>
             <span className="font-mono text-base font-black tracking-widest text-amber-300 bg-slate-900 px-2.5 py-0.5 rounded-lg border border-amber-500/40 shadow-sm">
               {activeRoomCode || '....'}
