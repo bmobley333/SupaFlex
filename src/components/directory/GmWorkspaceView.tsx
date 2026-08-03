@@ -10,26 +10,19 @@ import { parseMonsterLine, parseMultiRowMonsterBlock, ParsedMonster } from '../.
 interface GmWorkspaceViewProps {
   activeParty: Party | null;
   currentEmail: string;
-  onOpenLaunchHub: () => void;
+  onOpenLaunchHub?: () => void;
   onSelectActiveParty?: (party: Party) => void;
 }
 
 export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   activeParty: propActiveParty,
   currentEmail,
-  onOpenLaunchHub,
   onSelectActiveParty,
 }) => {
-  // GM Parties State
-  const [parties, setParties] = useState<Party[]>([]);
+  // GM Party State
   const [selectedParty, setSelectedParty] = useState<Party | null>(propActiveParty);
   const [activeRoomCode, setActiveRoomCode] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
-  const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
-  const [newPartyName, setNewPartyName] = useState('');
-  const [invitedEmails, setInvitedEmails] = useState('');
-  const [partyLoading, setPartyLoading] = useState(false);
-  const [partyError, setPartyError] = useState<string | null>(null);
 
   // Party Session Roster State
   const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
@@ -61,11 +54,14 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     if (!currentEmail) return;
     try {
       const data = await gameApi.getPartiesForUser(currentEmail);
-      const gmParties = (data as Party[]).filter(
+      let gmParties = (data as Party[]).filter(
         (p) => (p.gm_email || '').toLowerCase() === currentEmail.toLowerCase()
       );
-      setParties(gmParties);
-      if (gmParties.length > 0 && !selectedParty) {
+      if (gmParties.length === 0) {
+        const created = await gameApi.createParty('GM Screen Party', currentEmail, []);
+        gmParties = [created as Party];
+      }
+      if (!selectedParty) {
         const first = propActiveParty || gmParties[0];
         setSelectedParty(first);
         if (onSelectActiveParty) onSelectActiveParty(first);
@@ -198,35 +194,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     }
   };
 
-  const handleCreatePartySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentEmail || !newPartyName.trim()) return;
-
-    setPartyError(null);
-    setPartyLoading(true);
-
-    try {
-      const emailList = invitedEmails
-        .split(',')
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean);
-
-      const created = await gameApi.createParty(newPartyName.trim(), currentEmail, emailList);
-      setNewPartyName('');
-      setInvitedEmails('');
-      setIsPartyModalOpen(false);
-
-      await loadParties();
-      setSelectedParty(created as Party);
-      if (onSelectActiveParty) onSelectActiveParty(created as Party);
-    } catch (err: any) {
-      console.error('Failed to create party:', err);
-      setPartyError(err.message || 'Failed to create party.');
-    } finally {
-      setPartyLoading(false);
-    }
-  };
-
   const handleSaveMonsters = async (updated: ParsedMonster[]) => {
     setMonsters(updated);
     if (selectedParty) {
@@ -294,19 +261,16 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6">
-      {/* Top Banner Header with GM Party Controls */}
+      {/* Top Banner Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-900/90 border border-amber-500/30 rounded-2xl shadow-xl backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xl text-amber-400 shadow-inner">
             👑
           </div>
           <div>
-            <h1 className="text-lg font-black text-amber-400 uppercase tracking-wider font-outfit flex items-center gap-2">
-              GM Console: <span className="text-slate-100">{selectedParty ? selectedParty.name : 'No Party Selected'}</span>
+            <h1 className="text-xl font-black text-amber-400 uppercase tracking-wider font-outfit">
+              GM Screen
             </h1>
-            <p className="text-xs text-slate-400 font-medium">
-              GM Account: <span className="text-slate-300">{currentEmail}</span>
-            </p>
           </div>
         </div>
 
@@ -335,43 +299,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
             </button>
           </div>
         )}
-
-        {/* Party Selection & Creation Actions */}
-        <div className="flex flex-wrap items-center gap-3">
-          {parties.length > 0 && (
-            <select
-              value={selectedParty?.id || ''}
-              onChange={(e) => {
-                const found = parties.find((p) => p.id === e.target.value);
-                if (found) {
-                  setSelectedParty(found);
-                  if (onSelectActiveParty) onSelectActiveParty(found);
-                }
-              }}
-              className="bg-slate-950 border border-slate-700 text-xs text-amber-300 font-bold rounded-xl px-3 py-1.5 focus:outline-none focus:border-amber-500"
-            >
-              {parties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  🎉 {p.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          <button
-            onClick={() => setIsPartyModalOpen(true)}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-extrabold rounded-xl transition-all shadow-md flex items-center gap-1.5"
-          >
-            <span>➕</span> Create New Party
-          </button>
-
-          <button
-            onClick={onOpenLaunchHub}
-            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 rounded-xl border border-slate-700 transition-all flex items-center gap-1.5"
-          >
-            <span>👤</span> Player Vault
-          </button>
-        </div>
       </div>
 
       {/* Main Grid: Party Roster (Left) vs Monster Roster (Right) */}
@@ -388,14 +315,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           </div>
 
           {!selectedParty ? (
-            <div className="text-xs font-medium text-slate-400 italic p-6 bg-slate-950/70 rounded-xl border border-slate-800 text-center space-y-2">
-              <div>No party selected.</div>
-              <button
-                onClick={() => setIsPartyModalOpen(true)}
-                className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-lg"
-              >
-                + Create Party
-              </button>
+            <div className="text-xs font-medium text-slate-400 italic p-6 bg-slate-950/70 rounded-xl border border-slate-800 text-center">
+              Initializing GM Screen...
             </div>
           ) : isMembersLoading ? (
             <div className="text-xs text-slate-400 italic text-center py-6">Loading party members...</div>
@@ -566,81 +487,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           )}
         </div>
       </div>
-
-      {/* GM Create / Edit Party Modal */}
-      {isPartyModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider font-outfit flex items-center gap-2">
-                <span>👑</span> Create New Party (GM)
-              </h3>
-              <button
-                onClick={() => setIsPartyModalOpen(false)}
-                className="text-slate-400 hover:text-slate-200 text-lg font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            {partyError && (
-              <div className="p-2.5 bg-rose-950/80 border border-rose-700/60 rounded-xl text-xs text-rose-300 font-semibold">
-                {partyError}
-              </div>
-            )}
-
-            <form onSubmit={handleCreatePartySubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                  Party Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newPartyName}
-                  onChange={(e) => setNewPartyName(e.target.value)}
-                  placeholder="e.g. Friday Dungeon Crawl"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-400"
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                  Invited Player Emails (Comma Separated)
-                </label>
-                <input
-                  type="text"
-                  value={invitedEmails}
-                  onChange={(e) => setInvitedEmails(e.target.value)}
-                  placeholder="player1@gmail.com, player2@gmail.com"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-400"
-                />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Invited players will see this party in their player selector and can choose which character to join in their browser tabs.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsPartyModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={partyLoading || !newPartyName.trim()}
-                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl shadow disabled:opacity-50"
-                >
-                  {partyLoading ? 'Creating...' : 'Create Party'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Paste Multi-Row Statblock Modal */}
       {isPasteModalOpen && (

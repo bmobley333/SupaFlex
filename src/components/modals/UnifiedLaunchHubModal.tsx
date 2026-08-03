@@ -109,10 +109,8 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const [cloneSuccessMsg, setCloneSuccessMsg] = useState<string | null>(null);
 
   // Party Sub-Tab State
-  const [parties, setParties] = useState<Party[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
-  const [partyJoinCharId, setPartyJoinCharId] = useState<number | null>(null);
   const [partyError, setPartyError] = useState<string | null>(null);
   const [partySuccessMsg, setPartySuccessMsg] = useState<string | null>(null);
   const [roomCodeInput, setRoomCodeInput] = useState('');
@@ -128,9 +126,9 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       return;
     }
 
-    const targetCharId = partyJoinCharId || activeCharacter?.id || (userCharacters[0] ? userCharacters[0].id : null);
+    const targetCharId = activeCharacter?.id || (userCharacters[0] ? userCharacters[0].id : null);
     if (!targetCharId) {
-      setPartyError('Please select or create a character to join the party with.');
+      setPartyError('Please select or create an Active Hero in your vault to join.');
       return;
     }
 
@@ -144,7 +142,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       await loadSessionMembers(party.id);
       setPartySuccessMsg(`Successfully joined party "${party.name}" (Room ID: ${sanitized})!`);
       setRoomCodeInput('');
-      loadParties();
     } catch (err: any) {
       console.error('Error joining party by room code:', err);
       setPartyError(err.message || 'Failed to join party room.');
@@ -208,7 +205,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     if (!currentEmail) return;
     try {
       const data = await gameApi.getPartiesForUser(currentEmail);
-      setParties(data as Party[]);
       if (data.length > 0 && !selectedParty) {
         setSelectedParty(data[0] as Party);
       }
@@ -463,25 +459,15 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   };
 
   // --- PARTY HANDLERS ---
-  const handleJoinParty = async () => {
-    if (!selectedParty || !currentEmail || !partyJoinCharId) return;
-
-    setPartyError(null);
-    try {
-      await gameApi.joinPartySession(selectedParty.id, currentEmail, partyJoinCharId, tabSessionId);
-      setPartySuccessMsg('Joined party in this browser tab!');
-      await loadSessionMembers(selectedParty.id);
-    } catch (err: any) {
-      setPartyError(err.message || 'Failed to join party.');
-    }
-  };
-
   const handleLeaveParty = async () => {
-    if (!selectedParty) return;
     try {
       await gameApi.leavePartySession(tabSessionId);
-      await loadSessionMembers(selectedParty.id);
-      setPartySuccessMsg('Left party session for this browser tab.');
+      if (selectedParty) {
+        await loadSessionMembers(selectedParty.id);
+      }
+      setSelectedParty(null);
+      setSessionMembers([]);
+      setPartySuccessMsg('Left party room session.');
     } catch (err: any) {
       setPartyError(err.message || 'Failed to leave party.');
     }
@@ -791,7 +777,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       : 'border-transparent text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  ⚔️ Party Sessions
+                  ⚔️ Join Party
                 </button>
               </div>
             )}
@@ -1070,7 +1056,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 </div>
               )}
 
-              {/* SUB-TAB 3: PARTY SESSIONS (PLAYER VIEW) */}
+              {/* SUB-TAB 3: JOIN PARTY */}
               {rightSubTab === 'party' && (
                 <div className="space-y-4">
                   {partyError && <div className="p-3 bg-red-900/60 border border-red-500/50 rounded text-red-200 text-xs">{partyError}</div>}
@@ -1082,9 +1068,14 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       <span className="text-xs font-black text-amber-400 uppercase tracking-wider font-outfit flex items-center gap-1.5">
                         <span>🔑</span> Enter GM Room ID
                       </span>
-                      <span className="text-[10px] text-amber-300 font-mono font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-                        4 Chars
-                      </span>
+                      <button
+                        type="button"
+                        onClick={handleLeaveParty}
+                        className="px-3 py-1 bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-700/60 font-bold text-xs rounded-xl transition cursor-pointer shadow-sm"
+                        title="Leave active room session"
+                      >
+                        Leave
+                      </button>
                     </div>
 
                     <div className="flex gap-2">
@@ -1106,110 +1097,34 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                     </div>
                   </form>
 
-                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
-                        <span>⚔️</span> Join Party Session (This Tab)
-                      </h4>
-                      <span className="text-[10px] text-slate-400 font-mono bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                        Tab Session
-                      </span>
-                    </div>
-
-                    {parties.length === 0 ? (
-                      <div className="text-xs text-slate-400 italic p-4 bg-slate-950 rounded-lg text-center space-y-1">
-                        <div>No active party invitations found for {currentEmail}.</div>
-                        <div className="text-[11px] text-slate-500">
-                          Ask your Game Master to invite your email address in their GM Console.
-                        </div>
+                  {/* Active Room Session Party Roster */}
+                  {selectedParty && sessionMembers.length > 0 && (
+                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+                      <div className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span>Session Party Roster</span>
+                        <span className="text-emerald-400 font-bold flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                          Live ({sessionMembers.length})
+                        </span>
                       </div>
-                    ) : (
-                      <>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                            Select Active Party
-                          </label>
-                          <select
-                            value={selectedParty?.id || ''}
-                            onChange={(e) => {
-                              const p = parties.find((pt) => pt.id === e.target.value);
-                              if (p) setSelectedParty(p);
-                            }}
-                            className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 font-bold focus:outline-none focus:border-amber-400"
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                        {sessionMembers.map((m) => (
+                          <div
+                            key={m.id}
+                            className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 flex justify-between items-center text-xs"
                           >
-                            {parties.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                🎉 {p.name} (GM: {p.gm_email})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {selectedParty && (
-                          <div className="space-y-3 pt-2">
-                            <div>
-                              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                                Select Hero for This Browser Tab
-                              </label>
-                              <select
-                                value={partyJoinCharId || ''}
-                                onChange={(e) => setPartyJoinCharId(Number(e.target.value))}
-                                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-400"
-                              >
-                                <option value="">-- Select Character --</option>
-                                {userCharacters.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    🛡️ {c.name} ({c.class || 'Adventurer'} Lvl {c.sheet_data?.level || 1})
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="flex gap-2 pt-1">
-                              <button
-                                onClick={handleJoinParty}
-                                disabled={!partyJoinCharId}
-                                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-xs rounded-xl transition shadow cursor-pointer"
-                              >
-                                Join Session (This Tab)
-                              </button>
-                              <button
-                                onClick={handleLeaveParty}
-                                className="px-4 py-2 bg-red-950/80 hover:bg-red-900 text-red-200 font-bold text-xs rounded-xl border border-red-800/80 transition cursor-pointer"
-                              >
-                                Leave
-                              </button>
-                            </div>
-
-                            {/* Active Party Member Roster */}
-                            <div className="pt-3 border-t border-slate-800 space-y-2">
-                              <div className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex justify-between items-center">
-                                <span>Session Party Roster</span>
-                                <span className="text-emerald-400 font-bold flex items-center gap-1">
-                                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                  Live ({sessionMembers.length})
-                                </span>
-                              </div>
-                              {sessionMembers.map((m) => (
-                                <div
-                                  key={m.id}
-                                  className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 flex justify-between items-center text-xs"
-                                >
-                                  <span className="font-bold text-slate-200">
-                                    🛡️ {m.character?.name || `Hero #${m.character_id}`}{' '}
-                                    {m.tab_session_id === tabSessionId && (
-                                      <span className="text-amber-400 font-mono font-bold text-[10px] ml-1">(This Tab)</span>
-                                    )}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400">{m.player_email}</span>
-                                </div>
-                              ))}
-                            </div>
+                            <span className="font-bold text-slate-200">
+                              🛡️ {m.character?.name || `Hero #${m.character_id}`}{' '}
+                              {m.tab_session_id === tabSessionId && (
+                                <span className="text-amber-400 font-mono font-bold text-[10px] ml-1">(This Tab)</span>
+                              )}
+                            </span>
+                            <span className="text-[10px] text-slate-400">{m.player_email}</span>
                           </div>
-                        )}
-                      </>
-                    )}
-                  </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
