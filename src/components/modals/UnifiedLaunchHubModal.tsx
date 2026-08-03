@@ -493,11 +493,11 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
         <div className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-6 py-4 flex items-center justify-between shrink-0 flex-wrap gap-3">
           <div>
             <h2 className="text-xl font-extrabold text-amber-400 flex items-center gap-2 font-outfit tracking-wide">
-              <span>🌌</span> Character & Room Selector
+              <span>🌌</span> Character & Party Selector
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
               {currentEmail
-                ? 'Manage your character vault, room sessions, user account, and read-only inspection.'
+                ? 'Manage your character vault, active party sessions, user account, and read-only inspection.'
                 : '🔒 Please sign in or create an account to access your character sheet.'}
             </p>
           </div>
@@ -556,9 +556,15 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                     Game Master Mode Active
                   </h3>
                   <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                    Player hero selection is hidden while in GM Mode. Closing this selector or clicking <strong className="text-amber-300">Done</strong> will launch the GM Command Console.
+                    Player hero selection is hidden while in GM Mode. Click below or close this selector to launch the GM Command Console.
                   </p>
                 </div>
+                <button
+                  onClick={onClose}
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <span>👑</span> Launch GM Screen
+                </button>
               </div>
             ) : (
               <>
@@ -778,7 +784,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       : 'border-transparent text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  ⚔️ Join Room
+                  ⚔️ Join Party
                 </button>
               )}
             </div>
@@ -1067,7 +1073,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                   <form onSubmit={handleJoinByRoomCode} className="p-3.5 bg-slate-950/90 rounded-xl border border-amber-500/40 space-y-2.5 shadow-inner">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black text-amber-400 uppercase tracking-wider font-outfit flex items-center gap-1.5">
-                        <span>🔑</span> Enter GM Room ID
+                        <span>🔑</span> ENTER GM PARTY ID
                       </span>
                       <button
                         type="button"
@@ -1093,7 +1099,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                         disabled={isJoiningRoom || roomCodeInput.length !== 4}
                         className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-40 text-slate-950 font-black text-xs rounded-lg transition-all shadow-md flex items-center justify-center gap-1 cursor-pointer"
                       >
-                        {isJoiningRoom ? 'Joining...' : '⚡ Join Room'}
+                        {isJoiningRoom ? 'Joining...' : '⚡ Join Party'}
                       </button>
                     </div>
                   </form>

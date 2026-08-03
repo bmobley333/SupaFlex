@@ -285,14 +285,14 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
             </span>
             <button
               onClick={handleCopyRoomCode}
-              title="Copy Room ID to Clipboard"
+              title="Copy Party ID to Clipboard"
               className="p-1 text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 rounded transition-all"
             >
               {copiedCode ? '✅' : '📋'}
             </button>
             <button
               onClick={handleResetRoomCode}
-              title="Generate New Room ID"
+              title="Generate New Party ID"
               className="p-1 text-xs text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded transition-all"
             >
               🔄
