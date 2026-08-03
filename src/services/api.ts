@@ -3,6 +3,7 @@
 
 import { supabase } from '../lib/supabase';
 import { Character, Power, MagicItem, Skillset, CharacterSheetData, DieRating, SupabaseArmor, SupabaseWeapon, SupabaseShield, SupabaseGear } from '../types/game';
+import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
 
 export const createDefaultSheetData = (): CharacterSheetData => ({
   level: 1,
@@ -590,6 +591,112 @@ export const gameApi = {
     }
 
     return data || [];
+  },
+
+  // --- ROOM CODES & DISCONNECT HEARTBEAT ---
+  async checkoutPartyRoomCode(partyId: string): Promise<{ party: any; roomCode: string }> {
+    await this.cleanupStaleRooms();
+
+    let attempts = 0;
+    let candidate = '';
+    let isCollision = true;
+
+    while (isCollision && attempts < 10) {
+      candidate = generateRoomId();
+      attempts++;
+      const { data } = await supabase
+        .from('parties')
+        .select('id')
+        .eq('room_code', candidate)
+        .eq('is_active', true);
+
+      if (!data || data.length === 0) {
+        isCollision = false;
+      }
+    }
+
+    const nowStr = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('parties')
+      .update({
+        room_code: candidate,
+        is_active: true,
+        last_active_at: nowStr,
+      })
+      .eq('id', partyId)
+      .select()
+      .single();
+
+    if (error) {
+      console.warn('[gameApi] Local room code checkout fallback due to DB update:', error.message);
+      return { party: { id: partyId, room_code: candidate, is_active: true }, roomCode: candidate };
+    }
+
+    return { party: data, roomCode: candidate };
+  },
+
+  async sendGmHeartbeat(partyId: string) {
+    const nowStr = new Date().toISOString();
+    await supabase
+      .from('parties')
+      .update({
+        is_active: true,
+        last_active_at: nowStr,
+      })
+      .eq('id', partyId);
+  },
+
+  async closePartyRoom(partyId: string) {
+    await supabase
+      .from('parties')
+      .update({
+        is_active: false,
+        room_code: null,
+      })
+      .eq('id', partyId);
+  },
+
+  async cleanupStaleRooms() {
+    const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    await supabase
+      .from('parties')
+      .update({
+        is_active: false,
+        room_code: null,
+      })
+      .eq('is_active', true)
+      .lt('last_active_at', fiveMinsAgo);
+  },
+
+  async findActivePartyByRoomCode(rawCode: string) {
+    const sanitized = sanitizeRoomCodeInput(rawCode);
+    if (!sanitized || sanitized.length !== 4) return null;
+
+    await this.cleanupStaleRooms();
+
+    const { data, error } = await supabase
+      .from('parties')
+      .select('*')
+      .eq('room_code', sanitized)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[gameApi] Error finding party by room code:', error);
+      return null;
+    }
+
+    return data;
+  },
+
+  async joinPartyByRoomCode(rawCode: string, playerEmail: string, characterId: number, tabSessionId: string) {
+    const party = await this.findActivePartyByRoomCode(rawCode);
+    if (!party) {
+      throw new Error(`Room ID "${rawCode.toUpperCase()}" not found or has been closed by the GM.`);
+    }
+
+    const sessionMember = await this.joinPartySession(party.id, playerEmail, characterId, tabSessionId);
+    return { party, sessionMember };
   },
 
   // --- MONSTER ROSTER SYNC & BROADCAST ---

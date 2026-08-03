@@ -553,6 +553,9 @@ export interface Party {
   name: string;
   gm_email: string;
   invited_emails: string[];
+  room_code?: string | null;
+  is_active?: boolean;
+  last_active_at?: string | null;
   created_at: string;
 }
 

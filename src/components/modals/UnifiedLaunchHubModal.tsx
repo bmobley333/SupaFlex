@@ -5,6 +5,7 @@ import { gameApi } from '../../services/api';
 import { Character, Party, PartySessionMember, AuthMode } from '../../types/game';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { RoleToggleSwitch } from '../common/RoleToggleSwitch';
+import { sanitizeRoomCodeInput, isValidRoomCodeFormat } from '../../utils/roomId';
 
 interface UnifiedLaunchHubModalProps {
   isOpen: boolean;
@@ -114,6 +115,43 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const [partyJoinCharId, setPartyJoinCharId] = useState<number | null>(null);
   const [partyError, setPartyError] = useState<string | null>(null);
   const [partySuccessMsg, setPartySuccessMsg] = useState<string | null>(null);
+  const [roomCodeInput, setRoomCodeInput] = useState('');
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
+
+  const handleJoinByRoomCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentEmail) return;
+
+    const sanitized = sanitizeRoomCodeInput(roomCodeInput);
+    if (!isValidRoomCodeFormat(sanitized)) {
+      setPartyError('Please enter a valid 4-character Room ID (e.g. K9X2).');
+      return;
+    }
+
+    const targetCharId = partyJoinCharId || activeCharacter?.id || (userCharacters[0] ? userCharacters[0].id : null);
+    if (!targetCharId) {
+      setPartyError('Please select or create a character to join the party with.');
+      return;
+    }
+
+    setPartyError(null);
+    setPartySuccessMsg(null);
+    setIsJoiningRoom(true);
+
+    try {
+      const { party } = await gameApi.joinPartyByRoomCode(sanitized, currentEmail, targetCharId, tabSessionId);
+      setSelectedParty(party);
+      await loadSessionMembers(party.id);
+      setPartySuccessMsg(`Successfully joined party "${party.name}" (Room ID: ${sanitized})!`);
+      setRoomCodeInput('');
+      loadParties();
+    } catch (err: any) {
+      console.error('Error joining party by room code:', err);
+      setPartyError(err.message || 'Failed to join party room.');
+    } finally {
+      setIsJoiningRoom(false);
+    }
+  };
 
   useEffect(() => {
     if (currentEmail) {
@@ -1037,6 +1075,36 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 <div className="space-y-4">
                   {partyError && <div className="p-3 bg-red-900/60 border border-red-500/50 rounded text-red-200 text-xs">{partyError}</div>}
                   {partySuccessMsg && <div className="p-3 bg-emerald-900/60 border border-emerald-500/50 rounded text-emerald-200 text-xs font-semibold">{partySuccessMsg}</div>}
+
+                  {/* Join Room by 4-Char Room ID Card */}
+                  <form onSubmit={handleJoinByRoomCode} className="p-3.5 bg-slate-950/90 rounded-xl border border-amber-500/40 space-y-2.5 shadow-inner">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-amber-400 uppercase tracking-wider font-outfit flex items-center gap-1.5">
+                        <span>🔑</span> Enter GM Room ID
+                      </span>
+                      <span className="text-[10px] text-amber-300 font-mono font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                        4 Chars
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={4}
+                        value={roomCodeInput}
+                        onChange={(e) => setRoomCodeInput(sanitizeRoomCodeInput(e.target.value))}
+                        placeholder="e.g. K9X2"
+                        className="w-32 px-3 py-2 bg-slate-900 border border-amber-500/40 rounded-lg text-center font-mono text-base font-black tracking-widest text-amber-300 uppercase focus:outline-none focus:border-amber-400 placeholder:text-slate-600 placeholder:font-sans placeholder:tracking-normal placeholder:text-xs"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isJoiningRoom || roomCodeInput.length !== 4}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-40 text-slate-950 font-black text-xs rounded-lg transition-all shadow-md flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        {isJoiningRoom ? 'Joining...' : '⚡ Join Room'}
+                      </button>
+                    </div>
+                  </form>
 
                   <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2">

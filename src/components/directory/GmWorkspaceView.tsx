@@ -23,6 +23,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // GM Parties State
   const [parties, setParties] = useState<Party[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(propActiveParty);
+  const [activeRoomCode, setActiveRoomCode] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
   const [newPartyName, setNewPartyName] = useState('');
   const [invitedEmails, setInvitedEmails] = useState('');
@@ -79,6 +81,59 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       setSelectedParty(propActiveParty);
     }
   }, [propActiveParty]);
+
+  // Room Code Checkout & Heartbeat Lifecycle
+  useEffect(() => {
+    if (!selectedParty?.id) return;
+
+    let heartbeatInterval: any = null;
+
+    const initRoom = async () => {
+      try {
+        const { roomCode } = await gameApi.checkoutPartyRoomCode(selectedParty.id);
+        setActiveRoomCode(roomCode);
+      } catch (err) {
+        console.error('Failed to checkout room code:', err);
+      }
+
+      // Start 30s keep-alive heartbeat
+      heartbeatInterval = setInterval(() => {
+        gameApi.sendGmHeartbeat(selectedParty.id).catch(console.error);
+      }, 30000);
+    };
+
+    initRoom();
+
+    const handleBeforeUnload = () => {
+      gameApi.closePartyRoom(selectedParty.id).catch(console.error);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      gameApi.closePartyRoom(selectedParty.id).catch(console.error);
+      setActiveRoomCode(null);
+    };
+  }, [selectedParty?.id]);
+
+  const handleResetRoomCode = async () => {
+    if (!selectedParty?.id) return;
+    try {
+      const { roomCode } = await gameApi.checkoutPartyRoomCode(selectedParty.id);
+      setActiveRoomCode(roomCode);
+    } catch (err) {
+      console.error('Failed to reset room code:', err);
+    }
+  };
+
+  const handleCopyRoomCode = () => {
+    if (!activeRoomCode) return;
+    navigator.clipboard.writeText(activeRoomCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
 
   // Load Session Members & Active Monsters on Selected Party Change
   useEffect(() => {
@@ -254,6 +309,32 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
             </p>
           </div>
         </div>
+
+        {/* Active Room ID Badge (High Visibility Monospace Display) */}
+        {selectedParty && (
+          <div className="flex items-center gap-2 bg-slate-950/90 border border-amber-500/50 px-3.5 py-1.5 rounded-xl shadow-inner">
+            <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-wider font-outfit">
+              Room ID:
+            </span>
+            <span className="font-mono text-base font-black tracking-widest text-amber-300 bg-slate-900 px-2.5 py-0.5 rounded-lg border border-amber-500/40 shadow-sm">
+              {activeRoomCode || '....'}
+            </span>
+            <button
+              onClick={handleCopyRoomCode}
+              title="Copy Room ID to Clipboard"
+              className="p-1 text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 rounded transition-all"
+            >
+              {copiedCode ? '✅' : '📋'}
+            </button>
+            <button
+              onClick={handleResetRoomCode}
+              title="Generate New Room ID"
+              className="p-1 text-xs text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded transition-all"
+            >
+              🔄
+            </button>
+          </div>
+        )}
 
         {/* Party Selection & Creation Actions */}
         <div className="flex flex-wrap items-center gap-3">
