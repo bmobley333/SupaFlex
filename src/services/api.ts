@@ -564,10 +564,32 @@ export const gameApi = {
       throw error;
     }
 
+    // Broadcast instant WebSocket event to all connected clients in room
+    try {
+      const channel = supabase.channel(`party:${partyId}`);
+      await channel.send({
+        type: 'broadcast',
+        event: 'party_members_updated',
+        payload: { partyId, tabSessionId, timestamp: new Date().toISOString() },
+      });
+    } catch (bcErr) {
+      console.warn('[gameApi] Notice broadcasting member join:', bcErr);
+    }
+
     return data;
   },
 
-  async leavePartySession(tabSessionId: string) {
+  async leavePartySession(tabSessionId: string, partyId?: string) {
+    let targetPartyId = partyId;
+    if (!targetPartyId) {
+      const { data } = await supabase
+        .from('party_session_members')
+        .select('party_id')
+        .eq('tab_session_id', tabSessionId)
+        .maybeSingle();
+      if (data) targetPartyId = data.party_id;
+    }
+
     const { error } = await supabase
       .from('party_session_members')
       .delete()
@@ -575,6 +597,17 @@ export const gameApi = {
 
     if (error) {
       console.error('[gameApi] Error leaving party session:', error);
+    } else if (targetPartyId) {
+      try {
+        const channel = supabase.channel(`party:${targetPartyId}`);
+        await channel.send({
+          type: 'broadcast',
+          event: 'party_members_updated',
+          payload: { partyId: targetPartyId, tabSessionId, timestamp: new Date().toISOString() },
+        });
+      } catch (bcErr) {
+        console.warn('[gameApi] Notice broadcasting member leave:', bcErr);
+      }
     }
   },
 

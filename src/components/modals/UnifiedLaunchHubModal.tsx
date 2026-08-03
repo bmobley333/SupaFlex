@@ -167,12 +167,13 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
     loadSessionMembers(selectedParty.id);
 
-    // Use a unique channel topic for modal instances to prevent collision with GM Screen channels
+    // Subscribe to both Postgres CDC changes and Realtime Broadcast events for party members
     const topic = `modal_party_${selectedParty.id}_${Math.random().toString(36).substring(7)}`;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cdcChannel: ReturnType<typeof supabase.channel> | null = null;
+    let broadcastChannel: ReturnType<typeof supabase.channel> | null = null;
 
     try {
-      channel = supabase
+      cdcChannel = supabase
         .channel(topic)
         .on(
           'postgres_changes',
@@ -187,14 +188,20 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
           }
         )
         .subscribe();
+
+      broadcastChannel = supabase
+        .channel(`party:${selectedParty.id}`)
+        .on('broadcast', { event: 'party_members_updated' }, () => {
+          loadSessionMembers(selectedParty.id);
+        })
+        .subscribe();
     } catch (err) {
       console.error('[UnifiedLaunchHubModal] Realtime subscription error:', err);
     }
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      if (cdcChannel) supabase.removeChannel(cdcChannel);
+      if (broadcastChannel) supabase.removeChannel(broadcastChannel);
     };
   }, [selectedParty, isOpen]);
 

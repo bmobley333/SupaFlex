@@ -123,7 +123,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     loadSessionMembers(selectedParty.id);
     loadPartyMonsters(selectedParty.id);
 
-    // Subscribe to Party Session Members changes
+    // 1. Subscribe to Postgres CDC changes for party_session_members
     const membersChannel = supabase
       .channel(`party_members:${selectedParty.id}`)
       .on(
@@ -140,19 +140,28 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       )
       .subscribe();
 
-    // Subscribe to Realtime Monster updates
-    const monsterChannel = supabase
+    // 2. Subscribe to Realtime Broadcast events (monster roster + party member join/leave)
+    const partyChannel = supabase
       .channel(`party:${selectedParty.id}`)
       .on('broadcast', { event: 'monster_roster_updated' }, (payload) => {
         if (payload?.payload?.monsters) {
           setMonsters(payload.payload.monsters);
         }
       })
+      .on('broadcast', { event: 'party_members_updated' }, () => {
+        loadSessionMembers(selectedParty.id);
+      })
       .subscribe();
+
+    // 3. Safety 5-second polling fallback for self-healing sync during tab backgrounding
+    const pollInterval = setInterval(() => {
+      loadSessionMembers(selectedParty.id);
+    }, 5000);
 
     return () => {
       supabase.removeChannel(membersChannel);
-      supabase.removeChannel(monsterChannel);
+      supabase.removeChannel(partyChannel);
+      clearInterval(pollInterval);
     };
   }, [selectedParty?.id]);
 
