@@ -60,8 +60,8 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   }, [currentEmail]);
 
   useEffect(() => {
-    if (activeRole === 'gm') {
-      setRightSubTab('party');
+    if (activeRole === 'gm' && rightSubTab === 'party') {
+      setRightSubTab('account');
     }
   }, [activeRole]);
 
@@ -483,11 +483,11 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
         <div className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-6 py-4 flex items-center justify-between shrink-0 flex-wrap gap-3">
           <div>
             <h2 className="text-xl font-extrabold text-amber-400 flex items-center gap-2 font-outfit tracking-wide">
-              <span>🌌</span> Character & Party Selector
+              <span>🌌</span> Character & Room Selector
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
               {currentEmail
-                ? 'Manage your character vault, active party sessions, user account, and read-only inspection.'
+                ? 'Manage your character vault, room sessions, user account, and read-only inspection.'
                 : '🔒 Please sign in or create an account to access your character sheet.'}
             </p>
           </div>
@@ -738,37 +738,28 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
           <div className="md:col-span-6 flex flex-col h-full overflow-hidden">
             
             {/* Top Sub-Tab Selector */}
-            {activeRole === 'gm' ? (
-              <div className="flex border-b border-slate-800 mb-4 shrink-0">
-                <button
-                  onClick={() => setRightSubTab('party')}
-                  className="flex-1 py-2 text-xs font-bold border-b-2 border-amber-400 text-amber-400 font-outfit transition cursor-pointer"
-                >
-                  👑 GM Party Setup
-                </button>
-              </div>
-            ) : (
-              <div className="flex border-b border-slate-800 mb-4 shrink-0">
-                <button
-                  onClick={() => setRightSubTab('account')}
-                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
-                    rightSubTab === 'account'
-                      ? 'border-amber-400 text-amber-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  👤 Account
-                </button>
-                <button
-                  onClick={() => setRightSubTab('inspect')}
-                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
-                    rightSubTab === 'inspect'
-                      ? 'border-indigo-400 text-indigo-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  👁️ Inspect & Clone
-                </button>
+            <div className="flex border-b border-slate-800 mb-4 shrink-0">
+              <button
+                onClick={() => setRightSubTab('account')}
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
+                  rightSubTab === 'account'
+                    ? 'border-amber-400 text-amber-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                👤 Account
+              </button>
+              <button
+                onClick={() => setRightSubTab('inspect')}
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
+                  rightSubTab === 'inspect'
+                    ? 'border-indigo-400 text-indigo-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                👁️ Inspect & Clone
+              </button>
+              {activeRole !== 'gm' && (
                 <button
                   onClick={() => setRightSubTab('party')}
                   className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
@@ -777,10 +768,10 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       : 'border-transparent text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  ⚔️ Join Party
+                  ⚔️ Join Room
                 </button>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="flex-1 overflow-y-auto pr-1">
               
