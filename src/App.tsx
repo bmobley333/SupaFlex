@@ -465,7 +465,10 @@ export default function App() {
         ) : (
           activeTab === 'sheet' && (
             <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
-              <PersistentHeaderHUD onOpenAttributeManager={() => setShowAttributeManagerModal(true)} />
+              <PersistentHeaderHUD
+                onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
+                activePartyId={activeRoomCode}
+              />
             </div>
           )
         )}

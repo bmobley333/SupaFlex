@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
 import { Party, PartySessionMember } from '../../types/game';
 import { parseMonsterLine, parseMultiRowMonsterBlock, ParsedMonster } from '../../utils/monsterStatParser';
+import { PartyCharacterCard } from '../common/PartyCharacterCard';
 
 interface GmWorkspaceViewProps {
   activeParty: Party | null;
@@ -120,7 +121,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   useEffect(() => {
     if (!selectedParty) return;
 
-    loadSessionMembers(selectedParty.id);
+    loadSessionMembers(selectedParty.id, false);
     loadPartyMonsters(selectedParty.id);
 
     // 1. Subscribe to Postgres CDC changes for party_session_members
@@ -135,7 +136,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           filter: `party_id=eq.${selectedParty.id}`,
         },
         () => {
-          loadSessionMembers(selectedParty.id);
+          loadSessionMembers(selectedParty.id, true);
         }
       )
       .subscribe();
@@ -149,13 +150,13 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         }
       })
       .on('broadcast', { event: 'party_members_updated' }, () => {
-        loadSessionMembers(selectedParty.id);
+        loadSessionMembers(selectedParty.id, true);
       })
       .subscribe();
 
     // 3. Safety 5-second polling fallback for self-healing sync during tab backgrounding
     const pollInterval = setInterval(() => {
-      loadSessionMembers(selectedParty.id);
+      loadSessionMembers(selectedParty.id, true);
     }, 5000);
 
     return () => {
@@ -165,15 +166,24 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     };
   }, [selectedParty?.id]);
 
-  const loadSessionMembers = async (partyId: string) => {
-    setIsMembersLoading(true);
+  const loadSessionMembers = async (partyId: string, isSilent = false) => {
+    if (!isSilent && sessionMembers.length === 0) {
+      setIsMembersLoading(true);
+    }
     try {
       const members = await gameApi.getPartySessionMembers(partyId);
-      setSessionMembers(members);
+      setSessionMembers((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(members)) {
+          return prev;
+        }
+        return members;
+      });
     } catch (e) {
       console.error('Failed to load session members:', e);
     } finally {
-      setIsMembersLoading(false);
+      if (!isSilent) {
+        setIsMembersLoading(false);
+      }
     }
   };
 
@@ -284,25 +294,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           ) : (
             <div className="space-y-2.5 overflow-y-auto max-h-[520px] pr-1">
               {sessionMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="p-3 bg-slate-950/80 border border-slate-800/90 rounded-xl space-y-1.5 hover:border-slate-700 transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-slate-100 font-outfit">
-                      {member.character?.name || `Hero #${member.character_id}`}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
-                      {member.character?.class || 'Adventurer'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>{member.player_email}</span>
-                    <span className="text-emerald-400 font-bold flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Online
-                    </span>
-                  </div>
-                </div>
+                <PartyCharacterCard key={member.id || member.character_id} member={member} />
               ))}
             </div>
           )}
