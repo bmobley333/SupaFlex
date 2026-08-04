@@ -20,6 +20,7 @@ interface UnifiedLaunchHubModalProps {
   onLogout: () => void;
   onCharacterCloned: (clonedChar: Character) => void;
   onRefreshCharacters?: () => void;
+  initialTab?: 'account' | 'inspect' | 'party';
 }
 
 export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
@@ -35,10 +36,17 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   onLogout,
   onCharacterCloned,
   onRefreshCharacters,
+  initialTab = 'account',
 }) => {
   const activeRole = useCharacterStore((state) => state.activeRole);
   const setActiveRole = useCharacterStore((state) => state.setActiveRole);
-  const [rightSubTab, setRightSubTab] = useState<'account' | 'inspect' | 'party'>('account');
+  const [rightSubTab, setRightSubTab] = useState<'account' | 'inspect' | 'party'>(initialTab);
+
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setRightSubTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   // Account Sub-Tab State
   const [authMode, setAuthMode] = useState<AuthMode>(currentEmail ? 'profile' : 'login');
@@ -140,6 +148,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       const { party } = await gameApi.joinPartyByRoomCode(sanitized, currentEmail, targetCharId, tabSessionId);
       setSelectedParty(party);
       await loadSessionMembers(party.id);
+      useCharacterStore.getState().setActivePartyId(sanitized);
       setPartySuccessMsg(`Successfully joined party "${party.name}" (Party ID: ${sanitized})!`);
       setRoomCodeInput('');
     } catch (err: any) {
@@ -484,6 +493,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       }
       setSelectedParty(null);
       setSessionMembers([]);
+      useCharacterStore.getState().setActivePartyId(null);
       setPartySuccessMsg('Left party room session.');
     } catch (err: any) {
       setPartyError(err.message || 'Failed to leave party.');

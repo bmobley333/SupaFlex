@@ -22,6 +22,7 @@ interface CharacterStore {
   playerName: string;
   filterMode: 'my_heroes' | 'all_heroes';
   activeRole: 'player' | 'gm';
+  activePartyId: string | null;
 
   // Actions
   fetchInitialData: () => Promise<void>;
@@ -38,6 +39,7 @@ interface CharacterStore {
   setPlayerName: (name: string) => void;
   setFilterMode: (mode: 'my_heroes' | 'all_heroes') => void;
   setActiveRole: (role: 'player' | 'gm') => void;
+  setActivePartyId: (partyId: string | null) => void;
   recordApExpenditure: (
     cost: number,
     category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual',
@@ -63,10 +65,20 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   playerName: sessionStorage.getItem('supaflex_player_name') || localStorage.getItem('supaflex_player_name') || '',
   filterMode: (sessionStorage.getItem('supaflex_filter_mode') as any) || (localStorage.getItem('supaflex_filter_mode') as any) || 'my_heroes',
   activeRole: (sessionStorage.getItem('supaflex_active_role') as 'player' | 'gm') || 'player',
+  activePartyId: sessionStorage.getItem('supaflex_active_party_id') || null,
 
   setActiveRole: (role: 'player' | 'gm') => {
     sessionStorage.setItem('supaflex_active_role', role);
     set({ activeRole: role });
+  },
+
+  setActivePartyId: (partyId: string | null) => {
+    if (partyId) {
+      sessionStorage.setItem('supaflex_active_party_id', partyId);
+    } else {
+      sessionStorage.removeItem('supaflex_active_party_id');
+    }
+    set({ activePartyId: partyId });
   },
 
   fetchInitialData: async () => {

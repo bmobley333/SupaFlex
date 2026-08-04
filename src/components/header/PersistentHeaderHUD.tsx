@@ -1,6 +1,5 @@
-// src/components/header/PersistentHeaderHUD.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowDown, ArrowUp, Zap, ChevronDown, ChevronUp, Sparkles, X, Plus, Minus, Users } from 'lucide-react';
+import { ArrowDown, ArrowUp, Zap, ChevronDown, ChevronUp, Sparkles, X, Plus, Minus } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, DieRating } from '../../types/game';
 import { stepDownDie, stepUpDie } from '../../lib/dice';
@@ -29,10 +28,9 @@ const dieToNum = (die?: string): string => {
 
 interface PersistentHeaderHUDProps {
   onOpenAttributeManager?: () => void;
-  activePartyId?: string | null;
 }
 
-export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({ onOpenAttributeManager, activePartyId }) => {
+export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({ onOpenAttributeManager }) => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, spendMeta, resetSparks } = useCharacterStore();
   const [activeDrawer, setActiveDrawer] = useState<'none' | 'attributes' | 'focus' | 'spark' | 'luck'>('none');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -543,24 +541,6 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({ onOpen
               </div>
             </div>
           )}
-        </div>
-
-        {/* 👥 Party Pill (Far right of SPARK) */}
-        <div className="relative">
-          <div
-            className={`flex items-center gap-1.5 px-3 py-1 border rounded-lg text-xs font-semibold transition-all ${
-              activePartyId
-                ? 'bg-cyan-950/60 border-cyan-500/40 text-cyan-200 shadow-sm shadow-cyan-500/20'
-                : 'bg-slate-950/40 border-slate-800 text-slate-400'
-            }`}
-            title={activePartyId ? `Connected Party: ${activePartyId}` : 'No Active Party Session'}
-          >
-            <Users className={`w-3.5 h-3.5 ${activePartyId ? 'text-cyan-400' : 'text-slate-500'}`} />
-            <span className="font-outfit font-bold uppercase text-[11px]">Party:</span>
-            <span className="font-mono font-extrabold text-xs">
-              {activePartyId || '----'}
-            </span>
-          </div>
         </div>
       </div>
 

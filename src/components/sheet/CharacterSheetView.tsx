@@ -15,9 +15,13 @@ import { PartyRosterHud } from '../hud/PartyRosterHud';
 
 interface CharacterSheetViewProps {
   onOpenVitalityManager?: () => void;
+  onOpenPartySelector?: () => void;
 }
 
-export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({ onOpenVitalityManager }) => {
+export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
+  onOpenVitalityManager,
+  onOpenPartySelector,
+}) => {
   const { activeCharacter, playerEmail } = useCharacterStore();
   const heroKey = activeCharacter?.id ? `hero_${activeCharacter.id}` : 'no_hero';
 
@@ -59,7 +63,11 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({ onOpenVi
         {/* Column 3: Survival (Vitality & Party Roster HUD) */}
         <div className="lg:col-span-2 xl:col-span-1 flex flex-col gap-4">
           <VitalsHeader onOpenVitalityManager={onOpenVitalityManager} />
-          <PartyRosterHud activeCharacter={activeCharacter} playerEmail={playerEmail} />
+          <PartyRosterHud
+            activeCharacter={activeCharacter}
+            playerEmail={playerEmail}
+            onOpenPartySelector={onOpenPartySelector}
+          />
         </div>
       </div>
 

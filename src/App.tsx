@@ -39,6 +39,7 @@ export default function App() {
 
   // Unified Launch Hub & Read-Only / Party Session State
   const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(false);
+  const [launchHubInitialTab, setLaunchHubInitialTab] = useState<'account' | 'inspect' | 'party'>('account');
   const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
   const [readOnlyOwner, setReadOnlyOwner] = useState<string | null>(null);
 
@@ -465,10 +466,7 @@ export default function App() {
         ) : (
           activeTab === 'sheet' && (
             <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
-              <PersistentHeaderHUD
-                onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
-                activePartyId={activeRoomCode}
-              />
+              <PersistentHeaderHUD onOpenAttributeManager={() => setShowAttributeManagerModal(true)} />
             </div>
           )
         )}
@@ -495,7 +493,13 @@ export default function App() {
               ) : (
                 <>
                   {activeTab === 'sheet' && (
-                    <CharacterSheetView onOpenVitalityManager={() => setShowVitalityManagerModal(true)} />
+                    <CharacterSheetView
+                      onOpenVitalityManager={() => setShowVitalityManagerModal(true)}
+                      onOpenPartySelector={() => {
+                        setLaunchHubInitialTab('party');
+                        setShowUnifiedLaunchHubModal(true);
+                      }}
+                    />
                   )}
                   {activeTab === 'rolls' && <ActionConsoleView />}
                   {activeTab === 'codex' && <CodexView />}
@@ -606,6 +610,7 @@ export default function App() {
           activeCharacter={activeCharacter}
           userCharacters={myHeroes}
           tabSessionId={tabSessionId}
+          initialTab={launchHubInitialTab}
           onSelectCharacter={selectCharacter}
           onCreateNewCharacter={createNewCharacter}
           onLoginSuccess={(email) => {
