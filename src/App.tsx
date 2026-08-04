@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Database, Shield, Zap, Activity, BookOpen, Users, Loader2, ChevronDown, ChevronUp, Award, Star, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
+import { gameApi } from './services/api';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { ActionConsoleView } from './components/rolls/ActionConsoleView';
@@ -96,6 +97,33 @@ export default function App() {
       authListener?.subscription?.unsubscribe();
     };
   }, [fetchInitialData]);
+
+  const activePartyId = useCharacterStore((state) => state.activePartyId);
+
+  // Player Party Session Heartbeat & Window Unload Life-cycle
+  useEffect(() => {
+    if (!activePartyId || !tabSessionId) return;
+
+    // Send immediate heartbeat on mount/party join
+    gameApi.sendPlayerHeartbeat(tabSessionId).catch(console.error);
+
+    // 15-second heartbeat loop
+    const interval = setInterval(() => {
+      gameApi.sendPlayerHeartbeat(tabSessionId).catch(console.error);
+    }, 15000);
+
+    const handleBeforeUnload = () => {
+      gameApi.leavePartySession(tabSessionId, activePartyId).catch(console.error);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      gameApi.leavePartySession(tabSessionId, activePartyId).catch(console.error);
+    };
+  }, [activePartyId, tabSessionId]);
 
   // NOTE: GM Room Code Checkout & Heartbeat have been moved entirely to GmWorkspaceView
   // to eliminate the double-checkout race condition that caused the stale Party ID bug.
@@ -499,6 +527,7 @@ export default function App() {
                         setLaunchHubInitialTab('party');
                         setShowUnifiedLaunchHubModal(true);
                       }}
+                      tabSessionId={tabSessionId}
                     />
                   )}
                   {activeTab === 'rolls' && <ActionConsoleView />}

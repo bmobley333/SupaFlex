@@ -538,19 +538,33 @@ export const gameApi = {
     return data;
   },
 
-  async joinPartySession(partyId: string, playerEmail: string, characterId: number, tabSessionId: string) {
+  async joinPartySession(partyIdOrCode: string, playerEmail: string, characterId: number, tabSessionId: string) {
     const cleanEmail = playerEmail.trim().toLowerCase();
 
-    // First delete any previous session membership for this tab to avoid ON CONFLICT index errors
+    let targetPartyUuid = partyIdOrCode;
+    let roomCode = partyIdOrCode;
+
+    if (partyIdOrCode.length === 4) {
+      const party = await this.findActivePartyByRoomCode(partyIdOrCode);
+      if (party) {
+        targetPartyUuid = party.id;
+        roomCode = party.room_code || partyIdOrCode;
+      }
+    } else {
+      const { data: p } = await supabase.from('parties').select('room_code').eq('id', partyIdOrCode).maybeSingle();
+      if (p?.room_code) roomCode = p.room_code;
+    }
+
+    // First delete any previous session membership for this tab OR character to prevent ghost rows
     await supabase
       .from('party_session_members')
       .delete()
-      .eq('tab_session_id', tabSessionId);
+      .or(`tab_session_id.eq.${tabSessionId},character_id.eq.${characterId}`);
 
     const { data, error } = await supabase
       .from('party_session_members')
       .insert({
-        party_id: partyId,
+        party_id: targetPartyUuid,
         player_email: cleanEmail,
         character_id: characterId,
         tab_session_id: tabSessionId,
@@ -564,14 +578,22 @@ export const gameApi = {
       throw error;
     }
 
-    // Broadcast instant WebSocket event to all connected clients in room
+    // Broadcast WebSocket event to both UUID and Room Code channels
     try {
-      const channel = supabase.channel(`party:${partyId}`);
-      await channel.send({
+      const channelUuid = supabase.channel(`party:${targetPartyUuid}`);
+      await channelUuid.send({
         type: 'broadcast',
         event: 'party_members_updated',
-        payload: { partyId, tabSessionId, timestamp: new Date().toISOString() },
+        payload: { partyId: targetPartyUuid, tabSessionId, timestamp: new Date().toISOString() },
       });
+      if (roomCode && roomCode !== targetPartyUuid) {
+        const channelCode = supabase.channel(`party:${roomCode}`);
+        await channelCode.send({
+          type: 'broadcast',
+          event: 'party_members_updated',
+          payload: { partyId: roomCode, tabSessionId, timestamp: new Date().toISOString() },
+        });
+      }
     } catch (bcErr) {
       console.warn('[gameApi] Notice broadcasting member join:', bcErr);
     }
@@ -611,18 +633,96 @@ export const gameApi = {
     }
   },
 
-  async getPartySessionMembers(partyId: string) {
+  async getPartySessionMembers(partyIdOrCode: string) {
+    if (!partyIdOrCode) return [];
+
+    let targetPartyUuid = partyIdOrCode;
+    let roomCode = partyIdOrCode;
+
+    if (partyIdOrCode.length === 4) {
+      const party = await this.findActivePartyByRoomCode(partyIdOrCode);
+      if (party) {
+        targetPartyUuid = party.id;
+        roomCode = party.room_code || partyIdOrCode;
+      }
+    } else {
+      const { data: p } = await supabase.from('parties').select('room_code').eq('id', partyIdOrCode).maybeSingle();
+      if (p?.room_code) roomCode = p.room_code;
+    }
+
+    // 45-second staleness threshold for active party members
+    const activeCutoff = new Date(Date.now() - 45000).toISOString();
     const { data, error } = await supabase
       .from('party_session_members')
       .select('*, character:characters(*)')
-      .eq('party_id', partyId);
+      .or(`party_id.eq.${targetPartyUuid},party_id.eq.${roomCode}`)
+      .gte('last_seen', activeCutoff);
+
+    // Asynchronously prune dead ghost sessions from DB (> 60s inactive)
+    const deadCutoff = new Date(Date.now() - 60000).toISOString();
+    Promise.resolve(
+      supabase
+        .from('party_session_members')
+        .delete()
+        .lt('last_seen', deadCutoff)
+    ).catch(() => {});
 
     if (error) {
       console.error('[gameApi] Error fetching party session members:', error);
       return [];
     }
 
-    return data || [];
+    // Strict deduplication by character_id (keeping the newest last_seen row)
+    const memberMap = new Map<number, any>();
+    (data || []).forEach((m) => {
+      const existing = memberMap.get(m.character_id);
+      if (!existing || new Date(m.last_seen) > new Date(existing.last_seen)) {
+        memberMap.set(m.character_id, m);
+      }
+    });
+
+    return Array.from(memberMap.values());
+  },
+
+  async sendPlayerHeartbeat(tabSessionId: string) {
+    if (!tabSessionId) return;
+    const nowStr = new Date().toISOString();
+    await supabase
+      .from('party_session_members')
+      .update({ last_seen: nowStr })
+      .eq('tab_session_id', tabSessionId);
+  },
+
+  async verifyActivePartySession(partyIdOrCode: string, tabSessionId: string): Promise<boolean> {
+    if (!partyIdOrCode || !tabSessionId) return false;
+    try {
+      let targetPartyUuid = partyIdOrCode;
+      let roomCode = partyIdOrCode;
+
+      if (partyIdOrCode.length === 4) {
+        const party = await this.findActivePartyByRoomCode(partyIdOrCode);
+        if (!party) return false;
+        targetPartyUuid = party.id;
+        roomCode = party.room_code || partyIdOrCode;
+      } else {
+        const { data: p } = await supabase.from('parties').select('room_code, is_active').eq('id', partyIdOrCode).maybeSingle();
+        if (!p || !p.is_active) return false;
+        if (p.room_code) roomCode = p.room_code;
+      }
+
+      // Check if this tab is registered in party_session_members under UUID or room code
+      const { data: memberData } = await supabase
+        .from('party_session_members')
+        .select('id')
+        .or(`party_id.eq.${targetPartyUuid},party_id.eq.${roomCode}`)
+        .eq('tab_session_id', tabSessionId)
+        .maybeSingle();
+
+      return !!memberData;
+    } catch (err) {
+      console.warn('[gameApi] Error verifying party session:', err);
+      return false;
+    }
   },
 
   // --- ROOM CODES & DISCONNECT HEARTBEAT ---

@@ -9,13 +9,15 @@ import { PartyCharacterCard } from '../common/PartyCharacterCard';
 
 interface PartyRosterHudProps {
   activeCharacter: Character | null;
-  playerEmail: string;
+  playerEmail?: string;
+  tabSessionId?: string;
   onOpenPartySelector?: () => void;
 }
 
 export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
   activeCharacter,
-  playerEmail,
+  playerEmail: _playerEmail,
+  tabSessionId,
   onOpenPartySelector,
 }) => {
   const activePartyId = useCharacterStore((state) => state.activePartyId);
@@ -30,6 +32,18 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
     const loadMembers = async () => {
       try {
         const members = await gameApi.getPartySessionMembers(activePartyId);
+
+        // Explicitly verify active session with Supabase before auto-clearing state
+        if (tabSessionId) {
+          const isValidSession = await gameApi.verifyActivePartySession(activePartyId, tabSessionId);
+          if (!isValidSession) {
+            console.warn(`[PartyRosterHud] Tab ${tabSessionId} failed active session check for ${activePartyId}. Auto-clearing stray party ID.`);
+            useCharacterStore.getState().setActivePartyId(null);
+            setSessionMembers([]);
+            return;
+          }
+        }
+
         setSessionMembers(members);
       } catch (err) {
         console.error('[PartyRosterHud] Failed to load session members:', err);
@@ -71,13 +85,12 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
       supabase.removeChannel(broadcastChannel);
       clearInterval(pollInterval);
     };
-  }, [activePartyId]);
+  }, [activePartyId, tabSessionId]);
 
-  // Filter out current user's active character ($N - 1$)
+  // Filter out current active character ($N - 1$)
   const otherMembers = sessionMembers.filter((m) => {
-    const isSameEmail = m.player_email?.toLowerCase().trim() === playerEmail?.toLowerCase().trim();
-    const isSameChar = activeCharacter && m.character_id === activeCharacter.id;
-    return !isSameEmail && !isSameChar;
+    if (!activeCharacter) return true;
+    return Number(m.character_id) !== Number(activeCharacter.id);
   });
 
   return (

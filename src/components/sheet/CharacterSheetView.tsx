@@ -16,11 +16,13 @@ import { PartyRosterHud } from '../hud/PartyRosterHud';
 interface CharacterSheetViewProps {
   onOpenVitalityManager?: () => void;
   onOpenPartySelector?: () => void;
+  tabSessionId?: string;
 }
 
 export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
   onOpenVitalityManager,
   onOpenPartySelector,
+  tabSessionId,
 }) => {
   const { activeCharacter, playerEmail } = useCharacterStore();
   const heroKey = activeCharacter?.id ? `hero_${activeCharacter.id}` : 'no_hero';
@@ -66,6 +68,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
           <PartyRosterHud
             activeCharacter={activeCharacter}
             playerEmail={playerEmail}
+            tabSessionId={tabSessionId}
             onOpenPartySelector={onOpenPartySelector}
           />
         </div>

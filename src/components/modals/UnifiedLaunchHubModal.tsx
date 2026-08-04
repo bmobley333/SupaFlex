@@ -243,6 +243,13 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     try {
       const members = await gameApi.getPartySessionMembers(partyId);
       setSessionMembers(members as PartySessionMember[]);
+
+      if (tabSessionId) {
+        const isThisTabRegistered = members.some((m) => m.tab_session_id === tabSessionId);
+        if (!isThisTabRegistered) {
+          useCharacterStore.getState().setActivePartyId(null);
+        }
+      }
     } catch (err) {
       console.error('Error loading session members:', err);
     }
