@@ -541,64 +541,74 @@ export const gameApi = {
   async joinPartySession(partyIdOrCode: string, playerEmail: string, characterId: number, tabSessionId: string) {
     const cleanEmail = playerEmail.trim().toLowerCase();
 
-    let targetPartyUuid = partyIdOrCode;
-    let roomCode = partyIdOrCode;
-
-    if (partyIdOrCode.length === 4) {
-      const party = await this.findActivePartyByRoomCode(partyIdOrCode);
-      if (party) {
-        targetPartyUuid = party.id;
-        roomCode = party.room_code || partyIdOrCode;
-      }
-    } else {
-      const { data: p } = await supabase.from('parties').select('room_code').eq('id', partyIdOrCode).maybeSingle();
-      if (p?.room_code) roomCode = p.room_code;
-    }
-
-    // First delete any previous session membership for this tab OR character to prevent ghost rows
-    await supabase
-      .from('party_session_members')
-      .delete()
-      .or(`tab_session_id.eq.${tabSessionId},character_id.eq.${characterId}`);
-
-    const { data, error } = await supabase
-      .from('party_session_members')
-      .insert({
-        party_id: targetPartyUuid,
-        player_email: cleanEmail,
-        character_id: characterId,
-        tab_session_id: tabSessionId,
-        last_seen: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('[gameApi] Error joining party session:', error);
-      throw error;
-    }
-
-    // Broadcast WebSocket event to both UUID and Room Code channels
+    // Call Atomic DB Function (RPC) to guarantee atomic deletion of stale tab/character sessions and fresh insert
+    let partyUuid: string | null = null;
     try {
-      const channelUuid = supabase.channel(`party:${targetPartyUuid}`);
+      const { data: rpcPartyUuid, error: rpcErr } = await supabase.rpc('join_party_session_atomic', {
+        p_party_code: partyIdOrCode,
+        p_email: cleanEmail,
+        p_char_id: characterId,
+        p_tab_id: tabSessionId,
+      });
+
+      if (!rpcErr && rpcPartyUuid) {
+        partyUuid = rpcPartyUuid;
+      }
+    } catch (rpcCatch) {
+      console.warn('[gameApi] join_party_session_atomic RPC fallback:', rpcCatch);
+    }
+
+    // Direct fallback if RPC is not deployed yet in dev
+    if (!partyUuid) {
+      let targetPartyUuid = partyIdOrCode;
+      let roomCode = partyIdOrCode;
+
+      if (partyIdOrCode.length === 4) {
+        const party = await this.findActivePartyByRoomCode(partyIdOrCode);
+        if (party) {
+          targetPartyUuid = party.id;
+          roomCode = party.party_code || party.room_code || partyIdOrCode;
+        }
+      }
+
+      await supabase
+        .from('party_session_members')
+        .delete()
+        .or(`tab_session_id.eq.${tabSessionId},character_id.eq.${characterId}`);
+
+      const { error } = await supabase
+        .from('party_session_members')
+        .insert({
+          party_uuid: targetPartyUuid,
+          party_code: roomCode,
+          player_email: cleanEmail,
+          character_id: characterId,
+          tab_session_id: tabSessionId,
+          last_seen: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[gameApi] Error joining party session:', error);
+        throw error;
+      }
+      partyUuid = targetPartyUuid;
+    }
+
+    // Broadcast WebSocket event on single canonical channel: party:${partyUuid} (Blueprint Section 2.D)
+    try {
+      const channelUuid = supabase.channel(`party:${partyUuid}`);
       await channelUuid.send({
         type: 'broadcast',
-        event: 'party_members_updated',
-        payload: { partyId: targetPartyUuid, tabSessionId, timestamp: new Date().toISOString() },
+        event: 'party.joined',
+        payload: { partyId: partyUuid, character_id: characterId, tab_session_id: tabSessionId, timestamp: new Date().toISOString() },
       });
-      if (roomCode && roomCode !== targetPartyUuid) {
-        const channelCode = supabase.channel(`party:${roomCode}`);
-        await channelCode.send({
-          type: 'broadcast',
-          event: 'party_members_updated',
-          payload: { partyId: roomCode, tabSessionId, timestamp: new Date().toISOString() },
-        });
-      }
     } catch (bcErr) {
       console.warn('[gameApi] Notice broadcasting member join:', bcErr);
     }
 
-    return data;
+    return { party_uuid: partyUuid, tab_session_id: tabSessionId, character_id: characterId };
   },
 
   async leavePartySession(tabSessionId: string, partyId?: string) {
@@ -606,10 +616,10 @@ export const gameApi = {
     if (!targetPartyId) {
       const { data } = await supabase
         .from('party_session_members')
-        .select('party_id')
+        .select('party_uuid, party_id')
         .eq('tab_session_id', tabSessionId)
         .maybeSingle();
-      if (data) targetPartyId = data.party_id;
+      if (data) targetPartyId = data.party_uuid || (data as any).party_id;
     }
 
     const { error } = await supabase
@@ -624,8 +634,8 @@ export const gameApi = {
         const channel = supabase.channel(`party:${targetPartyId}`);
         await channel.send({
           type: 'broadcast',
-          event: 'party_members_updated',
-          payload: { partyId: targetPartyId, tabSessionId, timestamp: new Date().toISOString() },
+          event: 'party.left',
+          payload: { partyId: targetPartyId, tab_session_id: tabSessionId, timestamp: new Date().toISOString() },
         });
       } catch (bcErr) {
         console.warn('[gameApi] Notice broadcasting member leave:', bcErr);
@@ -643,19 +653,19 @@ export const gameApi = {
       const party = await this.findActivePartyByRoomCode(partyIdOrCode);
       if (party) {
         targetPartyUuid = party.id;
-        roomCode = party.room_code || partyIdOrCode;
+        roomCode = party.party_code || party.room_code || partyIdOrCode;
       }
     } else {
-      const { data: p } = await supabase.from('parties').select('room_code').eq('id', partyIdOrCode).maybeSingle();
-      if (p?.room_code) roomCode = p.room_code;
+      const { data: p } = await supabase.from('parties').select('party_code, room_code').eq('id', partyIdOrCode).maybeSingle();
+      if (p) roomCode = p.party_code || p.room_code || partyIdOrCode;
     }
 
-    // 45-second staleness threshold for active party members
+    // 45-second staleness threshold for active party members (Blueprint 1.A.7 & 3.B.3)
     const activeCutoff = new Date(Date.now() - 45000).toISOString();
     const { data, error } = await supabase
       .from('party_session_members')
       .select('*, character:characters(*)')
-      .or(`party_id.eq.${targetPartyUuid},party_id.eq.${roomCode}`)
+      .or(`party_uuid.eq.${targetPartyUuid},party_code.eq.${roomCode},party_id.eq.${targetPartyUuid}`)
       .gte('last_seen', activeCutoff);
 
     // Asynchronously prune dead ghost sessions from DB (> 60s inactive)
@@ -672,7 +682,7 @@ export const gameApi = {
       return [];
     }
 
-    // Strict deduplication by character_id (keeping the newest last_seen row)
+    // Strict deduplication by character_id (keeping newest last_seen row)
     const memberMap = new Map<number, any>();
     (data || []).forEach((m) => {
       const existing = memberMap.get(m.character_id);
@@ -686,6 +696,16 @@ export const gameApi = {
 
   async sendPlayerHeartbeat(tabSessionId: string) {
     if (!tabSessionId) return;
+
+    try {
+      const { error: rpcErr } = await supabase.rpc('send_player_heartbeat_atomic', {
+        p_tab_id: tabSessionId,
+      });
+      if (!rpcErr) return;
+    } catch (e) {
+      // Fall through to direct table update if RPC fails
+    }
+
     const nowStr = new Date().toISOString();
     await supabase
       .from('party_session_members')

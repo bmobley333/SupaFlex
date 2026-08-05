@@ -1,15 +1,41 @@
 // src/components/hud/GmMonsterTrackerHud.tsx
+// GM Monster Tracker HUD - Displays live monster encounter stats using GmMonsterCard / PlayerMonsterCard.
+
 import React, { useState, useEffect } from 'react';
+import { useCharacterStore } from '../../store/useCharacterStore';
+import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
+import { PlayerMonsterCard } from '../common/PlayerMonsterCard';
 import { parseMonsterLine } from '../../utils/monsterStatParser';
 
 export interface MonsterEntry {
   id: string;
+  name?: string;
   text?: string;
   fullText?: string;
   reducedText?: string;
+  count?: number;
+  equipment?: string;
+  initiative?: number;
+  mr?: number;
+  attack?: number;
+  damage?: number;
+  min_wounds?: number;
+  defense?: number;
+  armor?: number;
+  max_vit?: number;
+  current_vit?: number;
+  attributes?: {
+    magic?: number;
+    might?: number;
+    mind?: number;
+    motion?: number;
+    moxie?: number;
+  };
+  gm_notes?: string;
 }
 
 export const GmMonsterTrackerHud: React.FC = () => {
+  const activeRole = useCharacterStore((state) => state.activeRole);
   const [monsters, setMonsters] = useState<MonsterEntry[]>(() => {
     try {
       const saved = localStorage.getItem('supaflex_gm_monster_stats');
@@ -44,36 +70,69 @@ export const GmMonsterTrackerHud: React.FC = () => {
     };
   }, []);
 
+  const mapToMonsterData = (m: MonsterEntry): MonsterData => {
+    if (m.name) {
+      return m as MonsterData;
+    }
+    // Parse raw text string if structured fields are not present
+    const raw = m.fullText || m.text || m.reducedText || 'Monster';
+    const parsed = parseMonsterLine(raw);
+
+    // Extract numbers from parsed stats if possible
+    const atkNums = parsed.attackStat.match(/\d+/g) || [];
+    const defNums = parsed.defenseStat.match(/\d+/g) || [];
+    const hpNums = parsed.healthStat.match(/\d+/g) || [];
+
+    return {
+      id: m.id,
+      name: parsed.nameWithEquip || 'Monster',
+      count: m.count || 1,
+      equipment: m.equipment,
+      initiative: m.initiative ?? 10,
+      mr: m.mr ?? 10,
+      attack: m.attack ?? (atkNums[0] ? parseInt(atkNums[0], 10) : 10),
+      damage: m.damage ?? (atkNums[1] ? parseInt(atkNums[1], 10) : 10),
+      min_wounds: m.min_wounds ?? (atkNums[2] ? parseInt(atkNums[2], 10) : 1),
+      defense: m.defense ?? (defNums[0] ? parseInt(defNums[0], 10) : 10),
+      armor: m.armor ?? (defNums[1] ? parseInt(defNums[1], 10) : 0),
+      max_vit: m.max_vit ?? (hpNums[0] ? parseInt(hpNums[0], 10) : 10),
+      current_vit: m.current_vit ?? (hpNums[0] ? parseInt(hpNums[0], 10) : 10),
+      attributes: m.attributes || {
+        magic: 10,
+        might: 10,
+        mind: 10,
+        motion: 10,
+        moxie: 10,
+      },
+      gm_notes: m.gm_notes,
+    };
+  };
+
   return (
-    <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/90 shadow-sm space-y-3">
+    <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/90 shadow-sm space-y-3 font-outfit">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
-          <span>👾</span> GM Monster Stats ({monsters.length})
+          <span>👾</span> MONSTER TRACKER ({monsters.length})
         </h3>
-        <span className="text-[10px] font-bold text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-          GM Live Feed
+        <span className="text-[10px] font-bold text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 uppercase tracking-wider">
+          {activeRole === 'gm' ? 'GM Screen Feed' : 'Encounter Feed'}
         </span>
       </div>
 
-      {/* Monster Lines List / Empty State */}
+      {/* Monster Cards List / Empty State */}
       {monsters.length === 0 ? (
-        <div className="text-xs font-semibold text-slate-400 italic p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-center">
-          No GM monsters at this time.
+        <div className="text-xs font-semibold text-slate-500 italic p-3 bg-slate-950/60 rounded-xl border border-slate-800/50 text-center">
+          No active monsters in encounter.
         </div>
       ) : (
-        <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
           {monsters.map((m) => {
-            const displayText = m.reducedText || (m.fullText ? parseMonsterLine(m.fullText).reducedText : m.text || '');
-            return (
-              <div
-                key={m.id}
-                className="flex items-center justify-between gap-2 p-2 bg-slate-950/70 border border-slate-800/80 rounded-lg"
-              >
-                <span className="font-mono text-xs font-semibold text-slate-200 truncate select-all">
-                  {displayText}
-                </span>
-              </div>
+            const data = mapToMonsterData(m);
+            return activeRole === 'gm' ? (
+              <GmMonsterCard key={m.id} monster={data} />
+            ) : (
+              <PlayerMonsterCard key={m.id} monster={data} />
             );
           })}
         </div>

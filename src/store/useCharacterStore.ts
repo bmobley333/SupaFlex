@@ -23,6 +23,7 @@ interface CharacterStore {
   filterMode: 'my_heroes' | 'all_heroes';
   activeRole: 'player' | 'gm';
   activePartyId: string | null;
+  tabSessionId: string;
 
   // Actions
   fetchInitialData: () => Promise<void>;
@@ -66,6 +67,14 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   filterMode: (sessionStorage.getItem('supaflex_filter_mode') as any) || (localStorage.getItem('supaflex_filter_mode') as any) || 'my_heroes',
   activeRole: (sessionStorage.getItem('supaflex_active_role') as 'player' | 'gm') || 'player',
   activePartyId: sessionStorage.getItem('supaflex_active_party_id') || null,
+  tabSessionId: (() => {
+    let id = sessionStorage.getItem('supaflex_tab_session_id');
+    if (!id) {
+      id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `tab_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      sessionStorage.setItem('supaflex_tab_session_id', id);
+    }
+    return id;
+  })(),
 
   setActiveRole: (role: 'player' | 'gm') => {
     sessionStorage.setItem('supaflex_active_role', role);
