@@ -79,7 +79,7 @@ export const EquipmentGrid: React.FC = () => {
                 className="bg-slate-900 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 outline-none focus:border-indigo-500"
               >
                 <option value="weapon">Weapon ⚔️</option>
-                <option value="armor">Armor 🛡️</option>
+                <option value="armor">Armor 🧥</option>
                 <option value="consumable">Consumable 🧪</option>
                 <option value="gear">Gear 🎒</option>
               </select>

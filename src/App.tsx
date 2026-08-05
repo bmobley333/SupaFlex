@@ -47,14 +47,7 @@ export default function App() {
   // GM Screen Active Room Code State
   const [activeRoomCode, setActiveRoomCode] = useState<string | null>(null);
 
-  const [tabSessionId] = useState<string>(() => {
-    let existing = sessionStorage.getItem('supaflex_tab_session_id');
-    if (!existing) {
-      existing = crypto.randomUUID();
-      sessionStorage.setItem('supaflex_tab_session_id', existing);
-    }
-    return existing;
-  });
+  const tabSessionId = useCharacterStore((state) => state.tabSessionId);
 
   const selectorRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef<HTMLDivElement>(null);

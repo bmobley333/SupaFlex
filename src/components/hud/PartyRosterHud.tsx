@@ -22,10 +22,12 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
 }) => {
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
+  const [displayRoomCode, setDisplayRoomCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activePartyId) {
       setSessionMembers([]);
+      setDisplayRoomCode(null);
       return;
     }
 
@@ -33,14 +35,21 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
       try {
         const members = await gameApi.getPartySessionMembers(activePartyId);
 
-        // Explicitly verify active session with Supabase before auto-clearing state
+        // Fetch friendly 4-character room code from database for active UUID session
+        if (activePartyId.length === 4) {
+          setDisplayRoomCode(activePartyId.toUpperCase());
+        } else {
+          const { data: p } = await supabase.from('parties').select('room_code').eq('id', activePartyId).maybeSingle();
+          if (p?.room_code) {
+            setDisplayRoomCode(p.room_code.toUpperCase());
+          }
+        }
+
+        // Verify active session with Supabase without auto-clearing state on transient error
         if (tabSessionId) {
           const isValidSession = await gameApi.verifyActivePartySession(activePartyId, tabSessionId);
           if (!isValidSession) {
-            console.warn(`[PartyRosterHud] Tab ${tabSessionId} failed active session check for ${activePartyId}. Auto-clearing stray party ID.`);
-            useCharacterStore.getState().setActivePartyId(null);
-            setSessionMembers([]);
-            return;
+            console.warn(`[PartyRosterHud] Tab ${tabSessionId} notice: session verification returned false for ${activePartyId}.`);
           }
         }
 
@@ -90,7 +99,7 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
   // Filter out current active character ($N - 1$)
   const otherMembers = sessionMembers.filter((m) => {
     if (!activeCharacter) return true;
-    return Number(m.character_id) !== Number(activeCharacter.id);
+    return String(m.character_id) !== String(activeCharacter.id);
   });
 
   return (
@@ -101,9 +110,9 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
           <span>👥</span> PARTY ROSTER ({otherMembers.length})
         </h3>
 
-        {/* Interactive Manage Party Pill (Replaces static Party Session badge) */}
+        {/* Interactive Manage Party Pill */}
         <button
-          onClick={onOpenPartySelector}
+          onClick={onOpenPartySelector || (() => {})}
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm cursor-pointer ${
             activePartyId
               ? 'bg-cyan-950/80 border-cyan-500/50 text-cyan-200 hover:border-cyan-400 shadow-cyan-950/40'
@@ -114,7 +123,7 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
           <Users className={`w-3.5 h-3.5 ${activePartyId ? 'text-cyan-400' : 'text-slate-500'}`} />
           <span className="font-outfit font-bold uppercase text-[11px]">Manage Party:</span>
           <span className="font-mono font-extrabold text-xs">
-            {activePartyId || '----'}
+            {displayRoomCode || (activePartyId ? activePartyId.slice(0, 4).toUpperCase() : '----')}
           </span>
           <ChevronDown className="w-3.5 h-3.5 text-cyan-400 shrink-0 ml-0.5" />
         </button>

@@ -81,7 +81,7 @@ export const GmMonsterTrackerHud: React.FC = () => {
     // Extract numbers from parsed stats if possible
     const atkNums = parsed.attackStat.match(/\d+/g) || [];
     const defNums = parsed.defenseStat.match(/\d+/g) || [];
-    const hpNums = parsed.healthStat.match(/\d+/g) || [];
+    const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
 
     return {
       id: m.id,

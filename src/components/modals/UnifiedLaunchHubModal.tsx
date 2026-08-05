@@ -148,7 +148,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       const { party } = await gameApi.joinPartyByRoomCode(sanitized, currentEmail, targetCharId, tabSessionId);
       setSelectedParty(party);
       await loadSessionMembers(party.id);
-      useCharacterStore.getState().setActivePartyId(sanitized);
+      useCharacterStore.getState().setActivePartyId(party.id);
       setPartySuccessMsg(`Successfully joined party "${party.name}" (Party ID: ${sanitized})!`);
       setRoomCodeInput('');
     } catch (err: any) {

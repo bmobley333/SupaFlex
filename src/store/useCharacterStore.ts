@@ -62,19 +62,39 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   dbConnected: false,
   error: null,
 
-  playerEmail: sessionStorage.getItem('supaflex_player_email') || localStorage.getItem('supaflex_player_email') || '',
-  playerName: sessionStorage.getItem('supaflex_player_name') || localStorage.getItem('supaflex_player_name') || '',
-  filterMode: (sessionStorage.getItem('supaflex_filter_mode') as any) || (localStorage.getItem('supaflex_filter_mode') as any) || 'my_heroes',
-  activeRole: (sessionStorage.getItem('supaflex_active_role') as 'player' | 'gm') || 'player',
-  activePartyId: sessionStorage.getItem('supaflex_active_party_id') || null,
   tabSessionId: (() => {
-    let id = sessionStorage.getItem('supaflex_tab_session_id');
-    if (!id) {
-      id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `tab_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-      sessionStorage.setItem('supaflex_tab_session_id', id);
+    if (typeof window === 'undefined') return 'server_side';
+
+    const windowKey = window.name;
+    const storedTabId = sessionStorage.getItem('supaflex_tab_session_id');
+
+    // If window.name matches storedTabId, this is an existing tab refresh/navigation
+    if (windowKey && storedTabId && windowKey === `supaflex_win_${storedTabId}`) {
+      return storedTabId;
     }
-    return id;
+
+    // Otherwise, this is a NEW tab or DUPLICATED tab (Ctrl+D)!
+    const newTabId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `tab_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+    window.name = `supaflex_win_${newTabId}`;
+    sessionStorage.setItem('supaflex_tab_session_id', newTabId);
+
+    // Purge copied sessionStorage credentials so duplicated tabs require fresh re-login
+    sessionStorage.removeItem('supaflex_player_email');
+    sessionStorage.removeItem('supaflex_player_name');
+    sessionStorage.removeItem('supaflex_active_party_id');
+    sessionStorage.removeItem('supaflex_last_active_char_id');
+
+    return newTabId;
   })(),
+
+  playerEmail: typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('supaflex_player_email') || '') : '',
+  playerName: typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('supaflex_player_name') || '') : '',
+  filterMode: (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('supaflex_filter_mode') as any) : null) || 'my_heroes',
+  activeRole: (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('supaflex_active_role') as 'player' | 'gm') : null) || 'player',
+  activePartyId: typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('supaflex_active_party_id') : null,
 
   setActiveRole: (role: 'player' | 'gm') => {
     sessionStorage.setItem('supaflex_active_role', role);
@@ -120,7 +140,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         gameApi.getSkillsets(),
       ]);
 
-      const lastActiveIdStr = sessionStorage.getItem('supaflex_last_active_char_id') || localStorage.getItem('supaflex_last_active_char_id');
+      const lastActiveIdStr = sessionStorage.getItem('supaflex_last_active_char_id');
       const lastActiveId = lastActiveIdStr ? Number(lastActiveIdStr) : null;
       let selectedChar = (lastActiveId ? chars.find((c) => c.id === lastActiveId) : null) || chars[0] || null;
 
@@ -157,28 +177,28 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       set({ activeCharacter: { ...found } });
     }
     try {
-      const fresh = await gameApi.getCharacterById(id);
-      if (fresh) {
+      const updated = await gameApi.getCharacterById(id);
+      if (updated) {
         set((state) => ({
-          activeCharacter: fresh,
-          characters: state.characters.map((c) => (c.id === id ? fresh : c)),
+          activeCharacter: updated,
+          characters: state.characters.map((c) => (c.id === updated.id ? updated : c)),
         }));
       }
     } catch (err) {
-      console.warn('[selectCharacter] Hydration fallback to cached hero:', err);
+      console.warn('Network fetch for character details failed:', err);
     }
   },
 
   createNewCharacter: async (name: string, characterClass = 'Adventurer', race = 'Human') => {
-    set({ isSaving: true, error: null });
+    set({ isSaving: true });
     try {
-      const email = get().playerEmail || 'TheBMobley@gmail.com';
-      const newChar = await gameApi.createCharacter(name, characterClass, race, email);
+      const newChar = await gameApi.createCharacter(name, characterClass, race);
       set((state) => ({
         characters: [newChar, ...state.characters],
         activeCharacter: newChar,
         isSaving: false,
       }));
+      sessionStorage.setItem('supaflex_last_active_char_id', String(newChar.id));
       return newChar;
     } catch (err: any) {
       set({ isSaving: false, error: err.message || 'Failed to create character.' });
@@ -222,7 +242,6 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         moxie: updatedSheet.attribute_dice.moxie,
         sheet_data: updatedSheet,
       };
-
       return {
         activeCharacter: updatedActive,
         characters: state.characters.map((c) => (c.id === updatedActive.id ? updatedActive : c)),
@@ -230,13 +249,13 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     });
   },
 
-  updateActiveCharacterMeta: (updates) => {
+  updateActiveCharacterMeta: (updates: Partial<Character>) => {
     set((state) => {
       if (!state.activeCharacter) return state;
-      const updatedActive = { ...state.activeCharacter, ...updates };
+      const updated = { ...state.activeCharacter, ...updates };
       return {
-        activeCharacter: updatedActive,
-        characters: state.characters.map((c) => (c.id === updatedActive.id ? updatedActive : c)),
+        activeCharacter: updated,
+        characters: state.characters.map((c) => (c.id === updated.id ? updated : c)),
       };
     });
   },
@@ -244,7 +263,6 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   saveActiveCharacter: async () => {
     const active = get().activeCharacter;
     if (!active) return;
-
     set({ isSaving: true });
     try {
       const saved = await gameApi.updateCharacter(active.id, {
@@ -360,5 +378,3 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     });
   },
 }));
-
-

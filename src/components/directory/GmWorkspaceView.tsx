@@ -340,7 +340,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
               value={quickAddText}
               onChange={(e) => setQuickAddText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddQuickMonster()}
-              placeholder="Quick add: 2 Hired Thugs ⚔15/12(2) 🛡️14/2 ❤️12"
+              placeholder="Quick add: 2 Hired Thugs ⚔15/12(2) 🧥14/2 ❤️12"
               className="flex-1 bg-transparent border-none text-xs text-slate-100 placeholder-slate-500 focus:outline-none px-2"
             />
             <button
@@ -458,7 +458,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
               rows={6}
               value={pasteInputText}
               onChange={(e) => setPasteInputText(e.target.value)}
-              placeholder={`3 Can Clan Cutthroats (Light Leather, Daggers) 🚩14 👣12 ⚔16/10(2) 🛡️14/1 ❤️10 – [💪14/🏃14/👁️12/✨10] (Bleed: on crit, foe takes 1d4 extra dmg).\n2 Hired Thugs (Chain Vests, Clubs) 🚩12 👣10 ⚔15/12(2) 🛡️14/2 ❤️12 – [💪16/🏃12/👁️10/✨10] (Reckless Swing: dmg+2, Def–2 that rnd).`}
+              placeholder={`3 Can Clan Cutthroats (Light Leather, Daggers) 🚩14 👣12 ⚔16/10(2) 🧥14/1 ❤️10 – [✨10/💪14/👁️12/🏃14/🫀10] (Bleed: on crit, foe takes 1d4 extra dmg).\n2 Hired Thugs (Chain Vests, Clubs) 🚩12 👣10 ⚔15/12(2) 🧥14/2 ❤️12 – [✨10/💪16/👁️10/🏃12/🫀10] (Reckless Swing: dmg+2, Def–2 that rnd).`}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-amber-500/80 placeholder-slate-600"
             />
 

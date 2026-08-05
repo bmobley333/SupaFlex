@@ -1,3 +1,6 @@
+// src/components/sheet/VitalsHeader.tsx
+// Vitality Header Component - Prominent Current Vitality readout, draggable progress bar, & quick adjusters.
+
 import React, { useState, useRef } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -17,15 +20,15 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
 
   if (!sheet) return null;
 
-  const maxHp = sheet.vitality_max || activeCharacter?.hp || 10;
-  const currentHp = sheet.current_vitality ?? maxHp;
-  const hpPercent = maxHp > 0 ? Math.min(100, Math.max(0, (currentHp / maxHp) * 100)) : 100;
+  const maxVit = sheet.vitality_max || activeCharacter?.hp || 10;
+  const currentVit = sheet.current_vitality ?? maxVit;
+  const vitPercent = maxVit > 0 ? Math.min(100, Math.max(0, (currentVit / maxVit) * 100)) : 100;
 
-  // Allow negative numbers by removing Math.max(0, ...), clamp only upper bound to maxHp
-  const handleHpChange = (delta: number) => {
+  // Allow negative numbers by removing Math.max(0, ...), clamp only upper bound to maxVit
+  const handleVitChange = (delta: number) => {
     updateActiveSheetData((prev) => {
-      const nextHp = Math.min(prev.vitality_max, (prev.current_vitality ?? prev.vitality_max) + delta);
-      return { ...prev, current_vitality: nextHp };
+      const nextVit = Math.min(prev.vitality_max, (prev.current_vitality ?? prev.vitality_max) + delta);
+      return { ...prev, current_vitality: nextVit };
     });
     saveActiveCharacter();
   };
@@ -33,7 +36,7 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
   const handleApplyDamage = () => {
     const val = parseInt(damageInput, 10);
     if (!isNaN(val) && val > 0) {
-      handleHpChange(-val);
+      handleVitChange(-val);
     }
     setDamageInput('');
   };
@@ -41,22 +44,22 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
   const handleApplyHeal = () => {
     const val = parseInt(healInput, 10);
     if (!isNaN(val) && val > 0) {
-      handleHpChange(val);
+      handleVitChange(val);
     }
     setHealInput('');
   };
 
   // Draggable Progress Bar Pointer Handlers
-  const updateHpFromPointer = (clientX: number) => {
-    if (!barRef.current || maxHp <= 0) return;
+  const updateVitFromPointer = (clientX: number) => {
+    if (!barRef.current || maxVit <= 0) return;
     const rect = barRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
     const ratio = x / rect.width;
-    const newHp = Math.round(ratio * maxHp);
+    const newVit = Math.round(ratio * maxVit);
 
     updateActiveSheetData((prev) => ({
       ...prev,
-      current_vitality: newHp,
+      current_vitality: newVit,
     }));
     saveActiveCharacter();
   };
@@ -64,12 +67,12 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     setIsDragging(true);
     e.currentTarget.setPointerCapture(e.pointerId);
-    updateHpFromPointer(e.clientX);
+    updateVitFromPointer(e.clientX);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isDragging) {
-      updateHpFromPointer(e.clientX);
+      updateVitFromPointer(e.clientX);
     }
   };
 
@@ -92,7 +95,7 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
             Vitality
           </h3>
           <CardHelpButton ruleKey="vitality.death_checks" />
-          {currentHp < 0 && (
+          {currentVit < 0 && (
             <span className="text-[10px] font-mono px-2 py-0.5 bg-rose-950 text-rose-300 rounded-full border border-rose-500/40 font-bold animate-pulse">
               Death Check / Negative
             </span>
@@ -109,22 +112,22 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
         </button>
       </div>
 
-      {/* Main Stat Row: Prominent Current HP Display & Draggable Progress Bar */}
+      {/* Main Stat Row: Prominent Current Vitality Display & Draggable Progress Bar */}
       <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800 flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4">
-          {/* Prominent Current Vitality on the Left (Allows Negative Numbers) */}
+          {/* Prominent Current Vitality on Left (Allows Negative Numbers) */}
           <div className="flex items-baseline gap-2 shrink-0">
             <span className={`text-2xl font-extrabold font-outfit ${
-              currentHp < 0 ? 'text-rose-500' : hpPercent > 50 ? 'text-emerald-400' : hpPercent > 20 ? 'text-amber-400' : 'text-rose-400'
+              currentVit < 0 ? 'text-rose-500' : vitPercent > 50 ? 'text-emerald-400' : vitPercent > 20 ? 'text-amber-400' : 'text-rose-400'
             }`}>
-              {currentHp}
+              {currentVit}
             </span>
             <span className="text-xs font-mono font-bold text-slate-400">
-              / {maxHp} ({currentHp < 0 ? '0' : Math.round(hpPercent)}%)
+              / {maxVit} ({currentVit < 0 ? '0' : Math.round(vitPercent)}%)
             </span>
           </div>
 
-          {/* Interactive S-Tier Draggable HP Bar (Bounded max-width to prevent over-expansion) */}
+          {/* Interactive S-Tier Draggable Vitality Bar */}
           <div
             ref={barRef}
             onPointerDown={handlePointerDown}
@@ -135,12 +138,12 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
           >
             <div
               className={`h-full transition-all duration-75 relative ${
-                currentHp < 0 ? 'bg-rose-950/40' : hpPercent > 50 ? 'bg-emerald-500' : hpPercent > 20 ? 'bg-amber-500' : 'bg-rose-500'
+                currentVit < 0 ? 'bg-rose-950/40' : vitPercent > 50 ? 'bg-emerald-500' : vitPercent > 20 ? 'bg-amber-500' : 'bg-rose-500'
               }`}
-              style={{ width: `${currentHp < 0 ? 0 : hpPercent}%` }}
+              style={{ width: `${currentVit < 0 ? 0 : vitPercent}%` }}
             >
               {/* Glowing Draggable Handle Knob */}
-              {currentHp > 0 && (
+              {currentVit > 0 && (
                 <div className="absolute right-0 top-0 bottom-0 w-2.5 bg-white/90 rounded-full shadow-lg shadow-emerald-500/80 group-hover:scale-125 transition-transform" />
               )}
             </div>
@@ -152,34 +155,33 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
           {/* Quick Adjustment Buttons */}
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => handleHpChange(-5)}
+              onClick={() => handleVitChange(-5)}
               className="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 text-xs font-mono font-bold rounded-lg border border-rose-500/30 transition-all"
             >
               -5
             </button>
             <button
-              onClick={() => handleHpChange(-1)}
+              onClick={() => handleVitChange(-1)}
               className="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 text-xs font-mono font-bold rounded-lg border border-rose-500/30 transition-all"
             >
               -1
             </button>
             <button
-              onClick={() => handleHpChange(1)}
+              onClick={() => handleVitChange(1)}
               className="px-2 py-1 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 text-xs font-mono font-bold rounded-lg border border-emerald-500/30 transition-all"
             >
               +1
             </button>
             <button
-              onClick={() => handleHpChange(5)}
+              onClick={() => handleVitChange(5)}
               className="px-2 py-1 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 text-xs font-mono font-bold rounded-lg border border-emerald-500/30 transition-all"
             >
               +5
             </button>
           </div>
 
-          {/* Custom Math Inputs: Wounded by & Healed by (UI DRY: Enter key submit, hidden spinners, no Apply buttons, expanded gap-6) */}
+          {/* Custom Math Inputs */}
           <div className="flex items-center gap-6">
-            {/* Wounded by Input */}
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-bold text-slate-400">Wounded by:</span>
               <input
@@ -194,7 +196,6 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
               />
             </div>
 
-            {/* Healed by Input */}
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-bold text-slate-400">Healed by:</span>
               <input

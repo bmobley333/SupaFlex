@@ -561,13 +561,11 @@ export const gameApi = {
     // Direct fallback if RPC is not deployed yet in dev
     if (!partyUuid) {
       let targetPartyUuid = partyIdOrCode;
-      let roomCode = partyIdOrCode;
 
       if (partyIdOrCode.length === 4) {
         const party = await this.findActivePartyByRoomCode(partyIdOrCode);
         if (party) {
           targetPartyUuid = party.id;
-          roomCode = party.party_code || party.room_code || partyIdOrCode;
         }
       }
 
@@ -579,8 +577,7 @@ export const gameApi = {
       const { error } = await supabase
         .from('party_session_members')
         .insert({
-          party_uuid: targetPartyUuid,
-          party_code: roomCode,
+          party_id: targetPartyUuid,
           player_email: cleanEmail,
           character_id: characterId,
           tab_session_id: tabSessionId,
@@ -616,10 +613,10 @@ export const gameApi = {
     if (!targetPartyId) {
       const { data } = await supabase
         .from('party_session_members')
-        .select('party_uuid, party_id')
+        .select('party_id')
         .eq('tab_session_id', tabSessionId)
         .maybeSingle();
-      if (data) targetPartyId = data.party_uuid || (data as any).party_id;
+      if (data) targetPartyId = (data as any).party_id;
     }
 
     const { error } = await supabase
@@ -647,17 +644,12 @@ export const gameApi = {
     if (!partyIdOrCode) return [];
 
     let targetPartyUuid = partyIdOrCode;
-    let roomCode = partyIdOrCode;
 
     if (partyIdOrCode.length === 4) {
       const party = await this.findActivePartyByRoomCode(partyIdOrCode);
       if (party) {
         targetPartyUuid = party.id;
-        roomCode = party.party_code || party.room_code || partyIdOrCode;
       }
-    } else {
-      const { data: p } = await supabase.from('parties').select('party_code, room_code').eq('id', partyIdOrCode).maybeSingle();
-      if (p) roomCode = p.party_code || p.room_code || partyIdOrCode;
     }
 
     // 45-second staleness threshold for active party members (Blueprint 1.A.7 & 3.B.3)
@@ -665,7 +657,7 @@ export const gameApi = {
     const { data, error } = await supabase
       .from('party_session_members')
       .select('*, character:characters(*)')
-      .or(`party_uuid.eq.${targetPartyUuid},party_code.eq.${roomCode},party_id.eq.${targetPartyUuid}`)
+      .eq('party_id', targetPartyUuid)
       .gte('last_seen', activeCutoff);
 
     // Asynchronously prune dead ghost sessions from DB (> 60s inactive)
@@ -717,30 +709,32 @@ export const gameApi = {
     if (!partyIdOrCode || !tabSessionId) return false;
     try {
       let targetPartyUuid = partyIdOrCode;
-      let roomCode = partyIdOrCode;
 
       if (partyIdOrCode.length === 4) {
         const party = await this.findActivePartyByRoomCode(partyIdOrCode);
         if (!party) return false;
         targetPartyUuid = party.id;
-        roomCode = party.room_code || partyIdOrCode;
       } else {
         const { data: p } = await supabase.from('parties').select('room_code, is_active').eq('id', partyIdOrCode).maybeSingle();
         if (!p || !p.is_active) return false;
-        if (p.room_code) roomCode = p.room_code;
       }
 
-      // Check if this tab is registered in party_session_members under UUID or room code
-      const { data: memberData } = await supabase
+      // Check if this tab is registered in party_session_members under targetPartyUuid
+      const { data: memberData, error: memberErr } = await supabase
         .from('party_session_members')
         .select('id')
-        .or(`party_id.eq.${targetPartyUuid},party_id.eq.${roomCode}`)
+        .eq('party_id', targetPartyUuid)
         .eq('tab_session_id', tabSessionId)
         .maybeSingle();
 
+      if (memberErr) {
+        console.warn('[gameApi] Error querying memberData in verifyActivePartySession:', memberErr);
+        return false;
+      }
+
       return !!memberData;
     } catch (err) {
-      console.warn('[gameApi] Error verifying party session:', err);
+      console.warn('[gameApi] Exception verifying party session:', err);
       return false;
     }
   },

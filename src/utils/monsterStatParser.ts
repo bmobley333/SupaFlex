@@ -6,7 +6,7 @@ export interface ParsedMonster {
   nameWithEquip: string;
   attackStat: string;
   defenseStat: string;
-  healthStat: string;
+  vitalityStat: string;
   fullText: string;
   reducedText: string;
 }
@@ -21,7 +21,7 @@ export function parseMonsterLine(line: string): ParsedMonster {
       nameWithEquip: '',
       attackStat: '',
       defenseStat: '',
-      healthStat: '',
+      vitalityStat: '',
       fullText: line,
       reducedText: '',
     };
@@ -35,9 +35,9 @@ export function parseMonsterLine(line: string): ParsedMonster {
   const defMatch = trimmed.match(/(?:🛡️|🧥)\s*[\d\/\(\)\s\-+]+/u);
   const defenseStat = defMatch ? defMatch[0].trim() : '';
 
-  // 3. Extract Health Stat (❤️)
-  const hpMatch = trimmed.match(/(?:❤️)\s*\d+/u);
-  const healthStat = hpMatch ? hpMatch[0].trim() : '';
+  // 3. Extract Vitality Stat (❤️)
+  const vitMatch = trimmed.match(/(?:❤️)\s*\d+/u);
+  const vitalityStat = vitMatch ? vitMatch[0].trim() : '';
 
   // 4. Extract Name / Prefix (everything before first stat icon 🚩, 👣, ⚔️, 🛡️, 🧥, ❤️)
   const iconPosMatch = trimmed.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
@@ -50,8 +50,8 @@ export function parseMonsterLine(line: string): ParsedMonster {
 
   // 5. Construct Reduced Text for Player View
   let reducedText = '';
-  if (nameWithEquip || attackStat || defenseStat || healthStat) {
-    const parts = [nameWithEquip, attackStat, defenseStat, healthStat].filter(Boolean);
+  if (nameWithEquip || attackStat || defenseStat || vitalityStat) {
+    const parts = [nameWithEquip, attackStat, defenseStat, vitalityStat].filter(Boolean);
     reducedText = parts.join(' ');
   } else {
     reducedText = trimmed;
@@ -62,7 +62,7 @@ export function parseMonsterLine(line: string): ParsedMonster {
     nameWithEquip,
     attackStat,
     defenseStat,
-    healthStat,
+    vitalityStat,
     fullText: trimmed,
     reducedText,
   };
