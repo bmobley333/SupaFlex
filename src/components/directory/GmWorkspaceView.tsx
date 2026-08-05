@@ -265,13 +265,44 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     }
   };
 
+  const formatCanonicalAttributes = (rawAttr: string | undefined): string => {
+    if (!rawAttr) return '✨10 / 💪10 / 👁️10 / 🏃10 / 🫀10';
+
+    const magicMatch = rawAttr.match(/✨\s*(\d+)/u);
+    const mightMatch = rawAttr.match(/💪\s*(\d+)/u);
+    const mindMatch = rawAttr.match(/👁️\s*(\d+)/u);
+    const motionMatch = rawAttr.match(/🏃\s*(\d+)/u);
+    const moxieMatch = rawAttr.match(/(?:🫀|💖)\s*(\d+)/u);
+
+    if (magicMatch || mightMatch || mindMatch || motionMatch || moxieMatch) {
+      const magic = magicMatch ? magicMatch[1] : '10';
+      const might = mightMatch ? mightMatch[1] : '10';
+      const mind = mindMatch ? mindMatch[1] : '10';
+      const motion = motionMatch ? motionMatch[1] : '10';
+      const moxie = moxieMatch ? moxieMatch[1] : '10';
+      return `✨${magic} / 💪${might} / 👁️${mind} / 🏃${motion} / 🫀${moxie}`;
+    }
+
+    const nums = rawAttr.match(/\d+/g) || [];
+    if (nums.length >= 5) {
+      const might = nums[0];
+      const motion = nums[1];
+      const mind = nums[2];
+      const magic = nums[3];
+      const moxie = nums[4];
+      return `✨${magic} / 💪${might} / 👁️${mind} / 🏃${motion} / 🫀${moxie}`;
+    }
+
+    return '✨10 / 💪10 / 👁️10 / 🏃10 / 🫀10';
+  };
+
   const handleAddCodexMonster = async (rawMonster: SupabaseMonster) => {
     const init = formatStatWithIcon('🚩', rawMonster.nish, '10');
     const mr = formatStatWithIcon('👣', rawMonster.mr, '10');
     const atk = formatStatWithIcon('⚔️', rawMonster.atk_dmg_ftg, '10/5(1)', /^(?:⚔️|⚔)/u);
     const def = formatStatWithIcon('🧥', rawMonster.dod_ar, '10/1', /^(?:🧥|🛡️)/u);
     const vit = formatStatWithIcon('❤️', rawMonster.vit, '10');
-    const attrStr = rawMonster.attributes ? ` – [${rawMonster.attributes}]` : '';
+    const attrStr = ` – [${formatCanonicalAttributes(rawMonster.attributes)}]`;
     const abStr = rawMonster.abilities ? ` (${rawMonster.abilities})` : '';
 
     const fullStatStr = `${rawMonster.name || 'Monster'} ${init}, ${mr}, ${atk}, ${def}, ${vit}${attrStr}${abStr}`;
@@ -289,8 +320,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const atkNums = parsed.attackStat.match(/\d+/g) || [];
     const defNums = parsed.defenseStat.match(/\d+/g) || [];
     const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
-    const attrMatch = raw.match(/\[✨\s*(\d+)\/💪\s*(\d+)\/👁️\s*(\d+)\/🏃\s*(\d+)\/🫀\s*(\d+)\]/u);
-    const notesMatch = raw.match(/\(([^)]+)\)$/);
+    const attrMatch = raw.match(/\[✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*👁️\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(?:🫀|💖)\s*(\d+)\]/u);
+    const notesMatch = raw.match(/(?:\]|❤️\s*\d+)\s*\((.*)\)$/);
 
     return {
       id: m.id,

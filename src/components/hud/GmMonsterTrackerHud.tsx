@@ -83,6 +83,9 @@ export const GmMonsterTrackerHud: React.FC = () => {
     const defNums = parsed.defenseStat.match(/\d+/g) || [];
     const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
 
+    const notesMatch = raw.match(/(?:\]|❤️\s*\d+)\s*\((.*)\)$/);
+    const attrMatch = raw.match(/\[✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*👁️\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(?:🫀|💖)\s*(\d+)\]/u);
+
     return {
       id: m.id,
       name: parsed.nameWithEquip || 'Monster',
@@ -97,14 +100,20 @@ export const GmMonsterTrackerHud: React.FC = () => {
       armor: m.armor ?? (defNums[1] ? parseInt(defNums[1], 10) : 0),
       max_vit: m.max_vit ?? (hpNums[0] ? parseInt(hpNums[0], 10) : 10),
       current_vit: m.current_vit ?? (hpNums[0] ? parseInt(hpNums[0], 10) : 10),
-      attributes: m.attributes || {
+      attributes: m.attributes || (attrMatch ? {
+        magic: parseInt(attrMatch[1], 10),
+        might: parseInt(attrMatch[2], 10),
+        mind: parseInt(attrMatch[3], 10),
+        motion: parseInt(attrMatch[4], 10),
+        moxie: parseInt(attrMatch[5], 10),
+      } : {
         magic: 10,
         might: 10,
         mind: 10,
         motion: 10,
         moxie: 10,
-      },
-      gm_notes: m.gm_notes,
+      }),
+      gm_notes: m.gm_notes || (notesMatch ? notesMatch[1] : undefined),
     };
   };
 
