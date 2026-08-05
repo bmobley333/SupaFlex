@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "name": "Round Shield",
+    "requirement": "💪 4",
+    "max_block": "🛡️12",
+    "mr": "👣0",
+    "description": "Mid-sized wooden shield, classic adventurer gear.",
+    "cost": "2g",
+    "created_at": "2026-07-24T15:50:08.806975+00:00"
+  },
+  {
+    "id": 2,
+    "name": "Heater Shield",
+    "requirement": "💪 6",
+    "max_block": "🛡️16",
+    "mr": "👣–1",
+    "description": "Iconic knight’s shield, shaped like an inverted triangle.",
+    "cost": "3g",
+    "created_at": "2026-07-24T15:50:08.806975+00:00"
+  },
+  {
+    "id": 3,
+    "name": "Kite Shield",
+    "requirement": "💪 8",
+    "max_block": "🛡️20",
+    "mr": "👣–2",
+    "description": "Long tapered shield, excellent for infantry formations.",
+    "cost": "4g",
+    "created_at": "2026-07-24T15:50:08.806975+00:00"
+  },
+  {
+    "id": 4,
+    "name": "Tower Shield",
+    "requirement": "💪 10",
+    "max_block": "🛡️24",
+    "mr": "👣-3",
+    "description": "Huge slab shield, nearly full-body cover.",
+    "cost": "8g",
+    "created_at": "2026-07-24T15:50:08.806975+00:00"
+  },
+  {
+    "id": 5,
+    "name": "Siege Wall Shield",
+    "requirement": "💪 12",
+    "max_block": "🛡️28",
+    "mr": "👣-4",
+    "description": "Oversized heavy wood-and-iron shield, used in sieges.",
+    "cost": "10g",
+    "created_at": "2026-07-24T15:50:08.806975+00:00"
+  }
+]

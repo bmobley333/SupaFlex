@@ -1,0 +1,639 @@
+[
+  {
+    "id": 1,
+    "name": "Agility",
+    "skills": [
+      "Acrobatics🏃",
+      "Balance🏃",
+      "Escape Bonds🏃",
+      "Falling🏃",
+      "Climb🏃"
+    ],
+    "source": "Sunblessed Fey Devotion",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Agility ➡ Acrobatics🏃, Balance🏃, Escape Bonds🏃, Falling🏃, Climb🏃",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 2,
+    "name": "Alchemy",
+    "skills": [
+      "Identify👁️",
+      "Mix👁️",
+      "Apply Potions And Substances👁️",
+      "Id/Forage Plants👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Alchemy ➡ Identify👁️, Mix👁️, Apply Potions And Substances👁️, Id/Forage Plants👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 3,
+    "name": "Arcana",
+    "skills": [
+      "ID Magic ✨",
+      "Detect Enchantments✨"
+    ],
+    "source": "Sunblessed Fey Devotion",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Arcana ➡ ID Magic ✨, Detect Enchantments✨",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 4,
+    "name": "Athletics",
+    "skills": [
+      "Climb🏃",
+      "Swim🏃",
+      "Jump🏃",
+      "Lift💪",
+      "Feats Of Stregth.💪"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Athletics ➡ Climb🏃, Swim🏃, Jump🏃, Lift💪, Feats Of Stregth.💪",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 5,
+    "name": "Bardic",
+    "skills": [
+      "Performance👁️",
+      "Music👁️",
+      "Persuasion👁️",
+      "Inspiration.👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Bardic ➡ Performance👁️, Music👁️, Persuasion👁️, Inspiration.👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 6,
+    "name": "Crafting",
+    "skills": [
+      "Craft/Repair Weapons💪",
+      "Craft/Repair Armor💪",
+      "Craft/Repair Carpentry🏃",
+      "Craft/Repair Leatherwork🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Crafting ➡ Craft/Repair Weapons💪, Craft/Repair Armor💪, Craft/Repair Carpentry🏃, Craft/Repair Leatherwork🏃",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 7,
+    "name": "Diplomacy",
+    "skills": [
+      "Persuasion👁️",
+      "De-escalation👁️",
+      "Command Presence👁️",
+      "Mediation👁️"
+    ],
+    "source": "Psionic Sentinel Discipline",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Diplomacy ➡ Persuasion👁️, De-escalation👁️, Command Presence👁️, Mediation👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 8,
+    "name": "Drudic",
+    "skills": [
+      "ID Plants👁️",
+      "Talk To Plants👁️",
+      "Befriend Animal👁️",
+      "Talk To Animal👁️",
+      "Endure Weather✨"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Drudic ➡ ID Plants👁️, Talk To Plants👁️, Befriend Animal👁️, Talk To Animal👁️, Endure Weather✨",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 9,
+    "name": "Dungeoneering",
+    "skills": [
+      "Direction SenseDetect Trap/Hazard👁️",
+      "Assess Stonework👁️",
+      "Climb🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Dungeoneering ➡ Direction SenseDetect Trap/Hazard👁️, Assess Stonework👁️, Climb🏃",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 10,
+    "name": "Guard Skills",
+    "skills": [
+      "Intimidation💪",
+      "Interrogate💪",
+      "Repair Weapons/Armor💪",
+      "Danger Sense👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Guard Skills ➡ Intimidation💪, Interrogate💪, Repair Weapons/Armor💪, Danger Sense👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 11,
+    "name": "Husbandry",
+    "skills": [
+      "Ridding🏃",
+      "Animal Training🏃",
+      "Befriend Animal👁️",
+      "Talk To Animal✨"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Husbandry ➡ Ridding🏃, Animal Training🏃, Befriend Animal👁️, Talk To Animal✨",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 12,
+    "name": "Medicine",
+    "skills": [
+      "Bind Wounds👁️",
+      "Set Bones👁️",
+      "Treat Disease👁️",
+      "Treat Poison👁️",
+      "Basic Healing.👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Medicine ➡ Bind Wounds👁️, Set Bones👁️, Treat Disease👁️, Treat Poison👁️, Basic Healing.👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 13,
+    "name": "Mercantile",
+    "skills": [
+      "Appraise👁️",
+      "Haggle👁️",
+      "Gambel👁️",
+      "Fast Talk👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Mercantile ➡ Appraise👁️, Haggle👁️, Gambel👁️, Fast Talk👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 14,
+    "name": "Mountaineering",
+    "skills": [
+      "Climb🏃",
+      "Falling🏃",
+      "Find Route👁️",
+      "Danger Sense👁️",
+      "Endure Weather✨"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Mountaineering ➡ Climb🏃, Falling🏃, Find Route👁️, Danger Sense👁️, Endure Weather✨",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 15,
+    "name": "Rogue",
+    "skills": [
+      "Pickpockets🏃",
+      "Disguise👁️",
+      "Stealth🏃",
+      "Gambeling🏃",
+      "Languages👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Rogue ➡ Pickpockets🏃, Disguise👁️, Stealth🏃, Gambeling🏃, Languages👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 16,
+    "name": "Sailing",
+    "skills": [
+      "Ships🏃",
+      "Navigation👁️",
+      "Weather👁️",
+      "Swim🏃",
+      "Fishing🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Sailing ➡ Ships🏃, Navigation👁️, Weather👁️, Swim🏃, Fishing🏃",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 17,
+    "name": "Scholar",
+    "skills": [
+      "Lore👁️",
+      "History👁️",
+      "ID Magic Item👁️",
+      "Religion👁️",
+      "Politics👁️",
+      "Monster Knowledge.👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Scholar ➡ Lore👁️, History👁️, ID Magic Item👁️, Religion👁️, Politics👁️, Monster Knowledge.👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 18,
+    "name": "Scout",
+    "skills": [
+      "Track👁️",
+      "Forage👁️",
+      "Stealth🏃",
+      "Climb🏃",
+      "Fishing🏃",
+      "Set Traps🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Scout ➡ Track👁️, Forage👁️, Stealth🏃, Climb🏃, Fishing🏃, Set Traps🏃",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 19,
+    "name": "Survival",
+    "skills": [
+      "Forage👁️",
+      "Find Water👁️",
+      "Identify Plants👁️",
+      "Endure Weather✨"
+    ],
+    "source": "Sunblessed Fey Devotion",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Survival ➡ Forage👁️, Find Water👁️, Identify Plants👁️, Endure Weather✨",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 20,
+    "name": "Thievery",
+    "skills": [
+      "Stealth🏃",
+      "Climb🏃",
+      "Open Locks👁️",
+      "Detect/Remove Traps👁️",
+      "Pick Pockets🏃"
+    ],
+    "source": "Thievery & Assassination",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "General Skill Sets - Thievery🎓 ➡ Stealth🏃, Climb🏃, Open Locks👁️, Detect/Remove Traps👁️, Pick Pockets🏃",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 21,
+    "name": "Dwarven Skills",
+    "skills": [
+      "Stonecraft👁️",
+      "Mining💪",
+      "Brewing👁️",
+      "Underground Lore👁️",
+      "Repair Gear💪",
+      "Poison Save✨",
+      "Infrared👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "Racial Skill Sets - Dwarven Skills ➡ Stonecraft👁️, Mining💪, Brewing👁️, Underground Lore👁️, Repair Gear💪, Poison Save✨, Infrared👁️",
+    "sub": "Racial",
+    "table_name": "Racial Skill Sets"
+  },
+  {
+    "id": 22,
+    "name": "Elven Skills",
+    "skills": [
+      "Flettcher👁️",
+      "Forest Lore👁️",
+      "Stealth🏃",
+      "Artistry👁️",
+      "Tracking👁️",
+      "Charm Save✨",
+      "Starlight👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "Racial Skill Sets - Elven Skills ➡ Flettcher👁️, Forest Lore👁️, Stealth🏃, Artistry👁️, Tracking👁️, Charm Save✨, Starlight👁️",
+    "sub": "Racial",
+    "table_name": "Racial Skill Sets"
+  },
+  {
+    "id": 23,
+    "name": "Gnomish Skills",
+    "skills": [
+      "Inventer👁️",
+      "Small Illusions✨",
+      "Solve Puzzles👁️",
+      "Repairs👁️",
+      "Illusion Save✨",
+      "Infrared👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "Racial Skill Sets - Gnomish Skills ➡ Inventer👁️, Small Illusions✨, Solve Puzzles👁️, Repairs👁️, Illusion Save✨, Infrared👁️",
+    "sub": "Racial",
+    "table_name": "Racial Skill Sets"
+  },
+  {
+    "id": 24,
+    "name": "Goblin Skills",
+    "skills": [
+      "Scavenging👁️",
+      "Set Traps🏃",
+      "Stealth🏃",
+      "Ambush Setup👁️",
+      "Disease Save✨",
+      "Starlight👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "Racial Skill Sets - Goblin Skills ➡ Scavenging👁️, Set Traps🏃, Stealth🏃, Ambush Setup👁️, Disease Save✨, Starlight👁️",
+    "sub": "Racial",
+    "table_name": "Racial Skill Sets"
+  },
+  {
+    "id": 25,
+    "name": "Halfling Skills",
+    "skills": [
+      "Stealth🏃",
+      "Throw Rocks👁️",
+      "Cooking👁️",
+      "Community Lore👁️",
+      "Fear Save✨",
+      "Starlight👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "Racial Skill Sets - Halfling Skills ➡ Stealth🏃, Throw Rocks👁️, Cooking👁️, Community Lore👁️, Fear Save✨, Starlight👁️",
+    "sub": "Racial",
+    "table_name": "Racial Skill Sets"
+  },
+  {
+    "id": 26,
+    "name": "Orc Skills",
+    "skills": [
+      "Hunt🏃",
+      "Ambush👁️",
+      "Intimidation👁️",
+      "Crafting💪",
+      "Endure Weather✨",
+      "Weather Save✨",
+      "Infrared👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-07-18T15:15:31.174696+00:00",
+    "dropdown": "Racial Skill Sets - Orc Skills ➡ Hunt🏃, Ambush👁️, Intimidation👁️, Crafting💪, Endure Weather✨, Weather Save✨, Infrared👁️",
+    "sub": "Racial",
+    "table_name": "Racial Skill Sets"
+  },
+  {
+    "id": 27,
+    "name": "Engineering & Siegecraft",
+    "skills": [
+      "Siege Engine Use/Atk/Dmg👁️",
+      "Repairs👁️",
+      "Rune-Engraving✨",
+      "Stone/Metal Weakness 👁️",
+      "Thunder Barge Piloting🏃"
+    ],
+    "source": "Engineering & Siegecraft",
+    "created_at": "2026-07-19T02:53:19.04813+00:00",
+    "dropdown": "General Skill Sets - Engineering & Siegecraft ➡ Siege Engine Use/Atk/Dmg👁️,  Repairs👁️, Rune-Engraving✨, Stone/Metal Weakness 👁️, Thunder Barge Piloting🏃",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 28,
+    "name": "Magnetism",
+    "skills": [
+      "Metal Manipulation💪",
+      "Falling✨",
+      "Detect Metal👁️",
+      "Streetwise👁️"
+    ],
+    "source": "Magnetism",
+    "created_at": "2026-07-19T02:53:19.207552+00:00",
+    "dropdown": "General Skill Sets - Magnetism ➡ Metal Manipulation💪,  Falling✨, Detect Metal👁️, Streetwise👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 29,
+    "name": "Streetwise Survival",
+    "skills": [
+      "Spot unusual activity👁️",
+      "Blend into crowds🏃",
+      "Create distractions👁️",
+      "Identify urban threats👁️",
+      "Escape pursuit🏃"
+    ],
+    "source": "Punk Fighter",
+    "created_at": "2026-07-19T02:53:19.348657+00:00",
+    "dropdown": "General Skill Sets - Streetwise Survival ➡ Spot unusual activity👁️, Blend into crowds🏃, Create distractions👁️, Identify urban threats👁️, Escape pursuit🏃",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 30,
+    "name": "Intimidation & Presence",
+    "skills": [
+      "Threaten convincingly👁️",
+      "Taunt foes👁️",
+      "Inspire allies👁️",
+      "Lead rebellious groups👁️",
+      "Recognize manipulation👁️"
+    ],
+    "source": "Punk Fighter",
+    "created_at": "2026-07-19T02:53:19.490675+00:00",
+    "dropdown": "General Skill Sets - Intimidation & Presence ➡ Threaten convincingly👁️, Taunt foes👁️, Inspire allies👁️, Lead rebellious groups👁️, Recognize manipulation👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 31,
+    "name": "Iron Lotus Discipline",
+    "skills": [
+      "Awareness👁️",
+      "Mountaineering🏃",
+      "Healing Arts👁️",
+      "Endure Pain/Fear✨"
+    ],
+    "source": "Iron Lotus Discipline",
+    "created_at": "2026-07-19T02:53:19.629572+00:00",
+    "dropdown": "General Skill Sets - Iron Lotus Discipline ➡ Awareness👁️, Mountaineering🏃, Healing Arts👁️, Endure Pain/Fear✨",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 32,
+    "name": "Healing Arts",
+    "skills": [
+      "Herbalism👁️",
+      "Basic Healing👁️",
+      "Treat Disease👁️",
+      "Treat Poison👁️"
+    ],
+    "source": "Sunblessed Fey Devotion",
+    "created_at": "2026-07-19T02:53:19.769031+00:00",
+    "dropdown": "General Skill Sets - Healing Arts ➡ Herbalism👁️, Basic Healing👁️, Treat Disease👁️, Treat Poison👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 33,
+    "name": "Mental Discipline",
+    "skills": [
+      "Focus👁️",
+      "empathy👁️",
+      "Mental Fortitude✨",
+      "Psionic Control✨"
+    ],
+    "source": "Psionic Sentinel Discipline",
+    "created_at": "2026-07-19T02:53:20.334416+00:00",
+    "dropdown": "General Skill Sets - Mental Discipline ➡ Focus👁️, empathy👁️, Mental Fortitude✨, Psionic Control✨",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 34,
+    "name": "Martial Prowess",
+    "skills": [
+      "Tactics👁️",
+      "Guard Drills🏃"
+    ],
+    "source": "Psionic Sentinel Discipline",
+    "created_at": "2026-07-19T02:53:20.471692+00:00",
+    "dropdown": "General Skill Sets - Martial Prowess ➡ Tactics👁️, Guard Drills🏃",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 35,
+    "name": "Awareness",
+    "skills": [
+      "Perception👁️",
+      "Read Intent👁️",
+      "Lie Detection👁️",
+      "Situational Analysis👁️"
+    ],
+    "source": "Psionic Sentinel Discipline",
+    "created_at": "2026-07-19T02:53:20.61169+00:00",
+    "dropdown": "General Skill Sets - Awareness ➡ Perception👁️, Read Intent👁️, Lie Detection👁️, Situational Analysis👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 36,
+    "name": "Acrobatics",
+    "skills": [
+      "Balance🏃",
+      "Evasion🏃",
+      "Parkour🏃",
+      "Recovery Rolls🏃"
+    ],
+    "source": "Psionic Sentinel Discipline",
+    "created_at": "2026-07-19T02:53:20.743866+00:00",
+    "dropdown": "General Skill Sets - Acrobatics ➡ Balance🏃, Evasion🏃, Parkour🏃, Recovery Rolls🏃",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 37,
+    "name": "Urban Survival",
+    "skills": [
+      "Navigate Cityscapes🏃",
+      "Hidden Routes👁️",
+      "Blend into Crowds🏃",
+      "Streetwise👁️"
+    ],
+    "source": "Thievery & Assassination",
+    "created_at": "2026-07-19T02:53:21.16197+00:00",
+    "dropdown": "General Skill Sets - Urban Survival🎓 ➡ Navigate Cityscapes🏃, Hidden Routes👁️, Blend into Crowds🏃, Streetwise👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 38,
+    "name": "Assassination",
+    "skills": [
+      "Target Analysis👁️",
+      "Poison Use👁️"
+    ],
+    "source": "Thievery & Assassination",
+    "created_at": "2026-07-19T02:53:21.306255+00:00",
+    "dropdown": "General Skill Sets - Assassination🎓 ➡ Target Analysis👁️, Poison Use👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 39,
+    "name": "Thievery🎓",
+    "skills": [
+      "Stealth🏃",
+      "Climb🏃",
+      "Open Locks👁️",
+      "Detect/Remove Traps👁️",
+      "Pick Pockets🏃"
+    ],
+    "source": "Thievery & Assassination",
+    "created_at": "2026-07-19T03:02:09.454143+00:00",
+    "dropdown": "General Skill Sets - Thievery🎓 ➡ Stealth🏃, Climb🏃, Open Locks👁️, Detect/Remove Traps👁️, Pick Pockets🏃",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 40,
+    "name": "Urban Survival🎓",
+    "skills": [
+      "Navigate Cityscapes🏃",
+      "Hidden Routes👁️",
+      "Blend into Crowds🏃",
+      "Streetwise👁️"
+    ],
+    "source": "Thievery & Assassination",
+    "created_at": "2026-07-19T03:02:09.593266+00:00",
+    "dropdown": "General Skill Sets - Urban Survival🎓 ➡ Navigate Cityscapes🏃, Hidden Routes👁️, Blend into Crowds🏃, Streetwise👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  },
+  {
+    "id": 41,
+    "name": "Assassination🎓",
+    "skills": [
+      "Target Analysis👁️",
+      "Poison Use👁️"
+    ],
+    "source": "Thievery & Assassination",
+    "created_at": "2026-07-19T03:02:09.732271+00:00",
+    "dropdown": "General Skill Sets - Assassination🎓 ➡ Target Analysis👁️, Poison Use👁️",
+    "sub": "General",
+    "table_name": "General Skill Sets"
+  }
+]

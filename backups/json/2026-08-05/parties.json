@@ -1,0 +1,70 @@
+[
+  {
+    "id": "031a5a29-ccb6-4035-960b-70e108f6a07d",
+    "gm_email": "thebmobley@gmail.com",
+    "created_at": "2026-08-03T23:20:53.582044+00:00",
+    "name": "GM Campaign",
+    "room_code": null,
+    "is_active": false,
+    "last_active_at": "2026-08-03T23:45:15.740181+00:00",
+    "active_monsters": []
+  },
+  {
+    "id": "385684c5-ac66-4b5a-88c0-7ee14d4c8437",
+    "gm_email": "metascapegame@gmail.com",
+    "created_at": "2026-08-02T23:15:24.486298+00:00",
+    "name": "GM Campaign",
+    "room_code": "995T",
+    "is_active": true,
+    "last_active_at": "2026-08-05T18:03:11.146+00:00",
+    "active_monsters": [
+      {
+        "id": "mon_70w77um",
+        "fullText": "Bandit Archer 🚩🚩13, 👣👣10, ⚔️⚔️16 / 5 (1), 🧥🧥14 / 1, ❤️❤️8 – [💪12 / 🏃16 / 👁️14 / ✨10 / 🫀10] (Volley fire)",
+        "attackStat": "⚔️16 / 5 (1)",
+        "defenseStat": "🧥14 / 1",
+        "reducedText": "Bandit Archer ⚔️16 / 5 (1) 🧥14 / 1 ❤️8",
+        "vitalityStat": "❤️8",
+        "nameWithEquip": "Bandit Archer"
+      },
+      {
+        "id": "mon_n46d3rv",
+        "fullText": "Bear, Brown 🚩🚩15, 👣👣11, ⚔️⚔️18 / 12 (2), 🧥🧥16 / 2, ❤️❤️16 – [💪20 / 🏃14 / 👁️10 / ✨10 / 🫀10] (Mauling attacks)",
+        "attackStat": "⚔️18 / 12 (2)",
+        "defenseStat": "🧥16 / 2",
+        "reducedText": "Bear, Brown ⚔️18 / 12 (2) 🧥16 / 2 ❤️16",
+        "vitalityStat": "❤️16",
+        "nameWithEquip": "Bear, Brown"
+      },
+      {
+        "id": "mon_vgrwwsk",
+        "fullText": "Chimera 🚩18, 👣10, ⚔️22 / 12 (2), 🧥20 / 3, ❤️30 – [💪22 / 🏃16 / 👁️14 / ✨16 / 🫀10] (3 attacks (lion, goat, dragon))",
+        "attackStat": "⚔️22 / 12 (2)",
+        "defenseStat": "🧥20 / 3",
+        "reducedText": "Chimera ⚔️22 / 12 (2) 🧥20 / 3 ❤️30",
+        "vitalityStat": "❤️30",
+        "nameWithEquip": "Chimera"
+      }
+    ]
+  },
+  {
+    "id": "9c1c47a7-8cc1-44af-86df-b56901860254",
+    "gm_email": "metascapegame@gmail.com",
+    "created_at": "2026-08-02T23:13:05.357857+00:00",
+    "name": "GM Campaign",
+    "room_code": null,
+    "is_active": false,
+    "last_active_at": "2026-08-03T23:45:36.438+00:00",
+    "active_monsters": []
+  },
+  {
+    "id": "ef1affbb-236d-4ce2-8d26-24b37752baab",
+    "gm_email": "metascapegame@gmail.com",
+    "created_at": "2026-08-02T23:14:35.644738+00:00",
+    "name": "GM Campaign",
+    "room_code": null,
+    "is_active": false,
+    "last_active_at": "2026-08-03T23:45:15.740181+00:00",
+    "active_monsters": []
+  }
+]

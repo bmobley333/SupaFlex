@@ -1,0 +1,802 @@
+[
+  {
+    "id": 1,
+    "type": "tremendous",
+    "roll_value": 1,
+    "name": "Quick Step",
+    "effect": "Gain +1 to MR👣 for this round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 2,
+    "type": "tremendous",
+    "roll_value": 2,
+    "name": "Sharp Eyes",
+    "effect": "One Free Awareness roll this round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 3,
+    "type": "tremendous",
+    "roll_value": 3,
+    "name": "Steady Grip",
+    "effect": "Auto-succeed next simple task",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 4,
+    "type": "tremendous",
+    "roll_value": 4,
+    "name": "Lucky Break",
+    "effect": "Cancel 1 Minor🍺 penalty this round (–1, Affliction Save✨, etc.).",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 5,
+    "type": "tremendous",
+    "roll_value": 5,
+    "name": "Flair Move",
+    "effect": "Add a flourish; gain Advantage on \"personality\" based Mind👁️",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 6,
+    "type": "tremendous",
+    "roll_value": 6,
+    "name": "Catch Breath",
+    "effect": "Regain 1 Vit❤️ immediately.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 7,
+    "type": "tremendous",
+    "roll_value": 7,
+    "name": "Loose Stone",
+    "effect": "On hit; Auto-disarm or unshield d2sq",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 8,
+    "type": "tremendous",
+    "roll_value": 8,
+    "name": "Smooth Draw",
+    "effect": "Equip or switch weapon/shield without using P action.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 9,
+    "type": "tremendous",
+    "roll_value": 9,
+    "name": "Quick Call",
+    "effect": "You have Advantage vs next trap for encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 10,
+    "type": "tremendous",
+    "roll_value": 10,
+    "name": "Easy Dodge",
+    "effect": "Your next Dodge roll has Advantage.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 11,
+    "type": "tremendous",
+    "roll_value": 11,
+    "name": "Nimble Feet",
+    "effect": "Step d4 squares without using MR👣.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 12,
+    "type": "tremendous",
+    "roll_value": 12,
+    "name": "Quick Hand",
+    "effect": "Free Luck🍀 of 1 skill (not Wpn or Armor) this encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 13,
+    "type": "tremendous",
+    "roll_value": 13,
+    "name": "Guard Shift",
+    "effect": "Gain +1 Def for 1 rnd",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 14,
+    "type": "tremendous",
+    "roll_value": 14,
+    "name": "Extra Glance",
+    "effect": "Auto-spot 1 hidden or unseen detail in the area.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 15,
+    "type": "tremendous",
+    "roll_value": 15,
+    "name": "Rally Breath",
+    "effect": "An ally of choice gets +3 Nish🚩 next round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 16,
+    "type": "tremendous",
+    "roll_value": 16,
+    "name": "Keep Pace",
+    "effect": "Match Nish🚩 of any ally this round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 17,
+    "type": "tremendous",
+    "roll_value": 17,
+    "name": "Lucky Timing",
+    "effect": "Your Nish🚩 is minimum of +1 more than best monster for encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 18,
+    "type": "tremendous",
+    "roll_value": 18,
+    "name": "Swift Stand",
+    "effect": "Stand from prone without P action for encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 19,
+    "type": "tremendous",
+    "roll_value": 19,
+    "name": "Quick Step Back",
+    "effect": "Immediately step 1 sq away when targeted for 1 rnd",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 20,
+    "type": "tremendous",
+    "roll_value": 20,
+    "name": "Duck Low",
+    "effect": "Avoid next ranged Atk",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 21,
+    "type": "tremendous",
+    "roll_value": 21,
+    "name": "Push Forward",
+    "effect": "Gain Nish🚩 Advantage next round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 22,
+    "type": "tremendous",
+    "roll_value": 22,
+    "name": "Quick Swap",
+    "effect": "Change held gear(weapon/shield/item) instantly once this encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 23,
+    "type": "tremendous",
+    "roll_value": 23,
+    "name": "Cover Dash",
+    "effect": "Gain +2 AR🧥",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 24,
+    "type": "tremendous",
+    "roll_value": 24,
+    "name": "Double Time",
+    "effect": "Move full MR👣 plus +d4 extra this round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 25,
+    "type": "tremendous",
+    "roll_value": 25,
+    "name": "Haste Pulse",
+    "effect": "All allies within 3 sq gain +1 Nish🚩 next round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 26,
+    "type": "tremendous",
+    "roll_value": 26,
+    "name": "Inspire Action",
+    "effect": "One ally gains an extra P action this round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 27,
+    "type": "tremendous",
+    "roll_value": 27,
+    "name": "Speed Echo",
+    "effect": "You gain and extra P action this round",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 28,
+    "type": "tremendous",
+    "roll_value": 28,
+    "name": "Deflect",
+    "effect": "If attacked; weapon/shield glints; Block🧱 with Advantage for 1 rnd",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 29,
+    "type": "tremendous",
+    "roll_value": 29,
+    "name": "Dash First",
+    "effect": "Move before enemy group regardless of Nish🚩 order.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 30,
+    "type": "tremendous",
+    "roll_value": 30,
+    "name": "Strike True",
+    "effect": "Add +1d to your next Atk roll this rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 31,
+    "type": "tremendous",
+    "roll_value": 31,
+    "name": "Step In Sync",
+    "effect": "Choose 1 ally of lower Nish🚩; both act simultaneously this round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 32,
+    "type": "tremendous",
+    "roll_value": 32,
+    "name": "Call Shot",
+    "effect": "Add +2 Dmg💥 to your first successful Atk this rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 33,
+    "type": "tremendous",
+    "roll_value": 33,
+    "name": "Rally Cry",
+    "effect": "All allies within earshot gain +1 to first roll this rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 34,
+    "type": "tremendous",
+    "roll_value": 34,
+    "name": "Slip Free",
+    "effect": "Escape 1 grapple, hold, or slow effect for encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 35,
+    "type": "tremendous",
+    "roll_value": 35,
+    "name": "Quick Cast",
+    "effect": "If casting a spell, reduce action to P instead of A this rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 36,
+    "type": "tremendous",
+    "roll_value": 36,
+    "name": "Swap Order",
+    "effect": "Your Nish🚩 matches ally of choice this round",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 37,
+    "type": "tremendous",
+    "roll_value": 37,
+    "name": "Strike Again",
+    "effect": "After a successful Atk, Opportunity Atk at –2.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 38,
+    "type": "tremendous",
+    "roll_value": 38,
+    "name": "Blur Dash",
+    "effect": "Gain Dodge Advantage for all Dodges until next turn.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 39,
+    "type": "tremendous",
+    "roll_value": 39,
+    "name": "Flow Motion",
+    "effect": "Perform A-M-A (Attack, Move, Attack) sequence this rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 40,
+    "type": "tremendous",
+    "roll_value": 40,
+    "name": "Pinpoint",
+    "effect": "Your Atk ignores AR🧥 on first strike this rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 41,
+    "type": "tremendous",
+    "roll_value": 41,
+    "name": "Nimble Surge",
+    "effect": "Gain extra M Actionthis rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 42,
+    "type": "tremendous",
+    "roll_value": 42,
+    "name": "Flash Counter",
+    "effect": "If struck in melee, gain one Opportunity atk back",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 43,
+    "type": "tremendous",
+    "roll_value": 43,
+    "name": "Fast Hands",
+    "effect": "One P Action is Free this rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 44,
+    "type": "tremendous",
+    "roll_value": 44,
+    "name": "Nish Lock",
+    "effect": "Your Nish🚩 stays the same next round (no roll).",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 45,
+    "type": "tremendous",
+    "roll_value": 45,
+    "name": "Momentum",
+    "effect": "Bonus of +5 to your next Atk roll.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 46,
+    "type": "tremendous",
+    "roll_value": 46,
+    "name": "Surge Order",
+    "effect": "All allies act before monsters this round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 47,
+    "type": "tremendous",
+    "roll_value": 47,
+    "name": "Push the Line",
+    "effect": "Foes adjacent to you suffer –1 Def this rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 48,
+    "type": "tremendous",
+    "roll_value": 48,
+    "name": "Masters Surge",
+    "effect": "Gain extra A Actionthis rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 49,
+    "type": "tremendous",
+    "roll_value": 49,
+    "name": "Heroic Dash",
+    "effect": "Up to MR👣 ; May M-A-M this rnd",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 50,
+    "type": "tremendous",
+    "roll_value": 50,
+    "name": "Lead the Charge",
+    "effect": "All allies add +2 MR👣 this round if they move toward you.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 51,
+    "type": "critical",
+    "roll_value": 1,
+    "name": "Squirrel!!!",
+    "effect": "Your Nish🚩 = 1 this round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 52,
+    "type": "critical",
+    "roll_value": 2,
+    "name": "Stumbler",
+    "effect": "You slip and fall prone.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 53,
+    "type": "critical",
+    "roll_value": 3,
+    "name": "Doh… So Close",
+    "effect": "Your Nish🚩 is 1 less than the slowest opponent.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 54,
+    "type": "critical",
+    "roll_value": 4,
+    "name": "Quick Fumble",
+    "effect": "Drop 1 held item (weapon/shield/etc.) in reach of foes.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 55,
+    "type": "critical",
+    "roll_value": 5,
+    "name": "Clumsy Hands",
+    "effect": "Random gearitem is lost",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 56,
+    "type": "critical",
+    "roll_value": 6,
+    "name": "Random Act",
+    "effect": "Roll a random Skill🎓; must be your next action (besides move).",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 57,
+    "type": "critical",
+    "roll_value": 7,
+    "name": "Friendly Fire",
+    "effect": "Your planned Atk hits nearest ally. If no plan, use most common Atk.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 58,
+    "type": "critical",
+    "roll_value": 8,
+    "name": "This is Not the Weapon I Was Looking For",
+    "effect": "Next Atk uses random weapon from Weapons Table (appears in hand)",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 59,
+    "type": "critical",
+    "roll_value": 9,
+    "name": "I NEED POWER!",
+    "effect": "You may ONLY move (i.e. relocate) this round",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 60,
+    "type": "critical",
+    "roll_value": 10,
+    "name": "So Thirsty!",
+    "effect": "You may not drink anything (potions, etc.) this encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 61,
+    "type": "critical",
+    "roll_value": 11,
+    "name": "Flat Footed",
+    "effect": "Loose your M Action this round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 62,
+    "type": "critical",
+    "roll_value": 12,
+    "name": "Frozen",
+    "effect": "You may only Attack, Move, or Defend this rnd. Pick one.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 63,
+    "type": "critical",
+    "roll_value": 13,
+    "name": "Passive",
+    "effect": "You may not Atk or cause harm this rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 64,
+    "type": "critical",
+    "roll_value": 14,
+    "name": "Random Thought",
+    "effect": "Lose your P action this rnd.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 65,
+    "type": "critical",
+    "roll_value": 15,
+    "name": "No Sudden Movements!",
+    "effect": "Your next Resist✨ance roll auto-fails, for encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 66,
+    "type": "critical",
+    "roll_value": 16,
+    "name": "Save Me!",
+    "effect": "All Resist✨ance rolls Disadvantaged for encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 67,
+    "type": "critical",
+    "roll_value": 17,
+    "name": "Rumblin Stumblin Bumblin",
+    "effect": "Def and all Motion🏃 rolls Disadvantaged for 1 rnd",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 68,
+    "type": "critical",
+    "roll_value": 18,
+    "name": "Bumbling Fool",
+    "effect": "Halve your Nish🚩 and closest ally’s Nish🚩 this round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 69,
+    "type": "critical",
+    "roll_value": 19,
+    "name": "Lack of Focus",
+    "effect": "All rolls at -4 this round",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 70,
+    "type": "critical",
+    "roll_value": 20,
+    "name": "Wait What?",
+    "effect": "Cannot use Skills🎓 for this encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 71,
+    "type": "critical",
+    "roll_value": 21,
+    "name": "Hear/See/Speak No Evil",
+    "effect": "No Awareness rolls for encounter; No speech for 1 rnd",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 72,
+    "type": "critical",
+    "roll_value": 22,
+    "name": "Slacker",
+    "effect": "No Luck🍀 use for encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 73,
+    "type": "critical",
+    "roll_value": 23,
+    "name": "Excedrin Won’t Fix This",
+    "effect": "Lose 1 Luck🍀 chit",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 74,
+    "type": "critical",
+    "roll_value": 24,
+    "name": "Oh So Drained",
+    "effect": "Lose d4 Vit❤️",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 75,
+    "type": "critical",
+    "roll_value": 25,
+    "name": "Half Power",
+    "effect": "Take d(half of Max Vit❤️) as Wounds",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 76,
+    "type": "critical",
+    "roll_value": 26,
+    "name": "No Power!",
+    "effect": "Loose all Luck🍀 Chits",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 77,
+    "type": "critical",
+    "roll_value": 27,
+    "name": "Glass Weapon",
+    "effect": "Next failed Atk breaks that weapon until repaired.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 78,
+    "type": "critical",
+    "roll_value": 28,
+    "name": "Glass Armor",
+    "effect": "Next hit you take reduces armor to AR🧥 1 until repaired",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 79,
+    "type": "critical",
+    "roll_value": 29,
+    "name": "Glass Jaw",
+    "effect": "If you take Dmg💥 this rnd, you fall unconscious until awake Magic✨ Dif 20",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 80,
+    "type": "critical",
+    "roll_value": 30,
+    "name": "Glass Jaw 2",
+    "effect": "All Wnds🩸 taken are doubled this encounter.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 81,
+    "type": "critical",
+    "roll_value": 31,
+    "name": "Comes in Like a Wreckingball",
+    "effect": "You fall into nearest ally; Motion🏃Dif 15 or they fall prone",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 82,
+    "type": "critical",
+    "roll_value": 32,
+    "name": "Hey Stupid!",
+    "effect": "You shout and become most likely monster target.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 83,
+    "type": "critical",
+    "roll_value": 33,
+    "name": "Half a Man",
+    "effect": "All your rolls Disadvantaged this round.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 84,
+    "type": "critical",
+    "roll_value": 34,
+    "name": "Crit Be Gone",
+    "effect": "You got Lucky - no effect.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 85,
+    "type": "critical",
+    "roll_value": 35,
+    "name": "You Left It in Your Other Pants…",
+    "effect": "You only have a P Action this rnd",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 86,
+    "type": "critical",
+    "roll_value": 36,
+    "name": "No Power",
+    "effect": "Cannot use Magic Item Effects this encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 87,
+    "type": "critical",
+    "roll_value": 37,
+    "name": "It’s a Trap!",
+    "effect": "You stumble into the nearest logical trap (if any).",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 88,
+    "type": "critical",
+    "roll_value": 38,
+    "name": "Clang & Bang",
+    "effect": "Stealth rolls Disadvantaged this encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 89,
+    "type": "critical",
+    "roll_value": 39,
+    "name": "Spell Addict",
+    "effect": "A Action may ONLY be for a spell like power this round",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 90,
+    "type": "critical",
+    "roll_value": 40,
+    "name": "Ranged Addict",
+    "effect": "A Action may ONLY be for a Ranged weapon Atk this round",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 91,
+    "type": "critical",
+    "roll_value": 41,
+    "name": "Melee Addict",
+    "effect": "A Action may ONLY be for a mleee weapon Atk this round",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 92,
+    "type": "critical",
+    "roll_value": 42,
+    "name": "I’m a Bit Punchy",
+    "effect": "You may only deal Dmg💥 via Brawl this round",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 93,
+    "type": "critical",
+    "roll_value": 43,
+    "name": "This Weapon Sucks!",
+    "effect": "You will not use current weapon for encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 94,
+    "type": "critical",
+    "roll_value": 44,
+    "name": "I Should Have Opened With That",
+    "effect": "Your next Atk must be your strongest possible combo you can legally do",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 95,
+    "type": "critical",
+    "roll_value": 45,
+    "name": "Stuck Reload",
+    "effect": "Your current main weapon is useless until A Action is used to free it",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 96,
+    "type": "critical",
+    "roll_value": 46,
+    "name": "Weapon Slip",
+    "effect": "Disarm self; weapon skitters 2H4 squares away",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 97,
+    "type": "critical",
+    "roll_value": 47,
+    "name": "Armor Pinch",
+    "effect": "MR👣 reduced by half until rnd ends.",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 98,
+    "type": "critical",
+    "roll_value": 48,
+    "name": "Overextend",
+    "effect": "Your next Def is at Disadvantage",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 99,
+    "type": "critical",
+    "roll_value": 49,
+    "name": "Sudden Fatigue",
+    "effect": "Lose 1 Act this rnd (choose M or A).",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  },
+  {
+    "id": 100,
+    "type": "critical",
+    "roll_value": 50,
+    "name": "Head Rush",
+    "effect": "Lose 1 Act each rnd (choose M, A, or P each rnd) for encounter",
+    "created_at": "2026-08-01T20:28:28.074796+00:00"
+  }
+]

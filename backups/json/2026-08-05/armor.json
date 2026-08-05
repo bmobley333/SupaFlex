@@ -1,0 +1,290 @@
+[
+  {
+    "id": 1,
+    "name": "Padded Cloth",
+    "requirement": "💪 4",
+    "ar": "🧥4",
+    "mr": "👣8",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 2,
+    "name": "Leather Jacket",
+    "requirement": "💪 4",
+    "ar": "🧥4",
+    "mr": "👣8",
+    "cost": "1g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 3,
+    "name": "Denim Battle Vest",
+    "requirement": "💪 4",
+    "ar": "🧥4",
+    "mr": "👣8",
+    "cost": "1g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 4,
+    "name": "Glowweave Robe",
+    "requirement": "💪 4",
+    "ar": "🧥4",
+    "mr": "👣8",
+    "cost": "2g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 5,
+    "name": "Gambeson",
+    "requirement": "💪 4",
+    "ar": "🧥4",
+    "mr": "👣8",
+    "cost": "2g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 6,
+    "name": "Traveler’s Cloak",
+    "requirement": "💪 4",
+    "ar": "🧥4",
+    "mr": "👣8",
+    "cost": "1g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 7,
+    "name": "Chain Shirt",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣7",
+    "cost": "2g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 8,
+    "name": "Hide Armor",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣7",
+    "cost": "1g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 9,
+    "name": "Scale Mail",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣7",
+    "cost": "3g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 10,
+    "name": "Tactical Vest",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣7",
+    "cost": "3g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 11,
+    "name": "Brigandine",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣7",
+    "cost": "3g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 12,
+    "name": "Lamellar Armor",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣7",
+    "cost": "3g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 13,
+    "name": "Plate Harness",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣6",
+    "cost": "5g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 14,
+    "name": "Stoneform Armor",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣6",
+    "cost": "6g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 15,
+    "name": "Spiked Armor",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣6",
+    "cost": "5g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 16,
+    "name": "Riot Gear",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣6",
+    "cost": "4g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 17,
+    "name": "Splint Mail",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣6",
+    "cost": "5g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 18,
+    "name": "Banded Armor",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣6",
+    "cost": "5g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 19,
+    "name": "Half-Plate",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣6",
+    "cost": "6g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 20,
+    "name": "Field Plate",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣6",
+    "cost": "7g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 21,
+    "name": "Samurai Armor",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣6",
+    "cost": "7g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 22,
+    "name": "Heavy Laminar",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣6",
+    "cost": "6g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 23,
+    "name": "Hardened Riot Exo-Suit",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣6",
+    "cost": "8g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 24,
+    "name": "Full Plate",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣5",
+    "cost": "10g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 25,
+    "name": "Dragon Scale Armor",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣5",
+    "cost": "12g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 26,
+    "name": "Mithril Mail",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣5",
+    "cost": "15g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 27,
+    "name": "Obsidian Carapace",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣5",
+    "cost": "15g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 28,
+    "name": "Tower Shield Harness",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣5",
+    "cost": "9g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 29,
+    "name": "Arcane Wardsuit",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣5",
+    "cost": "20g",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 32,
+    "name": "Unarmored",
+    "requirement": "💪 0",
+    "ar": "🧥1",
+    "mr": "👣9",
+    "cost": "0s",
+    "created_at": "2026-07-24T15:50:06.373207+00:00"
+  },
+  {
+    "id": 33,
+    "name": "asdf",
+    "requirement": "💪 4",
+    "ar": "🧥4",
+    "mr": "👣8",
+    "cost": "1g",
+    "created_at": "2026-07-31T21:33:16.441726+00:00"
+  },
+  {
+    "id": 34,
+    "name": "asdf",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣5",
+    "cost": "1g",
+    "created_at": "2026-07-31T21:33:26.849216+00:00"
+  }
+]

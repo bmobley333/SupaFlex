@@ -1,0 +1,646 @@
+[
+  {
+    "id": 1,
+    "category": "👕 Clothing & Personal",
+    "name": "Belt",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 2,
+    "category": "👕 Clothing & Personal",
+    "name": "Boots (sturdy)",
+    "cost": "6s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 3,
+    "category": "👕 Clothing & Personal",
+    "name": "Cloak (Winter, Warm)",
+    "cost": "8s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 4,
+    "category": "👕 Clothing & Personal",
+    "name": "Clothes (Common)",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 5,
+    "category": "👕 Clothing & Personal",
+    "name": "Clothes (Fine)",
+    "cost": "2g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 6,
+    "category": "👕 Clothing & Personal",
+    "name": "Gloves (leather)",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 7,
+    "category": "👕 Clothing & Personal",
+    "name": "Hood",
+    "cost": "3s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 8,
+    "category": "👕 Clothing & Personal",
+    "name": "Perfume (small vial)",
+    "cost": "2g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 9,
+    "category": "👕 Clothing & Personal",
+    "name": "Sandals",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 10,
+    "category": "👕 Clothing & Personal",
+    "name": "Scarf of Warmth (non-magical wool)",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 11,
+    "category": "👕 Clothing & Personal",
+    "name": "Soap (bar)",
+    "cost": "1s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 12,
+    "category": "🧺 Containers",
+    "name": "Backpack",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 13,
+    "category": "🧺 Containers",
+    "name": "Barrel (small)",
+    "cost": "6s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 14,
+    "category": "🧺 Containers",
+    "name": "Basket (woven)",
+    "cost": "1s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 15,
+    "category": "🧺 Containers",
+    "name": "Bucket (wood)",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 16,
+    "category": "🧺 Containers",
+    "name": "Case (Map Case, leather)",
+    "cost": "1g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 17,
+    "category": "🧺 Containers",
+    "name": "Flask (metal)",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 18,
+    "category": "🧺 Containers",
+    "name": "Jug (clay)",
+    "cost": "1s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 19,
+    "category": "🧺 Containers",
+    "name": "Pouch (small)",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 20,
+    "category": "🧺 Containers",
+    "name": "Sack (large)",
+    "cost": "1s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 21,
+    "category": "🧺 Containers",
+    "name": "Satchel (leather)",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 22,
+    "category": "🧺 Containers",
+    "name": "Waterskin",
+    "cost": "3s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 23,
+    "category": "🥖 Food & Drink",
+    "name": "Ale (pitcher)",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 24,
+    "category": "🥖 Food & Drink",
+    "name": "Cheese Wheel (small)",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 25,
+    "category": "🥖 Food & Drink",
+    "name": "Dried Meat (1 lb)",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 26,
+    "category": "🥖 Food & Drink",
+    "name": "Hardtack Biscuits (1 lb)",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 27,
+    "category": "🥖 Food & Drink",
+    "name": "Honey Jar",
+    "cost": "6s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 28,
+    "category": "🥖 Food & Drink",
+    "name": "Rations (1 day)",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 29,
+    "category": "🥖 Food & Drink",
+    "name": "Rations (1 week)",
+    "cost": "3g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 30,
+    "category": "🥖 Food & Drink",
+    "name": "Wine (bottle)",
+    "cost": "1g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 31,
+    "category": "🐴 Travel & Animals",
+    "name": "Bridle & Bit",
+    "cost": "2g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 32,
+    "category": "🐴 Travel & Animals",
+    "name": "Cart (2-wheel)",
+    "cost": "20g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 33,
+    "category": "🐴 Travel & Animals",
+    "name": "Feed Bag",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 34,
+    "category": "🐴 Travel & Animals",
+    "name": "Horse (riding)",
+    "cost": "75g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 35,
+    "category": "🐴 Travel & Animals",
+    "name": "Mule",
+    "cost": "8g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 36,
+    "category": "🐴 Travel & Animals",
+    "name": "Saddle",
+    "cost": "5g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 37,
+    "category": "🐴 Travel & Animals",
+    "name": "Saddle Bags",
+    "cost": "3g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 38,
+    "category": "🐴 Travel & Animals",
+    "name": "Wagon (4-wheel)",
+    "cost": "35g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 39,
+    "category": "🏕️ Camp Gear",
+    "name": "Bedroll",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 40,
+    "category": "🏕️ Camp Gear",
+    "name": "Blanket (wool)",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 41,
+    "category": "🏕️ Camp Gear",
+    "name": "Candle (dozen)",
+    "cost": "1s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 42,
+    "category": "🏕️ Camp Gear",
+    "name": "Firewood Bundle",
+    "cost": "1s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 43,
+    "category": "🏕️ Camp Gear",
+    "name": "Lantern (hooded)",
+    "cost": "8s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 44,
+    "category": "🏕️ Camp Gear",
+    "name": "Oil Flask (lamp fuel)",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 45,
+    "category": "🏕️ Camp Gear",
+    "name": "Tent (2-person)",
+    "cost": "2g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 46,
+    "category": "🏕️ Camp Gear",
+    "name": "Tent Stakes (6)",
+    "cost": "1s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 47,
+    "category": "🏕️ Camp Gear",
+    "name": "Tarp (canvas)",
+    "cost": "6s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 48,
+    "category": "🏕️ Camp Gear",
+    "name": "Tinderbox",
+    "cost": "3s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 49,
+    "category": "🏕️ Camp Gear",
+    "name": "Torch (bundle of 5)",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 50,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Chisel (iron)",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 51,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Climbing Spikes (set)",
+    "cost": "6s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 52,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Cooking Pot (iron)",
+    "cost": "6s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 53,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Crowbar",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 54,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Funnel (metal)",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 55,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Grappling Hook",
+    "cost": "8s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 56,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Hammer (small)",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 57,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Hammer (wooden, tent)",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 58,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Mallet (wood)",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 59,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Nails (25)",
+    "cost": "1s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 60,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Net (10 ft)",
+    "cost": "8s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 61,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Pickaxe",
+    "cost": "7s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 62,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Rope (50 ft hemp)",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 63,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Rope (50 ft silk)",
+    "cost": "2g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 64,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Saw (hand)",
+    "cost": "6s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 65,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Shovel (iron)",
+    "cost": "6s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 66,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Skillet (iron)",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 67,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Spikes (iron, 10)",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 68,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Waterscoop Ladle",
+    "cost": "1s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 69,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Whetstone",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 70,
+    "category": "✒️ Writing & Communication",
+    "name": "Chalk (10 sticks)",
+    "cost": "1s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 71,
+    "category": "✒️ Writing & Communication",
+    "name": "Charcoal (writing, 5 sticks)",
+    "cost": "1s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 72,
+    "category": "✒️ Writing & Communication",
+    "name": "Dice/Playing Cards",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 73,
+    "category": "✒️ Writing & Communication",
+    "name": "Horn (wooden)",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 74,
+    "category": "✒️ Writing & Communication",
+    "name": "Ink (small vial)",
+    "cost": "1g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 75,
+    "category": "✒️ Writing & Communication",
+    "name": "Journal/Notebook",
+    "cost": "2g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 76,
+    "category": "✒️ Writing & Communication",
+    "name": "Mirror (polished steel)",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 77,
+    "category": "✒️ Writing & Communication",
+    "name": "Quill & Parchment (10 sheets)",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 78,
+    "category": "✒️ Writing & Communication",
+    "name": "Signal Whistle",
+    "cost": "3s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 79,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Bell (small)",
+    "cost": "4s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 80,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Comb/Brush",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 81,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Drum (hand)",
+    "cost": "1g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 82,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Drum (war)",
+    "cost": "3g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 83,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Lyre/Flute (instrument)",
+    "cost": "5g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 84,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Soapstone Idol",
+    "cost": "3s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 85,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Bandages (roll)",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 86,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Healer’s Kit (bandages, herbs)",
+    "cost": "3g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 87,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Lock (simple)",
+    "cost": "1g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 88,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Lockpicks (set)",
+    "cost": "3g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 89,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Manacles",
+    "cost": "1g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 90,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Needle & Thread (suturing)",
+    "cost": "1g",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 91,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Sewing Kit",
+    "cost": "5s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  },
+  {
+    "id": 92,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Splints (wooden)",
+    "cost": "2s",
+    "created_at": "2026-07-24T15:50:09.365481+00:00"
+  }
+]

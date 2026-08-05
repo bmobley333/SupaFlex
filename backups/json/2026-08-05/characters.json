@@ -1,0 +1,4113 @@
+[
+  {
+    "id": 2,
+    "name": "Duke Nuke'em",
+    "class": "Nuke Master",
+    "race": "Human",
+    "hp": 10,
+    "inventory": [],
+    "log": [
+      "Rolled Mind check  (Unskilled): [16] ➡ kept 16; rolled 2 on d4; +0 bonus. Total = 18.",
+      "Rolled Might check  (Skilled): [19, 20] ➡ kept 20; rolled 2 on d4; +0 bonus. Total = 22. (🌟 Tremendous!)",
+      "Rolled Might check  (Skilled): [17, 14] ➡ kept 17; rolled 2 on d4; +0 bonus. Total = 19."
+    ],
+    "updated_at": "2026-08-02T21:26:44.396+00:00",
+    "might": "d4",
+    "motion": "d4",
+    "mind": "d4",
+    "magic": "d4",
+    "moxie": "d4",
+    "skills": [],
+    "owner_email": null,
+    "sheet_data": {
+      "ap": 2,
+      "bio": {
+        "notes": "",
+        "backstory": "",
+        "image_url": "",
+        "personality": ""
+      },
+      "armor": 4,
+      "level": 1,
+      "sparks": 0,
+      "wounds": 0,
+      "defense": 10,
+      "identity": {
+        "name": "Duke Nuke'em",
+        "race": "Human",
+        "class": "Nuke Master"
+      },
+      "gear_slots": [],
+      "is_charged": false,
+      "max_powers": 5,
+      "max_spells": 5,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "Power Strike ⚡",
+          "usage": "1-⚡",
+          "action": "A",
+          "effect": "Execute weapon strike + 1 Spark.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 10,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d4",
+        "magic": "d4",
+        "might": "d4",
+        "moxie": "d4",
+        "motion": "d4"
+      },
+      "known_skillsets": [],
+      "current_vitality": 10,
+      "focus_die_current": "d4"
+    }
+  },
+  {
+    "id": 3,
+    "name": "Shanask Hero",
+    "class": "Ranger",
+    "race": "None",
+    "hp": 10,
+    "inventory": [],
+    "log": [],
+    "updated_at": "2026-07-22T19:51:35+00:00",
+    "might": "d4",
+    "motion": "d4",
+    "mind": "d4",
+    "magic": "d4",
+    "moxie": "d4",
+    "skills": [],
+    "owner_email": "blake@example.com",
+    "sheet_data": {
+      "ap": 2,
+      "bio": {
+        "notes": "",
+        "backstory": "",
+        "image_url": "",
+        "personality": ""
+      },
+      "armor": 0,
+      "level": 1,
+      "sparks": 0,
+      "wounds": 0,
+      "defense": 10,
+      "gear_slots": [],
+      "is_charged": false,
+      "max_powers": 5,
+      "max_spells": 5,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 10,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d4",
+        "magic": "d4",
+        "might": "d4",
+        "moxie": "d4",
+        "motion": "d4"
+      },
+      "known_skillsets": [],
+      "current_vitality": 10,
+      "focus_die_current": "d4"
+    }
+  },
+  {
+    "id": 4,
+    "name": "Elder Sage",
+    "class": "Mage",
+    "race": "Shanask",
+    "hp": 40,
+    "inventory": [],
+    "log": [
+      "Elder Sage arrives."
+    ],
+    "updated_at": "2026-07-22T19:51:35+00:00",
+    "might": "d10",
+    "motion": "d6",
+    "mind": "d12",
+    "magic": "d12",
+    "moxie": "d8",
+    "skills": [
+      "Lore",
+      "Spellcasting"
+    ],
+    "owner_email": "peer@example.com",
+    "sheet_data": {
+      "ap": 2,
+      "bio": {
+        "notes": "",
+        "backstory": "",
+        "image_url": "",
+        "personality": ""
+      },
+      "armor": 0,
+      "level": 1,
+      "sparks": 0,
+      "wounds": 0,
+      "defense": 10,
+      "gear_slots": [],
+      "is_charged": false,
+      "max_powers": 5,
+      "max_spells": 5,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 40,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d12",
+        "magic": "d12",
+        "might": "d10",
+        "moxie": "d8",
+        "motion": "d6"
+      },
+      "known_skillsets": [
+        "Lore",
+        "Spellcasting"
+      ],
+      "current_vitality": 40,
+      "focus_die_current": "d4"
+    }
+  },
+  {
+    "id": 5,
+    "name": "Elder Sage (Copy)",
+    "class": "Sorcerer",
+    "race": "Shanask",
+    "hp": 40,
+    "inventory": [],
+    "log": [],
+    "updated_at": "2026-07-22T19:51:35+00:00",
+    "might": "d10",
+    "motion": "d6",
+    "mind": "d12",
+    "magic": "d12",
+    "moxie": "d8",
+    "skills": [
+      "Lore",
+      "Spellcasting"
+    ],
+    "owner_email": "blake@example.com",
+    "sheet_data": {
+      "ap": 2,
+      "bio": {
+        "notes": "",
+        "backstory": "",
+        "image_url": "",
+        "personality": ""
+      },
+      "armor": 0,
+      "level": 1,
+      "sparks": 0,
+      "wounds": 0,
+      "defense": 10,
+      "gear_slots": [],
+      "is_charged": false,
+      "max_powers": 5,
+      "max_spells": 5,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 40,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d12",
+        "magic": "d12",
+        "might": "d10",
+        "moxie": "d8",
+        "motion": "d6"
+      },
+      "known_skillsets": [
+        "Lore",
+        "Spellcasting"
+      ],
+      "current_vitality": 40,
+      "focus_die_current": "d4"
+    }
+  },
+  {
+    "id": 6,
+    "name": "Ogluck1",
+    "class": "Adventurer",
+    "race": "Human",
+    "hp": 9,
+    "inventory": [],
+    "log": [],
+    "updated_at": "2026-07-22T19:51:35+00:00",
+    "might": "d6",
+    "motion": "d10",
+    "mind": "d4",
+    "magic": "d4",
+    "moxie": "d4",
+    "skills": [
+      "Goblin Skills",
+      "Diplomacy"
+    ],
+    "owner_email": "metascapegame@gmail.com",
+    "sheet_data": {
+      "ap": 2,
+      "bio": {
+        "notes": "",
+        "backstory": "",
+        "image_url": "",
+        "personality": ""
+      },
+      "armor": 12,
+      "level": 1,
+      "sparks": 0,
+      "wounds": 2,
+      "defense": 10,
+      "gear_slots": [],
+      "is_charged": false,
+      "max_powers": 5,
+      "max_spells": 5,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "Feather Step",
+          "usage": "1-Enc",
+          "action": "M",
+          "effect": "Motion🏃 actions (e.g. silence, balance, acrobatics,etc) at Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Panda Stance",
+          "usage": "1-Rnd",
+          "action": "P",
+          "effect": "Immune to Fear/Charm for 1 rnd; req unarmored or very light armor",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Battle Drill",
+          "usage": "1-Enc",
+          "action": "F",
+          "effect": "Give 1 adjacent ally Nish🚩+1 this rnd.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "Drum [Weapon]",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "On hit; Magic✨ Atk for d6 Dmg💥 to adjacent",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 9,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d4",
+        "magic": "d4",
+        "might": "d6",
+        "moxie": "d4",
+        "motion": "d10"
+      },
+      "known_skillsets": [
+        "Goblin Skills",
+        "Diplomacy"
+      ],
+      "current_vitality": 7,
+      "focus_die_current": "d4"
+    }
+  },
+  {
+    "id": 7,
+    "name": "TestChar",
+    "class": "Adventurer",
+    "race": "Human",
+    "hp": 10,
+    "inventory": [],
+    "log": [],
+    "updated_at": "2026-08-04T15:23:14.816+00:00",
+    "might": "d4",
+    "motion": "d4",
+    "mind": "d4",
+    "magic": "d4",
+    "moxie": "d4",
+    "skills": [],
+    "owner_email": "thebmobley@gmail.com",
+    "sheet_data": {
+      "ap": 2,
+      "bio": {
+        "notes": "",
+        "backstory": "",
+        "image_url": "",
+        "personality": ""
+      },
+      "armor": 4,
+      "level": 1,
+      "sparks": 0,
+      "wounds": 0,
+      "defense": 10,
+      "gear_slots": [],
+      "is_charged": false,
+      "max_powers": 5,
+      "max_spells": 5,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "Battle Rhythm",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Mind👁️; ally Nish🚩+2",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 10,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d4",
+        "magic": "d4",
+        "might": "d4",
+        "moxie": "d4",
+        "motion": "d4"
+      },
+      "known_skillsets": [],
+      "current_vitality": 8,
+      "focus_die_current": "d4"
+    }
+  },
+  {
+    "id": 8,
+    "name": "Phantom Tainville",
+    "class": "Thief",
+    "race": "Human",
+    "hp": 28,
+    "inventory": [
+      {
+        "name": "Weapon: Dagger",
+        "type": "weapon",
+        "usage": "Atk d6 / Dmg d6",
+        "effect": "Max Block: 6",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      },
+      {
+        "name": "Weapon: Dagger",
+        "type": "weapon",
+        "usage": "Atk d8 / Dmg d8",
+        "effect": "Max Block: ",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      }
+    ],
+    "log": [],
+    "updated_at": "2026-07-31T23:56:52.001+00:00",
+    "might": "d6",
+    "motion": "d8",
+    "mind": "d8",
+    "magic": "d4",
+    "moxie": "d6",
+    "skills": [
+      "Thievery"
+    ],
+    "owner_email": "thestobin@gmail.com",
+    "sheet_data": {
+      "ap": 42,
+      "bio": {
+        "notes": "Appearance: Lean and agile | Details: 5'10\", 160 lbs, 16 | Armor: Chain Shirt",
+        "backstory": "Darious Vanar  Prince is the Venue holder  Aurelon chaple in keep.",
+        "image_url": "",
+        "personality": "Positive: Loyal to family | Negative: Distrust of Power | Goal: To find father's Muderer"
+      },
+      "luck": 5,
+      "armor": 4,
+      "level": 19,
+      "ap_log": [
+        {
+          "id": "ap_1785539298332_7zlnn",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage AP",
+          "category": "Vitality",
+          "timestamp": "2026-07-31T23:08:18.332Z",
+          "description": "Purchased +2 Max Vitality"
+        },
+        {
+          "id": "ap_1785536174790_ni3k8",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:16:14.790Z",
+          "description": "Unlearned Individual Skill: 🏃 Nish (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785536168288_u5jy7",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:16:08.288Z",
+          "description": "Learned Custom Skill: Nish (1 AP)"
+        },
+        {
+          "id": "ap_1785535925963_37wlf",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:12:05.963Z",
+          "description": "Unlearned Individual Skill: Ambush Setup (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535923748_r9s88",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:12:03.748Z",
+          "description": "Unlearned Individual Skill: Appraise (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535923422_6ecme",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:12:03.422Z",
+          "description": "Unlearned Individual Skill: Animal Training (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535921670_agydq",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:12:01.670Z",
+          "description": "Learned Individual Skill: Animal Training (1 AP)"
+        },
+        {
+          "id": "ap_1785535867380_zdlgk",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:11:07.380Z",
+          "description": "Learned Individual Skill: Appraise (1 AP)"
+        },
+        {
+          "id": "ap_1785535862600_hvh7y",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:11:02.600Z",
+          "description": "Learned Individual Skill: Ambush Setup (1 AP)"
+        },
+        {
+          "id": "ap_1785535858947_i0ode",
+          "cost": -2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:10:58.947Z",
+          "description": "Unlearned Skill Set: Alchemy (-2 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535858440_e8r4t",
+          "cost": -2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:10:58.440Z",
+          "description": "Unlearned Skill Set: Assassination (-2 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535855582_y7b12",
+          "cost": 2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:10:55.582Z",
+          "description": "Learned Skill Set: Assassination (2 AP)"
+        },
+        {
+          "id": "ap_1785535853508_dx85x",
+          "cost": 2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:10:53.508Z",
+          "description": "Learned Skill Set: Alchemy (2 AP)"
+        },
+        {
+          "id": "ap_1785535675849_c6v4b",
+          "cost": -2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:07:55.849Z",
+          "description": "Unlearned Skill Set: Acrobatics (-2 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535672200_rn7ux",
+          "cost": 2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:07:52.200Z",
+          "description": "Learned Skill Set: Acrobatics (2 AP)"
+        },
+        {
+          "id": "ap_1785535644828_7l58i",
+          "cost": -2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:07:24.828Z",
+          "description": "Unlearned Skill Set: Thievery🎓 (-2 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535616598_9ug8q",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:06:56.598Z",
+          "description": "Unlearned Individual Skill: Acrobatics (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535610678_a48zh",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:06:50.678Z",
+          "description": "Learned Individual Skill: Acrobatics (1 AP)"
+        },
+        {
+          "id": "ap_1785533174150_m72w0",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T21:26:14.150Z",
+          "description": "Unlearned Skilled Weapon: Glaive (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785533170216_v94c8",
+          "cost": 0,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T21:26:10.216Z",
+          "description": "Dropped Unskilled Weapon: Nuke (0 AP)"
+        },
+        {
+          "id": "ap_1785532042968_490zc",
+          "cost": 0,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T21:07:22.968Z",
+          "description": "Dropped Unskilled Weapon: Polearm (0 AP)"
+        },
+        {
+          "id": "ap_1785532018418_yywsw",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T21:06:58.418Z",
+          "description": "Unlearned Skilled Weapon: Quarterstaff (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785531546735_ql50f",
+          "cost": 0,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T20:59:06.735Z",
+          "description": "Dropped Unskilled Weapon: Siege Hammer (0 AP)"
+        },
+        {
+          "id": "ap_1785531522052_0scq8",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T20:58:42.052Z",
+          "description": "Unlearned Skilled Weapon: Dagger (-1 AP Refunded)"
+        }
+      ],
+      "armory": [
+        {
+          "id": "shd_1785533374124_b3dn",
+          "sk": true,
+          "cost": "3g",
+          "name": "Heater Shield",
+          "equipped": true,
+          "max_block": 16,
+          "requirement": "💪 6",
+          "mr_adjustment": "👣–1"
+        },
+        {
+          "id": "shd_1785534050151_fza8",
+          "sk": true,
+          "cost": "2g",
+          "name": "Round Shield",
+          "equipped": false,
+          "max_block": 12,
+          "requirement": "💪 4",
+          "mr_adjustment": "👣0"
+        },
+        {
+          "id": "shd_1785534066347_9pq8",
+          "sk": false,
+          "cost": "8g",
+          "name": "Tower Shield",
+          "equipped": true,
+          "max_block": 24,
+          "requirement": "💪 10",
+          "mr_adjustment": "👣-3"
+        }
+      ],
+      "sparks": 4,
+      "wounds": 0,
+      "defense": 10,
+      "updates": [
+        {
+          "id": "wep_1784929597709_7wix",
+          "sk": true,
+          "atk": "8",
+          "dmg": "8",
+          "mhs": "H",
+          "name": "Dagger (Hurled)",
+          "effect": "Hurled Weapon (Req 🏃 4, Cost 5s)",
+          "max_blk": "n/a"
+        },
+        {
+          "id": "wep_1784929597709_dhzz",
+          "sk": true,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Dagger (Melee)",
+          "effect": "Melee Weapon (Req 💪 4, Cost 5s)",
+          "max_blk": "8"
+        },
+        {
+          "id": "wep_1785530522636_23r4",
+          "sk": true,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Quarterstaff",
+          "effect": "Melee Weapon (Req 💪 4, Cost 1g)",
+          "max_blk": "8"
+        },
+        {
+          "id": "wep_1784929604261_5d13",
+          "sk": false,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Short Sword",
+          "effect": "Melee Weapon (Req 💪 4, Cost 1g)",
+          "max_blk": "8"
+        }
+      ],
+      "weapons": [
+        {
+          "id": "wep_1785532023422_rcep",
+          "sk": true,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Chain Whip",
+          "effect": "Melee Weapon (Req 💪 4, Cost 2g)",
+          "max_blk": "8"
+        },
+        {
+          "id": "wep_1785531527112_4f4f",
+          "sk": true,
+          "atk": "8",
+          "dmg": "8",
+          "mhs": "H",
+          "name": "Dagger (Hurled)",
+          "effect": "Hurled Weapon (Req 🏃 4, Cost 5s)",
+          "max_blk": "n/a"
+        },
+        {
+          "id": "wep_1785531527112_3x63",
+          "sk": true,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Dagger (Melee)",
+          "effect": "Melee Weapon (Req 💪 4, Cost 5s)",
+          "max_blk": "8"
+        },
+        {
+          "id": "wep_1784929604261_5d13",
+          "sk": true,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Short Sword",
+          "effect": "Melee Weapon (Req 💪 4, Cost 1g)",
+          "max_blk": "8"
+        }
+      ],
+      "wardrobe": [
+        {
+          "ar": 4,
+          "name": "Glowweave Robe",
+          "block": 8,
+          "dodge": 8,
+          "effect": "Reinforced Light Armor"
+        },
+        {
+          "ar": 12,
+          "id": "arm_1785533606077_q39z",
+          "mr": "👣5",
+          "sk": false,
+          "cost": "1g",
+          "name": "asdf",
+          "requirement": "💪 12"
+        },
+        {
+          "ar": 4,
+          "id": "arm_1785533863929_buqo",
+          "mr": "👣8",
+          "sk": true,
+          "cost": "5s",
+          "name": "Padded Cloth",
+          "requirement": "💪 4"
+        }
+      ],
+      "armor_slot": {
+        "ar": 4,
+        "name": "Glowweave Robe",
+        "block": 8,
+        "dodge": 8,
+        "effect": "Reinforced Light Armor"
+      },
+      "gear_slots": [
+        {
+          "name": "Weapon: Dagger",
+          "type": "weapon",
+          "usage": "Atk d6 / Dmg d6",
+          "effect": "Max Block: 6",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        },
+        {
+          "name": "Weapon: Dagger",
+          "type": "weapon",
+          "usage": "Atk d8 / Dmg d8",
+          "effect": "Max Block: ",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        }
+      ],
+      "is_charged": false,
+      "max_powers": 8,
+      "max_spells": 5,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "Twin Strike",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "Multi-Atk with main and/or off-hand daggers (no uplift) to Mulit-Atk limit +1",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Weighted Throw",
+          "usage": "2-Enc",
+          "action": "A",
+          "effect": "If you are unseen to Target; Hurl dagger at Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Shadow Step",
+          "usage": "1-Enc",
+          "action": "M",
+          "effect": "Teleport up to MR👣 to a visible shadow",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Apply Poison",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Coat 1 dagger; next hit this Enc adds Dmg💥+1; target Resist✨ or Poisoned",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Shadow Veil",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Invisible for 1 rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Target Analysis",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Study 1 foe; your next Atk⚔️ vs that foe gains Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Assassinate",
+          "usage": "1-Enc",
+          "action": "F",
+          "effect": "On surprise Atk⚔️ from Hidden; Atk with Advantage, Dmg💥+6; target Resist✨ or Stunned",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Lucky Strike",
+          "usage": "1-Luck🍀",
+          "action": "F",
+          "effect": "On successful Atk; Dmg💥+d6",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "shield_slot": {
+        "id": "shd_1785534066347_9pq8",
+        "sk": false,
+        "cost": "8g",
+        "name": "Tower Shield",
+        "equipped": true,
+        "max_block": 24,
+        "requirement": "💪 10",
+        "mr_adjustment": "👣-3"
+      },
+      "simple_gear": [
+        {
+          "id": "gear_1784864889692_r61e",
+          "qty": 1,
+          "name": "Rope"
+        },
+        {
+          "id": "gear_1784997551241_2siu",
+          "qty": 1,
+          "cost": "1g",
+          "name": "Lock (simple)",
+          "category": "⚕️ Medical & Healing Supplies"
+        },
+        {
+          "id": "gear_1784997553439_7nqz",
+          "qty": 2,
+          "cost": "1g",
+          "name": "Manacles",
+          "category": "⚕️ Medical & Healing Supplies"
+        },
+        {
+          "id": "gear_1784997570027_r38w",
+          "qty": 1,
+          "cost": "1g",
+          "name": "Needle & Thread (suturing)",
+          "category": "⚕️ Medical & Healing Supplies"
+        },
+        {
+          "id": "gear_1784997576061_xigq",
+          "qty": 1,
+          "cost": "1s",
+          "name": "Candle (dozen)",
+          "category": "🏕️ Camp Gear"
+        },
+        {
+          "id": "gear_1784997577189_wt76",
+          "qty": 1,
+          "cost": "1s",
+          "name": "Soap (bar)",
+          "category": "👕 Clothing & Personal"
+        },
+        {
+          "id": "gear_1784997578448_t8ou",
+          "qty": 1,
+          "cost": "6s",
+          "name": "Climbing Spikes (set)",
+          "category": "🛠️ Tools & Equipment"
+        },
+        {
+          "id": "gear_1784997579838_vzq9",
+          "qty": 2,
+          "cost": "4s",
+          "name": "Skillet (iron)",
+          "category": "🛠️ Tools & Equipment"
+        },
+        {
+          "id": "gear_1784997581388_h9pm",
+          "qty": 1,
+          "cost": "4s",
+          "name": "Spikes (iron, 10)",
+          "category": "🛠️ Tools & Equipment"
+        },
+        {
+          "id": "gear_1784997582793_u0g4",
+          "qty": 1,
+          "cost": "2s",
+          "name": "Whetstone",
+          "category": "🛠️ Tools & Equipment"
+        },
+        {
+          "id": "gear_1784998255176_murt",
+          "qty": 2,
+          "cost": "2s",
+          "name": "Bandages (roll)",
+          "category": "⚕️ Medical & Healing Supplies"
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "Zircon Lens",
+          "usage": "1-Enc",
+          "action": "M",
+          "effect": "Peer through; Mind👁️+2 to spot hidden doors/traps/monsters",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Hush Leaf",
+          "usage": "1",
+          "action": "P",
+          "effect": "On chew; Stealth🏃 Advantage this rnd.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Potion of Healing",
+          "usage": "4",
+          "action": "P",
+          "effect": "Heal self 1d4",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Zephyr Feather",
+          "usage": "1-Enc",
+          "action": "M",
+          "effect": "MR👣+2 this rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Lucky Coin",
+          "usage": "1-Day",
+          "action": "F",
+          "effect": "Reroll one failed roll x2  Have two coins",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 28,
+      "custom_powers": [
+        {
+          "id": 1785534647147,
+          "sub": "class",
+          "name": "Nuke v1",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "asdf",
+          "source": "Custom",
+          "version": 1,
+          "dropdown": null,
+          "base_name": "Nuke",
+          "created_at": "2026-07-31T21:50:47.147Z",
+          "table_name": "📁 Custom Powers"
+        },
+        {
+          "id": 1785534664031,
+          "sub": "class",
+          "name": "Nukeem v1",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "asdf",
+          "source": "Custom",
+          "version": 1,
+          "dropdown": null,
+          "base_name": "Nukeem",
+          "created_at": "2026-07-31T21:51:04.031Z",
+          "table_name": "📁 Custom Powers"
+        },
+        {
+          "id": 1785534675083,
+          "sub": "class",
+          "name": "Nukeem v2",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "asdfasdf",
+          "source": "Custom",
+          "version": 2,
+          "dropdown": null,
+          "base_name": "Nukeem",
+          "created_at": "2026-07-31T21:51:15.083Z",
+          "table_name": "📁 Custom Powers"
+        },
+        {
+          "id": 1785534937055,
+          "sub": "class",
+          "name": "asdf v1",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "asdf",
+          "source": "Custom",
+          "version": 1,
+          "dropdown": null,
+          "base_name": "asdf",
+          "created_at": "2026-07-31T21:55:37.055Z",
+          "table_name": "📁 Custom Powers"
+        },
+        {
+          "id": 1785534947753,
+          "sub": "class",
+          "name": "asdf v2",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "asdfasdf",
+          "source": "Custom",
+          "version": 2,
+          "dropdown": null,
+          "base_name": "asdf",
+          "created_at": "2026-07-31T21:55:47.753Z",
+          "table_name": "📁 Custom Powers"
+        }
+      ],
+      "focus_die_max": "d4",
+      "movement_rate": {
+        "shield": "3",
+        "armored": 6
+      },
+      "attribute_dice": {
+        "mind": "d8",
+        "magic": "d4",
+        "might": "d6",
+        "moxie": "d6",
+        "motion": "d8"
+      },
+      "other_treasure": [
+        {
+          "id": "tr_1784864728079_iqji",
+          "name": "Ruby",
+          "value": 3,
+          "currency": "gp"
+        },
+        {
+          "id": "tr_1784864741659_6dh9",
+          "name": "Iron Statuette",
+          "value": 2,
+          "currency": "sp"
+        },
+        {
+          "id": "val-1785012750739",
+          "name": "Good Drum (war) (1.25x value)",
+          "value": 1,
+          "currency": "gp"
+        }
+      ],
+      "known_skillsets": [
+        "Thievery"
+      ],
+      "current_vitality": 28,
+      "focus_die_current": "d4",
+      "last_vit_roll_level": 19,
+      "favorite_power_tables": [
+        "Human (Aethelgard Bloodline)",
+        "Trickster Powers",
+        "Phantom Tainville",
+        "Dual Wield Power",
+        "Luck Powers"
+      ],
+      "known_individual_skills": []
+    }
+  },
+  {
+    "id": 9,
+    "name": "Maddy",
+    "class": "Adventurer",
+    "race": "Human",
+    "hp": 25,
+    "inventory": [
+      {
+        "name": "Weapon: Long Sword",
+        "type": "weapon",
+        "usage": "Atk d8 / Dmg d8",
+        "effect": "Max Block: 8",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      },
+      {
+        "name": "Weapon: Brawl",
+        "type": "weapon",
+        "usage": "Atk d8 / Dmg d6",
+        "effect": "Max Block: n/a",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      }
+    ],
+    "log": [],
+    "updated_at": "2026-07-22T19:53:11.662+00:00",
+    "might": "d8",
+    "motion": "d6",
+    "mind": "d4",
+    "magic": "d6",
+    "moxie": "d8",
+    "skills": [
+      "Streetwise Survival",
+      "Intimidation & Presence"
+    ],
+    "owner_email": "mccann.2010@gmail.com",
+    "sheet_data": {
+      "ap": 40,
+      "bio": {
+        "notes": "Appearance: Pants Stale Vest | Details: 6'1\", 300 lbs, 23 | Armor: Dragon Scale",
+        "backstory": "Aurelln - inside of chapel of Darius Vanar - Vanar owns venue of wedding.\n\nVanar seems like a  somewhat innocent party.\n\nHis nickname is \"The Fox\"\n\nUse Seashell with Tree carving as a challenge token with the phrase -\nFor the quiet tide, and the living wood.\n\nThe great one came from the \"far North.\"\n\nFOUND JIM - has magic invisibility ring that resizes. When put on wearer becomes permanently invisible until removed. Is cursed but has not been explained to me what that means.\n\n",
+        "image_url": "",
+        "personality": "Positive: Loyal | Negative: Wreckless | Goal: Reunite with Trashboat"
+      },
+      "armor": 8,
+      "level": 20,
+      "sparks": 0,
+      "wounds": 2,
+      "defense": 10,
+      "gear_slots": [
+        {
+          "name": "Weapon: Long Sword",
+          "type": "weapon",
+          "usage": "Atk d8 / Dmg d8",
+          "effect": "Max Block: 8",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        },
+        {
+          "name": "Weapon: Brawl",
+          "type": "weapon",
+          "usage": "Atk d8 / Dmg d6",
+          "effect": "Max Block: n/a",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        }
+      ],
+      "is_charged": false,
+      "max_powers": 13,
+      "max_spells": 8,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "Adrenaline Surge",
+          "usage": "2-Enc",
+          "action": "A",
+          "effect": "Heal self 2❤️",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Bareknuckle Brawling",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "Make 2 unarmed Atk⚔️; suffer d4 self-Dmg💥❤️",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Savage Strike",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "Melee Atk; Dmg💥+2",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Smash Gate",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "Break barrier/object; Might💪 with Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Whirlwind Strike",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "Atk all foes adjacent to you",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Improvised Arsenal",
+          "usage": "1-Rnd",
+          "action": "P",
+          "effect": "Wield random object; Atk⚔️ and Dmg💥 equals Might💪",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Iron Stamina",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Heal self 1d4",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Lucky Block🛡️",
+          "usage": "1-Luck🍀",
+          "action": "P",
+          "effect": "Block🛡️ as if max roll, on 1 Atk",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Oops, Shouldn’t Have Said That…",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Insult foe; Mind👁️ or target focuses Atk on you this rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Weapon Breaker",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "On successful Might💪 Atk; destroy 1 enemy weapon/shield",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Brotherhood of the Garbage Can Gods",
+          "usage": "1-Day",
+          "action": "F",
+          "effect": "Call on ally memory; reroll 1 failed roll (self or ally)",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Fortunate Timing",
+          "usage": "1-Luck🍀",
+          "action": "F",
+          "effect": "take turn immediately even if before your Nish🚩",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "PA-TING!",
+          "usage": "1-Enc",
+          "action": "F",
+          "effect": "On successful Dodge🏃; make 1 immediate counter-Atk⚔️ at Disadvantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "Cape of Winds",
+          "usage": "2-Enc",
+          "action": "A",
+          "effect": "Magic✨ to push 1 foe d4sq",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Boots of Springsteel",
+          "usage": "1-Enc",
+          "action": "M",
+          "effect": "Doubles jump height",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Vine Cord",
+          "usage": "1-Day",
+          "action": "M",
+          "effect": "Extend up to 100ft vine-rope; can lift up to 250Lb individuals/items",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Dragon [Armor]",
+          "usage": "1-Day",
+          "action": "P",
+          "effect": "Immune to fire Dmg💥 for Encounter",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Ember Pin",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Ignite small flame on touch",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Loaded Gambler’s Dice",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "On use; reroll 1 failed Atk⚔️, Skill🎓, or Power⚡ roll",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Potion of Healing",
+          "usage": "2",
+          "action": "P",
+          "effect": "Heal self 1d4",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Smoke Pellet",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Creates smoke cloud; immedite Dodge with Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 25,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d4",
+        "magic": "d6",
+        "might": "d8",
+        "moxie": "d8",
+        "motion": "d6"
+      },
+      "known_skillsets": [
+        "Streetwise Survival",
+        "Intimidation & Presence"
+      ],
+      "current_vitality": 23,
+      "focus_die_current": "d4"
+    }
+  },
+  {
+    "id": 10,
+    "name": "Solen Flickerlight",
+    "class": "Adventurer",
+    "race": "Human",
+    "hp": 26,
+    "inventory": [
+      {
+        "name": "Weapon: Shirkin",
+        "type": "weapon",
+        "usage": "Atk d8 / Dmg d8",
+        "effect": "Max Block: n/a",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      },
+      {
+        "name": "Weapon: Brawl",
+        "type": "weapon",
+        "usage": "Atk d4 / Dmg d4",
+        "effect": "Max Block: n/a",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      }
+    ],
+    "log": [],
+    "updated_at": "2026-07-22T19:51:35+00:00",
+    "might": "d4",
+    "motion": "d8",
+    "mind": "d8",
+    "magic": "d6",
+    "moxie": "d6",
+    "skills": [
+      "Agility",
+      "Scholar"
+    ],
+    "owner_email": "pbagga777@gmail.com",
+    "sheet_data": {
+      "ap": 40,
+      "bio": {
+        "notes": "Appearance: Gold Eyes & wings, | Details: 2'6\", 2 lbs, 18 yr | Armor: Cloth",
+        "backstory": "Aurelon Lawful Good god of Sea. Rose Pink Blue\nConch shell tree talisment\n3 ap to use",
+        "image_url": "",
+        "personality": "Positive: Calm, does not panic | Negative: Hates undead | Goal: To spread Solen Light"
+      },
+      "armor": 4,
+      "level": 20,
+      "sparks": 0,
+      "wounds": 0,
+      "defense": 10,
+      "gear_slots": [
+        {
+          "name": "Weapon: Shirkin",
+          "type": "weapon",
+          "usage": "Atk d8 / Dmg d8",
+          "effect": "Max Block: n/a",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        },
+        {
+          "name": "Weapon: Brawl",
+          "type": "weapon",
+          "usage": "Atk d4 / Dmg d4",
+          "effect": "Max Block: n/a",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        }
+      ],
+      "is_charged": false,
+      "max_powers": 10,
+      "max_spells": 7,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "Healing Light (Greater)",
+          "usage": "3-Enc",
+          "action": "A",
+          "effect": "Heal 1d8+1 Vit❤️",
+          "select": true,
+          "checked": [
+            true,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Purging Breath",
+          "usage": "2-Day",
+          "action": "A",
+          "effect": "Cleanse 1 condition (Poison, Disease, Fatigue, Fear, Charm, Confusion, Stunned, Paralysis)",
+          "select": true,
+          "checked": [
+            true,
+            true,
+            false
+          ]
+        },
+        {
+          "name": "Crashing Wave",
+          "usage": "2-Enc",
+          "action": "A",
+          "effect": "Summon a forceful wave; Magic✨ Atk pushes all adjacent foes 1sq and they must roll Might💪 or fall Prone\n.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Fey Flight",
+          "usage": "3-Enc",
+          "action": "M",
+          "effect": "While flying this rnd, move up to MR👣 and ignore difficult terrain",
+          "select": true,
+          "checked": [
+            true,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Righteous Riptide",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "Channel a forceful jet of purified water at a target. Magic✨ Atk for d8 Dmg💥. If the target is Undead or a Demon, the attack is made with Advantage\n.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Cobra Stance",
+          "usage": "1-Rnd",
+          "action": "P",
+          "effect": "Dodge+2 for 1 rnd; req unarmored/light armor",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Radiant Presence",
+          "usage": "1-Rnd",
+          "action": "P",
+          "effect": "Activate aura for 1 rnd; adjacent allies Heal 1 Vit❤️ at start of their next turn",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Sun-Kissed Radiance",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Emit bright light 3sq / dim 6sq for 1 Enc; vs Undead in bright light PCs Atk with Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Piercing Strike",
+          "usage": "3-Enc",
+          "action": "A",
+          "effect": "This Atk ignores 1 AR🧥 (Dmg💥+1 if target has armor)",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Solara’s Vow",
+          "usage": "2-Day",
+          "action": "F",
+          "effect": "Once/day, Revive ally at ≤0 Vit❤️ to 1 Vit❤️",
+          "select": true,
+          "checked": [
+            true,
+            true,
+            false
+          ]
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "Sunglow Brooch",
+          "usage": "1-Day",
+          "action": "P",
+          "effect": "Emit light 20ft radius, no shadows for Encounter",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Sunpetal Brooch",
+          "usage": "1",
+          "action": "P",
+          "effect": "On use; Heal self 1 Vit❤️ and emit light 2sq for 1 Enc",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Vial of Sacred Dust",
+          "usage": "1",
+          "action": "A",
+          "effect": "Throw 2sq; Magic✨ Atk vs undead; d4 Dmg and Weakened 1 rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Zircon Lens",
+          "usage": "1-Enc",
+          "action": "M",
+          "effect": "Peer through; Mind👁️+2 to spot hidden doors/traps/monsters",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Torch Seed",
+          "usage": "1-Day",
+          "action": "P",
+          "effect": "Thow against wall or surface; sprouts flaming torch for Encounter",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Hush Leaf",
+          "usage": "1",
+          "action": "P",
+          "effect": "On chew; Stealth🏃 Advantage this rnd.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Lantern of Whispers",
+          "usage": "1-Day",
+          "action": "P",
+          "effect": "Perception has Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 26,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d8",
+        "magic": "d6",
+        "might": "d4",
+        "moxie": "d6",
+        "motion": "d8"
+      },
+      "known_skillsets": [
+        "Agility",
+        "Scholar"
+      ],
+      "current_vitality": 26,
+      "focus_die_current": "d4"
+    }
+  },
+  {
+    "id": 11,
+    "name": "Kaeleon \"The Mantis\" Corvus",
+    "class": "Adventurer",
+    "race": "Human",
+    "hp": 23,
+    "inventory": [
+      {
+        "name": "Weapon: Katar",
+        "type": "weapon",
+        "usage": "Atk d8 / Dmg d8",
+        "effect": "Max Block: 8",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      },
+      {
+        "name": "Weapon: Crossbow",
+        "type": "weapon",
+        "usage": "Atk d6 / Dmg d6",
+        "effect": "Max Block: n/a",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      },
+      {
+        "name": "Weapon: Brawl",
+        "type": "weapon",
+        "usage": "Atk d8 / Dmg d6",
+        "effect": "Max Block: n/a",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      }
+    ],
+    "log": [],
+    "updated_at": "2026-07-22T19:51:35+00:00",
+    "might": "d8",
+    "motion": "d8",
+    "mind": "d6",
+    "magic": "d4",
+    "moxie": "d6",
+    "skills": [
+      "Iron Lotus Discipline",
+      "Scout",
+      "Scholar"
+    ],
+    "owner_email": "ratumoko@gmail.com",
+    "sheet_data": {
+      "ap": 44,
+      "bio": {
+        "notes": "Details: 6'4\", 194 lbs, 36 yr | Armor: Hide",
+        "backstory": "Future Skills\n- Shadow Step\n-Cloak of Darkness\nPrince Darius owns venue\n",
+        "image_url": "",
+        "personality": "Positive: Protector Ferocity | Negative: Mistrust of politics | Goal: Stop mercenary named Sora"
+      },
+      "armor": 6,
+      "level": 22,
+      "sparks": 0,
+      "wounds": 9,
+      "defense": 10,
+      "gear_slots": [
+        {
+          "name": "Weapon: Katar",
+          "type": "weapon",
+          "usage": "Atk d8 / Dmg d8",
+          "effect": "Max Block: 8",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        },
+        {
+          "name": "Weapon: Crossbow",
+          "type": "weapon",
+          "usage": "Atk d6 / Dmg d6",
+          "effect": "Max Block: n/a",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        },
+        {
+          "name": "Weapon: Brawl",
+          "type": "weapon",
+          "usage": "Atk d8 / Dmg d6",
+          "effect": "Max Block: n/a",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        }
+      ],
+      "is_charged": false,
+      "max_powers": 5,
+      "max_spells": 12,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "Flurry of Blows",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "Multi-Atk⚔️ with katars⚔️; each Dmg💥 at –1d",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Pressure Point Strike",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "On hit; target Resist✨ or Stunned 1 rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Feather Step",
+          "usage": "1-Enc",
+          "action": "M",
+          "effect": "Motion🏃 actions (e.g. silence, balance, acrobatics,etc) at Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Herbal Poultice",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Heal 1 Vit❤️ using herbs",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "Crossbow of the Alley",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "Make 1 Ranged Atk⚔️; ignoring cover and any Atk Disadvantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Scroll of the Commet",
+          "usage": "1",
+          "action": "A",
+          "effect": "Magic✨Atk and Dmg💥 both with Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Shoes of Silence",
+          "usage": "1-Enc",
+          "action": "F",
+          "effect": "Activate; all steps are noiseless for 1 Enc; Stealth🏃 while moving gains Advantage.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Magnet Ring",
+          "usage": "1-Rnd",
+          "action": "M",
+          "effect": "Pull/push metal object 2sq; Magic✨ vs difficulty if Resist✨s or over 50Lbs",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Hush Leaf",
+          "usage": "1-Day",
+          "action": "P",
+          "effect": "On chew, can't talk for encounter; Stealth🏃 completely silent this enc.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Dice of Fortune",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Roll d10 on 10 gain 1 Luck🍀 chit",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Potion of Healing",
+          "usage": "2",
+          "action": "P",
+          "effect": "Heal self 1d4",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Shimmer Veil [Armor]",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Become Invisible for 1 rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Katars of the Unbending Steel (Resolve & Execution)",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "On hit; target Resist✨ or Stunned 1 rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Ring of the Serpent",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Poison aura; all foes in 3sqR Rolls-2 vs Resist✨",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Smoke Pellet",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Creates smoke cloud; immedite Dodge with Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Fine Slik Shirt",
+          "usage": "1-Day",
+          "action": "P",
+          "effect": "Mind👁️ Social+2 for encounter",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 23,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d6",
+        "magic": "d4",
+        "might": "d8",
+        "moxie": "d6",
+        "motion": "d8"
+      },
+      "known_skillsets": [
+        "Iron Lotus Discipline",
+        "Scout",
+        "Scholar"
+      ],
+      "current_vitality": 14,
+      "focus_die_current": "d4"
+    }
+  },
+  {
+    "id": 17,
+    "name": "Phantom Tainville",
+    "class": "Thief",
+    "race": "Human",
+    "hp": 28,
+    "inventory": [
+      {
+        "name": "Weapon: Dagger",
+        "type": "weapon",
+        "usage": "Atk d6 / Dmg d6",
+        "effect": "Max Block: 6",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      },
+      {
+        "name": "Weapon: Dagger",
+        "type": "weapon",
+        "usage": "Atk d8 / Dmg d8",
+        "effect": "Max Block: ",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      }
+    ],
+    "log": [],
+    "updated_at": "2026-08-05T17:46:42.5+00:00",
+    "might": "d6",
+    "motion": "d8",
+    "mind": "d8",
+    "magic": "d4",
+    "moxie": "d6",
+    "skills": [
+      "Thievery"
+    ],
+    "owner_email": "metascapegame@gmail.com",
+    "sheet_data": {
+      "ap": 42,
+      "bio": {
+        "notes": "Appearance: Lean and agile | Details: 5'10\", 160 lbs, 16 | Armor: Chain Shirt",
+        "backstory": "Darious Vanar  Prince is the Venue holder  Aurelon chaple in keep.",
+        "image_url": "",
+        "personality": "Positive: Loyal to family | Negative: Distrust of Power | Goal: To find father's Muderer"
+      },
+      "luck": 5,
+      "armor": 4,
+      "level": 19,
+      "ap_log": [
+        {
+          "id": "ap_1785539298332_7zlnn",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage AP",
+          "category": "Vitality",
+          "timestamp": "2026-07-31T23:08:18.332Z",
+          "description": "Purchased +2 Max Vitality"
+        },
+        {
+          "id": "ap_1785536174790_ni3k8",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:16:14.790Z",
+          "description": "Unlearned Individual Skill: 🏃 Nish (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785536168288_u5jy7",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:16:08.288Z",
+          "description": "Learned Custom Skill: Nish (1 AP)"
+        },
+        {
+          "id": "ap_1785535925963_37wlf",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:12:05.963Z",
+          "description": "Unlearned Individual Skill: Ambush Setup (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535923748_r9s88",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:12:03.748Z",
+          "description": "Unlearned Individual Skill: Appraise (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535923422_6ecme",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:12:03.422Z",
+          "description": "Unlearned Individual Skill: Animal Training (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535921670_agydq",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:12:01.670Z",
+          "description": "Learned Individual Skill: Animal Training (1 AP)"
+        },
+        {
+          "id": "ap_1785535867380_zdlgk",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:11:07.380Z",
+          "description": "Learned Individual Skill: Appraise (1 AP)"
+        },
+        {
+          "id": "ap_1785535862600_hvh7y",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:11:02.600Z",
+          "description": "Learned Individual Skill: Ambush Setup (1 AP)"
+        },
+        {
+          "id": "ap_1785535858947_i0ode",
+          "cost": -2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:10:58.947Z",
+          "description": "Unlearned Skill Set: Alchemy (-2 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535858440_e8r4t",
+          "cost": -2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:10:58.440Z",
+          "description": "Unlearned Skill Set: Assassination (-2 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535855582_y7b12",
+          "cost": 2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:10:55.582Z",
+          "description": "Learned Skill Set: Assassination (2 AP)"
+        },
+        {
+          "id": "ap_1785535853508_dx85x",
+          "cost": 2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:10:53.508Z",
+          "description": "Learned Skill Set: Alchemy (2 AP)"
+        },
+        {
+          "id": "ap_1785535675849_c6v4b",
+          "cost": -2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:07:55.849Z",
+          "description": "Unlearned Skill Set: Acrobatics (-2 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535672200_rn7ux",
+          "cost": 2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:07:52.200Z",
+          "description": "Learned Skill Set: Acrobatics (2 AP)"
+        },
+        {
+          "id": "ap_1785535644828_7l58i",
+          "cost": -2,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:07:24.828Z",
+          "description": "Unlearned Skill Set: Thievery🎓 (-2 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535616598_9ug8q",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:06:56.598Z",
+          "description": "Unlearned Individual Skill: Acrobatics (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785535610678_a48zh",
+          "cost": 1,
+          "tier": 1,
+          "source": "Manage Skills",
+          "category": "Skills",
+          "timestamp": "2026-07-31T22:06:50.678Z",
+          "description": "Learned Individual Skill: Acrobatics (1 AP)"
+        },
+        {
+          "id": "ap_1785533174150_m72w0",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T21:26:14.150Z",
+          "description": "Unlearned Skilled Weapon: Glaive (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785533170216_v94c8",
+          "cost": 0,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T21:26:10.216Z",
+          "description": "Dropped Unskilled Weapon: Nuke (0 AP)"
+        },
+        {
+          "id": "ap_1785532042968_490zc",
+          "cost": 0,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T21:07:22.968Z",
+          "description": "Dropped Unskilled Weapon: Polearm (0 AP)"
+        },
+        {
+          "id": "ap_1785532018418_yywsw",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T21:06:58.418Z",
+          "description": "Unlearned Skilled Weapon: Quarterstaff (-1 AP Refunded)"
+        },
+        {
+          "id": "ap_1785531546735_ql50f",
+          "cost": 0,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T20:59:06.735Z",
+          "description": "Dropped Unskilled Weapon: Siege Hammer (0 AP)"
+        },
+        {
+          "id": "ap_1785531522052_0scq8",
+          "cost": -1,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-07-31T20:58:42.052Z",
+          "description": "Unlearned Skilled Weapon: Dagger (-1 AP Refunded)"
+        }
+      ],
+      "armory": [
+        {
+          "id": "shd_1785533374124_b3dn",
+          "sk": true,
+          "cost": "3g",
+          "name": "Heater Shield",
+          "equipped": true,
+          "max_block": 16,
+          "requirement": "💪 6",
+          "mr_adjustment": "👣–1"
+        },
+        {
+          "id": "shd_1785534050151_fza8",
+          "sk": true,
+          "cost": "2g",
+          "name": "Round Shield",
+          "equipped": false,
+          "max_block": 12,
+          "requirement": "💪 4",
+          "mr_adjustment": "👣0"
+        },
+        {
+          "id": "shd_1785534066347_9pq8",
+          "sk": false,
+          "cost": "8g",
+          "name": "Tower Shield",
+          "equipped": true,
+          "max_block": 24,
+          "requirement": "💪 10",
+          "mr_adjustment": "👣-3"
+        }
+      ],
+      "sparks": 4,
+      "wounds": 0,
+      "defense": 10,
+      "updates": [
+        {
+          "id": "wep_1784929597709_7wix",
+          "sk": true,
+          "atk": "8",
+          "dmg": "8",
+          "mhs": "H",
+          "name": "Dagger (Hurled)",
+          "effect": "Hurled Weapon (Req 🏃 4, Cost 5s)",
+          "max_blk": "n/a"
+        },
+        {
+          "id": "wep_1784929597709_dhzz",
+          "sk": true,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Dagger (Melee)",
+          "effect": "Melee Weapon (Req 💪 4, Cost 5s)",
+          "max_blk": "8"
+        },
+        {
+          "id": "wep_1785530522636_23r4",
+          "sk": true,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Quarterstaff",
+          "effect": "Melee Weapon (Req 💪 4, Cost 1g)",
+          "max_blk": "8"
+        },
+        {
+          "id": "wep_1784929604261_5d13",
+          "sk": false,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Short Sword",
+          "effect": "Melee Weapon (Req 💪 4, Cost 1g)",
+          "max_blk": "8"
+        }
+      ],
+      "weapons": [
+        {
+          "id": "wep_1785532023422_rcep",
+          "sk": true,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Chain Whip",
+          "effect": "Melee Weapon (Req 💪 4, Cost 2g)",
+          "max_blk": "8"
+        },
+        {
+          "id": "wep_1785531527112_4f4f",
+          "sk": true,
+          "atk": "8",
+          "dmg": "8",
+          "mhs": "H",
+          "name": "Dagger (Hurled)",
+          "effect": "Hurled Weapon (Req 🏃 4, Cost 5s)",
+          "max_blk": "n/a"
+        },
+        {
+          "id": "wep_1785531527112_3x63",
+          "sk": true,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Dagger (Melee)",
+          "effect": "Melee Weapon (Req 💪 4, Cost 5s)",
+          "max_blk": "8"
+        },
+        {
+          "id": "wep_1784929604261_5d13",
+          "sk": true,
+          "atk": "6",
+          "dmg": "6",
+          "mhs": "M",
+          "name": "Short Sword",
+          "effect": "Melee Weapon (Req 💪 4, Cost 1g)",
+          "max_blk": "8"
+        }
+      ],
+      "wardrobe": [
+        {
+          "ar": 4,
+          "name": "Glowweave Robe",
+          "block": 8,
+          "dodge": 8,
+          "effect": "Reinforced Light Armor"
+        },
+        {
+          "ar": 12,
+          "id": "arm_1785533606077_q39z",
+          "mr": "👣5",
+          "sk": false,
+          "cost": "1g",
+          "name": "asdf",
+          "requirement": "💪 12"
+        },
+        {
+          "ar": 4,
+          "id": "arm_1785533863929_buqo",
+          "mr": "👣8",
+          "sk": true,
+          "cost": "5s",
+          "name": "Padded Cloth",
+          "requirement": "💪 4"
+        }
+      ],
+      "armor_slot": {
+        "ar": 4,
+        "name": "Glowweave Robe",
+        "block": 8,
+        "dodge": 8,
+        "effect": "Reinforced Light Armor"
+      },
+      "gear_slots": [
+        {
+          "name": "Weapon: Dagger",
+          "type": "weapon",
+          "usage": "Atk d6 / Dmg d6",
+          "effect": "Max Block: 6",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        },
+        {
+          "name": "Weapon: Dagger",
+          "type": "weapon",
+          "usage": "Atk d8 / Dmg d8",
+          "effect": "Max Block: ",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        }
+      ],
+      "is_charged": false,
+      "max_powers": 8,
+      "max_spells": 5,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "Twin Strike",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "Multi-Atk with main and/or off-hand daggers (no uplift) to Mulit-Atk limit +1",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Weighted Throw",
+          "usage": "2-Enc",
+          "action": "A",
+          "effect": "If you are unseen to Target; Hurl dagger at Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Shadow Step",
+          "usage": "1-Enc",
+          "action": "M",
+          "effect": "Teleport up to MR👣 to a visible shadow",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Apply Poison",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Coat 1 dagger; next hit this Enc adds Dmg💥+1; target Resist✨ or Poisoned",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Shadow Veil",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Invisible for 1 rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Target Analysis",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Study 1 foe; your next Atk⚔️ vs that foe gains Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Assassinate",
+          "usage": "1-Enc",
+          "action": "F",
+          "effect": "On surprise Atk⚔️ from Hidden; Atk with Advantage, Dmg💥+6; target Resist✨ or Stunned",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Lucky Strike",
+          "usage": "1-Luck🍀",
+          "action": "F",
+          "effect": "On successful Atk; Dmg💥+d6",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "shield_slot": {
+        "id": "shd_1785534066347_9pq8",
+        "sk": false,
+        "cost": "8g",
+        "name": "Tower Shield",
+        "equipped": true,
+        "max_block": 24,
+        "requirement": "💪 10",
+        "mr_adjustment": "👣-3"
+      },
+      "simple_gear": [
+        {
+          "id": "gear_1784864889692_r61e",
+          "qty": 1,
+          "name": "Rope"
+        },
+        {
+          "id": "gear_1784997551241_2siu",
+          "qty": 1,
+          "cost": "1g",
+          "name": "Lock (simple)",
+          "category": "⚕️ Medical & Healing Supplies"
+        },
+        {
+          "id": "gear_1784997553439_7nqz",
+          "qty": 2,
+          "cost": "1g",
+          "name": "Manacles",
+          "category": "⚕️ Medical & Healing Supplies"
+        },
+        {
+          "id": "gear_1784997570027_r38w",
+          "qty": 1,
+          "cost": "1g",
+          "name": "Needle & Thread (suturing)",
+          "category": "⚕️ Medical & Healing Supplies"
+        },
+        {
+          "id": "gear_1784997576061_xigq",
+          "qty": 1,
+          "cost": "1s",
+          "name": "Candle (dozen)",
+          "category": "🏕️ Camp Gear"
+        },
+        {
+          "id": "gear_1784997577189_wt76",
+          "qty": 1,
+          "cost": "1s",
+          "name": "Soap (bar)",
+          "category": "👕 Clothing & Personal"
+        },
+        {
+          "id": "gear_1784997578448_t8ou",
+          "qty": 1,
+          "cost": "6s",
+          "name": "Climbing Spikes (set)",
+          "category": "🛠️ Tools & Equipment"
+        },
+        {
+          "id": "gear_1784997579838_vzq9",
+          "qty": 2,
+          "cost": "4s",
+          "name": "Skillet (iron)",
+          "category": "🛠️ Tools & Equipment"
+        },
+        {
+          "id": "gear_1784997581388_h9pm",
+          "qty": 1,
+          "cost": "4s",
+          "name": "Spikes (iron, 10)",
+          "category": "🛠️ Tools & Equipment"
+        },
+        {
+          "id": "gear_1784997582793_u0g4",
+          "qty": 1,
+          "cost": "2s",
+          "name": "Whetstone",
+          "category": "🛠️ Tools & Equipment"
+        },
+        {
+          "id": "gear_1784998255176_murt",
+          "qty": 2,
+          "cost": "2s",
+          "name": "Bandages (roll)",
+          "category": "⚕️ Medical & Healing Supplies"
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "Zircon Lens",
+          "usage": "1-Enc",
+          "action": "M",
+          "effect": "Peer through; Mind👁️+2 to spot hidden doors/traps/monsters",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Hush Leaf",
+          "usage": "1",
+          "action": "P",
+          "effect": "On chew; Stealth🏃 Advantage this rnd.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Potion of Healing",
+          "usage": "4",
+          "action": "P",
+          "effect": "Heal self 1d4",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Zephyr Feather",
+          "usage": "1-Enc",
+          "action": "M",
+          "effect": "MR👣+2 this rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Lucky Coin",
+          "usage": "1-Day",
+          "action": "F",
+          "effect": "Reroll one failed roll x2  Have two coins",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 28,
+      "custom_powers": [
+        {
+          "id": 1785534647147,
+          "sub": "class",
+          "name": "Nuke v1",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "asdf",
+          "source": "Custom",
+          "version": 1,
+          "dropdown": null,
+          "base_name": "Nuke",
+          "created_at": "2026-07-31T21:50:47.147Z",
+          "table_name": "📁 Custom Powers"
+        },
+        {
+          "id": 1785534664031,
+          "sub": "class",
+          "name": "Nukeem v1",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "asdf",
+          "source": "Custom",
+          "version": 1,
+          "dropdown": null,
+          "base_name": "Nukeem",
+          "created_at": "2026-07-31T21:51:04.031Z",
+          "table_name": "📁 Custom Powers"
+        },
+        {
+          "id": 1785534675083,
+          "sub": "class",
+          "name": "Nukeem v2",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "asdfasdf",
+          "source": "Custom",
+          "version": 2,
+          "dropdown": null,
+          "base_name": "Nukeem",
+          "created_at": "2026-07-31T21:51:15.083Z",
+          "table_name": "📁 Custom Powers"
+        },
+        {
+          "id": 1785534937055,
+          "sub": "class",
+          "name": "asdf v1",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "asdf",
+          "source": "Custom",
+          "version": 1,
+          "dropdown": null,
+          "base_name": "asdf",
+          "created_at": "2026-07-31T21:55:37.055Z",
+          "table_name": "📁 Custom Powers"
+        },
+        {
+          "id": 1785534947753,
+          "sub": "class",
+          "name": "asdf v2",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "asdfasdf",
+          "source": "Custom",
+          "version": 2,
+          "dropdown": null,
+          "base_name": "asdf",
+          "created_at": "2026-07-31T21:55:47.753Z",
+          "table_name": "📁 Custom Powers"
+        }
+      ],
+      "focus_die_max": "d4",
+      "movement_rate": {
+        "shield": "3",
+        "armored": 6
+      },
+      "attribute_dice": {
+        "mind": "d8",
+        "magic": "d4",
+        "might": "d6",
+        "moxie": "d6",
+        "motion": "d8"
+      },
+      "other_treasure": [
+        {
+          "id": "tr_1784864728079_iqji",
+          "name": "Ruby",
+          "value": 3,
+          "currency": "gp"
+        },
+        {
+          "id": "tr_1784864741659_6dh9",
+          "name": "Iron Statuette",
+          "value": 2,
+          "currency": "sp"
+        },
+        {
+          "id": "val-1785012750739",
+          "name": "Good Drum (war) (1.25x value)",
+          "value": 1,
+          "currency": "gp"
+        }
+      ],
+      "known_skillsets": [
+        "Thievery"
+      ],
+      "current_vitality": 28,
+      "focus_die_current": "d4",
+      "last_vit_roll_level": 19,
+      "favorite_power_tables": [
+        "Human (Aethelgard Bloodline)",
+        "Trickster Powers",
+        "Phantom Tainville",
+        "Dual Wield Power",
+        "Luck Powers"
+      ],
+      "known_individual_skills": []
+    }
+  },
+  {
+    "id": 19,
+    "name": "Kaeleon \"The Mantis\" Corvus",
+    "class": "Adventurer",
+    "race": "Human",
+    "hp": 23,
+    "inventory": [
+      {
+        "name": "Weapon: Katar",
+        "type": "weapon",
+        "usage": "Atk d8 / Dmg d8",
+        "effect": "Max Block: 8",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      },
+      {
+        "name": "Weapon: Crossbow",
+        "type": "weapon",
+        "usage": "Atk d6 / Dmg d6",
+        "effect": "Max Block: n/a",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      },
+      {
+        "name": "Weapon: Brawl",
+        "type": "weapon",
+        "usage": "Atk d8 / Dmg d6",
+        "effect": "Max Block: n/a",
+        "select": true,
+        "checked": [
+          false,
+          false,
+          false
+        ],
+        "armor_bonus": 0,
+        "defense_bonus": 0
+      }
+    ],
+    "log": [],
+    "updated_at": "2026-08-05T17:46:30.04+00:00",
+    "might": "d8",
+    "motion": "d8",
+    "mind": "d6",
+    "magic": "d4",
+    "moxie": "d6",
+    "skills": [
+      "Iron Lotus Discipline",
+      "Scout",
+      "Scholar"
+    ],
+    "owner_email": "thebmobley@gmail.com",
+    "sheet_data": {
+      "ap": 44,
+      "bio": {
+        "notes": "Details: 6'4\", 194 lbs, 36 yr | Armor: Hide",
+        "backstory": "Future Skills\n- Shadow Step\n-Cloak of Darkness\nPrince Darius owns venue\n",
+        "image_url": "",
+        "personality": "Positive: Protector Ferocity | Negative: Mistrust of politics | Goal: Stop mercenary named Sora"
+      },
+      "armor": 6,
+      "level": 22,
+      "sparks": 0,
+      "wounds": 9,
+      "defense": 10,
+      "gear_slots": [
+        {
+          "name": "Weapon: Katar",
+          "type": "weapon",
+          "usage": "Atk d8 / Dmg d8",
+          "effect": "Max Block: 8",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        },
+        {
+          "name": "Weapon: Crossbow",
+          "type": "weapon",
+          "usage": "Atk d6 / Dmg d6",
+          "effect": "Max Block: n/a",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        },
+        {
+          "name": "Weapon: Brawl",
+          "type": "weapon",
+          "usage": "Atk d8 / Dmg d6",
+          "effect": "Max Block: n/a",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "armor_bonus": 0,
+          "defense_bonus": 0
+        }
+      ],
+      "is_charged": false,
+      "max_powers": 5,
+      "max_spells": 12,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "Flurry of Blows",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "Multi-Atk⚔️ with katars⚔️; each Dmg💥 at –1d",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Pressure Point Strike",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "On hit; target Resist✨ or Stunned 1 rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Feather Step",
+          "usage": "1-Enc",
+          "action": "M",
+          "effect": "Motion🏃 actions (e.g. silence, balance, acrobatics,etc) at Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Herbal Poultice",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Heal 1 Vit❤️ using herbs",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "",
+          "usage": "",
+          "action": "",
+          "effect": "",
+          "select": false,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "Crossbow of the Alley",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "Make 1 Ranged Atk⚔️; ignoring cover and any Atk Disadvantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Scroll of the Commet",
+          "usage": "1",
+          "action": "A",
+          "effect": "Magic✨Atk and Dmg💥 both with Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Shoes of Silence",
+          "usage": "1-Enc",
+          "action": "F",
+          "effect": "Activate; all steps are noiseless for 1 Enc; Stealth🏃 while moving gains Advantage.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Magnet Ring",
+          "usage": "1-Rnd",
+          "action": "M",
+          "effect": "Pull/push metal object 2sq; Magic✨ vs difficulty if Resist✨s or over 50Lbs",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Hush Leaf",
+          "usage": "1-Day",
+          "action": "P",
+          "effect": "On chew, can't talk for encounter; Stealth🏃 completely silent this enc.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Dice of Fortune",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Roll d10 on 10 gain 1 Luck🍀 chit",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Potion of Healing",
+          "usage": "2",
+          "action": "P",
+          "effect": "Heal self 1d4",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Shimmer Veil [Armor]",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Become Invisible for 1 rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Katars of the Unbending Steel (Resolve & Execution)",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "On hit; target Resist✨ or Stunned 1 rnd",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Ring of the Serpent",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Poison aura; all foes in 3sqR Rolls-2 vs Resist✨",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Smoke Pellet",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Creates smoke cloud; immedite Dodge with Advantage",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "Fine Slik Shirt",
+          "usage": "1-Day",
+          "action": "P",
+          "effect": "Mind👁️ Social+2 for encounter",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ]
+        }
+      ],
+      "vitality_max": 23,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d6",
+        "magic": "d4",
+        "might": "d8",
+        "moxie": "d6",
+        "motion": "d8"
+      },
+      "known_skillsets": [
+        "Iron Lotus Discipline",
+        "Scout",
+        "Scholar"
+      ],
+      "current_vitality": 23,
+      "focus_die_current": "d4"
+    }
+  }
+]
