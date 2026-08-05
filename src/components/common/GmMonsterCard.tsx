@@ -1,5 +1,5 @@
 // src/components/common/GmMonsterCard.tsx
-// GM Monster Card - Displays full combat specs, alphabetical attributes, & private GM notes.
+// GM Monster Card - Single-line high-density layout with full combat specs, alphabetical attributes, & private GM notes.
 
 import React from 'react';
 
@@ -56,49 +56,54 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
   const notesStr = monster.gm_notes ? ` (${monster.gm_notes})` : '';
 
   return (
-    <div className="bg-slate-900/90 border border-amber-500/30 rounded-lg p-3 text-xs text-slate-200 font-mono shadow-md flex flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-bold text-amber-300 text-sm">
+    <div className="bg-slate-900/90 border border-amber-500/30 hover:border-amber-500/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono shadow-sm flex flex-wrap items-center justify-between gap-x-3 gap-y-1 transition-all">
+      {/* Main Content: Name, Combat Specs, and Alphabetical System Attributes */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 flex-1 min-w-0">
+        <span className="font-bold text-amber-300 text-xs shrink-0">
           {countPrefix}{monster.name}{equipStr}
         </span>
-        {(onEdit || onDelete) && (
-          <div className="flex items-center gap-1.5 shrink-0">
-            {onEdit && (
-              <button
-                onClick={() => onEdit(monster)}
-                className="text-slate-400 hover:text-amber-400 p-1 transition-colors"
-                title="Edit Monster"
-              >
-                ✏️
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={() => onDelete(monster.id)}
-                className="text-slate-400 hover:text-rose-400 p-1 transition-colors"
-                title="Delete Monster"
-              >
-                🗑️
-              </button>
-            )}
-          </div>
-        )}
+
+        {/* Combat Metrics */}
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-slate-300 text-[11px] shrink-0">
+          <span>🚩{initVal}</span>
+          <span>👣{mrVal}</span>
+          <span>⚔️{atkVal}/{dmgVal}({minWoundsVal})</span>
+          <span>🧥{defVal}/{armorVal}</span>
+          <span>❤️{maxVitVal}</span>
+        </div>
+
+        {/* System Attributes (Strict Alphabetical Order: ✨ Magic, 💪 Might, 👁️ Mind, 🏃 Motion, 🫀 Moxie) */}
+        <span className="text-amber-200/90 font-semibold text-[11px] shrink-0">
+          – [✨{magic}/💪{might}/👁️{mind}/🏃{motion}/🫀{moxie}]
+        </span>
+
+        {/* Private GM Notes */}
+        {notesStr && <span className="italic text-slate-400 text-[11px] truncate">{notesStr}</span>}
       </div>
 
-      {/* Combat Metrics Row */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-300">
-        <span>🚩{initVal}</span>
-        <span>👣{mrVal}</span>
-        <span>⚔️{atkVal}/{dmgVal}({minWoundsVal})</span>
-        <span>🧥{defVal}/{armorVal}</span>
-        <span>❤️{maxVitVal}</span>
-      </div>
-
-      {/* System Attributes Row (Strict Alphabetical Order: ✨ Magic, 💪 Might, 👁️ Mind, 🏃 Motion, 🫀 Moxie) */}
-      <div className="text-amber-200/90 font-semibold flex flex-wrap items-center gap-2 border-t border-slate-800 pt-1">
-        <span>– [✨{magic}/💪{might}/👁️{mind}/🏃{motion}/🫀{moxie}]</span>
-        {notesStr && <span className="italic text-slate-400">{notesStr}</span>}
-      </div>
+      {/* Action Controls */}
+      {(onEdit || onDelete) && (
+        <div className="flex items-center gap-1 shrink-0">
+          {onEdit && (
+            <button
+              onClick={() => onEdit(monster)}
+              className="text-slate-400 hover:text-amber-400 p-0.5 rounded transition-colors text-xs"
+              title="Edit Monster"
+            >
+              ✏️
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(monster.id)}
+              className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors text-xs"
+              title="Delete Monster"
+            >
+              🗑️
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

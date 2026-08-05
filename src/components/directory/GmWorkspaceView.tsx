@@ -402,42 +402,38 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
               </div>
             </div>
           ) : (
-            <div className="space-y-3 overflow-y-auto max-h-[500px] pr-1">
-              {monsters.map((m) => (
-                <div
-                  key={m.id}
-                  className="p-3 bg-slate-950/90 border border-slate-800 rounded-xl space-y-2 hover:border-slate-700 transition-all"
-                >
-                  {editingId === m.id ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        className="flex-1 bg-slate-900 border border-amber-500/60 text-xs font-mono text-slate-100 px-2 py-1 rounded"
-                      />
-                      <button
-                        onClick={() => handleSaveEdit(m.id)}
-                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold rounded"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingId(null)}
-                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <GmMonsterCard
-                      monster={mapToMonsterData(m)}
-                      onEdit={() => handleStartEdit(m)}
-                      onDelete={() => handleDeleteMonster(m.id)}
+            <div className="space-y-1.5 overflow-y-auto max-h-[600px] pr-1">
+              {monsters.map((m) =>
+                editingId === m.id ? (
+                  <div key={m.id} className="p-2 bg-slate-950 border border-amber-500/60 rounded-lg flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      className="flex-1 bg-slate-900 border border-amber-500/60 text-xs font-mono text-slate-100 px-2 py-1 rounded"
                     />
-                  )}
-                </div>
-              ))}
+                    <button
+                      onClick={() => handleSaveEdit(m.id)}
+                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold rounded"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <GmMonsterCard
+                    key={m.id}
+                    monster={mapToMonsterData(m)}
+                    onEdit={() => handleStartEdit(m)}
+                    onDelete={() => handleDeleteMonster(m.id)}
+                  />
+                )
+              )}
             </div>
           )}
         </div>
