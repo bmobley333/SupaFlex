@@ -67,6 +67,20 @@ export interface SupabaseGear {
   created_at?: string;
 }
 
+export interface SupabaseMonster {
+  id?: number;
+  name: string;
+  nish: string;
+  mr: string;
+  atk_dmg_ftg: string;
+  dod_ar: string;
+  vit: string;
+  attributes?: string;
+  abilities?: string;
+  created_at?: string;
+}
+
+
 export const REQUIREMENT_TO_MR_MAP: Record<number, string> = {
   4: '👣8',
   6: '👣7',

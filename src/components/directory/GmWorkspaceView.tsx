@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
-import { Party, PartySessionMember } from '../../types/game';
+import { Party, PartySessionMember, SupabaseMonster } from '../../types/game';
 import { parseMonsterLine, parseMultiRowMonsterBlock, ParsedMonster } from '../../utils/monsterStatParser';
 import { PartyCharacterCard } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
@@ -36,7 +36,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const [isPasteModalOpen, setIsPasteModalOpen] = useState(false);
   const [pasteInputText, setPasteInputText] = useState('');
   const [isCodexOpen, setIsCodexOpen] = useState(false);
-  const [supabaseMonsters, setSupabaseMonsters] = useState<any[]>([]);
+  const [supabaseMonsters, setSupabaseMonsters] = useState<SupabaseMonster[]>([]);
   const [codexSearch, setCodexSearch] = useState('');
 
   // Inline Quick Add State
@@ -247,6 +247,16 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     await handleSaveMonsters(updated);
   };
 
+  const formatStatWithIcon = (icon: string, val: string | undefined, defaultVal: string, iconRegex?: RegExp): string => {
+    if (!val) return `${icon}${defaultVal}`;
+    const trimmed = val.trim();
+    const pattern = iconRegex || new RegExp(`^${icon}`, 'u');
+    if (pattern.test(trimmed)) {
+      return trimmed;
+    }
+    return `${icon}${trimmed}`;
+  };
+
   const handleOpenCodex = async () => {
     setIsCodexOpen(true);
     if (supabaseMonsters.length === 0) {
@@ -255,10 +265,16 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     }
   };
 
-  const handleAddCodexMonster = async (rawMonster: any) => {
-    const fullStatStr = `${rawMonster.name || 'Monster'} 🚩${rawMonster.init || 10} 👣${
-      rawMonster.mv || 10
-    } ⚔️${rawMonster.atk || '10/5(1)'} 🧥${rawMonster.ar || '10/1'} ❤️${rawMonster.hp || 10}`;
+  const handleAddCodexMonster = async (rawMonster: SupabaseMonster) => {
+    const init = formatStatWithIcon('🚩', rawMonster.nish, '10');
+    const mr = formatStatWithIcon('👣', rawMonster.mr, '10');
+    const atk = formatStatWithIcon('⚔️', rawMonster.atk_dmg_ftg, '10/5(1)', /^(?:⚔️|⚔)/u);
+    const def = formatStatWithIcon('🧥', rawMonster.dod_ar, '10/1', /^(?:🧥|🛡️)/u);
+    const vit = formatStatWithIcon('❤️', rawMonster.vit, '10');
+    const attrStr = rawMonster.attributes ? ` – [${rawMonster.attributes}]` : '';
+    const abStr = rawMonster.abilities ? ` (${rawMonster.abilities})` : '';
+
+    const fullStatStr = `${rawMonster.name || 'Monster'} ${init}, ${mr}, ${atk}, ${def}, ${vit}${attrStr}${abStr}`;
     const parsed = parseMonsterLine(fullStatStr);
     const updated = [...monsters, parsed];
     await handleSaveMonsters(updated);
@@ -519,8 +535,13 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   >
                     <div>
                       <div className="font-bold text-xs text-slate-200">{m.name}</div>
-                      <div className="text-[11px] text-slate-400 font-mono">
-                        ⚔️{m.atk || '10/5'} | 🧥{m.ar || '10/1'} | ❤️{m.hp || 10}
+                      <div className="text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
+                        <span>{formatStatWithIcon('🚩', m.nish, '10')}</span>
+                        <span>{formatStatWithIcon('👣', m.mr, '10')}</span>
+                        <span>{formatStatWithIcon('⚔️', m.atk_dmg_ftg, '10/5(1)', /^(?:⚔️|⚔)/u)}</span>
+                        <span>{formatStatWithIcon('🧥', m.dod_ar, '10/1', /^(?:🧥|🛡️)/u)}</span>
+                        <span>{formatStatWithIcon('❤️', m.vit, '10')}</span>
+                        {m.attributes && <span className="text-slate-500">– [{m.attributes}]</span>}
                       </div>
                     </div>
                     <button

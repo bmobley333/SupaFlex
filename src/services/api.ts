@@ -2,7 +2,7 @@
 // Supabase Data Access Gateway for SupaFlex
 
 import { supabase } from '../lib/supabase';
-import { Character, Power, MagicItem, Skillset, CharacterSheetData, DieRating, SupabaseArmor, SupabaseWeapon, SupabaseShield, SupabaseGear } from '../types/game';
+import { Character, Power, MagicItem, Skillset, CharacterSheetData, DieRating, SupabaseArmor, SupabaseWeapon, SupabaseShield, SupabaseGear, SupabaseMonster } from '../types/game';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
 
 export const createDefaultSheetData = (): CharacterSheetData => ({
@@ -909,7 +909,7 @@ export const gameApi = {
   },
 
   // --- MONSTER ROSTER SYNC & BROADCAST ---
-  async getSupabaseMonsters() {
+  async getSupabaseMonsters(): Promise<SupabaseMonster[]> {
     try {
       const { data, error } = await supabase
         .from('monsters')
