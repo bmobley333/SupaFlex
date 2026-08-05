@@ -568,6 +568,7 @@ export interface PartySessionMember {
   joined_at: string;
   last_seen: string;
   character?: Character;
+  player_first_name?: string;
 }
 
 export type AuthMode = 'login' | 'signup' | 'reset_password' | 'profile';

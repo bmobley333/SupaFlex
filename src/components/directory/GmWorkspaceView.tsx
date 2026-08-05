@@ -7,6 +7,7 @@ import { gameApi } from '../../services/api';
 import { Party, PartySessionMember } from '../../types/game';
 import { parseMonsterLine, parseMultiRowMonsterBlock, ParsedMonster } from '../../utils/monsterStatParser';
 import { PartyCharacterCard } from '../common/PartyCharacterCard';
+import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 
 interface GmWorkspaceViewProps {
   activeParty: Party | null;
@@ -263,6 +264,47 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     await handleSaveMonsters(updated);
   };
 
+  const mapToMonsterData = (m: ParsedMonster): MonsterData => {
+    const raw = m.fullText || m.nameWithEquip || 'Monster';
+    const parsed = parseMonsterLine(raw);
+
+    const initMatch = raw.match(/🚩\s*(\d+)/u);
+    const mrMatch = raw.match(/👣\s*(\d+)/u);
+    const atkNums = parsed.attackStat.match(/\d+/g) || [];
+    const defNums = parsed.defenseStat.match(/\d+/g) || [];
+    const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
+    const attrMatch = raw.match(/\[✨\s*(\d+)\/💪\s*(\d+)\/👁️\s*(\d+)\/🏃\s*(\d+)\/🫀\s*(\d+)\]/u);
+    const notesMatch = raw.match(/\(([^)]+)\)$/);
+
+    return {
+      id: m.id,
+      name: parsed.nameWithEquip || 'Monster',
+      initiative: initMatch ? parseInt(initMatch[1], 10) : 10,
+      mr: mrMatch ? parseInt(mrMatch[1], 10) : 10,
+      attack: atkNums[0] ? parseInt(atkNums[0], 10) : 10,
+      damage: atkNums[1] ? parseInt(atkNums[1], 10) : 10,
+      min_wounds: atkNums[2] ? parseInt(atkNums[2], 10) : 1,
+      defense: defNums[0] ? parseInt(defNums[0], 10) : 10,
+      armor: defNums[1] ? parseInt(defNums[1], 10) : 0,
+      max_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
+      current_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
+      attributes: attrMatch ? {
+        magic: parseInt(attrMatch[1], 10),
+        might: parseInt(attrMatch[2], 10),
+        mind: parseInt(attrMatch[3], 10),
+        motion: parseInt(attrMatch[4], 10),
+        moxie: parseInt(attrMatch[5], 10),
+      } : {
+        magic: 10,
+        might: 10,
+        mind: 10,
+        motion: 10,
+        moxie: 10,
+      },
+      gm_notes: notesMatch ? notesMatch[1] : undefined,
+    };
+  };
+
   return (
     <div className="space-y-6 max-w-[2500px] mx-auto">
       {/* Main Grid: Party Roster (Left) vs Monster Roster (Right) */}
@@ -388,44 +430,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                       </button>
                     </div>
                   ) : (
-                    <>
-                      {/* GM View: Full Statblock */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1 flex-1">
-                          <div className="text-xs font-extrabold text-amber-300 font-mono select-all">
-                            <span className="text-[10px] text-amber-500 uppercase font-sans mr-2 px-1.5 py-0.2 bg-amber-950/80 rounded border border-amber-800/80">
-                              GM Full
-                            </span>
-                            {m.fullText}
-                          </div>
-
-                          {/* Reduced Player View Preview */}
-                          <div className="text-[11px] font-semibold text-slate-400 font-mono select-all">
-                            <span className="text-[9px] text-cyan-400 uppercase font-sans mr-2 px-1 py-0.1 bg-cyan-950/80 rounded border border-cyan-800/80">
-                              Player View
-                            </span>
-                            {m.reducedText}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleStartEdit(m)}
-                            className="p-1 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded text-xs"
-                            title="Edit Monster"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMonster(m.id)}
-                            className="p-1 hover:bg-slate-800 text-rose-400 hover:text-rose-300 rounded text-xs"
-                            title="Delete Monster"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                    </>
+                    <GmMonsterCard
+                      monster={mapToMonsterData(m)}
+                      onEdit={() => handleStartEdit(m)}
+                      onDelete={() => handleDeleteMonster(m.id)}
+                    />
                   )}
                 </div>
               ))}

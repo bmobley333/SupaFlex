@@ -4,34 +4,32 @@ import { PartySessionMember, CharacterSheetData } from '../../types/game';
 
 interface PartyCharacterCardProps {
   member: PartySessionMember;
-  currentEmail?: string;
   playerNameOverride?: string;
 }
 
 /**
- * Extracts first name from a full name string or email address.
- * E.g., "Blake Mobley" -> "Blake", "john.doe@gmail.com" -> "John".
+ * Resolves player's first name strictly from full name input.
+ * Blueprint Section 2.C: ([Player's First Name derived from player's full name (NOT email)])
+ * If name is blank or missing, returns "empty".
  */
-export const parseFirstName = (nameOrEmail?: string): string => {
-  if (!nameOrEmail) return 'Player';
-  const str = nameOrEmail.trim();
-  if (!str) return 'Player';
+export const resolvePlayerFirstName = (rawName?: string): string => {
+  if (!rawName) return 'empty';
+  const trimmed = rawName.trim();
+  if (!trimmed || trimmed.includes('@')) return 'empty';
 
-  // If input contains spaces, assume full name and grab first word
-  if (str.includes(' ')) {
-    return str.split(' ')[0];
-  }
+  const parts = trimmed.split(/\s+/);
+  return parts[0] || 'empty';
+};
 
-  // If input contains '@', parse email username prefix
-  if (str.includes('@')) {
-    const handle = str.split('@')[0];
-    // If handle contains '.' or '_' or '-', split and capitalize first segment
-    const parts = handle.split(/[._-]/);
-    const firstPart = parts[0] || handle;
-    return firstPart.charAt(0).toUpperCase() + firstPart.slice(1);
-  }
-
-  return str;
+/**
+ * Extracts character's first name from full character name.
+ */
+export const resolveCharFirstName = (rawCharName?: string): string => {
+  if (!rawCharName) return 'Hero';
+  const trimmed = rawCharName.trim();
+  if (!trimmed) return 'Hero';
+  const parts = trimmed.split(/\s+/);
+  return parts[0] || 'Hero';
 };
 
 export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
@@ -39,8 +37,8 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
   playerNameOverride,
 }) => {
   const char = member.character;
-  const playerFirstName = parseFirstName(playerNameOverride || member.player_email);
-  const charFirstName = parseFirstName(char?.name || `Hero #${member.character_id}`);
+  const playerFirstName = resolvePlayerFirstName(playerNameOverride || member.player_first_name);
+  const charFirstName = resolveCharFirstName(char?.name || `Hero #${member.character_id}`);
   const race = char?.race || 'Human';
   const charClass = char?.class || 'Adventurer';
 
@@ -71,10 +69,11 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
     >
       {/* 
         Single-line layout for wide viewports, wrapped two-line layout for narrow sidebar panels.
-        Format: ([player's first name]) [Character's first name] [Race] [Class], [Current Vit]/[Max Vit] [Vit %]% [vitality graphic with color indicator]
+        Blueprint 2.C Syntax: ([Player's First Name]) [Character's First Name] [Race] [Class], [Current Vit]/[Max Vit] [Vit %]% [vitality graphic]
+        Example: (Blake) Ogluck Human Monk, 12/24 50% [🟧 50% Bar]
       */}
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 leading-snug">
-        {/* Left Segment: Name & Identifiers */}
+        {/* Left Segment: Player Name, Character Name, Race, Class, and Trailing Comma */}
         <div className="flex items-center gap-1.5 flex-wrap font-bold text-slate-100">
           <span className="font-mono text-amber-300 font-extrabold text-xs">
             ({playerFirstName})
@@ -86,14 +85,14 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
             {race}
           </span>
           <span className="text-indigo-300 font-semibold text-[11px]">
-            {charClass}
+            {charClass},
           </span>
         </div>
 
         {/* Right Segment: Vitality numerical readout & vitality bar graphic */}
         <div className="flex items-center gap-2 shrink-0">
           <span className={`font-mono text-[11px] font-extrabold px-1.5 py-0.5 rounded border ${badgeColorClass}`}>
-            , {currentVit}/{maxVit} {pct}%
+            {currentVit}/{maxVit} {pct}%
           </span>
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${dotColorClass} animate-pulse shrink-0`} />

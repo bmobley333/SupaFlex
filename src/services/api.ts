@@ -377,11 +377,11 @@ export const gameApi = {
   },
 
   // --- USER PROFILE & PRIVACY ---
-  async getUserProfile(email: string): Promise<{ email: string; allow_cloning: boolean; player_name?: string }> {
+  async getUserProfile(email: string): Promise<{ email: string; allow_cloning: boolean; player_name?: string; first_name?: string; last_name?: string }> {
     const cleanEmail = email.trim().toLowerCase();
     const { data, error } = await supabase
       .from('players')
-      .select('email, allow_cloning, player_name')
+      .select('email, allow_cloning, first_name, last_name')
       .eq('email', cleanEmail)
       .maybeSingle();
 
@@ -390,14 +390,21 @@ export const gameApi = {
     }
 
     if (data) {
-      return { email: data.email, allow_cloning: data.allow_cloning ?? true, player_name: data.player_name || '' };
+      const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ').trim();
+      return {
+        email: data.email,
+        allow_cloning: data.allow_cloning ?? true,
+        first_name: data.first_name || '',
+        last_name: data.last_name || '',
+        player_name: fullName,
+      };
     }
 
     // Auto-create profile if missing
     const { data: created, error: createError } = await supabase
       .from('players')
       .insert({ email: cleanEmail, allow_cloning: true })
-      .select('email, allow_cloning, player_name')
+      .select('email, allow_cloning, first_name, last_name')
       .single();
 
     if (createError) {
@@ -405,7 +412,14 @@ export const gameApi = {
       return { email: cleanEmail, allow_cloning: true };
     }
 
-    return { email: created.email, allow_cloning: created.allow_cloning ?? true, player_name: created.player_name || '' };
+    const createdFullName = [created.first_name, created.last_name].filter(Boolean).join(' ').trim();
+    return {
+      email: created.email,
+      allow_cloning: created.allow_cloning ?? true,
+      first_name: created.first_name || '',
+      last_name: created.last_name || '',
+      player_name: createdFullName,
+    };
   },
 
   async updateProfilePrivacy(email: string, allowCloning: boolean): Promise<boolean> {
@@ -423,9 +437,14 @@ export const gameApi = {
 
   async updatePlayerName(email: string, playerName: string): Promise<boolean> {
     const cleanEmail = email.trim().toLowerCase();
+    const trimmed = playerName.trim();
+    const parts = trimmed.split(/\s+/);
+    const firstName = parts[0] || '';
+    const lastName = parts.slice(1).join(' ') || '';
+
     const { error } = await supabase
       .from('players')
-      .upsert({ email: cleanEmail, player_name: playerName.trim() }, { onConflict: 'email' });
+      .upsert({ email: cleanEmail, first_name: firstName, last_name: lastName }, { onConflict: 'email' });
 
     if (error) {
       console.error('[gameApi] Error updating player name:', error);
@@ -652,16 +671,16 @@ export const gameApi = {
       }
     }
 
-    // 45-second staleness threshold for active party members (Blueprint 1.A.7 & 3.B.3)
-    const activeCutoff = new Date(Date.now() - 45000).toISOString();
+    // 12-hour staleness threshold for tabletop playtest session members
+    const activeCutoff = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
     const { data, error } = await supabase
       .from('party_session_members')
       .select('*, character:characters(*)')
       .eq('party_id', targetPartyUuid)
       .gte('last_seen', activeCutoff);
 
-    // Asynchronously prune dead ghost sessions from DB (> 60s inactive)
-    const deadCutoff = new Date(Date.now() - 60000).toISOString();
+    // Asynchronously prune dead ghost sessions from DB (> 12h inactive)
+    const deadCutoff = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
     Promise.resolve(
       supabase
         .from('party_session_members')
@@ -674,12 +693,31 @@ export const gameApi = {
       return [];
     }
 
+    // Fetch player profiles to attach first_name for roster card display
+    const uniqueEmails = Array.from(new Set((data || []).map((m) => (m.player_email || '').toLowerCase()).filter(Boolean)));
+    const playerProfileMap = new Map<string, string>();
+    if (uniqueEmails.length > 0) {
+      const { data: playersData } = await supabase
+        .from('players')
+        .select('email, first_name')
+        .in('email', uniqueEmails);
+      (playersData || []).forEach((p) => {
+        if (p.email && p.first_name) {
+          playerProfileMap.set(p.email.toLowerCase(), p.first_name);
+        }
+      });
+    }
+
     // Strict deduplication by character_id (keeping newest last_seen row)
     const memberMap = new Map<number, any>();
     (data || []).forEach((m) => {
       const existing = memberMap.get(m.character_id);
       if (!existing || new Date(m.last_seen) > new Date(existing.last_seen)) {
-        memberMap.set(m.character_id, m);
+        const emailKey = (m.player_email || '').toLowerCase();
+        memberMap.set(m.character_id, {
+          ...m,
+          player_first_name: playerProfileMap.get(emailKey) || '',
+        });
       }
     });
 
