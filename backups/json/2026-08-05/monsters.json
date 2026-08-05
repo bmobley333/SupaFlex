@@ -7,7 +7,7 @@
     "atk_dmg_ftg": "⚔️16 / 5 (1)",
     "dod_ar": "🧥14 / 1",
     "vit": "❤️8",
-    "attributes": "💪12 / 🏃16 / 👁️14 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪12 / 👁️14 / 🏃16 / 🫀10",
     "abilities": "Volley fire",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -19,7 +19,7 @@
     "atk_dmg_ftg": "⚔️20 / 8 (1)",
     "dod_ar": "🧥18 / 2",
     "vit": "❤️16",
-    "attributes": "💪18 / 🏃12 / 👁️12 / ✨11 / 🫀10",
+    "attributes": "✨11 / 💪18 / 👁️12 / 🏃12 / 🫀15",
     "abilities": "Inspires bandits",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -31,7 +31,7 @@
     "atk_dmg_ftg": "⚔️16 / 8 (1)",
     "dod_ar": "🧥14 / 1",
     "vit": "❤️10",
-    "attributes": "💪16 / 🏃12 / 👁️10 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪16 / 👁️10 / 🏃12 / 🫀12",
     "abilities": "Dirty tricks",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -43,7 +43,7 @@
     "atk_dmg_ftg": "⚔️18 / 12 (2)",
     "dod_ar": "🧥16 / 2",
     "vit": "❤️16",
-    "attributes": "💪20 / 🏃14 / 👁️10 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪20 / 👁️10 / 🏃14 / 🫀17",
     "abilities": "Mauling attacks",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -55,7 +55,7 @@
     "atk_dmg_ftg": "⚔️14 / 5 (1)",
     "dod_ar": "🧥14 / 0",
     "vit": "❤️6",
-    "attributes": "💪10 / 🏃22 / 👁️16 / ✨12 / 🫀10",
+    "attributes": "✨12 / 💪10 / 👁️16 / 🏃22 / 🫀8",
     "abilities": "Distracts enemies",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -67,7 +67,7 @@
     "atk_dmg_ftg": "⚔️18 / 12 (2)",
     "dod_ar": "🧥18 / 3",
     "vit": "❤️14",
-    "attributes": "💪20 / 🏃12 / 👁️14 / ✨16 / 🫀10",
+    "attributes": "✨16 / 💪20 / 👁️14 / 🏃12 / 🫀19",
     "abilities": "Traps foes in gum",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -79,7 +79,7 @@
     "atk_dmg_ftg": "⚔️22 / 12 (2)",
     "dod_ar": "🧥20 / 3",
     "vit": "❤️30",
-    "attributes": "💪22 / 🏃16 / 👁️14 / ✨16 / 🫀10",
+    "attributes": "✨16 / 💪22 / 👁️14 / 🏃16 / 🫀24",
     "abilities": "3 attacks (lion, goat, dragon)",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -91,7 +91,7 @@
     "atk_dmg_ftg": "⚔️20 / 12 (2)",
     "dod_ar": "🧥18 / 3",
     "vit": "❤️24",
-    "attributes": "💪24 / 🏃12 / 👁️12 / ✨18 / 🫀10",
+    "attributes": "✨18 / 💪24 / 👁️12 / 🏃12 / 🫀23",
     "abilities": "Rage aura",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -103,7 +103,7 @@
     "atk_dmg_ftg": "⚔️14 / 5 (1)",
     "dod_ar": "🧥16 / 0",
     "vit": "❤️8",
-    "attributes": "💪10 / 🏃18 / 👁️16 / ✨20 / 🫀10",
+    "attributes": "✨20 / 💪10 / 👁️16 / 🏃18 / 🫀8",
     "abilities": "Mischief magic",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -115,7 +115,7 @@
     "atk_dmg_ftg": "⚔️18 / 8 (1)",
     "dod_ar": "🧥16 / 1",
     "vit": "❤️12",
-    "attributes": "💪18 / 🏃18 / 👁️12 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪18 / 👁️12 / 🏃18 / 🫀14",
     "abilities": "Pack hunter",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -127,7 +127,7 @@
     "atk_dmg_ftg": "⚔️24 / 25 (5)",
     "dod_ar": "🧥22 / 4",
     "vit": "❤️40",
-    "attributes": "💪24 / 🏃20 / 👁️18 / ✨22 / 🫀10",
+    "attributes": "✨22 / 💪24 / 👁️18 / 🏃20 / 🫀28",
     "abilities": "Large breath, fear aura",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -139,7 +139,7 @@
     "atk_dmg_ftg": "⚔️18 / 8 (1)",
     "dod_ar": "🧥16 / 2",
     "vit": "❤️16",
-    "attributes": "💪18 / 🏃16 / 👁️14 / ✨16 / 🫀10",
+    "attributes": "✨16 / 💪18 / 👁️14 / 🏃16 / 🫀20",
     "abilities": "Small breath attack",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -151,7 +151,7 @@
     "atk_dmg_ftg": "⚔️20 / 12 (2)",
     "dod_ar": "🧥20 / 3",
     "vit": "❤️28",
-    "attributes": "💪22 / 🏃18 / 👁️16 / ✨20 / 🫀10",
+    "attributes": "✨20 / 💪22 / 👁️16 / 🏃18 / 🫀24",
     "abilities": "Breath weapon 1-Enc",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -163,7 +163,7 @@
     "atk_dmg_ftg": "⚔️18 / 8 (1)",
     "dod_ar": "🧥16 / 1",
     "vit": "❤️14",
-    "attributes": "💪14 / 🏃22 / 👁️18 / ✨20 / 🫀10",
+    "attributes": "✨20 / 💪14 / 👁️18 / 🏃22 / 🫀16",
     "abilities": "Push / knockback",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -175,7 +175,7 @@
     "atk_dmg_ftg": "⚔️18 / 12 (2)",
     "dod_ar": "🧥20 / 4",
     "vit": "❤️22",
-    "attributes": "💪24 / 🏃12 / 👁️12 / ✨20 / 🫀10",
+    "attributes": "✨20 / 💪24 / 👁️12 / 🏃12 / 🫀25",
     "abilities": "Knockdown slam",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -187,20 +187,8 @@
     "atk_dmg_ftg": "⚔️18 / 8 (1)",
     "dod_ar": "🧥16 / 2",
     "vit": "❤️14",
-    "attributes": "💪16 / 🏃18 / 👁️14 / ✨22 / 🫀10",
+    "attributes": "✨22 / 💪16 / 👁️14 / 🏃18 / 🫀17",
     "abilities": "Burns attackers",
-    "created_at": "2026-07-24T15:50:16.077793+00:00"
-  },
-  {
-    "id": 18,
-    "name": "Elemental of Water",
-    "nish": "🚩15",
-    "mr": "👣10",
-    "atk_dmg_ftg": "⚔️18 / 8 (1)",
-    "dod_ar": "🧥16 / 2",
-    "vit": "❤️16",
-    "attributes": "💪18 / 🏃14 / 👁️14 / ✨22 / 🫀10",
-    "abilities": "Engulf + drown",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
   {
@@ -211,7 +199,7 @@
     "atk_dmg_ftg": "⚔️16 / 8 (1)",
     "dod_ar": "🧥14 / 1",
     "vit": "❤️10",
-    "attributes": "💪14 / 🏃12 / 👁️12 / ✨12 / 🫀10",
+    "attributes": "✨12 / 💪14 / 👁️12 / 🏃12 / 🫀15",
     "abilities": "Paralysis on hit",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -223,7 +211,7 @@
     "atk_dmg_ftg": "⚔️22 / 19 (4)",
     "dod_ar": "🧥18 / 3",
     "vit": "❤️30",
-    "attributes": "💪24 / 🏃12 / 👁️12 / ✨14 / 🫀10",
+    "attributes": "✨14 / 💪24 / 👁️12 / 🏃12 / 🫀23",
     "abilities": "Fire aura",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -235,7 +223,7 @@
     "atk_dmg_ftg": "⚔️20 / 19 (4)",
     "dod_ar": "🧥18 / 3",
     "vit": "❤️30",
-    "attributes": "💪24 / 🏃12 / 👁️12 / ✨14 / 🫀10",
+    "attributes": "✨14 / 💪24 / 👁️12 / 🏃12 / 🫀23",
     "abilities": "Cold aura",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -247,7 +235,7 @@
     "atk_dmg_ftg": "⚔️18 / 12 (2)",
     "dod_ar": "🧥16 / 3",
     "vit": "❤️26",
-    "attributes": "💪22 / 🏃12 / 👁️10 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪22 / 👁️10 / 🏃12 / 🫀23",
     "abilities": "Rock throws",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -259,7 +247,7 @@
     "atk_dmg_ftg": "⚔️20 / 12 (2)",
     "dod_ar": "🧥18 / 3",
     "vit": "❤️28",
-    "attributes": "💪24 / 🏃12 / 👁️12 / ✨12 / 🫀10",
+    "attributes": "✨12 / 💪24 / 👁️12 / 🏃12 / 🫀23",
     "abilities": "Rock skin",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -271,7 +259,7 @@
     "atk_dmg_ftg": "⚔️14 / 5 (1)",
     "dod_ar": "🧥12 / 0",
     "vit": "❤️6",
-    "attributes": "💪10 / 🏃18 / 👁️12 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪10 / 👁️12 / 🏃18 / 🫀14",
     "abilities": "Swarm tactics",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -283,7 +271,7 @@
     "atk_dmg_ftg": "⚔️16 / 8 (1)",
     "dod_ar": "🧥14 / 1",
     "vit": "❤️8",
-    "attributes": "💪12 / 🏃12 / 👁️14 / ✨14 / 🫀10",
+    "attributes": "✨14 / 💪12 / 👁️14 / 🏃12 / 🫀14",
     "abilities": "Blinds with sparkle cloud",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -295,7 +283,7 @@
     "atk_dmg_ftg": "⚔️16 / 8 (1)",
     "dod_ar": "🧥14 / 1",
     "vit": "❤️6",
-    "attributes": "💪12 / 🏃16 / 👁️12 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪12 / 👁️12 / 🏃16 / 🫀9",
     "abilities": "Likes ambushes",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -307,7 +295,7 @@
     "atk_dmg_ftg": "⚔️14 / 5 (1)",
     "dod_ar": "🧥13 / 0",
     "vit": "❤️6",
-    "attributes": "💪10 / 🏃18 / 👁️12 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪10 / 👁️12 / 🏃18 / 🫀8",
     "abilities": "Nimble, fights in packs",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -319,7 +307,7 @@
     "atk_dmg_ftg": "⚔️16 / 8 (1)",
     "dod_ar": "🧥14 / 1",
     "vit": "❤️6",
-    "attributes": "💪10 / 🏃10 / 👁️14 / ✨18 / 🫀10",
+    "attributes": "✨18 / 💪10 / 👁️14 / 🏃10 / 🫀9",
     "abilities": "1 quirky spell",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -331,7 +319,7 @@
     "atk_dmg_ftg": "⚔️20 / 12 (2)",
     "dod_ar": "🧥22 / 4",
     "vit": "❤️28",
-    "attributes": "💪24 / 🏃12 / 👁️12 / ✨18 / 🫀10",
+    "attributes": "✨18 / 💪24 / 👁️12 / 🏃12 / 🫀25",
     "abilities": "Gas cloud breath",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -343,7 +331,7 @@
     "atk_dmg_ftg": "⚔️18 / 12 (2)",
     "dod_ar": "🧥20 / 4",
     "vit": "❤️24",
-    "attributes": "💪22 / 🏃12 / 👁️12 / ✨16 / 🫀10",
+    "attributes": "✨16 / 💪22 / 👁️12 / 🏃12 / 🫀25",
     "abilities": "Magic Resistant",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -355,7 +343,7 @@
     "atk_dmg_ftg": "⚔️16 / 8 (1)",
     "dod_ar": "🧥16 / 1",
     "vit": "❤️10",
-    "attributes": "💪12 / 🏃18 / 👁️14 / ✨16 / 🫀10",
+    "attributes": "✨16 / 💪12 / 👁️14 / 🏃18 / 🫀11",
     "abilities": "Alluring song",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -367,7 +355,7 @@
     "atk_dmg_ftg": "⚔️14 / 5 (1)",
     "dod_ar": "🧥14 / 1",
     "vit": "❤️8",
-    "attributes": "💪12 / 🏃18 / 👁️16 / ✨18 / 🫀10",
+    "attributes": "✨18 / 💪12 / 👁️16 / 🏃18 / 🫀10",
     "abilities": "Song = trending curse",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -379,7 +367,7 @@
     "atk_dmg_ftg": "⚔️18 / 8 (1)",
     "dod_ar": "🧥16 / 2",
     "vit": "❤️10",
-    "attributes": "💪12 / 🏃12 / 👁️14 / ✨20 / 🫀10",
+    "attributes": "✨20 / 💪12 / 👁️14 / 🏃12 / 🫀16",
     "abilities": "Vanishes in shadows",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -391,7 +379,7 @@
     "atk_dmg_ftg": "⚔️22 / 19 (4)",
     "dod_ar": "🧥18 / 3",
     "vit": "❤️30",
-    "attributes": "💪24 / 🏃16 / 👁️14 / ✨16 / 🫀10",
+    "attributes": "✨16 / 💪24 / 👁️14 / 🏃16 / 🫀24",
     "abilities": "Tentacle grapple",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -403,7 +391,7 @@
     "atk_dmg_ftg": "⚔️22 / 12 (2)",
     "dod_ar": "🧥20 / 3",
     "vit": "❤️26",
-    "attributes": "💪14 / 🏃12 / 👁️20 / ✨24 / 🫀10",
+    "attributes": "✨24 / 💪14 / 👁️20 / 🏃12 / 🫀24",
     "abilities": "Casts spells",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -415,7 +403,7 @@
     "atk_dmg_ftg": "⚔️14 / 5 (1)",
     "dod_ar": "🧥14 / 0",
     "vit": "❤️6",
-    "attributes": "💪10 / 🏃16 / 👁️16 / ✨20 / 🫀10",
+    "attributes": "✨20 / 💪10 / 👁️16 / 🏃16 / 🫀8",
     "abilities": "Random meme magic",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -427,7 +415,7 @@
     "atk_dmg_ftg": "⚔️20 / 12 (2)",
     "dod_ar": "🧥18 / 2",
     "vit": "❤️18",
-    "attributes": "💪22 / 🏃12 / 👁️12 / ✨12 / 🫀10",
+    "attributes": "✨12 / 💪22 / 👁️12 / 🏃12 / 🫀17",
     "abilities": "Charge attack",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -439,7 +427,7 @@
     "atk_dmg_ftg": "⚔️20 / 12 (2)",
     "dod_ar": "🧥16 / 3",
     "vit": "❤️24",
-    "attributes": "💪22 / 🏃12 / 👁️10 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪22 / 👁️10 / 🏃12 / 🫀18",
     "abilities": "Smashes obstacles",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -451,7 +439,7 @@
     "atk_dmg_ftg": "⚔️16 / 8 (1)",
     "dod_ar": "🧥14 / 1",
     "vit": "❤️10",
-    "attributes": "💪12 / 🏃16 / 👁️12 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪12 / 👁️12 / 🏃16 / 🫀12",
     "abilities": "Ranged focus",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -463,7 +451,7 @@
     "atk_dmg_ftg": "⚔️18 / 12 (2)",
     "dod_ar": "🧥16 / 2",
     "vit": "❤️12",
-    "attributes": "💪18 / 🏃12 / 👁️10 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪18 / 👁️10 / 🏃12 / 🫀13",
     "abilities": "Brutal melee strikes",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -475,7 +463,7 @@
     "atk_dmg_ftg": "⚔️20 / 12 (2)",
     "dod_ar": "🧥18 / 3",
     "vit": "❤️16",
-    "attributes": "💪22 / 🏃12 / 👁️12 / ✨12 / 🫀10",
+    "attributes": "✨12 / 💪22 / 👁️12 / 🏃12 / 🫀17",
     "abilities": "Inspires allies",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -487,7 +475,7 @@
     "atk_dmg_ftg": "⚔️20 / 12 (2)",
     "dod_ar": "🧥16 / 2",
     "vit": "❤️18",
-    "attributes": "💪22 / 🏃14 / 👁️10 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪22 / 👁️10 / 🏃14 / 🫀17",
     "abilities": "Ferocious charge",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -499,7 +487,7 @@
     "atk_dmg_ftg": "⚔️18 / 8 (1)",
     "dod_ar": "🧥16 / 2",
     "vit": "❤️10",
-    "attributes": "💪16 / 🏃18 / 👁️12 / ✨12 / 🫀10",
+    "attributes": "✨12 / 💪16 / 👁️12 / 🏃18 / 🫀12",
     "abilities": "Rides neon scooter",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -511,7 +499,7 @@
     "atk_dmg_ftg": "⚔️14 / 5 (1)",
     "dod_ar": "🧥12 / 0",
     "vit": "❤️8",
-    "attributes": "💪12 / 🏃12 / 👁️12 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪12 / 👁️12 / 🏃12 / 🫀13",
     "abilities": "Bone arrows",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -523,7 +511,7 @@
     "atk_dmg_ftg": "⚔️18 / 12 (2)",
     "dod_ar": "🧥16 / 2",
     "vit": "❤️10",
-    "attributes": "💪18 / 🏃12 / 👁️12 / ✨12 / 🫀10",
+    "attributes": "✨12 / 💪18 / 👁️12 / 🏃12 / 🫀16",
     "abilities": "Relentless",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -535,7 +523,7 @@
     "atk_dmg_ftg": "⚔️16 / 8 (1)",
     "dod_ar": "🧥14 / 2",
     "vit": "❤️8",
-    "attributes": "💪16 / 🏃10 / 👁️10 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪16 / 👁️10 / 🏃10 / 🫀15",
     "abilities": "Immune to poison",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -547,7 +535,7 @@
     "atk_dmg_ftg": "⚔️18 / 8 (1)",
     "dod_ar": "🧥16 / 2",
     "vit": "❤️10",
-    "attributes": "💪16 / 🏃18 / 👁️14 / ✨14 / 🫀10",
+    "attributes": "✨14 / 💪16 / 👁️14 / 🏃18 / 🫀13",
     "abilities": "Rally cry with guitar",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -559,8 +547,20 @@
     "atk_dmg_ftg": "⚔️14 / 8 (1)",
     "dod_ar": "🧥12 / 2",
     "vit": "❤️8",
-    "attributes": "💪12 / 🏃10 / 👁️12 / ✨20 / 🫀10",
+    "attributes": "✨20 / 💪12 / 👁️12 / 🏃10 / 🫀11",
     "abilities": "Splits if hit by slashing",
+    "created_at": "2026-07-24T15:50:16.077793+00:00"
+  },
+  {
+    "id": 18,
+    "name": "Elemental of Water",
+    "nish": "🚩15",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️18 / 8 (1)",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️16",
+    "attributes": "✨22 / 💪18 / 👁️14 / 🏃14 / 🫀19",
+    "abilities": "Engulf + drown",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
   {
@@ -571,7 +571,7 @@
     "atk_dmg_ftg": "⚔️16 / 8 (1)",
     "dod_ar": "🧥14 / 2",
     "vit": "❤️8",
-    "attributes": "💪12 / 🏃12 / 👁️12 / ✨20 / 🫀10",
+    "attributes": "✨20 / 💪12 / 👁️12 / 🏃12 / 🫀11",
     "abilities": "Sticky soda burst",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -583,7 +583,7 @@
     "atk_dmg_ftg": "⚔️18 / 8 (1)",
     "dod_ar": "🧥16 / 1",
     "vit": "❤️12",
-    "attributes": "💪16 / 🏃18 / 👁️14 / ✨14 / 🫀10",
+    "attributes": "✨14 / 💪16 / 👁️14 / 🏃18 / 🫀16",
     "abilities": "Web entrapment",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -595,7 +595,7 @@
     "atk_dmg_ftg": "⚔️14 / 5 (1)",
     "dod_ar": "🧥12 / 0",
     "vit": "❤️6",
-    "attributes": "💪10 / 🏃18 / 👁️12 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪10 / 👁️12 / 🏃18 / 🫀8",
     "abilities": "Obscures vision",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -607,7 +607,7 @@
     "atk_dmg_ftg": "⚔️20 / 12 (2)",
     "dod_ar": "🧥18 / 3",
     "vit": "❤️16",
-    "attributes": "💪18 / 🏃18 / 👁️14 / ✨20 / 🫀10",
+    "attributes": "✨20 / 💪18 / 👁️14 / 🏃18 / 🫀22",
     "abilities": "Dance = spell component",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -619,7 +619,7 @@
     "atk_dmg_ftg": "⚔️18 / 12 (2)",
     "dod_ar": "🧥16 / 3",
     "vit": "❤️22",
-    "attributes": "💪22 / 🏃12 / 👁️10 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪22 / 👁️10 / 🏃12 / 🫀21",
     "abilities": "Regenerates unless burned",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -631,7 +631,7 @@
     "atk_dmg_ftg": "⚔️22 / 12 (2)",
     "dod_ar": "🧥20 / 3",
     "vit": "❤️24",
-    "attributes": "💪22 / 🏃18 / 👁️18 / ✨24 / 🫀10",
+    "attributes": "✨24 / 💪22 / 👁️18 / 🏃18 / 🫀22",
     "abilities": "Commands bats / wolves",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -643,7 +643,7 @@
     "atk_dmg_ftg": "⚔️18 / 8 (1)",
     "dod_ar": "🧥16 / 2",
     "vit": "❤️14",
-    "attributes": "💪18 / 🏃16 / 👁️16 / ✨16 / 🫀10",
+    "attributes": "✨16 / 💪18 / 👁️16 / 🏃16 / 🫀16",
     "abilities": "Heals 2 Vit❤️ when feeding",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -655,7 +655,7 @@
     "atk_dmg_ftg": "⚔️20 / 12 (2)",
     "dod_ar": "🧥18 / 2",
     "vit": "❤️18",
-    "attributes": "💪20 / 🏃18 / 👁️14 / ✨12 / 🫀10",
+    "attributes": "✨12 / 💪20 / 👁️14 / 🏃18 / 🫀17",
     "abilities": "Regeneration",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -667,7 +667,7 @@
     "atk_dmg_ftg": "⚔️20 / 8 (1)",
     "dod_ar": "🧥18 / 2",
     "vit": "❤️16",
-    "attributes": "💪12 / 🏃18 / 👁️16 / ✨22 / 🫀10",
+    "attributes": "✨22 / 💪12 / 👁️16 / 🏃18 / 🫀18",
     "abilities": "Intangible",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -679,7 +679,7 @@
     "atk_dmg_ftg": "⚔️14 / 8 (1)",
     "dod_ar": "🧥12 / 2",
     "vit": "❤️10",
-    "attributes": "💪18 / 🏃10 / 👁️10 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪18 / 👁️10 / 🏃10 / 🫀16",
     "abilities": "Slow, keeps coming",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   },
@@ -691,7 +691,7 @@
     "atk_dmg_ftg": "⚔️18 / 12 (2)",
     "dod_ar": "🧥14 / 3",
     "vit": "❤️12",
-    "attributes": "💪20 / 🏃10 / 👁️10 / ✨10 / 🫀10",
+    "attributes": "✨10 / 💪20 / 👁️10 / 🏃10 / 🫀18",
     "abilities": "Hits hard, slow",
     "created_at": "2026-07-24T15:50:16.077793+00:00"
   }
