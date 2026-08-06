@@ -454,7 +454,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           {/* Header Controls */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
             <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-2 font-outfit">
-              <span>👾</span> MONSTER ROSTER ({monsters.length})
+              <span>🐉</span> MONSTER TRACKER ({monsters.length})
             </h3>
 
             <div className="flex flex-wrap items-center gap-2">

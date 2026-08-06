@@ -122,7 +122,7 @@ export const GmMonsterTrackerHud: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
-          <span>👾</span> MONSTER TRACKER ({monsters.length})
+          <span>🐉</span> MONSTER TRACKER ({monsters.length})
         </h3>
       </div>
 
