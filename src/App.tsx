@@ -23,6 +23,7 @@ import { LevelingWizard } from './components/common/LevelingWizard';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { CardHelpButton } from './components/common/CardHelpButton';
 import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
+import { resolveCharFirstName } from './components/common/PartyCharacterCard';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'sheet' | 'rolls' | 'codex' | 'logs' | 'directory'>('sheet');
@@ -92,6 +93,18 @@ export default function App() {
   }, [fetchInitialData]);
 
   const activePartyId = useCharacterStore((state) => state.activePartyId);
+
+  // Dynamic Browser Tab Title Lifecycle
+  useEffect(() => {
+    if (activeRole === 'gm') {
+      document.title = 'SupaFlex GM Screen';
+    } else if (activeCharacter?.name) {
+      const charFirstName = resolveCharFirstName(activeCharacter.name);
+      document.title = `SupaFlex ${charFirstName}`;
+    } else {
+      document.title = 'SupaFlex Companion';
+    }
+  }, [activeRole, activeCharacter?.name]);
 
   // Player Party Session Heartbeat & Window Unload Life-cycle
   useEffect(() => {
