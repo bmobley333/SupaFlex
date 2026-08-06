@@ -231,8 +231,18 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     if (!currentEmail) return;
     try {
       const data = await gameApi.getPartiesForUser(currentEmail);
-      if (data.length > 0 && !selectedParty) {
-        setSelectedParty(data[0] as Party);
+      const currentActivePartyId = useCharacterStore.getState().activePartyId;
+      if (data.length > 0) {
+        if (currentActivePartyId) {
+          const match = (data as Party[]).find((p) => p.id === currentActivePartyId);
+          if (match) {
+            setSelectedParty(match);
+            return;
+          }
+        }
+        if (!selectedParty) {
+          setSelectedParty(data[0] as Party);
+        }
       }
     } catch (err) {
       console.error('Error loading parties:', err);
@@ -243,13 +253,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     try {
       const members = await gameApi.getPartySessionMembers(partyId);
       setSessionMembers(members as PartySessionMember[]);
-
-      if (tabSessionId) {
-        const isThisTabRegistered = members.some((m) => m.tab_session_id === tabSessionId);
-        if (!isThisTabRegistered) {
-          useCharacterStore.getState().setActivePartyId(null);
-        }
-      }
     } catch (err) {
       console.error('Error loading session members:', err);
     }
@@ -494,13 +497,13 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   // --- PARTY HANDLERS ---
   const handleLeaveParty = async () => {
     try {
-      await gameApi.leavePartySession(tabSessionId);
-      if (selectedParty) {
-        await loadSessionMembers(selectedParty.id);
+      const activePartyId = useCharacterStore.getState().activePartyId;
+      if (tabSessionId && activePartyId) {
+        await gameApi.leavePartySession(tabSessionId, activePartyId);
       }
+      useCharacterStore.getState().setActivePartyId(null);
       setSelectedParty(null);
       setSessionMembers([]);
-      useCharacterStore.getState().setActivePartyId(null);
       setPartySuccessMsg('Left party room session.');
     } catch (err: any) {
       setPartyError(err.message || 'Failed to leave party.');
@@ -1104,72 +1107,92 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
               {/* SUB-TAB 3: JOIN PARTY */}
               {rightSubTab === 'party' && (
-                <div className="space-y-4">
+                <div className="space-y-4 font-outfit">
                   {partyError && <div className="p-3 bg-red-900/60 border border-red-500/50 rounded text-red-200 text-xs">{partyError}</div>}
                   {partySuccessMsg && <div className="p-3 bg-emerald-900/60 border border-emerald-500/50 rounded text-emerald-200 text-xs font-semibold">{partySuccessMsg}</div>}
 
-                  {/* Join Room by 4-Char Room ID Card */}
-                  <form onSubmit={handleJoinByRoomCode} className="p-3.5 bg-slate-950/90 rounded-xl border border-amber-500/40 space-y-2.5 shadow-inner">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-amber-400 uppercase tracking-wider font-outfit flex items-center gap-1.5">
-                        <span>🔑</span> ENTER GM PARTY ID
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleLeaveParty}
-                        className="px-3 py-1 bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-700/60 font-bold text-xs rounded-xl transition cursor-pointer shadow-sm"
-                        title="Leave active room session"
-                      >
-                        Leave
-                      </button>
-                    </div>
+                  {useCharacterStore.getState().activePartyId ? (
+                    /* JOINED STATE: Active Party Session Display */
+                    <div className="p-3.5 bg-slate-950/90 rounded-xl border border-cyan-500/40 space-y-3 shadow-inner">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-extrabold text-cyan-400 uppercase tracking-wider font-outfit flex items-center gap-1.5">
+                            <span>👥</span> ACTIVE SESSION:
+                          </span>
+                          <span className="font-mono text-cyan-300 font-extrabold text-sm px-2 py-0.5 bg-cyan-950/80 rounded border border-cyan-800">
+                            {selectedParty?.room_code?.toUpperCase() || (useCharacterStore.getState().activePartyId?.slice(0, 4).toUpperCase() || 'LIVE')}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleLeaveParty}
+                          className="px-3 py-1 bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-700/60 font-bold text-xs rounded-xl transition cursor-pointer shadow-sm"
+                          title="Leave active room session"
+                        >
+                          Leave Party
+                        </button>
+                      </div>
 
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        maxLength={4}
-                        value={roomCodeInput}
-                        onChange={(e) => setRoomCodeInput(sanitizeRoomCodeInput(e.target.value))}
-                        placeholder="e.g. K9X2"
-                        className="w-32 px-3 py-2 bg-slate-900 border border-amber-500/40 rounded-lg text-center font-mono text-base font-black tracking-widest text-amber-300 uppercase focus:outline-none focus:border-amber-400 placeholder:text-slate-600 placeholder:font-sans placeholder:tracking-normal placeholder:text-xs"
-                      />
-                      <button
-                        type="submit"
-                        disabled={isJoiningRoom || roomCodeInput.length !== 4}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-40 text-slate-950 font-black text-xs rounded-lg transition-all shadow-md flex items-center justify-center gap-1 cursor-pointer"
-                      >
-                        {isJoiningRoom ? 'Joining...' : '⚡ Join Party'}
-                      </button>
+                      {/* Connected Roster Members */}
+                      {sessionMembers.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex justify-between items-center">
+                            <span>Connected Party Roster</span>
+                            <span className="text-emerald-400 font-bold flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                              Live ({sessionMembers.length})
+                            </span>
+                          </div>
+                          <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                            {sessionMembers.map((m) => (
+                              <div
+                                key={m.id}
+                                className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex justify-between items-center text-xs"
+                              >
+                                <span className="font-bold text-slate-200">
+                                  🛡️ {m.character?.name || `Hero #${m.character_id}`}{' '}
+                                  {m.tab_session_id === tabSessionId && (
+                                    <span className="text-amber-400 font-mono font-bold text-[10px] ml-1">(This Tab)</span>
+                                  )}
+                                </span>
+                                <span className="text-[10px] text-slate-400">{m.player_email}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-400 italic text-center py-2">
+                          Connected to party room session.
+                        </div>
+                      )}
                     </div>
-                  </form>
-
-                  {/* Active Room Session Party Roster */}
-                  {selectedParty && sessionMembers.length > 0 && (
-                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-                      <div className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex justify-between items-center border-b border-slate-800 pb-2">
-                        <span>Session Party Roster</span>
-                        <span className="text-emerald-400 font-bold flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                          Live ({sessionMembers.length})
+                  ) : (
+                    /* UNJOINED STATE: Enter Room Code Input Form */
+                    <form onSubmit={handleJoinByRoomCode} className="p-3.5 bg-slate-950/90 rounded-xl border border-amber-500/40 space-y-2.5 shadow-inner">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-amber-400 uppercase tracking-wider font-outfit flex items-center gap-1.5">
+                          <span>🔑</span> ENTER GM PARTY ID
                         </span>
                       </div>
-                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                        {sessionMembers.map((m) => (
-                          <div
-                            key={m.id}
-                            className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 flex justify-between items-center text-xs"
-                          >
-                            <span className="font-bold text-slate-200">
-                              🛡️ {m.character?.name || `Hero #${m.character_id}`}{' '}
-                              {m.tab_session_id === tabSessionId && (
-                                <span className="text-amber-400 font-mono font-bold text-[10px] ml-1">(This Tab)</span>
-                              )}
-                            </span>
-                            <span className="text-[10px] text-slate-400">{m.player_email}</span>
-                          </div>
-                        ))}
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          maxLength={4}
+                          value={roomCodeInput}
+                          onChange={(e) => setRoomCodeInput(sanitizeRoomCodeInput(e.target.value))}
+                          placeholder="e.g. K9X2"
+                          className="w-32 px-3 py-2 bg-slate-900 border border-amber-500/40 rounded-lg text-center font-mono text-base font-black tracking-widest text-amber-300 uppercase focus:outline-none focus:border-amber-400 placeholder:text-slate-600 placeholder:font-sans placeholder:tracking-normal placeholder:text-xs"
+                        />
+                        <button
+                          type="submit"
+                          disabled={isJoiningRoom || roomCodeInput.length !== 4}
+                          className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-40 text-slate-950 font-black text-xs rounded-lg transition-all shadow-md flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          {isJoiningRoom ? 'Joining...' : '⚡ Join Party'}
+                        </button>
                       </div>
-                    </div>
+                    </form>
                   )}
                 </div>
               )}

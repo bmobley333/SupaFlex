@@ -1,11 +1,13 @@
 // src/components/hud/GmMonsterTrackerHud.tsx
-// GM Monster Tracker HUD - Displays live monster encounter stats using GmMonsterCard / PlayerMonsterCard.
+// GM & Player Monster Tracker HUD - Displays live monster encounter stats using GmMonsterCard / PlayerMonsterCard.
 
 import React, { useState, useEffect } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { PlayerMonsterCard } from '../common/PlayerMonsterCard';
 import { parseMonsterLine, sortMonstersAlphabetically } from '../../utils/monsterStatParser';
+import { gameApi } from '../../services/api';
+import { supabase } from '../../lib/supabase';
 
 export interface MonsterEntry {
   id: string;
@@ -36,39 +38,83 @@ export interface MonsterEntry {
 
 export const GmMonsterTrackerHud: React.FC = () => {
   const activeRole = useCharacterStore((state) => state.activeRole);
-  const [monsters, setMonsters] = useState<MonsterEntry[]>(() => {
-    try {
-      const saved = localStorage.getItem('supaflex_gm_monster_stats');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return Array.isArray(parsed) ? parsed : [];
-      }
-    } catch (e) {
-      console.error('Failed to load monster stats:', e);
-    }
-    return [];
-  });
+  const activePartyId = useCharacterStore((state) => state.activePartyId);
+  const [monsters, setMonsters] = useState<MonsterEntry[]>([]);
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        const saved = localStorage.getItem('supaflex_gm_monster_stats');
-        if (saved) {
-          setMonsters(JSON.parse(saved));
+    // When role is player and NOT in an active party, Monster Tracker MUST be strictly empty.
+    if (activeRole === 'player' && !activePartyId) {
+      setMonsters([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadMonsters = async () => {
+      if (activeRole === 'player' && activePartyId) {
+        try {
+          const list = await gameApi.getPartyMonsters(activePartyId);
+          if (isMounted && Array.isArray(list)) {
+            setMonsters(list);
+          }
+        } catch (err) {
+          console.error('[GmMonsterTrackerHud] Error loading party monsters:', err);
         }
-      } catch (e) {
-        console.error('Error syncing monster stats:', e);
+      } else {
+        // GM Mode or fallback local state
+        try {
+          const saved = localStorage.getItem('supaflex_gm_monster_stats');
+          if (saved && isMounted) {
+            const parsed = JSON.parse(saved);
+            setMonsters(Array.isArray(parsed) ? parsed : []);
+          }
+        } catch (e) {
+          console.error('Failed to load monster stats:', e);
+        }
+      }
+    };
+
+    loadMonsters();
+
+    // Set up Realtime Broadcast channel when joined to a party
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    if (activeRole === 'player' && activePartyId) {
+      channel = supabase.channel(`party_monsters_hud_${activePartyId}`);
+      channel
+        .on('broadcast', { event: 'monster_roster_updated' }, (payload) => {
+          if (isMounted && payload?.payload?.monsters) {
+            setMonsters(payload.payload.monsters);
+          }
+        })
+        .subscribe();
+    }
+
+    // Storage listener fallback for local browser tabs
+    const handleStorageChange = () => {
+      if (activeRole === 'gm') {
+        try {
+          const saved = localStorage.getItem('supaflex_gm_monster_stats');
+          if (saved && isMounted) {
+            setMonsters(JSON.parse(saved));
+          }
+        } catch (e) {
+          console.error('Error syncing monster stats:', e);
+        }
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(handleStorageChange, 1500);
+    const interval = setInterval(loadMonsters, 5000);
 
     return () => {
+      isMounted = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
-  }, []);
+  }, [activeRole, activePartyId]);
 
   const mapToMonsterData = (m: MonsterEntry): MonsterData => {
     if (m.name) {
