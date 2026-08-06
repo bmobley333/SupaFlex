@@ -193,14 +193,19 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showManageModal]);
 
-  const handleCheckboxToggle = (slotIndex: number, checkIndex: number) => {
+  const handleCheckboxToggle = (targetSlot: AbilitySlot, checkIndex: number) => {
     updateActiveSheetData((prev) => {
       const updatedSlots = [...(prev[slotKey] || [])];
-      const targetSlot = { ...updatedSlots[slotIndex] };
-      const newChecked = [...(targetSlot.checked || [false, false, false])];
+      const realIndex = updatedSlots.findIndex(
+        (s) => s.name === targetSlot.name || ((s as any).id && (s as any).id === (targetSlot as any).id)
+      );
+      if (realIndex === -1) return prev;
+
+      const slotToUpdate = { ...updatedSlots[realIndex] };
+      const newChecked = [...(slotToUpdate.checked || [false, false, false])];
       newChecked[checkIndex] = !newChecked[checkIndex];
-      targetSlot.checked = newChecked;
-      updatedSlots[slotIndex] = targetSlot;
+      slotToUpdate.checked = newChecked;
+      updatedSlots[realIndex] = slotToUpdate;
       return { ...prev, [slotKey]: updatedSlots };
     });
     saveActiveCharacter();
@@ -1179,7 +1184,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           key={bIdx}
                           type="checkbox"
                           checked={isChecked}
-                          onChange={() => handleCheckboxToggle(index, bIdx)}
+                          onChange={() => handleCheckboxToggle(slot, bIdx)}
                           className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500 focus:ring-0 cursor-pointer accent-indigo-500"
                           title={`Usage slot ${bIdx + 1}`}
                         />
