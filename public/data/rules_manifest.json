@@ -50,8 +50,8 @@
     "anchor": "#armor-shields"
   },
   "col.shields.block": {
-    "title": "Block Rating (🛡️)",
-    "summary": "Defense bonus or active Block die rolled to negate incoming physical attacks.",
+    "title": "Shield & Block Rules",
+    "summary": "Rolls:\n• Unskilled Shield Block — Unknown shields may be attempted as an Unskilled Block (1d20 + Block Die).\n• Skilled Attacks — Known shields use a Skilled Block (2H20 + Block Die).\n\nAction:\n• Action Cost — Blocking is a Free (F) action.\n\nBlocking:\n• Requirements — Wielding a drawn shield; Any Attack that “could” be Dodged; Attack’s Dmg ≤ weapon \"Max Block\" rating.\n• Resolution — Success = negates all damage. Failure = hit connects, roll Armor AR value to reduce damage.\n\nShield-Hand Restrictions:\n• Off-Hand Limits — Holding a shield completely ties up your off-hand. You cannot hold a torch, lantern, flask, or second weapon in your shield hand.\n• Utility Action Cost — Performing utility tasks during combat (quaffing a potion, retrieving an item, opening a heavy door) requires a Partial (P) action to awkwardly manage items while holding your weapon and shield.\n\nMovement Rate (MR 👣) Penalty:\n• Active Shield Penalty — When a shield is drawn, the Shield Drawn MR applies.",
     "anchor": "#shields"
   },
   "col.powers.usage": {
