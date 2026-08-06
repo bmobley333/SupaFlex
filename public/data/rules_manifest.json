@@ -21,7 +21,7 @@
   },
   "skills.basics": {
     "title": "Skilled vs. Unskilled Rolls",
-    "summary": "ANY character can attempt ANY skill roll. Unskilled rolls use 1d20 + Atr Die. Skilled rolls (learned with AP) use 2H20 (keep highest of 2d20) + Atr Die.",
+    "summary": "Rolls:\n• Unskilled Checks — Unknown skills (including weapons, armor, and shields) may be attempted as an Unskilled Ability check (1d20 + Atr Die).\n• Skilled Checks — Known skills, or those approved by the GM as matching a Skill Set, use a Skilled Ability check (2H20 + Atr Die).\n• Powers & Magic Items — All Powers🔥 and Magic Items✨ are ALWAYS considered Skilled.\n\nAction:\n• Skill Action Costs — Skills use a Partial (P) or Free (F) action as determined by the GM. GM-initiated skill checks are always Free (F).",
     "anchor": "#skills"
   },
   "col.weapons.dmg": {

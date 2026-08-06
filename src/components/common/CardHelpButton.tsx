@@ -4,19 +4,23 @@ import { useRulesHelp } from '../../hooks/useRulesHelp';
 interface CardHelpButtonProps {
   ruleKey: string;
   buttonLabel?: string;
+  align?: 'left' | 'right' | 'auto';
 }
 
 export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
   ruleKey,
   buttonLabel = '?',
+  align = 'auto',
 }) => {
   const { rule } = useRulesHelp(ruleKey);
   const [isOpen, setIsOpen] = useState(false);
+  const [calculatedAlign, setCalculatedAlign] = useState<'left' | 'right'>('right');
   const popoverRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node) && buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -27,6 +31,20 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      if (align === 'left') {
+        setCalculatedAlign('left');
+      } else if (align === 'right') {
+        setCalculatedAlign('right');
+      } else {
+        setCalculatedAlign(rect.left < window.innerWidth / 2 ? 'left' : 'right');
+      }
+    }
+    setIsOpen(!isOpen);
+  };
 
   if (!rule) return null;
 
@@ -57,7 +75,7 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
 
   const renderFormattedSummary = (summaryText: string) => {
     const lines = summaryText.split('\n');
-    const isStructured = lines.some((l) => l.trim().startsWith('•') || l.trim().startsWith('-') || l.toLowerCase().includes('gain 2 ap') || l.trim().endsWith(':'));
+    const isStructured = lines.some((l) => l.trim().startsWith('•') || l.trim().startsWith('-') || l.toLowerCase().includes('gain 2 ap') || l.trim().endsWith(':') || l.trim() === 'Rolls' || l.trim() === 'Action');
 
     if (!isStructured) {
       return (
@@ -88,10 +106,11 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
           }
 
           // Section Category Headers
-          if (trimmed.endsWith(':') || trimmed === 'Free Level Advancement') {
+          if (trimmed.endsWith(':') || trimmed === 'Free Level Advancement' || trimmed === 'Rolls' || trimmed === 'Action') {
+            const cleanTitle = trimmed.endsWith(':') ? trimmed.slice(0, -1) : trimmed;
             return (
               <div key={idx} className="pt-2 pb-0.5 text-amber-400 font-bold text-[11.5px] uppercase tracking-wider border-b border-amber-500/25 mb-1 flex items-center gap-1.5">
-                <span>⚡</span> {formatTextWithApBadges(trimmed)}
+                <span>⚡</span> {formatTextWithApBadges(cleanTitle)}
               </div>
             );
           }
@@ -140,8 +159,9 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
   return (
     <div className="relative inline-block text-left" ref={popoverRef}>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         title={`View ${rule.title} Rules`}
         className="w-5 h-5 rounded-full bg-slate-800/80 hover:bg-amber-600/80 text-amber-300 hover:text-white border border-amber-500/40 text-xs font-bold flex items-center justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-amber-400"
       >
@@ -149,7 +169,9 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-[440px] max-w-[92vw] max-h-[75vh] overflow-y-auto p-4 rounded-xl bg-slate-900/95 border border-amber-500/50 shadow-2xl backdrop-blur-xl text-xs z-50 animate-in fade-in zoom-in-95 duration-150 custom-scrollbar">
+        <div
+          className={`absolute ${calculatedAlign === 'left' ? 'left-0' : 'right-0'} mt-2 w-80 sm:w-[440px] max-w-[calc(100vw-2rem)] max-h-[75vh] overflow-y-auto p-4 rounded-xl bg-slate-900/95 border border-amber-500/50 shadow-2xl backdrop-blur-xl text-xs z-50 animate-in fade-in zoom-in-95 duration-150 custom-scrollbar`}
+        >
           <div className="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-2.5 sticky top-0 bg-slate-900/90 backdrop-blur-md pt-0.5 z-10">
             <span className="font-bold text-amber-300 text-sm flex items-center gap-1.5">
               <span>📖</span> {rule.title}
