@@ -31,7 +31,32 @@ export function useRosterOrdering<T>({
     return [];
   });
 
-  const [activePreset, setActivePreset] = useState<SortPreset>('custom');
+  const presetStorageKey = `${storageKey}_preset`;
+
+  const [activePreset, setActivePresetState] = useState<SortPreset>(() => {
+    try {
+      const saved = localStorage.getItem(presetStorageKey);
+      if (saved && (saved === 'custom' || saved === 'alphabetical' || saved === 'vit_desc' || saved === 'vit_asc')) {
+        return saved as SortPreset;
+      }
+    } catch (e) {
+      console.warn(`[useRosterOrdering] Error reading preset key ${presetStorageKey}:`, e);
+    }
+    return 'custom';
+  });
+
+  const setActivePreset = useCallback(
+    (preset: SortPreset) => {
+      setActivePresetState(preset);
+      try {
+        localStorage.setItem(presetStorageKey, preset);
+      } catch (e) {
+        console.warn(`[useRosterOrdering] Error saving preset key ${presetStorageKey}:`, e);
+      }
+    },
+    [presetStorageKey]
+  );
+
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   // Sync to localStorage
@@ -52,13 +77,33 @@ export function useRosterOrdering<T>({
     if (!items || items.length === 0) return [];
 
     if (activePreset === 'alphabetical' && getName) {
-      return [...items].sort((a, b) => getName(a).localeCompare(getName(b)));
+      return [...items].sort((a, b) => {
+        const nameDiff = getName(a).localeCompare(getName(b));
+        if (nameDiff !== 0) return nameDiff;
+        return getId(a).localeCompare(getId(b));
+      });
     }
     if (activePreset === 'vit_desc' && getVitPct) {
-      return [...items].sort((a, b) => getVitPct(b) - getVitPct(a));
+      return [...items].sort((a, b) => {
+        const diff = getVitPct(b) - getVitPct(a);
+        if (Math.abs(diff) > 0.001) return diff;
+        if (getName) {
+          const nameDiff = getName(a).localeCompare(getName(b));
+          if (nameDiff !== 0) return nameDiff;
+        }
+        return getId(a).localeCompare(getId(b));
+      });
     }
     if (activePreset === 'vit_asc' && getVitPct) {
-      return [...items].sort((a, b) => getVitPct(a) - getVitPct(b));
+      return [...items].sort((a, b) => {
+        const diff = getVitPct(a) - getVitPct(b);
+        if (Math.abs(diff) > 0.001) return diff;
+        if (getName) {
+          const nameDiff = getName(a).localeCompare(getName(b));
+          if (nameDiff !== 0) return nameDiff;
+        }
+        return getId(a).localeCompare(getId(b));
+      });
     }
 
     if (orderIds.length === 0) return items;
@@ -112,7 +157,7 @@ export function useRosterOrdering<T>({
       setActivePreset('custom');
       saveOrder(newOrderIds);
     },
-    [orderedItems, getId, saveOrder]
+    [orderedItems, getId, saveOrder, setActivePreset]
   );
 
   // Nudge item up or down
@@ -131,16 +176,32 @@ export function useRosterOrdering<T>({
       if (preset !== 'custom') {
         const sorted = [...items];
         if (preset === 'alphabetical' && getName) {
-          sorted.sort((a, b) => getName(a).localeCompare(getName(b)));
+          sorted.sort((a, b) => getName(a).localeCompare(getName(b)) || getId(a).localeCompare(getId(b)));
         } else if (preset === 'vit_desc' && getVitPct) {
-          sorted.sort((a, b) => getVitPct(b) - getVitPct(a));
+          sorted.sort((a, b) => {
+            const diff = getVitPct(b) - getVitPct(a);
+            if (Math.abs(diff) > 0.001) return diff;
+            if (getName) {
+              const nameDiff = getName(a).localeCompare(getName(b));
+              if (nameDiff !== 0) return nameDiff;
+            }
+            return getId(a).localeCompare(getId(b));
+          });
         } else if (preset === 'vit_asc' && getVitPct) {
-          sorted.sort((a, b) => getVitPct(a) - getVitPct(b));
+          sorted.sort((a, b) => {
+            const diff = getVitPct(a) - getVitPct(b);
+            if (Math.abs(diff) > 0.001) return diff;
+            if (getName) {
+              const nameDiff = getName(a).localeCompare(getName(b));
+              if (nameDiff !== 0) return nameDiff;
+            }
+            return getId(a).localeCompare(getId(b));
+          });
         }
         saveOrder(sorted.map(getId));
       }
     },
-    [items, getName, getVitPct, getId, saveOrder]
+    [items, getName, getVitPct, getId, saveOrder, setActivePreset]
   );
 
   // Reset to initial backend order

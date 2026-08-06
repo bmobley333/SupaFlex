@@ -706,7 +706,8 @@ export const gameApi = {
       .from('party_session_members')
       .select('*, character:characters(*)')
       .eq('party_id', targetPartyUuid)
-      .gte('last_seen', activeCutoff);
+      .gte('last_seen', activeCutoff)
+      .order('character_id', { ascending: true });
 
     // Asynchronously prune dead ghost sessions from DB (> 12h inactive)
     const deadCutoff = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
@@ -750,7 +751,11 @@ export const gameApi = {
       }
     });
 
-    return Array.from(memberMap.values());
+    // 100% deterministic backend sorting by character_id
+    const sortedMembers = Array.from(memberMap.values()).sort((a, b) =>
+      Number(a.character_id || 0) - Number(b.character_id || 0)
+    );
+    return sortedMembers;
   },
 
   async sendPlayerHeartbeat(tabSessionId: string) {

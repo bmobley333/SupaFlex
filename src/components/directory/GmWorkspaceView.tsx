@@ -267,6 +267,26 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     };
   }, [selectedParty?.id]);
 
+function areSessionMembersEqual(a: PartySessionMember[], b: PartySessionMember[]): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const m1 = a[i];
+    const m2 = b[i];
+    if (
+      m1.id !== m2.id ||
+      m1.character_id !== m2.character_id ||
+      m1.player_email !== m2.player_email ||
+      m1.character?.name !== m2.character?.name ||
+      m1.character?.hp !== m2.character?.hp ||
+      JSON.stringify(m1.character?.sheet_data) !== JSON.stringify(m2.character?.sheet_data)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
   const loadSessionMembers = async (partyId: string, isSilent = false) => {
     if (!isSilent && sessionMembers.length === 0) {
       setIsMembersLoading(true);
@@ -274,7 +294,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     try {
       const members = await gameApi.getPartySessionMembers(partyId);
       setSessionMembers((prev) => {
-        if (JSON.stringify(prev) === JSON.stringify(members)) {
+        if (areSessionMembersEqual(prev, members)) {
           return prev;
         }
         return members;
