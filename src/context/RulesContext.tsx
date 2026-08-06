@@ -25,7 +25,7 @@ export const RulesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/data/rules_manifest.json')
+    fetch(`/data/rules_manifest.json?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

@@ -16,8 +16,8 @@
   },
   "leveling.advancement_steps": {
     "title": "Leveling & AP Advancement",
-    "summary": "At each Level up, gain AP to spend across 3 Tiers: Tier 1 (Utility/Traits 1-2 AP), Tier 2 (Atr/Focus Die upgrades 2-8 AP), Tier 3 (Heroic Capstones 5-8 AP). Vit increases by rolling Vit Max.",
-    "anchor": "#levelingadvancement"
+    "summary": "Gain 2 AP per Level\n\nFree Level Advancement\n• Manage Vitality - Free Max Vit Roll (Roll & keep higher)\n\nSpend AP to Improve Abilities (1–2 AP):\n• Manage Skills — Learn Skill Set (2 AP) | Learn Skill (1 AP)\n• Manage Weapons — Learn Weapon (1 AP)\n• Manage Armor — Learn Armor (1 AP)\n• Manage Shields — Learn Shield (1 AP)\n• Manage Vitality — Gain +2 Max Vit (1 AP)\n• Manage Powers — Learn Power (1 AP) | Upgrade Power (1 AP)\n• Manage Magic Items — Acquire Minor Item (1 AP) | Upgrade Any Magic Item (1 AP)\n\nSpecial AP Expenditures (2–8 AP):\n• Manage Attributes — Step-Up Attribute Die (2–8 AP) | Respec Attributes (1 AP)\n• Upgrade Focus Die — Step-Up Focus Die (2–8 AP)\n• Gain Capstone Ability — Learn Heroic Capstone (5–8 AP)",
+    "anchor": "#leveling-advancement_steps"
   },
   "skills.basics": {
     "title": "Skilled vs. Unskilled Rolls",

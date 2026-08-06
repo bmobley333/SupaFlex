@@ -47,22 +47,24 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 p-3 rounded-lg bg-slate-900/95 border border-amber-500/50 shadow-2xl backdrop-blur-lg text-xs z-50 animate-in fade-in zoom-in-95 duration-150">
-          <div className="flex items-center justify-between border-b border-slate-700/80 pb-1.5 mb-2">
+        <div className="absolute right-0 mt-2 w-80 sm:w-[440px] max-w-[92vw] max-h-[75vh] overflow-y-auto p-4 rounded-xl bg-slate-900/95 border border-amber-500/50 shadow-2xl backdrop-blur-xl text-xs z-50 animate-in fade-in zoom-in-95 duration-150">
+          <div className="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-2.5 sticky top-0 bg-slate-900/90 backdrop-blur-md pt-0.5 z-10">
             <span className="font-bold text-amber-300 text-sm flex items-center gap-1.5">
               <span>📖</span> {rule.title}
             </span>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-slate-400 hover:text-slate-200 font-bold px-1"
+              className="text-slate-400 hover:text-slate-200 font-bold px-1.5 py-0.5 rounded hover:bg-slate-800 transition-colors"
             >
               ✕
             </button>
           </div>
-          <p className="text-slate-300 leading-relaxed mb-3 text-[11.5px]">
+
+          <div className="text-slate-200 leading-relaxed mb-3 text-[12px] whitespace-pre-line font-sans select-text">
             {rule.summary}
-          </p>
-          <div className="pt-1 border-t border-slate-800 flex justify-end">
+          </div>
+
+          <div className="pt-2 border-t border-slate-800 flex justify-end sticky bottom-0 bg-slate-900/90 backdrop-blur-md pb-0.5">
             <a
               href={playerGuideUrl}
               target="_blank"
@@ -77,3 +79,4 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
     </div>
   );
 };
+
