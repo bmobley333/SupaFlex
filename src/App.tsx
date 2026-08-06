@@ -127,7 +127,6 @@ export default function App() {
     return () => {
       clearInterval(interval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      gameApi.leavePartySession(tabSessionId, activePartyId).catch(console.error);
     };
   }, [activePartyId, tabSessionId]);
 

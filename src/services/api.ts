@@ -658,6 +658,35 @@ export const gameApi = {
       }
     }
   },
+  async ensureTabPartySession(partyIdOrCode: string, tabSessionId: string, characterId: number, playerEmail: string) {
+    if (!partyIdOrCode || !tabSessionId || !characterId) return;
+
+    let targetPartyUuid = partyIdOrCode;
+    if (partyIdOrCode.length === 4) {
+      const party = await this.findActivePartyByRoomCode(partyIdOrCode);
+      if (party) {
+        targetPartyUuid = party.id;
+      }
+    }
+
+    try {
+      const { data } = await supabase
+        .from('party_session_members')
+        .select('id')
+        .eq('party_id', targetPartyUuid)
+        .eq('tab_session_id', tabSessionId)
+        .maybeSingle();
+
+      if (!data) {
+        console.log(`[gameApi] Self-healing session for tab ${tabSessionId} in party ${targetPartyUuid}...`);
+        await this.joinPartySession(targetPartyUuid, playerEmail || 'player', characterId, tabSessionId);
+      } else {
+        await this.sendPlayerHeartbeat(tabSessionId);
+      }
+    } catch (e) {
+      console.warn('[gameApi] Error in ensureTabPartySession:', e);
+    }
+  },
 
   async getPartySessionMembers(partyIdOrCode: string) {
     if (!partyIdOrCode) return [];

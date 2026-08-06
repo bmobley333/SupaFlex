@@ -47,11 +47,15 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
           }
         }
 
-        // Verify active session with Supabase without auto-clearing state on transient error
-        if (tabSessionId) {
-          const isValidSession = await gameApi.verifyActivePartySession(activePartyId, tabSessionId);
-          if (!isValidSession) {
-            console.warn(`[PartyRosterHud] Tab ${tabSessionId} notice: session verification returned false for ${activePartyId}.`);
+        // Verify active session with Supabase and self-heal missing DB session rows
+        if (tabSessionId && activeCharacter?.id) {
+          const isRegisteredInDb = members.some((m) => m.tab_session_id === tabSessionId);
+          if (!isRegisteredInDb) {
+            const playerEmail = useCharacterStore.getState().playerEmail;
+            await gameApi.ensureTabPartySession(activePartyId, tabSessionId, activeCharacter.id, playerEmail);
+            const updatedMembers = await gameApi.getPartySessionMembers(activePartyId);
+            setSessionMembers(updatedMembers);
+            return;
           }
         }
 
