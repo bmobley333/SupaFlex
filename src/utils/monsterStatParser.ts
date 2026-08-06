@@ -73,3 +73,18 @@ export function parseMultiRowMonsterBlock(textBlock: string): ParsedMonster[] {
   const lines = textBlock.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
   return lines.map(parseMonsterLine);
 }
+
+export function getCleanMonsterName(name: string | undefined | null): string {
+  if (!name) return '';
+  return name.replace(/^\d+\s*/, '').toLowerCase().trim();
+}
+
+export function sortMonstersAlphabetically<T extends { name?: string; nameWithEquip?: string; fullText?: string }>(
+  items: T[]
+): T[] {
+  return [...items].sort((a, b) => {
+    const nameA = getCleanMonsterName(a.name || a.nameWithEquip || a.fullText);
+    const nameB = getCleanMonsterName(b.name || b.nameWithEquip || b.fullText);
+    return nameA.localeCompare(nameB);
+  });
+}

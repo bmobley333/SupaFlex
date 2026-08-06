@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
 import { Party, PartySessionMember, SupabaseMonster } from '../../types/game';
-import { parseMonsterLine, parseMultiRowMonsterBlock, ParsedMonster } from '../../utils/monsterStatParser';
+import { parseMonsterLine, parseMultiRowMonsterBlock, ParsedMonster, sortMonstersAlphabetically } from '../../utils/monsterStatParser';
 import { PartyCharacterCard } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 
@@ -239,7 +239,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     try {
       const activeList = await gameApi.getPartyMonsters(partyId);
       if (Array.isArray(activeList)) {
-        setMonsters(activeList);
+        setMonsters(sortMonstersAlphabetically(activeList));
       }
     } catch (e) {
       console.error('Failed to load party monsters:', e);
@@ -247,11 +247,12 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   };
 
   const handleSaveMonsters = async (updated: ParsedMonster[]) => {
-    setMonsters(updated);
+    const sorted = sortMonstersAlphabetically(updated);
+    setMonsters(sorted);
     if (selectedParty) {
-      await gameApi.savePartyMonsters(selectedParty.id, updated);
+      await gameApi.savePartyMonsters(selectedParty.id, sorted);
     } else {
-      localStorage.setItem('supaflex_gm_monster_stats', JSON.stringify(updated));
+      localStorage.setItem('supaflex_gm_monster_stats', JSON.stringify(sorted));
     }
   };
 
@@ -482,164 +483,179 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           </div>
 
           {/* Quick Structured Add Bar */}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 bg-slate-950/90 p-2.5 rounded-xl border border-slate-800 text-xs font-mono text-slate-200 shadow-inner">
-            <span className="text-slate-400 font-sans font-bold text-[11px]">Name:</span>
-            <input
-              type="text"
-              value={quickAdd.name}
-              onChange={(e) => handleTextChange('name', e.target.value)}
-              placeholder="Name"
-              className="w-24 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-amber-300 font-bold focus:outline-none focus:border-amber-500/80"
-            />
+          <div className="bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-2 text-xs font-mono text-slate-200 shadow-inner">
+            {/* Header Title */}
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-wider font-outfit flex items-center gap-1.5">
+                <span>⚡</span> Quick Add Monster
+              </span>
+            </div>
 
-            <span className="text-slate-400 font-sans font-bold text-[11px]">Gear:</span>
-            <input
-              type="text"
-              value={quickAdd.gear}
-              onChange={(e) => handleTextChange('gear', e.target.value)}
-              placeholder="Optional"
-              className="w-24 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 focus:outline-none focus:border-indigo-500/80"
-            />
+            {/* Row 1: Name, Gear & Combat Stats */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span className="text-slate-400 font-sans font-bold text-[11px]">Name:</span>
+              <input
+                type="text"
+                value={quickAdd.name}
+                onChange={(e) => handleTextChange('name', e.target.value)}
+                placeholder="Name"
+                className="w-28 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-amber-300 font-bold focus:outline-none focus:border-amber-500/80"
+              />
 
-            <span className="flex items-center gap-1">
-              🚩
+              <span className="text-slate-400 font-sans font-bold text-[11px]">Gear:</span>
               <input
-                type="number"
-                min="0"
-                value={quickAdd.init}
-                onChange={(e) => handleNumChange('init', e.target.value)}
-                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+                type="text"
+                value={quickAdd.gear}
+                onChange={(e) => handleTextChange('gear', e.target.value)}
+                placeholder="Optional"
+                className="w-28 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 focus:outline-none focus:border-indigo-500/80"
               />
-            </span>
 
-            <span className="flex items-center gap-1">
-              👣
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.mr}
-                onChange={(e) => handleNumChange('mr', e.target.value)}
-                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
-              />
-            </span>
+              <span className="flex items-center gap-1">
+                🚩
+                <input
+                  type="number"
+                  min="0"
+                  value={quickAdd.init}
+                  onChange={(e) => handleNumChange('init', e.target.value)}
+                  className="w-11 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+                />
+              </span>
 
-            <span className="flex items-center gap-0.5">
-              ⚔️
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.atk}
-                onChange={(e) => handleNumChange('atk', e.target.value)}
-                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
-              />
-              /
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.dmg}
-                onChange={(e) => handleNumChange('dmg', e.target.value)}
-                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
-              />
-              (
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.wounds}
-                onChange={(e) => handleNumChange('wounds', e.target.value)}
-                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
-              />
-              )
-            </span>
+              <span className="flex items-center gap-1">
+                👣
+                <input
+                  type="number"
+                  min="0"
+                  value={quickAdd.mr}
+                  onChange={(e) => handleNumChange('mr', e.target.value)}
+                  className="w-11 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+                />
+              </span>
 
-            <span className="flex items-center gap-0.5">
-              🧥
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.def}
-                onChange={(e) => handleNumChange('def', e.target.value)}
-                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
-              />
-              /
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.armor}
-                onChange={(e) => handleNumChange('armor', e.target.value)}
-                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
-              />
-            </span>
+              <span className="flex items-center gap-0.5">
+                ⚔️
+                <input
+                  type="number"
+                  min="0"
+                  value={quickAdd.atk}
+                  onChange={(e) => handleNumChange('atk', e.target.value)}
+                  className="w-11 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+                />
+                /
+                <input
+                  type="number"
+                  min="0"
+                  value={quickAdd.dmg}
+                  onChange={(e) => handleNumChange('dmg', e.target.value)}
+                  className="w-11 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+                />
+                (
+                <input
+                  type="number"
+                  min="0"
+                  value={quickAdd.wounds}
+                  onChange={(e) => handleNumChange('wounds', e.target.value)}
+                  className="w-9 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+                />
+                )
+              </span>
 
-            <span className="flex items-center gap-1">
-              ❤️
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.vit}
-                onChange={(e) => handleNumChange('vit', e.target.value)}
-                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
-              />
-            </span>
+              <span className="flex items-center gap-0.5">
+                🧥
+                <input
+                  type="number"
+                  min="0"
+                  value={quickAdd.def}
+                  onChange={(e) => handleNumChange('def', e.target.value)}
+                  className="w-11 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+                />
+                /
+                <input
+                  type="number"
+                  min="0"
+                  value={quickAdd.armor}
+                  onChange={(e) => handleNumChange('armor', e.target.value)}
+                  className="w-9 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+                />
+              </span>
 
-            <span className="flex items-center gap-0.5 text-amber-200/90 font-semibold">
-              – [✨
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.magic}
-                onChange={(e) => handleNumChange('magic', e.target.value)}
-                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
-              />
-              /💪
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.might}
-                onChange={(e) => handleNumChange('might', e.target.value)}
-                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
-              />
-              /👁️
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.mind}
-                onChange={(e) => handleNumChange('mind', e.target.value)}
-                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
-              />
-              /🏃
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.motion}
-                onChange={(e) => handleNumChange('motion', e.target.value)}
-                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
-              />
-              /🫀
-              <input
-                type="number"
-                min="0"
-                value={quickAdd.moxie}
-                onChange={(e) => handleNumChange('moxie', e.target.value)}
-                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
-              />
-              ]
-            </span>
+              <span className="flex items-center gap-1">
+                ❤️
+                <input
+                  type="number"
+                  min="0"
+                  value={quickAdd.vit}
+                  onChange={(e) => handleNumChange('vit', e.target.value)}
+                  className="w-11 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+                />
+              </span>
+            </div>
 
-            <span className="text-slate-400 font-sans font-bold text-[11px]">Abilities:</span>
-            <input
-              type="text"
-              value={quickAdd.abilities}
-              onChange={(e) => handleTextChange('abilities', e.target.value)}
-              placeholder="Optional"
-              className="w-32 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 italic focus:outline-none focus:border-indigo-500/80"
-            />
+            {/* Row 2: System Attributes, Abilities & + Add Button */}
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 pt-1 border-t border-slate-800/60">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <span className="flex items-center gap-0.5 text-amber-200/90 font-semibold">
+                  – [✨
+                  <input
+                    type="number"
+                    min="0"
+                    value={quickAdd.magic}
+                    onChange={(e) => handleNumChange('magic', e.target.value)}
+                    className="w-11 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
+                  />
+                  /💪
+                  <input
+                    type="number"
+                    min="0"
+                    value={quickAdd.might}
+                    onChange={(e) => handleNumChange('might', e.target.value)}
+                    className="w-11 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
+                  />
+                  /👁️
+                  <input
+                    type="number"
+                    min="0"
+                    value={quickAdd.mind}
+                    onChange={(e) => handleNumChange('mind', e.target.value)}
+                    className="w-11 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
+                  />
+                  /🏃
+                  <input
+                    type="number"
+                    min="0"
+                    value={quickAdd.motion}
+                    onChange={(e) => handleNumChange('motion', e.target.value)}
+                    className="w-11 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
+                  />
+                  /🫀
+                  <input
+                    type="number"
+                    min="0"
+                    value={quickAdd.moxie}
+                    onChange={(e) => handleNumChange('moxie', e.target.value)}
+                    className="w-11 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
+                  />
+                  ]
+                </span>
 
-            <button
-              onClick={handleAddQuickMonster}
-              className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-lg transition-all ml-auto shrink-0 shadow"
-            >
-              + Add
-            </button>
+                <span className="text-slate-400 font-sans font-bold text-[11px]">Abilities:</span>
+                <input
+                  type="text"
+                  value={quickAdd.abilities}
+                  onChange={(e) => handleTextChange('abilities', e.target.value)}
+                  placeholder="Optional (e.g. Cleave, Poison)"
+                  className="w-56 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 italic focus:outline-none focus:border-indigo-500/80"
+                />
+              </div>
+
+              <button
+                onClick={handleAddQuickMonster}
+                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl transition-all shadow-md shrink-0 flex items-center gap-1"
+              >
+                <span>+</span> Add Monster
+              </button>
+            </div>
           </div>
 
           {/* Monster List View */}

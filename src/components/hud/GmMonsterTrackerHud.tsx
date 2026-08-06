@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { PlayerMonsterCard } from '../common/PlayerMonsterCard';
-import { parseMonsterLine } from '../../utils/monsterStatParser';
+import { parseMonsterLine, sortMonstersAlphabetically } from '../../utils/monsterStatParser';
 
 export interface MonsterEntry {
   id: string;
@@ -133,7 +133,7 @@ export const GmMonsterTrackerHud: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-          {monsters.map((m) => {
+          {sortMonstersAlphabetically(monsters).map((m) => {
             const data = mapToMonsterData(m);
             return activeRole === 'gm' ? (
               <GmMonsterCard key={m.id} monster={data} />
