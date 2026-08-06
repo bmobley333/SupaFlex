@@ -17,10 +17,12 @@ export const PlayerMonsterCard: React.FC<PlayerMonsterCardProps> = ({ monster })
   const armorVal = monster.armor ?? 0;
   const maxVitVal = monster.max_vit ?? 10;
 
+  const cleanName = (monster.name || '').replace(/^\d+\s*/, '');
+
   return (
     <div className="bg-slate-900/80 border border-slate-700/60 rounded-lg p-2.5 text-xs text-slate-200 font-mono shadow-sm flex flex-wrap items-center justify-start gap-x-4 gap-y-1">
       <span className="font-bold text-slate-100">
-        {monster.name}{equipStr}
+        {cleanName}{equipStr}
       </span>
       <div className="flex items-center gap-3 text-slate-300">
         <span>⚔️{atkVal}/{dmgVal}({minWoundsVal})</span>

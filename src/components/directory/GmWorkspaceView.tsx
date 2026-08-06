@@ -9,6 +9,44 @@ import { parseMonsterLine, parseMultiRowMonsterBlock, ParsedMonster } from '../.
 import { PartyCharacterCard } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 
+interface QuickAddState {
+  name: string;
+  gear: string;
+  init: number;
+  mr: number;
+  atk: number;
+  dmg: number;
+  wounds: number;
+  def: number;
+  armor: number;
+  vit: number;
+  magic: number;
+  might: number;
+  mind: number;
+  motion: number;
+  moxie: number;
+  abilities: string;
+}
+
+const DEFAULT_QUICK_ADD: QuickAddState = {
+  name: 'Custom',
+  gear: '',
+  init: 15,
+  mr: 8,
+  atk: 15,
+  dmg: 8,
+  wounds: 1,
+  def: 15,
+  armor: 1,
+  vit: 12,
+  magic: 12,
+  might: 12,
+  mind: 12,
+  motion: 12,
+  moxie: 12,
+  abilities: '',
+};
+
 interface GmWorkspaceViewProps {
   activeParty: Party | null;
   currentEmail: string;
@@ -39,12 +77,21 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const [supabaseMonsters, setSupabaseMonsters] = useState<SupabaseMonster[]>([]);
   const [codexSearch, setCodexSearch] = useState('');
 
-  // Inline Quick Add State
-  const [quickAddText, setQuickAddText] = useState('');
+  // Structured Quick Add State
+  const [quickAdd, setQuickAdd] = useState<QuickAddState>(DEFAULT_QUICK_ADD);
 
   // Editing Monster State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+
+  const handleNumChange = (field: keyof QuickAddState, val: string) => {
+    const num = Math.max(0, parseInt(val, 10) || 0);
+    setQuickAdd((prev) => ({ ...prev, [field]: num }));
+  };
+
+  const handleTextChange = (field: keyof QuickAddState, val: string) => {
+    setQuickAdd((prev) => ({ ...prev, [field]: val }));
+  };
 
   // Load GM Parties on Mount
   useEffect(() => {
@@ -209,10 +256,15 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   };
 
   const handleAddQuickMonster = async () => {
-    if (!quickAddText.trim()) return;
-    const parsed = parseMonsterLine(quickAddText.trim());
+    const nameStr = quickAdd.name.trim() || 'Custom';
+    const gearStr = quickAdd.gear.trim() ? ` (${quickAdd.gear.trim()})` : '';
+    const abStr = quickAdd.abilities.trim() ? ` (${quickAdd.abilities.trim()})` : '';
+
+    const fullStatStr = `${nameStr}${gearStr} 🚩${quickAdd.init}, 👣${quickAdd.mr}, ⚔️${quickAdd.atk}/${quickAdd.dmg}(${quickAdd.wounds}), 🧥${quickAdd.def}/${quickAdd.armor}, ❤️${quickAdd.vit} – [✨${quickAdd.magic} / 💪${quickAdd.might} / 👁️${quickAdd.mind} / 🏃${quickAdd.motion} / 🫀${quickAdd.moxie}]${abStr}`;
+
+    const parsed = parseMonsterLine(fullStatStr);
     const updated = [...monsters, parsed];
-    setQuickAddText('');
+    setQuickAdd(DEFAULT_QUICK_ADD);
     await handleSaveMonsters(updated);
   };
 
@@ -429,19 +481,162 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
             </div>
           </div>
 
-          {/* Quick Single Line Add Bar */}
-          <div className="flex items-center gap-2 bg-slate-950/90 p-2 rounded-xl border border-slate-800">
+          {/* Quick Structured Add Bar */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 bg-slate-950/90 p-2.5 rounded-xl border border-slate-800 text-xs font-mono text-slate-200 shadow-inner">
+            <span className="text-slate-400 font-sans font-bold text-[11px]">Name:</span>
             <input
               type="text"
-              value={quickAddText}
-              onChange={(e) => setQuickAddText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddQuickMonster()}
-              placeholder="Quick add: 2 Hired Thugs ⚔15/12(2) 🧥14/2 ❤️12"
-              className="flex-1 bg-transparent border-none text-xs text-slate-100 placeholder-slate-500 focus:outline-none px-2"
+              value={quickAdd.name}
+              onChange={(e) => handleTextChange('name', e.target.value)}
+              placeholder="Name"
+              className="w-24 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-amber-300 font-bold focus:outline-none focus:border-amber-500/80"
             />
+
+            <span className="text-slate-400 font-sans font-bold text-[11px]">Gear:</span>
+            <input
+              type="text"
+              value={quickAdd.gear}
+              onChange={(e) => handleTextChange('gear', e.target.value)}
+              placeholder="Optional"
+              className="w-24 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 focus:outline-none focus:border-indigo-500/80"
+            />
+
+            <span className="flex items-center gap-1">
+              🚩
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.init}
+                onChange={(e) => handleNumChange('init', e.target.value)}
+                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+              />
+            </span>
+
+            <span className="flex items-center gap-1">
+              👣
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.mr}
+                onChange={(e) => handleNumChange('mr', e.target.value)}
+                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+              />
+            </span>
+
+            <span className="flex items-center gap-0.5">
+              ⚔️
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.atk}
+                onChange={(e) => handleNumChange('atk', e.target.value)}
+                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+              />
+              /
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.dmg}
+                onChange={(e) => handleNumChange('dmg', e.target.value)}
+                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+              />
+              (
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.wounds}
+                onChange={(e) => handleNumChange('wounds', e.target.value)}
+                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+              />
+              )
+            </span>
+
+            <span className="flex items-center gap-0.5">
+              🧥
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.def}
+                onChange={(e) => handleNumChange('def', e.target.value)}
+                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+              />
+              /
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.armor}
+                onChange={(e) => handleNumChange('armor', e.target.value)}
+                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+              />
+            </span>
+
+            <span className="flex items-center gap-1">
+              ❤️
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.vit}
+                onChange={(e) => handleNumChange('vit', e.target.value)}
+                className="w-10 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center focus:outline-none focus:border-amber-500/80"
+              />
+            </span>
+
+            <span className="flex items-center gap-0.5 text-amber-200/90 font-semibold">
+              – [✨
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.magic}
+                onChange={(e) => handleNumChange('magic', e.target.value)}
+                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
+              />
+              /💪
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.might}
+                onChange={(e) => handleNumChange('might', e.target.value)}
+                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
+              />
+              /👁️
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.mind}
+                onChange={(e) => handleNumChange('mind', e.target.value)}
+                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
+              />
+              /🏃
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.motion}
+                onChange={(e) => handleNumChange('motion', e.target.value)}
+                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
+              />
+              /🫀
+              <input
+                type="number"
+                min="0"
+                value={quickAdd.moxie}
+                onChange={(e) => handleNumChange('moxie', e.target.value)}
+                className="w-8 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded text-center text-slate-200 focus:outline-none focus:border-amber-500/80"
+              />
+              ]
+            </span>
+
+            <span className="text-slate-400 font-sans font-bold text-[11px]">Abilities:</span>
+            <input
+              type="text"
+              value={quickAdd.abilities}
+              onChange={(e) => handleTextChange('abilities', e.target.value)}
+              placeholder="Optional"
+              className="w-32 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 italic focus:outline-none focus:border-indigo-500/80"
+            />
+
             <button
               onClick={handleAddQuickMonster}
-              className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-lg transition-all"
+              className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-lg transition-all ml-auto shrink-0 shadow"
             >
               + Add
             </button>

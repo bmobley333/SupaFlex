@@ -124,9 +124,6 @@ export const GmMonsterTrackerHud: React.FC = () => {
         <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
           <span>👾</span> MONSTER TRACKER ({monsters.length})
         </h3>
-        <span className="text-[10px] font-bold text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 uppercase tracking-wider">
-          {activeRole === 'gm' ? 'GM Screen Feed' : 'Encounter Feed'}
-        </span>
       </div>
 
       {/* Monster Cards List / Empty State */}
