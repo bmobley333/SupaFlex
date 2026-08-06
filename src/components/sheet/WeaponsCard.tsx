@@ -13,6 +13,8 @@ import {
   calculateAvailableAp,
 } from '../../types/game';
 
+import { CardHelpButton } from '../common/CardHelpButton';
+
 const DIE_SCALE = [4, 6, 8, 10, 12];
 const REQ_NUMBERS = [4, 6, 8, 10, 12];
 
@@ -383,10 +385,13 @@ export const WeaponsCard: React.FC = () => {
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3 h-fit">
       {/* Card Header */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-        <h3 className="font-outfit font-bold text-sm tracking-widest text-rose-300 uppercase flex items-center gap-2">
-          <span className="text-base">⚔️</span>
-          Weapons
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-outfit font-bold text-sm tracking-widest text-rose-300 uppercase flex items-center gap-2">
+            <span className="text-base">⚔️</span>
+            Weapons
+          </h3>
+          <CardHelpButton ruleKey="weapons.basics" />
+        </div>
 
         {/* Manage Weapons Trigger Button */}
         <div className="relative">
