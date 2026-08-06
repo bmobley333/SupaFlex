@@ -1,11 +1,12 @@
 // src/components/hud/PartyRosterHud.tsx
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Users } from 'lucide-react';
+import { ChevronDown, Users, ArrowUpDown } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
-import { Character, PartySessionMember } from '../../types/game';
+import { Character, PartySessionMember, CharacterSheetData } from '../../types/game';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { PartyCharacterCard } from '../common/PartyCharacterCard';
+import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
+import { useRosterOrdering } from '../../hooks/useRosterOrdering';
 
 interface PartyRosterHudProps {
   activeCharacter: Character | null;
@@ -23,6 +24,7 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
   const [displayRoomCode, setDisplayRoomCode] = useState<string | null>(null);
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!activePartyId) {
@@ -62,8 +64,8 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
     loadMembers();
 
     // Subscribe to Realtime CDC & Broadcast for active party members
-    const cdcChannel = supabase
-      .channel(`roster_cdc_${activePartyId}`)
+    const cdcChannel = supabase.channel(`roster_cdc_${activePartyId}`);
+    cdcChannel
       .on(
         'postgres_changes',
         {
@@ -78,8 +80,8 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
       )
       .subscribe();
 
-    const broadcastChannel = supabase
-      .channel(`party:${activePartyId}`)
+    const broadcastChannel = supabase.channel(`party:${activePartyId}`);
+    broadcastChannel
       .on('broadcast', { event: 'party_members_updated' }, () => {
         loadMembers();
       })
@@ -102,13 +104,120 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
     return String(m.character_id) !== String(activeCharacter.id);
   });
 
+  // Custom Local Storage Roster Ordering
+  const storageKey = `supaflex_roster_order_${activeCharacter?.id || 'default'}`;
+  const {
+    orderedItems: orderedOtherMembers,
+    moveItem,
+    nudgeItem,
+    applyPreset,
+    activePreset,
+    draggedIndex,
+    setDraggedIndex,
+  } = useRosterOrdering<PartySessionMember>({
+    items: otherMembers,
+    storageKey,
+    getId: (m) => String(m.character_id || m.id),
+    getName: (m) => resolveCharFirstName(m.character?.name || `Hero #${m.character_id}`),
+    getVitPct: (m) => {
+      const sheetData: Partial<CharacterSheetData> = m.character?.sheet_data || {};
+      const current = sheetData.current_vitality ?? m.character?.hp ?? 28;
+      const max = sheetData.vitality_max ?? 28;
+      return max > 0 ? (current / max) * 100 : 0;
+    },
+  });
+
+  // Drag & Drop Handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null) return;
+    moveItem(draggedIndex, dropIndex);
+    setDraggedIndex(null);
+  };
+
   return (
     <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/90 shadow-sm space-y-3">
       {/* Section Header */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h3 className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
-          <span>👥</span> PARTY ROSTER ({otherMembers.length})
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
+            <span>👥</span> PARTY ROSTER ({orderedOtherMembers.length})
+          </h3>
+
+          {/* Quick-Sort Presets Trigger */}
+          {orderedOtherMembers.length > 1 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
+                className={`p-1 rounded text-xs transition-colors flex items-center gap-1 border ${
+                  activePreset !== 'custom'
+                    ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/50'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                }`}
+                title="Quick Sort Roster Presets"
+              >
+                <ArrowUpDown className="w-3 h-3" />
+              </button>
+
+              {/* Presets Dropdown */}
+              {isSortMenuOpen && (
+                <div
+                  className="absolute left-0 mt-1 w-44 bg-slate-950 border border-slate-800 rounded-lg shadow-xl z-50 py-1 text-xs font-outfit"
+                  onClick={() => setIsSortMenuOpen(false)}
+                >
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('custom')}
+                    className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                      activePreset === 'custom' ? 'text-cyan-400 font-bold' : 'text-slate-300'
+                    }`}
+                  >
+                    <span>🎲</span> Custom Drag Order
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('alphabetical')}
+                    className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                      activePreset === 'alphabetical' ? 'text-cyan-400 font-bold' : 'text-slate-300'
+                    }`}
+                  >
+                    <span>🔤</span> Alphabetical
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('vit_desc')}
+                    className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                      activePreset === 'vit_desc' ? 'text-cyan-400 font-bold' : 'text-slate-300'
+                    }`}
+                  >
+                    <span>🫀</span> Highest Vit First
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('vit_asc')}
+                    className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                      activePreset === 'vit_asc' ? 'text-cyan-400 font-bold' : 'text-slate-300'
+                    }`}
+                  >
+                    <span>🩸</span> Lowest Vit First
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Interactive Manage Party Pill */}
         <button
@@ -130,14 +239,27 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
       </div>
 
       {/* Roster Cards List */}
-      {otherMembers.length === 0 ? (
+      {orderedOtherMembers.length === 0 ? (
         <div className="text-[11px] text-slate-500 italic p-3 bg-slate-950/40 rounded-lg border border-slate-800/50 text-center">
           No other party members in session.
         </div>
       ) : (
         <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
-          {otherMembers.map((member, idx) => (
-            <PartyCharacterCard key={member.id || member.character_id || `pm_${idx}`} member={member} />
+          {orderedOtherMembers.map((member, idx) => (
+            <PartyCharacterCard
+              key={member.id || member.character_id || `pm_${idx}`}
+              member={member}
+              isDraggable={orderedOtherMembers.length > 1}
+              onDragStart={(e) => handleDragStart(e, idx)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, idx)}
+              onDragEnd={() => setDraggedIndex(null)}
+              isDragging={draggedIndex === idx}
+              onNudgeUp={() => nudgeItem(idx, 'up')}
+              onNudgeDown={() => nudgeItem(idx, 'down')}
+              canNudgeUp={idx > 0}
+              canNudgeDown={idx < orderedOtherMembers.length - 1}
+            />
           ))}
         </div>
       )}

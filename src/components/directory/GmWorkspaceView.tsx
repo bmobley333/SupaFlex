@@ -2,12 +2,14 @@
 // Game Master Command Console: Party Roster, Party Management & Monster Roster View
 
 import React, { useState, useEffect } from 'react';
+import { ArrowUpDown } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
-import { Party, PartySessionMember, SupabaseMonster } from '../../types/game';
+import { Party, PartySessionMember, SupabaseMonster, CharacterSheetData } from '../../types/game';
 import { parseMonsterLine, parseMultiRowMonsterBlock, ParsedMonster, sortMonstersAlphabetically } from '../../utils/monsterStatParser';
-import { PartyCharacterCard } from '../common/PartyCharacterCard';
+import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
+import { useRosterOrdering } from '../../hooks/useRosterOrdering';
 
 interface QuickAddState {
   name: string;
@@ -68,6 +70,47 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Party Session Roster State
   const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
   const [isMembersLoading, setIsMembersLoading] = useState(false);
+  const [isGmSortMenuOpen, setIsGmSortMenuOpen] = useState(false);
+
+  const gmPartyStorageKey = `supaflex_gm_roster_order_${selectedParty?.id || 'default'}`;
+  const {
+    orderedItems: orderedSessionMembers,
+    moveItem: movePartyItem,
+    nudgeItem: nudgePartyItem,
+    applyPreset: applyPartyPreset,
+    activePreset: gmPartyPreset,
+    draggedIndex: partyDraggedIndex,
+    setDraggedIndex: setPartyDraggedIndex,
+  } = useRosterOrdering<PartySessionMember>({
+    items: sessionMembers,
+    storageKey: gmPartyStorageKey,
+    getId: (m) => String(m.character_id || m.id),
+    getName: (m) => resolveCharFirstName(m.character?.name || `Hero #${m.character_id}`),
+    getVitPct: (m) => {
+      const sheetData: Partial<CharacterSheetData> = m.character?.sheet_data || {};
+      const current = sheetData.current_vitality ?? m.character?.hp ?? 28;
+      const max = sheetData.vitality_max ?? 28;
+      return max > 0 ? (current / max) * 100 : 0;
+    },
+  });
+
+  const handlePartyDragStart = (e: React.DragEvent, index: number) => {
+    setPartyDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handlePartyDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handlePartyDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (partyDraggedIndex === null) return;
+    movePartyItem(partyDraggedIndex, dropIndex);
+    setPartyDraggedIndex(null);
+  };
 
   // Monster Roster State
   const [monsters, setMonsters] = useState<ParsedMonster[]>([]);
@@ -419,9 +462,71 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         {/* Left Column: Party Roster (4 cols) */}
         <div className="lg:col-span-4 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-4 shadow-lg flex flex-col">
           <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-            <h3 className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider flex items-center gap-2 font-outfit">
-              <span>👥</span> PARTY ROSTER ({sessionMembers.length})
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider flex items-center gap-2 font-outfit">
+                <span>👥</span> PARTY ROSTER ({orderedSessionMembers.length})
+              </h3>
+              {orderedSessionMembers.length > 1 && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsGmSortMenuOpen(!isGmSortMenuOpen)}
+                    className={`p-1 rounded text-xs transition-colors flex items-center gap-1 border ${
+                      gmPartyPreset !== 'custom'
+                        ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/50'
+                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                    }`}
+                    title="Quick Sort GM Roster Presets"
+                  >
+                    <ArrowUpDown className="w-3 h-3" />
+                  </button>
+
+                  {isGmSortMenuOpen && (
+                    <div
+                      className="absolute left-0 mt-1 w-44 bg-slate-950 border border-slate-800 rounded-lg shadow-xl z-50 py-1 text-xs font-outfit"
+                      onClick={() => setIsGmSortMenuOpen(false)}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => applyPartyPreset('custom')}
+                        className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                          gmPartyPreset === 'custom' ? 'text-cyan-400 font-bold' : 'text-slate-300'
+                        }`}
+                      >
+                        <span>🎲</span> Custom Drag Order
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyPartyPreset('alphabetical')}
+                        className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                          gmPartyPreset === 'alphabetical' ? 'text-cyan-400 font-bold' : 'text-slate-300'
+                        }`}
+                      >
+                        <span>🔤</span> Alphabetical
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyPartyPreset('vit_desc')}
+                        className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                          gmPartyPreset === 'vit_desc' ? 'text-cyan-400 font-bold' : 'text-slate-300'
+                        }`}
+                      >
+                        <span>🫀</span> Highest Vit First
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyPartyPreset('vit_asc')}
+                        className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                          gmPartyPreset === 'vit_asc' ? 'text-cyan-400 font-bold' : 'text-slate-300'
+                        }`}
+                      >
+                        <span>🩸</span> Lowest Vit First
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <span className="text-[10px] font-bold text-indigo-300 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/80">
               Live Session
             </span>
@@ -433,7 +538,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
             </div>
           ) : isMembersLoading ? (
             <div className="text-xs text-slate-400 italic text-center py-6">Loading party members...</div>
-          ) : sessionMembers.length === 0 ? (
+          ) : orderedSessionMembers.length === 0 ? (
             <div className="text-xs font-medium text-slate-400 italic p-4 bg-slate-950/70 rounded-xl border border-slate-800 text-center space-y-1">
               <div>No players connected to "{selectedParty.name}" yet.</div>
               <div className="text-[10px] text-slate-500">
@@ -442,8 +547,21 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
             </div>
           ) : (
             <div className="space-y-2.5 overflow-y-auto max-h-[520px] pr-1">
-              {sessionMembers.map((member) => (
-                <PartyCharacterCard key={member.id || member.character_id} member={member} />
+              {orderedSessionMembers.map((member, idx) => (
+                <PartyCharacterCard
+                  key={member.id || member.character_id || `pm_${idx}`}
+                  member={member}
+                  isDraggable={orderedSessionMembers.length > 1}
+                  onDragStart={(e) => handlePartyDragStart(e, idx)}
+                  onDragOver={handlePartyDragOver}
+                  onDrop={(e) => handlePartyDrop(e, idx)}
+                  onDragEnd={() => setPartyDraggedIndex(null)}
+                  isDragging={partyDraggedIndex === idx}
+                  onNudgeUp={() => nudgePartyItem(idx, 'up')}
+                  onNudgeDown={() => nudgePartyItem(idx, 'down')}
+                  canNudgeUp={idx > 0}
+                  canNudgeDown={idx < orderedSessionMembers.length - 1}
+                />
               ))}
             </div>
           )}

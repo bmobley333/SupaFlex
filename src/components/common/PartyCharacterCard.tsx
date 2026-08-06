@@ -5,6 +5,16 @@ import { PartySessionMember, CharacterSheetData } from '../../types/game';
 interface PartyCharacterCardProps {
   member: PartySessionMember;
   playerNameOverride?: string;
+  isDraggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onDragEnd?: () => void;
+  isDragging?: boolean;
+  onNudgeUp?: () => void;
+  onNudgeDown?: () => void;
+  canNudgeUp?: boolean;
+  canNudgeDown?: boolean;
 }
 
 /**
@@ -35,6 +45,16 @@ export const resolveCharFirstName = (rawCharName?: string): string => {
 export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
   member,
   playerNameOverride,
+  isDraggable = false,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  isDragging = false,
+  onNudgeUp,
+  onNudgeDown,
+  canNudgeUp = false,
+  canNudgeDown = false,
 }) => {
   const char = member.character;
   const playerFirstName = resolvePlayerFirstName(playerNameOverride || member.player_first_name);
@@ -64,15 +84,31 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
 
   return (
     <div
-      className="p-2.5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-1.5 hover:border-slate-700 transition-all font-outfit text-xs text-slate-200"
+      draggable={isDraggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      className={`group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-outfit text-xs text-slate-200 ${
+        isDragging
+          ? 'opacity-40 border-cyan-500/80 bg-cyan-950/20 scale-[0.99]'
+          : 'border-slate-800 hover:border-slate-700'
+      }`}
       title={`(${playerFirstName}) ${charFirstName} ${race} ${charClass}, ${currentVit}/${maxVit} ${pct}%`}
     >
+      {/* Ultra-thin 6px edge drag handle */}
+      {isDraggable && (
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl bg-slate-800/60 group-hover:bg-cyan-500/60 cursor-grab active:cursor-grabbing transition-colors"
+          title="Drag to reorder roster position"
+        />
+      )}
+
       {/* 
         Single-line layout for wide viewports, wrapped two-line layout for narrow sidebar panels.
         Blueprint 2.C Syntax: ([Player's First Name]) [Character's First Name] [Race] [Class], [Current Vit]/[Max Vit] [Vit %]% [vitality graphic]
-        Example: (Blake) Ogluck Human Monk, 12/24 50% [🟧 50% Bar]
       */}
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 leading-snug">
+      <div className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-1 leading-snug ${isDraggable ? 'pl-2' : ''}`}>
         {/* Left Segment: Player Name, Character Name, Race, Class, and Trailing Comma */}
         <div className="flex items-center gap-1.5 flex-wrap font-bold text-slate-100">
           <span className="font-mono text-amber-300 font-extrabold text-xs">
@@ -89,7 +125,7 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
           </span>
         </div>
 
-        {/* Right Segment: Vitality numerical readout & vitality bar graphic */}
+        {/* Right Segment: Vitality readout, bar graphic, & touch nudge arrows */}
         <div className="flex items-center gap-2 shrink-0">
           <span className={`font-mono text-[11px] font-extrabold px-1.5 py-0.5 rounded border ${badgeColorClass}`}>
             {currentVit}/{maxVit} {pct}%
@@ -103,6 +139,40 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
               />
             </div>
           </div>
+
+          {/* Micro Nudge Arrows (Visible on card hover/focus) */}
+          {(onNudgeUp || onNudgeDown) && (
+            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity ml-1">
+              {onNudgeUp && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNudgeUp();
+                  }}
+                  disabled={!canNudgeUp}
+                  className="px-1 py-0.2 text-[10px] font-bold text-slate-400 hover:text-cyan-300 disabled:opacity-30 disabled:hover:text-slate-400 bg-slate-900 border border-slate-700/60 rounded"
+                  title="Move Up"
+                >
+                  ▲
+                </button>
+              )}
+              {onNudgeDown && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNudgeDown();
+                  }}
+                  disabled={!canNudgeDown}
+                  className="px-1 py-0.2 text-[10px] font-bold text-slate-400 hover:text-cyan-300 disabled:opacity-30 disabled:hover:text-slate-400 bg-slate-900 border border-slate-700/60 rounded"
+                  title="Move Down"
+                >
+                  ▼
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
