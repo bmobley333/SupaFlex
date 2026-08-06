@@ -1,7 +1,7 @@
 {
   "vitality.death_checks": {
     "title": "Vitality & Death Checks",
-    "summary": "When Wounds (Wnd) >= Vitality (Vit), you fall unconscious. If Wounds > Vitality, you must make a Death Check each round: Moxie roll vs DC = 5 + (Wounds - Vit). Failure results in death.",
+    "summary": "Unconsciousness & Dying:\n• Unconsciousness Condition — Unconscious if Current Vit is ≤ 0.\n• Death Check Trigger — When Current Vit is -1 or less, must immediately make a Death Check and make a Death Check each round on your nish, until Current Vit is no longer negative or you die.\n• Death Check Roll — Moxie 🫀 Ability check vs. Difficulty = 5 + (– Current Vit ❤️) as unskilled, unless you have the “Death Check🫀” skill. Example: at Current Vit of -8 the Dif is 13.\n\nBleeding:\n• Bleeding Out (+1 Wound/Rnd) — After each Death Check except the first, your Wounds automatically increase by +1 Wound due to active bleeding unless you receive bandaging, triage, or magical healing, making future death checks harder.\n\n💤 Rest & Recovery (Healing):\n• Post-Combat Short Rest — Taking a brief rest opportunity after a combat encounter restores d4 Vit ❤️ (Maximum 1 short rest per encounter).\n• Full Day Rest (Sleep) — A full night's sleep restores 2d4 Vit ❤️.\n• First Aid & Healing — Medical supplies, bandaging, and healing skills stop active bleeding.\n• Magical Healing — Will stop active bleeding and heal as per the power or item’s rules.",
     "anchor": "#combat-player-defending-monster-attacking"
   },
   "vitality.healing": {
