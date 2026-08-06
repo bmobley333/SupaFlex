@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Zap, ChevronDown, ChevronUp, Sparkles, X, Plus, Min
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, DieRating } from '../../types/game';
 import { stepDownDie, stepUpDie } from '../../lib/dice';
+import { CardHelpButton } from '../common/CardHelpButton';
 
 interface AttributeConfig {
   key: AttributeKey;
@@ -242,7 +243,10 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({ onOpen
                 : 'bg-purple-950/40 border-purple-500/30 text-purple-200'
             }`}
           >
-            <span className="text-purple-400 font-bold">🎯 Focus:</span>
+            <span className="text-purple-400 font-bold flex items-center gap-1">
+              <span>🎯 Focus:</span>
+              <CardHelpButton ruleKey="focus.basics" />
+            </span>
             <span className="font-mono font-extrabold text-purple-100 mr-0.5">{focusCurrent}</span>
 
             {/* Inline Direct Manipulation Step-Down Button */}
