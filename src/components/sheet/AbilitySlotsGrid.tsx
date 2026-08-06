@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Globe, Flame, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { CardHelpButton } from '../common/CardHelpButton';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
 
 interface AbilitySlotsGridProps {
@@ -575,10 +576,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">
       {/* Header: Title, Icon, & Master Manager Trigger Button */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-        <h3 className="font-outfit font-bold text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
-          <span className="text-base">{sectionIcon}</span>
-          {displayTitle}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className={`font-outfit font-bold text-sm tracking-widest uppercase flex items-center gap-2 ${
+            type === 'powers' ? 'text-amber-300' : 'text-cyan-300'
+          }`}>
+            <span className="text-base">{sectionIcon}</span>
+            {displayTitle}
+          </h3>
+          <CardHelpButton ruleKey={type === 'powers' ? 'powers.basics' : 'magic_items.basics'} />
+        </div>
 
         <div className="relative">
           <button
