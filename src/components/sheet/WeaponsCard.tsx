@@ -914,17 +914,18 @@ export const WeaponsCard: React.FC = () => {
           No weapons equipped. Click "Manage Weapons" above to add weapons to your arsenal.
         </p>
       ) : (
-        <div className="flex flex-col gap-1.5 overflow-x-auto">
-          {/* Table Header Row */}
-          <div className="grid grid-cols-[34px_68px_1fr_48px_48px_56px_60px] gap-2 items-center px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80">
-            <span className="text-center">Sk</span>
-            <span className="text-center">M/H/S</span>
-            <span><RuleTooltip ruleKey="col.weapons.atr">Weapon Name</RuleTooltip></span>
-            <span className="text-center"><RuleTooltip ruleKey="col.weapons.atr">Atk</RuleTooltip></span>
-            <span className="text-center"><RuleTooltip ruleKey="col.weapons.dmg">Dmg</RuleTooltip></span>
-            <span className="text-center"><RuleTooltip ruleKey="col.shields.block">Blk💪</RuleTooltip></span>
-            <span className="text-center"><RuleTooltip ruleKey="col.shields.block">Max Blk</RuleTooltip></span>
-          </div>
+        <div className="flex flex-col gap-1.5 overflow-x-auto pb-1">
+          <div className="min-w-[500px] flex flex-col gap-1.5">
+            {/* Table Header Row */}
+            <div className="grid grid-cols-[34px_68px_1fr_48px_48px_56px_60px] gap-2 items-center px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80">
+              <span className="text-center">Sk</span>
+              <span className="text-center">M/H/S</span>
+              <span><RuleTooltip ruleKey="col.weapons.atr">Weapon Name</RuleTooltip></span>
+              <span className="text-center"><RuleTooltip ruleKey="col.weapons.atr">Atk</RuleTooltip></span>
+              <span className="text-center"><RuleTooltip ruleKey="col.weapons.dmg">Dmg</RuleTooltip></span>
+              <span className="text-center"><RuleTooltip ruleKey="col.shields.block">Blk💪</RuleTooltip></span>
+              <span className="text-center whitespace-nowrap"><RuleTooltip ruleKey="col.shields.block">Max Blk</RuleTooltip></span>
+            </div>
 
           {/* Weapons Rows (Sorted Alphabetically) */}
           {[...weapons]
@@ -977,7 +978,7 @@ export const WeaponsCard: React.FC = () => {
                     type="text"
                     value={item.name}
                     readOnly
-                    className="bg-slate-900 text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-800 outline-none w-full max-w-[240px] cursor-default"
+                    className="bg-slate-900 text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-800 outline-none w-full min-w-[120px] max-w-[240px] cursor-default truncate"
                     title="Weapon name set via Manage Weapons modal"
                   />
 
@@ -1015,6 +1016,7 @@ export const WeaponsCard: React.FC = () => {
                 </div>
               );
             })}
+          </div>
         </div>
       )}
     </div>

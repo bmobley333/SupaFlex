@@ -682,7 +682,7 @@ export const ShieldCard: React.FC = () => {
 
       {/* Main Character Sheet Card View */}
       {shield.equipped ? (
-        <div className="flex items-center gap-3 pt-1 animate-fadeIn">
+        <div className="flex flex-wrap items-center gap-2.5 pt-1 animate-fadeIn">
           {/* Sk Checkbox / Red X Toggle */}
           <div className="flex items-center gap-1.5 shrink-0">
             <label className="text-xs font-bold text-slate-300 cursor-pointer">
@@ -712,7 +712,7 @@ export const ShieldCard: React.FC = () => {
             value={shield.name}
             readOnly
             placeholder="Shield Name (e.g. Round Shield)"
-            className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none w-full max-w-[240px] cursor-default"
+            className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none flex-1 min-w-[130px] max-w-[240px] cursor-default truncate"
             title="Shield name set via Manage Shields modal"
           />
 
