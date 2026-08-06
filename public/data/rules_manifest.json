@@ -45,8 +45,8 @@
     "anchor": "#weapon-rules"
   },
   "col.armor.ar": {
-    "title": "Armor Rating (🧥)",
-    "summary": "Damage reduction die rolled when hit by an attack. Reduces incoming Wounds by the AR roll result.",
+    "title": "Armor & Defense Rules",
+    "summary": "Rolls:\n• Unskilled Armor — Unknown armor may be attempted as an Unskilled Dodge (1d20 + Dodge Die) and normal AR.\n• Skilled Armor — Skilled armor uses a Skilled Dodge (2H20 + Dodge Die) and normal AR.\n\nDodge vs Block:\n• Attack Evasion — All attacks may be Dodged; some attacks may be Blocked rather than Dodged (see weapon and shield rules).\n• Exclusive Defenses — No attack may be both Blocked and Dodged.\n• Fallback AR Protection — If a weapon or shield block fails, the Armor's AR is still rolled.\n\nAction:\n• Action Cost — ALL armor rolls are a Free (F) action.",
     "anchor": "#armor-shields"
   },
   "col.shields.block": {
