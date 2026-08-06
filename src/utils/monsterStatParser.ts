@@ -74,9 +74,26 @@ export function parseMultiRowMonsterBlock(textBlock: string): ParsedMonster[] {
   return lines.map(parseMonsterLine);
 }
 
+export type MonsterSortPreset = 'alphabetical' | 'nish' | 'vitality';
+
 export function getCleanMonsterName(name: string | undefined | null): string {
   if (!name) return '';
   return name.replace(/^\d+\s*/, '').toLowerCase().trim();
+}
+
+export function getMonsterNish<T extends { fullText?: string; nameWithEquip?: string; initiative?: number }>(m: T): number {
+  if (typeof m.initiative === 'number') return m.initiative;
+  const raw = m.fullText || m.nameWithEquip || '';
+  const match = raw.match(/🚩\s*(\d+)/u);
+  return match ? parseInt(match[1], 10) : 10;
+}
+
+export function getMonsterVitality<T extends { fullText?: string; vitalityStat?: string; nameWithEquip?: string; max_vit?: number; current_vit?: number }>(m: T): number {
+  if (typeof m.max_vit === 'number') return m.max_vit;
+  if (typeof m.current_vit === 'number') return m.current_vit;
+  const raw = m.fullText || m.vitalityStat || m.nameWithEquip || '';
+  const match = raw.match(/❤️\s*(\d+)/u);
+  return match ? parseInt(match[1], 10) : 10;
 }
 
 export function sortMonstersAlphabetically<T extends { name?: string; nameWithEquip?: string; fullText?: string }>(
@@ -87,4 +104,29 @@ export function sortMonstersAlphabetically<T extends { name?: string; nameWithEq
     const nameB = getCleanMonsterName(b.name || b.nameWithEquip || b.fullText);
     return nameA.localeCompare(nameB);
   });
+}
+
+export function sortMonstersByPreset<T extends { name?: string; nameWithEquip?: string; fullText?: string; initiative?: number; max_vit?: number; current_vit?: number; vitalityStat?: string }>(
+  items: T[],
+  preset: MonsterSortPreset
+): T[] {
+  const sorted = [...items];
+  if (preset === 'nish') {
+    return sorted.sort((a, b) => {
+      const nishA = getMonsterNish(a);
+      const nishB = getMonsterNish(b);
+      if (nishB !== nishA) return nishB - nishA; // Descending (highest initiative first)
+      return sortMonstersAlphabetically([a, b])[0] === a ? -1 : 1;
+    });
+  }
+  if (preset === 'vitality') {
+    return sorted.sort((a, b) => {
+      const vitA = getMonsterVitality(a);
+      const vitB = getMonsterVitality(b);
+      if (vitB !== vitA) return vitB - vitA; // Descending (highest Vitality first)
+      return sortMonstersAlphabetically([a, b])[0] === a ? -1 : 1;
+    });
+  }
+  // Default 'alphabetical'
+  return sortMonstersAlphabetically(sorted);
 }

@@ -6,7 +6,7 @@ import { ArrowUpDown } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
 import { Party, PartySessionMember, SupabaseMonster, CharacterSheetData } from '../../types/game';
-import { parseMonsterLine, parseMultiRowMonsterBlock, ParsedMonster, sortMonstersAlphabetically } from '../../utils/monsterStatParser';
+import { parseMonsterLine, parseMultiRowMonsterBlock, ParsedMonster, sortMonstersByPreset, MonsterSortPreset } from '../../utils/monsterStatParser';
 import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { useRosterOrdering } from '../../hooks/useRosterOrdering';
@@ -114,6 +114,16 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
   // Monster Roster State
   const [monsters, setMonsters] = useState<ParsedMonster[]>([]);
+  const [monsterPreset, setMonsterPreset] = useState<MonsterSortPreset>(() => {
+    try {
+      const saved = localStorage.getItem(`supaflex_gm_monster_preset_${propActiveParty?.id || 'default'}`);
+      if (saved && (saved === 'alphabetical' || saved === 'nish' || saved === 'vitality')) {
+        return saved as MonsterSortPreset;
+      }
+    } catch (e) {}
+    return 'alphabetical';
+  });
+  const [isMonsterSortMenuOpen, setIsMonsterSortMenuOpen] = useState(false);
   const [isPasteModalOpen, setIsPasteModalOpen] = useState(false);
   const [pasteInputText, setPasteInputText] = useState('');
   const [isCodexOpen, setIsCodexOpen] = useState(false);
@@ -282,21 +292,30 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     try {
       const activeList = await gameApi.getPartyMonsters(partyId);
       if (Array.isArray(activeList)) {
-        setMonsters(sortMonstersAlphabetically(activeList));
+        setMonsters(sortMonstersByPreset(activeList, monsterPreset));
       }
     } catch (e) {
       console.error('Failed to load party monsters:', e);
     }
   };
 
-  const handleSaveMonsters = async (updated: ParsedMonster[]) => {
-    const sorted = sortMonstersAlphabetically(updated);
+  const handleSaveMonsters = async (updated: ParsedMonster[], presetOverride?: MonsterSortPreset) => {
+    const activePreset = presetOverride || monsterPreset;
+    const sorted = sortMonstersByPreset(updated, activePreset);
     setMonsters(sorted);
     if (selectedParty) {
       await gameApi.savePartyMonsters(selectedParty.id, sorted);
     } else {
       localStorage.setItem('supaflex_gm_monster_stats', JSON.stringify(sorted));
     }
+  };
+
+  const applyMonsterPreset = (preset: MonsterSortPreset) => {
+    setMonsterPreset(preset);
+    try {
+      localStorage.setItem(`supaflex_gm_monster_preset_${selectedParty?.id || 'default'}`, preset);
+    } catch (e) {}
+    handleSaveMonsters(monsters, preset);
   };
 
   const handleAddQuickMonster = async () => {
@@ -571,9 +590,62 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         <div className="lg:col-span-8 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-4 shadow-lg flex flex-col">
           {/* Header Controls */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
-            <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-2 font-outfit">
-              <span>🐉</span> MONSTER TRACKER ({monsters.length})
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-2 font-outfit">
+                <span>🐉</span> MONSTER TRACKER ({monsters.length})
+              </h3>
+              {monsters.length > 1 && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsMonsterSortMenuOpen(!isMonsterSortMenuOpen)}
+                    className={`p-1 rounded text-xs transition-colors flex items-center gap-1 border ${
+                      monsterPreset !== 'alphabetical'
+                        ? 'bg-amber-950/80 text-amber-300 border-amber-500/50'
+                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                    }`}
+                    title="Quick Sort Monster Presets"
+                  >
+                    <ArrowUpDown className="w-3 h-3" />
+                  </button>
+
+                  {isMonsterSortMenuOpen && (
+                    <div
+                      className="absolute left-0 mt-1 w-44 bg-slate-950 border border-slate-800 rounded-lg shadow-xl z-50 py-1 text-xs font-outfit"
+                      onClick={() => setIsMonsterSortMenuOpen(false)}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => applyMonsterPreset('alphabetical')}
+                        className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                          monsterPreset === 'alphabetical' ? 'text-amber-400 font-bold' : 'text-slate-300'
+                        }`}
+                      >
+                        <span>🔤</span> Alphabetical
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyMonsterPreset('nish')}
+                        className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                          monsterPreset === 'nish' ? 'text-amber-400 font-bold' : 'text-slate-300'
+                        }`}
+                      >
+                        <span>🚩</span> Nish
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyMonsterPreset('vitality')}
+                        className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                          monsterPreset === 'vitality' ? 'text-amber-400 font-bold' : 'text-slate-300'
+                        }`}
+                      >
+                        <span>❤️</span> Vitality
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <button
