@@ -560,7 +560,9 @@ export const WeaponsCard: React.FC = () => {
                                         <span>•</span>
                                         <span><RuleTooltip ruleKey="col.weapons.dmg">Dmg</RuleTooltip>: <strong className="text-rose-300">{calculatedDmg}</strong></span>
                                         <span>•</span>
-                                        <span><RuleTooltip ruleKey="col.shields.block">Blk</RuleTooltip>: <strong className="text-amber-300">{item.max_blk ?? 'n/a'}</strong></span>
+                                        <span><RuleTooltip ruleKey="col.shields.block">Blk💪</RuleTooltip>: <strong className="text-amber-300">{item.max_blk === 'n/a' ? 'n/a' : getDieNum(attributeDice.might)}</strong></span>
+                                        <span>•</span>
+                                        <span><RuleTooltip ruleKey="col.shields.block">Max Blk</RuleTooltip>: <strong className="text-amber-300">{item.max_blk ?? 'n/a'}</strong></span>
                                       </div>
                                     </div>
                                   );
@@ -914,12 +916,13 @@ export const WeaponsCard: React.FC = () => {
       ) : (
         <div className="flex flex-col gap-1.5 overflow-x-auto">
           {/* Table Header Row */}
-          <div className="grid grid-cols-[36px_92px_1fr_54px_54px_68px] gap-2 items-center px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80">
+          <div className="grid grid-cols-[34px_68px_1fr_48px_48px_56px_60px] gap-2 items-center px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80">
             <span className="text-center">Sk</span>
             <span className="text-center">M/H/S</span>
             <span><RuleTooltip ruleKey="col.weapons.atr">Weapon Name</RuleTooltip></span>
             <span className="text-center"><RuleTooltip ruleKey="col.weapons.atr">Atk</RuleTooltip></span>
             <span className="text-center"><RuleTooltip ruleKey="col.weapons.dmg">Dmg</RuleTooltip></span>
+            <span className="text-center"><RuleTooltip ruleKey="col.shields.block">Blk💪</RuleTooltip></span>
             <span className="text-center"><RuleTooltip ruleKey="col.shields.block">Max Blk</RuleTooltip></span>
           </div>
 
@@ -939,7 +942,7 @@ export const WeaponsCard: React.FC = () => {
               return (
                 <div
                   key={item.id}
-                  className="grid grid-cols-[36px_92px_1fr_54px_54px_68px] gap-2 items-center px-2 py-1.5 bg-slate-950/60 rounded-lg border border-slate-850 hover:border-slate-750 transition-all"
+                  className="grid grid-cols-[34px_68px_1fr_48px_48px_56px_60px] gap-2 items-center px-2 py-1.5 bg-slate-950/60 rounded-lg border border-slate-850 hover:border-slate-750 transition-all"
                 >
                   {/* Sk Checkbox / Red X Toggle */}
                   <div className="flex justify-center">
@@ -992,6 +995,14 @@ export const WeaponsCard: React.FC = () => {
                     title="Auto-updated from character attributes (-1d for Brawl / Unarmed)"
                   >
                     {calculatedDmg}
+                  </div>
+
+                  {/* Blk💪 Cell */}
+                  <div
+                    className="bg-slate-950 border border-slate-800 text-amber-300 text-xs font-mono font-extrabold text-center py-1 rounded"
+                    title="Auto-updated Block rating based on character Might"
+                  >
+                    {item.max_blk === 'n/a' ? 'n/a' : getDieNum(attributeDice.might)}
                   </div>
 
                   {/* Max Blk Read-Only Display Box */}

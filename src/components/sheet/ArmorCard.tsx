@@ -59,7 +59,6 @@ export const ArmorCard: React.FC = () => {
     moxie: 'd4',
   }) as Record<string, string>;
 
-  const derivedBlock = getDieNum(attributeDice.might);
   const derivedDodge = getDieNum(attributeDice.motion);
 
   const isArmorSkilled = (item: ArmorData): boolean => {
@@ -535,86 +534,66 @@ export const ArmorCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Armor Sheet Card View */}
-      <div className="flex flex-col gap-3">
-        {/* Armor Row 1: Sk Checkbox & Read-Only Name */}
-        <div className="flex items-center gap-3">
-          {/* Sk Checkbox / Red X Toggle */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <label className="text-xs font-bold text-slate-300 cursor-pointer">
-              Sk
-            </label>
-            <button
-              type="button"
-              onClick={() => handleSkToggle(!(armor.sk ?? true))}
-              className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-pointer shrink-0 ${
-                (armor.sk ?? true)
-                  ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm hover:bg-cyan-600/50'
-                  : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md hover:bg-rose-900/90'
-              }`}
-              title={(armor.sk ?? true) ? 'Skilled (Click to mark Unskilled)' : 'Unskilled (Click to mark Skilled)'}
-            >
-              {(armor.sk ?? true) ? (
-                <Check className="w-3.5 h-3.5 stroke-[3]" />
-              ) : (
-                <X className="w-3.5 h-3.5 stroke-[3]" />
-              )}
-            </button>
-          </div>
-
-          {/* Armor Name Input (Read-Only) */}
-          <input
-            type="text"
-            value={armor.name}
-            readOnly
-            placeholder="Armor Name (e.g. Studded Leather)"
-            className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none w-full max-w-[240px] cursor-default"
-            title="Armor name set via Manage Armor modal"
-          />
+      {/* Main Character Sheet Card View - High Density Single Line */}
+      <div className="flex items-center gap-3 pt-1 animate-fadeIn">
+        {/* Sk Checkbox / Red X Toggle */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <label className="text-xs font-bold text-slate-300 cursor-pointer">
+            Sk
+          </label>
+          <button
+            type="button"
+            onClick={() => handleSkToggle(!(armor.sk ?? true))}
+            className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-pointer shrink-0 ${
+              (armor.sk ?? true)
+                ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm hover:bg-cyan-600/50'
+                : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md hover:bg-rose-900/90'
+            }`}
+            title={(armor.sk ?? true) ? 'Skilled (Click to mark Unskilled)' : 'Unskilled (Click to mark Skilled)'}
+          >
+            {(armor.sk ?? true) ? (
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+            ) : (
+              <X className="w-3.5 h-3.5 stroke-[3]" />
+            )}
+          </button>
         </div>
 
-        {/* Armor Row 2: Block 💪 (Might), Dodge 🏃 (Motion), AR 🧥 */}
-        <div className="flex flex-wrap items-center gap-3 pt-1">
-          {/* Block Cell (Auto-Updated from Might) */}
-          <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.shields.block">Block</RuleTooltip></span>
-              <span className="text-sm">💪</span>
-            </div>
-            <div
-              className="w-10 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
-              title="Auto-updated matching Character Might rating"
-            >
-              {derivedBlock}
-            </div>
-          </div>
+        {/* Armor Name Input (Read-Only) */}
+        <input
+          type="text"
+          value={armor.name}
+          readOnly
+          placeholder="Armor Name (e.g. Studded Leather)"
+          className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none w-full max-w-[240px] cursor-default"
+          title="Armor name set via Manage Armor modal"
+        />
 
-          {/* Dodge Cell (Auto-Updated from Motion) */}
-          <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.weapons.range">Dodge</RuleTooltip></span>
-              <span className="text-sm">🏃</span>
-            </div>
-            <div
-              className="w-10 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
-              title="Auto-updated matching Character Motion rating"
-            >
-              {derivedDodge}
-            </div>
+        {/* Dodge Cell (Auto-Updated from Motion) */}
+        <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.weapons.range">Dodge</RuleTooltip></span>
+            <span className="text-sm">🏃</span>
           </div>
+          <div
+            className="w-10 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
+            title="Auto-updated matching Character Motion rating"
+          >
+            {derivedDodge}
+          </div>
+        </div>
 
-          {/* AR Cell (Auto-Updated Read-Only Display Box) */}
-          <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 w-fit">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.armor.ar">AR</RuleTooltip></span>
-              <span className="text-sm">🧥</span>
-            </div>
-            <div
-              className="w-10 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
-              title="Auto-updated matching equipped armor AR rating"
-            >
-              {armor.ar ?? 0}
-            </div>
+        {/* AR Cell (Auto-Updated Read-Only Display Box) */}
+        <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.armor.ar">AR</RuleTooltip></span>
+            <span className="text-sm">🧥</span>
+          </div>
+          <div
+            className="w-10 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
+            title="Auto-updated matching equipped armor AR rating"
+          >
+            {armor.ar ?? 0}
           </div>
         </div>
       </div>

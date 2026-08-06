@@ -46,6 +46,14 @@ export const ShieldCard: React.FC = () => {
     moxie: 'd4',
   }) as Record<string, string>;
 
+  const getDieNum = (dieRating?: string): number => {
+    if (!dieRating) return 4;
+    const num = parseInt(dieRating.replace('d', ''), 10);
+    return isNaN(num) ? 4 : num;
+  };
+
+  const derivedBlock = getDieNum(attributeDice.might);
+
   const isShieldSkilled = (item: ShieldData): boolean => {
     if (!item || item.id === 'shd_none') return false;
     if (item.sk === true) return true;
@@ -707,6 +715,20 @@ export const ShieldCard: React.FC = () => {
             className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none w-full max-w-[240px] cursor-default"
             title="Shield name set via Manage Shields modal"
           />
+
+          {/* Block Cell (Auto-Updated from Might) */}
+          <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.shields.block">Block</RuleTooltip></span>
+              <span className="text-sm">💪</span>
+            </div>
+            <div
+              className="w-10 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
+              title="Auto-updated matching Character Might rating"
+            >
+              {derivedBlock}
+            </div>
+          </div>
 
           {/* Max Block Read-Only Display Box */}
           <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">
