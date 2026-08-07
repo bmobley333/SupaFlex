@@ -84,7 +84,10 @@ const calculateTotalPowerUnits = (abilitySlots: AbilitySlot[]): number => {
 export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type }) => {
   const { activeCharacter, powers, magicItems, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
   const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
-  const slots: AbilitySlot[] = activeCharacter?.sheet_data?.[slotKey] || [];
+  const rawSlots: AbilitySlot[] = (activeCharacter?.sheet_data?.[slotKey as keyof typeof activeCharacter.sheet_data] as AbilitySlot[]) || [];
+  const slots: AbilitySlot[] = useMemo(() => {
+    return rawSlots.filter((s) => s && s.name && s.name.trim() !== '');
+  }, [rawSlots]);
   const favoriteTables: string[] = activeCharacter?.sheet_data?.favorite_power_tables || [];
   const stockCatalog = type === 'powers' ? powers : magicItems;
 
@@ -599,7 +602,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">
       {/* Header: Title, Icon, & Master Manager Trigger Button */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 justify-start">
           <h3 className={`font-outfit font-bold text-sm tracking-widest uppercase flex items-center gap-2 ${
             type === 'powers' ? 'text-amber-300' : 'text-cyan-300'
           }`}>
@@ -609,8 +612,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           <CardHelpButton ruleKey={type === 'powers' ? 'powers.basics' : 'magic_items.basics'} />
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Clear Uses Button */}
+        {/* Clear Uses Button (Centered to align closer to the uses column) */}
+        <div className="flex items-center justify-center flex-1">
           <button
             type="button"
             onClick={handleClearAllUses}
@@ -620,7 +623,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
             <span className="font-outfit text-[11px] font-bold">Clear Uses</span>
           </button>
+        </div>
 
+        <div className="flex items-center justify-end gap-2 flex-1">
           <div className="relative">
           <button
             onClick={() => setShowManageModal(!showManageModal)}

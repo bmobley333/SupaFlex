@@ -79,7 +79,10 @@ const calculateWeaponDmg = (name: string, mhsCategory: string, attributeDice: Re
 
 export const WeaponsCard: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
-  const weapons: WeaponSlot[] = activeCharacter?.sheet_data?.weapons || [];
+  const rawWeapons: WeaponSlot[] = activeCharacter?.sheet_data?.weapons || [];
+  const weapons: WeaponSlot[] = useMemo(() => {
+    return rawWeapons.filter((w) => w && w.name && w.name.trim() !== '');
+  }, [rawWeapons]);
   const attributeDice = (activeCharacter?.sheet_data?.attribute_dice || {
     might: 'd8',
     motion: 'd8',

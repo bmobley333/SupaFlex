@@ -66,7 +66,10 @@ export const calculateInventoryValue = (gearList: SimpleGearItem[]) => {
 
 export const GearCard: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
-  const gearList: SimpleGearItem[] = activeCharacter?.sheet_data?.simple_gear || [];
+  const rawGearList: SimpleGearItem[] = activeCharacter?.sheet_data?.simple_gear || [];
+  const gearList: SimpleGearItem[] = useMemo(() => {
+    return rawGearList.filter((g) => g && g.name && g.name.trim() !== '');
+  }, [rawGearList]);
 
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
   const modalRef = useRef<HTMLDivElement>(null);

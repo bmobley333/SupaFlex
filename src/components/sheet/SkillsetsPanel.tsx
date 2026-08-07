@@ -43,8 +43,15 @@ const dieToNum = (die?: string): string => {
 
 export const SkillsetsPanel: React.FC = () => {
   const { activeCharacter, skillsets, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
-  const knownSkillsetNames = activeCharacter?.sheet_data?.known_skillsets || [];
-  const knownIndividualSkills = activeCharacter?.sheet_data?.known_individual_skills || [];
+  const rawKnownSkillsetNames = activeCharacter?.sheet_data?.known_skillsets || [];
+  const knownSkillsetNames = useMemo(() => {
+    return rawKnownSkillsetNames.filter((s) => s && typeof s === 'string' && s.trim() !== '');
+  }, [rawKnownSkillsetNames]);
+
+  const rawKnownIndividualSkills = activeCharacter?.sheet_data?.known_individual_skills || [];
+  const knownIndividualSkills = useMemo(() => {
+    return rawKnownIndividualSkills.filter((s) => s && typeof s === 'string' && s.trim() !== '');
+  }, [rawKnownIndividualSkills]);
   const attributeDice = activeCharacter?.sheet_data?.attribute_dice || {
     might: 'd4',
     motion: 'd4',

@@ -28,22 +28,8 @@ export const createDefaultSheetData = (): CharacterSheetData => ({
   sparks: 0,
   is_charged: false,
   known_skillsets: [],
-  power_slots: Array.from({ length: 5 }, () => ({
-    select: false,
-    name: '',
-    action: '',
-    usage: '',
-    effect: '',
-    checked: [false, false, false],
-  })),
-  spell_slots: Array.from({ length: 5 }, () => ({
-    select: false,
-    name: '',
-    action: '',
-    usage: '',
-    effect: '',
-    checked: [false, false, false],
-  })),
+  power_slots: [],
+  spell_slots: [],
   gear_slots: [],
   bio: {
     backstory: '',
@@ -60,11 +46,29 @@ export const normalizeCharacterData = (c: Character): Character => {
   const vitalityMax = rawSheet.vitality_max ?? c.hp ?? 10;
   const currentVitality = rawSheet.current_vitality ?? c.hp ?? vitalityMax;
 
+  // Filter out any blank/empty legacy objects where name is empty or whitespace
+  const cleanPowerSlots = (rawSheet.power_slots || []).filter((s) => s && s.name && s.name.trim() !== '');
+  const cleanSpellSlots = (rawSheet.spell_slots || []).filter((s) => s && s.name && s.name.trim() !== '');
+  const cleanWeapons = (rawSheet.weapons || []).filter((w) => w && w.name && w.name.trim() !== '');
+  const cleanSimpleGear = (rawSheet.simple_gear || []).filter((g) => g && g.name && g.name.trim() !== '');
+  const cleanSkillsets = (rawSheet.known_skillsets?.length ? rawSheet.known_skillsets : c.skills || []).filter(
+    (s) => s && typeof s === 'string' && s.trim() !== ''
+  );
+  const cleanIndividualSkills = (rawSheet.known_individual_skills || []).filter(
+    (s) => s && typeof s === 'string' && s.trim() !== ''
+  );
+
   const normalizedSheet: CharacterSheetData = {
     ...defaultSheet,
     ...rawSheet,
     vitality_max: vitalityMax,
     current_vitality: currentVitality,
+    power_slots: cleanPowerSlots,
+    spell_slots: cleanSpellSlots,
+    weapons: cleanWeapons,
+    simple_gear: cleanSimpleGear,
+    known_skillsets: cleanSkillsets,
+    known_individual_skills: cleanIndividualSkills,
     attribute_dice: {
       might: ((rawSheet.attribute_dice?.might || c.might || 'd4') as DieRating),
       motion: ((rawSheet.attribute_dice?.motion || c.motion || 'd4') as DieRating),
@@ -72,7 +76,6 @@ export const normalizeCharacterData = (c: Character): Character => {
       magic: ((rawSheet.attribute_dice?.magic || c.magic || 'd4') as DieRating),
       moxie: ((rawSheet.attribute_dice?.moxie || c.moxie || 'd4') as DieRating),
     },
-    known_skillsets: rawSheet.known_skillsets?.length ? rawSheet.known_skillsets : c.skills || [],
   };
 
   return {
