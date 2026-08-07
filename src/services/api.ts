@@ -5,6 +5,15 @@ import { supabase } from '../lib/supabase';
 import { Character, Power, MagicItem, Skillset, CharacterSheetData, DieRating, SupabaseArmor, SupabaseWeapon, SupabaseShield, SupabaseGear, SupabaseMonster } from '../types/game';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
 
+const DEFAULT_UNARMORED_SLOT = {
+  id: 'arm_none',
+  name: 'Unarmored',
+  sk: true,
+  ar: 0,
+  requirement: '💪 4',
+  mr: '👣8',
+};
+
 export const createDefaultSheetData = (): CharacterSheetData => ({
   level: 1,
   ap: 0,
@@ -16,6 +25,7 @@ export const createDefaultSheetData = (): CharacterSheetData => ({
   armor: 0,
   max_powers: 5,
   max_spells: 5,
+  armor_slot: DEFAULT_UNARMORED_SLOT,
   attribute_dice: {
     might: 'd6',
     motion: 'd6',
@@ -63,6 +73,7 @@ export const normalizeCharacterData = (c: Character): Character => {
     ...rawSheet,
     vitality_max: vitalityMax,
     current_vitality: currentVitality,
+    armor_slot: rawSheet.armor_slot || DEFAULT_UNARMORED_SLOT,
     power_slots: cleanPowerSlots,
     spell_slots: cleanSpellSlots,
     weapons: cleanWeapons,

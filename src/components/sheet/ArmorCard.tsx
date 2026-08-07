@@ -27,15 +27,12 @@ export const ArmorCard: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
 
   const armor: ArmorData = activeCharacter?.sheet_data?.armor_slot || {
-    id: 'arm_default',
-    name: 'Studded Leather',
+    id: 'arm_none',
+    name: 'Unarmored',
     sk: true,
-    block: 8,
-    dodge: 8,
-    ar: 6,
+    ar: 0,
     requirement: '💪 4',
-    mr: '👣7',
-    cost: '15g',
+    mr: '👣8',
   };
 
   const wardrobe: ArmorData[] = useMemo(() => {
