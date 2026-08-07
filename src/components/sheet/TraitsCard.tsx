@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, X, User } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CharacterBio } from '../../types/game';
+import { InfoTooltip } from '../common/InfoTooltip';
 
 export const TraitsCard: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
@@ -93,7 +94,7 @@ export const TraitsCard: React.FC = () => {
                       placeholder="6'1&quot;"
                       value={bio.height || ''}
                       onChange={(e) => handleBioChange('height', e.target.value)}
-                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
+                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 placeholder:text-slate-600/40"
                     />
                   </div>
 
@@ -104,7 +105,7 @@ export const TraitsCard: React.FC = () => {
                       placeholder="185 lbs"
                       value={bio.weight || ''}
                       onChange={(e) => handleBioChange('weight', e.target.value)}
-                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
+                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 placeholder:text-slate-600/40"
                     />
                   </div>
 
@@ -115,7 +116,7 @@ export const TraitsCard: React.FC = () => {
                       placeholder="28"
                       value={bio.age || ''}
                       onChange={(e) => handleBioChange('age', e.target.value)}
-                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
+                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 placeholder:text-slate-600/40"
                     />
                   </div>
                 </div>
@@ -124,73 +125,91 @@ export const TraitsCard: React.FC = () => {
                 <div className="flex flex-col gap-3">
                   {/* Appearance */}
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Appearance</label>
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Appearance</label>
+                      <InfoTooltip text="Physical description (e.g. Rugged scar on left cheek, dark cloak, keen eyes...)" />
+                    </div>
                     <input
                       type="text"
-                      placeholder="Rugged scar on left cheek, dark cloak, keen eyes..."
+                      placeholder="..."
                       value={bio.appearance || ''}
                       onChange={(e) => handleBioChange('appearance', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full placeholder:text-slate-700/50"
                     />
                   </div>
 
                   {/* Positive Trait */}
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Positive Trait</label>
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Positive Trait</label>
+                      <InfoTooltip text="Key strength or virtue (e.g. Fiercely loyal to comrades, calm under pressure...)" />
+                    </div>
                     <input
                       type="text"
-                      placeholder="Fiercely loyal to comrades, calm under pressure..."
+                      placeholder="..."
                       value={bio.positive_trait || ''}
                       onChange={(e) => handleBioChange('positive_trait', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 w-full"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 w-full placeholder:text-slate-700/50"
                     />
                   </div>
 
                   {/* Negative Trait */}
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-rose-300 uppercase tracking-wider">Negative Trait</label>
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs font-bold text-rose-300 uppercase tracking-wider">Negative Trait</label>
+                      <InfoTooltip text="Character flaw or weakness (e.g. Overly stubborn, mistrustful of noble bloodlines...)" />
+                    </div>
                     <input
                       type="text"
-                      placeholder="Overly stubborn, mistrustful of noble bloodlines..."
+                      placeholder="..."
                       value={bio.negative_trait || ''}
                       onChange={(e) => handleBioChange('negative_trait', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-rose-500 w-full"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-rose-500 w-full placeholder:text-slate-700/50"
                     />
                   </div>
 
                   {/* Flair */}
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-purple-300 uppercase tracking-wider">Flair</label>
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs font-bold text-purple-300 uppercase tracking-wider">Flair</label>
+                      <InfoTooltip text="Unique signature quirk or habit (e.g. Flips a worn brass coin before making crucial decisions...)" />
+                    </div>
                     <input
                       type="text"
-                      placeholder="Flips a worn brass coin before making crucial decisions..."
+                      placeholder="..."
                       value={bio.flair || ''}
                       onChange={(e) => handleBioChange('flair', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full placeholder:text-slate-700/50"
                     />
                   </div>
 
                   {/* Adventuring Goal */}
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-amber-300 uppercase tracking-wider">Adventuring Goal</label>
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs font-bold text-amber-300 uppercase tracking-wider">Adventuring Goal</label>
+                      <InfoTooltip text="Long-term quest or narrative drive (e.g. Reclaim the ancestral crown of Shanask...)" />
+                    </div>
                     <textarea
                       rows={2}
-                      placeholder="Reclaim the ancestral crown of Shanask and uncover the lost relic..."
+                      placeholder="..."
                       value={bio.adventuring_goal || ''}
                       onChange={(e) => handleBioChange('adventuring_goal', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-amber-500 w-full resize-none"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-amber-500 w-full resize-none placeholder:text-slate-700/50"
                     />
                   </div>
 
                   {/* Notes */}
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-cyan-300 uppercase tracking-wider">Notes</label>
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs font-bold text-cyan-300 uppercase tracking-wider">Notes</label>
+                      <InfoTooltip text="General campaign notes, secrets, contacts, and personal logs..." />
+                    </div>
                     <textarea
                       rows={3}
-                      placeholder="General campaign notes, secrets, contacts, and personal logs..."
+                      placeholder="..."
                       value={bio.notes || ''}
                       onChange={(e) => handleBioChange('notes', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-cyan-500 w-full resize-none"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-cyan-500 w-full resize-none placeholder:text-slate-700/50"
                     />
                   </div>
                 </div>
