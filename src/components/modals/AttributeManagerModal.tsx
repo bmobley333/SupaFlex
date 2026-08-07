@@ -521,28 +521,52 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
           {/* LEFT PANE (md:col-span-6): DIE POOL ASSIGNMENT                            */}
           {/* ========================================================================= */}
           <div className="md:col-span-6 flex flex-col p-5 bg-slate-900/60 overflow-y-auto max-h-full">
-            {/* Max Die Pool Header Card */}
-            <div className="p-4 rounded-xl bg-slate-950/90 border border-indigo-500/30 mb-4 shadow-lg shrink-0">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-outfit font-black text-xs uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
-                  <Shield className="w-4 h-4 text-indigo-400" />
-                  Max Die Pool at Level {level}
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {activeMilestone.name}
-                </span>
+            {/* Dual Die Pool Header Card (Current Pool vs Max Allowed Pool) */}
+            <div className="p-4 rounded-xl bg-slate-950/90 border border-indigo-500/30 mb-4 shadow-lg shrink-0 space-y-3">
+              {/* Row 1: Current Assigned Die Pool */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-outfit font-black text-xs uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                    Current Assigned Die Pool
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    5 Dice Assigned
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap bg-slate-900 p-2 rounded-lg border border-slate-800">
+                  {currentPoolList.map((die, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-0.5 bg-indigo-950/80 border border-indigo-500/40 text-indigo-200 font-mono font-black text-xs rounded-lg shadow-sm"
+                    >
+                      {formatDieNum(die)}
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              {/* Pool Dice Visual Badges (Max Milestone Ceiling Dice) */}
-              <div className="flex items-center gap-2 flex-wrap bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-                {maxPoolCeilingList.map((die, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3.5 py-1 bg-indigo-950/80 border border-indigo-500/40 text-indigo-200 font-mono font-black text-sm rounded-lg shadow-sm"
-                  >
-                    {formatDieNum(die)}
+              {/* Row 2: Max Die Pool at Level */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-outfit font-black text-xs uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                    <Award className="w-3.5 h-3.5 text-amber-400" />
+                    Max Die Pool at Level {level}
                   </span>
-                ))}
+                  <span className="text-[10px] text-amber-400/80 font-mono font-bold">
+                    {activeMilestone.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap bg-slate-900 p-2 rounded-lg border border-amber-500/20">
+                  {maxPoolCeilingList.map((die, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-0.5 bg-amber-950/60 border border-amber-500/40 text-amber-200 font-mono font-black text-xs rounded-lg shadow-sm"
+                    >
+                      {formatDieNum(die)}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -709,10 +733,6 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
             <span className="text-slate-700 font-bold">|</span>
             <span>
               Available AP: <strong className="text-emerald-400 font-mono">{availableAp}</strong>
-            </span>
-            <span className="text-slate-700 font-bold">|</span>
-            <span>
-              Pool: <strong className="text-slate-200 font-mono">[{currentPoolList.map((d) => formatDieNum(d)).join(', ')}]</strong>
             </span>
           </div>
 
