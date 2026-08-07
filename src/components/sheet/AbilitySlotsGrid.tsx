@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Globe, Flame, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Globe, Flame, Star, RotateCcw } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
@@ -209,6 +209,24 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       slotToUpdate.checked = newChecked;
       updatedSlots[realIndex] = slotToUpdate;
       return { ...prev, [slotKey]: updatedSlots };
+    });
+    saveActiveCharacter();
+  };
+
+  const handleClearAllUses = () => {
+    updateActiveSheetData((prev) => {
+      const currentSlots = prev[slotKey] || [];
+      if (currentSlots.length === 0) return prev;
+
+      const clearedSlots = currentSlots.map((slot: any) => ({
+        ...slot,
+        checked: [false, false, false],
+      }));
+
+      return {
+        ...prev,
+        [slotKey]: clearedSlots,
+      };
     });
     saveActiveCharacter();
   };
@@ -591,7 +609,19 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           <CardHelpButton ruleKey={type === 'powers' ? 'powers.basics' : 'magic_items.basics'} />
         </div>
 
-        <div className="relative">
+        <div className="flex items-center gap-2">
+          {/* Clear Uses Button */}
+          <button
+            type="button"
+            onClick={handleClearAllUses}
+            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-950/60 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-slate-100 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+            title={`Uncheck all ${type === 'powers' ? 'power' : 'magic item'} usage checkboxes`}
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+            <span className="font-outfit text-[11px] font-bold">Clear Uses</span>
+          </button>
+
+          <div className="relative">
           <button
             onClick={() => setShowManageModal(!showManageModal)}
             className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
@@ -1140,6 +1170,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           )}
         </div>
       </div>
+    </div>
 
       {/* Main Character Sheet Card View: Entire List of Learned Abilities */}
       <div className="flex flex-col gap-2">
