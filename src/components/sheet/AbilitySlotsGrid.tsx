@@ -529,15 +529,19 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const availableTableNames = useMemo(() => Object.keys(groupedTables), [groupedTables]);
 
   const effectiveActiveTable = useMemo(() => {
+    if (activeTableName === 'ALL') return 'ALL';
     if (activeTableName && availableTableNames.includes(activeTableName)) {
       return activeTableName;
     }
-    return availableTableNames[0] || null;
+    return 'ALL';
   }, [activeTableName, availableTableNames]);
 
   const activeTableAbilities = useMemo(() => {
+    if (effectiveActiveTable === 'ALL') {
+      return categoryFilteredCatalog;
+    }
     return effectiveActiveTable ? groupedTables[effectiveActiveTable] || [] : [];
-  }, [effectiveActiveTable, groupedTables]);
+  }, [effectiveActiveTable, groupedTables, categoryFilteredCatalog]);
 
   const filteredCatalogAbilities = useMemo(() => {
     return activeTableAbilities.filter((item) => {
@@ -833,10 +837,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-xs font-bold text-slate-400 shrink-0">Table:</span>
                           <select
-                            value={effectiveActiveTable || ''}
+                            value={effectiveActiveTable || 'ALL'}
                             onChange={(e) => setActiveTableName(e.target.value)}
                             className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
                           >
+                            <option value="ALL">🌐 All Tables ({categoryFilteredCatalog.length})</option>
                             {availableTableNames.map((tblName) => (
                               <option key={tblName} value={tblName}>
                                 📁 {tblName} ({groupedTables[tblName]?.length || 0})
@@ -921,7 +926,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                             <input
                               type="text"
-                              placeholder={`Search catalog ${type}...`}
+                              placeholder={`Search catalog ${type === 'powers' ? 'powers' : 'magic items'}...`}
                               value={rightSearchQuery}
                               onChange={(e) => setRightSearchQuery(e.target.value)}
                               className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"

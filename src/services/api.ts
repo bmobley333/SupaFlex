@@ -116,8 +116,14 @@ export const gameApi = {
     return data ? normalizeCharacterData(data as Character) : null;
   },
 
-  async createCharacter(name: string, characterClass = 'Adventurer', race = 'Human', ownerEmail = 'TheBMobley@gmail.com'): Promise<Character> {
+  async createCharacter(name: string, characterClass = 'Adventurer', race = 'Human', ownerEmail?: string): Promise<Character> {
     const defaultSheet = createDefaultSheetData();
+    let resolvedEmail = ownerEmail?.trim();
+    if (!resolvedEmail) {
+      const { data: authData } = await supabase.auth.getUser();
+      resolvedEmail = authData?.user?.email || 'metascapegame@gmail.com';
+    }
+
     const { data, error } = await supabase
       .from('characters')
       .insert({
@@ -133,7 +139,7 @@ export const gameApi = {
         skills: [],
         inventory: [],
         log: [],
-        owner_email: ownerEmail,
+        owner_email: resolvedEmail,
         sheet_data: defaultSheet,
       })
       .select()

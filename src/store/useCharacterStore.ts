@@ -192,7 +192,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   createNewCharacter: async (name: string, characterClass = 'Adventurer', race = 'Human') => {
     set({ isSaving: true });
     try {
-      const newChar = await gameApi.createCharacter(name, characterClass, race);
+      const ownerEmail = get().playerEmail || undefined;
+      const newChar = await gameApi.createCharacter(name, characterClass, race, ownerEmail);
       set((state) => ({
         characters: [newChar, ...state.characters],
         activeCharacter: newChar,

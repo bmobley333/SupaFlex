@@ -52,7 +52,7 @@ export const MILESTONE_TIERS: MilestoneTier[] = [
     minLevel: 1,
     maxLevel: 1,
     ceiling: { d4: 2, d6: 2, d8: 1, d10: 0, d12: 0, Exhausted: 0 },
-    description: '2x d4, 2x d6, 1x d8',
+    description: '2x 4, 2x 6, 1x 8',
   },
   {
     id: 'lvl1_9',
@@ -60,7 +60,7 @@ export const MILESTONE_TIERS: MilestoneTier[] = [
     minLevel: 1,
     maxLevel: 9,
     ceiling: { d4: 1, d6: 2, d8: 2, d10: 0, d12: 0, Exhausted: 0 },
-    description: '1x d4, 2x d6, 2x d8',
+    description: '1x 4, 2x 6, 2x 8',
   },
   {
     id: 'lvl10',
@@ -68,7 +68,7 @@ export const MILESTONE_TIERS: MilestoneTier[] = [
     minLevel: 10,
     maxLevel: 24,
     ceiling: { d4: 1, d6: 1, d8: 3, d10: 0, d12: 0, Exhausted: 0 },
-    description: '1x d4, 1x d6, 3x d8',
+    description: '1x 4, 1x 6, 3x 8',
   },
   {
     id: 'lvl25',
@@ -76,7 +76,7 @@ export const MILESTONE_TIERS: MilestoneTier[] = [
     minLevel: 25,
     maxLevel: 49,
     ceiling: { d4: 0, d6: 2, d8: 1, d10: 2, d12: 0, Exhausted: 0 },
-    description: '2x d6, 1x d8, 2x d10',
+    description: '2x 6, 1x 8, 2x 10',
   },
   {
     id: 'lvl50',
@@ -84,7 +84,7 @@ export const MILESTONE_TIERS: MilestoneTier[] = [
     minLevel: 50,
     maxLevel: 74,
     ceiling: { d4: 0, d6: 1, d8: 2, d10: 2, d12: 0, Exhausted: 0 },
-    description: '1x d6, 2x d8, 2x d10',
+    description: '1x 6, 2x 8, 2x 10',
   },
   {
     id: 'lvl75',
@@ -92,7 +92,7 @@ export const MILESTONE_TIERS: MilestoneTier[] = [
     minLevel: 75,
     maxLevel: 99,
     ceiling: { d4: 0, d6: 1, d8: 1, d10: 2, d12: 1, Exhausted: 0 },
-    description: '1x d6, 1x d8, 2x d10, 1x d12',
+    description: '1x 6, 1x 8, 2x 10, 1x 12',
   },
   {
     id: 'lvl100',
@@ -100,7 +100,7 @@ export const MILESTONE_TIERS: MilestoneTier[] = [
     minLevel: 100,
     maxLevel: 999,
     ceiling: { d4: 0, d6: 1, d8: 1, d10: 1, d12: 2, Exhausted: 0 },
-    description: '1x d6, 1x d8, 1x d10, 2x d12 (Hard cap)',
+    description: '1x 6, 1x 8, 1x 10, 2x 12 (Hard cap)',
   },
 ];
 
@@ -115,6 +115,12 @@ const dieToNum = (die?: string): string => {
   if (!die) return 'd4';
   const clean = die.toString().trim().toLowerCase();
   return clean.startsWith('d') ? clean : `d${clean}`;
+};
+
+const formatDieNum = (die?: string): string => {
+  if (!die) return '4';
+  const clean = die.toString().trim().toLowerCase();
+  return clean.replace(/^d/, '');
 };
 
 const dieOrderValue = (die: DieRating): number => {
@@ -145,6 +151,15 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
   const modalRef = useRef<HTMLDivElement>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // State for "Increase Die" Confirmation Popover
+  const [pendingUpgrade, setPendingUpgrade] = useState<{
+    attrKey: AttributeKey;
+    attrName: string;
+    currentDie: DieRating;
+    nextDie: DieRating;
+    cost: number;
+  } | null>(null);
+
   // Character Sheet Data
   const sheetData: any = activeCharacter?.sheet_data || {};
   const level = sheetData.level || 1;
@@ -154,11 +169,11 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
   // Baseline Saved Assignments
   const savedAttributeDice: Record<AttributeKey, DieRating> = useMemo(() => {
     const defaultDice: Record<AttributeKey, DieRating> = {
-      might: 'd4',
-      motion: 'd4',
+      might: 'd6',
+      motion: 'd6',
       mind: 'd8',
-      magic: 'd6',
-      moxie: 'd6',
+      magic: 'd4',
+      moxie: 'd4',
     };
     if (!sheetData.attribute_dice) return defaultDice;
     return {
@@ -169,41 +184,50 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
       moxie: dieToNum(sheetData.attribute_dice.moxie) as DieRating,
     };
   }, [sheetData.attribute_dice]);
+  const activeMilestone = getActiveMilestoneTier(level);
 
-  // Local Draft Assignments state for drag/swap re-allocation
-  const [draftAssignments, setDraftAssignments] = useState<Record<AttributeKey, DieRating>>(savedAttributeDice);
-
-  // Sync draft assignments whenever saved assignments change
-  useEffect(() => {
-    setDraftAssignments(savedAttributeDice);
-  }, [savedAttributeDice]);
-
-  // Click Outside Listener
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose();
+  // Calculate Max Die Pool ceiling list for character's current level milestone
+  const maxPoolCeilingList: DieRating[] = useMemo(() => {
+    const list: DieRating[] = [];
+    const dice: DieRating[] = ['d4', 'd6', 'd8', 'd10', 'd12'];
+    const targetCeiling = level === 1 ? MILESTONE_TIERS[1].ceiling : activeMilestone.ceiling;
+    for (const d of dice) {
+      const count = targetCeiling[d] || 0;
+      for (let i = 0; i < count; i++) {
+        list.push(d);
       }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
     }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
+    return list.sort((a, b) => dieOrderValue(a) - dieOrderValue(b));
+  }, [level, activeMilestone]);
+
+  // Smart auto-initialization for default starting character pool
+  useEffect(() => {
+    if (!sheetData.attribute_dice && activeCharacter && isOpen) {
+      const defaultStartingAssignments: Record<AttributeKey, DieRating> = {
+        might: 'd6',
+        motion: 'd6',
+        mind: 'd8',
+        magic: 'd4',
+        moxie: 'd4',
+      };
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        attribute_dice: defaultStartingAssignments,
+      }));
+      saveActiveCharacter();
+    }
+  }, [activeCharacter, sheetData.attribute_dice, isOpen]);
+
+  // Early return if modal is closed or activeCharacter is missing
+  if (!isOpen || !activeCharacter) return null;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  if (!isOpen || !activeCharacter) return null;
-
-  const activeMilestone = getActiveMilestoneTier(level);
-
-  // Derived current pool from draft assignments (sorted by die tier)
-  const currentPoolList: DieRating[] = Object.values(draftAssignments).sort(
+  // Derived current pool from saved assignments (sorted by die tier)
+  const currentPoolList: DieRating[] = Object.values(savedAttributeDice).sort(
     (a, b) => dieOrderValue(a) - dieOrderValue(b)
   );
 
@@ -222,102 +246,114 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
     }
   });
 
-  // Check if draft assignments differ from saved baseline
-  const isAssignmentChanged = ATTRIBUTES.some(
-    (attr) => draftAssignments[attr.key] !== savedAttributeDice[attr.key]
-  );
+  // Handler to swap die assignment between two attributes immediately
+  const handleAssignDie = (attr1Key: AttributeKey, attr2Key: AttributeKey) => {
+    if (attr1Key === attr2Key) return;
+    const die1 = savedAttributeDice[attr1Key];
+    const die2 = savedAttributeDice[attr2Key];
+    if (die1 === die2) return;
 
-  // Handler to swap die assignment between attributes (guaranteeing exact pool match)
-  const handleAssignDie = (targetAttr: AttributeKey, newDie: DieRating) => {
-    const currentDieOfTarget = draftAssignments[targetAttr];
-    if (currentDieOfTarget === newDie) return;
-
-    // Find another attribute that currently holds `newDie` to swap with
-    const swapAttrKey = (Object.keys(draftAssignments) as AttributeKey[]).find(
-      (key) => key !== targetAttr && draftAssignments[key] === newDie
-    );
-
-    if (swapAttrKey) {
-      setDraftAssignments((prev) => ({
-        ...prev,
-        [targetAttr]: newDie,
-        [swapAttrKey]: currentDieOfTarget,
-      }));
-    }
-  };
-
-  // Execute 1 AP Attribute Reshuffle
-  const handleApplyReshuffle = () => {
-    if (!isAssignmentChanged) {
-      showToast('No assignment changes to apply.');
+    const swapCost = level === 1 ? 0 : 1;
+    if (swapCost > 0 && availableAp < swapCost) {
+      showToast(`Insufficient AP! Swapping requires ${swapCost} AP (Available: ${availableAp} AP).`);
       return;
     }
 
-    if (availableAp < 1) {
-      showToast('Insufficient AP! Required: 1 AP for Attribute Reshuffle.');
-      return;
-    }
+    const newAssignments = {
+      ...savedAttributeDice,
+      [attr1Key]: die2,
+      [attr2Key]: die1,
+    };
 
     updateActiveSheetData((prev) => ({
       ...prev,
-      attribute_dice: draftAssignments,
+      attribute_dice: newAssignments,
     }));
 
-    recordApExpenditure(
-      1,
-      'Attributes',
-      `Downtime Attribute Reshuffle (${Object.entries(draftAssignments)
-        .map(([k, v]) => `${k}:${v}`)
-        .join(', ')})`,
-      1,
-      'Attribute Manager'
-    );
-
-    saveActiveCharacter();
-    showToast('Attribute Reshuffle applied! (1 AP deducted)');
-  };
-
-  // Reset Draft Assignments back to saved baseline
-  const handleResetDraft = () => {
-    setDraftAssignments(savedAttributeDice);
-  };
-
-  // Ceiling Validation for Pool Upgrade
-  const canUpgradeDieInPool = (currentDie: DieRating): { allowed: boolean; reason?: string } => {
-    const upgradeInfo = DIE_UPGRADE_COSTS[currentDie];
-    if (!upgradeInfo) {
-      return { allowed: false, reason: 'Already at Max Die Rating (d12)' };
+    if (swapCost > 0) {
+      recordApExpenditure(
+        swapCost,
+        'Attributes',
+        `Attribute Swap: ${attr1Key.toUpperCase()} (${formatDieNum(die1)}) ↔ ${attr2Key.toUpperCase()} (${formatDieNum(die2)})`,
+        1,
+        'Attribute Manager'
+      );
     }
 
-    if (availableAp < upgradeInfo.cost) {
-      return { allowed: false, reason: `Requires ${upgradeInfo.cost} AP (Available: ${availableAp} AP)` };
+    saveActiveCharacter();
+    const attr1Name = ATTRIBUTES.find((a) => a.key === attr1Key)?.name || attr1Key;
+    const attr2Name = ATTRIBUTES.find((a) => a.key === attr2Key)?.name || attr2Key;
+    showToast(`Swapped ${attr1Name} (${formatDieNum(die1)}) ↔ ${attr2Name} (${formatDieNum(die2)})! ${swapCost > 0 ? '(1 AP deducted)' : '(Free)'}`);
+  };
+
+  // Determine if upgrading a die from currentDie to nextDie is free (Level 1 starting baseline) or costs AP
+  const getUpgradeApCost = (currentDie: DieRating): number => {
+    const upgradeInfo = DIE_UPGRADE_COSTS[currentDie];
+    if (!upgradeInfo) return 0;
+
+    const nextDie = upgradeInfo.next;
+
+    if (currentDie === 'd4' && nextDie === 'd6') {
+      const d6PlusCount = (currentPoolCounts.d6 || 0) + (currentPoolCounts.d8 || 0) + (currentPoolCounts.d10 || 0) + (currentPoolCounts.d12 || 0);
+      if (d6PlusCount < 3) return 0; // Free upgrade towards Level 1 baseline [4, 4, 6, 6, 8]
+    } else if (currentDie === 'd6' && nextDie === 'd8') {
+      const d8PlusCount = (currentPoolCounts.d8 || 0) + (currentPoolCounts.d10 || 0) + (currentPoolCounts.d12 || 0);
+      if (d8PlusCount < 1) return 0; // Free upgrade towards Level 1 baseline [4, 4, 6, 6, 8]
+    }
+
+    return upgradeInfo.cost;
+  };
+
+  // Ceiling Validation for Pool Upgrade (Cumulative High-Tier Limits)
+  const canUpgradeDieInPool = (currentDie: DieRating): { allowed: boolean; cost: number; reason?: string } => {
+    const upgradeInfo = DIE_UPGRADE_COSTS[currentDie];
+    if (!upgradeInfo) {
+      return { allowed: false, cost: 0, reason: 'Already at Max Rating (12)' };
+    }
+
+    const apCost = getUpgradeApCost(currentDie);
+    if (availableAp < apCost) {
+      return { allowed: false, cost: apCost, reason: `Requires ${apCost} AP (Available: ${availableAp} AP)` };
     }
 
     // Simulate upgrading one instance of `currentDie` to `upgradeInfo.next`
     const nextDie = upgradeInfo.next;
     const simulatedCounts = { ...currentPoolCounts };
     simulatedCounts[currentDie]--;
-    simulatedCounts[nextDie]++;
+    simulatedCounts[nextDie] = (simulatedCounts[nextDie] || 0) + 1;
 
     // Validate simulatedCounts against active milestone ceiling
     const targetCeiling = level === 1 ? MILESTONE_TIERS[1].ceiling : activeMilestone.ceiling;
 
-    const diceRatings: DieRating[] = ['d4', 'd6', 'd8', 'd10', 'd12'];
-    for (const d of diceRatings) {
-      if (simulatedCounts[d] > (targetCeiling[d] || 0)) {
-        return {
-          allowed: false,
-          reason: `Exceeds max allowed ${d} for Level ${level} (Ceiling Max: ${targetCeiling[d] || 0}x ${d})`,
-        };
-      }
+    const d12Count = simulatedCounts.d12 || 0;
+    const d10PlusCount = d12Count + (simulatedCounts.d10 || 0);
+    const d8PlusCount = d10PlusCount + (simulatedCounts.d8 || 0);
+    const d6PlusCount = d8PlusCount + (simulatedCounts.d6 || 0);
+
+    const maxD12 = targetCeiling.d12 || 0;
+    const maxD10Plus = maxD12 + (targetCeiling.d10 || 0);
+    const maxD8Plus = maxD10Plus + (targetCeiling.d8 || 0);
+    const maxD6Plus = maxD8Plus + (targetCeiling.d6 || 0);
+
+    if (d12Count > maxD12) {
+      return { allowed: false, cost: apCost, reason: `Exceeds max 12 for Level ${level} (Ceiling Max: ${maxD12}x 12)` };
+    }
+    if (d10PlusCount > maxD10Plus) {
+      return { allowed: false, cost: apCost, reason: `Exceeds max 10+ for Level ${level} (Ceiling Max: ${maxD10Plus}x 10+)` };
+    }
+    if (d8PlusCount > maxD8Plus) {
+      return { allowed: false, cost: apCost, reason: `Exceeds max 8+ for Level ${level} (Ceiling Max: ${maxD8Plus}x 8+)` };
+    }
+    if (d6PlusCount > maxD6Plus) {
+      return { allowed: false, cost: apCost, reason: `Exceeds max 6+ for Level ${level} (Ceiling Max: ${maxD6Plus}x 6+)` };
     }
 
-    return { allowed: true };
+    return { allowed: true, cost: apCost };
   };
 
-  // Upgrade a die in the pool & attribute assignment
-  const handleUpgradeDieInPool = (attrKey: AttributeKey) => {
-    const currentDie = draftAssignments[attrKey];
+  // Open "Increase Die" Confirmation Popover
+  const handleOpenUpgradeConfirmation = (attrKey: AttributeKey, attrName: string) => {
+    const currentDie = savedAttributeDice[attrKey];
     const validation = canUpgradeDieInPool(currentDie);
 
     if (!validation.allowed) {
@@ -326,34 +362,55 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
     }
 
     const upgradeInfo = DIE_UPGRADE_COSTS[currentDie];
-    const nextDie = upgradeInfo.next;
+    setPendingUpgrade({
+      attrKey,
+      attrName,
+      currentDie,
+      nextDie: upgradeInfo.next,
+      cost: validation.cost,
+    });
+  };
+
+  // Execute Confirmed Die Increase
+  const handleConfirmUpgrade = () => {
+    if (!pendingUpgrade) return;
+    const { attrKey, attrName, currentDie, nextDie, cost } = pendingUpgrade;
 
     const newAssignments = {
-      ...draftAssignments,
+      ...savedAttributeDice,
       [attrKey]: nextDie,
     };
-
-    setDraftAssignments(newAssignments);
 
     updateActiveSheetData((prev) => ({
       ...prev,
       attribute_dice: newAssignments,
     }));
 
-    recordApExpenditure(
-      upgradeInfo.cost,
-      'Attributes',
-      `Die Pool Upgrade: ${attrKey.toUpperCase()} ${currentDie} ➔ ${nextDie}`,
-      2,
-      'Attribute Manager'
-    );
+    if (cost > 0) {
+      recordApExpenditure(
+        cost,
+        'Attributes',
+        `Die Increase: ${attrKey.toUpperCase()} ${formatDieNum(currentDie)} ➔ ${formatDieNum(nextDie)}`,
+        2,
+        'Attribute Manager'
+      );
+    }
 
     saveActiveCharacter();
-    showToast(`Upgraded ${attrKey.toUpperCase()} to ${nextDie}! (${upgradeInfo.cost} AP spent)`);
+    setPendingUpgrade(null);
+    showToast(`Increased ${attrName} from ${formatDieNum(currentDie)} to ${formatDieNum(nextDie)}! (${cost > 0 ? `${cost} AP spent` : 'Free Starting Upgrade'})`);
+  };
+
+  const handleCloseModal = () => {
+    setPendingUpgrade(null);
+    onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn cursor-pointer"
+      onClick={handleCloseModal}
+    >
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 px-4 py-2.5 rounded-xl bg-indigo-900 border border-indigo-400 text-indigo-100 shadow-2xl font-medium text-xs flex items-center gap-2 animate-bounce">
@@ -365,9 +422,71 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
       {/* Main Modal Shell (Master 2-Column Split-Pane) */}
       <div
         ref={modalRef}
-        className="w-full max-w-6xl h-[88vh] bg-slate-900 border border-indigo-500/40 rounded-2xl shadow-2xl shadow-indigo-950/80 flex flex-col overflow-hidden text-slate-100"
+        className="relative w-full max-w-6xl h-[88vh] bg-slate-900 border border-indigo-500/40 rounded-2xl shadow-2xl shadow-indigo-950/80 flex flex-col overflow-hidden text-slate-100 cursor-default"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Bar (Standard Blueprint Header) */}
+        {/* "Increase Die" Confirmation Popover Modal (Scoped inside modal shell) */}
+        {pendingUpgrade && (
+          <div
+            className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-fadeIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full max-w-md bg-slate-900 border border-indigo-500/50 rounded-2xl p-6 shadow-2xl shadow-indigo-950 space-y-4">
+              <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
+                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-outfit font-black text-lg text-slate-100 uppercase tracking-wide">
+                    Confirm Die Increase
+                  </h3>
+                  <p className="text-xs text-slate-400">Attribute Upgrade Confirmation</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-2">
+                <p>
+                  Upgrading <strong className="text-indigo-300 font-bold">{pendingUpgrade.attrName}</strong> from{' '}
+                  <span className="font-mono font-bold text-amber-400">{formatDieNum(pendingUpgrade.currentDie)}</span> to{' '}
+                  <span className="font-mono font-bold text-emerald-400">{formatDieNum(pendingUpgrade.nextDie)}</span> will cost{' '}
+                  <strong className="text-emerald-400 font-mono">
+                    {pendingUpgrade.cost > 0 ? `${pendingUpgrade.cost} AP` : '0 AP (Free Baseline)'}
+                  </strong>
+                  .
+                </p>
+                {pendingUpgrade.cost > 0 && (
+                  <p className="text-[11px] text-slate-400 italic">
+                    Remaining AP after increase: {availableAp - pendingUpgrade.cost} AP.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPendingUpgrade(null);
+                  }}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleConfirmUpgrade();
+                  }}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-outfit font-bold text-xs rounded-xl shadow-lg transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  OK / Confirm Increase
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Header Bar */}
         <div className="px-6 py-4 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-300">
@@ -379,7 +498,7 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
               </h2>
               <p className="text-xs text-slate-400">
                 Configure attribute die assignments, upgrade die pools, and track milestone ceilings for{' '}
-                <strong className="text-indigo-300">{activeCharacter.name || 'Hero'}</strong>
+                <strong className="text-indigo-300">{activeCharacter?.name || 'Hero'}</strong>
               </p>
             </div>
           </div>
@@ -388,7 +507,7 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
               Available <strong className="text-emerald-400 font-bold">{availableAp} AP</strong>
             </span>
             <button
-              onClick={onClose}
+              onClick={handleCloseModal}
               className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
               title="Close Manager"
             >
@@ -397,32 +516,32 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
           </div>
         </div>
 
-        {/* 2-Column Split Body (Blueprint Section 2) */}
+        {/* 2-Column Split Body */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-0 overflow-hidden divide-y md:divide-y-0 md:divide-x divide-slate-800">
           {/* ========================================================================= */}
-          {/* LEFT PANE (md:col-span-6): DIE POOL ASSIGNMENT & RESHUFFLE                */}
+          {/* LEFT PANE (md:col-span-6): DIE POOL ASSIGNMENT                            */}
           {/* ========================================================================= */}
           <div className="md:col-span-6 flex flex-col p-5 bg-slate-900/60 overflow-y-auto max-h-full">
-            {/* Active Unlocked Die Pool Header Card */}
+            {/* Max Die Pool Header Card */}
             <div className="p-4 rounded-xl bg-slate-950/90 border border-indigo-500/30 mb-4 shadow-lg shrink-0">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-outfit font-black text-xs uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
                   <Shield className="w-4 h-4 text-indigo-400" />
-                  Unlocked Die Pool (5 Dice)
+                  Max Die Pool at Level {level}
                 </span>
                 <span className="text-[10px] text-slate-400 font-mono">
-                  Level <strong className="text-amber-300">{level}</strong> Pool
+                  {activeMilestone.name}
                 </span>
               </div>
 
-              {/* Pool Dice Visual Badges */}
+              {/* Pool Dice Visual Badges (Max Milestone Ceiling Dice) */}
               <div className="flex items-center gap-2 flex-wrap bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-                {currentPoolList.map((die, idx) => (
+                {maxPoolCeilingList.map((die, idx) => (
                   <span
                     key={idx}
-                    className="px-3 py-1 bg-indigo-950/80 border border-indigo-500/40 text-indigo-200 font-mono font-black text-xs rounded-lg shadow-sm"
+                    className="px-3.5 py-1 bg-indigo-950/80 border border-indigo-500/40 text-indigo-200 font-mono font-black text-sm rounded-lg shadow-sm"
                   >
-                    {die}
+                    {formatDieNum(die)}
                   </span>
                 ))}
               </div>
@@ -432,109 +551,84 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
             <div className="flex items-center justify-between mb-3 shrink-0">
               <span className="font-outfit font-extrabold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
                 <RotateCcw className="w-4 h-4 text-purple-400" />
-                Attribute Die Assignments (Guardrailed)
+                Attribute Die Assignments
               </span>
-              <span className="text-[11px] text-amber-300 font-semibold">Reshuffle: 1 AP</span>
+              <span className="text-[11px] text-amber-300 font-semibold">
+                Swap: {level === 1 ? 'Free (Level 1)' : '1 AP'}
+              </span>
             </div>
 
             {/* 5 Attribute Cards with Swap Dropdowns */}
             <div className="space-y-2.5 flex-1 min-h-0">
               {ATTRIBUTES.map((attr) => {
-                const assignedDie = draftAssignments[attr.key];
-                const savedDie = savedAttributeDice[attr.key];
-                const isModified = assignedDie !== savedDie;
+                const assignedDie = savedAttributeDice[attr.key];
                 const upgradeValidation = canUpgradeDieInPool(assignedDie);
 
                 return (
                   <div
                     key={attr.key}
-                    className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-xs ${
-                      isModified
-                        ? 'bg-purple-950/40 border-purple-500/60 shadow-md shadow-purple-950/40'
-                        : 'bg-slate-950/80 border-slate-800 hover:border-indigo-500/30'
-                    }`}
+                    className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/30 transition-all flex items-center justify-between gap-3 text-xs"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{attr.emoji}</span>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-outfit font-black text-sm uppercase text-slate-100 tracking-wider">
-                            {attr.name}
-                          </span>
-                          {isModified && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                              Modified
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-slate-400">
-                          Assigned: <strong className="text-indigo-300 font-mono">{assignedDie}</strong>
+                        <span className="font-outfit font-black text-sm uppercase text-slate-100 tracking-wider">
+                          {attr.name}
                         </span>
+                        <div className="text-[11px] text-slate-400">
+                          Assigned: <strong className="text-amber-300 font-mono font-bold text-sm">{formatDieNum(assignedDie)}</strong>
+                        </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Upgrade Step-Up Button */}
+                      {/* Increase Die Button */}
                       {upgradeValidation.allowed ? (
                         <button
-                          onClick={() => handleUpgradeDieInPool(attr.key)}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-outfit font-bold text-white transition-all shadow-md text-xs flex items-center gap-1 cursor-pointer"
-                          title={`Upgrade ${attr.name} (${DIE_UPGRADE_COSTS[assignedDie]?.cost} AP)`}
+                          onClick={() => handleOpenUpgradeConfirmation(attr.key, attr.name)}
+                          className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-outfit font-bold text-white transition-all shadow-md text-xs flex items-center gap-1 cursor-pointer"
+                          title={`Increase ${attr.name} (${upgradeValidation.cost > 0 ? `${upgradeValidation.cost} AP` : 'Free Baseline Upgrade'})`}
                         >
                           <TrendingUp className="w-3.5 h-3.5" />
-                          +{DIE_UPGRADE_COSTS[assignedDie]?.cost} AP
+                          Increase Die
                         </button>
                       ) : (
                         <span
                           className="px-2 py-1 rounded-lg bg-slate-900 text-slate-500 font-mono text-[10px] border border-slate-800"
                           title={upgradeValidation.reason}
                         >
-                          {assignedDie === 'd12' ? 'Max d12' : 'Ceiling Cap'}
+                          {assignedDie === 'd12' ? 'Max 12' : 'Ceiling Cap'}
                         </span>
                       )}
 
-                      {/* Swap Dropdown enforcing Pool Permutations */}
+                      {/* Swap Dropdown: Attribute AND its assigned Die */}
                       <select
-                        value={assignedDie}
-                        onChange={(e) => handleAssignDie(attr.key, e.target.value as DieRating)}
-                        className="bg-slate-900 text-amber-300 font-mono font-extrabold text-xs px-2.5 py-1.5 rounded-lg border border-indigo-500/40 outline-none cursor-pointer focus:border-amber-400"
-                        title="Swap assigned die with another attribute in your pool"
+                        value={attr.key}
+                        onChange={(e) => handleAssignDie(attr.key, e.target.value as AttributeKey)}
+                        className="bg-slate-900 text-amber-300 font-mono font-extrabold text-xs px-2.5 py-1.5 rounded-lg border border-indigo-500/40 outline-none cursor-pointer focus:border-amber-400 max-w-[140px] truncate"
+                        title={`Swap ${attr.name} die with another attribute`}
                       >
-                        {Array.from(new Set(currentPoolList)).map((die) => (
-                          <option key={die} value={die} className="bg-slate-900 text-slate-100">
-                            {die}
-                          </option>
-                        ))}
+                        <option value={attr.key} disabled>
+                          Swap ↕
+                        </option>
+                        {ATTRIBUTES.filter((other) => other.key !== attr.key).map((other) => {
+                          const otherDie = savedAttributeDice[other.key];
+                          return (
+                            <option key={other.key} value={other.key} className="bg-slate-900 text-slate-100">
+                              Swap w/ {other.name} ({formatDieNum(otherDie)})
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   </div>
                 );
               })}
             </div>
-
-            {/* Bottom Actions Bar for Left Pane */}
-            <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-3 shrink-0">
-              <button
-                onClick={handleResetDraft}
-                disabled={!isAssignmentChanged}
-                className="px-3 py-1.5 bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl border border-slate-800 transition-all disabled:opacity-40"
-              >
-                Reset Assignment
-              </button>
-
-              <button
-                onClick={handleApplyReshuffle}
-                disabled={!isAssignmentChanged || availableAp < 1}
-                className="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-outfit font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Apply Reshuffle (1 AP)
-              </button>
-            </div>
           </div>
 
           {/* ========================================================================= */}
-          {/* RIGHT PANE (md:col-span-6): MILESTONE MATRIX & AP UPGRADE CENTER         */}
+          {/* RIGHT PANE (md:col-span-6): MILESTONE MATRIX                              */}
           {/* ========================================================================= */}
           <div className="md:col-span-6 flex flex-col p-5 bg-slate-900/90 overflow-y-auto max-h-full">
             {/* Header / Context */}
@@ -610,25 +704,25 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
 
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                  <span className="font-mono text-slate-300 font-bold">d4 ➔ d6</span>
+                  <span className="font-mono text-slate-300 font-bold">4 ➔ 6</span>
                   <span className="px-2 py-0.5 bg-purple-950 text-purple-300 rounded font-extrabold border border-purple-500/30">
                     2 AP
                   </span>
                 </div>
                 <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                  <span className="font-mono text-slate-300 font-bold">d6 ➔ d8</span>
+                  <span className="font-mono text-slate-300 font-bold">6 ➔ 8</span>
                   <span className="px-2 py-0.5 bg-purple-950 text-purple-300 rounded font-extrabold border border-purple-500/30">
                     4 AP
                   </span>
                 </div>
                 <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                  <span className="font-mono text-slate-300 font-bold">d8 ➔ d10</span>
+                  <span className="font-mono text-slate-300 font-bold">8 ➔ 10</span>
                   <span className="px-2 py-0.5 bg-purple-950 text-purple-300 rounded font-extrabold border border-purple-500/30">
                     6 AP
                   </span>
                 </div>
                 <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                  <span className="font-mono text-slate-300 font-bold">d10 ➔ d12</span>
+                  <span className="font-mono text-slate-300 font-bold">10 ➔ 12</span>
                   <span className="px-2 py-0.5 bg-purple-950 text-purple-300 rounded font-extrabold border border-purple-500/30">
                     8 AP
                   </span>
@@ -636,17 +730,17 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
               </div>
 
               <div className="text-[10px] text-slate-400 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-850">
-                💡 <strong className="text-slate-300">Guardrail Rule:</strong> Die upgrades improve an existing die in your pool up to the max allowed die pool ceiling for your character level. Upgrading dice automatically updates your assigned attributes.
+                💡 <strong className="text-slate-300">Guardrail Rule:</strong> Die upgrades improve an existing die in your pool up to the max allowed die pool ceiling for your character level. Attribute swaps between pool dice cost 1 AP (Free at Level 1).
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer Context Bar & Mandatory Standardized `Done` Button (Blueprint Section 4) */}
+        {/* Footer Context Bar & Mandatory Standardized `Done` Button */}
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
           <div className="flex items-center gap-4">
             <span>
-              Hero: <strong className="text-indigo-300">{activeCharacter.name}</strong>
+              Hero: <strong className="text-indigo-300">{activeCharacter?.name || 'Hero'}</strong>
             </span>
             <span className="text-slate-700 font-bold">|</span>
             <span>
@@ -658,12 +752,12 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
             </span>
             <span className="text-slate-700 font-bold">|</span>
             <span>
-              Pool: <strong className="text-slate-200 font-mono">[{currentPoolList.join(', ')}]</strong>
+              Pool: <strong className="text-slate-200 font-mono">[{currentPoolList.map((d) => formatDieNum(d)).join(', ')}]</strong>
             </span>
           </div>
 
           <button
-            onClick={onClose}
+            onClick={handleCloseModal}
             className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
           >
             Done

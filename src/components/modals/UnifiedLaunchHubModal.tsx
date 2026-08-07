@@ -421,6 +421,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const handleCreateHeroSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newHeroName.trim()) return;
+    setAuthError(null);
 
     try {
       const created = await onCreateNewCharacter(
@@ -432,9 +433,14 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
         onSelectCharacter(created.id);
         setIsCreatingHero(false);
         setNewHeroName('');
+        setNewHeroRace('');
+        setNewHeroClass('');
+      } else {
+        setAuthError('Failed to create hero. Please check your connection and try again.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error creating new hero:', err);
+      setAuthError(err.message || 'Error creating new hero.');
     }
   };
 
