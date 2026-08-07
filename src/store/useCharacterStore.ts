@@ -49,6 +49,7 @@ interface CharacterStore {
     source: string
   ) => void;
   revertApExpenditure: (entryId: string) => void;
+  syncSheetRulesToDatabase: () => Promise<{ updatedCount: number; preservedCount: number }>;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
@@ -377,5 +378,136 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         ap_log: updatedLog,
       };
     });
+  },
+
+  syncSheetRulesToDatabase: async () => {
+    const active = get().activeCharacter;
+    if (!active || !active.sheet_data) return { updatedCount: 0, preservedCount: 0 };
+
+    let updatedCount = 0;
+    let preservedCount = 0;
+
+    try {
+      const [powers, magicItems, weapons, armor, shields] = await Promise.all([
+        gameApi.getPowers().catch(() => []),
+        gameApi.getMagicItems().catch(() => []),
+        gameApi.getWeapons().catch(() => []),
+        gameApi.getArmor().catch(() => []),
+        gameApi.getShields().catch(() => []),
+      ]);
+
+      const sheet = active.sheet_data;
+
+      // Powers & Spells
+      const updateAbilitySlots = (slots: any[]) => {
+        return (slots || []).map((slot: any) => {
+          if (!slot || !slot.name || (slot.version && slot.version > 1)) {
+            if (slot && slot.name) preservedCount++;
+            return slot;
+          }
+          const match = powers.find((p: any) => p.name.trim().toLowerCase() === slot.name.trim().toLowerCase());
+          if (match) {
+            updatedCount++;
+            return {
+              ...slot,
+              action: match.action || slot.action,
+              usage: match.usage || slot.usage,
+              effect: match.effect || slot.effect,
+            };
+          }
+          preservedCount++;
+          return slot;
+        });
+      };
+
+      // Magic Items / Gear
+      const updatedGearSlots = (sheet.gear_slots || []).map((item: any) => {
+        if (!item || !item.name || (item.version && item.version > 1)) {
+          if (item && item.name) preservedCount++;
+          return item;
+        }
+        const match = magicItems.find((m: any) => m.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+        if (match) {
+          updatedCount++;
+          return {
+            ...item,
+            usage: match.usage || item.usage,
+            effect: match.effect || item.effect,
+          };
+        }
+        preservedCount++;
+        return item;
+      });
+
+      // Weapons
+      const updatedWeapons = (sheet.weapons || []).map((w: any) => {
+        if (!w || !w.name) return w;
+        const match = weapons.find((masterW: any) => masterW.name.trim().toLowerCase() === w.name.trim().toLowerCase());
+        if (match) {
+          updatedCount++;
+          return {
+            ...w,
+            atk: match.atk || w.atk,
+            dmg: match.dmg || w.dmg,
+            max_blk: match.max_block || w.max_blk,
+          };
+        }
+        preservedCount++;
+        return w;
+      });
+
+      // Armor
+      let updatedArmor = sheet.armor_slot;
+      if (sheet.armor_slot && sheet.armor_slot.name && sheet.armor_slot.name !== 'Unarmored') {
+        const match = armor.find((a: any) => a.name.trim().toLowerCase() === sheet.armor_slot!.name.trim().toLowerCase());
+        if (match) {
+          updatedCount++;
+          updatedArmor = {
+            ...sheet.armor_slot,
+            ar: parseInt(String(match.ar).replace(/[^\d]/g, ''), 10) || sheet.armor_slot.ar,
+            mr: match.mr || sheet.armor_slot.mr,
+            requirement: match.requirement || sheet.armor_slot.requirement,
+            cost: match.cost || sheet.armor_slot.cost,
+          };
+        } else {
+          preservedCount++;
+        }
+      }
+
+      // Shield
+      let updatedShield = sheet.shield_slot;
+      if (sheet.shield_slot && sheet.shield_slot.name) {
+        const match = shields.find((s: any) => s.name.trim().toLowerCase() === sheet.shield_slot!.name.trim().toLowerCase());
+        if (match) {
+          updatedCount++;
+          const shieldBlockNum = typeof match.max_block === 'number' ? match.max_block : parseInt(String(match.max_block).replace(/[^\d]/g, ''), 10);
+          updatedShield = {
+            ...sheet.shield_slot,
+            max_block: shieldBlockNum || sheet.shield_slot.max_block,
+            mr_adjustment: match.mr || sheet.shield_slot.mr_adjustment,
+            requirement: match.requirement || sheet.shield_slot.requirement,
+            cost: match.cost || sheet.shield_slot.cost,
+          };
+        } else {
+          preservedCount++;
+        }
+      }
+
+      get().updateActiveSheetData((prev) => ({
+        ...prev,
+        power_slots: updateAbilitySlots(prev.power_slots),
+        spell_slots: updateAbilitySlots(prev.spell_slots),
+        gear_slots: updatedGearSlots,
+        weapons: updatedWeapons,
+        armor_slot: updatedArmor,
+        shield_slot: updatedShield,
+      }));
+
+      await get().saveActiveCharacter();
+      return { updatedCount, preservedCount };
+    } catch (err) {
+      console.error('Error syncing sheet rules:', err);
+      return { updatedCount: 0, preservedCount: 0 };
+    }
   },
 }));

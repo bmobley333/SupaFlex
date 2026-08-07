@@ -1,5 +1,6 @@
-import React from 'react';
-import { ExternalLink, BookOpen, Brain, Dices, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { ExternalLink, BookOpen, Brain, Dices, X, RefreshCw } from 'lucide-react';
+import { useCharacterStore } from '../../store/useCharacterStore';
 
 interface ResourcesPopoverProps {
   onClose: () => void;
@@ -16,6 +17,10 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
   onOpenNishTcGenerator,
   isGmMode = false,
 }) => {
+  const { syncSheetRulesToDatabase } = useCharacterStore();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+
   return (
     <div className="absolute top-full right-0 mt-2 z-50 w-72 p-3.5 bg-slate-900/95 border border-indigo-500/40 rounded-xl shadow-2xl shadow-indigo-950/60 backdrop-blur-xl animate-fadeIn flex flex-col gap-3 text-xs">
       {/* Popover Header */}
@@ -98,27 +103,26 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
               onOpenLootGenerator();
               onClose();
             }}
-            className="group flex items-start gap-3 p-2.5 rounded-lg bg-amber-950/30 hover:bg-amber-900/40 border border-amber-500/40 hover:border-amber-400 transition-all text-left w-full cursor-pointer"
+            className="group flex items-start gap-3 p-2.5 rounded-lg bg-slate-950/80 hover:bg-indigo-950/40 border border-slate-800 hover:border-indigo-500/50 transition-all text-left w-full cursor-pointer"
           >
-            <div className="p-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 group-hover:bg-amber-500/30 group-hover:text-amber-200 transition-colors shrink-0">
+            <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 group-hover:bg-amber-500/20 group-hover:text-amber-300 transition-colors shrink-0">
               <Dices className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1">
-                <span className="font-outfit font-bold text-amber-200 group-hover:text-amber-100 transition-colors truncate">
-                  Loot Generator
+                <span className="font-outfit font-bold text-slate-100 group-hover:text-amber-300 transition-colors truncate">
+                  Loot Table Roller
                 </span>
-                <span className="text-[10px] font-bold text-amber-950 bg-amber-400 px-1.5 py-0.5 rounded uppercase shrink-0">
-                  Tool
+                <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded uppercase shrink-0">
+                  Loot
                 </span>
               </div>
-              <p className="text-[11px] text-amber-200/70 group-hover:text-amber-100 transition-colors leading-tight mt-0.5">
-                Roll master & targeted loot + 1-click sheet claim.
+              <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
+                Roll gold, magic items, weapons, & armor tables.
               </p>
             </div>
           </button>
         )}
-
 
         {/* Link 1: SupaFlex Gemini Notebook */}
         <a
@@ -165,6 +169,44 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
             </p>
           </div>
         </a>
+
+        {/* Tool 3: Sync Sheet Rules to Master DB */}
+        {!isGmMode && (
+          <button
+            onClick={async () => {
+              setIsSyncing(true);
+              const result = await syncSheetRulesToDatabase();
+              setIsSyncing(false);
+              setSyncStatus(`✅ Synced ${result.updatedCount} item(s) to latest DB rules (${result.preservedCount} custom/v2 preserved).`);
+              setTimeout(() => setSyncStatus(null), 4000);
+            }}
+            disabled={isSyncing}
+            className="group flex items-start gap-3 p-2.5 rounded-lg bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-500/40 hover:border-emerald-400 transition-all text-left w-full cursor-pointer disabled:opacity-50 mt-1"
+          >
+            <div className="p-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 group-hover:bg-emerald-500/30 group-hover:text-emerald-200 transition-colors shrink-0">
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-300' : ''}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-outfit font-bold text-emerald-200 group-hover:text-emerald-100 transition-colors truncate">
+                  {isSyncing ? 'Syncing Rules...' : 'Sync Sheet Rules'}
+                </span>
+                <span className="text-[10px] font-bold text-emerald-950 bg-emerald-400 px-1.5 py-0.5 rounded uppercase shrink-0">
+                  Master DB
+                </span>
+              </div>
+              <p className="text-[11px] text-emerald-200/70 group-hover:text-emerald-100 transition-colors leading-tight mt-0.5">
+                Refresh equipped baseline items to latest DB text.
+              </p>
+            </div>
+          </button>
+        )}
+
+        {syncStatus && (
+          <div className="p-2 rounded bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-[11px] text-center font-semibold animate-fadeIn">
+            {syncStatus}
+          </div>
+        )}
       </div>
     </div>
   );
