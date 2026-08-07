@@ -255,11 +255,13 @@ export const PartyManagerModal: React.FC<PartyManagerModalProps> = ({
                         className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100"
                       >
                         <option value="">-- Select Character --</option>
-                        {userCharacters.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name} (Lvl {c.sheet_data?.level || 1})
-                          </option>
-                        ))}
+                        {[...userCharacters]
+                          .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }))
+                          .map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name} (Lvl {c.sheet_data?.level || 1})
+                            </option>
+                          ))}
                       </select>
 
                       <div className="flex gap-2">

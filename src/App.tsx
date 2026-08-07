@@ -1,7 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Database, Shield, Zap, Activity, BookOpen, Users, Loader2, ChevronDown, ChevronUp, Award, Star, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { gameApi } from './services/api';
+import { Character } from './types/game';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { ActionConsoleView } from './components/rolls/ActionConsoleView';
@@ -156,12 +157,16 @@ export default function App() {
     };
   }, [showSelectorBar, showLevelPopover, showResourcesPopover]);
 
-  const myHeroes = characters.filter((c) => {
-    if (!playerEmail.trim()) return false;
-    const owner = (c.owner_email || '').toLowerCase().trim();
-    const current = playerEmail.toLowerCase().trim();
-    return owner === current;
-  });
+  const myHeroes = useMemo(() => {
+    return characters
+      .filter((c: Character) => {
+        if (!playerEmail.trim()) return false;
+        const owner = (c.owner_email || '').toLowerCase().trim();
+        const current = playerEmail.toLowerCase().trim();
+        return owner === current;
+      })
+      .sort((a: Character, b: Character) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+  }, [characters, playerEmail]);
 
   // Unauthenticated Login Guard: Auto-open modal and clear active character when signed out
   useEffect(() => {

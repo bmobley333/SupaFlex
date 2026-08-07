@@ -669,96 +669,101 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       <p className="text-[11px]">Click "Create New Hero" above to make your first playtest hero!</p>
                     </div>
                   ) : (
-                    userCharacters.map((char) => {
-                      const isActive = activeCharacter?.id === char.id;
-                      const isEditing = editingCharId === char.id;
+                    [...userCharacters]
+                      .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }))
+                      .map((char) => {
+                        const isActive = activeCharacter?.id === char.id;
+                        const isEditing = editingCharId === char.id;
 
-                      return (
-                        <div
-                          key={char.id}
-                          onClick={() => {
-                            if (!isEditing) onSelectCharacter(char.id);
-                          }}
-                          className={`p-3.5 rounded-xl border transition-all cursor-pointer relative min-h-[76px] ${
-                            isActive
-                              ? 'bg-gradient-to-r from-indigo-950/80 to-slate-900 border-indigo-500/80 shadow-md shadow-indigo-950/50'
-                              : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
-                          }`}
-                        >
-                          {isEditing ? (
-                            <div className="space-y-2.5" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="text"
-                                value={editName}
-                                onChange={(e) => setEditName(e.target.value)}
-                                className="w-full px-2.5 py-1 bg-slate-950 border border-indigo-500/60 rounded text-xs text-slate-100 font-bold"
-                              />
-                              <div className="grid grid-cols-2 gap-2">
+                        return (
+                          <div
+                            key={char.id}
+                            onClick={() => {
+                              if (!isEditing) onSelectCharacter(char.id);
+                            }}
+                            className={`p-3.5 rounded-xl border transition-all cursor-pointer relative min-h-[76px] ${
+                              isActive
+                                ? 'bg-gradient-to-r from-indigo-950/80 to-slate-900 border-indigo-500/80 shadow-md shadow-indigo-950/50'
+                                : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
+                            }`}
+                          >
+                            {isEditing ? (
+                              <div className="space-y-2.5" onClick={(e) => e.stopPropagation()}>
                                 <input
                                   type="text"
-                                  value={editRace}
-                                  onChange={(e) => setEditRace(e.target.value)}
-                                  placeholder="Race"
-                                  className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200"
+                                  value={editName}
+                                  onChange={(e) => setEditName(e.target.value)}
+                                  className="w-full px-2.5 py-1 bg-slate-950 border border-indigo-500/60 rounded text-xs text-slate-100 font-bold"
                                 />
-                                <input
-                                  type="text"
-                                  value={editClass}
-                                  onChange={(e) => setEditClass(e.target.value)}
-                                  placeholder="Class"
-                                  className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200"
-                                />
-                              </div>
-                              <div className="flex justify-end gap-1.5 pt-1">
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingCharId(null)}
-                                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold rounded"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveEdit(char)}
-                                  disabled={isSavingEdit || !editName.trim()}
-                                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded"
-                                >
-                                  {isSavingEdit ? 'Saving...' : 'Save'}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between gap-3">
-                              {/* Left Column: 2 Rows (Name, Badges) */}
-                              <div className="flex flex-col justify-between gap-1.5 min-w-0 flex-1">
-                                {/* Row 1: Character Name */}
-                                <div className="flex items-center min-h-[22px]">
-                                  <span className="font-bold text-sm text-slate-100 font-outfit truncate" title={char.name}>
-                                    {char.name}
-                                  </span>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <input
+                                    type="text"
+                                    value={editRace}
+                                    onChange={(e) => setEditRace(e.target.value)}
+                                    placeholder="Race"
+                                    className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={editClass}
+                                    onChange={(e) => setEditClass(e.target.value)}
+                                    placeholder="Class"
+                                    className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200"
+                                  />
                                 </div>
-
-                                {/* Row 2: Race & Class Badges */}
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold shrink-0">
-                                    {char.race || 'Human'}
-                                  </span>
-                                  <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-[10px] font-semibold shrink-0">
-                                    {char.class || 'Adventurer'}
-                                  </span>
+                                <div className="flex justify-end gap-1.5 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingCharId(null)}
+                                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold rounded"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveEdit(char)}
+                                    disabled={isSavingEdit || !editName.trim()}
+                                    className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded"
+                                  >
+                                    {isSavingEdit ? 'Saving...' : 'Save'}
+                                  </button>
                                 </div>
                               </div>
-
-                              {/* Right Column: 2 Rows (Active Hero Badge, Edit/Delete Buttons) */}
-                              <div className="flex flex-col items-end justify-between gap-1.5 shrink-0">
-                                {/* Row 1: Upper-Right Active Hero Badge */}
-                                <div className="flex items-center justify-end min-h-[22px]">
-                                  {isActive && (
-                                    <span className="text-[10px] font-bold text-indigo-300 bg-indigo-950/90 px-2 py-0.5 rounded border border-indigo-700/80 shadow-sm shrink-0">
-                                      Active Hero
+                            ) : (
+                              <div className="flex items-center justify-between gap-3">
+                                {/* Left Column: 2 Rows (Name, Badges) */}
+                                <div className="flex flex-col justify-between gap-1.5 min-w-0 flex-1">
+                                  {/* Row 1: Character Name */}
+                                  <div className="flex items-center min-h-[22px]">
+                                    <span className="font-bold text-sm text-slate-100 font-outfit truncate" title={char.name}>
+                                      {char.name}
                                     </span>
-                                  )}
+                                  </div>
+
+                                  {/* Row 2: Race & Class Badges */}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/25 text-purple-300 text-[10px] font-semibold shrink-0">
+                                      {char.race || 'Human'}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-[10px] font-semibold shrink-0">
+                                      {char.class || 'Adventurer'}
+                                    </span>
+                                  </div>
                                 </div>
+
+                                {/* Right Column: 2 Rows (Level & Active Hero Badges, Edit/Delete Buttons) */}
+                                <div className="flex flex-col items-end justify-between gap-1.5 shrink-0">
+                                  {/* Row 1: Upper-Right Level & Active Hero Badges */}
+                                  <div className="flex items-center justify-end gap-1.5 min-h-[22px]">
+                                    <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-500/40 shadow-sm shrink-0">
+                                      Level {char.sheet_data?.level || 1}
+                                    </span>
+                                    {isActive && (
+                                      <span className="text-[10px] font-bold text-indigo-300 bg-indigo-950/90 px-2 py-0.5 rounded border border-indigo-700/80 shadow-sm shrink-0">
+                                        Active Hero
+                                      </span>
+                                    )}
+                                  </div>
 
                                 {/* Row 2: Lower-Right Edit / Delete Action Buttons */}
                                 <div
