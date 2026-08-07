@@ -7,7 +7,6 @@ import {
   TrendingUp,
   Check,
   Award,
-  Zap,
   Shield,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
@@ -693,45 +692,6 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
                   </div>
                 );
               })}
-            </div>
-
-            {/* Die Pool AP Upgrade Reference & Rules Card */}
-            <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3 mt-auto shrink-0">
-              <h4 className="font-outfit font-bold text-slate-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                <Zap className="w-4 h-4 text-purple-400" />
-                Die Pool Upgrade AP Costs
-              </h4>
-
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                  <span className="font-mono text-slate-300 font-bold">4 ➔ 6</span>
-                  <span className="px-2 py-0.5 bg-purple-950 text-purple-300 rounded font-extrabold border border-purple-500/30">
-                    2 AP
-                  </span>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                  <span className="font-mono text-slate-300 font-bold">6 ➔ 8</span>
-                  <span className="px-2 py-0.5 bg-purple-950 text-purple-300 rounded font-extrabold border border-purple-500/30">
-                    4 AP
-                  </span>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                  <span className="font-mono text-slate-300 font-bold">8 ➔ 10</span>
-                  <span className="px-2 py-0.5 bg-purple-950 text-purple-300 rounded font-extrabold border border-purple-500/30">
-                    6 AP
-                  </span>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-                  <span className="font-mono text-slate-300 font-bold">10 ➔ 12</span>
-                  <span className="px-2 py-0.5 bg-purple-950 text-purple-300 rounded font-extrabold border border-purple-500/30">
-                    8 AP
-                  </span>
-                </div>
-              </div>
-
-              <div className="text-[10px] text-slate-400 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-850">
-                💡 <strong className="text-slate-300">Guardrail Rule:</strong> Die upgrades improve an existing die in your pool up to the max allowed die pool ceiling for your character level. Attribute swaps between pool dice cost 1 AP (Free at Level 1).
-              </div>
             </div>
           </div>
         </div>
