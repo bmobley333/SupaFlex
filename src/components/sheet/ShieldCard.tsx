@@ -231,13 +231,28 @@ export const ShieldCard: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
-      const created = await gameApi.createShield({
-        name: trimmedName,
-        requirement: newShieldReq,
-        max_block: derivedMaxBlockStr,
-        mr: derivedMrStr,
-        cost: `${Math.max(1, newShieldCostVal)}${newShieldCostUnit}`,
-      });
+      const shieldCost = `${Math.max(1, newShieldCostVal)}${newShieldCostUnit}`;
+      let created: SupabaseShield;
+      try {
+        created = await gameApi.createShield({
+          name: trimmedName,
+          requirement: newShieldReq,
+          max_block: derivedMaxBlockStr,
+          mr: derivedMrStr,
+          cost: shieldCost,
+        });
+      } catch (dbErr: any) {
+        console.warn('[ShieldCard] Remote catalog insert restricted by RLS; generating local custom item:', dbErr);
+        created = {
+          id: Date.now(),
+          name: trimmedName,
+          requirement: newShieldReq,
+          max_block: derivedMaxBlockStr,
+          mr: derivedMrStr,
+          cost: shieldCost,
+          created_at: new Date().toISOString(),
+        };
+      }
       setShieldCatalog((prev) => [...prev, created]);
       handleAddToArmory(created);
       setNewShieldName('');

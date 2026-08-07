@@ -298,15 +298,31 @@ export const WeaponsCard: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const created = await gameApi.createWeapon({
-        name: trimmedName,
-        type: customTypeMode,
-        requirement: reqStr,
-        atk: derivedAtkDmg,
-        dmg: derivedAtkDmg,
-        max_block: derivedMaxBlock,
-        cost: combinedCost,
-      });
+      let created: SupabaseWeapon;
+      try {
+        created = await gameApi.createWeapon({
+          name: trimmedName,
+          type: customTypeMode,
+          requirement: reqStr,
+          atk: derivedAtkDmg,
+          dmg: derivedAtkDmg,
+          max_block: derivedMaxBlock,
+          cost: combinedCost,
+        });
+      } catch (dbErr: any) {
+        console.warn('[WeaponsCard] Remote catalog insert restricted by RLS; generating local custom item:', dbErr);
+        created = {
+          id: Date.now(),
+          name: trimmedName,
+          type: customTypeMode,
+          requirement: reqStr,
+          atk: derivedAtkDmg,
+          dmg: derivedAtkDmg,
+          max_block: derivedMaxBlock,
+          cost: combinedCost,
+          created_at: new Date().toISOString(),
+        };
+      }
 
       setSupabaseWeapons((prev) => [...prev, created]);
 

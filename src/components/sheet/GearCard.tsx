@@ -243,11 +243,23 @@ export const GearCard: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const created = await gameApi.createGear({
-        name: trimmedName,
-        category: finalCategory,
-        cost: combinedCost,
-      });
+      let created: SupabaseGear;
+      try {
+        created = await gameApi.createGear({
+          name: trimmedName,
+          category: finalCategory,
+          cost: combinedCost,
+        });
+      } catch (dbErr: any) {
+        console.warn('[GearCard] Remote catalog insert restricted by RLS; generating local custom item:', dbErr);
+        created = {
+          id: Date.now(),
+          name: trimmedName,
+          category: finalCategory,
+          cost: combinedCost,
+          created_at: new Date().toISOString(),
+        };
+      }
 
       // Update local catalog state
       setGearCatalog((prev) => [...prev, created]);

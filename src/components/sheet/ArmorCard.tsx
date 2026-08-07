@@ -258,13 +258,27 @@ export const ArmorCard: React.FC = () => {
     const combinedCost = `${Math.max(1, newArmorCostVal)}${newArmorCostUnit}`;
     setIsSubmitting(true);
     try {
-      const created = await gameApi.createArmor({
-        name: trimmedName,
-        requirement: newArmorReq,
-        ar: derivedArStr,
-        mr: derivedMrStr,
-        cost: combinedCost,
-      });
+      let created: SupabaseArmor;
+      try {
+        created = await gameApi.createArmor({
+          name: trimmedName,
+          requirement: newArmorReq,
+          ar: derivedArStr,
+          mr: derivedMrStr,
+          cost: combinedCost,
+        });
+      } catch (dbErr: any) {
+        console.warn('[ArmorCard] Remote catalog insert restricted by RLS; generating local custom item:', dbErr);
+        created = {
+          id: Date.now(),
+          name: trimmedName,
+          requirement: newArmorReq,
+          ar: derivedArStr,
+          mr: derivedMrStr,
+          cost: combinedCost,
+          created_at: new Date().toISOString(),
+        };
+      }
       setArmorCatalog((prev) => [...prev, created]);
       handleAddToWardrobe(created);
       setNewArmorName('');
