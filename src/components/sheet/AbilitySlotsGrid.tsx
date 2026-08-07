@@ -108,7 +108,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   );
 
   const [showManageModal, setShowManageModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>('class');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeTableName, setActiveTableName] = useState<string | null>(null);
   
   // Search Filters for Left and Right Panes
