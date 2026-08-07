@@ -36,6 +36,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({ text, title }) => {
       <button
         ref={buttonRef}
         type="button"
+        tabIndex={-1}
         onClick={() => setIsOpen(!isOpen)}
         onMouseEnter={() => setIsOpen(true)}
         onMouseLeave={() => setIsOpen(false)}

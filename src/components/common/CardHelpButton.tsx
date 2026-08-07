@@ -255,6 +255,7 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
       <button
         ref={buttonRef}
         type="button"
+        tabIndex={-1}
         onClick={handleToggle}
         title={`View ${rule.title} Rules`}
         className="w-5 h-5 rounded-full bg-slate-800/80 hover:bg-amber-600/80 text-amber-300 hover:text-white border border-amber-500/40 text-xs font-bold flex items-center justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-amber-400"
