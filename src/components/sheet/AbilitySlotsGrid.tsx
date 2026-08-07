@@ -29,6 +29,7 @@ const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
 const USAGE_OPTIONS = ['1-Enc', '2-Enc', '3-Enc', '1', '1-Luck🍀', '1-Charge⚡'];
 
 const POWER_CATEGORY_BUTTONS = [
+  { id: 'all', label: 'All Categories', icon: '🌐' },
   { id: 'class', label: 'Class', icon: '👤' },
   { id: 'race', label: 'Racial', icon: '🧬' },
   { id: 'combat style', label: 'Combat Styles', icon: '⚔️' },
@@ -819,8 +820,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             <select
                               value={selectedCategory}
                               onChange={(e) => {
-                                setSelectedCategory(e.target.value);
-                                setActiveTableName(null);
+                                const newCat = e.target.value;
+                                setSelectedCategory(newCat);
+                                if (newCat === 'all') {
+                                  setActiveTableName('ALL');
+                                } else {
+                                  setActiveTableName(null);
+                                }
                               }}
                               className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
                             >
