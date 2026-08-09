@@ -330,6 +330,7 @@ export interface CharacterSheetData {
   free_augment_tokens?: number;
   ap_log?: ApLogEntry[];
   vitality_max: number;
+  vitality_base_max?: number;
   current_vitality: number;
   last_vit_roll_level?: number;
   wounds: number;

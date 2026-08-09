@@ -20,7 +20,6 @@ import { ApManagerModal } from './components/modals/ApManagerModal';
 import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
 import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
 import { UnifiedLaunchHubModal } from './components/modals/UnifiedLaunchHubModal';
-import { LevelingWizard } from './components/common/LevelingWizard';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { CardHelpButton } from './components/common/CardHelpButton';
 import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
@@ -32,7 +31,6 @@ export default function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSelectorBar, setShowSelectorBar] = useState(false);
   const [showLevelPopover, setShowLevelPopover] = useState(false);
-  const [showLevelingWizard, setShowLevelingWizard] = useState(false);
   const [showResourcesPopover, setShowResourcesPopover] = useState(false);
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
   const [showNishTcModal, setShowNishTcModal] = useState(false);
@@ -406,11 +404,11 @@ export default function App() {
                       <button
                         onClick={() => {
                           setShowLevelPopover(false);
-                          setShowLevelingWizard(true);
+                          setShowVitalityManagerModal(true);
                         }}
-                        className="w-full py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="w-full py-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/40 rounded-lg font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <span>🪄 Guided Progression Wizard</span>
+                        <span>🎲 Free Vitality Roll</span>
                       </button>
                     </div>
                   </div>
@@ -704,12 +702,6 @@ export default function App() {
         />
       </ErrorBoundary>
 
-      {/* 🪄 Leveling / Progression Wizard */}
-      {showLevelingWizard && (
-        <LevelingWizard
-          onClose={() => setShowLevelingWizard(false)}
-        />
-      )}
 
       {/* 🔐 Password Reset Modal */}
       <UpdatePasswordModal

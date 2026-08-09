@@ -1,13 +1,10 @@
 // src/components/sheet/HeroIdentityHeader.tsx
 import React, { useState, useEffect } from 'react';
-import { Shield, User, Sparkles, Check, Edit2, Wand2 } from 'lucide-react';
+import { Shield, User, Sparkles, Check, Edit2 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { LevelingWizard } from '../common/LevelingWizard';
-
 export const HeroIdentityHeader: React.FC = () => {
   const { activeCharacter, updateActiveCharacterMeta, saveActiveCharacter } = useCharacterStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [showWizard, setShowWizard] = useState(false);
   const [nameInput, setNameInput] = useState(activeCharacter?.name || '');
   const [classInput, setClassInput] = useState(activeCharacter?.class || 'Adventurer');
   const [raceInput, setRaceInput] = useState(activeCharacter?.race || 'Human');
@@ -121,20 +118,8 @@ export const HeroIdentityHeader: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Hero Quick Status Pill & Guided Wizard Toggle */}
+        {/* Right Column: Hero Quick Status Pill */}
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setShowWizard(!showWizard)}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
-              showWizard
-                ? 'bg-amber-600/30 text-amber-200 border-amber-400 shadow-amber-500/30'
-                : 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-300'
-            }`}
-          >
-            <Wand2 className="w-4 h-4 text-amber-400" />
-            <span>Guided Wizard</span>
-          </button>
-
           <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-850 text-xs font-semibold">
             <Shield className="w-4 h-4 text-emerald-400" />
             <span className="text-slate-400">Hero State:</span>
@@ -142,10 +127,6 @@ export const HeroIdentityHeader: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {showWizard && (
-        <LevelingWizard mode="both" />
-      )}
     </div>
   );
 };

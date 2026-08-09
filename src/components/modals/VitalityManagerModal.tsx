@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ApLogEntry, calculateAvailableAp } from '../../types/game';
+import { InfoTooltip } from '../common/InfoTooltip';
 
 interface VitalityManagerModalProps {
   isOpen: boolean;
@@ -60,6 +61,7 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
     total: number;
     lucked: boolean;
     previousMax: number;
+    targetLevel: number;
   } | null>(null);
 
   if (!isOpen || !activeCharacter) return null;
@@ -70,18 +72,9 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
   };
 
   const sheetData = activeCharacter.sheet_data || {};
-  const currentMaxVit = sheetData.vitality_max || activeCharacter.hp || 10;
-  const currentVit = sheetData.current_vitality ?? currentMaxVit;
   const level = sheetData.level || 1;
   const moxieDieStr = sheetData.attribute_dice?.moxie || activeCharacter.moxie || 'd8';
   const moxieDieSides = parseDieSides(moxieDieStr);
-  const diceBracket = getMoxieDiceBracket(level);
-
-  // Theoretical Max Possible Vit calculation: 10 + N * moxieDieSides
-  const maxPossibleVit = 10 + diceBracket * moxieDieSides;
-
-  // Once-per-level roll completion check
-  const isRollDoneThisLevel = (sheetData.last_vit_roll_level || 0) >= level;
 
   // AP Calculation & Vit Bonus Breakdown
   const availableAp = calculateAvailableAp(level, sheetData);
@@ -91,7 +84,28 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
     0
   );
   const totalApVitBonus = vitalityApSpent * 2;
-  const baseMaxVit = Math.max(0, currentMaxVit - totalApVitBonus);
+
+  // Decoupled Base Max Vit vs Total Max Vit
+  const baseMaxVit = typeof sheetData.vitality_base_max === 'number'
+    ? sheetData.vitality_base_max
+    : Math.max(0, (sheetData.vitality_max || activeCharacter.hp || 10) - totalApVitBonus);
+
+  const currentMaxVit = baseMaxVit + totalApVitBonus;
+  const currentVit = sheetData.current_vitality ?? currentMaxVit;
+
+  // Multi-Level Roll Queue Engine
+  const lastVitRollLevel = typeof sheetData.last_vit_roll_level === 'number' ? sheetData.last_vit_roll_level : 1;
+  const pendingLevels: number[] = [];
+  for (let lvl = lastVitRollLevel + 1; lvl <= level; lvl++) {
+    pendingLevels.push(lvl);
+  }
+
+  const isRollDoneThisLevel = pendingLevels.length === 0;
+  const targetLevel = pendingLevels[0] || level;
+
+  const targetDiceBracket = getMoxieDiceBracket(targetLevel);
+  const baseMaxPossible = 10 + targetDiceBracket * moxieDieSides;
+  const totalMaxPossible = baseMaxPossible + totalApVitBonus;
 
   // Handle Purchasing +2 Max Vit for 1 AP
   const handleBuyVit = () => {
@@ -99,9 +113,11 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
       showToast('Insufficient AP! Required: 1 AP.');
       return;
     }
+    const newTotalMax = currentMaxVit + 2;
     updateActiveSheetData((prev) => ({
       ...prev,
-      vitality_max: (prev.vitality_max || 10) + 2,
+      vitality_base_max: baseMaxVit,
+      vitality_max: newTotalMax,
       current_vitality: (prev.current_vitality || 10) + 2,
     }));
     recordApExpenditure(1, 'Vitality', 'Purchased +2 Max Vitality', 1, 'Vitality Manager');
@@ -113,7 +129,7 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
   const handleFullHeal = () => {
     updateActiveSheetData((prev) => ({
       ...prev,
-      current_vitality: prev.vitality_max || 10,
+      current_vitality: currentMaxVit,
     }));
     saveActiveCharacter();
     showToast('Vitality fully restored to maximum!');
@@ -122,69 +138,82 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
   // Handle Interactive Auto-Roll for Vit Max
   const handleAutoRoll = () => {
     if (isRollDoneThisLevel) {
-      showToast(`Vit Roll has already been completed for Level ${level}.`);
+      showToast(`All level rolls up to Level ${level} are complete!`);
       return;
     }
 
     const rolls: number[] = [];
     let sum = 0;
-    for (let i = 0; i < diceBracket; i++) {
+    for (let i = 0; i < targetDiceBracket; i++) {
       const roll = Math.floor(Math.random() * moxieDieSides) + 1;
       rolls.push(roll);
       sum += roll;
     }
 
     const base = 10;
-    const rolledTotal = base + sum;
-    const previousMax = currentMaxVit;
-    const newMax = Math.max(previousMax, rolledTotal);
-    const lucked = newMax > previousMax;
+    const rolledBaseTotal = base + sum;
+    const previousBaseMax = baseMaxVit;
+    const newBaseMax = Math.max(previousBaseMax, rolledBaseTotal);
+    const lucked = newBaseMax > previousBaseMax;
+    const newTotalMax = newBaseMax + totalApVitBonus;
 
     setLastRollResult({
       rolls,
       sum,
       base,
       levelBonus: 0,
-      total: rolledTotal,
+      total: rolledBaseTotal + totalApVitBonus,
       lucked,
-      previousMax,
+      previousMax: previousBaseMax + totalApVitBonus,
+      targetLevel,
     });
 
     updateActiveSheetData((prev) => ({
       ...prev,
-      vitality_max: newMax,
-      last_vit_roll_level: level,
-      current_vitality: (prev.current_vitality ?? previousMax) === previousMax ? newMax : (prev.current_vitality ?? previousMax),
+      vitality_base_max: newBaseMax,
+      vitality_max: newTotalMax,
+      last_vit_roll_level: Math.max(lastVitRollLevel, targetLevel),
+      current_vitality: Math.min(newTotalMax, (prev.current_vitality ?? currentMaxVit) + (newTotalMax - currentMaxVit)),
     }));
     saveActiveCharacter();
 
     if (lucked) {
-      showToast(`🎲 Rolled ${rolls.join('+')} (${sum})! Max Vitality upgraded to ${newMax}!`);
+      showToast(`🎲 Rolled ${rolls.join('+')} (${sum}) for Level ${targetLevel}! Max Vit upgraded to ${newTotalMax}!`);
     } else {
-      showToast(`🎲 Rolled ${rolledTotal} vs Current ${previousMax}. Lucking kept your higher Max Vit (${previousMax}).`);
+      showToast(`🎲 Level ${targetLevel} Roll: ${rolledBaseTotal} base vs previous ${previousBaseMax} base. Lucking kept higher Max Vit (${newTotalMax}).`);
     }
   };
 
-  // Handle Manual Entry Override
+  // Handle Manual Entry Override for target level
   const handleApplyManualInput = () => {
     if (isRollDoneThisLevel) {
-      showToast(`Vit Roll has already been completed for Level ${level}.`);
+      showToast(`All level rolls up to Level ${level} are complete!`);
       return;
     }
 
     const val = parseInt(manualInput, 10);
     if (isNaN(val) || val <= 0) {
-      showToast('Please enter a valid positive number for Max Vitality.');
+      showToast('Please enter a valid positive number for Max Vitality roll.');
       return;
     }
 
+    let rolledBase = val;
+    if (val > baseMaxPossible && val > totalApVitBonus) {
+      rolledBase = val - totalApVitBonus;
+    }
+
+    const newBaseMax = Math.max(baseMaxVit, rolledBase);
+    const newTotalMax = newBaseMax + totalApVitBonus;
+
     updateActiveSheetData((prev) => ({
       ...prev,
-      vitality_max: val,
-      last_vit_roll_level: level,
+      vitality_base_max: newBaseMax,
+      vitality_max: newTotalMax,
+      last_vit_roll_level: Math.max(lastVitRollLevel, targetLevel),
+      current_vitality: Math.min(newTotalMax, (prev.current_vitality ?? currentMaxVit) + (newTotalMax - currentMaxVit)),
     }));
     saveActiveCharacter();
-    showToast(`Max Vitality manually set to ${val} for Level ${level}.`);
+    showToast(`Manual roll for Level ${targetLevel} saved! Max Vit updated to ${newTotalMax}.`);
     setManualInput('');
   };
 
@@ -263,7 +292,7 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
               {/* Formula Table with Active Bracket Highlighting */}
               <div className="space-y-1.5 font-mono text-xs bg-slate-900/60 p-3 rounded-lg border border-slate-800">
                 {levelBrackets.map((b) => {
-                  const isActive = diceBracket === b.bracket;
+                  const isActive = targetDiceBracket === b.bracket;
                   return (
                     <div
                       key={b.range}
@@ -294,25 +323,69 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
             <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 flex flex-col gap-4">
               <h3 className="font-outfit font-bold text-sm text-indigo-300 flex items-center gap-2">
                 <Dices className="w-4 h-4 text-indigo-400" />
-                Level Vit Roll Calculator (Level {level})
+                Level Vit Roll Calculator (Level {targetLevel})
               </h3>
 
-              {/* Current Max Vit (Base) vs Max Possible Vit Grid */}
+              {/* Clean & Dense Unrolled Levels Status Card */}
+              {pendingLevels.length > 1 && (
+                <div className="px-3.5 py-2.5 bg-indigo-950/40 border border-indigo-500/30 rounded-xl flex items-center justify-between text-xs text-indigo-300 font-bold font-mono">
+                  <span>⚡ Unrolled Levels: {pendingLevels.join(', ')}</span>
+                </div>
+              )}
+
+              {/* A + B = C Current Max Vit vs Max Possible Vit Grid */}
               <div className="grid grid-cols-2 gap-3 text-center text-xs">
                 <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex flex-col justify-center">
                   <span className="text-[10px] text-slate-400 block uppercase font-bold">Current Max Vit</span>
-                  <span className="font-mono font-bold text-emerald-400 text-base mt-0.5">{baseMaxVit}</span>
+                  <div className="font-mono font-bold text-xs mt-1 flex items-center justify-center gap-1">
+                    <span className="text-slate-300 font-semibold">{baseMaxVit}</span>
+                    <span className="text-rose-400 font-semibold">+{totalApVitBonus}</span>
+                    <span className="text-emerald-400 font-extrabold text-base ml-0.5">= {currentMaxVit}</span>
+                  </div>
                 </div>
                 <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex flex-col justify-center">
                   <span className="text-[10px] text-slate-400 block uppercase font-bold">Max Possible Vit</span>
-                  <span className="font-mono font-bold text-amber-400 text-base mt-0.5">{maxPossibleVit}</span>
+                  <div className="font-mono font-bold text-xs mt-1 flex items-center justify-center gap-1">
+                    <span className="text-slate-300 font-semibold">{baseMaxPossible}</span>
+                    <span className="text-rose-400 font-semibold">+{totalApVitBonus}</span>
+                    <span className="text-amber-400 font-extrabold text-base ml-0.5">= {totalMaxPossible}</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Roll Lock Banner OR Auto-Roll Launcher Button */}
+              {/* Manual Entry Section (Positioned Directly Above Auto-Roll Button) */}
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-300 block">
+                    {isRollDoneThisLevel ? 'Manual Max Vit Override' : `Manual Roll Entry (Level ${targetLevel})`}
+                  </span>
+                  <InfoTooltip text={`Enter physical dice result for Level ${targetLevel}`} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    disabled={isRollDoneThisLevel}
+                    placeholder="e.g. 18"
+                    value={manualInput}
+                    onChange={(e) => setManualInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !isRollDoneThisLevel && handleApplyManualInput()}
+                    className="w-24 bg-slate-900 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 text-center placeholder:text-slate-600/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                  />
+                  <button
+                    onClick={handleApplyManualInput}
+                    disabled={isRollDoneThisLevel}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Set
+                  </button>
+                </div>
+              </div>
+
+              {/* Roll Lock Banner (Image 4) OR Auto-Roll Launcher Button */}
               {isRollDoneThisLevel ? (
-                <div className="p-3 bg-emerald-950/50 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 animate-fadeIn">
-                  <Check className="w-4.5 h-4.5 text-emerald-400" />
+                <div className="p-3 bg-emerald-950/50 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 animate-fadeIn shadow-sm">
+                  <Check className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
                   <span>Level {level} Vit Roll Completed (Unlocks at Level {level + 1})</span>
                 </div>
               ) : (
@@ -321,7 +394,7 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
                   className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white font-outfit font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm cursor-pointer active:scale-[0.99]"
                 >
                   <Dices className="w-5 h-5 animate-bounce" />
-                  Auto-Roll Level {level} Max Vitality
+                  Auto-Roll Level {targetLevel} Max Vitality
                 </button>
               )}
 
@@ -335,16 +408,16 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
                   <div className="flex items-center justify-between font-bold">
                     <span className="flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-amber-400" />
-                      Roll Results: {diceBracket}{moxieDieStr} [{lastRollResult.rolls.join(', ')}] = {lastRollResult.sum}
+                      Level {lastRollResult.targetLevel} Roll: {targetDiceBracket}{moxieDieStr} [{lastRollResult.rolls.join(', ')}] = {lastRollResult.sum}
                     </span>
                     <span className="font-mono text-sm">Total: {lastRollResult.total}</span>
                   </div>
                   <div className="text-[11px] opacity-90 font-mono">
-                    Breakdown: 10 (Base) + {lastRollResult.sum} (Dice) + {lastRollResult.levelBonus} (Level Bonus) = {lastRollResult.total}
+                    Breakdown: 10 (Base) + {lastRollResult.sum} (Dice) + {totalApVitBonus} (AP Vit Bonus) = {lastRollResult.total}
                   </div>
                   {lastRollResult.lucked ? (
                     <div className="font-bold text-emerald-400 flex items-center gap-1 pt-1 border-t border-emerald-500/30">
-                      <Check className="w-4 h-4" /> Higher roll! Max Vitality upgraded from {lastRollResult.previousMax} to {lastRollResult.total}!
+                      <Check className="w-4 h-4" /> Higher roll! Max Vitality upgraded to {lastRollResult.total}!
                     </div>
                   ) : (
                     <div className="text-slate-400 italic pt-1 border-t border-slate-800">
@@ -353,62 +426,19 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
                   )}
                 </div>
               )}
-
-              {/* Manual Override Section */}
-              <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-3">
-                <div>
-                  <span className="text-xs font-bold text-slate-300 block">Manual Max Vit Override</span>
-                  <span className="text-[10px] text-slate-500">Directly set custom Max Vitality</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    disabled={isRollDoneThisLevel}
-                    placeholder={`Current: ${currentMaxVit}`}
-                    value={manualInput}
-                    onChange={(e) => setManualInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !isRollDoneThisLevel && handleApplyManualInput()}
-                    className="w-24 bg-slate-900 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
-                  />
-                  <button
-                    onClick={handleApplyManualInput}
-                    disabled={isRollDoneThisLevel}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Set
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 
           {/* PANE 2 (RIGHT): AP Vitality Boosts & Healing (md:col-span-5) */}
           <div className="md:col-span-5 flex flex-col gap-5 overflow-y-auto">
-            {/* AP-Purchased Vitality Boost Card */}
+            {/* AP-Purchased Vitality Boost Card (De-duplicated & Top-Action Order) */}
             <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 flex flex-col gap-4">
               <h3 className="font-outfit font-bold text-sm text-rose-300 flex items-center gap-2">
                 <Zap className="w-4 h-4 text-rose-400" />
                 AP Vitality Boosts
               </h3>
 
-              {/* Max Vit Before & After AP Bonus Display */}
-              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col gap-2 text-xs font-mono">
-                <div className="flex items-center justify-between text-slate-300">
-                  <span>Base Vit (Before AP):</span>
-                  <strong className="text-slate-100">{baseMaxVit} Vit</strong>
-                </div>
-                <div className="flex items-center justify-between text-rose-300">
-                  <span>AP Vit Bonus:</span>
-                  <strong className="text-rose-400">+{totalApVitBonus} Vit ({vitalityApSpent} AP spent)</strong>
-                </div>
-                <div className="pt-2 border-t border-slate-800 flex items-center justify-between font-bold text-sm">
-                  <span className="text-emerald-300">Final Max Vit:</span>
-                  <span className="text-emerald-400 font-extrabold">{currentMaxVit} Vit</span>
-                </div>
-              </div>
-
-              {/* Purchase Card */}
+              {/* Top Action Row */}
               <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-3">
                 <div>
                   <h4 className="font-outfit font-bold text-slate-100 text-xs flex items-center gap-1.5">
@@ -423,6 +453,22 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
                 >
                   Buy +2 Vit (1 AP)
                 </button>
+              </div>
+
+              {/* De-duplicated Breakdown Panel */}
+              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col gap-2 text-xs font-mono">
+                <div className="flex items-center justify-between text-slate-300">
+                  <span>Base Vit (Before AP):</span>
+                  <strong className="text-slate-100">{baseMaxVit} Vit</strong>
+                </div>
+                <div className="flex items-center justify-between text-rose-300">
+                  <span>AP Vit Bonus:</span>
+                  <strong className="text-rose-400">+{totalApVitBonus} Vit ({vitalityApSpent} AP spent)</strong>
+                </div>
+                <div className="pt-2 border-t border-slate-800 flex items-center justify-between font-bold text-sm">
+                  <span className="text-emerald-300">Final Max Vit:</span>
+                  <span className="text-emerald-400 font-extrabold">{currentMaxVit} Vit</span>
+                </div>
               </div>
             </div>
 
