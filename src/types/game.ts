@@ -391,12 +391,19 @@ export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number;
   const focusNet = Math.max(0, sumLogCategory('Focus Die'));
   const gmBonus = apLog.reduce((sum, e) => (e && (e.category === 'GM Bonus' || e.category === 'Manual') ? sum + (e.cost || 0) : sum), 0);
 
-  const magicItems = Array.isArray(sheetData.custom_magic_items) ? sheetData.custom_magic_items : [];
-  const magicItemsNet = magicItems.length * 1;
-
   const powerSlots = (sheetData.power_slots || []).filter(Boolean);
   const totalPowerUnits = powerSlots.reduce((sum: number, slot: any) => sum + (slot?.version || 1), 0);
   const powersNet = Math.max(0, totalPowerUnits - 3);
+
+  const magicItemSlots = (sheetData.spell_slots || []).filter(
+    (s: any) => s && s.name && s.name.trim() !== ''
+  );
+  const magicItemsNet = magicItemSlots.reduce((sum: number, slot: any) => {
+    const v = typeof slot.version === 'number' && slot.version > 0
+      ? slot.version
+      : (parseAbilityVersion(slot.name).version || 1);
+    return sum + Math.max(0, v - 1);
+  }, 0);
 
   const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
   const skilledShields = armory.filter((s: any) => s && s.sk);
@@ -443,6 +450,18 @@ export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number;
   return { totalSpent, gmBonus, categories };
 };
 
+export const parseAbilityVersion = (name: string): { baseName: string; version: number } => {
+  if (!name) return { baseName: '', version: 1 };
+  const match = name.match(/^(.*?)(?:\s+v(\d+))?$/i);
+  if (match) {
+    return {
+      baseName: (match[1] || name).trim(),
+      version: match[2] ? parseInt(match[2], 10) : 1,
+    };
+  }
+  return { baseName: name.trim(), version: 1 };
+};
+
 export const calculateSpentAp = (logOrSheet?: any): number => {
   if (!logOrSheet) return 0;
   if (Array.isArray(logOrSheet)) {
@@ -484,6 +503,57 @@ export const calculateAvailableAp = (level: number, logOrSheet?: any, _rawApFiel
 
   const calculated = lifetime + gmBonus - spent;
   return Math.max(0, calculated);
+};
+
+export const calculateMovementRate = (sheetData: any): { armored: number; shield: string | number } => {
+  if (!sheetData) return { armored: 6, shield: 'n/a' };
+
+  // 1. Armored MR Calculation
+  const armorSlot = sheetData.armor_slot;
+  let armoredMR = 6;
+
+  if (
+    armorSlot &&
+    armorSlot.id !== 'arm_none' &&
+    armorSlot.name &&
+    armorSlot.name.toLowerCase() !== 'unarmored' &&
+    armorSlot.name.toLowerCase() !== 'no armor'
+  ) {
+    const rawMr = armorSlot.mr || armorSlot.mr_adjustment || '';
+    const mrMatch = String(rawMr).match(/\d+/);
+    if (mrMatch) {
+      armoredMR = parseInt(mrMatch[0], 10);
+    }
+  }
+
+  if (
+    typeof sheetData.movement_rate?.armored === 'number' &&
+    !isNaN(sheetData.movement_rate.armored) &&
+    (!armorSlot || !armorSlot.mr)
+  ) {
+    armoredMR = sheetData.movement_rate.armored;
+  }
+
+  // 2. Shield Drawn MR Calculation
+  const shieldSlot = sheetData.shield_slot;
+  const isShieldEquipped = Boolean(
+    shieldSlot &&
+      shieldSlot.id !== 'shd_none' &&
+      shieldSlot.name &&
+      shieldSlot.name.toLowerCase() !== 'none' &&
+      shieldSlot.equipped !== false
+  );
+
+  let shieldDrawnMR: string | number = 'n/a';
+
+  if (isShieldEquipped) {
+    const mrAdjustmentStr = shieldSlot.mr_adjustment || shieldSlot.mr || shieldSlot.effect || '0';
+    const match = String(mrAdjustmentStr).match(/-?\d+/);
+    const penalty = match ? parseInt(match[0], 10) : 0;
+    shieldDrawnMR = Math.max(0, armoredMR + penalty);
+  }
+
+  return { armored: armoredMR, shield: shieldDrawnMR };
 };
 
 

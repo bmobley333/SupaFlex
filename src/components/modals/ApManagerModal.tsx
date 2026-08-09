@@ -18,6 +18,7 @@ import {
   calculateLifetimeAp,
   calculateLiveSheetSpentAp,
   calculateAvailableAp,
+  parseAbilityVersion,
 } from '../../types/game';
 
 interface ApManagerModalProps {
@@ -118,8 +119,15 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
     const totalPowerUnits = powerSlots.reduce((sum: number, slot: any) => sum + (slot?.version || 1), 0);
     const powersNet = Math.max(0, totalPowerUnits - 3);
 
-    const magicItems = Array.isArray(sheetData.custom_magic_items) ? sheetData.custom_magic_items : [];
-    const magicItemsNet = magicItems.length * 1;
+    const magicItemSlots = (sheetData.spell_slots || []).filter(
+      (s: any) => s && s.name && s.name.trim() !== ''
+    );
+    const magicItemsNet = magicItemSlots.reduce((sum: number, slot: any) => {
+      const v = typeof slot.version === 'number' && slot.version > 0
+        ? slot.version
+        : (parseAbilityVersion(slot.name).version || 1);
+      return sum + Math.max(0, v - 1);
+    }, 0);
 
     const sumLogCategory = (cat: string) =>
       apLog.reduce((sum, e) => (e && e.category === cat ? sum + (e.cost || 0) : sum), 0);
@@ -187,7 +195,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: magicItemsNet,
         badgeColor: 'text-pink-300 bg-pink-950/60 border-pink-500/30',
         details: [
-          { label: `Minor Magic Items & Upgrades (${magicItems.length})`, value: `${magicItemsNet} AP` },
+          { label: `Magic Item Upgrades (v2+ Version Edits)`, value: `${magicItemsNet} AP (Base v1 Free)` },
         ],
       },
       {

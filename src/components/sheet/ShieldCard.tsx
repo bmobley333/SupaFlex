@@ -12,6 +12,7 @@ import {
   getShieldMaxBlockFromRequirement,
   isRequirementLearnable,
   calculateAvailableAp,
+  calculateMovementRate,
 } from '../../types/game';
 
 const REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
@@ -114,44 +115,41 @@ export const ShieldCard: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showManageModal]);
 
-  const updateMovementForShield = (mrAdjustmentStr?: string, equipped: boolean = true) => {
-    const mrMatch = (mrAdjustmentStr || '👣0').match(/-?\d+/);
-    const penalty = mrMatch ? parseInt(mrMatch[0], 10) : 0;
-    const armoredMR = activeCharacter?.sheet_data?.movement_rate?.armored ?? 6;
-    const calculatedShieldDrawn = equipped ? Math.max(0, armoredMR + penalty) : 'n/a';
-
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      movement_rate: {
-        ...(prev.movement_rate || { armored: 6, shield: 'n/a' }),
-        shield: String(calculatedShieldDrawn),
-      },
-    }));
-  };
 
   const handleSelectActiveShield = (selectedShield: ShieldData) => {
     const equippedShield = { ...selectedShield, equipped: true };
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      shield_slot: equippedShield,
-      armory: (prev.armory || armory).map((s) => ({
-        ...s,
-        equipped: s.name.toLowerCase() === selectedShield.name.toLowerCase(),
-      })),
-    }));
-    updateMovementForShield(selectedShield.mr_adjustment, true);
+    updateActiveSheetData((prev) => {
+      const updatedSheet = {
+        ...prev,
+        shield_slot: equippedShield,
+        armory: (prev.armory || armory).map((s) => ({
+          ...s,
+          equipped: s.name.toLowerCase() === selectedShield.name.toLowerCase(),
+        })),
+      };
+      return {
+        ...updatedSheet,
+        movement_rate: calculateMovementRate(updatedSheet),
+      };
+    });
     saveActiveCharacter();
   };
 
   const handleSkToggle = (skChecked: boolean) => {
     const updatedShield = { ...shield, sk: skChecked };
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      shield_slot: updatedShield,
-      armory: (prev.armory || armory).map((item) =>
-        item.name.toLowerCase() === shield.name.toLowerCase() ? { ...item, sk: skChecked } : item
-      ),
-    }));
+    updateActiveSheetData((prev) => {
+      const updatedSheet = {
+        ...prev,
+        shield_slot: updatedShield,
+        armory: (prev.armory || armory).map((item) =>
+          item.name.toLowerCase() === shield.name.toLowerCase() ? { ...item, sk: skChecked } : item
+        ),
+      };
+      return {
+        ...updatedSheet,
+        movement_rate: calculateMovementRate(updatedSheet),
+      };
+    });
     saveActiveCharacter();
   };
 
@@ -179,13 +177,16 @@ export const ShieldCard: React.FC = () => {
           recordApExpenditure(0, 'Shields', `Added Unskilled Shield: ${item.name} (0 AP - Unskilled)`, 1, 'Manage Shields');
         }
       }
-      return {
+      const updatedSheet = {
         ...prev,
         shield_slot: newShieldItem,
         armory: [...(prev.armory || armory).filter((s) => s.name.toLowerCase() !== item.name.toLowerCase()), newShieldItem],
       };
+      return {
+        ...updatedSheet,
+        movement_rate: calculateMovementRate(updatedSheet),
+      };
     });
-    updateMovementForShield(item.mr, true);
     saveActiveCharacter();
   };
 
@@ -208,16 +209,16 @@ export const ShieldCard: React.FC = () => {
         recordApExpenditure(0, 'Shields', `Dropped Unskilled Shield: ${shieldName} (0 AP)`, 1, 'Manage Shields');
       }
 
-      return {
+      const updatedSheet = {
         ...prev,
         shield_slot: nextActiveShield,
         armory: updatedArmory,
       };
+      return {
+        ...updatedSheet,
+        movement_rate: calculateMovementRate(updatedSheet),
+      };
     });
-    if (shield.name.toLowerCase() === shieldName.toLowerCase()) {
-      const nextShield = armory.find((s) => s.name.toLowerCase() !== shieldName.toLowerCase());
-      updateMovementForShield(nextShield?.mr_adjustment, !!nextShield);
-    }
     saveActiveCharacter();
   };
 

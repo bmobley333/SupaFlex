@@ -1,38 +1,35 @@
 // src/components/sheet/MovementRateCard.tsx
 import React from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { MovementRateData } from '../../types/game';
+import { calculateMovementRate } from '../../types/game';
 
 const ARMORED_OPTIONS = Array.from({ length: 13 }, (_, i) => i); // 0 to 12
 
 export const MovementRateCard: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
 
-  const mrData: MovementRateData = activeCharacter?.sheet_data?.movement_rate || {
-    armored: 6,
-    shield: 'n/a',
-  };
+  const derivedMR = calculateMovementRate(activeCharacter?.sheet_data);
+  const armoredMR = derivedMR.armored;
+  const shieldDrawnMR = derivedMR.shield;
 
-  const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
-  const isShieldEquipped = shieldSlot?.equipped ?? false;
-  const armoredMR = mrData.armored ?? 6;
-
-  let derivedShieldDrawnMR: string | number = 'n/a';
-  if (isShieldEquipped) {
-    const mrStr = shieldSlot?.mr_adjustment || shieldSlot?.effect || '';
-    const match = mrStr.match(/-?\d+/);
-    const penalty = match ? parseInt(match[0], 10) : 0;
-    derivedShieldDrawnMR = Math.max(0, armoredMR + penalty);
-  }
-
-  const handleUpdate = (updates: Partial<MovementRateData>) => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      movement_rate: {
-        ...(prev.movement_rate || mrData),
-        ...updates,
-      },
-    }));
+  const handleManualArmoredChange = (newArmored: number) => {
+    updateActiveSheetData((prev) => {
+      const tempSheet = {
+        ...prev,
+        movement_rate: {
+          ...(prev.movement_rate || { armored: 6, shield: 'n/a' }),
+          armored: newArmored,
+        },
+      };
+      const recalculated = calculateMovementRate(tempSheet);
+      return {
+        ...prev,
+        movement_rate: {
+          armored: recalculated.armored,
+          shield: recalculated.shield,
+        },
+      };
+    });
     saveActiveCharacter();
   };
 
@@ -57,17 +54,10 @@ export const MovementRateCard: React.FC = () => {
             Armored 👣
           </span>
           <select
-            value={mrData.armored ?? 6}
+            value={armoredMR}
             onChange={(e) => {
-              const newArmored = parseInt(e.target.value, 10) || 0;
-              let newShieldMR: string | number = 'n/a';
-              if (isShieldEquipped) {
-                const mrStr = shieldSlot?.mr_adjustment || shieldSlot?.effect || '';
-                const match = mrStr.match(/-?\d+/);
-                const penalty = match ? parseInt(match[0], 10) : 0;
-                newShieldMR = Math.max(0, newArmored + penalty);
-              }
-              handleUpdate({ armored: newArmored, shield: newShieldMR });
+              const val = parseInt(e.target.value, 10) || 0;
+              handleManualArmoredChange(val);
             }}
             className="bg-slate-900 border border-slate-700 text-teal-300 text-xs font-mono font-extrabold px-2 py-1 rounded-lg outline-none focus:border-teal-400 cursor-pointer text-center"
           >
@@ -88,10 +78,11 @@ export const MovementRateCard: React.FC = () => {
             className="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-xs font-mono font-extrabold text-teal-300 text-center"
             title="Auto-calculated Armored MR reduced by shield MR penalty (min 0)"
           >
-            {derivedShieldDrawnMR}
+            {shieldDrawnMR}
           </div>
         </div>
       </div>
     </div>
   );
 };
+

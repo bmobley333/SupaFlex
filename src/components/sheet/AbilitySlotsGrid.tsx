@@ -96,12 +96,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return pruneLesserPowerVersions(slots);
   }, [slots]);
 
-  // Powers AP Metrics (Version-based cumulative AP units: v1=1 AP, v2=2 AP, v5=5 AP; 3 Free AP Allowance)
+  // Powers / Spells AP Metrics
   const totalPowerUnits = useMemo(() => {
     return calculateTotalPowerUnits(slots);
   }, [slots]);
 
   const apSpent = Math.max(0, totalPowerUnits - 3);
+
+  const magicItemsApSpent = useMemo(() => {
+    if (type !== 'spells') return 0;
+    return slots.reduce((sum, slot) => {
+      const { version } = parseAbilityVersion(slot.name);
+      return sum + Math.max(0, version - 1);
+    }, 0);
+  }, [slots, type]);
+
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
@@ -352,7 +361,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             effect: item.effect || '',
             checked: [false, false, false],
           });
-          recordApExpenditure(1, 'Magic Items', `Acquired Magic Item: ${cleanName(item.name)}`, 1, 'Manage Magic Items');
         }
         return { ...prev, [slotKey]: current };
       }
@@ -387,8 +395,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
         return { ...prev, [slotKey]: prunedUpdated };
       } else {
+        const targetSlot = current.find(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
+        );
+        const v = targetSlot ? parseAbilityVersion(targetSlot.name).version : 1;
+        const apRefund = Math.max(0, v - 1);
+
+        if (apRefund > 0) {
+          recordApExpenditure(-apRefund, 'Magic Items', `Unlearned Magic Item: ${cleanName(abilityName)} (-${apRefund} AP Refunded)`, 1, 'Manage Magic Items');
+        }
+
         const updated = current.filter(
-          (s) => cleanName(s.name).toLowerCase() !== cleanName(abilityName).toLowerCase()
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
         );
         return { ...prev, [slotKey]: updated };
       }
@@ -472,24 +490,45 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         };
       } else {
         const existingIndex = currentSlots.findIndex(
-          (s) => cleanName(s.name).toLowerCase() === versionedName.toLowerCase()
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
         );
-        if (existingIndex < 0) {
-          currentSlots.push({
-            select: true,
-            name: versionedName,
-            base_name: baseName,
-            version: version,
-            action: (createAction.toUpperCase() as any) || 'A',
-            usage: createUsage,
-            effect: createEffect.trim(),
-            checked: [false, false, false],
-          });
+
+        const oldVersion = existingIndex >= 0 ? parseAbilityVersion(currentSlots[existingIndex].name).version : 1;
+        const newSlot: AbilitySlot = {
+          select: true,
+          name: versionedName,
+          base_name: baseName,
+          version: version,
+          action: (createAction.toUpperCase() as any) || 'A',
+          usage: createUsage,
+          effect: createEffect.trim(),
+          checked: [false, false, false],
+        };
+
+        if (existingIndex >= 0) {
+          currentSlots[existingIndex] = newSlot;
+        } else {
+          currentSlots.push(newSlot);
         }
+
+        const prunedSlots = pruneLesserPowerVersions(currentSlots);
+        const oldApSpent = Math.max(0, oldVersion - 1);
+        const newApSpent = Math.max(0, version - 1);
+        const apDiff = newApSpent - oldApSpent;
+
+        const isUpgrade = existingIndex >= 0;
+        const logAction = isUpgrade ? 'Upgraded Magic Item' : 'Created & Learned Magic Item';
+
+        if (apDiff > 0) {
+          recordApExpenditure(apDiff, 'Magic Items', `${logAction}: ${versionedName} (+${apDiff} AP)`, 1, 'Manage Magic Items');
+        } else if (apDiff < 0) {
+          recordApExpenditure(apDiff, 'Magic Items', `Downgraded Magic Item: ${versionedName} (${apDiff} AP Refunded)`, 1, 'Manage Magic Items');
+        }
+
         return {
           ...prev,
           [customKey]: updatedCustom,
-          [slotKey]: currentSlots,
+          [slotKey]: prunedSlots,
         };
       }
     });
@@ -683,6 +722,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           {apSpent}
                           {totalPowerUnits > 0 ? `+${Math.min(3, totalPowerUnits)}Free` : ''} AP
                         </strong>
+                        ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
+                      </span>
+                    </div>
+                  )}
+
+                  {type === 'spells' && (
+                    <div className="px-3.5 py-1 bg-pink-950/70 border border-pink-500/40 rounded-full font-mono font-bold text-xs text-pink-200 flex items-center gap-2 shadow-md">
+                      <span>
+                        Magic Items: <strong className="text-pink-300">{slots.length}</strong>; Upgrades:{' '}
+                        <strong className="text-rose-300">{magicItemsApSpent} AP</strong> (v1 Base Free)
                         ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
                       </span>
                     </div>

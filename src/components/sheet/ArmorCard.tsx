@@ -13,6 +13,7 @@ import {
   getArFromRequirement,
   isRequirementLearnable,
   calculateAvailableAp,
+  calculateMovementRate,
 } from '../../types/game';
 
 const getDieNum = (dieRating?: string): number => {
@@ -120,34 +121,19 @@ export const ArmorCard: React.FC = () => {
     };
   }, [showManageModal]);
 
-  const updateMovementForArmor = (mrStr?: string) => {
-    const mrMatch = mrStr ? mrStr.match(/\d+/) : null;
-    const numericMr = mrMatch ? parseInt(mrMatch[0], 10) : 6;
-    const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
-    let newShieldMR: string | number = 'n/a';
-    if (shieldSlot?.equipped) {
-      const mrAdjustmentStr = shieldSlot?.mr_adjustment || shieldSlot?.effect || '';
-      const match = mrAdjustmentStr.match(/-?\d+/);
-      const penalty = match ? parseInt(match[0], 10) : 0;
-      newShieldMR = Math.max(0, numericMr + penalty);
-    }
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      movement_rate: {
-        ...(prev.movement_rate || mrData),
-        armored: numericMr,
-        shield: newShieldMR,
-      },
-    }));
-  };
 
   const handleSelectActiveArmor = (selectedArmor: ArmorData) => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      armor_slot: selectedArmor,
-      armor: selectedArmor.ar,
-    }));
-    updateMovementForArmor(selectedArmor.mr);
+    updateActiveSheetData((prev) => {
+      const updatedSheet = {
+        ...prev,
+        armor_slot: selectedArmor,
+        armor: selectedArmor.ar,
+      };
+      return {
+        ...updatedSheet,
+        movement_rate: calculateMovementRate(updatedSheet),
+      };
+    });
     saveActiveCharacter();
   };
 
@@ -157,10 +143,14 @@ export const ArmorCard: React.FC = () => {
       const updatedWardrobe = (prev.wardrobe || wardrobe).map((item) =>
         item.name.toLowerCase() === armor.name.toLowerCase() ? { ...item, sk: skChecked } : item
       );
-      return {
+      const updatedSheet = {
         ...prev,
         armor_slot: updatedArmor,
         wardrobe: updatedWardrobe,
+      };
+      return {
+        ...updatedSheet,
+        movement_rate: calculateMovementRate(updatedSheet),
       };
     });
     saveActiveCharacter();
@@ -197,14 +187,17 @@ export const ArmorCard: React.FC = () => {
         }
       }
       const updatedWardrobe = isAlreadyInWardrobe ? existingWardrobe : [...existingWardrobe, newArmorItem];
-      return {
+      const updatedSheet = {
         ...prev,
         armor_slot: newArmorItem,
         armor: numericAr,
         wardrobe: updatedWardrobe,
       };
+      return {
+        ...updatedSheet,
+        movement_rate: calculateMovementRate(updatedSheet),
+      };
     });
-    updateMovementForArmor(item.mr);
     saveActiveCharacter();
   };
 
@@ -237,11 +230,15 @@ export const ArmorCard: React.FC = () => {
         recordApExpenditure(0, 'Armor', `Dropped Unskilled Armor: ${armorName} (0 AP)`, 1, 'Manage Armor');
       }
 
-      return {
+      const updatedSheet = {
         ...prev,
         armor_slot: nextActiveArmor,
         armor: nextActiveArmor ? nextActiveArmor.ar : 0,
         wardrobe: updatedWardrobe,
+      };
+      return {
+        ...updatedSheet,
+        movement_rate: calculateMovementRate(updatedSheet),
       };
     });
     saveActiveCharacter();
