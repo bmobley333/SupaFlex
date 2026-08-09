@@ -68,15 +68,33 @@ export default function App() {
     saveActiveCharacter,
     updateActiveSheetData,
     setPlayerEmail,
+    setPlayerName,
   } = useCharacterStore();
 
   useEffect(() => {
     fetchInitialData();
 
-    // Auth state listener — ONLY handles PASSWORD_RECOVERY redirect & URL cleanup.
-    // Cross-tab session writes have been removed: login/logout are tab-local via
-    // sessionStorage and the onLoginSuccess/onLogout callbacks below.
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+    // Restore existing Supabase Auth Session on mount (e.g., after Google OAuth redirect)
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) {
+        const userEmail = user.email.trim().toLowerCase();
+        const userName = user.user_metadata?.full_name || user.user_metadata?.name || '';
+        setPlayerEmail(userEmail);
+        if (userName) setPlayerName(userName);
+      }
+    });
+
+    // Auth state listener — Handles OAuth logins, PASSWORD_RECOVERY redirect & URL cleanup.
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user?.email) {
+        const userEmail = session.user.email.trim().toLowerCase();
+        const userName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || '';
+        setPlayerEmail(userEmail);
+        if (userName) setPlayerName(userName);
+        await gameApi.getUserProfile(userEmail);
+        fetchInitialData();
+      }
+
       if (event === 'PASSWORD_RECOVERY') {
         setShowUpdatePasswordModal(true);
       }
@@ -91,7 +109,7 @@ export default function App() {
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, [fetchInitialData]);
+  }, [fetchInitialData, setPlayerEmail, setPlayerName]);
 
   const activePartyId = useCharacterStore((state) => state.activePartyId);
 

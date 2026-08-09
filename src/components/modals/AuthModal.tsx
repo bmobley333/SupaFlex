@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { signInWithGoogle } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
-import { AuthMode } from '../../types/game';
 import { useCharacterStore } from '../../store/useCharacterStore';
 
 interface AuthModalProps {
@@ -16,12 +15,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   currentEmail,
-  onLoginSuccess,
   onLogout,
 }) => {
-  const [mode, setMode] = useState<AuthMode>(currentEmail ? 'profile' : 'login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [allowCloning, setAllowCloning] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -55,10 +50,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   useEffect(() => {
     if (currentEmail) {
-      setMode('profile');
       loadProfile(currentEmail);
-    } else {
-      setMode('login');
     }
   }, [currentEmail, isOpen]);
 
@@ -77,103 +69,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleSignIn = async () => {
     setErrorMsg(null);
     setSuccessMsg(null);
     setLoading(true);
-
     try {
-      const cleanEmail = email.trim().toLowerCase();
-      const { error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password,
-      });
-
-      if (error) {
-        // Fallback for simple local/playtest login if Supabase auth user is not registered yet
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-        });
-
-        if (signUpError && !signUpError.message.includes('already registered')) {
-          setErrorMsg(error.message);
-          setLoading(false);
-          return;
-        }
-      }
-
-      await gameApi.getUserProfile(cleanEmail);
-      onLoginSuccess(cleanEmail);
-      setSuccessMsg('Successfully logged in!');
-      setTimeout(() => {
-        onClose();
-      }, 500);
+      await signInWithGoogle();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Login failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    setLoading(true);
-
-    try {
-      const cleanEmail = email.trim().toLowerCase();
-      const { error } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password,
-      });
-
-      if (error) {
-        setErrorMsg(error.message);
-        setLoading(false);
-        return;
-      }
-
-      await gameApi.getUserProfile(cleanEmail);
-      onLoginSuccess(cleanEmail);
-      setSuccessMsg('Account created & logged in!');
-      setTimeout(() => {
-        onClose();
-      }, 600);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Sign up failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    if (!email.trim()) {
-      setErrorMsg('Please enter your email address to receive a password reset link.');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-        redirectTo: window.location.origin,
-      });
-
-      if (error) {
-        setErrorMsg(error.message);
-      } else {
-        setSuccessMsg(`If an account exists for ${email.trim()}, a password reset link has been sent.`);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to send password reset email.');
-    } finally {
+      setErrorMsg(err.message || 'Google Sign-In failed.');
       setLoading(false);
     }
   };
@@ -202,7 +105,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Title */}
         <h2 className="text-xl font-bold text-amber-400 flex items-center gap-2 mb-4">
-          🔐 {currentEmail ? 'Account Settings' : mode === 'login' ? 'Player Login' : mode === 'signup' ? 'Create Account' : 'Reset Password'}
+          🔐 {currentEmail ? 'Account Settings' : 'Player Login'}
         </h2>
 
         {errorMsg && (
@@ -334,101 +237,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           </div>
         ) : (
-          /* Login / Signup / Reset Form */
-          <div>
-            <div className="flex border-b border-slate-700 mb-6">
-              <button
-                onClick={() => { setMode('login'); setErrorMsg(null); setSuccessMsg(null); }}
-                className={`flex-1 py-2 text-sm font-bold border-b-2 transition ${mode === 'login' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => { setMode('signup'); setErrorMsg(null); setSuccessMsg(null); }}
-                className={`flex-1 py-2 text-sm font-bold border-b-2 transition ${mode === 'signup' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
-              >
-                Sign Up
-              </button>
-              <button
-                onClick={() => { setMode('reset_password'); setErrorMsg(null); setSuccessMsg(null); }}
-                className={`flex-1 py-2 text-sm font-bold border-b-2 transition ${mode === 'reset_password' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
-              >
-                Reset
-              </button>
+          /* Pure 1-Click Google OAuth View */
+          <div className="bg-slate-950/70 p-5 rounded-xl border border-slate-800 space-y-4 text-center">
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-amber-400 flex items-center justify-center gap-2">
+                🌌 Welcome to SupaFlex
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Sign in with your Google account to manage your hero sheet and party sessions.
+              </p>
             </div>
 
-            {mode === 'reset_password' ? (
-              <form onSubmit={handleResetPassword} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="player@example.com"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 text-slate-950 font-bold rounded-lg transition"
-                >
-                  {loading ? 'Sending Link...' : '📧 Send Password Reset Email'}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={mode === 'login' ? handleLogin : handleSignUp} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="player@example.com"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-indigo-500/50 rounded-xl text-slate-100 font-bold text-xs flex items-center justify-center gap-2.5 transition-all shadow-lg hover:shadow-indigo-500/10 cursor-pointer group"
+            >
+              <svg className="w-4 h-4 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              <span>{loading ? 'Redirecting to Google...' : 'Sign in with Google'}</span>
+            </button>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-
-                <div className="flex justify-between items-center text-xs pt-1">
-                  <button
-                    type="button"
-                    onClick={() => { setMode('reset_password'); setErrorMsg(null); }}
-                    className="text-amber-400 hover:underline"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 text-slate-950 font-bold rounded-lg transition"
-                >
-                  {loading ? 'Processing...' : mode === 'login' ? 'Sign In' : 'Create Account'}
-                </button>
-              </form>
-            )}
+            <div className="pt-2 text-[10px] text-slate-500 font-medium flex items-center justify-center gap-1">
+              🔒 Secured by Supabase Auth & Google Cloud OAuth 2.0
+            </div>
           </div>
         )}
       </div>
