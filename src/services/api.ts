@@ -49,9 +49,35 @@ export const createDefaultSheetData = (): CharacterSheetData => ({
   },
 });
 
-export const normalizeCharacterData = (c: Character): Character => {
+export function ensureLatestSheetSchema(rawSheet: any): CharacterSheetData {
   const defaultSheet = createDefaultSheetData();
-  const rawSheet = (c.sheet_data || {}) as Partial<CharacterSheetData>;
+  if (!rawSheet || typeof rawSheet !== 'object') {
+    return defaultSheet;
+  }
+
+  // Deep-merge fallback to guarantee no missing properties cause runtime exceptions
+  return {
+    ...defaultSheet,
+    ...rawSheet,
+    attribute_dice: {
+      ...defaultSheet.attribute_dice,
+      ...(rawSheet.attribute_dice || {}),
+    },
+    bio: {
+      ...defaultSheet.bio,
+      ...(rawSheet.bio || {}),
+    },
+    known_skillsets: Array.isArray(rawSheet.known_skillsets) ? rawSheet.known_skillsets : [],
+    power_slots: Array.isArray(rawSheet.power_slots) ? rawSheet.power_slots : [],
+    spell_slots: Array.isArray(rawSheet.spell_slots) ? rawSheet.spell_slots : [],
+    gear_slots: Array.isArray(rawSheet.gear_slots) ? rawSheet.gear_slots : [],
+    weapons: Array.isArray(rawSheet.weapons) ? rawSheet.weapons : [],
+    simple_gear: Array.isArray(rawSheet.simple_gear) ? rawSheet.simple_gear : [],
+  };
+}
+
+export const normalizeCharacterData = (c: Character): Character => {
+  const rawSheet = ensureLatestSheetSchema(c.sheet_data);
 
   const vitalityMax = rawSheet.vitality_max ?? c.hp ?? 10;
   const currentVitality = rawSheet.current_vitality ?? c.hp ?? vitalityMax;
@@ -69,7 +95,6 @@ export const normalizeCharacterData = (c: Character): Character => {
   );
 
   const normalizedSheet: CharacterSheetData = {
-    ...defaultSheet,
     ...rawSheet,
     vitality_max: vitalityMax,
     current_vitality: currentVitality,
