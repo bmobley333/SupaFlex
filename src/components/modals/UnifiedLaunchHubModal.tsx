@@ -600,6 +600,13 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                             onClick={() => {
                               if (!isEditing) onSelectCharacter(char.id);
                             }}
+                            onDoubleClick={() => {
+                              if (!isEditing) {
+                                onSelectCharacter(char.id);
+                                onClose();
+                              }
+                            }}
+                            title="Click to select • Double-click to open character sheet"
                             className={`p-3.5 rounded-xl border transition-all cursor-pointer relative min-h-[76px] ${
                               isActive
                                 ? 'bg-gradient-to-r from-indigo-950/80 to-slate-900 border-indigo-500/80 shadow-md shadow-indigo-950/50'
