@@ -25,7 +25,11 @@ interface PartyCharacterCardProps {
 export const resolvePlayerFirstName = (rawName?: string): string => {
   if (!rawName) return 'empty';
   const trimmed = rawName.trim();
-  if (!trimmed || trimmed.includes('@')) return 'empty';
+  if (!trimmed) return 'empty';
+  if (trimmed.includes('@')) {
+    const handle = trimmed.split('@')[0]?.trim();
+    return handle || 'empty';
+  }
 
   const parts = trimmed.split(/\s+/);
   return parts[0] || 'empty';

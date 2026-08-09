@@ -75,7 +75,8 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     const trimmed = playerNameInput.trim();
     setIsSavingName(true);
     try {
-      await gameApi.updatePlayerName(currentEmail, trimmed);
+      const { tabSessionId, activePartyId } = useCharacterStore.getState();
+      await gameApi.updatePlayerName(currentEmail, trimmed, tabSessionId, activePartyId || undefined);
       useCharacterStore.getState().setPlayerName(trimmed);
       setNameSaveSuccess(true);
       setTimeout(() => setNameSaveSuccess(false), 3000);
@@ -84,6 +85,14 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     } finally {
       setIsSavingName(false);
     }
+  };
+
+  const handleCloseModal = () => {
+    const storeName = useCharacterStore.getState().playerName;
+    if (currentEmail && playerNameInput.trim() && playerNameInput.trim() !== storeName) {
+      handleSavePlayerName();
+    }
+    onClose();
   };
 
   // Create Hero State
@@ -210,11 +219,14 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
   const loadProfile = async (targetEmail: string) => {
     try {
-      const profile = await gameApi.getUserProfile(targetEmail);
+      const storeName = useCharacterStore.getState().playerName;
+      const profile = await gameApi.getUserProfile(targetEmail, storeName);
       setAllowCloning(profile.allow_cloning);
       if (profile.player_name) {
         setPlayerNameInput(profile.player_name);
         useCharacterStore.getState().setPlayerName(profile.player_name);
+      } else if (storeName) {
+        setPlayerNameInput(storeName);
       }
     } catch (err) {
       console.error('Error loading profile:', err);
@@ -474,7 +486,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                   <span>🚪</span> Sign Out
                 </button>
                 <button
-                  onClick={onClose}
+                  onClick={handleCloseModal}
                   className="text-slate-400 hover:text-white text-2xl font-bold px-2.5 py-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
                   title="Close Selector"
                 >
@@ -1071,7 +1083,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
           </div>
           {currentEmail ? (
             <button
-              onClick={onClose}
+              onClick={handleCloseModal}
               className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-6 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
             >
               Done

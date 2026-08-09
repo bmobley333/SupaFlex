@@ -74,13 +74,27 @@ export default function App() {
   useEffect(() => {
     fetchInitialData();
 
+    const handleAuthUser = async (userEmail: string, googleName: string) => {
+      setPlayerEmail(userEmail);
+      const profile = await gameApi.getUserProfile(userEmail, googleName);
+      if (profile.player_name) {
+        setPlayerName(profile.player_name);
+      } else if (googleName) {
+        setPlayerName(googleName);
+      }
+
+      const { tabSessionId, activePartyId, activeCharacter } = useCharacterStore.getState();
+      if (activePartyId && tabSessionId && activeCharacter?.id) {
+        gameApi.ensureTabPartySession(activePartyId, tabSessionId, activeCharacter.id, userEmail).catch(console.error);
+      }
+    };
+
     // Restore existing Supabase Auth Session on mount (e.g., after Google OAuth redirect)
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user?.email) {
         const userEmail = user.email.trim().toLowerCase();
         const userName = user.user_metadata?.full_name || user.user_metadata?.name || '';
-        setPlayerEmail(userEmail);
-        if (userName) setPlayerName(userName);
+        handleAuthUser(userEmail, userName);
       }
     });
 
@@ -89,9 +103,7 @@ export default function App() {
       if (session?.user?.email) {
         const userEmail = session.user.email.trim().toLowerCase();
         const userName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || '';
-        setPlayerEmail(userEmail);
-        if (userName) setPlayerName(userName);
-        await gameApi.getUserProfile(userEmail);
+        await handleAuthUser(userEmail, userName);
         fetchInitialData();
       }
 

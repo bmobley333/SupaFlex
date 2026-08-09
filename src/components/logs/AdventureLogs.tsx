@@ -1,6 +1,6 @@
 // src/components/logs/AdventureLogs.tsx
-import React, { useState } from 'react';
-import { Scroll, BookMarked, Save } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Scroll, BookMarked, Check, Loader2 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 
 export interface LogEntry {
@@ -10,6 +10,8 @@ export interface LogEntry {
   content: string;
   completed?: boolean;
 }
+
+type SaveStatus = 'saved' | 'unsaved' | 'saving';
 
 export const AdventureLogs: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
@@ -21,18 +23,126 @@ export const AdventureLogs: React.FC = () => {
   const [notesText, setNotesText] = useState(bioNotes);
   const [backstoryText, setBackstoryText] = useState(backstory);
   const [personalityText, setPersonalityText] = useState(personality);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
 
-  const handleSaveBioLogs = () => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      bio: {
-        ...prev.bio,
-        notes: notesText,
-        backstory: backstoryText,
-        personality: personalityText,
-      },
-    }));
-    saveActiveCharacter();
+  const latestTextRef = useRef({ notes: bioNotes, backstory, personality });
+  const activeCharRef = useRef(activeCharacter);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync ref with current state on every render
+  useEffect(() => {
+    latestTextRef.current = { notes: notesText, backstory: backstoryText, personality: personalityText };
+    activeCharRef.current = activeCharacter;
+  }, [notesText, backstoryText, personalityText, activeCharacter]);
+
+  // Re-initialize state when active character changes
+  useEffect(() => {
+    const curBio = activeCharacter?.sheet_data?.bio;
+    const n = curBio?.notes || '';
+    const b = curBio?.backstory || '';
+    const p = curBio?.personality || '';
+
+    setNotesText(n);
+    setBackstoryText(b);
+    setPersonalityText(p);
+    latestTextRef.current = { notes: n, backstory: b, personality: p };
+    setSaveStatus('saved');
+  }, [activeCharacter?.id]);
+
+  const flushAutoSave = useCallback(async () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    const current = latestTextRef.current;
+    const savedBio = activeCharRef.current?.sheet_data?.bio;
+
+    if (
+      savedBio?.notes === current.notes &&
+      savedBio?.backstory === current.backstory &&
+      savedBio?.personality === current.personality
+    ) {
+      setSaveStatus('saved');
+      return;
+    }
+
+    setSaveStatus('saving');
+    try {
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        bio: {
+          ...prev.bio,
+          notes: current.notes,
+          backstory: current.backstory,
+          personality: current.personality,
+        },
+      }));
+      await saveActiveCharacter();
+      setSaveStatus('saved');
+    } catch (err) {
+      console.error('[AdventureLogs] Auto-save error:', err);
+      setSaveStatus('unsaved');
+    }
+  }, [updateActiveSheetData, saveActiveCharacter]);
+
+  const scheduleAutoSave = () => {
+    setSaveStatus('unsaved');
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      flushAutoSave();
+    }, 2500); // 2.5-second idle delay
+  };
+
+  const handleBlur = () => {
+    if (saveStatus === 'unsaved') {
+      flushAutoSave();
+    }
+  };
+
+  // Flush unsaved changes on unmount (tab switch or exit)
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      const current = latestTextRef.current;
+      const savedBio = activeCharRef.current?.sheet_data?.bio;
+      if (
+        savedBio?.notes !== current.notes ||
+        savedBio?.backstory !== current.backstory ||
+        savedBio?.personality !== current.personality
+      ) {
+        flushAutoSave();
+      }
+    };
+  }, [flushAutoSave]);
+
+  const renderStatusBadge = () => {
+    if (saveStatus === 'saving') {
+      return (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cyan-950/40 border border-cyan-800/40 text-cyan-300 text-xs font-semibold transition-all">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <span>Saving...</span>
+        </div>
+      );
+    }
+    if (saveStatus === 'unsaved') {
+      return (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-950/40 border border-amber-800/40 text-amber-300 text-xs font-semibold transition-all">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+          <span>Unsaved changes...</span>
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/40 border border-emerald-800/40 text-emerald-400 text-xs font-semibold transition-all">
+        <Check className="w-3.5 h-3.5" />
+        <span>All changes saved</span>
+      </div>
+    );
   };
 
   return (
@@ -45,18 +155,16 @@ export const AdventureLogs: React.FC = () => {
               <Scroll className="w-5 h-5 text-amber-400" />
               Adventure & Session Journal
             </h3>
-            <button
-              onClick={handleSaveBioLogs}
-              className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-semibold rounded-lg border border-emerald-500/30 flex items-center gap-1.5 transition-all"
-            >
-              <Save className="w-3.5 h-3.5" />
-              Save Journal
-            </button>
+            {renderStatusBadge()}
           </div>
 
           <textarea
             value={notesText}
-            onChange={(e) => setNotesText(e.target.value)}
+            onChange={(e) => {
+              setNotesText(e.target.value);
+              scheduleAutoSave();
+            }}
+            onBlur={handleBlur}
             placeholder="Record active campaign session notes, quest objectives, key NPCs encountered, and campaign milestones..."
             className="w-full min-h-[350px] bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-xs leading-relaxed text-slate-200 outline-none focus:border-indigo-500 font-mono resize-y"
           />
@@ -66,9 +174,12 @@ export const AdventureLogs: React.FC = () => {
       {/* Right Column (1/3): Character Backstory & Personality Notes */}
       <div className="flex flex-col gap-6">
         <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-5 flex flex-col gap-4">
-          <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-            <BookMarked className="w-5 h-5 text-indigo-400" />
-            <h3 className="font-outfit font-bold text-base text-slate-100">Hero Lore & Bio</h3>
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <BookMarked className="w-5 h-5 text-indigo-400" />
+              <h3 className="font-outfit font-bold text-base text-slate-100">Hero Lore & Bio</h3>
+            </div>
+            {renderStatusBadge()}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -78,7 +189,11 @@ export const AdventureLogs: React.FC = () => {
               </label>
               <textarea
                 value={backstoryText}
-                onChange={(e) => setBackstoryText(e.target.value)}
+                onChange={(e) => {
+                  setBackstoryText(e.target.value);
+                  scheduleAutoSave();
+                }}
+                onBlur={handleBlur}
                 placeholder="Hero's origin story, homeland, and motivation..."
                 className="w-full min-h-[120px] bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 outline-none focus:border-indigo-500 resize-y"
               />
@@ -90,19 +205,15 @@ export const AdventureLogs: React.FC = () => {
               </label>
               <textarea
                 value={personalityText}
-                onChange={(e) => setPersonalityText(e.target.value)}
+                onChange={(e) => {
+                  setPersonalityText(e.target.value);
+                  scheduleAutoSave();
+                }}
+                onBlur={handleBlur}
                 placeholder="Key personality traits, flaws, ideals..."
                 className="w-full min-h-[120px] bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 outline-none focus:border-indigo-500 resize-y"
               />
             </div>
-
-            <button
-              onClick={handleSaveBioLogs}
-              className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all"
-            >
-              <Save className="w-3.5 h-3.5" />
-              Save Lore Details
-            </button>
           </div>
         </div>
       </div>

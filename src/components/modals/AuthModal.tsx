@@ -37,7 +37,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const trimmed = playerNameInput.trim();
     setIsSavingName(true);
     try {
-      await gameApi.updatePlayerName(currentEmail, trimmed);
+      const { tabSessionId, activePartyId } = useCharacterStore.getState();
+      await gameApi.updatePlayerName(currentEmail, trimmed, tabSessionId, activePartyId || undefined);
       useCharacterStore.getState().setPlayerName(trimmed);
       setNameSaveSuccess(true);
       setTimeout(() => setNameSaveSuccess(false), 3000);
@@ -48,6 +49,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
+  const handleCloseModal = () => {
+    const storeName = useCharacterStore.getState().playerName;
+    if (currentEmail && playerNameInput.trim() && playerNameInput.trim() !== storeName) {
+      handleSavePlayerName();
+    }
+    onClose();
+  };
+
   useEffect(() => {
     if (currentEmail) {
       loadProfile(currentEmail);
@@ -56,11 +65,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const loadProfile = async (targetEmail: string) => {
     try {
-      const profile = await gameApi.getUserProfile(targetEmail);
+      const storeName = useCharacterStore.getState().playerName;
+      const profile = await gameApi.getUserProfile(targetEmail, storeName);
       setAllowCloning(profile.allow_cloning);
       if (profile.player_name) {
         setPlayerNameInput(profile.player_name);
         useCharacterStore.getState().setPlayerName(profile.player_name);
+      } else if (storeName) {
+        setPlayerNameInput(storeName);
       }
     } catch (err) {
       console.error('Error loading profile:', err);
@@ -97,7 +109,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-md w-full p-6 shadow-2xl text-slate-100 relative">
         <button
-          onClick={onClose}
+          onClick={handleCloseModal}
           className="absolute top-4 right-4 text-slate-400 hover:text-white text-xl font-bold"
         >
           ✕
@@ -229,7 +241,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 Log Out
               </button>
               <button
-                onClick={onClose}
+                onClick={handleCloseModal}
                 className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-sm rounded-lg transition"
               >
                 Done

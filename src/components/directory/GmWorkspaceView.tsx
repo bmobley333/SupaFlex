@@ -277,6 +277,7 @@ function areSessionMembersEqual(a: PartySessionMember[], b: PartySessionMember[]
       m1.id !== m2.id ||
       m1.character_id !== m2.character_id ||
       m1.player_email !== m2.player_email ||
+      m1.player_first_name !== m2.player_first_name ||
       m1.character?.name !== m2.character?.name ||
       m1.character?.hp !== m2.character?.hp ||
       JSON.stringify(m1.character?.sheet_data) !== JSON.stringify(m2.character?.sheet_data)

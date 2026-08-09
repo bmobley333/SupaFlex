@@ -422,7 +422,7 @@ export const gameApi = {
   },
 
   // --- USER PROFILE & PRIVACY ---
-  async getUserProfile(email: string): Promise<{ email: string; allow_cloning: boolean; player_name?: string; first_name?: string; last_name?: string }> {
+  async getUserProfile(email: string, defaultFullName?: string): Promise<{ email: string; allow_cloning: boolean; player_name?: string; first_name?: string; last_name?: string }> {
     const cleanEmail = email.trim().toLowerCase();
     const { data, error } = await supabase
       .from('players')
@@ -436,6 +436,17 @@ export const gameApi = {
 
     if (data) {
       const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ').trim();
+      if (!fullName && defaultFullName && defaultFullName.trim()) {
+        await this.updatePlayerName(cleanEmail, defaultFullName);
+        const parts = defaultFullName.trim().split(/\s+/);
+        return {
+          email: data.email,
+          allow_cloning: data.allow_cloning ?? true,
+          first_name: parts[0] || '',
+          last_name: parts.slice(1).join(' ') || '',
+          player_name: defaultFullName.trim(),
+        };
+      }
       return {
         email: data.email,
         allow_cloning: data.allow_cloning ?? true,
@@ -446,15 +457,18 @@ export const gameApi = {
     }
 
     // Auto-create profile if missing
+    const parts = (defaultFullName || '').trim().split(/\s+/);
+    const firstName = parts[0] || '';
+    const lastName = parts.slice(1).join(' ') || '';
     const { data: created, error: createError } = await supabase
       .from('players')
-      .insert({ email: cleanEmail, allow_cloning: true })
+      .insert({ email: cleanEmail, allow_cloning: true, first_name: firstName, last_name: lastName })
       .select('email, allow_cloning, first_name, last_name')
       .single();
 
     if (createError) {
       console.error('[gameApi] Error creating player profile:', createError);
-      return { email: cleanEmail, allow_cloning: true };
+      return { email: cleanEmail, allow_cloning: true, player_name: defaultFullName?.trim() || '' };
     }
 
     const createdFullName = [created.first_name, created.last_name].filter(Boolean).join(' ').trim();
@@ -480,7 +494,7 @@ export const gameApi = {
     return true;
   },
 
-  async updatePlayerName(email: string, playerName: string): Promise<boolean> {
+  async updatePlayerName(email: string, playerName: string, tabSessionId?: string, activePartyId?: string): Promise<boolean> {
     const cleanEmail = email.trim().toLowerCase();
     const trimmed = playerName.trim();
     const parts = trimmed.split(/\s+/);
@@ -495,6 +509,28 @@ export const gameApi = {
       console.error('[gameApi] Error updating player name:', error);
       return false;
     }
+
+    if (tabSessionId) {
+      const nowStr = new Date().toISOString();
+      await supabase
+        .from('party_session_members')
+        .update({ player_email: cleanEmail, last_seen: nowStr })
+        .eq('tab_session_id', tabSessionId);
+    }
+
+    if (activePartyId) {
+      try {
+        const channel = supabase.channel(`party:${activePartyId}`);
+        await channel.send({
+          type: 'broadcast',
+          event: 'party_members_updated',
+          payload: { partyId: activePartyId, player_email: cleanEmail, first_name: firstName, timestamp: new Date().toISOString() },
+        });
+      } catch (bcErr) {
+        console.warn('[gameApi] Notice broadcasting player name update:', bcErr);
+      }
+    }
+
     return true;
   },
 
