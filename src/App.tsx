@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { Database, Shield, Activity, BookOpen, Loader2, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { gameApi } from './services/api';
-import { Character } from './types/game';
+import { Character, AbilitySlot, TreasureItem, SimpleGearItem } from './types/game';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { AdventureLogs } from './components/logs/AdventureLogs';
@@ -232,55 +232,77 @@ export default function App() {
     }
   }, [myHeroes, activeCharacter, playerEmail, selectCharacter]);
 
-  const handleClaimCoins = async (addSilver: number, addGold: number): Promise<boolean> => {
-    if (!activeCharacter) return false;
-    try {
-      updateActiveSheetData((prev) => ({
-        ...prev,
-        silver: (prev.silver || 0) + addSilver,
-        gold: (prev.gold || 0) + addGold
-      }));
-      await saveActiveCharacter();
-      return true;
-    } catch {
-      return false;
-    }
-  };
+  // Unified Move to Sheet Claim Handler
 
-  const handleClaimMagicItem = async (item: any, autoEquip: boolean): Promise<boolean> => {
+  const handleMoveToSheet = async (itemPayload: {
+    title: string;
+    categoryKey: string;
+    description?: string;
+    coinsSilver?: number;
+    coinsGold?: number;
+    valuableVal?: string;
+    magicItem?: any;
+    type?: string;
+  }): Promise<boolean> => {
     if (!activeCharacter) return false;
-    try {
-      const newItem = {
-        id: `mi-${Date.now()}`,
-        name: item.name || 'Magic Item',
-        category: item.category || 'Lesser',
-        description: item.description || '',
-        equipped: autoEquip
-      };
-      updateActiveSheetData((prev) => ({
-        ...prev,
-        custom_magic_items: [...(prev.custom_magic_items || []), newItem as any]
-      }));
-      await saveActiveCharacter();
-      return true;
-    } catch {
-      return false;
-    }
-  };
 
-  const handleClaimValuable = async (name: string, _val: string): Promise<boolean> => {
-    if (!activeCharacter) return false;
     try {
-      const newVal = {
-        id: `val-${Date.now()}`,
-        name,
-        value: 1,
-        currency: 'gp' as const
-      };
-      updateActiveSheetData((prev) => ({
-        ...prev,
-        other_treasure: [...(prev.other_treasure || []), newVal]
-      }));
+      const category = itemPayload.categoryKey || '';
+      const isMagic = category.startsWith('magic_') || itemPayload.type === 'magic_item' || !!itemPayload.magicItem;
+
+      if (isMagic) {
+        const m = itemPayload.magicItem || {};
+        const slotObj: AbilitySlot = {
+          select: false,
+          name: m.name || itemPayload.title || 'Magic Item',
+          action: (m.action as any) || 'P',
+          usage: m.usage || '1-Enc',
+          effect: m.effect || m.description || itemPayload.description || '',
+          checked: [false],
+          version: 1,
+        };
+
+        updateActiveSheetData((prev) => ({
+          ...prev,
+          spell_slots: [...(prev.spell_slots || []), slotObj],
+        }));
+      } else if (category === 'coins' || itemPayload.coinsSilver || itemPayload.coinsGold) {
+        const s = itemPayload.coinsSilver || 0;
+        const g = itemPayload.coinsGold || 0;
+        updateActiveSheetData((prev) => ({
+          ...prev,
+          silver: (prev.silver || 0) + s,
+          gold: (prev.gold || 0) + g,
+        }));
+      } else if (category === 'art_gems') {
+        const numVal = parseInt(itemPayload.valuableVal || '5', 10) || 5;
+        const treasureItem: TreasureItem = {
+          id: `treasure-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+          name: itemPayload.title || 'Art & Gem Treasure',
+          value: numVal,
+          currency: 'gp',
+          category: 'Art & Gems',
+        };
+
+        updateActiveSheetData((prev) => ({
+          ...prev,
+          other_treasure: [...(prev.other_treasure || []), treasureItem],
+        }));
+      } else {
+        const gearCat = category === 'gear_quality' ? 'Quality Gear' : category === 'curios' ? 'Curios & Documents' : 'Junk';
+        const gearItem: SimpleGearItem = {
+          id: `gear-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+          name: itemPayload.title || 'Adventure Item',
+          qty: 1,
+          category: gearCat,
+        };
+
+        updateActiveSheetData((prev) => ({
+          ...prev,
+          simple_gear: [...(prev.simple_gear || []), gearItem],
+        }));
+      }
+
       await saveActiveCharacter();
       return true;
     } catch {
@@ -541,9 +563,7 @@ export default function App() {
         characterName={activeCharacter?.name || 'Hero'}
         currentSilver={activeCharacter?.sheet_data?.silver || 0}
         currentGold={activeCharacter?.sheet_data?.gold || 0}
-        onClaimCoins={handleClaimCoins}
-        onClaimMagicItem={handleClaimMagicItem}
-        onClaimValuable={handleClaimValuable}
+        onMoveToSheet={handleMoveToSheet}
       />
 
       {/* 🧩 AP Manager Modal */}

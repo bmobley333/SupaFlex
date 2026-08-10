@@ -5,15 +5,24 @@ import { LootDraftModal } from './LootDraftModal';
 import { EchoVaultModal } from './EchoVaultModal';
 import { VaultItem } from '../../types/game';
 
+export interface MoveToSheetPayload {
+  title: string;
+  categoryKey: string;
+  description?: string;
+  coinsSilver?: number;
+  coinsGold?: number;
+  valuableVal?: string;
+  magicItem?: any;
+  type?: string;
+}
+
 interface LootGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
   characterName: string;
   currentSilver: number;
   currentGold: number;
-  onClaimCoins: (addSilver: number, addGold: number) => Promise<boolean>;
-  onClaimMagicItem: (item: any, autoEquip: boolean) => Promise<boolean>;
-  onClaimValuable: (name: string, val: string) => Promise<boolean>;
+  onMoveToSheet: (payload: MoveToSheetPayload) => Promise<boolean>;
 }
 
 export interface RollResult {
@@ -24,6 +33,7 @@ export interface RollResult {
   title: string;
   description: string;
   type: 'coins' | 'magic_item' | 'art_gem' | 'document' | 'junk' | 'quality' | 'special';
+  categoryKey?: string;
   coinsSilver?: number;
   coinsGold?: number;
   magicItem?: any;
@@ -50,9 +60,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   characterName,
   currentSilver,
   currentGold,
-  onClaimCoins,
-  onClaimMagicItem,
-  onClaimValuable
+  onMoveToSheet
 }) => {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
   const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
@@ -430,43 +438,26 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   };
 
   // Claim Handlers
-  const claimCoins = async (res: RollResult) => {
+  // Unified Claim Handler
+  const claimMoveToSheet = async (res: RollResult) => {
     if (res.claimed) return;
-    const s = res.coinsSilver || 0;
-    const g = res.coinsGold || 0;
-    const ok = await onClaimCoins(s, g);
-    if (ok) {
-      res.claimed = true;
-      setResults([...results]);
-      showToast(`✅ Claimed +${s}s, +${g}g directly to ${characterName}'s Wallet!`);
-    } else {
-      showToast(`❌ Failed to claim coins. State reverted.`);
-    }
-  };
+    const ok = await onMoveToSheet({
+      title: res.title,
+      categoryKey: res.categoryKey || res.tableKey || '',
+      description: res.description,
+      coinsSilver: res.coinsSilver,
+      coinsGold: res.coinsGold,
+      valuableVal: res.valuableVal,
+      magicItem: res.magicItem,
+      type: res.type,
+    });
 
-  const claimMagicItem = async (res: RollResult, autoEquip: boolean) => {
-    if (res.claimed || !res.magicItem) return;
-    const ok = await onClaimMagicItem(res.magicItem, autoEquip);
     if (ok) {
       res.claimed = true;
       setResults([...results]);
-      showToast(`✅ Claimed '${res.magicItem.name}' ${autoEquip ? '& Equipped ' : ''}to ${characterName}!`);
+      showToast(`✅ Moved '${res.title}' to ${characterName}'s Sheet!`);
     } else {
-      showToast(`❌ Failed to claim magic item. State reverted.`);
-    }
-  };
-
-  const claimValuable = async (res: RollResult) => {
-    if (res.claimed) return;
-    const name = res.valuableName || res.title;
-    const val = res.valuableVal || '1g';
-    const ok = await onClaimValuable(name, val);
-    if (ok) {
-      res.claimed = true;
-      setResults([...results]);
-      showToast(`✅ Claimed '${name}' (${val}) to Valuables List!`);
-    } else {
-      showToast(`❌ Failed to claim valuable. State reverted.`);
+      showToast(`❌ Failed to move '${res.title}' to Sheet.`);
     }
   };
 
@@ -545,28 +536,37 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   };
 
   const handleSelectDraftReward = async (reward: { type: 'magic_item' | 'treasure'; data: any }) => {
+    let categoryKey = 'magic_Lesser';
     if (reward.data?.type === 'coins') {
-      const s = reward.data.silver || 0;
-      const g = reward.data.gold || 0;
-      await onClaimCoins(s, g);
-      showToast(`✅ Claimed Draft Reward +${s}s, +${g}g!`);
+      categoryKey = 'coins';
     } else if (reward.type === 'treasure' || reward.data?.type === 'valuable') {
-      const name = reward.data.name || 'Valuable Treasure';
-      const val = reward.data.value || '10g';
-      await onClaimValuable(name, val);
-      showToast(`✅ Claimed Draft Reward '${name}' (${val})!`);
+      categoryKey = 'art_gems';
     } else {
-      await onClaimMagicItem(reward.data, false);
-      showToast(`✅ Claimed Draft Reward '${reward.data.name}'!`);
+      categoryKey = lastDraftTier === 'Minor' ? 'magic_Minor' : lastDraftTier === 'Greater' ? 'magic_Greater' : lastDraftTier === 'Artifact' ? 'magic_Artifact' : 'magic_Lesser';
+    }
+
+    const ok = await onMoveToSheet({
+      title: reward.data?.name || 'Draft Reward',
+      categoryKey,
+      description: reward.data?.description,
+      coinsSilver: reward.data?.silver,
+      coinsGold: reward.data?.gold,
+      valuableVal: reward.data?.value,
+      magicItem: reward.type === 'magic_item' ? reward.data : undefined,
+      type: reward.type,
+    });
+
+    if (ok) {
+      showToast(`✅ Claimed Draft Reward '${reward.data?.name || 'Reward'}' to Sheet!`);
     }
 
     const draftCost = lastDraftTier === 'Minor' ? 15 : lastDraftTier === 'Lesser' ? 25 : lastDraftTier === 'Greater' ? 50 : 100;
     updateActiveSheetData((prev) => ({
       ...prev,
-      essence_core: Math.max(0, (prev.essence_core || 0) - draftCost),
+      essence_core: Math.min(100, Math.max(0, (prev.essence_core || 0) - draftCost)),
     }));
 
-    return true;
+    return ok;
   };
 
   const handleDeconstructDraft = () => {
@@ -583,14 +583,21 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   };
 
   const handleClaimVaultItem = async (item: VaultItem): Promise<boolean> => {
-    let ok = false;
-    if (item.type === 'coins') {
-      ok = await onClaimCoins(item.coinsSilver || 0, item.coinsGold || 0);
-    } else if (item.magicItem) {
-      ok = await onClaimMagicItem(item.magicItem, false);
-    } else {
-      ok = await onClaimValuable(item.title, item.valuableVal || '5g');
-    }
+    let categoryKey = 'gear_quality';
+    if (item.type === 'coins' || item.coinsSilver || item.coinsGold) categoryKey = 'coins';
+    else if (item.magicItem) categoryKey = `magic_${item.rarity}`;
+    else categoryKey = 'art_gems';
+
+    const ok = await onMoveToSheet({
+      title: item.title,
+      categoryKey,
+      description: item.description,
+      coinsSilver: item.coinsSilver,
+      coinsGold: item.coinsGold,
+      valuableVal: item.valuableVal,
+      magicItem: item.magicItem,
+      type: item.type,
+    });
 
     if (ok) {
       const partyId = activePartyId || 'default';
@@ -699,45 +706,19 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                       {/* 1-Click Claim & Refine Action Buttons */}
                       <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
                         {res.claimed ? (
-                          <span className="text-xs font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-3 py-1 rounded-lg">
-                            ✓ Claimed / Refined
+                          <span className="text-xs font-extrabold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                            ✅ Moved to Sheet
                           </span>
                         ) : (
                           <>
-                            {res.type === 'coins' && (
-                              <button
-                                onClick={() => claimCoins(res)}
-                                className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-md shadow-amber-500/20"
-                              >
-                                🪙 +Add Coins
-                              </button>
-                            )}
-
-                            {res.type === 'magic_item' && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => claimMagicItem(res, false)}
-                                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition-all"
-                                >
-                                  🎒 Inventory
-                                </button>
-                                <button
-                                  onClick={() => claimMagicItem(res, true)}
-                                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition-all"
-                                >
-                                  ⚔️ Equip
-                                </button>
-                              </div>
-                            )}
-
-                            {(res.type === 'art_gem' || res.type === 'junk' || res.type === 'document') && (
-                              <button
-                                onClick={() => claimValuable(res)}
-                                className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
-                              >
-                                💎 +Add Valuables
-                              </button>
-                            )}
+                            <button
+                              onClick={() => claimMoveToSheet(res)}
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                              title="Move this item to your character sheet (0 AP cost)"
+                            >
+                              <span>✨</span>
+                              <span>Move to Sheet</span>
+                            </button>
 
                             {/* 🧪 Disenchant & ➡️ Party Buttons */}
                             <button

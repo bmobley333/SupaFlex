@@ -312,7 +312,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
                     className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <ShieldCheck className="w-4 h-4" />
-                    Claim Reward
+                    Move to Sheet
                   </button>
                 </div>
               ))}
