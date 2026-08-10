@@ -438,7 +438,7 @@ export const ShieldCard: React.FC = () => {
                                 onClick={() => handleDropFromArmory(item.name)}
                                 className="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0"
                               >
-                                - Drop
+                                Forget
                               </button>
                             </div>
 
@@ -572,8 +572,7 @@ export const ShieldCard: React.FC = () => {
                                         : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
                                     }`}
                                   >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    + Add to Armory
+                                    + Learn
                                   </button>
                                 </div>
 
@@ -681,7 +680,7 @@ export const ShieldCard: React.FC = () => {
                           className="w-full mt-1 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
                         >
                           {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Plus className="w-4 h-4" />}
-                          <span>Save & Equip Custom Shield</span>
+                          <span>Save & Learn Custom Shield</span>
                         </button>
                       </form>
                     </div>

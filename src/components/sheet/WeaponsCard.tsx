@@ -565,7 +565,7 @@ export const WeaponsCard: React.FC = () => {
                                   className="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1"
                                   title="Drop Weapon Arsenal"
                                 >
-                                  - Drop
+                                  Forget
                                 </button>
                               </div>
 
@@ -748,8 +748,7 @@ export const WeaponsCard: React.FC = () => {
                                       }`}
                                       title={isAnyLearnable ? 'Equip as Trained/Skilled' : 'Equip as Unskilled'}
                                     >
-                                      <Plus className="w-3.5 h-3.5" />
-                                      + Equip
+                                      + Learn
                                     </button>
                                   </div>
 
@@ -917,7 +916,7 @@ export const WeaponsCard: React.FC = () => {
                             className="w-full mt-1 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
                           >
                             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Plus className="w-4 h-4" />}
-                            <span>Save & Equip Custom Weapon</span>
+                            <span>Save & Learn Custom Weapon</span>
                           </button>
                         </form>
                       </div>

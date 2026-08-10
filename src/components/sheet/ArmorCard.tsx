@@ -390,7 +390,7 @@ export const ArmorCard: React.FC = () => {
                           <div key={item.id} className={`p-3 rounded-xl border flex flex-col gap-2 ${isActive ? 'bg-amber-950/40 border-amber-500/60' : 'bg-slate-900/90 border-slate-800'}`}>
                             <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                               <div className="flex items-center gap-2"><button type="button" onClick={() => handleSelectActiveArmor(item)} className={`px-2 py-0.5 text-xs font-bold rounded-lg border ${isActive ? 'bg-emerald-600/30 text-emerald-200' : 'bg-slate-950 text-slate-400'}`}>{isActive ? '● Active' : '○ Wear'}</button><span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span></div>
-                              <button onClick={() => handleDropFromWardrobe(item.name)} className="px-2 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold rounded-lg">- Drop</button>
+                              <button onClick={() => handleDropFromWardrobe(item.name)} className="px-2 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold rounded-lg">Forget</button>
                             </div>
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400"><span><RuleTooltip ruleKey="col.armor.ar">AR</RuleTooltip>: {item.ar} | MR: {item.mr}</span></div>
                           </div>
@@ -484,8 +484,7 @@ export const ArmorCard: React.FC = () => {
                                           : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50'
                                       }`}
                                     >
-                                      <Plus className="w-3.5 h-3.5" />
-                                      + Add to Armory
+                                      + Learn
                                     </button>
                                   </div>
                                   <div className="flex items-center justify-between text-xs font-mono text-slate-400">
@@ -528,7 +527,7 @@ export const ArmorCard: React.FC = () => {
                         )}
                         <button type="submit" disabled={isSubmitting} className="bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 text-white font-bold text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow">
                           {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                          <span>Save & Equip Armor</span>
+                          <span>Save & Learn Custom Armor</span>
                         </button>
                       </form>
                     )}

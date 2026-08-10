@@ -2,6 +2,7 @@
 // Vitality Header Component - Prominent Current Vitality readout, draggable progress bar, & quick adjusters.
 
 import React, { useState, useRef } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 
@@ -109,6 +110,7 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
         >
           <span className="text-xs">❤️</span>
           <span>Manage Vitality</span>
+          <ChevronDown className="w-3.5 h-3.5 text-rose-300 shrink-0" />
         </button>
       </div>
 

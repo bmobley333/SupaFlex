@@ -1108,7 +1108,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                         onClick={() => handleLearnAbility(item)}
                                         className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 flex items-center gap-1 transition-all shrink-0"
                                       >
-                                        <Plus className="w-3.5 h-3.5" />
                                         + Learn
                                       </button>
                                     </div>

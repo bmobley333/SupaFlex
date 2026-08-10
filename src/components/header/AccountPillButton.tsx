@@ -1,5 +1,6 @@
 // src/components/header/AccountPillButton.tsx
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Character } from '../../types/game';
 
 interface AccountPillButtonProps {
@@ -51,9 +52,7 @@ export const AccountPillButton: React.FC<AccountPillButtonProps> = ({
         </>
       )}
 
-      <span className="text-slate-400 group-hover:text-amber-400 transition-colors ml-1 text-xs">
-        ⚙️
-      </span>
+      <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors ml-1 shrink-0" />
     </button>
   );
 };
