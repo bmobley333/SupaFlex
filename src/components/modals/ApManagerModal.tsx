@@ -516,17 +516,17 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
           {/* RIGHT COLUMN: STREAMLINED ADVANCEMENT & GM BONUS CENTER                   */}
           {/* ========================================================================= */}
           <div className="w-1/2 flex flex-col p-5 bg-slate-900/90 overflow-hidden">
-            {/* Prominent Level Rating Card */}
+            {/* Prominent Level Up Card */}
             <div className="p-4 rounded-xl bg-slate-950/90 border border-amber-500/40 shadow-xl mb-4 shrink-0 flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <span className="text-base">⭐</span>
                   <h3 className="font-outfit font-extrabold text-sm text-amber-300 uppercase tracking-wider">
-                    Level Rating
+                    Level Up
                   </h3>
                 </div>
                 <p className="text-[11px] text-slate-400 font-mono">
-                  Hero progression tier (1 - 250 Lvl)
+                  Hero progression level (1 - 250+)
                 </p>
               </div>
 
