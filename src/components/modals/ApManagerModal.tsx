@@ -55,8 +55,13 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
   onOpenMagicItemsManager,
   onOpenSkillsManager,
 }) => {
-  const { activeCharacter, saveActiveCharacter, recordApExpenditure, revertApExpenditure } =
-    useCharacterStore();
+  const {
+    activeCharacter,
+    updateActiveSheetData,
+    saveActiveCharacter,
+    recordApExpenditure,
+    revertApExpenditure,
+  } = useCharacterStore();
 
   const [activeTab, setActiveTab] = useState<RightSubTab>('CAPSTONES');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -341,24 +346,25 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         ref={modalRef}
         className="w-full max-w-6xl h-[88vh] bg-slate-900 border border-indigo-500/40 rounded-2xl shadow-2xl shadow-indigo-950/80 flex flex-col overflow-hidden text-slate-100"
       >
-        {/* Header Bar: 🧩 is the ONLY icon in the title bar */}
+        {/* Header Bar */}
         <div className="px-6 py-4 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div>
               <h2 className="font-outfit font-black text-xl text-slate-100 tracking-wide flex items-center gap-2">
-                🧩 Manage AP
+                🧩 Manage Level & AP
                 <CardHelpButton ruleKey="leveling.advancement_steps" />
               </h2>
               <p className="text-xs text-slate-400">
-                Audit character progression, AP costs, and capstones for{' '}
+                Audit character progression, level rating, AP costs, and capstones for{' '}
                 <strong className="text-purple-300">{activeCharacter.name || 'Hero'}</strong>
               </p>
             </div>
           </div>
+
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
-            title="Close Manage AP"
+            title="Close Manage Level & AP"
           >
             <X className="w-5 h-5" />
           </button>
@@ -510,6 +516,37 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
           {/* RIGHT COLUMN: STREAMLINED ADVANCEMENT & GM BONUS CENTER                   */}
           {/* ========================================================================= */}
           <div className="w-1/2 flex flex-col p-5 bg-slate-900/90 overflow-hidden">
+            {/* Prominent Level Rating Card */}
+            <div className="p-4 rounded-xl bg-slate-950/90 border border-amber-500/40 shadow-xl mb-4 shrink-0 flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">⭐</span>
+                  <h3 className="font-outfit font-extrabold text-sm text-amber-300 uppercase tracking-wider">
+                    Level Rating
+                  </h3>
+                </div>
+                <p className="text-[11px] text-slate-400 font-mono">
+                  Hero progression tier (1 - 250 Lvl)
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 bg-slate-900 px-3 py-2 rounded-xl border border-amber-500/50 shadow-inner">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Level</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={250}
+                  value={level}
+                  onChange={(e) => {
+                    const val = Math.max(1, Math.min(250, parseInt(e.target.value, 10) || 1));
+                    updateActiveSheetData((prev: any) => ({ ...prev, level: val }));
+                    saveActiveCharacter();
+                  }}
+                  className="w-16 bg-slate-950 border border-amber-400 rounded-lg px-2 py-1 text-base font-mono font-black text-amber-300 text-center outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-400/50 shadow-inner"
+                />
+              </div>
+            </div>
+
             {/* Right Pane Navigation Sub-Tabs */}
             <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-4 shrink-0 overflow-x-auto">
               <button

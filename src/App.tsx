@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Database, Shield, Activity, BookOpen, Loader2, ChevronDown, ChevronUp, Award, Star, X } from 'lucide-react';
+import { Database, Shield, Activity, BookOpen, Loader2, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { gameApi } from './services/api';
 import { Character } from './types/game';
@@ -28,7 +28,6 @@ export default function App() {
   const [newCharName, setNewCharName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSelectorBar, setShowSelectorBar] = useState(false);
-  const [showLevelPopover, setShowLevelPopover] = useState(false);
   const [showResourcesPopover, setShowResourcesPopover] = useState(false);
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
   const [showNishTcModal, setShowNishTcModal] = useState(false);
@@ -69,7 +68,6 @@ export default function App() {
   const tabSessionId = useCharacterStore((state) => state.tabSessionId);
 
   const selectorRef = useRef<HTMLDivElement>(null);
-  const levelRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -189,20 +187,17 @@ export default function App() {
       if (selectorRef.current && !selectorRef.current.contains(event.target as Node)) {
         setShowSelectorBar(false);
       }
-      if (levelRef.current && !levelRef.current.contains(event.target as Node)) {
-        setShowLevelPopover(false);
-      }
       if (resourcesRef.current && !resourcesRef.current.contains(event.target as Node)) {
         setShowResourcesPopover(false);
       }
     };
-    if (showSelectorBar || showLevelPopover || showResourcesPopover) {
+    if (showSelectorBar || showResourcesPopover) {
       document.addEventListener('pointerdown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('pointerdown', handleClickOutside);
     };
-  }, [showSelectorBar, showLevelPopover, showResourcesPopover]);
+  }, [showSelectorBar, showResourcesPopover]);
 
   const myHeroes = useMemo(() => {
     return characters
@@ -302,17 +297,6 @@ export default function App() {
   };
 
   const currentLevel = activeCharacter?.sheet_data?.level || 1;
-  const currentAp = activeCharacter?.sheet_data?.ap ?? currentLevel * 2;
-
-  const handleLevelChange = (newLevel: number) => {
-    const val = Math.max(1, Math.min(250, newLevel));
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      level: val,
-      ap: val * 2,
-    }));
-    saveActiveCharacter();
-  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -349,89 +333,26 @@ export default function App() {
               onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
             />
 
-            {/* ⭐ Stylized Level Popover Trigger (Header Row 1 - Player Mode Only) */}
+            {/* ⭐ Stylized Level Trigger (Header Row 1 - Player Mode Only) */}
             {activeRole !== 'gm' && (
-              <div className="flex items-center gap-1.5 relative" ref={levelRef}>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/35 text-amber-300 shadow-amber-950/40">
                 <button
-                  onClick={() => setShowLevelPopover(!showLevelPopover)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all border shadow-sm ${
-                    showLevelPopover
-                      ? 'bg-amber-500/20 border-amber-400 text-amber-200 shadow-amber-500/30'
-                      : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/35 text-amber-300 shadow-amber-950/40'
-                  }`}
-                  title="Click to view or edit Hero Level and Action Points"
+                  onClick={() => setShowApManagerModal(true)}
+                  className="text-amber-400 font-bold flex items-center gap-1 hover:text-amber-200 transition-colors cursor-pointer"
+                  title="Open Manage Level & AP Modal"
                 >
                   <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30 shrink-0" />
-                  <span className="font-outfit tracking-wide">Lvl {currentLevel}</span>
-                  {showLevelPopover ? (
-                    <ChevronUp className="w-3 h-3 text-amber-300 shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-3 h-3 text-amber-400 shrink-0" />
-                  )}
+                  <span>Level</span>
+                  <CardHelpButton ruleKey="leveling.advancement_steps" />
                 </button>
-                <CardHelpButton ruleKey="leveling.advancement_steps" />
-
-                {/* 🌟 Level Edit Absolute Floating Glass Popover Card */}
-                {showLevelPopover && (
-                  <div className="absolute top-full left-0 mt-2 z-50 w-64 p-3.5 bg-slate-900/95 border border-amber-500/40 rounded-xl shadow-2xl shadow-amber-950/60 backdrop-blur-xl animate-fadeIn flex flex-col gap-3 text-xs">
-                    <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
-                      <span className="font-outfit font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1.5 text-xs">
-                        <Award className="w-4 h-4 text-amber-400" />
-                        Hero Level & AP
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-slate-400 font-semibold">
-                          AP: <span className="text-amber-300 font-bold">{currentAp}</span>
-                        </span>
-                        <button
-                          onClick={() => setShowLevelPopover(false)}
-                          className="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors"
-                          title="Close popover"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
-                      <div className="flex flex-col">
-                        <span className="text-[11px] font-bold text-slate-300">Level Rating</span>
-                        <span className="text-[10px] text-slate-400 font-mono">1 - 250 Lvl</span>
-                      </div>
-
-                      <input
-                        type="number"
-                        min={1}
-                        max={250}
-                        value={currentLevel}
-                        onChange={(e) => handleLevelChange(parseInt(e.target.value) || 1)}
-                        className="w-16 bg-slate-900 border border-amber-500/40 rounded-lg px-2 py-1 text-sm font-mono font-extrabold text-amber-300 text-center outline-none focus:border-amber-400 shadow-inner"
-                      />
-                    </div>
-
-                    <div className="pt-1 flex flex-col gap-1.5">
-                      <button
-                        onClick={() => {
-                          setShowLevelPopover(false);
-                          setShowApManagerModal(true);
-                        }}
-                        className="w-full py-1.5 bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 rounded-lg font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <span>🧩 Manage AP & Progression</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setShowLevelPopover(false);
-                          setShowVitalityManagerModal(true);
-                        }}
-                        className="w-full py-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/40 rounded-lg font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <span>🎲 Free Vitality Roll</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <span className="font-mono font-extrabold text-amber-100 mr-0.5">{currentLevel}</span>
+                <button
+                  onClick={() => setShowApManagerModal(true)}
+                  className="p-0.5 text-amber-400 hover:text-amber-200 transition-colors ml-0.5 cursor-pointer"
+                  title="Open Manage Level & AP Modal"
+                >
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
           </div>
@@ -495,7 +416,6 @@ export default function App() {
                   onClose={() => setShowResourcesPopover(false)} 
                   onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
                   onOpenNishTcGenerator={() => setShowNishTcModal(true)}
-                  onOpenApManager={() => setShowApManagerModal(true)}
                   isGmMode={activeRole === 'gm'}
                 />
               )}
