@@ -333,26 +333,34 @@ export default function App() {
               onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
             />
 
-            {/* ⭐ Stylized Level Trigger (Header Row 1 - Player Mode Only) */}
+            {/* ⭐ Stylized Level & AP Trigger (Header Row 1 - Player Mode Only) */}
             {activeRole !== 'gm' && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/35 text-amber-300 shadow-amber-950/40">
                 <button
                   onClick={() => setShowApManagerModal(true)}
-                  className="text-amber-400 font-bold flex items-center gap-1 hover:text-amber-200 transition-colors cursor-pointer"
+                  className="text-amber-400 font-bold flex items-center gap-1.5 hover:text-amber-200 transition-colors cursor-pointer"
                   title="Open Manage Level & AP Modal"
                 >
                   <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30 shrink-0" />
-                  <span>Level</span>
+                  <span className="font-outfit tracking-wide">Level & AP</span>
+                </button>
+
+                <span className="px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/40 font-mono font-extrabold text-amber-100 text-[11px] shrink-0">
+                  Lvl {currentLevel}
+                </span>
+
+                <div className="h-3.5 w-[1px] bg-amber-500/30 mx-0.5 shrink-0" />
+
+                <div className="flex items-center gap-0.5">
                   <CardHelpButton ruleKey="leveling.advancement_steps" />
-                </button>
-                <span className="font-mono font-extrabold text-amber-100 mr-0.5">{currentLevel}</span>
-                <button
-                  onClick={() => setShowApManagerModal(true)}
-                  className="p-0.5 text-amber-400 hover:text-amber-200 transition-colors ml-0.5 cursor-pointer"
-                  title="Open Manage Level & AP Modal"
-                >
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
+                  <button
+                    onClick={() => setShowApManagerModal(true)}
+                    className="p-1 text-amber-400 hover:text-amber-200 hover:bg-amber-500/20 rounded-md transition-colors cursor-pointer"
+                    title="Open Manage Level & AP Modal"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             )}
           </div>

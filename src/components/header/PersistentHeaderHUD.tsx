@@ -222,36 +222,37 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
       <div className="flex-1 flex justify-center items-center gap-3 flex-wrap">
         {/* 🎯 Focus Split Pill Container */}
         <div className="relative">
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all bg-purple-950/40 border-purple-500/30 text-purple-200 hover:border-purple-400"
-          >
+          <div className="flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all bg-purple-950/40 border-purple-500/30 text-purple-200 hover:border-purple-400">
             <button
               onClick={() => onOpenFocusManager?.()}
               className="text-purple-400 font-bold flex items-center gap-1 hover:text-purple-200 transition-colors cursor-pointer"
               title="Open Focus Manager Modal"
             >
               <span>🎯 Focus:</span>
-              <CardHelpButton ruleKey="focus.basics" />
             </button>
-            <span className="font-mono font-extrabold text-purple-100 mr-0.5">{focusCurrent}</span>
+            <span className="font-mono font-extrabold text-purple-100">{focusCurrent}</span>
 
             {/* Inline Direct Manipulation Step-Down Button */}
             <button
               onClick={handleFocusStepDown}
-              className="p-0.5 bg-purple-950/80 hover:bg-purple-900 text-purple-300 rounded border border-purple-800/80 transition-all hover:scale-105 cursor-pointer"
+              className="p-0.5 bg-purple-950/80 hover:bg-purple-900 text-purple-300 rounded border border-purple-800/80 transition-all hover:scale-105 cursor-pointer ml-0.5"
               title="Spend / Step Down 1 Focus rating"
             >
               <ArrowDown className="w-3 h-3" />
             </button>
 
-            {/* Secondary Zone: Chevron Manager Trigger */}
-            <button
-              onClick={() => onOpenFocusManager?.()}
-              className="p-0.5 text-purple-400 hover:text-purple-200 transition-colors ml-0.5 cursor-pointer"
-              title="Open Focus Manager Modal"
-            >
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
+            <div className="h-3.5 w-[1px] bg-purple-500/30 mx-0.5 shrink-0" />
+
+            <div className="flex items-center gap-0.5">
+              <CardHelpButton ruleKey="focus.basics" />
+              <button
+                onClick={() => onOpenFocusManager?.()}
+                className="p-1 text-purple-400 hover:text-purple-200 hover:bg-purple-500/20 rounded-md transition-colors cursor-pointer"
+                title="Open Focus Manager Modal"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 
