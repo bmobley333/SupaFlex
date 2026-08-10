@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Globe, Flame, Star, RotateCcw } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -348,20 +348,78 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return new Set(slots.map((s) => cleanName(s.name).toLowerCase()));
   }, [slots]);
 
+  // Check if an item is starred in character sheet wishlist
+  const isItemStarred = useCallback(
+    (targetItem: Power | MagicItem | AbilitySlot) => {
+      const starredList = activeCharacter?.sheet_data?.starred_magic_items || [];
+      if (!starredList.length) return false;
+
+      const rawName = targetItem.name || '';
+      const cleaned = cleanName(rawName);
+      const { baseName } = parseAbilityVersion(cleaned);
+      const targetId = (targetItem as any).id;
+
+      // Find stock catalog match if target is a learned slot
+      const catalogMatch = fullCatalog.find(
+        (c) =>
+          cleanName(c.name).toLowerCase() === cleaned.toLowerCase() ||
+          (c.base_name && c.base_name.toLowerCase() === baseName.toLowerCase())
+      );
+
+      return starredList.some((k) => {
+        const kStr = String(k);
+        if (targetId && kStr === String(targetId)) return true;
+        if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return true;
+        if (kStr === String(rawName)) return true;
+        if (kStr === String(cleaned)) return true;
+        if (kStr === String(baseName)) return true;
+        return false;
+      });
+    },
+    [activeCharacter?.sheet_data?.starred_magic_items, fullCatalog]
+  );
+
   // Toggle Starred Wishlist Item
-  const handleToggleStarItem = (targetItem: Power | MagicItem) => {
-    const itemKey = targetItem.id || targetItem.name;
+  const handleToggleStarItem = (targetItem: Power | MagicItem | AbilitySlot) => {
+    const rawName = targetItem.name || '';
+    const cleaned = cleanName(rawName);
+    const { baseName } = parseAbilityVersion(cleaned);
+
+    const catalogMatch = fullCatalog.find(
+      (c) =>
+        cleanName(c.name).toLowerCase() === cleaned.toLowerCase() ||
+        (c.base_name && c.base_name.toLowerCase() === baseName.toLowerCase())
+    );
+
+    const itemKey = (targetItem as any).id || (catalogMatch ? catalogMatch.id : null) || baseName || rawName;
+
     updateActiveSheetData((prev) => {
       const currentStarred = prev.starred_magic_items || [];
-      const exists = currentStarred.some((k) => String(k) === String(itemKey));
-      const updated = exists
-        ? currentStarred.filter((k) => String(k) !== String(itemKey))
-        : [...currentStarred, itemKey];
+      const currentlyStarred = isItemStarred(targetItem);
+      let updated: (string | number)[];
+
+      if (currentlyStarred) {
+        updated = currentStarred.filter((k) => {
+          const kStr = String(k);
+          if ((targetItem as any).id && kStr === String((targetItem as any).id)) return false;
+          if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return false;
+          if (kStr === String(rawName)) return false;
+          if (kStr === String(cleaned)) return false;
+          if (kStr === String(baseName)) return false;
+          return true;
+        });
+      } else {
+        updated = currentStarred.some((k) => String(k) === String(itemKey))
+          ? currentStarred
+          : [...currentStarred, itemKey];
+      }
+
       return {
         ...prev,
         starred_magic_items: updated,
       };
     });
+    saveActiveCharacter();
   };
 
   // Learn an ability from catalog into active sheet slots
@@ -656,10 +714,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return acc;
   }, [categoryFilteredCatalog, type, customPowerTables, selectedCategory, favoriteTables]);
 
+  const starredCatalogItems = useMemo(() => {
+    if (type !== 'spells') return [];
+    return fullCatalog.filter((item) => isItemStarred(item));
+  }, [type, fullCatalog, isItemStarred]);
+
   const availableTableNames = useMemo(() => Object.keys(groupedTables), [groupedTables]);
 
   const effectiveActiveTable = useMemo(() => {
     if (activeTableName === 'ALL') return 'ALL';
+    if (activeTableName === 'STARRED') return 'STARRED';
     if (activeTableName && availableTableNames.includes(activeTableName)) {
       return activeTableName;
     }
@@ -670,8 +734,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     if (effectiveActiveTable === 'ALL') {
       return categoryFilteredCatalog;
     }
+    if (effectiveActiveTable === 'STARRED') {
+      return starredCatalogItems;
+    }
     return effectiveActiveTable ? groupedTables[effectiveActiveTable] || [] : [];
-  }, [effectiveActiveTable, groupedTables, categoryFilteredCatalog]);
+  }, [effectiveActiveTable, groupedTables, categoryFilteredCatalog, starredCatalogItems]);
 
   const filteredCatalogAbilities = useMemo(() => {
     return activeTableAbilities.filter((item) => {
@@ -904,6 +971,20 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     )}
                                   </div>
 
+                                  {type === 'spells' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStarItem(item)}
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                        isItemStarred(item)
+                                          ? 'text-amber-400'
+                                          : 'text-slate-600 hover:text-amber-400'
+                                      }`}
+                                      title={isItemStarred(item) ? 'Starred in Wishlist' : 'Star to add to Loot Draft Wishlist'}
+                                    >
+                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => handleLaunchVersionEditor(item)}
                                     className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors"
@@ -1038,6 +1119,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
                           >
                             <option value="ALL">🌐 All Tables ({categoryFilteredCatalog.length})</option>
+                            {type === 'spells' && (
+                              <option value="STARRED">⭐ Starred Favorites ({starredCatalogItems.length})</option>
+                            )}
                             {availableTableNames.map((tblName) => (
                               <option key={tblName} value={tblName}>
                                 📁 {tblName} ({groupedTables[tblName]?.length || 0})
@@ -1183,13 +1267,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           type="button"
                                           onClick={() => handleToggleStarItem(item)}
                                           className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                            (activeCharacter?.sheet_data?.starred_magic_items || []).some((k) => String(k) === String(item.id || item.name))
+                                            isItemStarred(item)
                                               ? 'text-amber-400'
                                               : 'text-slate-600 hover:text-amber-400'
                                           }`}
-                                          title={(activeCharacter?.sheet_data?.starred_magic_items || []).some((k) => String(k) === String(item.id || item.name)) ? 'Starred in Wishlist' : 'Star to add to Loot Draft Wishlist'}
+                                          title={isItemStarred(item) ? 'Starred in Wishlist' : 'Star to add to Loot Draft Wishlist'}
                                         >
-                                          <Star className={`w-3.5 h-3.5 ${(activeCharacter?.sheet_data?.starred_magic_items || []).some((k) => String(k) === String(item.id || item.name)) ? 'fill-amber-400' : ''}`} />
+                                          <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
                                         </button>
                                       )}
                                       <button
