@@ -191,7 +191,8 @@ export function scaleSupabaseMonster(sm: SupabaseMonster, dif: number): Supabase
   const scaledDef = scaleAbilityStat(defVal, dif, false);
   const scaledArmor = scaleFlatStat(armorVal, dif, true);
 
-  const scaledAttrs = attrNums.slice(0, 5).map((a) => scaleAbilityStat(a, dif, true)).join('/');
+  const scaledList = attrNums.slice(0, 5).map((a) => scaleAbilityStat(a, dif, true));
+  const scaledAttrs = `✨${scaledList[0]}/💪${scaledList[1]}/👁️${scaledList[2]}/🏃${scaledList[3]}/🫀${scaledList[4]}`;
 
   return {
     ...sm,
@@ -215,7 +216,36 @@ export function parseMonsterLineToData(raw: string, id: string = 'mon_tmp'): Mon
   const atkNums = parsed.attackStat.match(/\d+/g) || [];
   const defNums = parsed.defenseStat.match(/\d+/g) || [];
   const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
-  const attrMatch = raw.match(/\[✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*👁️\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(?:🫀|💖)\s*(\d+)\]/u);
+
+  // Match system attributes with or without individual inline icons
+  let attrMatch = raw.match(/\[✨?\s*(\d+)\s*\/\s*💪?\s*(\d+)\s*\/\s*👁️?\s*(\d+)\s*\/\s*🏃?\s*(\d+)\s*\/\s*(?:🫀|💖)?\s*(\d+)\]/u);
+
+  // Fallback: extract any 5 integers inside square brackets [ ... ]
+  let attrValues = { magic: 10, might: 10, mind: 10, motion: 10, moxie: 10 };
+  if (attrMatch) {
+    attrValues = {
+      magic: parseInt(attrMatch[1], 10),
+      might: parseInt(attrMatch[2], 10),
+      mind: parseInt(attrMatch[3], 10),
+      motion: parseInt(attrMatch[4], 10),
+      moxie: parseInt(attrMatch[5], 10),
+    };
+  } else {
+    const bracketMatch = raw.match(/\[(.*?)\]/);
+    if (bracketMatch) {
+      const nums = bracketMatch[1].match(/\d+/g);
+      if (nums && nums.length >= 5) {
+        attrValues = {
+          magic: parseInt(nums[0], 10),
+          might: parseInt(nums[1], 10),
+          mind: parseInt(nums[2], 10),
+          motion: parseInt(nums[3], 10),
+          moxie: parseInt(nums[4], 10),
+        };
+      }
+    }
+  }
+
   const notesMatch = raw.match(/(?:\]|❤️\s*\d+)\s*\((.*)\)$/);
 
   return {
@@ -230,19 +260,7 @@ export function parseMonsterLineToData(raw: string, id: string = 'mon_tmp'): Mon
     armor: defNums[1] ? parseInt(defNums[1], 10) : 0,
     max_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
     current_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
-    attributes: attrMatch ? {
-      magic: parseInt(attrMatch[1], 10),
-      might: parseInt(attrMatch[2], 10),
-      mind: parseInt(attrMatch[3], 10),
-      motion: parseInt(attrMatch[4], 10),
-      moxie: parseInt(attrMatch[5], 10),
-    } : {
-      magic: 10,
-      might: 10,
-      mind: 10,
-      motion: 10,
-      moxie: 10,
-    },
+    attributes: attrValues,
     gm_notes: notesMatch ? notesMatch[1] : undefined,
   };
 }

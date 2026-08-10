@@ -14,6 +14,8 @@ import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import {
   scaleParsedMonster,
   scaleSupabaseMonster,
+  extractFirstInt,
+  extractAllInts,
 } from '../../utils/monsterStatScaler';
 
 interface MonsterManagerModalProps {
@@ -135,7 +137,35 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const atkNums = parsed.attackStat.match(/\d+/g) || [];
     const defNums = parsed.defenseStat.match(/\d+/g) || [];
     const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
-    const attrMatch = raw.match(/\[✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*👁️\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(?:🫀|💖)\s*(\d+)\]/u);
+    
+    // Match system attributes with or without individual inline icons
+    let attrMatch = raw.match(/\[✨?\s*(\d+)\s*\/\s*💪?\s*(\d+)\s*\/\s*👁️?\s*(\d+)\s*\/\s*🏃?\s*(\d+)\s*\/\s*(?:🫀|💖)?\s*(\d+)\]/u);
+    let attrValues = { magic: 10, might: 10, mind: 10, motion: 10, moxie: 10 };
+    
+    if (attrMatch) {
+      attrValues = {
+        magic: parseInt(attrMatch[1], 10),
+        might: parseInt(attrMatch[2], 10),
+        mind: parseInt(attrMatch[3], 10),
+        motion: parseInt(attrMatch[4], 10),
+        moxie: parseInt(attrMatch[5], 10),
+      };
+    } else {
+      const bracketMatch = raw.match(/\[(.*?)\]/);
+      if (bracketMatch) {
+        const nums = bracketMatch[1].match(/\d+/g);
+        if (nums && nums.length >= 5) {
+          attrValues = {
+            magic: parseInt(nums[0], 10),
+            might: parseInt(nums[1], 10),
+            mind: parseInt(nums[2], 10),
+            motion: parseInt(nums[3], 10),
+            moxie: parseInt(nums[4], 10),
+          };
+        }
+      }
+    }
+
     const notesMatch = raw.match(/(?:\]|❤️\s*\d+)\s*\((.*)\)$/);
 
     return {
@@ -150,28 +180,14 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
       armor: defNums[1] ? parseInt(defNums[1], 10) : 0,
       max_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
       current_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
-      attributes: attrMatch ? {
-        magic: parseInt(attrMatch[1], 10),
-        might: parseInt(attrMatch[2], 10),
-        mind: parseInt(attrMatch[3], 10),
-        motion: parseInt(attrMatch[4], 10),
-        moxie: parseInt(attrMatch[5], 10),
-      } : {
-        magic: 10,
-        might: 10,
-        mind: 10,
-        motion: 10,
-        moxie: 10,
-      },
+      attributes: attrValues,
       gm_notes: notesMatch ? notesMatch[1] : undefined,
     };
   };
 
-  // Handlers
+  // Handlers (Instant Clear All - No Verification Modal)
   const handleClearAll = () => {
-    if (window.confirm('Clear all monsters from the active encounter roster?')) {
-      onSaveMonsters([]);
-    }
+    onSaveMonsters([]);
   };
 
   const handleDeleteMonster = (id: string) => {
@@ -232,15 +248,19 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const targetSm = masterDif !== 10 && applyDifOnParse ? scaleSupabaseMonster(sm, masterDif) : sm;
 
     const nameStr = targetSm.name || 'Codex Monster';
-    const nish = targetSm.nish || 10;
-    const mr = targetSm.mr || 10;
-    const atk = targetSm.atk_dmg_ftg || '10/5(1)';
-    const def = targetSm.dod_ar || '10/1';
-    const vit = targetSm.vit || 10;
-    const attrs = targetSm.attributes || '10/10/10/10/10';
+    const nish = extractFirstInt(targetSm.nish, 10);
+    const mr = extractFirstInt(targetSm.mr, 10);
+    const vit = extractFirstInt(targetSm.vit, 10);
+    const atk = String(targetSm.atk_dmg_ftg || '10/5(1)').replace(/[⚔️⚔]/g, '').trim();
+    const def = String(targetSm.dod_ar || '10/1').replace(/[🧥🛡️]/g, '').trim();
+    
+    let attrNums = extractAllInts(targetSm.attributes);
+    while (attrNums.length < 5) attrNums.push(10);
+    const attrStr = `[✨${attrNums[0]}/💪${attrNums[1]}/👁️${attrNums[2]}/🏃${attrNums[3]}/🫀${attrNums[4]}]`;
+
     const notes = targetSm.abilities ? ` (${targetSm.abilities})` : '';
 
-    const fullStatStr = `${nameStr} 🚩${nish} 👣${mr} ⚔️${atk} 🧥${def} ❤️${vit} [✨${attrs}]${notes}`;
+    const fullStatStr = `${nameStr} 🚩${nish} 👣${mr} ⚔️${atk} 🧥${def} ❤️${vit} ${attrStr}${notes}`;
     const parsed = parseMonsterLine(fullStatStr);
     onSaveMonsters([...monsters, parsed]);
 
@@ -414,9 +434,9 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
           </div>
 
           {/* Right Pane (md:col-span-5): Construction Tools, Codex Picker & Difficulty System */}
-          <div className="md:col-span-5 flex flex-col gap-4 overflow-y-auto pr-1">
-            {/* Tab Navigation Controls (3 Tabs) */}
-            <div className="flex items-center gap-1.5 border-b border-slate-800/80 pb-2.5 shrink-0">
+          <div className="md:col-span-5 flex flex-col gap-4 overflow-y-auto pr-1 relative">
+            {/* Sticky Tab Navigation Controls (Fixed Top Header across ALL Tabs) */}
+            <div className="sticky top-0 bg-slate-900/95 backdrop-blur-md z-20 pb-2.5 border-b border-slate-800/80 shrink-0 flex items-center gap-1.5 pt-0.5">
               <button
                 type="button"
                 onClick={() => setActiveRightTab('paste_quick')}
@@ -462,7 +482,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     Paste Multi-Row Statblocks
                   </span>
                   <p className="text-[11px] text-slate-400 leading-tight">
-                    Paste raw statblocks directly. Multiple rows will be automatically parsed and added to the roster.
+                    Paste raw monster stats directly from your adventure (e.g. Word/Doc). Multiple rows will be automatically parsed and added to the roster. Assumes SupaFlex formatting
                   </p>
                   <textarea
                     rows={3}
@@ -627,47 +647,59 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     </div>
                   </div>
 
-                  {/* System Attributes */}
-                  <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      System Attributes [✨Magic/💪Might/👁️Mind/🏃Motion/🫀Moxie]
-                    </label>
-                    <div className="grid grid-cols-5 gap-1 text-xs">
-                      <input
-                        type="number"
-                        title="Magic"
-                        value={quickAdd.magic}
-                        onChange={(e) => handleQuickAddChange('magic', parseInt(e.target.value, 10) || 0)}
-                        className="bg-slate-900 border border-slate-800 rounded px-1 py-0.5 text-center text-slate-100 font-mono text-[11px]"
-                      />
-                      <input
-                        type="number"
-                        title="Might"
-                        value={quickAdd.might}
-                        onChange={(e) => handleQuickAddChange('might', parseInt(e.target.value, 10) || 0)}
-                        className="bg-slate-900 border border-slate-800 rounded px-1 py-0.5 text-center text-slate-100 font-mono text-[11px]"
-                      />
-                      <input
-                        type="number"
-                        title="Mind"
-                        value={quickAdd.mind}
-                        onChange={(e) => handleQuickAddChange('mind', parseInt(e.target.value, 10) || 0)}
-                        className="bg-slate-900 border border-slate-800 rounded px-1 py-0.5 text-center text-slate-100 font-mono text-[11px]"
-                      />
-                      <input
-                        type="number"
-                        title="Motion"
-                        value={quickAdd.motion}
-                        onChange={(e) => handleQuickAddChange('motion', parseInt(e.target.value, 10) || 0)}
-                        className="bg-slate-900 border border-slate-800 rounded px-1 py-0.5 text-center text-slate-100 font-mono text-[11px]"
-                      />
-                      <input
-                        type="number"
-                        title="Moxie"
-                        value={quickAdd.moxie}
-                        onChange={(e) => handleQuickAddChange('moxie', parseInt(e.target.value, 10) || 0)}
-                        className="bg-slate-900 border border-slate-800 rounded px-1 py-0.5 text-center text-slate-100 font-mono text-[11px]"
-                      />
+                  {/* System Attributes (High-Density Inline Icon Input Fields) */}
+                  <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-1">
+                    <div className="grid grid-cols-5 gap-1.5 text-xs">
+                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
+                        <span className="text-xs mr-1 select-none text-amber-400">✨</span>
+                        <input
+                          type="number"
+                          title="Magic"
+                          value={quickAdd.magic}
+                          onChange={(e) => handleQuickAddChange('magic', parseInt(e.target.value, 10) || 0)}
+                          className="w-full bg-transparent text-center text-slate-100 font-mono text-[11px] outline-none"
+                        />
+                      </div>
+                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
+                        <span className="text-xs mr-1 select-none text-amber-400">💪</span>
+                        <input
+                          type="number"
+                          title="Might"
+                          value={quickAdd.might}
+                          onChange={(e) => handleQuickAddChange('might', parseInt(e.target.value, 10) || 0)}
+                          className="w-full bg-transparent text-center text-slate-100 font-mono text-[11px] outline-none"
+                        />
+                      </div>
+                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
+                        <span className="text-xs mr-1 select-none text-amber-400">👁️</span>
+                        <input
+                          type="number"
+                          title="Mind"
+                          value={quickAdd.mind}
+                          onChange={(e) => handleQuickAddChange('mind', parseInt(e.target.value, 10) || 0)}
+                          className="w-full bg-transparent text-center text-slate-100 font-mono text-[11px] outline-none"
+                        />
+                      </div>
+                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
+                        <span className="text-xs mr-1 select-none text-amber-400">🏃</span>
+                        <input
+                          type="number"
+                          title="Motion"
+                          value={quickAdd.motion}
+                          onChange={(e) => handleQuickAddChange('motion', parseInt(e.target.value, 10) || 0)}
+                          className="w-full bg-transparent text-center text-slate-100 font-mono text-[11px] outline-none"
+                        />
+                      </div>
+                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
+                        <span className="text-xs mr-1 select-none text-rose-400">🫀</span>
+                        <input
+                          type="number"
+                          title="Moxie"
+                          value={quickAdd.moxie}
+                          onChange={(e) => handleQuickAddChange('moxie', parseInt(e.target.value, 10) || 0)}
+                          className="w-full bg-transparent text-center text-slate-100 font-mono text-[11px] outline-none"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -733,10 +765,11 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                           >
                             <div className="truncate pr-2">
                               <span className="font-bold text-amber-300 font-outfit">{scaledSm.name}</span>
-                              <span className="text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
-                                <span>🚩 {scaledSm.nish || 10}</span>
-                                <span>⚔️ {scaledSm.atk_dmg_ftg || '10/5(1)'}</span>
-                                <span>❤️ {scaledSm.vit || 10}</span>
+                              <span className="text-[11px] text-slate-400 font-mono flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-0.5">
+                                <span>🚩 {extractFirstInt(scaledSm.nish, 10)}</span>
+                                <span>⚔️ {(scaledSm.atk_dmg_ftg || '10/5(1)').replace(/[⚔️⚔]/g, '').trim()}</span>
+                                <span>🧥 {(scaledSm.dod_ar || '10/0').replace(/[🧥🛡️]/g, '').trim()}</span>
+                                <span>❤️ {extractFirstInt(scaledSm.vit, 10)}</span>
                               </span>
                             </div>
                             <button
