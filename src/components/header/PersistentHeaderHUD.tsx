@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowDown, ArrowUp, Zap, ChevronDown, ChevronUp, Sparkles, X, Plus, Minus } from 'lucide-react';
+import { ArrowDown, Zap, ChevronDown, ChevronUp, Sparkles, X, Plus, Minus } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, DieRating } from '../../types/game';
-import { stepDownDie, stepUpDie } from '../../lib/dice';
+import { stepDownDie } from '../../lib/dice';
 import { CardHelpButton } from '../common/CardHelpButton';
 
 interface AttributeConfig {
@@ -29,9 +29,13 @@ const dieToNum = (die?: string): string => {
 
 interface PersistentHeaderHUDProps {
   onOpenAttributeManager?: () => void;
+  onOpenFocusManager?: () => void;
 }
 
-export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({ onOpenAttributeManager }) => {
+export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
+  onOpenAttributeManager,
+  onOpenFocusManager,
+}) => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, spendMeta, resetSparks } = useCharacterStore();
   const [activeDrawer, setActiveDrawer] = useState<'none' | 'attributes' | 'focus' | 'spark' | 'luck'>('none');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,9 +66,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({ onOpen
   };
 
   const focusCurrentDie = sheet?.focus_die_current || 'd4';
-  const focusMaxDie = sheet?.focus_die_max || 'd4';
   const focusCurrent = dieToNum(focusCurrentDie);
-  const focusMax = dieToNum(focusMaxDie);
   const sparks = sheet?.sparks ?? 0;
   const isCharged = sheet?.is_charged ?? false;
   const luck = sheet?.luck ?? 3;
@@ -74,22 +76,6 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({ onOpen
     updateActiveSheetData((prev) => ({
       ...prev,
       focus_die_current: stepDownDie(prev.focus_die_current || 'd4'),
-    }));
-    saveActiveCharacter();
-  };
-
-  const handleFocusFlood = () => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      focus_die_current: stepUpDie(prev.focus_die_current || 'd4', prev.focus_die_max || 'd4'),
-    }));
-    saveActiveCharacter();
-  };
-
-  const handleFocusMaxChange = (newMax: DieRating) => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      focus_die_max: newMax,
     }));
     saveActiveCharacter();
   };
@@ -234,100 +220,39 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({ onOpen
 
       {/* Center Zone: Centered Split-Pill Control Deck (Focus, Spark, Luck) */}
       <div className="flex-1 flex justify-center items-center gap-3 flex-wrap">
-        {/* 🎯 Focus Split Pill Container & Floating Popover */}
+        {/* 🎯 Focus Split Pill Container */}
         <div className="relative">
           <div
-            className={`flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all ${
-              activeDrawer === 'focus'
-                ? 'bg-purple-900/60 border-purple-400 text-purple-100 shadow-sm shadow-purple-500/30'
-                : 'bg-purple-950/40 border-purple-500/30 text-purple-200'
-            }`}
+            className="flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all bg-purple-950/40 border-purple-500/30 text-purple-200 hover:border-purple-400"
           >
-            <span className="text-purple-400 font-bold flex items-center gap-1">
+            <button
+              onClick={() => onOpenFocusManager?.()}
+              className="text-purple-400 font-bold flex items-center gap-1 hover:text-purple-200 transition-colors cursor-pointer"
+              title="Open Focus Manager Modal"
+            >
               <span>🎯 Focus:</span>
               <CardHelpButton ruleKey="focus.basics" />
-            </span>
+            </button>
             <span className="font-mono font-extrabold text-purple-100 mr-0.5">{focusCurrent}</span>
 
             {/* Inline Direct Manipulation Step-Down Button */}
             <button
               onClick={handleFocusStepDown}
-              className="p-0.5 bg-purple-950/80 hover:bg-purple-900 text-purple-300 rounded border border-purple-800/80 transition-all hover:scale-105"
+              className="p-0.5 bg-purple-950/80 hover:bg-purple-900 text-purple-300 rounded border border-purple-800/80 transition-all hover:scale-105 cursor-pointer"
               title="Spend / Step Down 1 Focus rating"
             >
               <ArrowDown className="w-3 h-3" />
             </button>
 
-            {/* Secondary Zone: Chevron Popover Trigger */}
+            {/* Secondary Zone: Chevron Manager Trigger */}
             <button
-              onClick={() => toggleDrawer('focus')}
-              className="p-0.5 text-purple-400 hover:text-purple-200 transition-colors ml-0.5"
-              title="Click to configure Focus Ladder & Max Rating"
+              onClick={() => onOpenFocusManager?.()}
+              className="p-0.5 text-purple-400 hover:text-purple-200 transition-colors ml-0.5 cursor-pointer"
+              title="Open Focus Manager Modal"
             >
-              {activeDrawer === 'focus' ? (
-                <ChevronUp className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronDown className="w-3.5 h-3.5" />
-              )}
+              <ChevronDown className="w-3.5 h-3.5" />
             </button>
           </div>
-
-          {/* 🎯 Focus Absolute Floating Glass Popover Card */}
-          {activeDrawer === 'focus' && (
-            <div className="absolute top-full left-0 mt-2 z-50 w-72 p-3 bg-slate-900/95 border border-purple-500/40 rounded-xl shadow-2xl shadow-purple-950/60 backdrop-blur-xl text-xs flex flex-col gap-2.5 animate-fadeIn">
-              <div className="flex items-center justify-between border-b border-purple-500/20 pb-1.5">
-                <span className="font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-1 text-[11px]">
-                  🎯 Focus Ladder
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-purple-100 font-extrabold">
-                    {focusCurrent} <span className="text-[10px] text-slate-400 font-normal">(Max: {focusMax})</span>
-                  </span>
-                  <button
-                    onClick={() => setActiveDrawer('none')}
-                    className="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors"
-                    title="Close popover"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={handleFocusStepDown}
-                    title="Spend / Step Down Focus"
-                    className="p-1 bg-purple-950/60 hover:bg-purple-900 text-purple-300 rounded border border-purple-800"
-                  >
-                    <ArrowDown className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={handleFocusFlood}
-                    title="Flood / +1 Step Focus"
-                    className="p-1 bg-purple-950/60 hover:bg-purple-900 text-purple-300 rounded border border-purple-800"
-                  >
-                    <ArrowUp className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-slate-400 font-mono">Max:</span>
-                  <select
-                    value={focusMaxDie}
-                    onChange={(e) => handleFocusMaxChange(e.target.value as DieRating)}
-                    className="bg-slate-950 text-purple-300 font-mono font-bold text-xs px-2 py-0.5 rounded border border-purple-800 outline-none"
-                  >
-                    {DIE_OPTIONS.map((die) => (
-                      <option key={die} value={die} className="bg-slate-900 text-slate-100">
-                        {dieToNum(die)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 🍀 Luck Split Pill Container & Floating Popover */}

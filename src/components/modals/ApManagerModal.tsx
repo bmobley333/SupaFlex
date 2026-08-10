@@ -13,7 +13,6 @@ import {
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import {
-  DieRating,
   ApLogEntry,
   calculateLifetimeAp,
   calculateLiveSheetSpentAp,
@@ -28,14 +27,7 @@ interface ApManagerModalProps {
   onOpenVitalityManager?: () => void;
 }
 
-type RightSubTab = 'FOCUS' | 'VITALITY' | 'CAPSTONES' | 'GM_BONUS';
-
-const FOCUS_STEP_UP_COSTS: Record<string, { next: DieRating; cost: number; levelGate: number }> = {
-  d4: { next: 'd6', cost: 2, levelGate: 1 },
-  d6: { next: 'd8', cost: 4, levelGate: 15 },
-  d8: { next: 'd10', cost: 6, levelGate: 35 },
-  d10: { next: 'd12', cost: 8, levelGate: 60 },
-};
+type RightSubTab = 'VITALITY' | 'CAPSTONES' | 'GM_BONUS';
 
 const normalizeDie = (die?: string): string => {
   if (!die) return 'd4';
@@ -50,10 +42,10 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
   onOpenAttributeManager: _onOpenAttributeManager,
   onOpenVitalityManager,
 }) => {
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, revertApExpenditure } =
+  const { activeCharacter, saveActiveCharacter, recordApExpenditure, revertApExpenditure } =
     useCharacterStore();
 
-  const [activeTab, setActiveTab] = useState<RightSubTab>('FOCUS');
+  const [activeTab, setActiveTab] = useState<RightSubTab>('VITALITY');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // GM Bonus Form State
@@ -255,39 +247,6 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
 
   if (!isOpen || !activeCharacter) return null;
 
-  // Handle Focus Die Step-Up
-  const handleFocusStepUp = () => {
-    const upgrade = FOCUS_STEP_UP_COSTS[focusDie];
-    if (!upgrade) {
-      showToast('Focus die is already at max (d12)!');
-      return;
-    }
-    if (level < upgrade.levelGate) {
-      showToast(`Level Gate locked! Level ${upgrade.levelGate}+ required (Current: Level ${level}).`);
-      return;
-    }
-    if (availableAp < upgrade.cost) {
-      showToast(`Insufficient AP! Required: ${upgrade.cost} AP, Available: ${availableAp} AP.`);
-      return;
-    }
-
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      focus_die_max: upgrade.next,
-      focus_die_current: upgrade.next,
-    }));
-
-    recordApExpenditure(
-      upgrade.cost,
-      'Focus Die',
-      `Upgraded Focus Die ${focusDie} ➔ ${upgrade.next}`,
-      2,
-      'Manage AP'
-    );
-    saveActiveCharacter();
-    showToast(`Focus die upgraded to ${upgrade.next}!`);
-  };
-
   // Handle Tier 3 Capstones
   const handleBuyCapstone = (title: string, cost: number) => {
     if (availableAp < cost) {
@@ -470,18 +429,6 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
             {/* Right Pane Navigation Sub-Tabs */}
             <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-4 shrink-0 overflow-x-auto">
               <button
-                onClick={() => setActiveTab('FOCUS')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                  activeTab === 'FOCUS'
-                    ? 'bg-purple-600 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Focus Die
-              </button>
-
-              <button
                 onClick={() => setActiveTab('VITALITY')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                   activeTab === 'VITALITY'
@@ -520,58 +467,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
 
             {/* Sub-Tab Content Viewport */}
             <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
-              {/* TAB 1: FOCUS DIE STEP-UP */}
-              {activeTab === 'FOCUS' && (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-outfit font-bold text-slate-100 text-sm flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-amber-400" />
-                          Focus Die Step-Up
-                        </h4>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          Current Focus Die Ceiling: <strong className="text-amber-300">{focusDie}</strong>
-                        </p>
-                      </div>
-
-                      {FOCUS_STEP_UP_COSTS[focusDie] ? (
-                        <button
-                          onClick={handleFocusStepUp}
-                          className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 font-outfit font-bold text-white transition-all shadow-md text-xs cursor-pointer"
-                        >
-                          Upgrade ({FOCUS_STEP_UP_COSTS[focusDie].cost} AP)
-                        </button>
-                      ) : (
-                        <span className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-500 font-bold text-xs">
-                          Max Ceiling (d12)
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-2 text-center text-[11px]">
-                      <div className={`p-2 rounded-lg border ${focusDie === 'd4' ? 'bg-amber-950/40 border-amber-500' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
-                        <strong>d4 ➔ d6</strong>
-                        <div className="text-[10px]">Level 1+ | 2 AP</div>
-                      </div>
-                      <div className={`p-2 rounded-lg border ${focusDie === 'd6' ? 'bg-amber-950/40 border-amber-500' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
-                        <strong>d6 ➔ d8</strong>
-                        <div className="text-[10px]">Level 15+ | 4 AP</div>
-                      </div>
-                      <div className={`p-2 rounded-lg border ${focusDie === 'd8' ? 'bg-amber-950/40 border-amber-500' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
-                        <strong>d8 ➔ d10</strong>
-                        <div className="text-[10px]">Level 35+ | 6 AP</div>
-                      </div>
-                      <div className={`p-2 rounded-lg border ${focusDie === 'd10' ? 'bg-amber-950/40 border-amber-500' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
-                        <strong>d10 ➔ d12</strong>
-                        <div className="text-[10px]">Level 60+ | 8 AP</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: VITALITY BOOST */}
+              {/* TAB 1: VITALITY BOOST */}
               {activeTab === 'VITALITY' && (
                 <div className="space-y-4">
                   <div className="p-5 rounded-2xl bg-slate-950/90 border border-rose-500/30 flex items-center justify-between shadow-xl">

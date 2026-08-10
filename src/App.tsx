@@ -19,6 +19,7 @@ import { NishTcModal } from './components/modals/NishTcModal';
 import { ApManagerModal } from './components/modals/ApManagerModal';
 import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
 import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
+import { FocusManagerModal } from './components/modals/FocusManagerModal';
 import { UnifiedLaunchHubModal } from './components/modals/UnifiedLaunchHubModal';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { CardHelpButton } from './components/common/CardHelpButton';
@@ -37,6 +38,7 @@ export default function App() {
   const [showApManagerModal, setShowApManagerModal] = useState(false);
   const [showAttributeManagerModal, setShowAttributeManagerModal] = useState(false);
   const [showVitalityManagerModal, setShowVitalityManagerModal] = useState(false);
+  const [showFocusManagerModal, setShowFocusManagerModal] = useState(false);
 
   // Unified Launch Hub & Read-Only / Party Session State
   const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(false);
@@ -532,7 +534,10 @@ export default function App() {
         ) : (
           activeTab === 'sheet' && (
             <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
-              <PersistentHeaderHUD onOpenAttributeManager={() => setShowAttributeManagerModal(true)} />
+              <PersistentHeaderHUD
+                onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
+                onOpenFocusManager={() => setShowFocusManagerModal(true)}
+              />
             </div>
           )
         )}
@@ -665,6 +670,14 @@ export default function App() {
         <VitalityManagerModal
           isOpen={showVitalityManagerModal}
           onClose={() => setShowVitalityManagerModal(false)}
+        />
+      </ErrorBoundary>
+
+      {/* 🎯 Focus Manager Modal */}
+      <ErrorBoundary fallbackTitle="Focus Manager Error" onClose={() => setShowFocusManagerModal(false)}>
+        <FocusManagerModal
+          isOpen={showFocusManagerModal}
+          onClose={() => setShowFocusManagerModal(false)}
         />
       </ErrorBoundary>
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { X, Dices, Trash2 } from 'lucide-react';
+import nishTcDataRaw from '../../data/nish_tc.json';
 
 interface NishTcModalProps {
   isOpen: boolean;
@@ -16,6 +17,16 @@ export interface NishTcRollResult {
   effect: string;
   timestamp: string;
 }
+
+interface NishTcDataItem {
+  id?: number;
+  type: 'tremendous' | 'critical';
+  roll_value: number;
+  name: string;
+  effect: string;
+}
+
+const LOCAL_NISH_TC: NishTcDataItem[] = nishTcDataRaw as NishTcDataItem[];
 
 export const NishTcModal: React.FC<NishTcModalProps> = ({
   isOpen,
@@ -39,48 +50,54 @@ export const NishTcModal: React.FC<NishTcModalProps> = ({
     setIsRolling(true);
     const rollVal = rollDice(50);
 
+    let name = '';
+    let effect = '';
+
     try {
       const { data, error } = await supabase
         .from('nish_tc')
         .select('*')
         .eq('type', targetType)
         .eq('roll_value', rollVal)
-        .single();
+        .maybeSingle();
 
-      if (error || !data) {
-        throw new Error(error?.message || 'No matching row');
+      if (!error && data && data.name && data.effect) {
+        name = data.name;
+        effect = data.effect;
       }
-
-      const newResult: NishTcRollResult = {
-        id: `nish-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        type: targetType,
-        rollVal: data.roll_value,
-        name: data.name,
-        effect: data.effect,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      };
-
-      setHistory((prev) => [newResult, ...prev]);
-      showToast(`Rolled d50 #${rollVal}: ${data.name}`);
     } catch (err: any) {
-      console.warn('Supabase nish_tc query fallback:', err);
-      const fallbackName = targetType === 'tremendous' ? `Tremendous Result #${rollVal}` : `Critical Result #${rollVal}`;
-      const fallbackEffect = targetType === 'tremendous' ? 'Gain advantage or minor tactical bonus.' : 'Suffer minor penalty or complication.';
-      
-      const newResult: NishTcRollResult = {
-        id: `nish-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        type: targetType,
-        rollVal,
-        name: fallbackName,
-        effect: fallbackEffect,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      };
-
-      setHistory((prev) => [newResult, ...prev]);
-      showToast(`Rolled d50 #${rollVal}`);
-    } finally {
-      setIsRolling(false);
+      console.warn('Supabase nish_tc query notice:', err);
     }
+
+    // If Supabase query failed or returned empty data, lookup in bundled local dataset
+    if (!name || !effect) {
+      const localMatch = LOCAL_NISH_TC.find(
+        (item) => item.type === targetType && item.roll_value === rollVal
+      );
+      if (localMatch) {
+        name = localMatch.name;
+        effect = localMatch.effect;
+      } else {
+        name = `${targetType === 'tremendous' ? 'Tremendous' : 'Critical'} Result #${rollVal}`;
+        effect =
+          targetType === 'tremendous'
+            ? 'Gain advantage or minor tactical bonus.'
+            : 'Suffer minor penalty or complication.';
+      }
+    }
+
+    const newResult: NishTcRollResult = {
+      id: `nish-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      type: targetType,
+      rollVal,
+      name,
+      effect,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    };
+
+    setHistory((prev) => [newResult, ...prev]);
+    showToast(`Rolled d50 #${rollVal}: ${name}`);
+    setIsRolling(false);
   };
 
   return (
