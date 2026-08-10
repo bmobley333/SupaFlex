@@ -12,6 +12,7 @@ export interface MoveToSheetPayload {
   coinsSilver?: number;
   coinsGold?: number;
   valuableVal?: string;
+  valuableCurrency?: 'gp' | 'sp';
   magicItem?: any;
   type?: string;
 }
@@ -39,8 +40,52 @@ export interface RollResult {
   magicItem?: any;
   valuableName?: string;
   valuableVal?: string;
+  valuableCurrency?: 'gp' | 'sp';
+  valueText?: string;
   claimed?: boolean;
 }
+
+/**
+ * Parses and evaluates dice formulas for art & gem values (e.g. "2d6g", "1d4+1g", "10g", "3g")
+ */
+export const parseAndEvaluateFormula = (formula: string): { value: number; currency: 'gp' | 'sp'; text: string } => {
+  if (!formula || formula.trim() === '') return { value: 1, currency: 'gp', text: '1g' };
+  
+  const clean = formula.trim().toLowerCase();
+  
+  // Match dice patterns like 2d6g, 1d4+1g, 1d6s, 1d20g, etc.
+  const diceMatch = clean.match(/^(\d+)?d(\d+)(?:\+(\d+))?\s*([gs])$/);
+  if (diceMatch) {
+    const count = diceMatch[1] ? parseInt(diceMatch[1], 10) : 1;
+    const sides = parseInt(diceMatch[2], 10);
+    const bonus = diceMatch[3] ? parseInt(diceMatch[3], 10) : 0;
+    const unit = diceMatch[4] === 's' ? 'sp' : 'gp';
+    
+    let total = bonus;
+    for (let i = 0; i < count; i++) {
+      total += Math.floor(Math.random() * sides) + 1;
+    }
+    const unitSuffix = unit === 'sp' ? 's' : 'g';
+    return { value: total, currency: unit, text: `${total}${unitSuffix}` };
+  }
+  
+  // Match flat values like 10g, 4g, 5s
+  const flatMatch = clean.match(/^(\d+)\s*([gs])$/);
+  if (flatMatch) {
+    const val = parseInt(flatMatch[1], 10);
+    const unit = flatMatch[2] === 's' ? 'sp' : 'gp';
+    const unitSuffix = unit === 'sp' ? 's' : 'g';
+    return { value: val, currency: unit, text: `${val}${unitSuffix}` };
+  }
+  
+  // Fallback if purely numeric
+  const num = parseInt(clean, 10);
+  if (!isNaN(num)) {
+    return { value: num, currency: 'gp', text: `${num}g` };
+  }
+  
+  return { value: 5, currency: 'gp', text: '5g' };
+};
 
 export const CATEGORY_OPTIONS = [
   { key: 'coins', label: '🪙 Coins (s/g)' },
@@ -254,16 +299,24 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           const subEntry = subEntries && subEntries.length > 0 ? subEntries[0] : null;
           const badgeLabel = subKey === 'art_gems' ? '🎨 Art & Gems' : subKey === 'curios' ? '📜 Curio' : '🗑️ Junk';
           const cleanDesc = subEntry ? (subEntry.notes || subEntry.result_name) : (entry.notes || 'A rare collectible item.');
+          
+          const rawFormula = subEntry ? (subEntry.val_formula || entry.val_formula) : entry.val_formula;
+          const isArtGemItem = rType === 'art_gem' || subKey === 'art_gems';
+          const evalVal = isArtGemItem ? parseAndEvaluateFormula(rawFormula || '2d6g') : null;
+
           resList.push({
             id: `res-${Date.now()}`,
             tableKey: 'master_d100',
+            categoryKey: isArtGemItem ? 'art_gems' : subKey,
             tableName: badgeLabel,
             rollVal: d100,
             title: subEntry ? subEntry.result_name : entry.result_name,
             description: cleanDesc,
-            type: rType === 'art_gem' ? 'art_gem' : 'junk',
+            type: isArtGemItem ? 'art_gem' : subKey === 'curios' ? 'document' : 'junk',
             valuableName: subEntry ? subEntry.result_name : entry.result_name,
-            valuableVal: subEntry ? subEntry.val_formula : '1g'
+            valuableVal: evalVal ? String(evalVal.value) : (subEntry ? subEntry.val_formula : '1g'),
+            valuableCurrency: evalVal ? evalVal.currency : 'gp',
+            valueText: evalVal ? evalVal.text : undefined
           });
         } else if (rType === 'special') {
           if (entry.range_min >= 96 && entry.range_min <= 99) {
@@ -394,16 +447,22 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         const entry = entries && entries.length > 0 ? entries[0] : null;
         const badgeLabel = tableKey === 'art_gems' ? '🎨 Art & Gems' : tableKey === 'curios' ? '📜 Curios' : '🗑️ Junk';
         const cleanDesc = entry ? (entry.notes || entry.result_name) : 'An interesting item found in the container.';
+        
+        const evalVal = tableKey === 'art_gems' && entry ? parseAndEvaluateFormula(entry.val_formula || '2d6g') : null;
+
         const resObj: RollResult = {
           id: `res-${Date.now()}`,
           tableKey,
+          categoryKey: tableKey,
           tableName: badgeLabel,
           rollVal: dVal,
           title: entry ? entry.result_name : 'Targeted Item',
           description: cleanDesc,
           type: tableKey === 'art_gems' ? 'art_gem' : tableKey === 'curios' ? 'document' : 'junk',
           valuableName: entry ? entry.result_name : 'Targeted Item',
-          valuableVal: entry ? entry.val_formula : '1g'
+          valuableVal: evalVal ? String(evalVal.value) : (entry ? entry.val_formula : '1g'),
+          valuableCurrency: evalVal ? evalVal.currency : 'gp',
+          valueText: evalVal ? evalVal.text : undefined
         };
         if (append) setResults(prev => [resObj, ...prev]);
         return resObj;
@@ -443,11 +502,12 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     if (res.claimed) return;
     const ok = await onMoveToSheet({
       title: res.title,
-      categoryKey: res.categoryKey || res.tableKey || '',
+      categoryKey: res.categoryKey || (res.type === 'art_gem' ? 'art_gems' : res.tableKey) || '',
       description: res.description,
       coinsSilver: res.coinsSilver,
       coinsGold: res.coinsGold,
       valuableVal: res.valuableVal,
+      valuableCurrency: res.valuableCurrency || 'gp',
       magicItem: res.magicItem,
       type: res.type,
     });
@@ -694,10 +754,16 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                           <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-md bg-slate-950 border border-slate-700 text-amber-400 shadow-sm">
                             {res.tableName}
                           </span>
+                          {res.valueText && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-amber-950/80 border border-amber-500/40 text-amber-300 shadow-sm flex items-center gap-1">
+                              <span>💎 Value:</span>
+                              <span className="font-mono font-extrabold">{res.valueText}</span>
+                            </span>
+                          )}
                         </div>
                         <h4 className="text-base font-bold text-slate-100">{res.title}</h4>
                         <p className="text-xs text-slate-300 mt-1 leading-relaxed">{res.description}</p>

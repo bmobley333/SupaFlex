@@ -241,6 +241,7 @@ export default function App() {
     coinsSilver?: number;
     coinsGold?: number;
     valuableVal?: string;
+    valuableCurrency?: 'gp' | 'sp';
     magicItem?: any;
     type?: string;
   }): Promise<boolean> => {
@@ -249,6 +250,7 @@ export default function App() {
     try {
       const category = itemPayload.categoryKey || '';
       const isMagic = category.startsWith('magic_') || itemPayload.type === 'magic_item' || !!itemPayload.magicItem;
+      const isArtGems = category === 'art_gems' || itemPayload.type === 'art_gem';
 
       if (isMagic) {
         const m = itemPayload.magicItem || {};
@@ -274,14 +276,16 @@ export default function App() {
           silver: (prev.silver || 0) + s,
           gold: (prev.gold || 0) + g,
         }));
-      } else if (category === 'art_gems') {
+      } else if (isArtGems) {
         const numVal = parseInt(itemPayload.valuableVal || '5', 10) || 5;
+        const currency = itemPayload.valuableCurrency || 'gp';
         const treasureItem: TreasureItem = {
           id: `treasure-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
           name: itemPayload.title || 'Art & Gem Treasure',
           value: numVal,
-          currency: 'gp',
+          currency: currency,
           category: 'Art & Gems',
+          qty: 1,
         };
 
         updateActiveSheetData((prev) => ({
