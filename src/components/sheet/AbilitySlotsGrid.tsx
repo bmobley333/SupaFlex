@@ -84,7 +84,7 @@ const getMagicItemTierBadge = (itemObj: any): { label: string; icon: string; sty
   if (str.includes('minor') || str.includes('beer')) {
     return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' };
   }
-  return { label: 'Magic Item', icon: '🪄', style: 'bg-cyan-950/80 text-cyan-300 border-cyan-500/40' };
+  return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' };
 };
 
 const pruneLesserPowerVersions = (abilitySlots: AbilitySlot[]): AbilitySlot[] => {
@@ -854,18 +854,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               key={item.name + idx}
                               className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
                             >
-                              {/* Header Row: Name, Action, Usage, Drop Button */}
-                              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                                <div className="flex items-center gap-2 flex-wrap">
+                              {/* Header Row: Name, Version, Tier Badge, Action & Usage (Adjacent), Buttons */}
+                              <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
+                                <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="font-outfit font-bold text-sm text-slate-100">{baseName}</span>
                                   {version > 1 && (
                                     <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
                                       v{version}
-                                    </span>
-                                  )}
-                                  {actionUpper && (
-                                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${actionClass}`}>
-                                      {actionUpper}
                                     </span>
                                   )}
                                   {type === 'spells' && (() => {
@@ -880,7 +875,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   })()}
                                 </div>
 
-                                <div className="flex items-center gap-1 shrink-0">
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {/* Action & Usage side-by-side */}
+                                  <div className="flex items-center gap-1">
+                                    {actionUpper && (
+                                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
+                                        {actionUpper}
+                                      </span>
+                                    )}
+                                    {item.usage && (
+                                      <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
+                                        {item.usage}
+                                      </span>
+                                    )}
+                                  </div>
+
                                   <button
                                     onClick={() => handleLaunchVersionEditor(item)}
                                     className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors"
@@ -898,13 +907,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 </div>
                               </div>
 
-                              {/* Sub-Row: Usage & Effect */}
-                              <div className="flex flex-col gap-1 text-xs">
-                                {item.usage && (
-                                  <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-2 py-0.5 rounded border border-slate-800 w-fit">
-                                    {item.usage}
-                                  </span>
-                                )}
+                              {/* Sub-Row: Effect */}
+                              <div className="text-xs pt-1">
                                 <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
                                   {item.effect || 'No description'}
                                 </p>
@@ -1122,17 +1126,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   key={item.id || idx}
                                   className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-amber-500/40 transition-all shrink-0"
                                 >
-                                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                                    <div className="flex items-center gap-2 flex-wrap">
+                                  {/* Header Row: Name, Version, Tier Badge, Action & Usage (Adjacent), Buttons */}
+                                  <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className="font-bold text-sm text-slate-100">{baseName}</span>
                                       {version > 1 && (
                                         <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
                                           v{version}
-                                        </span>
-                                      )}
-                                      {actionUpper && (
-                                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${ACTION_COLORS[actionUpper] || 'bg-slate-800'}`}>
-                                          {actionUpper}
                                         </span>
                                       )}
                                       {type === 'spells' && (() => {
@@ -1147,7 +1147,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       })()}
                                     </div>
 
-                                    <div className="flex items-center gap-1.5 shrink-0">
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      {/* Action & Usage side-by-side */}
+                                      <div className="flex items-center gap-1">
+                                        {actionUpper && (
+                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${ACTION_COLORS[actionUpper] || 'bg-slate-800'}`}>
+                                            {actionUpper}
+                                          </span>
+                                        )}
+                                        {item.usage && (
+                                          <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
+                                            {item.usage}
+                                          </span>
+                                        )}
+                                      </div>
+
                                       {type === 'spells' && (
                                         <button
                                           type="button"
@@ -1179,12 +1193,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     </div>
                                   </div>
 
-                                  <div className="flex flex-col gap-1 text-xs text-slate-300">
-                                    {item.usage && (
-                                      <span className="bg-slate-900 text-[10px] font-mono text-slate-400 px-1.5 py-0.5 rounded border border-slate-800 w-fit">
-                                        {item.usage}
-                                      </span>
-                                    )}
+                                  {/* Sub-Row: Effect */}
+                                  <div className="text-xs text-slate-300 pt-1">
                                     <p className="text-[11px] leading-relaxed font-sans">{item.effect || 'No description'}</p>
                                   </div>
                                 </div>
