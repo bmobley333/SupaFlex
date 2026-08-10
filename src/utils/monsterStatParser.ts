@@ -9,6 +9,7 @@ export interface ParsedMonster {
   vitalityStat: string;
   fullText: string;
   reducedText: string;
+  baseFullText?: string;
 }
 
 export function parseMonsterLine(line: string): ParsedMonster {
@@ -24,6 +25,7 @@ export function parseMonsterLine(line: string): ParsedMonster {
       vitalityStat: '',
       fullText: line,
       reducedText: '',
+      baseFullText: line,
     };
   }
 
@@ -65,6 +67,7 @@ export function parseMonsterLine(line: string): ParsedMonster {
     vitalityStat,
     fullText: trimmed,
     reducedText,
+    baseFullText: trimmed,
   };
 }
 
