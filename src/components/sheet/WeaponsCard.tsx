@@ -598,7 +598,7 @@ export const WeaponsCard: React.FC = () => {
                                         <span>•</span>
                                         <span>Blk💪: <strong className="text-amber-300">{item.max_blk === 'n/a' ? 'n/a' : getDieNum(attributeDice.might)}</strong></span>
                                         <span>•</span>
-                                        <span>Max Blk: <strong className="text-amber-300">{item.max_blk ?? 'n/a'}</strong></span>
+                                        <span>Blk Cap: <strong className="text-amber-300">{item.max_blk ?? 'n/a'}</strong></span>
                                       </div>
                                     </div>
                                   );
@@ -895,7 +895,7 @@ export const WeaponsCard: React.FC = () => {
                             </div>
 
                             <div className="px-2.5 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-slate-400">Max Blk:</span>
+                              <span className="text-[11px] font-bold text-slate-400">Blk Cap:</span>
                               <span className="text-xs font-mono font-extrabold text-amber-300">{derivedMaxBlock}</span>
                             </div>
                           </div>
@@ -959,7 +959,7 @@ export const WeaponsCard: React.FC = () => {
               <span className="text-center">Atk</span>
               <span className="text-center">Dmg</span>
               <span className="text-center">Blk💪</span>
-              <span className="text-center whitespace-nowrap">Max Blk</span>
+              <span className="text-center whitespace-nowrap">Blk Cap</span>
             </div>
 
           {/* Weapons Rows (Sorted Alphabetically) */}
@@ -1044,7 +1044,7 @@ export const WeaponsCard: React.FC = () => {
                   {/* Max Blk Read-Only Display Box */}
                   <div
                     className="bg-slate-950 border border-slate-800 text-amber-300 text-xs font-mono font-extrabold text-center py-1 rounded"
-                    title="Auto-updated Max Block based on equipped weapon"
+                    title="Auto-updated Block Cap based on equipped weapon"
                   >
                     {item.max_blk ?? 'n/a'}
                   </div>
