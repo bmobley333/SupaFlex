@@ -264,7 +264,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
                 ⚡ ESSENCE CRAFTING!
               </h3>
               <p className="text-xs text-slate-400">
-                Select <strong className="text-amber-300">1 (One)</strong> reward for {characterName} or Deconstruct to cut Essence in half.
+                Select <strong className="text-amber-300">1 (One) crafted reward</strong> for {(characterName || 'Hero').split(' ')[0]} or Deconstruct to cut Essence in half.
               </p>
             </div>
           </div>
