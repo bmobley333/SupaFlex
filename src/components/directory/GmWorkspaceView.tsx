@@ -1,19 +1,10 @@
 // src/components/directory/GmWorkspaceView.tsx
 // Game Master Command Console: Party Roster, Party Management & Monster Roster View
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowUpDown,
   Link2,
-  ExternalLink,
-  Edit2,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-  Info,
-  Tag,
-  Globe,
-  FileText,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
@@ -22,6 +13,7 @@ import { parseMonsterLine, parseMultiRowMonsterBlock, ParsedMonster, sortMonster
 import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { useRosterOrdering } from '../../hooks/useRosterOrdering';
+import { LinksManagerModal } from '../modals/LinksManagerModal';
 
 interface QuickAddState {
   name: string;
@@ -59,25 +51,6 @@ const DEFAULT_QUICK_ADD: QuickAddState = {
   motion: 12,
   moxie: 12,
   abilities: '',
-};
-
-const formatUrl = (url: string): string => {
-  const trimmed = url.trim();
-  if (!trimmed) return '';
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    return trimmed;
-  }
-  return `https://${trimmed}`;
-};
-
-const getDomainLabel = (rawUrl: string): string => {
-  try {
-    const formatted = formatUrl(rawUrl);
-    const parsed = new URL(formatted);
-    return parsed.hostname.replace(/^www\./, '');
-  } catch {
-    return 'link';
-  }
 };
 
 interface GmWorkspaceViewProps {
@@ -135,26 +108,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     }
   }, [selectedParty?.id]);
 
-  // Filter state for GM Document Vault: 'ALL', 'GENERAL', or specific tag string
-  const [activeTagFilter, setActiveTagFilter] = useState<string>('ALL');
-
-  // Form states for creating tags & adding/editing GM links
-  const [isAddingTag, setIsAddingTag] = useState(false);
-  const [newTagName, setNewTagName] = useState('');
-
-  const [isAddingGmLink, setIsAddingGmLink] = useState(false);
-  const [newGmTitle, setNewGmTitle] = useState('');
-  const [newGmUrl, setNewGmUrl] = useState('');
-  const [newGmTag, setNewGmTag] = useState<string>('General');
-  const [newGmDesc, setNewGmDesc] = useState('');
-
-  const [editingGmLinkId, setEditingGmLinkId] = useState<string | null>(null);
-  const [editGmTitle, setEditGmTitle] = useState('');
-  const [editGmUrl, setEditGmUrl] = useState('');
-  const [editGmTag, setEditGmTag] = useState<string>('General');
-  const [editGmDesc, setEditGmDesc] = useState('');
-
-  const [expandedGmLinkIds, setExpandedGmLinkIds] = useState<Record<string, boolean>>({});
+  // Filter state for GM Document Vault & Links Manager Modal
+  const [isLinksManagerOpen, setIsLinksManagerOpen] = useState(false);
 
   // Local storage persistence helpers
   const persistGmDocLinks = (updated: GmDocLink[]) => {
@@ -173,100 +128,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     } catch (err) {
       console.error('[GmWorkspaceView] LocalStorage tags save error:', err);
     }
-  };
-
-  // Filtered links calculation
-  const filteredGmDocLinks = useMemo(() => {
-    if (activeTagFilter === 'ALL') return gmDocLinks;
-    if (activeTagFilter === 'GENERAL') {
-      return gmDocLinks.filter((link) => !link.adventureTag || link.adventureTag === 'General');
-    }
-    return gmDocLinks.filter((link) => link.adventureTag === activeTagFilter);
-  }, [gmDocLinks, activeTagFilter]);
-
-  // Tag Handlers
-  const handleCreateTag = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = newTagName.trim();
-    if (!trimmed || adventureTags.includes(trimmed) || trimmed.toLowerCase() === 'general') return;
-    const updated = [...adventureTags, trimmed];
-    persistAdventureTags(updated);
-    setNewTagName('');
-    setIsAddingTag(false);
-  };
-
-  const handleDeleteTag = (tagToDelete: string) => {
-    const updatedTags = adventureTags.filter((t) => t !== tagToDelete);
-    persistAdventureTags(updatedTags);
-    if (activeTagFilter === tagToDelete) {
-      setActiveTagFilter('ALL');
-    }
-  };
-
-  // GM Link CRUD Handlers
-  const handleAddGmLink = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newGmTitle.trim() || !newGmUrl.trim()) return;
-
-    const formatted = formatUrl(newGmUrl);
-    const newLinkObj: GmDocLink = {
-      id: crypto.randomUUID(),
-      title: newGmTitle.trim(),
-      url: formatted,
-      adventureTag: newGmTag || 'General',
-      description: newGmDesc.trim() || undefined,
-    };
-
-    const updated = [newLinkObj, ...gmDocLinks];
-    persistGmDocLinks(updated);
-
-    // Reset Form
-    setNewGmTitle('');
-    setNewGmUrl('');
-    setNewGmTag('General');
-    setNewGmDesc('');
-    setIsAddingGmLink(false);
-  };
-
-  const handleStartEditGmLink = (link: GmDocLink) => {
-    setEditingGmLinkId(link.id);
-    setEditGmTitle(link.title);
-    setEditGmUrl(link.url);
-    setEditGmTag(link.adventureTag || 'General');
-    setEditGmDesc(link.description || '');
-  };
-
-  const handleSaveEditGmLink = (id: string, e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editGmTitle.trim() || !editGmUrl.trim()) return;
-
-    const formatted = formatUrl(editGmUrl);
-    const updated = gmDocLinks.map((item) =>
-      item.id === id
-        ? {
-            ...item,
-            title: editGmTitle.trim(),
-            url: formatted,
-            adventureTag: editGmTag || 'General',
-            description: editGmDesc.trim() || undefined,
-          }
-        : item
-    );
-
-    persistGmDocLinks(updated);
-    setEditingGmLinkId(null);
-  };
-
-  const handleDeleteGmLink = (id: string) => {
-    const updated = gmDocLinks.filter((item) => item.id !== id);
-    persistGmDocLinks(updated);
-  };
-
-  const toggleExpandGmLink = (id: string) => {
-    setExpandedGmLinkIds((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
   };
 
   // Party Session Roster State
@@ -811,380 +672,29 @@ function areSessionMembersEqual(a: PartySessionMember[], b: PartySessionMember[]
           )}
           </div>
 
-          {/* Card 2: GM Linked Documents & Reference Vaults (Full CRUD, Adventure Tagging & Filtering) */}
-          <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-3.5 shadow-lg flex flex-col">
-            {/* Card Header: Title & Action Buttons */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+          {/* Card 2: LINKS (High-Density Summary Bar & Manage Links Modal Launcher) */}
+          <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-2 shadow-lg flex flex-col font-outfit">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
               <div className="flex items-center gap-1.5">
                 <Link2 className="w-4 h-4 text-teal-400" />
-                <h3 className="font-outfit font-bold text-xs text-slate-100 uppercase tracking-wider">
-                  GM LINKED DOCS ({gmDocLinks.length})
+                <h3 className="font-bold text-xs text-slate-100 uppercase tracking-wider">
+                  LINKS ({gmDocLinks.length})
                 </h3>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    setIsAddingTag(!isAddingTag);
-                    setIsAddingGmLink(false);
-                  }}
-                  className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-600/30 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 shrink-0"
-                >
-                  <Tag className="w-3 h-3" />
-                  {isAddingTag ? 'Cancel' : '+ Tag'}
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsAddingGmLink(!isAddingGmLink);
-                    setIsAddingTag(false);
-                  }}
-                  className="px-2 py-0.5 bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-600/30 text-[11px] font-bold rounded-lg transition-all shrink-0"
-                >
-                  {isAddingGmLink ? 'Cancel' : '+ Link'}
-                </button>
-              </div>
-            </div>
-
-            {/* Drawer 1: New Adventure Tag Creator */}
-            {isAddingTag && (
-              <form onSubmit={handleCreateTag} className="p-3 bg-slate-950/90 rounded-xl border border-slate-800 flex flex-col gap-2">
-                <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
-                  <Tag className="w-3 h-3 text-amber-400" />
-                  Create Custom Adventure Tag
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex-1">
-                    <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-0.5">
-                      Tag Name *
-                      <span title="e.g. Curse of Strahd, The Lost Citadel">
-                        <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer" />
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={newTagName}
-                      onChange={(e) => setNewTagName(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-amber-500 font-outfit"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="mt-4 px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-600/30 text-xs font-bold rounded-lg transition-all"
-                  >
-                    Save
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Drawer 2: Add GM Link Form */}
-            {isAddingGmLink && (
-              <form onSubmit={handleAddGmLink} className="p-3 bg-slate-950/90 rounded-xl border border-slate-800 flex flex-col gap-2.5">
-                <span className="text-[11px] font-bold text-teal-300 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
-                  <FileText className="w-3 h-3 text-teal-400" />
-                  Add GM Document Link
-                </span>
-
-                <div className="flex flex-col gap-2">
-                  <div>
-                    <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-0.5">
-                      Document Title *
-                      <span title="e.g. GM Overview, Strahd Map">
-                        <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer" />
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={newGmTitle}
-                      onChange={(e) => setNewGmTitle(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-teal-500 font-outfit"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-0.5">
-                      Document URL *
-                      <span title="e.g. docs.google.com/document/d/...">
-                        <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer" />
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={newGmUrl}
-                      onChange={(e) => setNewGmUrl(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 font-mono outline-none focus:border-teal-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-0.5">
-                      Adventure Tag
-                      <span title="Categorize under an adventure tag">
-                        <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer" />
-                      </span>
-                    </label>
-                    <select
-                      value={newGmTag}
-                      onChange={(e) => setNewGmTag(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 outline-none focus:border-teal-500 font-outfit"
-                    >
-                      <option value="General">General (Untagged)</option>
-                      {adventureTags.map((tag) => (
-                        <option key={tag} value={tag}>
-                          🏷️ {tag}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-0.5">Description (Optional)</label>
-                    <input
-                      type="text"
-                      value={newGmDesc}
-                      onChange={(e) => setNewGmDesc(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-teal-500 font-sans"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingGmLink(false)}
-                    className="px-2.5 py-0.5 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 font-outfit"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-3 py-0.5 bg-teal-600/30 text-teal-200 border border-teal-500/50 hover:bg-teal-600/50 text-xs font-bold rounded-lg font-outfit"
-                  >
-                    Save & Link
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Filter Bar: All, General, Adventure Tag Pills */}
-            <div className="flex items-center gap-1 flex-wrap border-b border-slate-800/80 pb-2">
               <button
-                onClick={() => setActiveTagFilter('ALL')}
-                className={`px-2 py-0.5 text-[11px] font-bold rounded-md border transition-all ${
-                  activeTagFilter === 'ALL'
-                    ? 'bg-teal-500/30 text-teal-200 border-teal-500/60'
-                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
-                }`}
+                onClick={() => setIsLinksManagerOpen(true)}
+                className="px-2.5 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-600/30 text-xs font-bold rounded-lg transition-all shrink-0 font-outfit"
               >
-                All ({gmDocLinks.length})
+                Manage Links
               </button>
-
-              <button
-                onClick={() => setActiveTagFilter('GENERAL')}
-                className={`px-2 py-0.5 text-[11px] font-bold rounded-md border transition-all ${
-                  activeTagFilter === 'GENERAL'
-                    ? 'bg-teal-500/30 text-teal-200 border-teal-500/60'
-                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
-                }`}
-              >
-                General ({gmDocLinks.filter((l) => !l.adventureTag || l.adventureTag === 'General').length})
-              </button>
-
-              {adventureTags.map((tag) => {
-                const count = gmDocLinks.filter((l) => l.adventureTag === tag).length;
-                const isSelected = activeTagFilter === tag;
-
-                return (
-                  <div key={tag} className="flex items-center gap-0.5">
-                    <button
-                      onClick={() => setActiveTagFilter(tag)}
-                      className={`px-2 py-0.5 text-[11px] font-bold rounded-md border transition-all flex items-center gap-1 ${
-                        isSelected
-                          ? 'bg-amber-500/30 text-amber-200 border-amber-500/60'
-                          : 'bg-slate-950 text-amber-400/80 border-slate-800 hover:border-slate-700'
-                      }`}
-                    >
-                      <span>🏷️ {tag}</span>
-                      <span className="text-[10px] font-mono opacity-80">({count})</span>
-                    </button>
-                    <button
-                      onClick={() => handleDeleteTag(tag)}
-                      className="p-0.5 text-slate-500 hover:text-rose-400 transition-colors"
-                      title={`Delete Tag "${tag}"`}
-                    >
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
             </div>
 
-            {/* Links Roster */}
-            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-              {filteredGmDocLinks.length === 0 ? (
-                <div className="p-4 bg-slate-950/40 rounded-xl border border-slate-800/80 text-center flex flex-col items-center gap-1">
-                  <Globe className="w-5 h-5 text-slate-600" />
-                  <p className="text-xs text-slate-400 font-medium font-outfit">No links found for this filter.</p>
-                </div>
-              ) : (
-                filteredGmDocLinks.map((link) => {
-                  const isEditing = editingGmLinkId === link.id;
-                  const isExpanded = !!expandedGmLinkIds[link.id];
-                  const domain = getDomainLabel(link.url);
-                  const tagLabel = link.adventureTag || 'General';
-
-                  if (isEditing) {
-                    return (
-                      <form
-                        key={link.id}
-                        onSubmit={(e) => handleSaveEditGmLink(link.id, e)}
-                        className="p-3 bg-slate-950/90 rounded-xl border border-amber-500/60 flex flex-col gap-2"
-                      >
-                        <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider font-outfit">
-                          Edit GM Link
-                        </span>
-
-                        <input
-                          type="text"
-                          required
-                          value={editGmTitle}
-                          onChange={(e) => setEditGmTitle(e.target.value)}
-                          className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-amber-500 font-outfit"
-                        />
-                        <input
-                          type="text"
-                          required
-                          value={editGmUrl}
-                          onChange={(e) => setEditGmUrl(e.target.value)}
-                          className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 font-mono outline-none focus:border-amber-500"
-                        />
-                        <select
-                          value={editGmTag}
-                          onChange={(e) => setEditGmTag(e.target.value)}
-                          className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 outline-none focus:border-amber-500 font-outfit"
-                        >
-                          <option value="General">General (Untagged)</option>
-                          {adventureTags.map((tag) => (
-                            <option key={tag} value={tag}>
-                              🏷️ {tag}
-                            </option>
-                          ))}
-                        </select>
-
-                        <input
-                          type="text"
-                          value={editGmDesc}
-                          onChange={(e) => setEditGmDesc(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-amber-500 font-sans"
-                        />
-
-                        <div className="flex items-center justify-end gap-1.5 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => setEditingGmLinkId(null)}
-                            className="px-2.5 py-0.5 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 font-outfit"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="submit"
-                            className="px-3 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-600/30 text-xs font-bold rounded-lg font-outfit"
-                          >
-                            Save
-                          </button>
-                        </div>
-                      </form>
-                    );
-                  }
-
-                  return (
-                    <div
-                      key={link.id}
-                      className="p-2.5 bg-slate-950/70 rounded-xl border border-slate-800 flex flex-col gap-1.5 transition-all hover:border-slate-700"
-                    >
-                      {/* Header Row: Title, Actions */}
-                      <div className="flex items-center justify-between gap-1.5">
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-outfit font-bold text-xs text-slate-100 hover:text-teal-300 transition-colors flex items-center gap-1 truncate"
-                          title="Open GM document in new tab"
-                        >
-                          <span className="truncate">{link.title}</span>
-                          <ExternalLink className="w-3 h-3 text-teal-400 shrink-0" />
-                        </a>
-
-                        <div className="flex items-center gap-1 shrink-0">
-                          <a
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-1.5 py-0.5 bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-600/30 text-[10px] font-bold rounded transition-all font-outfit"
-                            title="Open link in new browser tab"
-                          >
-                            Open
-                          </a>
-                          {link.description && (
-                            <button
-                              onClick={() => toggleExpandGmLink(link.id)}
-                              className="p-1 text-slate-400 hover:text-slate-200 transition-colors"
-                              title={isExpanded ? 'Collapse details' : 'Expand details'}
-                            >
-                              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleStartEditGmLink(link)}
-                            className="p-1 text-slate-400 hover:text-amber-300 transition-colors"
-                            title="Edit GM document link"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteGmLink(link.id)}
-                            className="p-1 text-slate-400 hover:text-rose-300 transition-colors"
-                            title="Delete GM document link"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Badges */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span
-                          className={`text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded border ${
-                            tagLabel === 'General'
-                              ? 'bg-slate-900 text-slate-400 border-slate-800'
-                              : 'bg-amber-950/60 text-amber-300 border-amber-800/80'
-                          }`}
-                        >
-                          🏷️ {tagLabel}
-                        </span>
-                        <span className="text-[9px] font-mono font-semibold px-1 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-800">
-                          {domain}
-                        </span>
-                      </div>
-
-                      {/* Description */}
-                      {(isExpanded || !link.description) && (
-                        <div className="pt-1 border-t border-slate-800/60 text-xs flex flex-col gap-0.5">
-                          {link.description && (
-                            <p className="text-[11px] text-slate-300 leading-snug font-sans">{link.description}</p>
-                          )}
-                          <span className="text-[9px] text-slate-500 font-mono truncate">{link.url}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            <p className="text-xs text-slate-400">
+              {gmDocLinks.length === 0
+                ? 'No GM document links configured.'
+                : `${gmDocLinks.length} GM external link${gmDocLinks.length === 1 ? '' : 's'} configured.`}
+            </p>
           </div>
         </div>
 
@@ -1494,8 +1004,6 @@ function areSessionMembersEqual(a: PartySessionMember[], b: PartySessionMember[]
       </div>
 
       {/* Paste Multi-Row Statblock Modal */}
-
-      {/* Paste Multi-Row Statblock Modal */}
       {isPasteModalOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-5 space-y-4 shadow-2xl">
@@ -1610,6 +1118,18 @@ function areSessionMembersEqual(a: PartySessionMember[], b: PartySessionMember[]
           </div>
         </div>
       )}
+
+      {/* Master Links Manager Modal */}
+      <LinksManagerModal
+        isOpen={isLinksManagerOpen}
+        onClose={() => setIsLinksManagerOpen(false)}
+        mode="gm"
+        gmLinks={gmDocLinks}
+        onSaveGmLinks={persistGmDocLinks}
+        adventureTags={adventureTags}
+        onSaveAdventureTags={persistAdventureTags}
+        partyName={selectedParty?.name}
+      />
     </div>
   );
 };
