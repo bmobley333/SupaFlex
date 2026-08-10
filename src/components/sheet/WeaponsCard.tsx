@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Plus, X, Check, Swords, AlertCircle, Loader2, Search, Globe } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { RuleTooltip } from '../common/RuleTooltip';
 import {
   WeaponSlot,
   SupabaseWeapon,
@@ -595,11 +594,11 @@ export const WeaponsCard: React.FC = () => {
                                       <div className="flex items-center gap-3 text-[10px] text-slate-400 font-mono">
                                         <span>Atk: <strong className="text-rose-300">{calculatedAtk}</strong></span>
                                         <span>•</span>
-                                        <span><RuleTooltip ruleKey="col.weapons.dmg">Dmg</RuleTooltip>: <strong className="text-rose-300">{calculatedDmg}</strong></span>
+                                        <span>Dmg: <strong className="text-rose-300">{calculatedDmg}</strong></span>
                                         <span>•</span>
-                                        <span><RuleTooltip ruleKey="col.shields.block">Blk💪</RuleTooltip>: <strong className="text-amber-300">{item.max_blk === 'n/a' ? 'n/a' : getDieNum(attributeDice.might)}</strong></span>
+                                        <span>Blk💪: <strong className="text-amber-300">{item.max_blk === 'n/a' ? 'n/a' : getDieNum(attributeDice.might)}</strong></span>
                                         <span>•</span>
-                                        <span><RuleTooltip ruleKey="col.shields.block">Max Blk</RuleTooltip>: <strong className="text-amber-300">{item.max_blk ?? 'n/a'}</strong></span>
+                                        <span>Max Blk: <strong className="text-amber-300">{item.max_blk ?? 'n/a'}</strong></span>
                                       </div>
                                     </div>
                                   );
@@ -956,11 +955,11 @@ export const WeaponsCard: React.FC = () => {
             <div className="grid grid-cols-[34px_68px_1fr_48px_48px_56px_60px] gap-2 items-center px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80">
               <span className="text-center">Sk</span>
               <span className="text-center">M/H/S</span>
-              <span><RuleTooltip ruleKey="col.weapons.atr">Weapon Name</RuleTooltip></span>
-              <span className="text-center"><RuleTooltip ruleKey="col.weapons.atr">Atk</RuleTooltip></span>
-              <span className="text-center"><RuleTooltip ruleKey="col.weapons.dmg">Dmg</RuleTooltip></span>
-              <span className="text-center"><RuleTooltip ruleKey="col.shields.block">Blk💪</RuleTooltip></span>
-              <span className="text-center whitespace-nowrap"><RuleTooltip ruleKey="col.shields.block">Max Blk</RuleTooltip></span>
+              <span>Weapon Name</span>
+              <span className="text-center">Atk</span>
+              <span className="text-center">Dmg</span>
+              <span className="text-center">Blk💪</span>
+              <span className="text-center whitespace-nowrap">Max Blk</span>
             </div>
 
           {/* Weapons Rows (Sorted Alphabetically) */}

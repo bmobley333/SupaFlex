@@ -4,7 +4,6 @@ import { ChevronDown, ChevronUp, X, Check, Plus, Search, Globe, ShieldAlert, Loa
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
-import { RuleTooltip } from '../common/RuleTooltip';
 import {
   ShieldData,
   SupabaseShield,
@@ -747,7 +746,7 @@ export const ShieldCard: React.FC = () => {
           {/* Block Cell (Auto-Updated from Might) */}
           <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.shields.block">Block</RuleTooltip></span>
+              <span className="text-xs font-bold text-slate-300">Block</span>
               <span className="text-sm">💪</span>
             </div>
             <div
@@ -760,7 +759,7 @@ export const ShieldCard: React.FC = () => {
 
           {/* Max Block Read-Only Display Box */}
           <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">
-            <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.shields.block">Max Block</RuleTooltip></span>
+            <span className="text-xs font-bold text-slate-300">Max Block</span>
             <div
               className="w-10 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
               title="Auto-updated matching equipped shield Max Block"

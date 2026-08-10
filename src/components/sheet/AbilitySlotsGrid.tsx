@@ -30,9 +30,9 @@ const USAGE_OPTIONS: { value: string; label: string }[] = [
   { value: '1', label: '1' },
   { value: '1-⚡', label: '1-⚡(Spark)' },
   { value: '1-🍀', label: '1-🍀(Luck)' },
-  { value: '3-Enc', label: '3-Enc' },
-  { value: '2-Enc', label: '2-Enc' },
   { value: '1-Enc', label: '1-Enc' },
+  { value: '2-Enc', label: '2-Enc' },
+  { value: '3-Enc', label: '3-Enc' },
   { value: '1-Rnd', label: '1-Rnd' },
 ];
 
@@ -1397,7 +1397,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   {version > 1 && (
                     <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
                       <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                      v{version} Active
+                      v{version}
                     </span>
                   )}
                 </div>

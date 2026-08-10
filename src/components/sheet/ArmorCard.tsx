@@ -4,7 +4,6 @@ import { ChevronDown, ChevronUp, X, Check, Shirt, Plus, Search, Loader2, AlertCi
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
-import { RuleTooltip } from '../common/RuleTooltip';
 import {
   ArmorData,
   MovementRateData,
@@ -392,7 +391,7 @@ export const ArmorCard: React.FC = () => {
                               <div className="flex items-center gap-2"><button type="button" onClick={() => handleSelectActiveArmor(item)} className={`px-2 py-0.5 text-xs font-bold rounded-lg border ${isActive ? 'bg-emerald-600/30 text-emerald-200' : 'bg-slate-950 text-slate-400'}`}>{isActive ? '● Active' : '○ Wear'}</button><span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span></div>
                               <button onClick={() => handleDropFromWardrobe(item.name)} className="px-2 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold rounded-lg">Forget</button>
                             </div>
-                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400"><span><RuleTooltip ruleKey="col.armor.ar">AR</RuleTooltip>: {item.ar} | MR: {item.mr}</span></div>
+                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400"><span>AR: {item.ar} | MR: {item.mr}</span></div>
                           </div>
                         );
                       })}
@@ -592,7 +591,7 @@ export const ArmorCard: React.FC = () => {
         {/* Dodge Cell (Auto-Updated from Motion) */}
         <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.weapons.range">Dodge</RuleTooltip></span>
+            <span className="text-xs font-bold text-slate-300">Dodge</span>
             <span className="text-sm">🏃</span>
           </div>
           <div
@@ -606,7 +605,7 @@ export const ArmorCard: React.FC = () => {
         {/* AR Cell (Auto-Updated Read-Only Display Box) */}
         <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-300"><RuleTooltip ruleKey="col.armor.ar">AR</RuleTooltip></span>
+            <span className="text-xs font-bold text-slate-300">AR</span>
             <span className="text-sm">🧥</span>
           </div>
           <div
@@ -621,12 +620,12 @@ export const ArmorCard: React.FC = () => {
       {/* Integrated Movement Rate (MR) Footer Sub-Card */}
       <div className="pt-2.5 mt-1 border-t border-slate-800/80 flex flex-col gap-2">
         <span className="font-outfit font-bold text-teal-300 flex items-center gap-1.5 uppercase tracking-wider text-xs">
-          <span>👣</span> <RuleTooltip ruleKey="col.weapons.range">MR</RuleTooltip> <span className="text-[10px] text-slate-400 normal-case font-normal">(Movement Rate)</span>
+          <span>👣</span> MR <span className="text-[10px] text-slate-400 normal-case font-normal">(Movement Rate)</span>
         </span>
         <div className="flex flex-wrap items-center gap-3">
           {/* Armored MR Box */}
           <div className="px-3 py-1.5 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center gap-2 w-fit">
-            <span className="text-[11px] font-bold text-slate-300"><RuleTooltip ruleKey="col.armor.ar">Armored</RuleTooltip> 👣</span>
+            <span className="text-[11px] font-bold text-slate-300">Armored 👣</span>
             <div
               className="w-9 bg-slate-900 border border-slate-800 rounded py-0.5 text-xs font-mono font-extrabold text-teal-300 text-center"
               title="Auto-updated matching equipped armor Armored Movement Rate"
