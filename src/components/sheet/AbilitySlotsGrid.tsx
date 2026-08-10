@@ -68,6 +68,25 @@ const parseAbilityVersion = (name: string): { baseName: string; version: number 
   return match ? { baseName: match[1].trim(), version: parseInt(match[2], 10) } : { baseName: cleaned, version: 1 };
 };
 
+const getMagicItemTierBadge = (itemObj: any): { label: string; icon: string; style: string } | null => {
+  if (!itemObj) return null;
+  const str = `${itemObj.sub || ''} ${itemObj.table_name || ''} ${itemObj.category || ''} ${itemObj.name || ''}`.toLowerCase();
+  
+  if (str.includes('artifact') || str.includes('epic')) {
+    return { label: 'Artifact', icon: '💫', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40' };
+  }
+  if (str.includes('greater')) {
+    return { label: 'Greater', icon: '✨', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40' };
+  }
+  if (str.includes('lesser')) {
+    return { label: 'Lesser', icon: '🪄', style: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40' };
+  }
+  if (str.includes('minor') || str.includes('beer')) {
+    return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' };
+  }
+  return { label: 'Magic Item', icon: '🪄', style: 'bg-cyan-950/80 text-cyan-300 border-cyan-500/40' };
+};
+
 const pruneLesserPowerVersions = (abilitySlots: AbilitySlot[]): AbilitySlot[] => {
   const highestMap = abilitySlots.reduce((acc, slot) => {
     const { baseName, version } = parseAbilityVersion(slot.name);
@@ -849,6 +868,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       {actionUpper}
                                     </span>
                                   )}
+                                  {type === 'spells' && (() => {
+                                    const badge = getMagicItemTierBadge(item);
+                                    if (!badge) return null;
+                                    return (
+                                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border flex items-center gap-1 ${badge.style}`}>
+                                        <span>{badge.icon}</span>
+                                        <span>{badge.label}</span>
+                                      </span>
+                                    );
+                                  })()}
                                 </div>
 
                                 <div className="flex items-center gap-1 shrink-0">
@@ -1106,6 +1135,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           {actionUpper}
                                         </span>
                                       )}
+                                      {type === 'spells' && (() => {
+                                        const badge = getMagicItemTierBadge(item);
+                                        if (!badge) return null;
+                                        return (
+                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border flex items-center gap-1 ${badge.style}`}>
+                                            <span>{badge.icon}</span>
+                                            <span>{badge.label}</span>
+                                          </span>
+                                        );
+                                      })()}
                                     </div>
 
                                     <div className="flex items-center gap-1.5 shrink-0">
@@ -1424,6 +1463,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       v{version}
                     </span>
                   )}
+                  {type === 'spells' && (() => {
+                    const badge = getMagicItemTierBadge(slot);
+                    if (!badge) return null;
+                    return (
+                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 mt-0.5 ${badge.style}`}>
+                        <span>{badge.icon}</span>
+                        <span>{badge.label}</span>
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 {/* 2. Action Badge Column */}
