@@ -41,6 +41,38 @@ const dieToNum = (die?: string): string => {
   return die.replace(/^d/i, '');
 };
 
+const parseSkill = (
+  rawSkill: string,
+  catalogMap?: Map<string, CatalogSkillOption>
+): { cleanName: string; emoji: string; attributeKey: AttributeKey } => {
+  let cleanName = rawSkill.trim();
+  let foundEmoji: string | null = null;
+  let foundKey: AttributeKey | null = null;
+
+  for (const [emoji, info] of Object.entries(EMOJI_MAP)) {
+    if (cleanName.includes(emoji)) {
+      foundEmoji = emoji;
+      foundKey = info.key;
+      cleanName = cleanName.replace(emoji, '').trim();
+      break;
+    }
+  }
+
+  if (!foundKey && catalogMap) {
+    const catalogInfo = catalogMap.get(cleanName.toLowerCase());
+    if (catalogInfo) {
+      foundEmoji = catalogInfo.emoji;
+      foundKey = catalogInfo.attributeKey;
+    }
+  }
+
+  return {
+    cleanName: cleanName || rawSkill,
+    emoji: foundEmoji || '✨',
+    attributeKey: foundKey || 'magic',
+  };
+};
+
 export const SkillsetsPanel: React.FC = () => {
   const { activeCharacter, skillsets, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
   const rawKnownSkillsetNames = activeCharacter?.sheet_data?.known_skillsets || [];
@@ -106,14 +138,8 @@ export const SkillsetsPanel: React.FC = () => {
 
     // Check if already learned
     const isAlreadyLearned = knownIndividualSkills.some((s) => {
-      let sName = s;
-      for (const emoji of Object.keys(EMOJI_MAP)) {
-        if (s.includes(emoji)) {
-          sName = s.replace(emoji, '').trim();
-          break;
-        }
-      }
-      return sName.toLowerCase() === cleanName.toLowerCase();
+      const parsed = parseSkill(s, allCatalogSkillsMap);
+      return parsed.cleanName.toLowerCase() === cleanName.toLowerCase();
     });
 
     if (isAlreadyLearned) {
@@ -246,17 +272,13 @@ export const SkillsetsPanel: React.FC = () => {
       const ksObj = skillsets.find((s) => s.name === ksName);
       if (ksObj && Array.isArray(ksObj.skills)) {
         ksObj.skills.forEach((rawSkill) => {
-          for (const emoji of Object.keys(EMOJI_MAP)) {
-            if (rawSkill.includes(emoji)) {
-              const cleanName = rawSkill.replace(emoji, '').trim();
-              if (cleanName) set.add(cleanName.toLowerCase());
-            }
-          }
+          const parsed = parseSkill(rawSkill, allCatalogSkillsMap);
+          if (parsed.cleanName) set.add(parsed.cleanName.toLowerCase());
         });
       }
     });
     return set;
-  }, [knownSkillsetNames, skillsets]);
+  }, [knownSkillsetNames, skillsets, allCatalogSkillsMap]);
 
   // Compile unique active skills for main sheet Derived Skills Registry
   const activeRegistrySkillsMap = useMemo(() => {
@@ -267,25 +289,15 @@ export const SkillsetsPanel: React.FC = () => {
       const ksObj = skillsets.find((s) => s.name === ksName);
       if (ksObj && Array.isArray(ksObj.skills)) {
         ksObj.skills.forEach((rawSkill) => {
-          let cleanName = rawSkill;
-          let foundEmoji = '✨';
-          let foundKey: AttributeKey = 'magic';
+          const parsed = parseSkill(rawSkill, allCatalogSkillsMap);
+          const key = parsed.cleanName.toLowerCase();
 
-          for (const [emoji, info] of Object.entries(EMOJI_MAP)) {
-            if (rawSkill.includes(emoji)) {
-              foundEmoji = emoji;
-              foundKey = info.key;
-              cleanName = rawSkill.replace(emoji, '').trim();
-              break;
-            }
-          }
-
-          if (cleanName && !map.has(cleanName.toLowerCase())) {
-            map.set(cleanName.toLowerCase(), {
-              name: cleanName,
-              emoji: foundEmoji,
-              attributeKey: foundKey,
-              dieRating: dieToNum(attributeDice[foundKey]),
+          if (parsed.cleanName && !map.has(key)) {
+            map.set(key, {
+              name: parsed.cleanName,
+              emoji: parsed.emoji,
+              attributeKey: parsed.attributeKey,
+              dieRating: dieToNum(attributeDice[parsed.attributeKey]),
               source: 'skillset',
             });
           }
@@ -294,17 +306,16 @@ export const SkillsetsPanel: React.FC = () => {
     });
 
     // 2. Add individually learned skills (if not already derived from a skillset)
-    knownIndividualSkills.forEach((skillName) => {
-      const key = skillName.toLowerCase();
-      if (!map.has(key)) {
-        const catalogInfo = allCatalogSkillsMap.get(key);
-        const foundEmoji = catalogInfo?.emoji || '✨';
-        const foundKey = catalogInfo?.attributeKey || 'magic';
+    knownIndividualSkills.forEach((rawSkill) => {
+      const parsed = parseSkill(rawSkill, allCatalogSkillsMap);
+      const key = parsed.cleanName.toLowerCase();
+
+      if (parsed.cleanName && !map.has(key)) {
         map.set(key, {
-          name: skillName,
-          emoji: foundEmoji,
-          attributeKey: foundKey,
-          dieRating: dieToNum(attributeDice[foundKey]),
+          name: parsed.cleanName,
+          emoji: parsed.emoji,
+          attributeKey: parsed.attributeKey,
+          dieRating: dieToNum(attributeDice[parsed.attributeKey]),
           source: 'individual',
         });
       }
@@ -352,7 +363,9 @@ export const SkillsetsPanel: React.FC = () => {
   const filteredCatalogIndividualSkills = useMemo(() => {
     const unlearned = sortedAllCatalogSkills.filter((sk) => {
       const isDerived = skillsetDerivedSkillsSet.has(sk.name.toLowerCase());
-      const isLearned = knownIndividualSkills.some((s) => s.toLowerCase() === sk.name.toLowerCase());
+      const isLearned = knownIndividualSkills.some(
+        (s) => parseSkill(s, allCatalogSkillsMap).cleanName.toLowerCase() === sk.name.toLowerCase()
+      );
       return !isDerived && !isLearned;
     });
     if (!rightSearchQuery.trim()) return unlearned;
@@ -523,22 +536,31 @@ export const SkillsetsPanel: React.FC = () => {
                                 <Scroll className="w-3.5 h-3.5 text-indigo-400" />
                                 Individually Learned ({knownIndividualSkills.length})
                               </span>
-                              {knownIndividualSkills.map((skName) => (
-                                <div
-                                  key={skName}
-                                  className="p-2 bg-slate-900/90 rounded-lg border border-slate-800 flex items-center justify-between gap-2"
-                                >
-                                  <span className="text-xs font-semibold text-slate-200 truncate">
-                                    {skName}
-                                  </span>
-                                  <button
-                                    onClick={() => handleToggleIndividualSkill(skName)}
-                                    className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 transition-all shrink-0"
+                              {knownIndividualSkills.map((skName) => {
+                                const parsed = parseSkill(skName, allCatalogSkillsMap);
+                                const dieRating = dieToNum(attributeDice[parsed.attributeKey]);
+
+                                return (
+                                  <div
+                                    key={skName}
+                                    className="p-2 bg-slate-900/90 rounded-lg border border-slate-800 flex items-center justify-between gap-2"
                                   >
-                                    Forget
-                                  </button>
-                                </div>
-                              ))}
+                                    <span className="text-xs font-semibold text-slate-200 truncate flex items-center gap-1">
+                                      <span>{parsed.cleanName}</span>
+                                      <span className="text-[11px] font-bold text-indigo-300 flex items-center gap-0.5 ml-1 shrink-0">
+                                        <span>{parsed.emoji}</span>
+                                        <span className="font-mono font-black">{dieRating}</span>
+                                      </span>
+                                    </span>
+                                    <button
+                                      onClick={() => handleToggleIndividualSkill(skName)}
+                                      className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 transition-all shrink-0"
+                                    >
+                                      Forget
+                                    </button>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </>
@@ -682,7 +704,7 @@ export const SkillsetsPanel: React.FC = () => {
                             filteredCatalogIndividualSkills.map((sk) => {
                               const isSkillsetDerived = skillsetDerivedSkillsSet.has(sk.name.toLowerCase());
                               const isIndividuallyLearned = knownIndividualSkills.some(
-                                (s) => s.toLowerCase() === sk.name.toLowerCase()
+                                (s) => parseSkill(s, allCatalogSkillsMap).cleanName.toLowerCase() === sk.name.toLowerCase()
                               );
 
                               return (
@@ -854,7 +876,7 @@ export const SkillsetsPanel: React.FC = () => {
             {sortedActiveSkills.map((skill) => (
               <div
                 key={skill.name}
-                className={`px-2.5 py-1.5 rounded-xl border transition-all flex items-center gap-2 shadow-sm ${
+                className={`px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1 shadow-sm ${
                   skill.source === 'individual'
                     ? 'bg-indigo-950/80 border-indigo-500/40 hover:border-indigo-400/60'
                     : 'bg-slate-950/80 border-purple-500/30 hover:border-purple-400/60'
@@ -863,12 +885,11 @@ export const SkillsetsPanel: React.FC = () => {
                   skill.source === 'individual' ? 'Individually Learned' : 'Skillset Derived'
                 }`}
               >
-                <span className="text-[10px]">{skill.source === 'individual' ? '📜' : '🎓'}</span>
                 <span className="text-xs font-outfit font-bold text-slate-100">{skill.name}</span>
-                <div className="flex items-center gap-1 bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-800">
-                  <span className="text-xs">{skill.emoji}</span>
-                  <span className="font-mono font-black text-xs text-indigo-300">{skill.dieRating}</span>
-                </div>
+                <span className="text-xs font-bold text-indigo-300 flex items-center gap-0.5 ml-1">
+                  <span>{skill.emoji}</span>
+                  <span className="font-mono font-black">{skill.dieRating}</span>
+                </span>
               </div>
             ))}
           </div>

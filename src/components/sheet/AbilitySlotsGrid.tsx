@@ -124,8 +124,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [leftSearchQuery, setLeftSearchQuery] = useState('');
   const [rightSearchQuery, setRightSearchQuery] = useState('');
   
-  // Right Pane Active View: 'CATALOG' or 'CREATOR'
-  const [activeRightTab, setActiveRightTab] = useState<'CATALOG' | 'CREATOR'>('CATALOG');
+  // Right Pane Active View: 'CATALOG', 'CREATOR', or 'EDITOR'
+  const [activeRightTab, setActiveRightTab] = useState<'CATALOG' | 'CREATOR' | 'EDITOR'>('CATALOG');
 
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -173,7 +173,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setCreateUsage(item.usage || '1-Enc');
     setCreateEffect(item.effect || '');
 
-    setActiveRightTab('CREATOR');
+    setActiveRightTab('EDITOR');
   };
 
   const handleToggleFavoriteTable = (tableName: string) => {
@@ -856,7 +856,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
                       <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800 w-full">
                         <button
-                          onClick={() => setActiveRightTab('CATALOG')}
+                          type="button"
+                          onClick={() => {
+                            if (isVersionEditMode) setIsVersionEditMode(false);
+                            setActiveRightTab('CATALOG');
+                          }}
                           className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                             activeRightTab === 'CATALOG'
                               ? type === 'powers'
@@ -870,8 +874,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         </button>
 
                         <button
+                          type="button"
                           onClick={() => {
-                            if (activeRightTab === 'CREATOR' && isVersionEditMode) {
+                            if (isVersionEditMode) {
                               setIsVersionEditMode(false);
                               setCreateName('');
                               setCreateAction('A');
@@ -889,8 +894,25 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           }`}
                         >
                           <Plus className="w-3.5 h-3.5 text-amber-400" />
-                          {isVersionEditMode ? `Version Editor (v${versionEditNextVersion})` : 'Custom Creator'}
+                          Custom Creator
                         </button>
+
+                        {isVersionEditMode && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveRightTab('EDITOR')}
+                            className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                              activeRightTab === 'EDITOR'
+                                ? type === 'powers'
+                                  ? 'bg-amber-600/30 text-amber-200 border border-amber-500/40 shadow-sm'
+                                  : 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                            Version Editor (v{versionEditNextVersion})
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1051,13 +1073,23 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       )}
                                     </div>
 
-                                    <button
-                                      onClick={() => handleLearnAbility(item)}
-                                      className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 flex items-center gap-1 transition-all shrink-0"
-                                    >
-                                      <Plus className="w-3.5 h-3.5" />
-                                      + Learn
-                                    </button>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleLaunchVersionEditor(item)}
+                                        className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors"
+                                        title={`Version edit ${baseName}`}
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleLearnAbility(item)}
+                                        className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 flex items-center gap-1 transition-all shrink-0"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        + Learn
+                                      </button>
+                                    </div>
                                   </div>
 
                                   <div className="flex flex-col gap-1 text-xs text-slate-300">
@@ -1080,7 +1112,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </div>
                     )}
 
-                    {/* TAB 2: CUSTOM CREATOR VIEW */}
+                    {/* TAB 2: CUSTOM CREATOR VIEW (strictly for brand new custom abilities) */}
                     {activeRightTab === 'CREATOR' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-y-auto">
                         <form
@@ -1092,43 +1124,22 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         >
                           <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5">
                             <span className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-                              {isVersionEditMode ? (
-                                <>
-                                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                                  Version Editor: {versionEditBaseName} v{versionEditNextVersion}
-                                </>
-                              ) : (
-                                <>
-                                  <Plus className="w-3.5 h-3.5 text-amber-400" />
-                                  Custom Creator
-                                </>
-                              )}
+                              <Plus className="w-3.5 h-3.5 text-amber-400" />
+                              Custom Creator
                             </span>
                           </div>
 
                           <div className="flex flex-col gap-2">
                             <div className="flex flex-col gap-1">
                               <span className="text-xs font-bold text-slate-300">Ability Name</span>
-                              {isVersionEditMode ? (
-                                <div className="relative">
-                                  <input
-                                    type="text"
-                                    value={createName}
-                                    readOnly
-                                    className="bg-slate-900/90 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-lg border border-slate-800 outline-none cursor-not-allowed w-full pl-8"
-                                  />
-                                  <Lock className="w-3.5 h-3.5 text-amber-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                                </div>
-                              ) : (
-                                <input
-                                  type="text"
-                                  placeholder="e.g. Arcane Surge v1"
-                                  value={createName}
-                                  onChange={(e) => setCreateName(e.target.value)}
-                                  className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400"
-                                  required
-                                />
-                              )}
+                              <input
+                                type="text"
+                                placeholder="e.g. Arcane Surge v1"
+                                value={createName}
+                                onChange={(e) => setCreateName(e.target.value)}
+                                className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400"
+                                required
+                              />
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
@@ -1195,7 +1206,119 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             className="w-full mt-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
                           >
                             <Plus className="w-4 h-4" />
-                            <span>{isVersionEditMode ? `Save & Learn ${createName}` : 'Save & Learn Custom Ability'}</span>
+                            <span>Save & Learn Custom Ability</span>
+                          </button>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* TAB 3: VERSION EDITOR VIEW (dynamically visible when pencil icon is clicked) */}
+                    {activeRightTab === 'EDITOR' && (
+                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-y-auto">
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            handleSaveCustomAbility();
+                          }}
+                          className="p-3 bg-amber-950/20 border border-amber-500/30 rounded-xl flex flex-col gap-3"
+                        >
+                          <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5">
+                            <span className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                              Version Editor: {versionEditBaseName} v{versionEditNextVersion}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsVersionEditMode(false);
+                                setActiveRightTab('CATALOG');
+                              }}
+                              className="text-slate-400 hover:text-rose-300 text-xs font-bold transition-colors"
+                              title="Cancel Version Editing"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs font-bold text-slate-300">Target Version Name</span>
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  value={createName}
+                                  readOnly
+                                  className="bg-slate-900/90 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-lg border border-slate-800 outline-none cursor-not-allowed w-full pl-8"
+                                />
+                                <Lock className="w-3.5 h-3.5 text-amber-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-300 shrink-0">Action:</span>
+                                <select
+                                  value={createAction}
+                                  onChange={(e) => setCreateAction(e.target.value)}
+                                  className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full"
+                                >
+                                  {ACTION_OPTIONS.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-300 shrink-0">Usage:</span>
+                                <select
+                                  value={createUsage}
+                                  onChange={(e) => setCreateUsage(e.target.value)}
+                                  className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full"
+                                >
+                                  {USAGE_OPTIONS.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1 pt-1">
+                              <div className="flex items-center justify-between flex-wrap gap-1">
+                                <span className="text-xs font-bold text-slate-300">Effect Description</span>
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <span className="text-[10px] text-slate-400 font-bold mr-0.5">Insert Icon:</span>
+                                  {MAIN_ABILITY_ICONS.map((item) => (
+                                    <button
+                                      key={item.label}
+                                      type="button"
+                                      onClick={() => insertIconAtCursor(item.icon)}
+                                      className="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded text-[11px] font-bold text-slate-200 transition-colors flex items-center gap-1 shadow-sm cursor-pointer"
+                                      title={`Insert ${item.icon} (${item.label}) at cursor`}
+                                    >
+                                      <span>{item.icon}</span>
+                                      <span className="hidden sm:inline text-[9px] text-slate-300">{item.label}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              <textarea
+                                ref={createEffectRef}
+                                value={createEffect}
+                                onChange={(e) => setCreateEffect(e.target.value)}
+                                placeholder="Describe the mechanical effects of this version..."
+                                rows={3}
+                                className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400 resize-none"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            type="submit"
+                            className="w-full mt-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            <span>Save & Learn {createName}</span>
                           </button>
                         </form>
                       </div>
