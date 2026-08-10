@@ -26,7 +26,15 @@ const ACTION_ORDER: Record<string, number> = {
 };
 
 const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
-const USAGE_OPTIONS = ['1-Enc', '2-Enc', '3-Enc', '1', '1-Luck🍀', '1-Charge⚡'];
+const USAGE_OPTIONS: { value: string; label: string }[] = [
+  { value: '1', label: '1' },
+  { value: '1-⚡', label: '1-⚡(Spark)' },
+  { value: '1-🍀', label: '1-🍀(Luck)' },
+  { value: '3-Enc', label: '3-Enc' },
+  { value: '2-Enc', label: '2-Enc' },
+  { value: '1-Enc', label: '1-Enc' },
+  { value: '1-Rnd', label: '1-Rnd' },
+];
 
 const POWER_CATEGORY_BUTTONS = [
   { id: 'all', label: 'All Categories', icon: '🌐' },
@@ -132,7 +140,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   // Custom / Version Creation Form State
   const [createName, setCreateName] = useState('');
   const [createAction, setCreateAction] = useState('A');
-  const [createUsage, setCreateUsage] = useState('1-Enc');
+  const [createUsage, setCreateUsage] = useState('1');
   const [createEffect, setCreateEffect] = useState('');
   const createEffectRef = useRef<HTMLTextAreaElement>(null);
 
@@ -170,7 +178,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
     setCreateName(nextVersionedName);
     setCreateAction(item.action || 'A');
-    setCreateUsage(item.usage || '1-Enc');
+    setCreateUsage(item.usage || '1');
     setCreateEffect(item.effect || '');
 
     setActiveRightTab('EDITOR');
@@ -536,7 +544,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
     setCreateName('');
     setCreateAction('A');
-    setCreateUsage('1-Enc');
+    setCreateUsage('1');
     setCreateEffect('');
     setIsVersionEditMode(false);
     setActiveRightTab('CATALOG');
@@ -880,7 +888,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               setIsVersionEditMode(false);
                               setCreateName('');
                               setCreateAction('A');
-                              setCreateUsage('1-Enc');
+                              setCreateUsage('1');
                               setCreateEffect('');
                             }
                             setActiveRightTab('CREATOR');
@@ -1164,7 +1172,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full"
                                 >
                                   {USAGE_OPTIONS.map((opt) => (
-                                    <option key={opt} value={opt}>{opt}</option>
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </option>
                                   ))}
                                 </select>
                               </div>
@@ -1276,7 +1286,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full"
                                 >
                                   {USAGE_OPTIONS.map((opt) => (
-                                    <option key={opt} value={opt}>{opt}</option>
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </option>
                                   ))}
                                 </select>
                               </div>
