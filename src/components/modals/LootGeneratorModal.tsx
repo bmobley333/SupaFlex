@@ -570,12 +570,16 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   };
 
   const handleDeconstructDraft = () => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      essence_core: Math.min(100, (prev.essence_core || 0) - 75),
-      pity_level: ((prev.pity_level || 0) + 1) % 3,
-    }));
-    showToast(`♻️ Draft Deconstructed! +25% Essence refunded to Core.`);
+    updateActiveSheetData((prev) => {
+      const current = prev.essence_core || 0;
+      const halved = Math.floor(current / 2);
+      return {
+        ...prev,
+        essence_core: halved,
+        pity_level: ((prev.pity_level || 0) + 1) % 3,
+      };
+    });
+    showToast(`♻️ Draft Deconstructed! Essence cut in half.`);
   };
 
   const handleClaimVaultItem = async (item: VaultItem): Promise<boolean> => {
@@ -832,7 +836,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Essence Core</h4>
+                        <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Essence</h4>
                         {qualifiedTier && (
                           <span className="text-[9px] bg-amber-400 text-slate-950 font-extrabold px-1.5 py-0.2 rounded uppercase animate-bounce">
                             {qualifiedTier.name} Qualified!

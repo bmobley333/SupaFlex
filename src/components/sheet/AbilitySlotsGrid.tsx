@@ -68,10 +68,25 @@ const parseAbilityVersion = (name: string): { baseName: string; version: number 
   return match ? { baseName: match[1].trim(), version: parseInt(match[2], 10) } : { baseName: cleaned, version: 1 };
 };
 
-const getMagicItemTierBadge = (itemObj: any): { label: string; icon: string; style: string } | null => {
-  if (!itemObj) return null;
-  const str = `${itemObj.sub || ''} ${itemObj.table_name || ''} ${itemObj.category || ''} ${itemObj.name || ''}`.toLowerCase();
-  
+const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; icon: string; style: string } => {
+  if (!itemObj) return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' };
+
+  let subStr = itemObj.sub || itemObj.table_name || itemObj.category || '';
+
+  if (!subStr && catalog && catalog.length > 0) {
+    const rawName = itemObj.name || itemObj.title || '';
+    const baseName = parseAbilityVersion(cleanName(rawName)).baseName.toLowerCase();
+    const found = catalog.find((c) => {
+      const cBase = parseAbilityVersion(cleanName(c.name || '')).baseName.toLowerCase();
+      return cBase === baseName || cleanName(c.name || '').toLowerCase().includes(baseName);
+    });
+    if (found) {
+      subStr = found.sub || found.table_name || found.category || '';
+    }
+  }
+
+  const str = `${subStr} ${itemObj.name || itemObj.title || ''}`.toLowerCase();
+
   if (str.includes('artifact') || str.includes('epic')) {
     return { label: 'Artifact', icon: '💫', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40' };
   }
@@ -80,9 +95,6 @@ const getMagicItemTierBadge = (itemObj: any): { label: string; icon: string; sty
   }
   if (str.includes('lesser')) {
     return { label: 'Lesser', icon: '🪄', style: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40' };
-  }
-  if (str.includes('minor') || str.includes('beer')) {
-    return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' };
   }
   return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' };
 };
@@ -856,18 +868,20 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             >
                               {/* Header Row: Name, Version, Tier Badge, Action & Usage (Adjacent), Buttons */}
                               <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="font-outfit font-bold text-sm text-slate-100">{baseName}</span>
-                                  {version > 1 && (
-                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
-                                      v{version}
-                                    </span>
-                                  )}
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-outfit font-bold text-sm text-slate-100">{baseName}</span>
+                                    {version > 1 && (
+                                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
+                                        v{version}
+                                      </span>
+                                    )}
+                                  </div>
                                   {type === 'spells' && (() => {
-                                    const badge = getMagicItemTierBadge(item);
+                                    const badge = getMagicItemTierBadge(item, fullCatalog);
                                     if (!badge) return null;
                                     return (
-                                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border flex items-center gap-1 ${badge.style}`}>
+                                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
                                         <span>{badge.icon}</span>
                                         <span>{badge.label}</span>
                                       </span>
@@ -1128,18 +1142,20 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 >
                                   {/* Header Row: Name, Version, Tier Badge, Action & Usage (Adjacent), Buttons */}
                                   <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="font-bold text-sm text-slate-100">{baseName}</span>
-                                      {version > 1 && (
-                                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
-                                          v{version}
-                                        </span>
-                                      )}
+                                    <div className="flex flex-col gap-1">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-bold text-sm text-slate-100">{baseName}</span>
+                                        {version > 1 && (
+                                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
+                                            v{version}
+                                          </span>
+                                        )}
+                                      </div>
                                       {type === 'spells' && (() => {
-                                        const badge = getMagicItemTierBadge(item);
+                                        const badge = getMagicItemTierBadge(item, fullCatalog);
                                         if (!badge) return null;
                                         return (
-                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border flex items-center gap-1 ${badge.style}`}>
+                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
                                             <span>{badge.icon}</span>
                                             <span>{badge.label}</span>
                                           </span>
@@ -1474,7 +1490,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     </span>
                   )}
                   {type === 'spells' && (() => {
-                    const badge = getMagicItemTierBadge(slot);
+                    const badge = getMagicItemTierBadge(slot, fullCatalog);
                     if (!badge) return null;
                     return (
                       <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 mt-0.5 ${badge.style}`}>

@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { MagicItem } from '../../types/game';
 import { supabase } from '../../lib/supabase';
-import { Sparkles, Star, Gem, RefreshCw, X, ShieldCheck } from 'lucide-react';
+import { Sparkles, Star, Gem, RefreshCw, ShieldCheck } from 'lucide-react';
 
 interface LootDraftModalProps {
   isOpen: boolean;
@@ -264,13 +264,10 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
                 ⚡ Essence Core Charged: 3-Card Draft
               </h3>
               <p className="text-xs text-slate-400">
-                Select <strong className="text-amber-300">1 (One)</strong> reward for {characterName} or Deconstruct for +25% Essence refund.
+                Select <strong className="text-amber-300">1 (One)</strong> reward for {characterName} or Deconstruct to cut Essence in half.
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {/* 3-Card Body */}
@@ -326,14 +323,14 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
         {/* Footer: Deconstruct Option */}
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between">
           <span className="text-xs text-slate-400">
-            Don't like any choice? <strong className="text-slate-200">Deconstruct</strong> to refund +25% Essence toward your next Core fill.
+            Don't like any choice? <strong className="text-slate-200">Deconstruct</strong> to recycle materials (cuts current Essence in half).
           </span>
           <button
             onClick={handleDeconstruct}
             className="px-4 py-1.5 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-700/50 font-bold text-xs rounded-lg transition-all flex items-center gap-1.5"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            Deconstruct (+25% Refund)
+            Deconstruct (Cut Essence in Half)
           </button>
         </div>
       </div>
