@@ -171,7 +171,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onBlur={() => {
                     handleSavePlayerName();
                   }}
-                  placeholder="e.g. Steve Tobin"
                   className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm font-mono font-bold text-indigo-300 focus:outline-none focus:border-indigo-400 transition-colors"
                 />
                 <button

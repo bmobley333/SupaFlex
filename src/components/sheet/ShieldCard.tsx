@@ -385,7 +385,6 @@ export const ShieldCard: React.FC = () => {
                       <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
-                        placeholder="Search..."
                         value={leftSearchQuery}
                         onChange={(e) => setLeftSearchQuery(e.target.value)}
                         className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-cyan-500 w-24 sm:w-28"
@@ -495,7 +494,6 @@ export const ShieldCard: React.FC = () => {
                           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                           <input
                             type="text"
-                            placeholder="Search catalog..."
                             value={rightSearchQuery}
                             onChange={(e) => setRightSearchQuery(e.target.value)}
                             className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 w-full"
@@ -610,7 +608,6 @@ export const ShieldCard: React.FC = () => {
                             <span className="text-xs font-bold text-slate-300">Shield Name</span>
                             <input
                               type="text"
-                              placeholder="e.g. Aegis Bulwark"
                               value={newShieldName}
                               onChange={(e) => setNewShieldName(e.target.value)}
                               className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-400"
@@ -738,7 +735,6 @@ export const ShieldCard: React.FC = () => {
             type="text"
             value={shield.name}
             readOnly
-            placeholder="Shield Name (e.g. Round Shield)"
             className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none flex-1 min-w-[130px] max-w-[240px] cursor-default truncate"
             title="Shield name set via Manage Shields modal"
           />

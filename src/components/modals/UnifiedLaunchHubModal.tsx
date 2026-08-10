@@ -555,7 +555,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                         required
                         value={newHeroName}
                         onChange={(e) => setNewHeroName(e.target.value)}
-                        placeholder="e.g. Conan the Barbarian"
                         className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-400"
                         autoFocus
                       />
@@ -567,7 +566,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           type="text"
                           value={newHeroRace}
                           onChange={(e) => setNewHeroRace(e.target.value)}
-                          placeholder="Human"
                           className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
                         />
                       </div>
@@ -577,7 +575,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           type="text"
                           value={newHeroClass}
                           onChange={(e) => setNewHeroClass(e.target.value)}
-                          placeholder="Adventurer"
                           className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
                         />
                       </div>
@@ -638,14 +635,12 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                                     type="text"
                                     value={editRace}
                                     onChange={(e) => setEditRace(e.target.value)}
-                                    placeholder="Race"
                                     className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200"
                                   />
                                   <input
                                     type="text"
                                     value={editClass}
                                     onChange={(e) => setEditClass(e.target.value)}
-                                    placeholder="Class"
                                     className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200"
                                   />
                                 </div>
@@ -823,7 +818,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                             onBlur={() => {
                               handleSavePlayerName();
                             }}
-                            placeholder="e.g. Steve Tobin"
                             className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm font-mono font-bold text-indigo-300 focus:outline-none focus:border-indigo-400 transition-colors"
                           />
                           <button
@@ -940,7 +934,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       required
                       value={targetInspectEmail}
                       onChange={(e) => setTargetInspectEmail(e.target.value)}
-                      placeholder="Search player email (e.g. friend@gmail.com)"
                       className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
                     />
                     <button
@@ -1055,8 +1048,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           maxLength={4}
                           value={roomCodeInput}
                           onChange={(e) => setRoomCodeInput(sanitizeRoomCodeInput(e.target.value))}
-                          placeholder="e.g. K9X2"
-                          className="w-32 px-3 py-2 bg-slate-900 border border-amber-500/40 rounded-lg text-center font-mono text-base font-black tracking-widest text-amber-300 uppercase focus:outline-none focus:border-amber-400 placeholder:text-slate-600 placeholder:font-sans placeholder:tracking-normal placeholder:text-xs"
+                          className="w-32 px-3 py-2 bg-slate-900 border border-amber-500/40 rounded-lg text-center font-mono text-base font-black tracking-widest text-amber-300 uppercase focus:outline-none focus:border-amber-400"
                         />
                         <button
                           type="submit"
@@ -1131,7 +1123,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 type="text"
                 value={deleteConfirmInput}
                 onChange={(e) => setDeleteConfirmInput(e.target.value)}
-                placeholder="delete"
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-100 focus:outline-none focus:border-red-500"
                 autoFocus
               />

@@ -184,7 +184,6 @@ export const PartyManagerModal: React.FC<PartyManagerModalProps> = ({
                       required
                       value={newPartyName}
                       onChange={(e) => setNewPartyName(e.target.value)}
-                      placeholder="e.g. Friday Dungeon Crawl"
                       className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-sm text-slate-100"
                     />
                   </div>
@@ -196,7 +195,6 @@ export const PartyManagerModal: React.FC<PartyManagerModalProps> = ({
                       type="text"
                       value={invitedEmails}
                       onChange={(e) => setInvitedEmails(e.target.value)}
-                      placeholder="playerA@gmail.com, playerB@gmail.com"
                       className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-sm text-slate-100"
                     />
                   </div>

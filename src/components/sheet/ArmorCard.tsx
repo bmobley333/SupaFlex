@@ -380,7 +380,7 @@ export const ArmorCard: React.FC = () => {
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden">
                     <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80">
                       <div className="flex items-center gap-1.5"><Shirt className="w-4 h-4 text-amber-400" /><span className="text-xs font-outfit font-bold uppercase tracking-wider text-amber-300">Armory</span></div>
-                      <div className="relative"><Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" /><input type="text" placeholder="Search..." value={leftSearchQuery} onChange={(e) => setLeftSearchQuery(e.target.value)} className="bg-slate-900 text-slate-200 text-[11px] pl-6 py-0.5 rounded border border-slate-700 w-24" /></div>
+                      <div className="relative"><Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" /><input type="text" value={leftSearchQuery} onChange={(e) => setLeftSearchQuery(e.target.value)} className="bg-slate-900 text-slate-200 text-[11px] pl-6 py-0.5 rounded border border-slate-700 w-24" /></div>
                     </div>
                     <div className="flex-1 overflow-y-auto mt-2.5 flex flex-col gap-2.5">
                       {filteredWardrobe.map((item) => {
@@ -409,7 +409,6 @@ export const ArmorCard: React.FC = () => {
                             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                             <input
                               type="text"
-                              placeholder="Search catalog..."
                               value={rightSearchQuery}
                               onChange={(e) => setRightSearchQuery(e.target.value)}
                               className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
@@ -507,7 +506,7 @@ export const ArmorCard: React.FC = () => {
                         <div className="flex items-center justify-between border-b border-amber-500/20 pb-1">
                           <span className="text-xs font-bold text-amber-300 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Create Custom Armor</span>
                         </div>
-                        <input type="text" placeholder="Armor Name" value={newArmorName} onChange={(e) => setNewArmorName(e.target.value)} className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-amber-400" required />
+                        <input type="text" value={newArmorName} onChange={(e) => setNewArmorName(e.target.value)} className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-amber-400" required />
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-bold text-slate-300">Requirement</span>
                           <select value={newArmorReq} onChange={(e) => setNewArmorReq(e.target.value)} className="bg-slate-950 text-xs px-2 py-1 rounded border border-slate-700 text-amber-300 outline-none">
@@ -583,7 +582,6 @@ export const ArmorCard: React.FC = () => {
           type="text"
           value={armor.name}
           readOnly
-          placeholder="Armor Name (e.g. Studded Leather)"
           className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none flex-1 min-w-[130px] max-w-[240px] cursor-default truncate"
           title="Armor name set via Manage Armor modal"
         />

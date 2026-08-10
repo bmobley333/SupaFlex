@@ -56,21 +56,18 @@ export const HeroIdentityHeader: React.FC = () => {
                   type="text"
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
-                  placeholder="Hero Name"
                   className="bg-slate-950 border border-indigo-500/50 rounded-lg px-3 py-1 text-lg font-outfit font-extrabold text-indigo-200 outline-none focus:border-indigo-400"
                 />
                 <input
                   type="text"
                   value={classInput}
                   onChange={(e) => setClassInput(e.target.value)}
-                  placeholder="Class"
                   className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-300 outline-none w-28"
                 />
                 <input
                   type="text"
                   value={raceInput}
                   onChange={(e) => setRaceInput(e.target.value)}
-                  placeholder="Race"
                   className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-300 outline-none w-28"
                 />
                 <button

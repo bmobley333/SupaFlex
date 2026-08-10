@@ -366,11 +366,10 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
                     type="number"
                     min="1"
                     disabled={isRollDoneThisLevel}
-                    placeholder="e.g. 18"
                     value={manualInput}
                     onChange={(e) => setManualInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !isRollDoneThisLevel && handleApplyManualInput()}
-                    className="w-24 bg-slate-900 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 text-center placeholder:text-slate-600/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                    className="w-24 bg-slate-900 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
                   />
                   <button
                     onClick={handleApplyManualInput}

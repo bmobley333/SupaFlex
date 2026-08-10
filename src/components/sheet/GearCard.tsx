@@ -374,7 +374,6 @@ export const GearCard: React.FC = () => {
                         <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
-                          placeholder="Search..."
                           value={inventorySearchQuery}
                           onChange={(e) => setInventorySearchQuery(e.target.value)}
                           className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-cyan-500 w-24 sm:w-28"
@@ -485,7 +484,6 @@ export const GearCard: React.FC = () => {
                             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                             <input
                               type="text"
-                              placeholder="Search catalog..."
                               value={catalogSearchQuery}
                               onChange={(e) => setCatalogSearchQuery(e.target.value)}
                               className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 w-full"
@@ -590,7 +588,6 @@ export const GearCard: React.FC = () => {
                             </label>
                             <input
                               type="text"
-                              placeholder="e.g. Grappling Hook"
                               value={customName}
                               onChange={(e) => setCustomName(e.target.value)}
                               className="bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500"
@@ -625,7 +622,6 @@ export const GearCard: React.FC = () => {
                               </label>
                               <input
                                 type="text"
-                                placeholder="e.g. Alchemy & Elixirs"
                                 value={customCategoryNewText}
                                 onChange={(e) => setCustomCategoryNewText(e.target.value)}
                                 className="bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-cyan-500/50 outline-none focus:border-cyan-400"

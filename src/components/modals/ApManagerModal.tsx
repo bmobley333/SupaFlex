@@ -662,14 +662,12 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                         type="text"
                         value={gmBonusAmountInput}
                         onChange={(e) => setGmBonusAmountInput(e.target.value)}
-                        placeholder="AP (+/-)"
                         className="w-24 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-amber-300 font-mono font-bold outline-none focus:border-purple-500"
                       />
                       <input
                         type="text"
                         value={gmBonusNote}
                         onChange={(e) => setGmBonusNote(e.target.value)}
-                        placeholder="Reason (e.g. GM Quest Award)..."
                         className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 outline-none focus:border-purple-500"
                       />
                     </div>

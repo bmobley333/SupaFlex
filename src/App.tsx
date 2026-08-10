@@ -509,7 +509,6 @@ export default function App() {
                   type="text"
                   value={newCharName}
                   onChange={(e) => setNewCharName(e.target.value)}
-                  placeholder="e.g., Kaelen the Sunweaver"
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-100 outline-none focus:border-indigo-500"
                   autoFocus
                 />

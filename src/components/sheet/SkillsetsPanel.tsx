@@ -654,7 +654,6 @@ export const SkillsetsPanel: React.FC = () => {
                         <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
-                          placeholder="Search..."
                           value={leftSearchQuery}
                           onChange={(e) => setLeftSearchQuery(e.target.value)}
                           className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-purple-500 w-24 sm:w-28"
@@ -813,7 +812,6 @@ export const SkillsetsPanel: React.FC = () => {
                           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                           <input
                             type="text"
-                            placeholder="Search skillsets or included skills..."
                             value={rightSearchQuery}
                             onChange={(e) => setRightSearchQuery(e.target.value)}
                             className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-purple-500 w-full"
@@ -899,7 +897,6 @@ export const SkillsetsPanel: React.FC = () => {
                           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                           <input
                             type="text"
-                            placeholder="Search individual skills..."
                             value={rightSearchQuery}
                             onChange={(e) => setRightSearchQuery(e.target.value)}
                             className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 w-full"
@@ -1028,7 +1025,6 @@ export const SkillsetsPanel: React.FC = () => {
                               <label className="text-[11px] font-bold text-slate-300">Skillset Name</label>
                               <input
                                 type="text"
-                                placeholder="e.g. Arcane Sharpshooter"
                                 value={customSkillsetName}
                                 onChange={(e) => setCustomSkillsetName(e.target.value)}
                                 className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-purple-400"
@@ -1080,7 +1076,6 @@ export const SkillsetsPanel: React.FC = () => {
                                 <Search className="w-3 h-3 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
                                 <input
                                   type="text"
-                                  placeholder="Filter available skills..."
                                   value={skillPickerSearch}
                                   onChange={(e) => setSkillPickerSearch(e.target.value)}
                                   className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-purple-500 w-full"
@@ -1179,7 +1174,6 @@ export const SkillsetsPanel: React.FC = () => {
 
                             <input
                               type="text"
-                              placeholder="Skill Name (e.g. Dragon Riding)"
                               value={newSkillName}
                               onChange={(e) => setNewSkillName(e.target.value)}
                               className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-indigo-400"

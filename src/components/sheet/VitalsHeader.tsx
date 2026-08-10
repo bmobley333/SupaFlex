@@ -189,7 +189,6 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
               <input
                 type="number"
                 min="1"
-                placeholder="Amt"
                 value={damageInput}
                 onChange={(e) => setDamageInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleApplyDamage()}
@@ -203,7 +202,6 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
               <input
                 type="number"
                 min="1"
-                placeholder="Amt"
                 value={healInput}
                 onChange={(e) => setHealInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleApplyHeal()}

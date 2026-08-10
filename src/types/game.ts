@@ -309,6 +309,13 @@ export interface ApLogEntry {
   source: string;
 }
 
+export interface ExternalDocLink {
+  id: string;
+  title: string;
+  url: string;
+  description?: string;
+}
+
 export interface CharacterBio {
   backstory?: string;
   personality?: string;
@@ -322,6 +329,7 @@ export interface CharacterBio {
   height?: string;
   weight?: string;
   age?: string;
+  doc_links?: ExternalDocLink[];
 }
 
 export interface CustomSkillsetDefinition {

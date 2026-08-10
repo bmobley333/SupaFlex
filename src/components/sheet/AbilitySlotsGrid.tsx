@@ -789,7 +789,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
-                          placeholder="Search learned..."
                           value={leftSearchQuery}
                           onChange={(e) => setLeftSearchQuery(e.target.value)}
                           className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-amber-500 w-24 sm:w-28"
@@ -1023,7 +1022,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               type="text"
                               value={newTableName}
                               onChange={(e) => setNewTableName(e.target.value)}
-                              placeholder="Table Name..."
                               className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-100 outline-none focus:border-amber-400"
                             />
                             <div className="flex items-center gap-1.5">
@@ -1060,7 +1058,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                             <input
                               type="text"
-                              placeholder={`Search catalog ${type === 'powers' ? 'powers' : 'magic items'}...`}
                               value={rightSearchQuery}
                               onChange={(e) => setRightSearchQuery(e.target.value)}
                               className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
@@ -1155,7 +1152,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               <span className="text-xs font-bold text-slate-300">Ability Name</span>
                               <input
                                 type="text"
-                                placeholder="e.g. Arcane Surge v1"
                                 value={createName}
                                 onChange={(e) => setCreateName(e.target.value)}
                                 className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400"
@@ -1216,7 +1212,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 ref={createEffectRef}
                                 value={createEffect}
                                 onChange={(e) => setCreateEffect(e.target.value)}
-                                placeholder="Describe the mechanical effects of this custom ability..."
                                 rows={3}
                                 className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400 resize-none"
                                 required
@@ -1330,7 +1325,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 ref={createEffectRef}
                                 value={createEffect}
                                 onChange={(e) => setCreateEffect(e.target.value)}
-                                placeholder="Describe the mechanical effects of this version..."
                                 rows={3}
                                 className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400 resize-none"
                                 required

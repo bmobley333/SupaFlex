@@ -91,10 +91,9 @@ export const TraitsCard: React.FC = () => {
                     <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">Hgt (Height)</span>
                     <input
                       type="text"
-                      placeholder="6'1&quot;"
                       value={bio.height || ''}
                       onChange={(e) => handleBioChange('height', e.target.value)}
-                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 placeholder:text-slate-600/40"
+                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
                     />
                   </div>
 
@@ -102,10 +101,9 @@ export const TraitsCard: React.FC = () => {
                     <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">Wgt (Weight)</span>
                     <input
                       type="text"
-                      placeholder="185 lbs"
                       value={bio.weight || ''}
                       onChange={(e) => handleBioChange('weight', e.target.value)}
-                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 placeholder:text-slate-600/40"
+                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
                     />
                   </div>
 
@@ -113,10 +111,9 @@ export const TraitsCard: React.FC = () => {
                     <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">Age</span>
                     <input
                       type="text"
-                      placeholder="28"
                       value={bio.age || ''}
                       onChange={(e) => handleBioChange('age', e.target.value)}
-                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 placeholder:text-slate-600/40"
+                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
                     />
                   </div>
                 </div>
@@ -131,10 +128,9 @@ export const TraitsCard: React.FC = () => {
                     </div>
                     <input
                       type="text"
-                      placeholder="..."
                       value={bio.appearance || ''}
                       onChange={(e) => handleBioChange('appearance', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full placeholder:text-slate-700/50"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full"
                     />
                   </div>
 
@@ -146,10 +142,9 @@ export const TraitsCard: React.FC = () => {
                     </div>
                     <input
                       type="text"
-                      placeholder="..."
                       value={bio.positive_trait || ''}
                       onChange={(e) => handleBioChange('positive_trait', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 w-full placeholder:text-slate-700/50"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 w-full"
                     />
                   </div>
 
@@ -161,10 +156,9 @@ export const TraitsCard: React.FC = () => {
                     </div>
                     <input
                       type="text"
-                      placeholder="..."
                       value={bio.negative_trait || ''}
                       onChange={(e) => handleBioChange('negative_trait', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-rose-500 w-full placeholder:text-slate-700/50"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-rose-500 w-full"
                     />
                   </div>
 
@@ -176,10 +170,9 @@ export const TraitsCard: React.FC = () => {
                     </div>
                     <input
                       type="text"
-                      placeholder="..."
                       value={bio.flair || ''}
                       onChange={(e) => handleBioChange('flair', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full placeholder:text-slate-700/50"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full"
                     />
                   </div>
 
@@ -191,10 +184,9 @@ export const TraitsCard: React.FC = () => {
                     </div>
                     <textarea
                       rows={2}
-                      placeholder="..."
                       value={bio.adventuring_goal || ''}
                       onChange={(e) => handleBioChange('adventuring_goal', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-amber-500 w-full resize-none placeholder:text-slate-700/50"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-amber-500 w-full resize-none"
                     />
                   </div>
 
@@ -206,10 +198,9 @@ export const TraitsCard: React.FC = () => {
                     </div>
                     <textarea
                       rows={3}
-                      placeholder="..."
                       value={bio.notes || ''}
                       onChange={(e) => handleBioChange('notes', e.target.value)}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-cyan-500 w-full resize-none placeholder:text-slate-700/50"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-cyan-500 w-full resize-none"
                     />
                   </div>
                 </div>

@@ -282,7 +282,6 @@ export const MoneyCard: React.FC = () => {
                       <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
-                        placeholder="Search..."
                         value={inventorySearchQuery}
                         onChange={(e) => setInventorySearchQuery(e.target.value)}
                         className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-amber-500 w-24 sm:w-28"
@@ -373,7 +372,6 @@ export const MoneyCard: React.FC = () => {
                         </label>
                         <input
                           type="text"
-                          placeholder="e.g. Ruby Statue, Golden Goblet"
                           value={customName}
                           onChange={(e) => setCustomName(e.target.value)}
                           className="bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500"

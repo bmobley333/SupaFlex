@@ -709,7 +709,6 @@ function areSessionMembersEqual(a: PartySessionMember[], b: PartySessionMember[]
                 type="text"
                 value={quickAdd.name}
                 onChange={(e) => handleTextChange('name', e.target.value)}
-                placeholder="Name"
                 className="w-28 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-amber-300 font-bold focus:outline-none focus:border-amber-500/80"
               />
 
@@ -718,7 +717,6 @@ function areSessionMembersEqual(a: PartySessionMember[], b: PartySessionMember[]
                 type="text"
                 value={quickAdd.gear}
                 onChange={(e) => handleTextChange('gear', e.target.value)}
-                placeholder="Optional"
                 className="w-28 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 focus:outline-none focus:border-indigo-500/80"
               />
 
@@ -855,7 +853,6 @@ function areSessionMembersEqual(a: PartySessionMember[], b: PartySessionMember[]
                   type="text"
                   value={quickAdd.abilities}
                   onChange={(e) => handleTextChange('abilities', e.target.value)}
-                  placeholder="Optional (e.g. Cleave, Poison)"
                   className="w-56 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 italic focus:outline-none focus:border-indigo-500/80"
                 />
               </div>
@@ -939,8 +936,7 @@ function areSessionMembersEqual(a: PartySessionMember[], b: PartySessionMember[]
               rows={6}
               value={pasteInputText}
               onChange={(e) => setPasteInputText(e.target.value)}
-              placeholder={`3 Can Clan Cutthroats (Light Leather, Daggers) 🚩14 👣12 ⚔16/10(2) 🧥14/1 ❤️10 – [✨10/💪14/👁️12/🏃14/🫀10] (Bleed: on crit, foe takes 1d4 extra dmg).\n2 Hired Thugs (Chain Vests, Clubs) 🚩12 👣10 ⚔15/12(2) 🧥14/2 ❤️12 – [✨10/💪16/👁️10/🏃12/🫀10] (Reckless Swing: dmg+2, Def–2 that rnd).`}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-amber-500/80 placeholder-slate-600"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-amber-500/80"
             />
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
@@ -981,7 +977,6 @@ function areSessionMembersEqual(a: PartySessionMember[], b: PartySessionMember[]
               type="text"
               value={codexSearch}
               onChange={(e) => setCodexSearch(e.target.value)}
-              placeholder="Search monsters by name..."
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/80"
             />
 

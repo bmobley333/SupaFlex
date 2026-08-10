@@ -95,7 +95,6 @@ export const HeroSelectorPopover: React.FC<HeroSelectorPopoverProps> = ({
                   type="text"
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
-                  placeholder="Hero Name"
                   className="bg-slate-900 border border-indigo-500/50 rounded px-2 py-0.5 text-xs font-bold text-indigo-200 outline-none w-full"
                 />
                 <div className="flex items-center gap-1.5">
@@ -103,14 +102,12 @@ export const HeroSelectorPopover: React.FC<HeroSelectorPopoverProps> = ({
                     type="text"
                     value={raceInput}
                     onChange={(e) => setRaceInput(e.target.value)}
-                    placeholder="Race"
                     className="bg-slate-900 border border-slate-850 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-300 outline-none w-20"
                   />
                   <input
                     type="text"
                     value={classInput}
                     onChange={(e) => setClassInput(e.target.value)}
-                    placeholder="Class"
                     className="bg-slate-900 border border-slate-850 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-300 outline-none w-20"
                   />
                   <button
@@ -161,7 +158,6 @@ export const HeroSelectorPopover: React.FC<HeroSelectorPopoverProps> = ({
           type="email"
           value={playerEmail}
           onChange={(e) => setPlayerEmail(e.target.value)}
-          placeholder="player@email.com"
           className="bg-transparent text-xs font-mono font-bold text-indigo-300 outline-none w-full focus:text-indigo-200"
         />
       </div>

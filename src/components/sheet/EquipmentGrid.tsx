@@ -66,7 +66,6 @@ export const EquipmentGrid: React.FC = () => {
               {/* Item Name */}
               <input
                 type="text"
-                placeholder="Item Name (e.g. Iron Shield)"
                 value={item.name}
                 onChange={(e) => handleGearChange(index, { name: e.target.value })}
                 className="bg-slate-900 text-slate-200 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-800 outline-none w-full md:w-1/3 focus:border-indigo-500"
@@ -113,7 +112,6 @@ export const EquipmentGrid: React.FC = () => {
               {/* Effect */}
               <input
                 type="text"
-                placeholder="Effect or stats..."
                 value={item.effect || ''}
                 onChange={(e) => handleGearChange(index, { effect: e.target.value })}
                 className="bg-slate-900 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 outline-none flex-1 w-full focus:border-indigo-500"

@@ -120,7 +120,6 @@ export const AccountInspectorModal: React.FC<AccountInspectorModalProps> = ({
             required
             value={targetEmail}
             onChange={(e) => setTargetEmail(e.target.value)}
-            placeholder="Search by player email (e.g. friend@gmail.com)"
             className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-amber-400"
           />
           <button
