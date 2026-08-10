@@ -94,6 +94,14 @@ export const WeaponsCard: React.FC = () => {
   const [showManageModal, setShowManageModal] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const handleOpen = (e: CustomEvent) => {
+      if (e.detail === 'weapons') setShowManageModal(true);
+    };
+    window.addEventListener('supaflex:open-manager' as any, handleOpen);
+    return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
+  }, []);
+
   // Search filter states for split panes
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
   const [rightSearchQuery, setRightSearchQuery] = useState<string>('');
@@ -158,10 +166,15 @@ export const WeaponsCard: React.FC = () => {
     }
   }, [showManageModal]);
 
+  const handleCloseManageModal = () => {
+    setShowManageModal(false);
+    window.dispatchEvent(new CustomEvent('supaflex:close-manager'));
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        setShowManageModal(false);
+        handleCloseManageModal();
       }
     };
     if (showManageModal) {
@@ -466,7 +479,7 @@ export const WeaponsCard: React.FC = () => {
                   </div>
 
                   <button
-                    onClick={() => setShowManageModal(false)}
+                    onClick={handleCloseManageModal}
                     className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0"
                   >
                     <X className="w-5 h-5" />
@@ -920,7 +933,7 @@ export const WeaponsCard: React.FC = () => {
                   
                   {/* Standardized Master Blueprint Done Footer Button */}
                   <button 
-                    onClick={() => setShowManageModal(false)} 
+                    onClick={handleCloseManageModal} 
                     className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
                   >
                     Done

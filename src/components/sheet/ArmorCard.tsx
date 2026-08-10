@@ -80,6 +80,14 @@ export const ArmorCard: React.FC = () => {
   const [showManageModal, setShowManageModal] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const handleOpen = (e: CustomEvent) => {
+      if (e.detail === 'armor') setShowManageModal(true);
+    };
+    window.addEventListener('supaflex:open-manager' as any, handleOpen);
+    return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
+  }, []);
+
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
   const [rightSearchQuery, setRightSearchQuery] = useState<string>('');
   const [activeRightTab, setActiveRightTab] = useState<'CATALOG' | 'CREATOR'>('CATALOG');
@@ -109,10 +117,15 @@ export const ArmorCard: React.FC = () => {
     }
   }, [showManageModal]);
 
+  const handleCloseManageModal = () => {
+    setShowManageModal(false);
+    window.dispatchEvent(new CustomEvent('supaflex:close-manager'));
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        setShowManageModal(false);
+        handleCloseManageModal();
       }
     };
     if (showManageModal) document.addEventListener('mousedown', handleClickOutside);
@@ -362,7 +375,7 @@ export const ArmorCard: React.FC = () => {
                     </span>
                   </div>
 
-                  <button onClick={() => setShowManageModal(false)} className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 shrink-0"><X className="w-5 h-5" /></button>
+                  <button onClick={handleCloseManageModal} className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 shrink-0"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden">
@@ -530,7 +543,7 @@ export const ArmorCard: React.FC = () => {
                   
                   {/* Standardized Master Blueprint Done Footer Button */}
                   <button 
-                    onClick={() => setShowManageModal(false)} 
+                    onClick={handleCloseManageModal} 
                     className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
                   >
                     Done

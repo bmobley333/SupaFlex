@@ -4,7 +4,6 @@ import {
   X,
   Sparkles,
   Award,
-  Heart,
   Gift,
   RotateCcw,
   ChevronDown,
@@ -25,9 +24,16 @@ interface ApManagerModalProps {
   onClose: () => void;
   onOpenAttributeManager?: () => void;
   onOpenVitalityManager?: () => void;
+  onOpenFocusManager?: () => void;
+  onOpenArmorManager?: () => void;
+  onOpenWeaponsManager?: () => void;
+  onOpenShieldsManager?: () => void;
+  onOpenPowersManager?: () => void;
+  onOpenMagicItemsManager?: () => void;
+  onOpenSkillsManager?: () => void;
 }
 
-type RightSubTab = 'VITALITY' | 'CAPSTONES' | 'GM_BONUS';
+type RightSubTab = 'CAPSTONES' | 'GM_BONUS';
 
 const normalizeDie = (die?: string): string => {
   if (!die) return 'd4';
@@ -39,14 +45,62 @@ const normalizeDie = (die?: string): string => {
 export const ApManagerModal: React.FC<ApManagerModalProps> = ({
   isOpen,
   onClose,
-  onOpenAttributeManager: _onOpenAttributeManager,
+  onOpenAttributeManager,
   onOpenVitalityManager,
+  onOpenFocusManager,
+  onOpenArmorManager,
+  onOpenWeaponsManager,
+  onOpenShieldsManager,
+  onOpenPowersManager,
+  onOpenMagicItemsManager,
+  onOpenSkillsManager,
 }) => {
   const { activeCharacter, saveActiveCharacter, recordApExpenditure, revertApExpenditure } =
     useCharacterStore();
 
-  const [activeTab, setActiveTab] = useState<RightSubTab>('VITALITY');
+  const [activeTab, setActiveTab] = useState<RightSubTab>('CAPSTONES');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+  const handleOpenManager = (catId: string) => {
+    onClose();
+    if (catId === 'attributes' && onOpenAttributeManager) {
+      onOpenAttributeManager();
+      return;
+    }
+    if (catId === 'vitality' && onOpenVitalityManager) {
+      onOpenVitalityManager();
+      return;
+    }
+    if (catId === 'focus' && onOpenFocusManager) {
+      onOpenFocusManager();
+      return;
+    }
+    if (catId === 'armor' && onOpenArmorManager) {
+      onOpenArmorManager();
+      return;
+    }
+    if (catId === 'weapons' && onOpenWeaponsManager) {
+      onOpenWeaponsManager();
+      return;
+    }
+    if (catId === 'shields' && onOpenShieldsManager) {
+      onOpenShieldsManager();
+      return;
+    }
+    if (catId === 'powers' && onOpenPowersManager) {
+      onOpenPowersManager();
+      return;
+    }
+    if (catId === 'magicItems' && onOpenMagicItemsManager) {
+      onOpenMagicItemsManager();
+      return;
+    }
+    if (catId === 'skills' && onOpenSkillsManager) {
+      onOpenSkillsManager();
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: catId }));
+  };
 
   // GM Bonus Form State
   const [gmBonusAmountInput, setGmBonusAmountInput] = useState<string>('1');
@@ -359,6 +413,18 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                   </span>
                 </div>
               )}
+
+              {/* Prominent Free Vitality Roll Button */}
+              <div className="mt-3 pt-2.5 border-t border-purple-500/20">
+                <button
+                  type="button"
+                  onClick={() => handleOpenManager('vitality')}
+                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-rose-950/90 via-rose-900/80 to-purple-950/90 hover:from-rose-900 hover:to-purple-900 border border-rose-500/50 text-rose-200 font-outfit font-bold text-xs shadow-md hover:shadow-rose-950/60 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <span className="text-base">🎲</span>
+                  <span className="tracking-wide">Free Vitality Roll</span>
+                </button>
+              </div>
             </div>
 
             {/* Category AP Breakdown Title & Subtitle */}
@@ -386,14 +452,32 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                     {/* Line-Card Header Bar */}
                     <div
                       onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
-                      className="p-3 flex items-center justify-between gap-3 cursor-pointer select-none"
+                      className="p-3 flex items-center justify-between gap-2 cursor-pointer select-none"
                     >
-                      <div className="flex items-center gap-2.5">
+                      {/* Left: Icon & Name */}
+                      <div className="flex items-center gap-2.5 min-w-[110px]">
                         <span className="text-lg">{cat.emoji}</span>
                         <span className="font-outfit font-bold text-sm text-slate-100">{cat.name}</span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      {/* Center: Always-Visible Centered Manage Button */}
+                      <div className="flex-1 flex justify-center px-1">
+                        {['armor', 'attributes', 'focus', 'magicItems', 'powers', 'shields', 'skills', 'vitality', 'weapons'].includes(cat.id) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenManager(cat.id);
+                            }}
+                            className="px-3 py-1 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-outfit font-bold text-xs shadow-md hover:shadow-purple-500/30 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
+                          >
+                            <span>Manage {cat.name}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Right: Net AP & Chevron */}
+                      <div className="flex items-center gap-2 shrink-0">
                         <span className={`px-2.5 py-0.5 rounded-lg border font-mono font-bold text-xs ${cat.badgeColor}`}>
                           {cat.id === 'gmBonus' && cat.netAp > 0 ? `+${cat.netAp}` : cat.netAp} AP
                         </span>
@@ -429,18 +513,6 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
             {/* Right Pane Navigation Sub-Tabs */}
             <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-4 shrink-0 overflow-x-auto">
               <button
-                onClick={() => setActiveTab('VITALITY')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                  activeTab === 'VITALITY'
-                    ? 'bg-purple-600 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Heart className="w-3.5 h-3.5 text-rose-400" />
-                Vitality
-              </button>
-
-              <button
                 onClick={() => setActiveTab('CAPSTONES')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                   activeTab === 'CAPSTONES'
@@ -467,36 +539,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
 
             {/* Sub-Tab Content Viewport */}
             <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
-              {/* TAB 1: VITALITY BOOST */}
-              {activeTab === 'VITALITY' && (
-                <div className="space-y-4">
-                  <div className="p-5 rounded-2xl bg-slate-950/90 border border-rose-500/30 flex items-center justify-between shadow-xl">
-                    <div className="space-y-1">
-                      <h4 className="font-outfit font-bold text-rose-300 text-sm flex items-center gap-2">
-                        <Heart className="w-4 h-4 text-rose-400" />
-                        Open Vitality Manager
-                      </h4>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        Access Level Vit rolls, AP boosts (+2 Vit for 1 AP), auto-roll calculator, and restoration controls.
-                      </p>
-                    </div>
-                    {onOpenVitalityManager && (
-                      <button
-                        onClick={() => {
-                          onClose();
-                          onOpenVitalityManager();
-                        }}
-                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 font-outfit font-bold text-white transition-all shadow-lg text-xs cursor-pointer flex items-center gap-2 shrink-0 active:scale-95"
-                      >
-                        <span>Open Manager</span>
-                        <span>❤️</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: HEROIC CAPSTONES */}
+              {/* TAB 1: HEROIC CAPSTONES */}
               {activeTab === 'CAPSTONES' && (
                 <div className="space-y-3">
                   <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 text-xs text-purple-200">

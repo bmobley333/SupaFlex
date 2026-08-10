@@ -36,6 +36,26 @@ export default function App() {
   const [showAttributeManagerModal, setShowAttributeManagerModal] = useState(false);
   const [showVitalityManagerModal, setShowVitalityManagerModal] = useState(false);
   const [showFocusManagerModal, setShowFocusManagerModal] = useState(false);
+  const [openedFromApManager, setOpenedFromApManager] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => setOpenedFromApManager(true);
+    const handleClose = () => {
+      setOpenedFromApManager((prev) => {
+        if (prev) {
+          setShowApManagerModal(true);
+        }
+        return false;
+      });
+    };
+
+    window.addEventListener('supaflex:open-manager' as any, handleOpen);
+    window.addEventListener('supaflex:close-manager' as any, handleClose);
+    return () => {
+      window.removeEventListener('supaflex:open-manager' as any, handleOpen);
+      window.removeEventListener('supaflex:close-manager' as any, handleClose);
+    };
+  }, []);
 
   // Unified Launch Hub & Read-Only / Party Session State
   const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(false);
@@ -604,8 +624,21 @@ export default function App() {
         <ApManagerModal
           isOpen={showApManagerModal}
           onClose={() => setShowApManagerModal(false)}
-          onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
-          onOpenVitalityManager={() => setShowVitalityManagerModal(true)}
+          onOpenAttributeManager={() => {
+            setOpenedFromApManager(true);
+            setShowApManagerModal(false);
+            setShowAttributeManagerModal(true);
+          }}
+          onOpenVitalityManager={() => {
+            setOpenedFromApManager(true);
+            setShowApManagerModal(false);
+            setShowVitalityManagerModal(true);
+          }}
+          onOpenFocusManager={() => {
+            setOpenedFromApManager(true);
+            setShowApManagerModal(false);
+            setShowFocusManagerModal(true);
+          }}
         />
       </ErrorBoundary>
 
@@ -613,7 +646,13 @@ export default function App() {
       <ErrorBoundary fallbackTitle="Attribute Manager Error" onClose={() => setShowAttributeManagerModal(false)}>
         <AttributeManagerModal
           isOpen={showAttributeManagerModal}
-          onClose={() => setShowAttributeManagerModal(false)}
+          onClose={() => {
+            setShowAttributeManagerModal(false);
+            if (openedFromApManager) {
+              setOpenedFromApManager(false);
+              setShowApManagerModal(true);
+            }
+          }}
         />
       </ErrorBoundary>
 
@@ -630,7 +669,13 @@ export default function App() {
       <ErrorBoundary fallbackTitle="Vitality Manager Error" onClose={() => setShowVitalityManagerModal(false)}>
         <VitalityManagerModal
           isOpen={showVitalityManagerModal}
-          onClose={() => setShowVitalityManagerModal(false)}
+          onClose={() => {
+            setShowVitalityManagerModal(false);
+            if (openedFromApManager) {
+              setOpenedFromApManager(false);
+              setShowApManagerModal(true);
+            }
+          }}
         />
       </ErrorBoundary>
 
@@ -638,7 +683,13 @@ export default function App() {
       <ErrorBoundary fallbackTitle="Focus Manager Error" onClose={() => setShowFocusManagerModal(false)}>
         <FocusManagerModal
           isOpen={showFocusManagerModal}
-          onClose={() => setShowFocusManagerModal(false)}
+          onClose={() => {
+            setShowFocusManagerModal(false);
+            if (openedFromApManager) {
+              setOpenedFromApManager(false);
+              setShowApManagerModal(true);
+            }
+          }}
         />
       </ErrorBoundary>
 
