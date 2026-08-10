@@ -316,6 +316,14 @@ export interface ExternalDocLink {
   description?: string;
 }
 
+export interface GmDocLink {
+  id: string;
+  title: string;
+  url: string;
+  description?: string;
+  adventureTag?: string;
+}
+
 export interface CharacterBio {
   backstory?: string;
   personality?: string;
