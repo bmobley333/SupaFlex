@@ -576,73 +576,92 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Combat Stats Grid (with 3rd Ftg Minimum Wounds field) */}
-                  <div className="grid grid-cols-4 gap-2 text-xs">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-0.5">🚩 Init</label>
-                      <input
-                        type="number"
-                        value={quickAdd.init}
-                        onChange={(e) => handleQuickAddChange('init', parseInt(e.target.value, 10) || 0)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center text-slate-100 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-0.5">👣 MR</label>
-                      <input
-                        type="number"
-                        value={quickAdd.mr}
-                        onChange={(e) => handleQuickAddChange('mr', parseInt(e.target.value, 10) || 0)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center text-slate-100 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-0.5" title="Attack / Damage (Fatigue Min Wounds)">
-                        ⚔️ Atk/Dmg(Ftg)
-                      </label>
-                      <div className="flex items-center gap-0.5">
+                  {/* Combat Stats Grid (2-Row Responsive Proportional Layout) */}
+                  <div className="flex flex-col gap-2">
+                    {/* Row 1: Single Metrics (Nish, MR, Vit) */}
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5">🚩 Nish</label>
                         <input
                           type="number"
-                          value={quickAdd.atk}
-                          onChange={(e) => handleQuickAddChange('atk', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded px-1 py-1 text-center text-slate-100 font-mono text-[10px]"
-                          title="Attack"
+                          value={quickAdd.init}
+                          onChange={(e) => handleQuickAddChange('init', parseInt(e.target.value, 10) || 0)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center text-slate-100 font-mono text-xs"
                         />
-                        <span className="text-slate-500 text-[10px]">/</span>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5">👣 MR</label>
                         <input
                           type="number"
-                          value={quickAdd.dmg}
-                          onChange={(e) => handleQuickAddChange('dmg', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded px-1 py-1 text-center text-slate-100 font-mono text-[10px]"
-                          title="Damage"
+                          value={quickAdd.mr}
+                          onChange={(e) => handleQuickAddChange('mr', parseInt(e.target.value, 10) || 0)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center text-slate-100 font-mono text-xs"
                         />
-                        <span className="text-slate-500 text-[10px]">(</span>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5">❤️ Vit</label>
                         <input
                           type="number"
-                          value={quickAdd.minWounds}
-                          onChange={(e) => handleQuickAddChange('minWounds', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded px-1 py-1 text-center text-amber-300 font-mono text-[10px]"
-                          title="Fatigue / Min Wounds"
+                          value={quickAdd.vit}
+                          onChange={(e) => handleQuickAddChange('vit', parseInt(e.target.value, 10) || 0)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center text-slate-100 font-mono text-xs"
                         />
-                        <span className="text-slate-500 text-[10px]">)</span>
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-0.5">🧥 Def/Ar</label>
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          value={quickAdd.def}
-                          onChange={(e) => handleQuickAddChange('def', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-1 py-1 text-center text-slate-100 font-mono text-[11px]"
-                        />
-                        <span className="text-slate-500">/</span>
-                        <input
-                          type="number"
-                          value={quickAdd.armor}
-                          onChange={(e) => handleQuickAddChange('armor', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-1 py-1 text-center text-slate-100 font-mono text-[11px]"
-                        />
+
+                    {/* Row 2: Composite Metrics (Atk/Dmg/Ftg & Def/Armor Split 50%/50%) */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5" title="Attack / Damage (Fatigue Min Wounds)">
+                          ⚔️ Atk / Dmg (Ftg)
+                        </label>
+                        <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
+                          <input
+                            type="number"
+                            value={quickAdd.atk}
+                            onChange={(e) => handleQuickAddChange('atk', parseInt(e.target.value, 10) || 0)}
+                            className="w-full bg-transparent text-center text-slate-100 font-mono text-xs outline-none"
+                            title="Attack"
+                          />
+                          <span className="text-slate-500 font-bold text-xs select-none">/</span>
+                          <input
+                            type="number"
+                            value={quickAdd.dmg}
+                            onChange={(e) => handleQuickAddChange('dmg', parseInt(e.target.value, 10) || 0)}
+                            className="w-full bg-transparent text-center text-slate-100 font-mono text-xs outline-none"
+                            title="Damage"
+                          />
+                          <span className="text-slate-500 font-bold text-xs select-none">(</span>
+                          <input
+                            type="number"
+                            value={quickAdd.minWounds}
+                            onChange={(e) => handleQuickAddChange('minWounds', parseInt(e.target.value, 10) || 0)}
+                            className="w-full bg-transparent text-center text-amber-300 font-mono text-xs outline-none"
+                            title="Fatigue / Min Wounds"
+                          />
+                          <span className="text-slate-500 font-bold text-xs select-none">)</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5">🧥 Def / Armor</label>
+                        <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
+                          <input
+                            type="number"
+                            value={quickAdd.def}
+                            onChange={(e) => handleQuickAddChange('def', parseInt(e.target.value, 10) || 0)}
+                            className="w-full bg-transparent text-center text-slate-100 font-mono text-xs outline-none"
+                            title="Defense"
+                          />
+                          <span className="text-slate-500 font-bold text-xs select-none">/</span>
+                          <input
+                            type="number"
+                            value={quickAdd.armor}
+                            onChange={(e) => handleQuickAddChange('armor', parseInt(e.target.value, 10) || 0)}
+                            className="w-full bg-transparent text-center text-slate-100 font-mono text-xs outline-none"
+                            title="Armor"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
