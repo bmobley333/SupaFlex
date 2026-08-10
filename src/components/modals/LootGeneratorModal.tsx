@@ -1,5 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { Sparkles, Archive } from 'lucide-react';
+import { useCharacterStore } from '../../store/useCharacterStore';
+import { LootDraftModal } from './LootDraftModal';
+import { EchoVaultModal } from './EchoVaultModal';
+import { VaultItem } from '../../types/game';
 
 interface LootGeneratorModalProps {
   isOpen: boolean;
@@ -50,11 +55,37 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   onClaimMagicItem,
   onClaimValuable
 }) => {
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter);
+  const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
+  const magicItems = useCharacterStore((state) => state.magicItems);
+  const activePartyId = useCharacterStore((state) => state.activePartyId);
+
   const [isGmMode, setIsGmMode] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('coins');
   const [isRolling, setIsRolling] = useState(false);
   const [results, setResults] = useState<RollResult[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [isDraftOpen, setIsDraftOpen] = useState(false);
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [lastDraftTier, setLastDraftTier] = useState<'Minor' | 'Lesser' | 'Greater' | 'Artifact'>('Lesser');
+  const [partyVault, setPartyVault] = useState<VaultItem[]>([]);
+
+  const essenceCore = activeCharacter?.sheet_data?.essence_core || 0;
+  const starredItemIds = activeCharacter?.sheet_data?.starred_magic_items || [];
+
+  useEffect(() => {
+    if (isOpen) {
+      const partyId = activePartyId || 'default';
+      const storageKey = `supaflex_party_echo_vault_${partyId}`;
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          setPartyVault(JSON.parse(saved));
+        } catch {}
+      }
+    }
+  }, [activePartyId, isOpen]);
 
   if (!isOpen) return null;
 
@@ -101,19 +132,23 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       const { data, error } = await supabase
         .from('magic_items')
         .select('*')
-        .ilike('category', `%${rarity}%`);
+        .or(`sub.ilike.%${rarity}%,table_name.ilike.%${rarity}%`);
       
       if (error || !data || data.length === 0) {
-        const { data: allData } = await supabase.from('magic_items').select('*');
-        if (allData && allData.length > 0) {
-          return allData[Math.floor(Math.random() * allData.length)];
+        const { data: tierFallback } = await supabase
+          .from('magic_items')
+          .select('*')
+          .ilike('sub', `%${rarity}%`);
+        
+        if (tierFallback && tierFallback.length > 0) {
+          return tierFallback[Math.floor(Math.random() * tierFallback.length)];
         }
-        return { name: `${rarity} Magic Item`, category: rarity, description: 'Mystical artifact of power.' };
+        return { name: `${rarity} Magic Item`, sub: rarity, description: 'Mystical artifact of power.' };
       }
 
       return data[Math.floor(Math.random() * data.length)];
     } catch {
-      return { name: `${rarity} Magic Focus`, category: rarity, description: 'Enchanted magic focus.' };
+      return { name: `${rarity} Magic Focus`, sub: rarity, description: 'Enchanted magic focus.' };
     }
   };
 
@@ -243,7 +278,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             resList.push({
               id: `res-${Date.now()}-epic1`,
               tableKey: 'master_d100',
-              tableName: '💫 Epic Artifact',
+              tableName: '💫 Artifact Magic Item',
               rollVal: 100,
               title: `${artItem.name}`,
               description: artItem.description || 'Legendary artifact of massive power.',
@@ -435,6 +470,153 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     }
   };
 
+  const handleRefineResult = (res: RollResult) => {
+    if (res.claimed) return;
+
+    let fillPercentage = 15;
+    let tierRarity: 'Minor' | 'Lesser' | 'Greater' | 'Artifact' = 'Minor';
+
+    if (res.tableName.includes('Lesser') || res.type === 'magic_item') {
+      fillPercentage = 25;
+      tierRarity = 'Lesser';
+    }
+    if (res.tableName.includes('Greater')) {
+      fillPercentage = 50;
+      tierRarity = 'Greater';
+    }
+    if (res.tableName.includes('Artifact') || res.tableName.includes('Epic')) {
+      fillPercentage = 100;
+      tierRarity = 'Artifact';
+    }
+
+    const currentEssence = activeCharacter?.sheet_data?.essence_core || 0;
+    const newEssence = Math.min(100, currentEssence + fillPercentage);
+
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      essence_core: newEssence,
+    }));
+
+    res.claimed = true;
+    setResults([...results]);
+
+    showToast(`⚡ Refined '${res.title}' into +${fillPercentage}% Essence (${newEssence}% Total)!`);
+
+    if (newEssence >= 100) {
+      setLastDraftTier(tierRarity);
+      setIsDraftOpen(true);
+    }
+  };
+
+  const handlePassResult = (res: RollResult) => {
+    if (res.claimed) return;
+
+    const partyId = activePartyId || 'default';
+    const storageKey = `supaflex_party_echo_vault_${partyId}`;
+    const existingVaultStr = localStorage.getItem(storageKey);
+    const existingVault: VaultItem[] = existingVaultStr ? JSON.parse(existingVaultStr) : [];
+
+    let tierRarity: 'Minor' | 'Lesser' | 'Greater' | 'Artifact' = 'Lesser';
+    if (res.tableName.includes('Minor')) tierRarity = 'Minor';
+    if (res.tableName.includes('Greater')) tierRarity = 'Greater';
+    if (res.tableName.includes('Artifact')) tierRarity = 'Artifact';
+
+    const newItem: VaultItem = {
+      id: `vlt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      title: res.title,
+      description: res.description,
+      type: res.type,
+      rarity: tierRarity,
+      essenceValue: tierRarity === 'Minor' ? 15 : tierRarity === 'Lesser' ? 25 : tierRarity === 'Greater' ? 50 : 100,
+      coinsSilver: res.coinsSilver,
+      coinsGold: res.coinsGold,
+      magicItem: res.magicItem,
+      valuableName: res.valuableName,
+      valuableVal: res.valuableVal,
+      passedBy: characterName,
+      timestamp: new Date().toISOString(),
+    };
+
+    const updatedVault = [newItem, ...existingVault];
+    localStorage.setItem(storageKey, JSON.stringify(updatedVault));
+    setPartyVault(updatedVault);
+
+    res.claimed = true;
+    setResults([...results]);
+    showToast(`📥 Passed '${res.title}' to Party Echo Vault!`);
+  };
+
+  const handleSelectDraftReward = async (reward: { type: 'magic_item' | 'treasure'; data: any }) => {
+    if (reward.data?.type === 'coins') {
+      const s = reward.data.silver || 0;
+      const g = reward.data.gold || 0;
+      await onClaimCoins(s, g);
+      showToast(`✅ Claimed Draft Reward +${s}s, +${g}g!`);
+    } else if (reward.type === 'treasure' || reward.data?.type === 'valuable') {
+      const name = reward.data.name || 'Valuable Treasure';
+      const val = reward.data.value || '10g';
+      await onClaimValuable(name, val);
+      showToast(`✅ Claimed Draft Reward '${name}' (${val})!`);
+    } else {
+      await onClaimMagicItem(reward.data, false);
+      showToast(`✅ Claimed Draft Reward '${reward.data.name}'!`);
+    }
+
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      essence_core: Math.max(0, (prev.essence_core || 0) - 100),
+    }));
+
+    return true;
+  };
+
+  const handleDeconstructDraft = () => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      essence_core: Math.min(100, (prev.essence_core || 0) - 75),
+      pity_level: ((prev.pity_level || 0) + 1) % 3,
+    }));
+    showToast(`♻️ Draft Deconstructed! +25% Essence refunded to Core.`);
+  };
+
+  const handleClaimVaultItem = async (item: VaultItem): Promise<boolean> => {
+    let ok = false;
+    if (item.type === 'coins') {
+      ok = await onClaimCoins(item.coinsSilver || 0, item.coinsGold || 0);
+    } else if (item.magicItem) {
+      ok = await onClaimMagicItem(item.magicItem, false);
+    } else {
+      ok = await onClaimValuable(item.title, item.valuableVal || '5g');
+    }
+
+    if (ok) {
+      const partyId = activePartyId || 'default';
+      const storageKey = `supaflex_party_echo_vault_${partyId}`;
+      const updated = partyVault.filter((v) => v.id !== item.id);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      setPartyVault(updated);
+      showToast(`✅ Claimed '${item.title}' from Echo Vault!`);
+    }
+    return ok;
+  };
+
+  const handleTriggerRestSweep = async () => {
+    if (partyVault.length === 0) return;
+    const partyId = activePartyId || 'default';
+    const storageKey = `supaflex_party_echo_vault_${partyId}`;
+    const totalEssence = partyVault.reduce((acc, item) => acc + (item.essenceValue || 25), 0);
+    const share = Math.round(totalEssence / 4);
+
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      essence_core: Math.min(100, (prev.essence_core || 0) + share),
+    }));
+
+    localStorage.removeItem(storageKey);
+    setPartyVault([]);
+    showToast(`🔥 Rest Sweep Completed! +${share}% Essence deposited to all party members!`);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">
       <div className="bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden text-slate-100">
@@ -456,12 +638,47 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             </div>
           </div>
 
-          <button 
-            onClick={onClose} 
-            className="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 rounded hover:bg-slate-800 transition-colors"
-          >
-            ×
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Essence Core Meter */}
+            <button
+              type="button"
+              onClick={() => {
+                if (essenceCore >= 100) setIsDraftOpen(true);
+              }}
+              className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 font-mono font-bold text-xs transition-all shadow-md ${
+                essenceCore >= 100
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 animate-pulse cursor-pointer'
+                  : 'bg-slate-950/80 border-slate-700 text-amber-300'
+              }`}
+              title={essenceCore >= 100 ? 'Click to trigger 3-Card Draft!' : 'Refine unwanted loot to fill Essence Core'}
+            >
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>Core: {essenceCore}%</span>
+              {essenceCore >= 100 && (
+                <span className="text-[10px] bg-slate-950 text-amber-300 px-1.5 py-0.5 rounded uppercase font-sans">
+                  Draft Ready!
+                </span>
+              )}
+            </button>
+
+            {/* Echo Vault Button */}
+            <button
+              type="button"
+              onClick={() => setIsVaultOpen(true)}
+              className="px-3 py-1.5 bg-cyan-950/70 hover:bg-cyan-900/90 text-cyan-300 border border-cyan-500/40 rounded-xl font-mono font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+              title="Open Party Shared Echo Vault"
+            >
+              <Archive className="w-4 h-4 text-cyan-400" />
+              <span>Vault ({partyVault.length})</span>
+            </button>
+
+            <button 
+              onClick={onClose} 
+              className="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 rounded hover:bg-slate-800 transition-colors ml-2"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         {/* Modal Body: Two-Pane Master Blueprint Grid with Independent Pane Scrollbars */}
@@ -511,11 +728,11 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                         <p className="text-xs text-slate-300 mt-1 leading-relaxed">{res.description}</p>
                       </div>
 
-                      {/* 1-Click Claim Action Buttons */}
-                      <div className="flex items-center gap-2 shrink-0">
+                      {/* 1-Click Claim & Refine Action Buttons */}
+                      <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
                         {res.claimed ? (
                           <span className="text-xs font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-3 py-1 rounded-lg">
-                            ✓ Claimed
+                            ✓ Claimed / Refined
                           </span>
                         ) : (
                           <>
@@ -529,18 +746,18 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                             )}
 
                             {res.type === 'magic_item' && (
-                              <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center gap-1">
                                 <button
                                   onClick={() => claimMagicItem(res, false)}
-                                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition-all"
+                                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition-all"
                                 >
-                                  🎒 Add Inventory
+                                  🎒 Inventory
                                 </button>
                                 <button
                                   onClick={() => claimMagicItem(res, true)}
-                                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition-all"
+                                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition-all"
                                 >
-                                  ⚔️ Add & Equip
+                                  ⚔️ Equip
                                 </button>
                               </div>
                             )}
@@ -553,6 +770,22 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                                 💎 +Add Valuables
                               </button>
                             )}
+
+                            {/* ⚡ Refine & 📥 Pass Buttons */}
+                            <button
+                              onClick={() => handleRefineResult(res)}
+                              className="bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 text-xs font-bold px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                              title="Disenchant loot drop into personal Essence Core (+15% to +100%)"
+                            >
+                              ⚡ Refine
+                            </button>
+                            <button
+                              onClick={() => handlePassResult(res)}
+                              className="bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-300 border border-cyan-500/40 text-xs font-bold px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                              title="Pass item to Party Echo Vault for off-turn/rest claiming"
+                            >
+                              📥 Pass
+                            </button>
                           </>
                         )}
                       </div>
@@ -681,6 +914,28 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         </div>
 
       </div>
+
+      {/* 3-Card Smart Draft Modal */}
+      <LootDraftModal
+        isOpen={isDraftOpen}
+        onClose={() => setIsDraftOpen(false)}
+        characterName={characterName}
+        draftTier={lastDraftTier}
+        starredItemIds={starredItemIds}
+        stockMagicItems={magicItems}
+        onSelectReward={handleSelectDraftReward}
+        onDeconstructDraft={handleDeconstructDraft}
+      />
+
+      {/* Async Echo Vault Modal */}
+      <EchoVaultModal
+        isOpen={isVaultOpen}
+        onClose={() => setIsVaultOpen(false)}
+        characterName={characterName}
+        vaultItems={partyVault}
+        onClaimVaultItem={handleClaimVaultItem}
+        onTriggerRestSweep={handleTriggerRestSweep}
+      />
     </div>
   );
 };

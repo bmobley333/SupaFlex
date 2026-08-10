@@ -317,6 +317,22 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return new Set(slots.map((s) => cleanName(s.name).toLowerCase()));
   }, [slots]);
 
+  // Toggle Starred Wishlist Item
+  const handleToggleStarItem = (targetItem: Power | MagicItem) => {
+    const itemKey = targetItem.id || targetItem.name;
+    updateActiveSheetData((prev) => {
+      const currentStarred = prev.starred_magic_items || [];
+      const exists = currentStarred.some((k) => String(k) === String(itemKey));
+      const updated = exists
+        ? currentStarred.filter((k) => String(k) !== String(itemKey))
+        : [...currentStarred, itemKey];
+      return {
+        ...prev,
+        starred_magic_items: updated,
+      };
+    });
+  };
+
   // Learn an ability from catalog into active sheet slots
   const handleLearnAbility = (item: Power | MagicItem) => {
     const { baseName, version } = parseAbilityVersion(item.name);
@@ -1093,6 +1109,20 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     </div>
 
                                     <div className="flex items-center gap-1.5 shrink-0">
+                                      {type === 'spells' && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleStarItem(item)}
+                                          className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                            (activeCharacter?.sheet_data?.starred_magic_items || []).some((k) => String(k) === String(item.id || item.name))
+                                              ? 'text-amber-400'
+                                              : 'text-slate-600 hover:text-amber-400'
+                                          }`}
+                                          title={(activeCharacter?.sheet_data?.starred_magic_items || []).some((k) => String(k) === String(item.id || item.name)) ? 'Starred in Wishlist' : 'Star to add to Loot Draft Wishlist'}
+                                        >
+                                          <Star className={`w-3.5 h-3.5 ${(activeCharacter?.sheet_data?.starred_magic_items || []).some((k) => String(k) === String(item.id || item.name)) ? 'fill-amber-400' : ''}`} />
+                                        </button>
+                                      )}
                                       <button
                                         type="button"
                                         onClick={() => handleLaunchVersionEditor(item)}

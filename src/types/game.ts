@@ -392,6 +392,9 @@ export interface CharacterSheetData {
   armory?: ShieldData[];
   movement_rate?: MovementRateData;
   bio: CharacterBio;
+  essence_core?: number; // 0-100 Essence Core Progress Ring
+  starred_magic_items?: (number | string)[]; // Starred Magic Item Wishlist IDs
+  pity_level?: number; // 0-2 Draft Pity Escalator level
 }
 
 export const calculateLifetimeAp = (level: number): number => {
@@ -623,6 +626,22 @@ export interface Power {
   base_name?: string;
 }
 
+export interface VaultItem {
+  id: string;
+  title: string;
+  description: string;
+  type: 'coins' | 'magic_item' | 'art_gem' | 'document' | 'junk' | 'quality' | 'special';
+  rarity: 'Minor' | 'Lesser' | 'Greater' | 'Artifact';
+  essenceValue: number;
+  coinsSilver?: number;
+  coinsGold?: number;
+  magicItem?: any;
+  valuableName?: string;
+  valuableVal?: string;
+  passedBy: string;
+  timestamp: string;
+}
+
 export interface MagicItem {
   id: number;
   name: string;
@@ -634,6 +653,7 @@ export interface MagicItem {
   dropdown: string | null;
   sub: string | null;
   table_name: string | null;
+  category?: string;
   version?: number;
   base_name?: string;
 }
