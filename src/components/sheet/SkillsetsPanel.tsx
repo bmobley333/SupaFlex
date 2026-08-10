@@ -1,9 +1,10 @@
 // src/components/sheet/SkillsetsPanel.tsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Check, ChevronDown, ChevronUp, Search, X, Sparkles, BookOpen, Scroll, GraduationCap, Plus, AlertCircle } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Search, X, Sparkles, BookOpen, Scroll, GraduationCap, Plus, AlertCircle, Edit2 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { AttributeKey, calculateAvailableAp } from '../../types/game';
+import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
 import { CardHelpButton } from '../common/CardHelpButton';
+import { supabase } from '../../lib/supabase';
 
 interface DerivedSkill {
   name: string;
@@ -75,6 +76,31 @@ const parseSkill = (
 
 export const SkillsetsPanel: React.FC = () => {
   const { activeCharacter, skillsets, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
+
+  // Merge stock database skillsets with character sheet custom skillsets
+  const effectiveSkillsets = useMemo(() => {
+    const map = new Map<string, Skillset>();
+    skillsets.forEach((s) => map.set(s.name.toLowerCase(), s));
+
+    const customList: CustomSkillsetDefinition[] = activeCharacter?.sheet_data?.custom_skillsets || [];
+    customList.forEach((cs) => {
+      const key = cs.name.toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, {
+          id: (typeof cs.id === 'number' ? cs.id : Date.now()) as any,
+          name: cs.name,
+          skills: cs.skills,
+          source: cs.source || 'Custom',
+          created_at: cs.created_at || new Date().toISOString(),
+          dropdown: null,
+          sub: null,
+          table_name: null,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [skillsets, activeCharacter?.sheet_data?.custom_skillsets]);
+
   const rawKnownSkillsetNames = activeCharacter?.sheet_data?.known_skillsets || [];
   const knownSkillsetNames = useMemo(() => {
     return rawKnownSkillsetNames.filter((s) => s && typeof s === 'string' && s.trim() !== '');
@@ -84,6 +110,7 @@ export const SkillsetsPanel: React.FC = () => {
   const knownIndividualSkills = useMemo(() => {
     return rawKnownIndividualSkills.filter((s) => s && typeof s === 'string' && s.trim() !== '');
   }, [rawKnownIndividualSkills]);
+
   const attributeDice = activeCharacter?.sheet_data?.attribute_dice || {
     might: 'd4',
     motion: 'd4',
@@ -105,11 +132,23 @@ export const SkillsetsPanel: React.FC = () => {
 
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
   const [activeRightTab, setActiveRightTab] = useState<'skillsets' | 'individual' | 'creator'>('skillsets');
+  const [creatorSubMode, setCreatorSubMode] = useState<'skillset' | 'single'>('skillset');
+  
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
   const [rightSearchQuery, setRightSearchQuery] = useState<string>('');
+  
+  // Single Skill Creator state
   const [newSkillName, setNewSkillName] = useState<string>('');
   const [newSkillAttribute, setNewSkillAttribute] = useState<AttributeKey>('might');
   const [customSkillError, setCustomSkillError] = useState<string | null>(null);
+
+  // Custom Skillset Creator & Editor state
+  const [customSkillsetName, setCustomSkillsetName] = useState<string>('');
+  const [selectedCustomSkills, setSelectedCustomSkills] = useState<string[]>([]);
+  const [editingCustomSkillsetOriginalName, setEditingCustomSkillsetOriginalName] = useState<string | null>(null);
+  const [skillPickerSearch, setSkillPickerSearch] = useState<string>('');
+  const [customSkillsetError, setCustomSkillsetError] = useState<string | null>(null);
+
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -126,7 +165,7 @@ export const SkillsetsPanel: React.FC = () => {
     };
   }, [showManageModal]);
 
-  const handleCreateCustomSkill = (e: React.FormEvent) => {
+  const handleCreateCustomSingleSkill = (e: React.FormEvent) => {
     e.preventDefault();
     setCustomSkillError(null);
 
@@ -136,7 +175,6 @@ export const SkillsetsPanel: React.FC = () => {
       return;
     }
 
-    // Check if already learned
     const isAlreadyLearned = knownIndividualSkills.some((s) => {
       const parsed = parseSkill(s, allCatalogSkillsMap);
       return parsed.cleanName.toLowerCase() === cleanName.toLowerCase();
@@ -166,6 +204,113 @@ export const SkillsetsPanel: React.FC = () => {
     setNewSkillAttribute('might');
     setCustomSkillError(null);
     setActiveRightTab('individual');
+  };
+
+  const handleSaveCustomSkillset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCustomSkillsetError(null);
+
+    const cleanName = customSkillsetName.trim();
+    if (!cleanName) {
+      setCustomSkillsetError('Please enter a skillset name.');
+      return;
+    }
+
+    if (selectedCustomSkills.length < 2 || selectedCustomSkills.length > 5) {
+      setCustomSkillsetError(`A custom skillset must contain between 2 and 5 skills. (Currently ${selectedCustomSkills.length})`);
+      return;
+    }
+
+    const isEditing = Boolean(editingCustomSkillsetOriginalName);
+
+    if (!isEditing) {
+      const isDuplicate = effectiveSkillsets.some(
+        (s) => s.name.toLowerCase() === cleanName.toLowerCase()
+      );
+      if (isDuplicate) {
+        setCustomSkillsetError(`A skillset named "${cleanName}" already exists!`);
+        return;
+      }
+    }
+
+    updateActiveSheetData((prev) => {
+      const existingCustoms = prev.custom_skillsets || [];
+      let updatedCustoms: CustomSkillsetDefinition[];
+
+      if (isEditing) {
+        updatedCustoms = existingCustoms.map((cs) =>
+          cs.name.toLowerCase() === editingCustomSkillsetOriginalName!.toLowerCase()
+            ? { ...cs, name: cleanName, skills: selectedCustomSkills }
+            : cs
+        );
+        if (!updatedCustoms.some((cs) => cs.name.toLowerCase() === cleanName.toLowerCase())) {
+          updatedCustoms.push({ name: cleanName, skills: selectedCustomSkills, source: 'Custom' });
+        }
+      } else {
+        updatedCustoms = [
+          ...existingCustoms,
+          { name: cleanName, skills: selectedCustomSkills, source: 'Custom' },
+        ];
+      }
+
+      const currentKnown = prev.known_skillsets || [];
+      let updatedKnown = currentKnown;
+      if (isEditing && editingCustomSkillsetOriginalName && editingCustomSkillsetOriginalName !== cleanName) {
+        updatedKnown = currentKnown.map((k) => (k === editingCustomSkillsetOriginalName ? cleanName : k));
+      } else if (!currentKnown.includes(cleanName)) {
+        updatedKnown = [...currentKnown, cleanName];
+      }
+
+      return {
+        ...prev,
+        custom_skillsets: updatedCustoms,
+        known_skillsets: updatedKnown,
+      };
+    });
+
+    try {
+      if (isEditing && editingCustomSkillsetOriginalName) {
+        await supabase
+          .from('skillsets')
+          .update({ name: cleanName, skills: selectedCustomSkills })
+          .eq('name', editingCustomSkillsetOriginalName);
+      } else {
+        await supabase
+          .from('skillsets')
+          .insert({ name: cleanName, skills: selectedCustomSkills, source: 'Custom' });
+      }
+    } catch (err) {
+      console.warn('[SkillsetsPanel] Supabase sync for custom skillset deferred:', err);
+    }
+
+    if (!isEditing) {
+      const uniqueCurrent = Array.from(new Set(knownSkillsetNames));
+      if (uniqueCurrent.length === 0) {
+        recordApExpenditure(0, 'Skills', `Created Custom Skillset: ${cleanName} (1st Free SkillSet)`, 1, 'Manage Skills');
+      } else {
+        recordApExpenditure(2, 'Skills', `Created Custom Skillset: ${cleanName} (2 AP)`, 1, 'Manage Skills');
+      }
+    }
+
+    saveActiveCharacter();
+
+    setCustomSkillsetName('');
+    setSelectedCustomSkills([]);
+    setEditingCustomSkillsetOriginalName(null);
+    setCustomSkillsetError(null);
+    setActiveRightTab('skillsets');
+  };
+
+  const handleStartEditCustomSkillset = (ksName: string) => {
+    const found = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
+    if (!found) return;
+
+    setActiveRightTab('creator');
+    setCreatorSubMode('skillset');
+    setEditingCustomSkillsetOriginalName(found.name);
+    setCustomSkillsetName(found.name);
+    setSelectedCustomSkills(Array.isArray(found.skills) ? [...found.skills] : []);
+    setCustomSkillsetError(null);
   };
 
   const handleToggleSkillset = (name: string) => {
@@ -216,11 +361,11 @@ export const SkillsetsPanel: React.FC = () => {
     saveActiveCharacter();
   };
 
-  // Compile full catalog of all unique skills across all skillsets
+  // Compile full catalog of all unique skills across all effective skillsets
   const allCatalogSkillsMap = useMemo(() => {
     const map = new Map<string, CatalogSkillOption>();
 
-    skillsets.forEach((ks) => {
+    effectiveSkillsets.forEach((ks) => {
       if (Array.isArray(ks.skills)) {
         ks.skills.forEach((rawSkill) => {
           let cleanName = rawSkill;
@@ -257,7 +402,7 @@ export const SkillsetsPanel: React.FC = () => {
     });
 
     return map;
-  }, [skillsets]);
+  }, [effectiveSkillsets]);
 
   const sortedAllCatalogSkills = useMemo(() => {
     return Array.from(allCatalogSkillsMap.values()).sort((a, b) =>
@@ -265,11 +410,38 @@ export const SkillsetsPanel: React.FC = () => {
     );
   }, [allCatalogSkillsMap]);
 
+  // Picker skills list for Custom Skillset Builder (catalog skills + custom individual skills)
+  const availableSkillsForPicker = useMemo(() => {
+    const list: { name: string; emoji: string; category: string }[] = [];
+    const seen = new Set<string>();
+
+    sortedAllCatalogSkills.forEach((sk) => {
+      const key = sk.name.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push({ name: sk.name, emoji: sk.emoji, category: 'Catalog' });
+      }
+    });
+
+    knownIndividualSkills.forEach((raw) => {
+      const parsed = parseSkill(raw, allCatalogSkillsMap);
+      const key = parsed.cleanName.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push({ name: parsed.cleanName, emoji: parsed.emoji, category: 'Custom Skill' });
+      }
+    });
+
+    if (!skillPickerSearch.trim()) return list;
+    const q = skillPickerSearch.toLowerCase().trim();
+    return list.filter((item) => item.name.toLowerCase().includes(q));
+  }, [sortedAllCatalogSkills, knownIndividualSkills, allCatalogSkillsMap, skillPickerSearch]);
+
   // Set of skills derived directly from active skillsets
   const skillsetDerivedSkillsSet = useMemo(() => {
     const set = new Set<string>();
     knownSkillsetNames.forEach((ksName) => {
-      const ksObj = skillsets.find((s) => s.name === ksName);
+      const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
       if (ksObj && Array.isArray(ksObj.skills)) {
         ksObj.skills.forEach((rawSkill) => {
           const parsed = parseSkill(rawSkill, allCatalogSkillsMap);
@@ -278,15 +450,14 @@ export const SkillsetsPanel: React.FC = () => {
       }
     });
     return set;
-  }, [knownSkillsetNames, skillsets, allCatalogSkillsMap]);
+  }, [knownSkillsetNames, effectiveSkillsets, allCatalogSkillsMap]);
 
   // Compile unique active skills for main sheet Derived Skills Registry
   const activeRegistrySkillsMap = useMemo(() => {
     const map = new Map<string, DerivedSkill>();
 
-    // 1. Add skillset-derived skills
     knownSkillsetNames.forEach((ksName) => {
-      const ksObj = skillsets.find((s) => s.name === ksName);
+      const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
       if (ksObj && Array.isArray(ksObj.skills)) {
         ksObj.skills.forEach((rawSkill) => {
           const parsed = parseSkill(rawSkill, allCatalogSkillsMap);
@@ -305,7 +476,6 @@ export const SkillsetsPanel: React.FC = () => {
       }
     });
 
-    // 2. Add individually learned skills (if not already derived from a skillset)
     knownIndividualSkills.forEach((rawSkill) => {
       const parsed = parseSkill(rawSkill, allCatalogSkillsMap);
       const key = parsed.cleanName.toLowerCase();
@@ -322,7 +492,7 @@ export const SkillsetsPanel: React.FC = () => {
     });
 
     return map;
-  }, [knownSkillsetNames, knownIndividualSkills, skillsets, attributeDice, allCatalogSkillsMap]);
+  }, [knownSkillsetNames, knownIndividualSkills, effectiveSkillsets, attributeDice, allCatalogSkillsMap]);
 
   const sortedActiveSkills = useMemo(() => {
     return Array.from(activeRegistrySkillsMap.values()).sort((a, b) =>
@@ -330,26 +500,23 @@ export const SkillsetsPanel: React.FC = () => {
     );
   }, [activeRegistrySkillsMap]);
 
-  // Unique de-duplicated known skillset names
   const uniqueKnownSkillsetNames = useMemo(() => {
     return Array.from(new Set(knownSkillsetNames));
   }, [knownSkillsetNames]);
 
-  // Filtered active known skillsets for left pane
   const filteredKnownSkillsets = useMemo(() => {
     if (!leftSearchQuery.trim()) return uniqueKnownSkillsetNames;
     const query = leftSearchQuery.toLowerCase().trim();
     return uniqueKnownSkillsetNames.filter((ksName) => {
-      const ksObj = skillsets.find((s) => s.name === ksName);
+      const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
       const nameMatch = ksName.toLowerCase().includes(query);
       const skillMatch = ksObj && Array.isArray(ksObj.skills) && ksObj.skills.some((s) => s.toLowerCase().includes(query));
       return nameMatch || skillMatch;
     });
-  }, [uniqueKnownSkillsetNames, skillsets, leftSearchQuery]);
+  }, [uniqueKnownSkillsetNames, effectiveSkillsets, leftSearchQuery]);
 
-  // Filtered catalog skillsets for right pane (Tab 1) - strictly unlearned skillsets
   const filteredCatalogSkillsets = useMemo(() => {
-    const unlearned = skillsets.filter((ks) => !uniqueKnownSkillsetNames.includes(ks.name));
+    const unlearned = effectiveSkillsets.filter((ks) => !uniqueKnownSkillsetNames.some((k) => k.toLowerCase() === ks.name.toLowerCase()));
     if (!rightSearchQuery.trim()) return unlearned;
     const query = rightSearchQuery.toLowerCase().trim();
     return unlearned.filter((ks) => {
@@ -357,9 +524,8 @@ export const SkillsetsPanel: React.FC = () => {
       const skillMatch = Array.isArray(ks.skills) && ks.skills.some((s) => s.toLowerCase().includes(query));
       return nameMatch || skillMatch;
     });
-  }, [skillsets, uniqueKnownSkillsetNames, rightSearchQuery]);
+  }, [effectiveSkillsets, uniqueKnownSkillsetNames, rightSearchQuery]);
 
-  // Filtered catalog individual skills for right pane (Tab 2) - strictly unlearned & non-derived skills
   const filteredCatalogIndividualSkills = useMemo(() => {
     const unlearned = sortedAllCatalogSkills.filter((sk) => {
       const isDerived = skillsetDerivedSkillsSet.has(sk.name.toLowerCase());
@@ -402,7 +568,7 @@ export const SkillsetsPanel: React.FC = () => {
           >
             <span className="font-outfit font-bold">Manage Skills</span>
             <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-purple-900/80 rounded text-purple-200">
-              {uniqueKnownSkillsetNames.length}/{skillsets.length}
+              {uniqueKnownSkillsetNames.length}/{effectiveSkillsets.length}
             </span>
             {showManageModal ? (
               <ChevronUp className="w-3.5 h-3.5 text-purple-300 shrink-0" />
@@ -418,7 +584,7 @@ export const SkillsetsPanel: React.FC = () => {
                 ref={modalRef}
                 className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-left"
               >
-                {/* Pillar 1: Header Architecture & Exact Icon Parity */}
+                {/* Header */}
                 <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
                   <div className="flex items-center gap-2.5 shrink-0">
                     <div className="p-2 rounded-xl bg-purple-950/80 border border-purple-500/30 text-purple-300 flex items-center justify-center">
@@ -434,7 +600,7 @@ export const SkillsetsPanel: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Center: KISS Top-Center Header Status Pill */}
+                  {/* Header Status Pill */}
                   <div className="px-3.5 py-1 bg-purple-950/70 border border-purple-500/40 rounded-full font-mono font-bold text-xs text-purple-200 flex items-center gap-2 shadow-md">
                     <span>
                       SkillSets <strong className="text-purple-300">{skillsetCount}</strong>
@@ -455,12 +621,11 @@ export const SkillsetsPanel: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Pillar 2: 2-COLUMN SPLIT-PANE BODY */}
+                {/* 2-COLUMN SPLIT-PANE BODY */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
                   
-                  {/* --- LEFT COLUMN: KNOWN SKILLSETS & DERIVED SKILLS PANE --- */}
+                  {/* LEFT COLUMN: KNOWN SKILLSETS & DERIVED SKILLS PANE */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                    {/* Pane Header */}
                     <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
                       <div className="flex items-center gap-1.5">
                         <GraduationCap className="w-4 h-4 text-purple-400" />
@@ -472,7 +637,6 @@ export const SkillsetsPanel: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Inventory Search Filter */}
                       <div className="relative">
                         <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
                         <input
@@ -485,7 +649,6 @@ export const SkillsetsPanel: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Scrollable Known Skillsets List */}
                     <div className="flex-1 overflow-y-auto pr-1 mt-2.5 flex flex-col gap-2 min-h-0">
                       {filteredKnownSkillsets.length === 0 && knownIndividualSkills.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
@@ -498,9 +661,10 @@ export const SkillsetsPanel: React.FC = () => {
                         </div>
                       ) : (
                         <>
-                          {/* Active Known Skillsets */}
                           {filteredKnownSkillsets.map((ksName) => {
-                            const ksObj = skillsets.find((s) => s.name === ksName);
+                            const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
+                            const isCustom = ksObj?.source === 'Custom' || (activeCharacter?.sheet_data?.custom_skillsets || []).some((cs) => cs.name.toLowerCase() === ksName.toLowerCase());
+
                             return (
                               <div
                                 key={ksName}
@@ -509,7 +673,12 @@ export const SkillsetsPanel: React.FC = () => {
                                 <div className="flex flex-col gap-1 flex-1 min-w-0">
                                   <span className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1.5">
                                     <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                                    {ksName}
+                                    <span>{ksName}</span>
+                                    {isCustom && (
+                                      <span className="text-[9px] font-mono font-bold bg-purple-900/80 text-purple-200 px-1.5 py-0.2 rounded border border-purple-500/40 shrink-0">
+                                        Custom
+                                      </span>
+                                    )}
                                   </span>
                                   {ksObj && Array.isArray(ksObj.skills) && (
                                     <span className="text-[10px] text-slate-400 leading-normal">
@@ -518,18 +687,29 @@ export const SkillsetsPanel: React.FC = () => {
                                   )}
                                 </div>
 
-                                <button
-                                  onClick={() => handleToggleSkillset(ksName)}
-                                  className="px-2.5 py-1 text-[10px] font-extrabold rounded-lg border bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30 hover:text-rose-100 shrink-0 transition-all"
-                                  title="Forget Skillset"
-                                >
-                                  Forget
-                                </button>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {isCustom && (
+                                    <button
+                                      onClick={() => handleStartEditCustomSkillset(ksName)}
+                                      className="p-1 text-[10px] font-bold rounded border bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 transition-all flex items-center gap-1"
+                                      title="Edit Custom Skillset"
+                                    >
+                                      <Edit2 className="w-3 h-3" />
+                                      <span>Edit</span>
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleToggleSkillset(ksName)}
+                                    className="px-2.5 py-1 text-[10px] font-extrabold rounded-lg border bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30 hover:text-rose-100 shrink-0 transition-all"
+                                    title="Forget Skillset"
+                                  >
+                                    Forget
+                                  </button>
+                                </div>
                               </div>
                             );
                           })}
 
-                          {/* Individually Learned Skills Section (if any) */}
                           {knownIndividualSkills.length > 0 && (
                             <div className="pt-2 mt-1 border-t border-slate-800/80 flex flex-col gap-1.5">
                               <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1">
@@ -568,9 +748,8 @@ export const SkillsetsPanel: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* --- RIGHT COLUMN: STOCK CATALOG & INDIVIDUAL SKILLS PANE --- */}
+                  {/* RIGHT COLUMN: STOCK CATALOG, INDIVIDUAL SKILLS & CREATOR PANE */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                    {/* Pane Sub-Tab Selector Header */}
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
                       <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800 w-full">
                         <button
@@ -583,7 +762,7 @@ export const SkillsetsPanel: React.FC = () => {
                           }`}
                         >
                           <BookOpen className="w-3.5 h-3.5 text-purple-400" />
-                          Skillsets ({skillsets.length})
+                          Skillsets ({effectiveSkillsets.length})
                         </button>
 
                         <button
@@ -617,7 +796,6 @@ export const SkillsetsPanel: React.FC = () => {
                     {/* TAB 1: SKILLSETS CATALOG VIEW */}
                     {activeRightTab === 'skillsets' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-hidden">
-                        {/* Search Filter Bar */}
                         <div className="relative mb-2 shrink-0">
                           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                           <input
@@ -629,11 +807,12 @@ export const SkillsetsPanel: React.FC = () => {
                           />
                         </div>
 
-                        {/* Scrollable Skillsets Grid */}
                         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 min-h-0">
                           {filteredCatalogSkillsets.length > 0 ? (
                             filteredCatalogSkillsets.map((ks) => {
-                              const isKnown = knownSkillsetNames.includes(ks.name);
+                              const isKnown = knownSkillsetNames.some((k) => k.toLowerCase() === ks.name.toLowerCase());
+                              const isCustom = ks.source === 'Custom' || (activeCharacter?.sheet_data?.custom_skillsets || []).some((cs) => cs.name.toLowerCase() === ks.name.toLowerCase());
+
                               return (
                                 <div
                                   key={ks.id || ks.name}
@@ -648,6 +827,11 @@ export const SkillsetsPanel: React.FC = () => {
                                       <span className="font-outfit font-bold text-xs text-slate-100 truncate">
                                         {ks.name}
                                       </span>
+                                      {isCustom && (
+                                        <span className="text-[9px] font-mono font-bold bg-purple-900/80 text-purple-200 px-1.5 py-0.2 rounded border border-purple-500/40 shrink-0">
+                                          Custom
+                                        </span>
+                                      )}
                                       {isKnown && (
                                         <span className="text-[10px] font-mono font-bold bg-purple-900 text-purple-200 px-1.5 py-0.2 rounded border border-purple-500/40">
                                           Learned
@@ -661,16 +845,28 @@ export const SkillsetsPanel: React.FC = () => {
                                     )}
                                   </div>
 
-                                  <button
-                                    onClick={() => handleToggleSkillset(ks.name)}
-                                    className={`px-2.5 py-1 text-xs font-bold rounded-lg border shrink-0 transition-all ${
-                                      isKnown
-                                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30'
-                                        : 'bg-purple-600/30 text-purple-200 border-purple-500/50 hover:bg-purple-600/50'
-                                    }`}
-                                  >
-                                    {isKnown ? 'Forget' : '+ Learn'}
-                                  </button>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    {isCustom && (
+                                      <button
+                                        onClick={() => handleStartEditCustomSkillset(ks.name)}
+                                        className="p-1 text-xs font-bold rounded-lg border bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 transition-all flex items-center gap-1"
+                                        title="Edit Custom Skillset"
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                        <span>Edit</span>
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleToggleSkillset(ks.name)}
+                                      className={`px-2.5 py-1 text-xs font-bold rounded-lg border shrink-0 transition-all ${
+                                        isKnown
+                                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30'
+                                          : 'bg-purple-600/30 text-purple-200 border-purple-500/50 hover:bg-purple-600/50'
+                                      }`}
+                                    >
+                                      {isKnown ? 'Forget' : '+ Learn'}
+                                    </button>
+                                  </div>
                                 </div>
                               );
                             })
@@ -686,7 +882,6 @@ export const SkillsetsPanel: React.FC = () => {
                     {/* TAB 2: INDIVIDUAL SKILLS VIEW */}
                     {activeRightTab === 'individual' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-hidden">
-                        {/* Search Filter Bar */}
                         <div className="relative mb-2 shrink-0">
                           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                           <input
@@ -698,7 +893,6 @@ export const SkillsetsPanel: React.FC = () => {
                           />
                         </div>
 
-                        {/* Scrollable Individual Skills Grid */}
                         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 min-h-0">
                           {filteredCatalogIndividualSkills.length > 0 ? (
                             filteredCatalogIndividualSkills.map((sk) => {
@@ -761,65 +955,267 @@ export const SkillsetsPanel: React.FC = () => {
                       </div>
                     )}
 
-                    {/* TAB 3: CUSTOM CREATOR VIEW */}
+                    {/* TAB 3: CREATOR VIEW */}
                     {activeRightTab === 'creator' && (
-                      <form onSubmit={handleCreateCustomSkill} className="mt-2.5 p-3 bg-purple-950/20 rounded-xl border border-purple-500/30 flex flex-col gap-3">
-                        <div className="flex items-center justify-between border-b border-purple-500/20 pb-1 flex-wrap">
-                          <span className="text-xs font-bold text-purple-300 flex items-center gap-1">
-                            <Plus className="w-3.5 h-3.5 text-purple-400" /> Create Custom Skill
-                          </span>
-                        </div>
-
-                        <input
-                          type="text"
-                          placeholder="Skill Name (e.g. Dragon Riding)"
-                          value={newSkillName}
-                          onChange={(e) => setNewSkillName(e.target.value)}
-                          className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-purple-400"
-                          required
-                        />
-
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-slate-300">Attribute</span>
-                          <select
-                            value={newSkillAttribute}
-                            onChange={(e) => setNewSkillAttribute(e.target.value as AttributeKey)}
-                            className="bg-slate-950 text-xs px-2.5 py-1 rounded border border-slate-700 text-purple-200 outline-none"
+                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-hidden">
+                        {/* Creator Sub-Mode Switcher */}
+                        <div className="flex items-center gap-2 mb-2.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setCreatorSubMode('skillset')}
+                            className={`flex-1 py-1 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border ${
+                              creatorSubMode === 'skillset'
+                                ? 'bg-purple-600/30 text-purple-200 border-purple-500/50 shadow-sm'
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                            }`}
                           >
-                            {ATTRIBUTE_OPTIONS.map((opt) => (
-                              <option key={opt.key} value={opt.key}>
-                                {opt.icon} {opt.label}
-                              </option>
-                            ))}
-                          </select>
+                            <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                            <span>Custom Skillset (2 AP)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCreatorSubMode('single')}
+                            className={`flex-1 py-1 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border ${
+                              creatorSubMode === 'single'
+                                ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 shadow-sm'
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            <Plus className="w-3.5 h-3.5 text-indigo-300" />
+                            <span>Single Skill (1 AP)</span>
+                          </button>
                         </div>
 
-                        <div className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between text-xs font-mono">
-                          <span className="text-slate-400">AP Cost:</span>
-                          <strong className="text-amber-300">1 AP (Individually Learned)</strong>
-                        </div>
+                        {/* MODE 1: CUSTOM SKILLSET CREATOR & EDITOR */}
+                        {creatorSubMode === 'skillset' && (
+                          <form onSubmit={handleSaveCustomSkillset} className="flex-1 flex flex-col gap-2.5 min-h-0 overflow-y-auto pr-1">
+                            <div className="flex items-center justify-between border-b border-purple-500/20 pb-1.5 shrink-0">
+                              <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                                {editingCustomSkillsetOriginalName ? `Editing: ${editingCustomSkillsetOriginalName}` : 'Create Custom Skillset'}
+                              </span>
+                              {editingCustomSkillsetOriginalName && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingCustomSkillsetOriginalName(null);
+                                    setCustomSkillsetName('');
+                                    setSelectedCustomSkills([]);
+                                    setCustomSkillsetError(null);
+                                  }}
+                                  className="text-[10px] text-amber-300 hover:text-amber-200 underline font-semibold"
+                                >
+                                  Cancel Edit
+                                </button>
+                              )}
+                            </div>
 
-                        {customSkillError && (
-                          <div className="p-2 bg-rose-950/40 border border-rose-500/30 rounded text-rose-300 text-xs flex items-center gap-1.5">
-                            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                            <span>{customSkillError}</span>
-                          </div>
+                            {/* Name Input */}
+                            <div className="flex flex-col gap-1 shrink-0">
+                              <label className="text-[11px] font-bold text-slate-300">Skillset Name</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Arcane Sharpshooter"
+                                value={customSkillsetName}
+                                onChange={(e) => setCustomSkillsetName(e.target.value)}
+                                className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-purple-400"
+                                required
+                              />
+                            </div>
+
+                            {/* Selected Skills Tray */}
+                            <div className="flex flex-col gap-1.5 p-2 bg-slate-950/80 rounded-xl border border-slate-800 shrink-0">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-slate-300">Included Skills</span>
+                                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                                  selectedCustomSkills.length >= 2 && selectedCustomSkills.length <= 5
+                                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                                    : 'bg-amber-950/80 text-amber-300 border-amber-500/40'
+                                }`}>
+                                  {selectedCustomSkills.length} / 5 Skills (Min 2, Max 5)
+                                </span>
+                              </div>
+
+                              {selectedCustomSkills.length > 0 ? (
+                                <div className="flex flex-wrap gap-1 pt-0.5">
+                                  {selectedCustomSkills.map((skName) => (
+                                    <span
+                                      key={skName}
+                                      className="px-2 py-0.5 bg-purple-900/60 text-purple-200 border border-purple-500/40 rounded-lg text-xs font-semibold flex items-center gap-1"
+                                    >
+                                      <span>{skName}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedCustomSkills((prev) => prev.filter((s) => s !== skName))}
+                                        className="text-purple-300 hover:text-rose-300 ml-0.5"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-slate-500 italic py-1">
+                                  No skills added yet. Select 2 to 5 skills from list below.
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Skill Picker Search & List */}
+                            <div className="flex-1 flex flex-col gap-1 min-h-[130px] bg-slate-950/50 p-2 rounded-xl border border-slate-800 overflow-hidden">
+                              <div className="relative shrink-0">
+                                <Search className="w-3 h-3 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                                <input
+                                  type="text"
+                                  placeholder="Filter available skills..."
+                                  value={skillPickerSearch}
+                                  onChange={(e) => setSkillPickerSearch(e.target.value)}
+                                  className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-purple-500 w-full"
+                                />
+                              </div>
+
+                              <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1 min-h-0">
+                                {availableSkillsForPicker.map((skItem) => {
+                                  const isSelected = selectedCustomSkills.includes(skItem.name);
+                                  const disabled = !isSelected && selectedCustomSkills.length >= 5;
+
+                                  return (
+                                    <div
+                                      key={skItem.name}
+                                      className="p-1.5 bg-slate-900/80 rounded-lg border border-slate-800/80 flex items-center justify-between text-xs gap-2 shrink-0"
+                                    >
+                                      <div className="flex items-center gap-1.5 truncate">
+                                        <span>{skItem.emoji}</span>
+                                        <span className="text-slate-200 font-medium truncate">{skItem.name}</span>
+                                        <span className="text-[9px] font-mono text-slate-500 bg-slate-950 px-1 py-0.2 rounded">
+                                          {skItem.category}
+                                        </span>
+                                      </div>
+
+                                      {isSelected ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => setSelectedCustomSkills((prev) => prev.filter((s) => s !== skItem.name))}
+                                          className="px-2 py-0.5 text-[10px] font-bold rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 shrink-0"
+                                        >
+                                          Remove
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          disabled={disabled}
+                                          onClick={() => {
+                                            if (selectedCustomSkills.length < 5) {
+                                              setSelectedCustomSkills((prev) => [...prev, skItem.name]);
+                                            }
+                                          }}
+                                          className={`px-2 py-0.5 text-[10px] font-bold rounded border shrink-0 ${
+                                            disabled
+                                              ? 'opacity-40 bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                                              : 'bg-purple-600/30 text-purple-200 border-purple-500/50 hover:bg-purple-600/50 cursor-pointer'
+                                          }`}
+                                        >
+                                          + Add
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {customSkillsetError && (
+                              <div className="p-2 bg-rose-950/40 border border-rose-500/30 rounded text-rose-300 text-xs flex items-center gap-1.5 shrink-0">
+                                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                                <span>{customSkillsetError}</span>
+                              </div>
+                            )}
+
+                            <div className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between text-xs font-mono shrink-0">
+                              <span className="text-slate-400">AP Cost:</span>
+                              <strong className="text-amber-300">
+                                {editingCustomSkillsetOriginalName ? '0 AP (Editing Existing)' : '2 AP (Auto-Learned)'}
+                              </strong>
+                            </div>
+
+                            <button
+                              type="submit"
+                              disabled={selectedCustomSkills.length < 2 || selectedCustomSkills.length > 5 || !customSkillsetName.trim()}
+                              className={`font-bold text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow transition-all shrink-0 ${
+                                selectedCustomSkills.length >= 2 && selectedCustomSkills.length <= 5 && customSkillsetName.trim()
+                                  ? 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
+                                  : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                              }`}
+                            >
+                              <Sparkles className="w-4 h-4" />
+                              <span>
+                                {editingCustomSkillsetOriginalName ? 'Save Skillset Changes' : 'Create & Learn Skillset (2 AP)'}
+                              </span>
+                            </button>
+                          </form>
                         )}
 
-                        <button
-                          type="submit"
-                          className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
-                        >
-                          <Plus className="w-4 h-4" />
-                          <span>Save & Learn Skill</span>
-                        </button>
-                      </form>
+                        {/* MODE 2: SINGLE CUSTOM SKILL CREATOR */}
+                        {creatorSubMode === 'single' && (
+                          <form onSubmit={handleCreateCustomSingleSkill} className="p-3 bg-indigo-950/20 rounded-xl border border-indigo-500/30 flex flex-col gap-3">
+                            <div className="flex items-center justify-between border-b border-indigo-500/20 pb-1 flex-wrap">
+                              <span className="text-xs font-bold text-indigo-300 flex items-center gap-1">
+                                <Plus className="w-3.5 h-3.5 text-indigo-400" /> Create Custom Single Skill
+                              </span>
+                            </div>
+
+                            <input
+                              type="text"
+                              placeholder="Skill Name (e.g. Dragon Riding)"
+                              value={newSkillName}
+                              onChange={(e) => setNewSkillName(e.target.value)}
+                              className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-indigo-400"
+                              required
+                            />
+
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-slate-300">Attribute</span>
+                              <select
+                                value={newSkillAttribute}
+                                onChange={(e) => setNewSkillAttribute(e.target.value as AttributeKey)}
+                                className="bg-slate-950 text-xs px-2.5 py-1 rounded border border-slate-700 text-indigo-200 outline-none"
+                              >
+                                {ATTRIBUTE_OPTIONS.map((opt) => (
+                                  <option key={opt.key} value={opt.key}>
+                                    {opt.icon} {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between text-xs font-mono">
+                              <span className="text-slate-400">AP Cost:</span>
+                              <strong className="text-amber-300">1 AP (Individually Learned)</strong>
+                            </div>
+
+                            {customSkillError && (
+                              <div className="p-2 bg-rose-950/40 border border-rose-500/30 rounded text-rose-300 text-xs flex items-center gap-1.5">
+                                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                                <span>{customSkillError}</span>
+                              </div>
+                            )}
+
+                            <button
+                              type="submit"
+                              className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
+                            >
+                              <Plus className="w-4 h-4" />
+                              <span>Save & Learn Skill (1 AP)</span>
+                            </button>
+                          </form>
+                        )}
+                      </div>
                     )}
                   </div>
 
                 </div>
 
-                {/* Pillar 3: Streamlined UI DRY Footer Architecture */}
+                {/* Footer */}
                 <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2 text-xs font-mono font-bold text-purple-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
                     <span className="text-slate-400 font-sans font-semibold text-[11px]">Skillset Summary:</span>
@@ -845,15 +1241,25 @@ export const SkillsetsPanel: React.FC = () => {
       <div className="flex flex-col gap-2">
         {uniqueKnownSkillsetNames.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {uniqueKnownSkillsetNames.map((ksName) => (
-              <span
-                key={ksName}
-                className="px-3 py-1.5 bg-purple-950/40 text-purple-200 border border-purple-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
-              >
-                <span>🎓</span>
-                {ksName}
-              </span>
-            ))}
+            {uniqueKnownSkillsetNames.map((ksName) => {
+              const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
+              const isCustom = ksObj?.source === 'Custom' || (activeCharacter?.sheet_data?.custom_skillsets || []).some((cs) => cs.name.toLowerCase() === ksName.toLowerCase());
+
+              return (
+                <span
+                  key={ksName}
+                  className="px-3 py-1.5 bg-purple-950/40 text-purple-200 border border-purple-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                >
+                  <span>🎓</span>
+                  <span>{ksName}</span>
+                  {isCustom && (
+                    <span className="text-[9px] font-mono font-bold bg-purple-900/80 text-purple-200 px-1 py-0.2 rounded border border-purple-500/40">
+                      Custom
+                    </span>
+                  )}
+                </span>
+              );
+            })}
           </div>
         ) : (
           <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
@@ -862,7 +1268,7 @@ export const SkillsetsPanel: React.FC = () => {
         )}
       </div>
 
-      {/* 📜 De-Duplicated Alphabetical Derived Skills Registry */}
+      {/* De-Duplicated Alphabetical Derived Skills Registry */}
       <div className="flex flex-col gap-2.5 pt-2 border-t border-slate-800">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">

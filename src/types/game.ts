@@ -324,6 +324,14 @@ export interface CharacterBio {
   age?: string;
 }
 
+export interface CustomSkillsetDefinition {
+  id?: string | number;
+  name: string;
+  skills: string[];
+  source?: string;
+  created_at?: string;
+}
+
 export interface CharacterSheetData {
   level: number;
   ap: number;
@@ -352,6 +360,7 @@ export interface CharacterSheetData {
   simple_gear?: SimpleGearItem[];
   known_skillsets: string[];
   known_individual_skills?: string[]; // Individually learned skills outside a skillset
+  custom_skillsets?: CustomSkillsetDefinition[]; // Custom user-created skillsets
   favorite_power_tables?: string[]; // Favorited power tables (table_name strings)
   custom_power_tables?: { name: string; sub: string }[]; // Custom user-created power tables
   custom_powers?: Power[]; // Custom user-created powers
