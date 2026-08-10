@@ -1,7 +1,7 @@
 // src/components/modals/MonsterManagerModal.tsx
 // Master Two-Pane Modal for Managing GM Encounter Monsters with Master Difficulty Scaling & Tab Navigation
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Info, Trash2, Plus, Search, FileText, Skull, Check, Sliders } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SupabaseMonster } from '../../types/game';
@@ -73,6 +73,9 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   const [masterDif, setMasterDif] = useState<number>(10);
   const [applyDifOnParse, setApplyDifOnParse] = useState<boolean>(true);
 
+  // Debounce Timer Ref for Slider Movement (350ms short bounce)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Paste Statblock Area State
   const [pasteInputText, setPasteInputText] = useState('');
 
@@ -91,6 +94,15 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   // Inline Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   // Fetch Supabase Codex monsters when modal opens
   useEffect(() => {
@@ -238,12 +250,13 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     }, 1500);
   };
 
-  const handleApplyDifToRoster = () => {
+  // Auto-apply difficulty scaling across active encounter roster
+  const applyDifToRoster = (targetDif: number) => {
     if (monsters.length === 0) return;
     const updated = monsters.map((m) => {
       const baseText = m.baseFullText || m.fullText || m.nameWithEquip;
       const baseParsed = parseMonsterLine(baseText);
-      const scaled = scaleParsedMonster(baseParsed, masterDif);
+      const scaled = scaleParsedMonster(baseParsed, targetDif);
       return {
         ...scaled,
         id: m.id,
@@ -251,6 +264,36 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
       };
     });
     onSaveMonsters(updated);
+  };
+
+  // Instant Quick Preset handler with immediate auto-apply
+  const handlePresetClick = (presetVal: number) => {
+    setMasterDif(presetVal);
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    applyDifToRoster(presetVal);
+  };
+
+  // Debounced Slider Change Handler (350ms short bounce)
+  const handleSliderChange = (newDif: number) => {
+    setMasterDif(newDif);
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      applyDifToRoster(newDif);
+    }, 350);
+  };
+
+  // Blur Handler to commit pending difficulty on focus loss
+  const handleSliderBlur = () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    applyDifToRoster(masterDif);
   };
 
   // Threat Rating Badge Label Helper
@@ -718,6 +761,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
             {/* TAB 3: Master Difficulty System */}
             {activeRightTab === 'difficulty' && (
               <div className="p-4 bg-slate-950/90 rounded-xl border border-slate-800 flex flex-col gap-4">
+                {/* 1. Header Section */}
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                   <div className="flex items-center gap-2">
                     <Sliders className="w-5 h-5 text-purple-400" />
@@ -735,8 +779,40 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                   </span>
                 </div>
 
-                {/* Master Slider Control */}
-                <div className="flex flex-col gap-2 bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+                {/* 2. Quick Difficulty Presets (MOVED UP: Directly below header area) */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Quick Presets (Auto-Applies)
+                  </label>
+                  <div className="grid grid-cols-5 gap-1.5 text-xs">
+                    {[
+                      { label: 'Easy', val: 6, color: 'hover:border-emerald-500/60' },
+                      { label: 'Base', val: 10, color: 'hover:border-amber-500/60' },
+                      { label: 'Hard', val: 14, color: 'hover:border-orange-500/60' },
+                      { label: 'Deadly', val: 18, color: 'hover:border-rose-500/60' },
+                      { label: 'Mythic', val: 24, color: 'hover:border-purple-500/60' },
+                    ].map((p) => (
+                      <button
+                        key={p.val}
+                        type="button"
+                        onClick={() => handlePresetClick(p.val)}
+                        className={`py-1.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${
+                          masterDif === p.val
+                            ? 'bg-purple-500/30 text-purple-200 border-purple-500 shadow-sm'
+                            : `bg-slate-900 text-slate-300 border-slate-800 ${p.color}`
+                        }`}
+                      >
+                        {p.label} ({p.val})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Master Slider Control Card (below Quick Presets, featuring debounced auto-apply and onBlur) */}
+                <div
+                  className="flex flex-col gap-2 bg-slate-900/90 p-4 rounded-xl border border-slate-800"
+                  onBlur={handleSliderBlur}
+                >
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-slate-300">GM Dif Rating</span>
                     <span className="font-mono text-amber-300 font-extrabold text-sm px-2 py-0.5 rounded bg-slate-800 border border-slate-700">
@@ -750,7 +826,8 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     max={30}
                     step={1}
                     value={masterDif}
-                    onChange={(e) => setMasterDif(parseInt(e.target.value, 10))}
+                    onChange={(e) => handleSliderChange(parseInt(e.target.value, 10))}
+                    onBlur={handleSliderBlur}
                     className="w-full accent-purple-500 h-2 bg-slate-800 rounded-lg cursor-pointer"
                   />
 
@@ -762,36 +839,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                   </div>
                 </div>
 
-                {/* Quick Difficulty Presets */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Quick Presets
-                  </label>
-                  <div className="grid grid-cols-5 gap-1.5 text-xs">
-                    {[
-                      { label: 'Easy', val: 6, color: 'hover:border-emerald-500/60' },
-                      { label: 'Base', val: 10, color: 'hover:border-amber-500/60' },
-                      { label: 'Hard', val: 14, color: 'hover:border-orange-500/60' },
-                      { label: 'Deadly', val: 18, color: 'hover:border-rose-500/60' },
-                      { label: 'Mythic', val: 24, color: 'hover:border-purple-500/60' },
-                    ].map((p) => (
-                      <button
-                        key={p.val}
-                        type="button"
-                        onClick={() => setMasterDif(p.val)}
-                        className={`py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${
-                          masterDif === p.val
-                            ? 'bg-purple-500/30 text-purple-200 border-purple-500 shadow-sm'
-                            : `bg-slate-900 text-slate-300 border-slate-800 ${p.color}`
-                        }`}
-                      >
-                        {p.label} ({p.val})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Live Stat Scaling Breakdown Matrix */}
+                {/* 4. Live Stat Scaling Breakdown Matrix */}
                 <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex flex-col gap-2">
                   <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider">
                     Live Stat Scaling Matrix (Dif {masterDif})
@@ -832,19 +880,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                       </span>
                     </div>
                   </div>
-                </div>
-
-                {/* Encounter Sync Controls */}
-                <div className="flex flex-col gap-2 pt-2 border-t border-slate-800/80">
-                  <button
-                    type="button"
-                    onClick={handleApplyDifToRoster}
-                    disabled={monsters.length === 0}
-                    className="w-full py-2 bg-purple-600/30 text-purple-200 border border-purple-500/50 hover:bg-purple-600/50 disabled:opacity-50 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                  >
-                    <Sliders className="w-4 h-4" />
-                    Apply Master Dif ({masterDif}) to Active Roster
-                  </button>
                 </div>
               </div>
             )}
