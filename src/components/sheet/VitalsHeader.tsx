@@ -108,7 +108,6 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
           className="px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 text-xs font-semibold rounded-lg border border-rose-500/30 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-rose-500/50"
           title="Manage Max Vitality Rolls, AP Boosts, and Restoration"
         >
-          <span className="text-xs">❤️</span>
           <span>Manage Vitality</span>
           <ChevronDown className="w-3.5 h-3.5 text-rose-300 shrink-0" />
         </button>
