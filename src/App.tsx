@@ -1,14 +1,11 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Database, Shield, Zap, Activity, BookOpen, Users, Loader2, ChevronDown, ChevronUp, Award, Star, X } from 'lucide-react';
+import { Database, Shield, Activity, BookOpen, Loader2, ChevronDown, ChevronUp, Award, Star, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { gameApi } from './services/api';
 import { Character } from './types/game';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
-import { ActionConsoleView } from './components/rolls/ActionConsoleView';
-import { CodexView } from './components/codex/CodexView';
 import { AdventureLogs } from './components/logs/AdventureLogs';
-import { PlayerDirectoryView } from './components/directory/PlayerDirectoryView';
 import { GmWorkspaceView } from './components/directory/GmWorkspaceView';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { AccountPillButton } from './components/header/AccountPillButton';
@@ -27,7 +24,7 @@ import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
 import { resolveCharFirstName } from './components/common/PartyCharacterCard';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'sheet' | 'rolls' | 'codex' | 'logs' | 'directory'>('sheet');
+  const [activeTab, setActiveTab] = useState<'sheet' | 'logs'>('sheet');
   const [newCharName, setNewCharName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSelectorBar, setShowSelectorBar] = useState(false);
@@ -435,28 +432,6 @@ export default function App() {
                   Sheet
                 </button>
                 <button
-                  onClick={() => setActiveTab('rolls')}
-                  className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
-                    activeTab === 'rolls'
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
-                  }`}
-                >
-                  <Zap className="w-3.5 h-3.5" />
-                  Rolls
-                </button>
-                <button
-                  onClick={() => setActiveTab('codex')}
-                  className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
-                    activeTab === 'codex'
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
-                  }`}
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Codex
-                </button>
-                <button
                   onClick={() => setActiveTab('logs')}
                   className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
                     activeTab === 'logs'
@@ -466,17 +441,6 @@ export default function App() {
                 >
                   <Activity className="w-3.5 h-3.5" />
                   Logs
-                </button>
-                <button
-                  onClick={() => setActiveTab('directory')}
-                  className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
-                    activeTab === 'directory'
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  Directory
                 </button>
               </div>
             </nav>
@@ -573,10 +537,7 @@ export default function App() {
                       tabSessionId={tabSessionId}
                     />
                   )}
-                  {activeTab === 'rolls' && <ActionConsoleView />}
-                  {activeTab === 'codex' && <CodexView />}
                   {activeTab === 'logs' && <AdventureLogs />}
-                  {activeTab === 'directory' && <PlayerDirectoryView />}
                 </>
               )}
             </div>
