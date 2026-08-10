@@ -261,7 +261,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
             </div>
             <div>
               <h3 className="font-outfit font-bold text-lg text-amber-300 uppercase tracking-wide flex items-center gap-2">
-                ⚡ Essence Core Charged: 3-Card Draft
+                ⚡ ESSENCE CRAFTING!
               </h3>
               <p className="text-xs text-slate-400">
                 Select <strong className="text-amber-300">1 (One)</strong> reward for {characterName} or Deconstruct to cut Essence in half.
