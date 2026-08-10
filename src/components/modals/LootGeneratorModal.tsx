@@ -841,83 +841,83 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
               </button>
             </div>
 
-            {/* Position #2: Alchemy Essence Flask Visual Component with Tier-Threshold Craft Button */}
-            {(() => {
-              const qualifiedTier: { name: 'Minor' | 'Lesser' | 'Greater' | 'Artifact'; cost: number } | null =
-                essenceCore >= 100
-                  ? { name: 'Artifact', cost: 100 }
-                  : essenceCore >= 50
-                  ? { name: 'Greater', cost: 50 }
-                  : essenceCore >= 25
-                  ? { name: 'Lesser', cost: 25 }
-                  : essenceCore >= 15
-                  ? { name: 'Minor', cost: 15 }
-                  : null;
-
-              return (
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex items-center justify-between gap-3 shadow-inner shrink-0">
-                  <div className="flex items-center gap-3">
-                    {/* Visual Flask / Vial */}
-                    <div
-                      onClick={() => {
-                        if (qualifiedTier) {
-                          setLastDraftTier(qualifiedTier.name);
-                          setIsDraftOpen(true);
-                        }
-                      }}
-                      className={`relative w-9 h-14 rounded-b-full border-2 bg-slate-900 overflow-hidden flex flex-col justify-end transition-all shadow-lg shrink-0 ${
-                        qualifiedTier
-                          ? 'border-amber-400 shadow-amber-500/50 animate-pulse cursor-pointer'
-                          : 'border-slate-700'
-                      }`}
-                      title={qualifiedTier ? `Click to draft a ${qualifiedTier.name} magic item!` : 'Disenchant loot drops to fill Essence Flask'}
-                    >
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3.5 h-1.5 bg-slate-800 border-b border-slate-700 z-10"></div>
-                      <div
-                        className="w-full bg-gradient-to-t from-amber-600 via-amber-400 to-yellow-300 transition-all duration-700 ease-out relative"
-                        style={{ height: `${Math.min(100, Math.max(0, essenceCore))}%` }}
-                      >
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-white/40 animate-pulse"></div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Essence</h4>
-                        {qualifiedTier && (
-                          <span className="text-[9px] bg-amber-400 text-slate-950 font-extrabold px-1.5 py-0.2 rounded uppercase animate-bounce">
-                            {qualifiedTier.name} Qualified!
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-300 mt-0.5 font-mono font-bold">
-                        {essenceCore}% Full
-                      </p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">
-                        {qualifiedTier ? `Craft ${qualifiedTier.name} (${qualifiedTier.cost}% essence)` : 'Disenchant items to fill flask'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {qualifiedTier && (
-                    <button
-                      onClick={() => {
-                        setLastDraftTier(qualifiedTier.name);
-                        setIsDraftOpen(true);
-                      }}
-                      className="bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl transition-all shadow-md shadow-amber-500/20 animate-pulse cursor-pointer shrink-0 flex items-center gap-1"
-                    >
-                      <span>✨</span>
-                      <span>Craft {qualifiedTier.name}</span>
-                    </button>
-                  )}
-                </div>
-              );
-            })()}
-
             {/* TAB 1: GENERATOR CONTROLS */}
             {activeRightTab === 'GENERATOR' && (
               <div className="space-y-4 flex-1">
+                {/* Position #2: Alchemy Essence Flask Visual Component with Tier-Threshold Craft Button */}
+                {(() => {
+                  const qualifiedTier: { name: 'Minor' | 'Lesser' | 'Greater' | 'Artifact'; cost: number } | null =
+                    essenceCore >= 100
+                      ? { name: 'Artifact', cost: 100 }
+                      : essenceCore >= 50
+                      ? { name: 'Greater', cost: 50 }
+                      : essenceCore >= 25
+                      ? { name: 'Lesser', cost: 25 }
+                      : essenceCore >= 15
+                      ? { name: 'Minor', cost: 15 }
+                      : null;
+
+                  return (
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex items-center justify-between gap-3 shadow-inner shrink-0">
+                      <div className="flex items-center gap-3">
+                        {/* Visual Flask / Vial */}
+                        <div
+                          onClick={() => {
+                            if (qualifiedTier) {
+                              setLastDraftTier(qualifiedTier.name);
+                              setIsDraftOpen(true);
+                            }
+                          }}
+                          className={`relative w-9 h-14 rounded-b-full border-2 bg-slate-900 overflow-hidden flex flex-col justify-end transition-all shadow-lg shrink-0 ${
+                            qualifiedTier
+                              ? 'border-amber-400 shadow-amber-500/50 animate-pulse cursor-pointer'
+                              : 'border-slate-700'
+                          }`}
+                          title={qualifiedTier ? `Click to draft a ${qualifiedTier.name} magic item!` : 'Disenchant loot drops to fill Essence Flask'}
+                        >
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3.5 h-1.5 bg-slate-800 border-b border-slate-700 z-10"></div>
+                          <div
+                            className="w-full bg-gradient-to-t from-amber-600 via-amber-400 to-yellow-300 transition-all duration-700 ease-out relative"
+                            style={{ height: `${Math.min(100, Math.max(0, essenceCore))}%` }}
+                          >
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-white/40 animate-pulse"></div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Essence</h4>
+                            {qualifiedTier && (
+                              <span className="text-[9px] bg-amber-400 text-slate-950 font-extrabold px-1.5 py-0.2 rounded uppercase animate-bounce">
+                                {qualifiedTier.name} Qualified!
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-300 mt-0.5 font-mono font-bold">
+                            {essenceCore}% Full
+                          </p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            {qualifiedTier ? `Craft ${qualifiedTier.name} (${qualifiedTier.cost}% essence)` : 'Disenchant items to fill flask'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {qualifiedTier && (
+                        <button
+                          onClick={() => {
+                            setLastDraftTier(qualifiedTier.name);
+                            setIsDraftOpen(true);
+                          }}
+                          className="bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl transition-all shadow-md shadow-amber-500/20 animate-pulse cursor-pointer shrink-0 flex items-center gap-1"
+                        >
+                          <span>✨</span>
+                          <span>Craft {qualifiedTier.name}</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Mode Switcher Peg Slider */}
                 <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between shrink-0">
                   <span className={`text-xs font-bold transition-opacity ${!isGmMode ? 'text-amber-400 opacity-100' : 'text-slate-500 opacity-50'}`}>
