@@ -109,6 +109,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 }) => {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
   const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
+  const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
   const magicItems = useCharacterStore((state) => state.magicItems);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
 
@@ -551,16 +552,16 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const handleRefineResult = (res: RollResult) => {
     if (res.claimed) return;
 
-    let fillPercentage = 15;
+    let fillPercentage = 8; // Default / Minor / Standard drop
 
-    if (res.tableName.includes('Lesser') || res.type === 'magic_item') {
-      fillPercentage = 25;
+    if (res.tableName.includes('Lesser') || (res.type === 'magic_item' && !res.tableName.includes('Greater') && !res.tableName.includes('Epic') && !res.tableName.includes('Artifact'))) {
+      fillPercentage = 12;
     }
     if (res.tableName.includes('Greater')) {
-      fillPercentage = 50;
+      fillPercentage = 25;
     }
     if (res.tableName.includes('Artifact') || res.tableName.includes('Epic')) {
-      fillPercentage = 100;
+      fillPercentage = 50;
     }
 
     const currentEssence = activeCharacter?.sheet_data?.essence_core || 0;
@@ -570,6 +571,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       ...prev,
       essence_core: newEssence,
     }));
+    saveActiveCharacter();
 
     res.claimed = true;
     setResults([...results]);
@@ -603,7 +605,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       description: res.description,
       type: res.type,
       rarity: tierRarity,
-      essenceValue: tierRarity === 'Minor' ? 15 : tierRarity === 'Lesser' ? 25 : tierRarity === 'Greater' ? 50 : 100,
+      essenceValue: tierRarity === 'Minor' ? 8 : tierRarity === 'Lesser' ? 12 : tierRarity === 'Greater' ? 25 : 50,
       coinsSilver: res.coinsSilver,
       coinsGold: res.coinsGold,
       magicItem: res.magicItem,
@@ -652,21 +654,18 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       ...prev,
       essence_core: Math.min(100, Math.max(0, (prev.essence_core || 0) - draftCost)),
     }));
+    saveActiveCharacter();
 
     return ok;
   };
 
   const handleDeconstructDraft = () => {
-    updateActiveSheetData((prev) => {
-      const current = prev.essence_core || 0;
-      const halved = Math.floor(current / 2);
-      return {
-        ...prev,
-        essence_core: halved,
-        pity_level: ((prev.pity_level || 0) + 1) % 3,
-      };
-    });
-    showToast(`♻️ Draft Deconstructed! Essence cut in half.`);
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      pity_level: ((prev.pity_level || 0) + 1) % 3,
+    }));
+    saveActiveCharacter();
+    showToast(`♻️ Draft Discarded! Essence preserved intact.`);
   };
 
   const handleClaimVaultItem = async (item: VaultItem): Promise<boolean> => {
@@ -817,7 +816,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                             <button
                               onClick={() => handleRefineResult(res)}
                               className="bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 text-xs font-bold px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
-                              title="Disenchant loot drop into personal Essence Core (+15% to +100%)"
+                              title="Disenchant loot drop into personal Essence Core (+8% to +50%)"
                             >
                               🧪 Disenchant
                             </button>

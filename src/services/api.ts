@@ -37,6 +37,7 @@ export const createDefaultSheetData = (): CharacterSheetData => ({
   focus_die_max: 'd4',
   sparks: 0,
   is_charged: false,
+  essence_core: 0,
   known_skillsets: [],
   power_slots: [],
   spell_slots: [],
@@ -59,6 +60,7 @@ export function ensureLatestSheetSchema(rawSheet: any): CharacterSheetData {
   return {
     ...defaultSheet,
     ...rawSheet,
+    essence_core: rawSheet.essence_core ?? defaultSheet.essence_core ?? 0,
     attribute_dice: {
       ...defaultSheet.attribute_dice,
       ...(rawSheet.attribute_dice || {}),
