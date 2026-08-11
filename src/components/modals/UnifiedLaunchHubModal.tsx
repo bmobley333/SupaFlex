@@ -55,11 +55,11 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   }, [isOpen, initialTab, currentEmail]);
 
   useEffect(() => {
-    if (!currentEmail) {
+    if (!currentEmail || activeRole === 'gm') {
       if (rightSubTab !== 'account') setRightSubTab('account');
-      if (isCreatingHero) setIsCreatingHero(false);
+      if (!currentEmail && isCreatingHero) setIsCreatingHero(false);
     }
-  }, [currentEmail, rightSubTab, isCreatingHero]);
+  }, [currentEmail, activeRole, rightSubTab, isCreatingHero]);
 
   // Account Sub-Tab State
   const [allowCloning, setAllowCloning] = useState(true);
@@ -811,22 +811,24 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
               >
                 👤 Account
               </button>
-              <button
-                onClick={() => {
-                  if (currentEmail) setRightSubTab('inspect');
-                }}
-                disabled={!currentEmail}
-                title={!currentEmail ? 'Sign in required to clone characters' : 'Clone Characters'}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
-                  !currentEmail
-                    ? 'opacity-40 cursor-not-allowed border-transparent text-slate-500'
-                    : rightSubTab === 'inspect'
-                    ? 'border-indigo-400 text-indigo-400 cursor-pointer'
-                    : 'border-transparent text-slate-400 hover:text-slate-200 cursor-pointer'
-                }`}
-              >
-                🧬 Clone Characters
-              </button>
+              {activeRole !== 'gm' && (
+                <button
+                  onClick={() => {
+                    if (currentEmail) setRightSubTab('inspect');
+                  }}
+                  disabled={!currentEmail}
+                  title={!currentEmail ? 'Sign in required to clone characters' : 'Clone Characters'}
+                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                    !currentEmail
+                      ? 'opacity-40 cursor-not-allowed border-transparent text-slate-500'
+                      : rightSubTab === 'inspect'
+                      ? 'border-indigo-400 text-indigo-400 cursor-pointer'
+                      : 'border-transparent text-slate-400 hover:text-slate-200 cursor-pointer'
+                  }`}
+                >
+                  🧬 Clone Characters
+                </button>
+              )}
               {activeRole !== 'gm' && (
                 <button
                   onClick={() => {
@@ -904,40 +906,42 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                         </p>
                       </div>
 
-                      {/* Dyslexia-Friendly Peg-Slider Toggle for Vault Privacy */}
-                      <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
-                        <label className="text-xs font-bold text-slate-200 block">
-                          Character Vault Privacy & Cloning
-                        </label>
+                      {/* Dyslexia-Friendly Multi-Option Pill Switch for Vault Privacy */}
+                      {activeRole !== 'gm' && (
+                        <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
+                          <label className="text-xs font-bold text-slate-200 block">
+                            Character Vault Privacy & Cloning
+                          </label>
 
-                        <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleCloning(false)}
-                            className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              !allowCloning
-                                ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            🔒 Private Vault
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleCloning(true)}
-                            className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              allowCloning
-                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            🧬 Allow Cloning
-                          </button>
+                          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCloning(false)}
+                              className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                !allowCloning
+                                  ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                            >
+                              🔒 Private Vault
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCloning(true)}
+                              className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                allowCloning
+                                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                            >
+                              🧬 Allow Cloning
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-slate-400 italic">
+                            When enabled, other players who enter your email address can clone your characters.
+                          </p>
                         </div>
-                        <p className="text-[11px] text-slate-400 italic">
-                          When enabled, other players who enter your email address can clone your characters.
-                        </p>
-                      </div>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-4">
