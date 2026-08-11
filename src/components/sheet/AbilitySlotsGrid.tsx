@@ -87,8 +87,8 @@ const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; 
 
   const str = `${subStr} ${itemObj.name || itemObj.title || ''}`.toLowerCase();
 
-  if (str.includes('artifact') || str.includes('epic')) {
-    return { label: 'Artifact', icon: '💫', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40' };
+  if (str.includes('epic') || str.includes('artifact')) {
+    return { label: 'Epic', icon: '💫', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40' };
   }
   if (str.includes('greater')) {
     return { label: 'Greater', icon: '✨', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40' };
@@ -97,6 +97,14 @@ const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; 
     return { label: 'Lesser', icon: '🪄', style: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40' };
   }
   return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' };
+};
+
+const formatTableNameDisplay = (tblName: string): string => {
+  if (!tblName) return '';
+  return tblName
+    .replace(/Artifact🌀/g, 'Epic💫')
+    .replace(/Artifact/g, 'Epic')
+    .replace(/🌀/g, '💫');
 };
 
 const pruneLesserPowerVersions = (abilitySlots: AbilitySlot[]): AbilitySlot[] => {
@@ -181,6 +189,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [createName, setCreateName] = useState('');
   const [createAction, setCreateAction] = useState('A');
   const [createUsage, setCreateUsage] = useState('1');
+  const [createTier, setCreateTier] = useState<'Minor' | 'Lesser' | 'Greater' | 'Epic'>('Minor');
   const [createEffect, setCreateEffect] = useState('');
   const createEffectRef = useRef<HTMLTextAreaElement>(null);
 
@@ -549,7 +558,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     const rawClean = cleanName(createName.trim());
     const { baseName, version } = parseAbilityVersion(rawClean);
     const versionedName = `${baseName} v${version}`;
-    const targetTable = activeTableName || (type === 'powers' ? '📁 Custom Powers' : '📁 Custom Magic Items');
+    const tierEmoji = createTier === 'Minor' ? '🍺' : createTier === 'Lesser' ? '🪄' : createTier === 'Greater' ? '✨' : '💫';
+    const targetTable = activeTableName || (type === 'powers' ? '📁 Custom Powers' : `📁 ${createTier}${tierEmoji} Custom Magic Items`);
 
     const newItem: Power | MagicItem = {
       id: Date.now(),
@@ -562,7 +572,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       source: 'Custom',
       created_at: new Date().toISOString(),
       dropdown: null,
-      sub: type === 'powers' ? 'class' : null,
+      sub: type === 'powers' ? 'class' : createTier,
       table_name: targetTable,
     };
 
@@ -1123,7 +1133,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             )}
                             {availableTableNames.map((tblName) => (
                               <option key={tblName} value={tblName}>
-                                📁 {tblName} ({groupedTables[tblName]?.length || 0})
+                                📁 {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
                               </option>
                             ))}
                           </select>
@@ -1335,13 +1345,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className={`grid ${type === 'spells' ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-slate-300 shrink-0">Action:</span>
                                 <select
                                   value={createAction}
                                   onChange={(e) => setCreateAction(e.target.value)}
-                                  className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full"
+                                  className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full cursor-pointer"
                                 >
                                   {ACTION_OPTIONS.map((opt) => (
                                     <option key={opt} value={opt}>{opt}</option>
@@ -1354,7 +1364,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 <select
                                   value={createUsage}
                                   onChange={(e) => setCreateUsage(e.target.value)}
-                                  className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full"
+                                  className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full cursor-pointer"
                                 >
                                   {USAGE_OPTIONS.map((opt) => (
                                     <option key={opt.value} value={opt.value}>
@@ -1363,6 +1373,22 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   ))}
                                 </select>
                               </div>
+
+                              {type === 'spells' && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-slate-300 shrink-0">Tier:</span>
+                                  <select
+                                    value={createTier}
+                                    onChange={(e) => setCreateTier(e.target.value as any)}
+                                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full cursor-pointer"
+                                  >
+                                    <option value="Minor">🍺 Minor</option>
+                                    <option value="Lesser">🪄 Lesser</option>
+                                    <option value="Greater">✨ Greater</option>
+                                    <option value="Epic">💫 Epic</option>
+                                  </select>
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex flex-col gap-1 pt-1">

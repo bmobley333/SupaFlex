@@ -366,8 +366,10 @@ export interface CharacterSheetData {
   attribute_dice: Record<AttributeKey, DieRating>;
   focus_die_current?: DieRating;
   focus_die_max?: DieRating;
-  sparks?: number; // 0-5 Kinetic Sparks (5 Sparks = 1 Meta)
-  is_charged?: boolean; // True when sparks === 5 (+1 to ALL rolls)
+  charges?: number; // 0-5 Charges (5 Charges = 1 Spark)
+  is_sparked?: boolean; // True when charges === 5 (Fully Sparked: +1 to ALL rolls)
+  sparks?: number; // Deprecated alias for charges
+  is_charged?: boolean; // Deprecated alias for is_sparked
   luck?: number; // 0-5 Luck Pool (Default 3, Max 5)
   max_luck?: number; // Default 5
   gold?: number;
@@ -637,7 +639,7 @@ export interface VaultItem {
   title: string;
   description: string;
   type: 'coins' | 'magic_item' | 'art_gem' | 'document' | 'junk' | 'quality' | 'special';
-  rarity: 'Minor' | 'Lesser' | 'Greater' | 'Artifact';
+  rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic';
   essenceValue: number;
   coinsSilver?: number;
   coinsGold?: number;

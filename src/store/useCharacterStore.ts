@@ -33,6 +33,9 @@ interface CharacterStore {
   updateActiveCharacterMeta: (updates: Partial<Character>) => void;
   saveActiveCharacter: () => Promise<void>;
   deleteCharacter: (id: number) => Promise<void>;
+  addCharge: (amount?: number) => void;
+  spendSpark: () => void;
+  resetCharges: () => void;
   addSpark: (amount?: number) => void;
   spendMeta: () => void;
   resetSparks: () => void;
@@ -310,33 +313,44 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     }
   },
 
-  addSpark: (amount = 1) => {
+  addCharge: (amount = 1) => {
     get().updateActiveSheetData((prev) => {
-      const currentSparks = prev.sparks || 0;
-      const nextSparks = Math.min(5, currentSparks + amount);
+      const currentCharges = prev.charges ?? prev.sparks ?? 0;
+      const nextCharges = Math.min(5, currentCharges + amount);
+      const isSparked = nextCharges === 5;
       return {
         ...prev,
-        sparks: nextSparks,
-        is_charged: nextSparks === 5,
+        charges: nextCharges,
+        is_sparked: isSparked,
+        sparks: nextCharges,
+        is_charged: isSparked,
       };
     });
   },
 
-  spendMeta: () => {
+  spendSpark: () => {
     get().updateActiveSheetData((prev) => ({
       ...prev,
+      charges: 0,
+      is_sparked: false,
       sparks: 0,
       is_charged: false,
     }));
   },
 
-  resetSparks: () => {
+  resetCharges: () => {
     get().updateActiveSheetData((prev) => ({
       ...prev,
+      charges: 0,
+      is_sparked: false,
       sparks: 0,
       is_charged: false,
     }));
   },
+
+  addSpark: (amount = 1) => get().addCharge(amount),
+  spendMeta: () => get().spendSpark(),
+  resetSparks: () => get().resetCharges(),
 
   recordApExpenditure: (cost, category, description, tier, source) => {
     get().updateActiveSheetData((prev) => {

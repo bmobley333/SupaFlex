@@ -10,7 +10,7 @@ interface LootDraftModalProps {
   isOpen: boolean;
   onClose: () => void;
   characterName: string;
-  draftTier?: 'Minor' | 'Lesser' | 'Greater' | 'Artifact';
+  draftTier?: 'Minor' | 'Lesser' | 'Greater' | 'Epic';
   starredItemIds: (number | string)[];
   stockMagicItems: MagicItem[];
   onSelectReward: (reward: { type: 'magic_item' | 'treasure'; data: any }) => Promise<boolean>;
@@ -172,7 +172,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
           };
         }
       } else {
-        // Artifact: Best of 3 Art & Gem rolls
+        // Epic: Best of 3 Art & Gem rolls
         try {
           const { data } = await supabase
             .from('treasure_entries')
@@ -218,7 +218,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
         {
           slotType: 'treasure',
           slotTitle: '💎 Treasure Cache',
-          slotBadge: draftTier === 'Minor' ? 'Best of 2 Coins' : `Best of ${draftTier === 'Artifact' ? 3 : draftTier === 'Greater' ? 2 : 1} Art/Gem`,
+          slotBadge: draftTier === 'Minor' ? 'Best of 2 Coins' : `Best of ${draftTier === 'Epic' ? 3 : draftTier === 'Greater' ? 2 : 1} Art/Gem`,
           item: slot3Item,
         },
       ]);
