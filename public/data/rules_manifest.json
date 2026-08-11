@@ -91,7 +91,7 @@
   },
   "col.magic_items.category": {
     "title": "Item Category (💫)",
-    "summary": "Item tier and type: Minor, Lesser, Greater, or Epic.",
+    "summary": "Item tier and type: Minor, Lesser, Greater, or Relic.",
     "anchor": "#abilities-powers-magic-items-skills"
   },
   "focus.basics": {

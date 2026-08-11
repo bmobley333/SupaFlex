@@ -41,7 +41,6 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
   const mrVal = monster.mr ?? 10;
   const atkVal = monster.attack ?? 10;
   const dmgVal = monster.damage ?? 10;
-  const minWoundsVal = monster.min_wounds ?? 1;
   const defVal = monster.defense ?? 10;
   const armorVal = monster.armor ?? 0;
   const maxVitVal = monster.max_vit ?? 10;
@@ -67,7 +66,7 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-slate-300 text-[11px] shrink-0">
           <span>🚩{initVal}</span>
           <span>👣{mrVal}</span>
-          <span>⚔️{atkVal}/{dmgVal}({minWoundsVal})</span>
+          <span>⚔️{atkVal}/{dmgVal}</span>
           <span>🧥{defVal}/{armorVal}</span>
           <span>❤️{maxVitVal}</span>
         </div>

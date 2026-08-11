@@ -104,7 +104,6 @@ export function serializeMonsterDataLine(m: MonsterData): string {
   const mrVal = m.mr ?? 10;
   const atkVal = m.attack ?? 10;
   const dmgVal = m.damage ?? 10;
-  const minWoundsVal = m.min_wounds ?? 1;
   const defVal = m.defense ?? 10;
   const armorVal = m.armor ?? 0;
   const vitVal = m.max_vit ?? 10;
@@ -116,7 +115,7 @@ export function serializeMonsterDataLine(m: MonsterData): string {
   const motion = attrs.motion ?? 10;
   const moxie = attrs.moxie ?? 10;
 
-  return `${fullTitle} 🚩${initVal} 👣${mrVal} ⚔️${atkVal}/${dmgVal}(${minWoundsVal}) 🧥${defVal}/${armorVal} ❤️${vitVal} [✨${magic}/💪${might}/👁️${mind}/🏃${motion}/🫀${moxie}]${notesStr}`;
+  return `${fullTitle} 🚩${initVal} 👣${mrVal} ⚔️${atkVal}/${dmgVal} 🧥${defVal}/${armorVal} ❤️${vitVal} [✨${magic}/💪${might}/👁️${mind}/🏃${motion}/🫀${moxie}]${notesStr}`;
 }
 
 /**
@@ -170,7 +169,6 @@ export function scaleSupabaseMonster(sm: SupabaseMonster, dif: number): Supabase
   const atkNums = extractAllInts(sm.atk_dmg_ftg);
   const atkVal = atkNums[0] !== undefined ? atkNums[0] : 10;
   const dmgVal = atkNums[1] !== undefined ? atkNums[1] : 5;
-  const ftgVal = atkNums[2] !== undefined ? atkNums[2] : 1;
 
   // Parse dod/ar numbers e.g. "🧥12/2" -> [12, 2]
   const defNums = extractAllInts(sm.dod_ar);
@@ -187,7 +185,6 @@ export function scaleSupabaseMonster(sm: SupabaseMonster, dif: number): Supabase
   const scaledVit = scaleFlatStat(vitNum, dif, false);
   const scaledAtk = scaleAbilityStat(atkVal, dif, true);
   const scaledDmg = scaleFlatStat(dmgVal, dif, false);
-  const scaledFtg = scaleFtgStat(ftgVal, dif);
   const scaledDef = scaleAbilityStat(defVal, dif, false);
   const scaledArmor = scaleFlatStat(armorVal, dif, true);
 
@@ -199,7 +196,7 @@ export function scaleSupabaseMonster(sm: SupabaseMonster, dif: number): Supabase
     nish: String(scaledNish),
     mr: String(scaledMr),
     vit: String(scaledVit),
-    atk_dmg_ftg: `${scaledAtk}/${scaledDmg}(${scaledFtg})`,
+    atk_dmg_ftg: `${scaledAtk}/${scaledDmg}`,
     dod_ar: `${scaledDef}/${scaledArmor}`,
     attributes: scaledAttrs,
   };

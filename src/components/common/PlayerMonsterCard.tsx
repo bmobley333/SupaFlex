@@ -12,7 +12,6 @@ export const PlayerMonsterCard: React.FC<PlayerMonsterCardProps> = ({ monster })
   const equipStr = monster.equipment ? ` (${monster.equipment})` : '';
   const atkVal = monster.attack ?? 10;
   const dmgVal = monster.damage ?? 10;
-  const minWoundsVal = monster.min_wounds ?? 1;
   const defVal = monster.defense ?? 10;
   const armorVal = monster.armor ?? 0;
   const maxVitVal = monster.max_vit ?? 10;
@@ -25,7 +24,7 @@ export const PlayerMonsterCard: React.FC<PlayerMonsterCardProps> = ({ monster })
         {cleanName}{equipStr}
       </span>
       <div className="flex items-center gap-3 text-slate-300">
-        <span>⚔️{atkVal}/{dmgVal}({minWoundsVal})</span>
+        <span>⚔️{atkVal}/{dmgVal}</span>
         <span>🧥{defVal}/{armorVal}</span>
         <span>❤️{maxVitVal}</span>
       </div>

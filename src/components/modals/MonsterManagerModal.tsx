@@ -232,7 +232,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const fullTitle = `${nameStr}${gearStr}`;
     const notesStr = quickAdd.abilities.trim() ? ` (${quickAdd.abilities.trim()})` : '';
 
-    const fullStatStr = `${fullTitle} 🚩${quickAdd.init} 👣${quickAdd.mr} ⚔️${quickAdd.atk}/${quickAdd.dmg}(${quickAdd.minWounds}) 🧥${quickAdd.def}/${quickAdd.armor} ❤️${quickAdd.vit} [✨${quickAdd.magic}/💪${quickAdd.might}/👁️${quickAdd.mind}/🏃${quickAdd.motion}/🫀${quickAdd.moxie}]${notesStr}`;
+    const fullStatStr = `${fullTitle} 🚩${quickAdd.init} 👣${quickAdd.mr} ⚔️${quickAdd.atk}/${quickAdd.dmg} 🧥${quickAdd.def}/${quickAdd.armor} ❤️${quickAdd.vit} [✨${quickAdd.magic}/💪${quickAdd.might}/👁️${quickAdd.mind}/🏃${quickAdd.motion}/🫀${quickAdd.moxie}]${notesStr}`;
 
     let parsed = parseMonsterLine(fullStatStr);
 
@@ -251,7 +251,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const nish = extractFirstInt(targetSm.nish, 10);
     const mr = extractFirstInt(targetSm.mr, 10);
     const vit = extractFirstInt(targetSm.vit, 10);
-    const atk = String(targetSm.atk_dmg_ftg || '10/5(1)').replace(/[⚔️⚔]/g, '').trim();
+    const atk = String(targetSm.atk_dmg_ftg || '10/5').replace(/[⚔️⚔]/g, '').trim();
     const def = String(targetSm.dod_ar || '10/1').replace(/[🧥🛡️]/g, '').trim();
     
     let attrNums = extractAllInts(targetSm.attributes);
@@ -609,11 +609,11 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Row 2: Composite Metrics (Atk/Dmg/Ftg & Def/Armor Split 50%/50%) */}
+                    {/* Row 2: Composite Metrics (Atk/Dmg & Def/Armor Split 50%/50%) */}
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5" title="Attack / Damage (Fatigue Min Wounds)">
-                          ⚔️ Atk / Dmg (Ftg)
+                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5" title="Attack / Damage">
+                          ⚔️ Atk / Dmg
                         </label>
                         <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
                           <input
@@ -631,15 +631,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                             className="w-full bg-transparent text-center text-slate-100 font-mono text-xs outline-none"
                             title="Damage"
                           />
-                          <span className="text-slate-500 font-bold text-xs select-none">(</span>
-                          <input
-                            type="number"
-                            value={quickAdd.minWounds}
-                            onChange={(e) => handleQuickAddChange('minWounds', parseInt(e.target.value, 10) || 0)}
-                            className="w-full bg-transparent text-center text-amber-300 font-mono text-xs outline-none"
-                            title="Fatigue / Min Wounds"
-                          />
-                          <span className="text-slate-500 font-bold text-xs select-none">)</span>
                         </div>
                       </div>
 
@@ -786,7 +777,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                               <span className="font-bold text-amber-300 font-outfit">{scaledSm.name}</span>
                               <span className="text-[11px] text-slate-400 font-mono flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-0.5">
                                 <span>🚩 {extractFirstInt(scaledSm.nish, 10)}</span>
-                                <span>⚔️ {(scaledSm.atk_dmg_ftg || '10/5(1)').replace(/[⚔️⚔]/g, '').trim()}</span>
+                                <span>⚔️ {(scaledSm.atk_dmg_ftg || '10/5').replace(/[⚔️⚔]/g, '').trim()}</span>
                                 <span>🧥 {(scaledSm.dod_ar || '10/0').replace(/[🧥🛡️]/g, '').trim()}</span>
                                 <span>❤️ {extractFirstInt(scaledSm.vit, 10)}</span>
                               </span>
@@ -917,12 +908,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                       <span className="text-slate-400">Armor (AR):</span>
                       <span className="text-purple-300 font-bold">
                         {masterDif >= 10 ? `+${Math.round((masterDif - 10) * 4)}%` : `${Math.round((masterDif - 10) * 4)}%`}
-                      </span>
-                    </div>
-                    <div className="p-2 bg-slate-950/60 rounded border border-slate-800/60 flex justify-between">
-                      <span className="text-slate-400">Ftg (Min Dmg):</span>
-                      <span className="text-rose-300 font-bold">
-                        {masterDif >= 10 ? `+${Math.round((masterDif - 10) * 8)}%` : `${Math.round((masterDif - 10) * 8)}%`}
                       </span>
                     </div>
                     <div className="p-2 bg-slate-950/60 rounded border border-slate-800/60 flex justify-between">
