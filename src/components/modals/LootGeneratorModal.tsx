@@ -660,12 +660,17 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   };
 
   const handleDeconstructDraft = () => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      pity_level: ((prev.pity_level || 0) + 1) % 3,
-    }));
+    updateActiveSheetData((prev) => {
+      const current = prev.essence_core || 0;
+      const halved = Math.floor(current / 2);
+      return {
+        ...prev,
+        essence_core: halved,
+        pity_level: ((prev.pity_level || 0) + 1) % 3,
+      };
+    });
     saveActiveCharacter();
-    showToast(`♻️ Draft Discarded! Essence preserved intact.`);
+    showToast(`♻️ Draft Deconstructed! Essence cut in half.`);
   };
 
   const handleClaimVaultItem = async (item: VaultItem): Promise<boolean> => {
@@ -768,61 +773,72 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                 <p className="text-xs text-slate-500 mt-1">Use the control panel on the right to roll!</p>
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+              <div className="flex-1 overflow-y-auto space-y-2 pr-2">
                 {results.map((res) => (
                   <div 
                     key={res.id} 
-                    className={`p-4 rounded-xl border transition-all ${
+                    className={`p-3 rounded-xl border transition-all ${
                       res.claimed 
                         ? 'bg-slate-950/60 border-slate-800 opacity-60' 
-                        : 'bg-slate-800/80 border-slate-700/80 hover:border-amber-500/50 shadow-lg'
+                        : 'bg-slate-800/80 border-slate-700/80 hover:border-amber-500/50 shadow-md'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                          <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-md bg-slate-950 border border-slate-700 text-amber-400 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      {/* Left Column: Line 1 Badges, Line 2 Title (Wrapping), Line 3 Description */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        {/* Line 1: Category & Value Badges */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-slate-950 border border-slate-700 text-amber-400 shadow-sm shrink-0">
                             {res.tableName}
                           </span>
                           {res.valueText && (
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-amber-950/80 border border-amber-500/40 text-amber-300 shadow-sm flex items-center gap-1">
-                              <span>💎 Value:</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-950/80 border border-amber-500/40 text-amber-300 shadow-sm flex items-center gap-1 shrink-0">
+                              <span>💎</span>
                               <span className="font-mono font-extrabold">{res.valueText}</span>
                             </span>
                           )}
                         </div>
-                        <h4 className="text-base font-bold text-slate-100">{res.title}</h4>
-                        <p className="text-xs text-slate-300 mt-1 leading-relaxed">{res.description}</p>
+
+                        {/* Line 2: Item Title (Always below badges, full wrap) */}
+                        <h4 className="text-sm font-bold text-slate-100 leading-snug break-words">
+                          {res.title}
+                        </h4>
+
+                        {/* Line 3: Description */}
+                        {res.description && (
+                          <p className="text-[11px] text-slate-300 leading-snug font-sans break-words">
+                            {res.description}
+                          </p>
+                        )}
                       </div>
 
-                      {/* 1-Click Claim & Refine Action Buttons */}
-                      <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                      {/* Right Column: 1-Click Action Buttons (Strictly Top-Aligned) */}
+                      <div className="flex items-center gap-1.5 shrink-0 self-start pt-0.5">
                         {res.claimed ? (
-                          <span className="text-xs font-extrabold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-2.5 py-1 rounded-lg flex items-center gap-1">
-                            ✅ Moved to Sheet
+                          <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                            ✅ Claimed
                           </span>
                         ) : (
                           <>
                             <button
                               onClick={() => claimMoveToSheet(res)}
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
-                              title="Move this item to your character sheet (0 AP cost)"
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                              title="Claim item to character sheet"
                             >
-                              <span>✨</span>
-                              <span>Move to Sheet</span>
+                              Claim
                             </button>
 
                             {/* 🧪 Disenchant & ➡️ Party Buttons */}
                             <button
                               onClick={() => handleRefineResult(res)}
-                              className="bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 text-xs font-bold px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                              className="bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 text-xs font-bold px-2 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
                               title="Disenchant loot drop into personal Essence Core (+8% to +50%)"
                             >
                               🧪 Disenchant
                             </button>
                             <button
                               onClick={() => handlePassResult(res)}
-                              className="bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-300 border border-cyan-500/40 text-xs font-bold px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                              className="bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-300 border border-cyan-500/40 text-xs font-bold px-2 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
                               title="Pass item to Party Echo Vault for off-turn/rest claiming"
                             >
                               ➡️ Party

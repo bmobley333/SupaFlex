@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { MagicItem } from '../../types/game';
 import { supabase } from '../../lib/supabase';
-import { Sparkles, Star, Gem, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Sparkles, Star, Gem, RefreshCw } from 'lucide-react';
 
 interface LootDraftModalProps {
   isOpen: boolean;
@@ -309,10 +309,9 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
                   <button
                     onClick={() => handleClaimSlot(s)}
                     disabled={isClaiming}
-                    className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-all shadow-md flex items-center justify-center cursor-pointer"
                   >
-                    <ShieldCheck className="w-4 h-4" />
-                    Move to Sheet
+                    Claim
                   </button>
                 </div>
               ))}
