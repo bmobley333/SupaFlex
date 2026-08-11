@@ -441,7 +441,9 @@ export const WeaponsCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const [weaponFilterCategory, setWeaponFilterCategory] = useState<'all' | 'starred' | 'learnable'>('all');
+  const [weaponFilterCategory, setWeaponFilterCategory] = useState<
+    'all' | 'starred' | 'learnable' | 'melee' | 'hurled' | 'shot' | 'unarmed'
+  >('all');
 
   const starredWeaponsCount = useMemo(() => {
     return supabaseWeapons.filter((w) => isItemStarred(w)).length;
@@ -474,6 +476,29 @@ export const WeaponsCard: React.FC = () => {
       }
       if (weaponFilterCategory === 'learnable' && qualifying.length === 0) {
         return false;
+      }
+      if (weaponFilterCategory === 'melee') {
+        const t = (weapon.type || '').toLowerCase();
+        const n = (weapon.name || '').toLowerCase();
+        if (!t.includes('melee') && !n.includes('melee')) return false;
+      }
+      if (weaponFilterCategory === 'hurled') {
+        const t = (weapon.type || '').toLowerCase();
+        const n = (weapon.name || '').toLowerCase();
+        if (!t.includes('hurled') && !n.includes('hurled')) return false;
+      }
+      if (weaponFilterCategory === 'shot') {
+        const t = (weapon.type || '').toLowerCase();
+        const n = (weapon.name || '').toLowerCase();
+        if (!t.includes('shot') && !n.includes('shot')) return false;
+      }
+      if (weaponFilterCategory === 'unarmed') {
+        const t = (weapon.type || '').toLowerCase();
+        const n = (weapon.name || '').toLowerCase();
+        const isUnarmedMatch = ['brawl', 'improvised', 'throw object', 'unarmed'].some(
+          (k) => t.includes(k) || n.includes(k)
+        );
+        if (!isUnarmedMatch) return false;
       }
 
       // 3. Search filter
@@ -758,6 +783,10 @@ export const WeaponsCard: React.FC = () => {
                               <option value="all">🌐 All Weapons</option>
                               <option value="starred">⭐ Starred Favorites ({starredWeaponsCount})</option>
                               <option value="learnable">⚡ Learnable Only</option>
+                              <option value="melee">🗡️ Melee</option>
+                              <option value="hurled">🪓 Hurled</option>
+                              <option value="shot">🏹 Shot</option>
+                              <option value="unarmed">🥊 Unarmed</option>
                             </select>
                           </div>
                         </div>
