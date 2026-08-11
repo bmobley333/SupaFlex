@@ -91,14 +91,9 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
       })
       .subscribe();
 
-    const pollInterval = setInterval(() => {
-      loadMembers();
-    }, 5000);
-
     return () => {
       supabase.removeChannel(cdcChannel);
       supabase.removeChannel(broadcastChannel);
-      clearInterval(pollInterval);
     };
   }, [activePartyId, tabSessionId]);
 

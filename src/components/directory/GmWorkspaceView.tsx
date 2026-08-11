@@ -281,14 +281,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Load Session Members on Selected Party Change
   useEffect(() => {
     if (!selectedParty) return;
-
     loadSessionMembers(selectedParty.id, false);
-
-    const interval = setInterval(() => {
-      loadSessionMembers(selectedParty.id, true);
-    }, 5000);
-
-    return () => clearInterval(interval);
   }, [selectedParty?.id]);
 
   const loadSessionMembers = async (partyId: string, isSilent = false) => {

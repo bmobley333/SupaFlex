@@ -104,7 +104,6 @@ export const GmMonsterTrackerHud: React.FC = () => {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(loadMonsters, 5000);
 
     return () => {
       isMounted = false;
@@ -112,7 +111,6 @@ export const GmMonsterTrackerHud: React.FC = () => {
         supabase.removeChannel(channel);
       }
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
     };
   }, [activeRole, activePartyId]);
 
