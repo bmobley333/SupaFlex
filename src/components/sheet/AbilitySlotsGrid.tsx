@@ -42,7 +42,7 @@ const POWER_CATEGORY_BUTTONS = [
   { id: 'race', label: 'Racial', icon: '🧬' },
   { id: 'combat style', label: 'Combat Styles', icon: '⚔️' },
   { id: 'luck', label: 'Luck', icon: '🍀' },
-  { id: 'favorites', label: 'Favorites', icon: '⭐' },
+  { id: 'favorites', label: 'Starred Favorites', icon: '⭐' },
 ];
 
 const MAIN_ABILITY_ICONS = [
@@ -351,7 +351,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   // Check if an item is starred in character sheet wishlist
   const isItemStarred = useCallback(
     (targetItem: Power | MagicItem | AbilitySlot) => {
-      const starredList = activeCharacter?.sheet_data?.starred_magic_items || [];
+      const targetStarredKey = type === 'powers' ? 'starred_powers' : 'starred_magic_items';
+      const starredList = activeCharacter?.sheet_data?.[targetStarredKey] || [];
       if (!starredList.length) return false;
 
       const rawName = targetItem.name || '';
@@ -376,7 +377,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         return false;
       });
     },
-    [activeCharacter?.sheet_data?.starred_magic_items, fullCatalog]
+    [activeCharacter?.sheet_data, fullCatalog, type]
   );
 
   // Toggle Starred Wishlist Item
@@ -392,9 +393,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     );
 
     const itemKey = (targetItem as any).id || (catalogMatch ? catalogMatch.id : null) || baseName || rawName;
+    const targetStarredKey = type === 'powers' ? 'starred_powers' : 'starred_magic_items';
 
     updateActiveSheetData((prev) => {
-      const currentStarred = prev.starred_magic_items || [];
+      const currentStarred = prev[targetStarredKey] || [];
       const currentlyStarred = isItemStarred(targetItem);
       let updated: (string | number)[];
 
@@ -416,7 +418,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
       return {
         ...prev,
-        starred_magic_items: updated,
+        [targetStarredKey]: updated,
       };
     });
     saveActiveCharacter();
@@ -679,7 +681,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
       if (type === 'powers') {
         if (selectedCategory === 'favorites') {
-          return Boolean(item.table_name && favoriteTables.includes(item.table_name));
+          return isItemStarred(item);
         } else if (selectedCategory !== 'all') {
           const itemSub = (item.sub || '').toLowerCase();
           return itemSub.includes(selectedCategory.toLowerCase());
@@ -687,7 +689,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       }
       return true;
     });
-  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, favoriteTables]);
+  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, favoriteTables, isItemStarred]);
 
   const groupedTables = useMemo(() => {
     const acc = categoryFilteredCatalog.reduce((map, item) => {
@@ -715,9 +717,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   }, [categoryFilteredCatalog, type, customPowerTables, selectedCategory, favoriteTables]);
 
   const starredCatalogItems = useMemo(() => {
-    if (type !== 'spells') return [];
     return fullCatalog.filter((item) => isItemStarred(item));
-  }, [type, fullCatalog, isItemStarred]);
+  }, [fullCatalog, isItemStarred]);
 
   const availableTableNames = useMemo(() => Object.keys(groupedTables), [groupedTables]);
 
@@ -971,20 +972,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     )}
                                   </div>
 
-                                  {type === 'spells' && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleStarItem(item)}
-                                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                        isItemStarred(item)
-                                          ? 'text-amber-400'
-                                          : 'text-slate-600 hover:text-amber-400'
-                                      }`}
-                                      title={isItemStarred(item) ? 'Starred in Wishlist' : 'Star to add to Loot Draft Wishlist'}
-                                    >
-                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
-                                    </button>
-                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleStarItem(item)}
+                                    className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                      isItemStarred(item)
+                                        ? 'text-amber-400'
+                                        : 'text-slate-600 hover:text-amber-400'
+                                    }`}
+                                    title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                  >
+                                    <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                  </button>
                                   <button
                                     onClick={() => handleLaunchVersionEditor(item)}
                                     className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors"
@@ -1103,7 +1102,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             >
                               {POWER_CATEGORY_BUTTONS.map((cat) => (
                                 <option key={cat.id} value={cat.id}>
-                                  {cat.icon} {cat.label}
+                                  {cat.icon} {cat.label} {cat.id === 'favorites' ? `(${starredCatalogItems.length})` : ''}
                                 </option>
                               ))}
                             </select>
@@ -1262,20 +1261,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                         )}
                                       </div>
 
-                                      {type === 'spells' && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleToggleStarItem(item)}
-                                          className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                            isItemStarred(item)
-                                              ? 'text-amber-400'
-                                              : 'text-slate-600 hover:text-amber-400'
-                                          }`}
-                                          title={isItemStarred(item) ? 'Starred in Wishlist' : 'Star to add to Loot Draft Wishlist'}
-                                        >
-                                          <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
-                                        </button>
-                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleStarItem(item)}
+                                        className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                          isItemStarred(item)
+                                            ? 'text-amber-400'
+                                            : 'text-slate-600 hover:text-amber-400'
+                                        }`}
+                                        title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                      >
+                                        <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                      </button>
                                       <button
                                         type="button"
                                         onClick={() => handleLaunchVersionEditor(item)}

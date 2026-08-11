@@ -394,6 +394,10 @@ export interface CharacterSheetData {
   bio: CharacterBio;
   essence_core?: number; // 0-100 Essence Core Progress Ring
   starred_magic_items?: (number | string)[]; // Starred Magic Item Wishlist IDs
+  starred_powers?: (number | string)[]; // Starred Powers Wishlist IDs
+  starred_weapons?: (number | string)[]; // Starred Weapons Wishlist IDs
+  starred_armor?: (number | string)[]; // Starred Armor Wishlist IDs
+  starred_shields?: (number | string)[]; // Starred Shields Wishlist IDs
   pity_level?: number; // 0-2 Draft Pity Escalator level
 }
 

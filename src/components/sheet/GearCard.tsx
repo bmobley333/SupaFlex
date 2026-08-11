@@ -1,5 +1,5 @@
 // src/components/sheet/GearCard.tsx
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   ChevronDown,
   ChevronUp,
@@ -13,6 +13,7 @@ import {
   Package,
   Globe,
   Sparkles,
+  Star,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
@@ -157,6 +158,70 @@ export const GearCard: React.FC = () => {
     );
   }, [gearList, inventorySearchQuery]);
 
+  // Check if armor/gear item is starred
+  const isItemStarred = useCallback(
+    (targetItem: SupabaseGear | SimpleGearItem | { name: string; id?: number | string }) => {
+      const starredList = activeCharacter?.sheet_data?.starred_armor || [];
+      if (!starredList.length) return false;
+
+      const rawName = targetItem.name || '';
+      const targetId = (targetItem as any).id;
+
+      const catalogMatch = gearCatalog.find(
+        (g) => g.name.toLowerCase() === rawName.toLowerCase()
+      );
+
+      return starredList.some((k) => {
+        const kStr = String(k);
+        if (targetId && kStr === String(targetId)) return true;
+        if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return true;
+        if (kStr === String(rawName)) return true;
+        return false;
+      });
+    },
+    [activeCharacter?.sheet_data?.starred_armor, gearCatalog]
+  );
+
+  // Toggle Starred Armor/Gear Item
+  const handleToggleStarItem = (targetItem: SupabaseGear | SimpleGearItem | { name: string; id?: number | string }) => {
+    const rawName = targetItem.name || '';
+    const catalogMatch = gearCatalog.find(
+      (g) => g.name.toLowerCase() === rawName.toLowerCase()
+    );
+
+    const itemKey = (targetItem as any).id || (catalogMatch ? catalogMatch.id : null) || rawName;
+
+    updateActiveSheetData((prev) => {
+      const currentStarred = prev.starred_armor || [];
+      const currentlyStarred = isItemStarred(targetItem);
+      let updated: (string | number)[];
+
+      if (currentlyStarred) {
+        updated = currentStarred.filter((k) => {
+          const kStr = String(k);
+          if ((targetItem as any).id && kStr === String((targetItem as any).id)) return false;
+          if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return false;
+          if (kStr === String(rawName)) return false;
+          return true;
+        });
+      } else {
+        updated = currentStarred.some((k) => String(k) === String(itemKey))
+          ? currentStarred
+          : [...currentStarred, itemKey];
+      }
+
+      return {
+        ...prev,
+        starred_armor: updated,
+      };
+    });
+    saveActiveCharacter();
+  };
+
+  const starredArmorCount = useMemo(() => {
+    return gearCatalog.filter((g) => isItemStarred(g)).length;
+  }, [gearCatalog, isItemStarred]);
+
   // Filtered gear catalog based on search & category filter
   const filteredCatalog = useMemo(() => {
     return gearCatalog.filter((item) => {
@@ -164,13 +229,17 @@ export const GearCard: React.FC = () => {
         item.name.toLowerCase().includes(catalogSearchQuery.toLowerCase()) ||
         (item.category && item.category.toLowerCase().includes(catalogSearchQuery.toLowerCase()));
 
+      if (selectedCategoryFilter === 'STARRED') {
+        return matchesSearch && isItemStarred(item);
+      }
+
       const matchesCategory =
         selectedCategoryFilter === 'ALL' ||
         (item.category && item.category.toLowerCase() === selectedCategoryFilter.toLowerCase());
 
       return matchesSearch && matchesCategory;
     });
-  }, [gearCatalog, catalogSearchQuery, selectedCategoryFilter]);
+  }, [gearCatalog, catalogSearchQuery, selectedCategoryFilter, isItemStarred]);
 
   // Add stock item from Supabase catalog to character sheet inventory
   const handleAddStockGear = (stockItem: SupabaseGear) => {
@@ -431,13 +500,27 @@ export const GearCard: React.FC = () => {
                               </div>
                             </div>
 
-                            <button
-                              onClick={() => handleRemoveGear(item.id)}
-                              className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all shrink-0"
-                              title="Remove Item"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStarItem(item)}
+                                className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                  isItemStarred(item)
+                                    ? 'text-amber-400'
+                                    : 'text-slate-600 hover:text-amber-400'
+                                }`}
+                                title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                              >
+                                <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                              </button>
+                              <button
+                                onClick={() => handleRemoveGear(item.id)}
+                                className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all shrink-0"
+                                title="Remove Item"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         ))
                       )}
@@ -493,12 +576,13 @@ export const GearCard: React.FC = () => {
                           <select
                             value={selectedCategoryFilter}
                             onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                            className="bg-slate-900 text-slate-200 text-xs px-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 max-w-[130px]"
+                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 max-w-[170px] truncate cursor-pointer"
                           >
-                            <option value="ALL">All Categories</option>
+                            <option value="ALL">🌐 All Categories</option>
+                            <option value="STARRED">⭐ Starred Favorites ({starredArmorCount})</option>
                             {availableCategories.map((cat) => (
                               <option key={cat} value={cat}>
-                                {cat}
+                                📁 {cat}
                               </option>
                             ))}
                           </select>
@@ -546,14 +630,28 @@ export const GearCard: React.FC = () => {
                                     </div>
                                   </div>
 
-                                  <button
-                                    onClick={() => handleAddStockGear(item)}
-                                    className="px-2.5 py-1 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0"
-                                    title="Add 1x to character sheet"
-                                  >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    Add
-                                  </button>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStarItem(item)}
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                        isItemStarred(item)
+                                          ? 'text-amber-400'
+                                          : 'text-slate-600 hover:text-amber-400'
+                                      }`}
+                                      title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                    >
+                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleAddStockGear(item)}
+                                      className="px-2.5 py-1 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0"
+                                      title="Add 1x to character sheet"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                      Add
+                                    </button>
+                                  </div>
                                 </div>
                               );
                             })

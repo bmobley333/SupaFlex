@@ -1,6 +1,6 @@
 // src/components/sheet/WeaponsCard.tsx
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Plus, X, Check, Swords, AlertCircle, Loader2, Search, Globe } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { ChevronDown, ChevronUp, Plus, X, Check, Swords, AlertCircle, Loader2, Search, Globe, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import {
@@ -112,8 +112,6 @@ export const WeaponsCard: React.FC = () => {
   const [supabaseWeapons, setSupabaseWeapons] = useState<SupabaseWeapon[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
 
-  // Dyslexia-Friendly UI Toggle: Default set to "Learnable Only" (true)
-  const [learnableOnly, setLearnableOnly] = useState<boolean>(true);
 
   // Custom Weapon Creator Form State
   const [customName, setCustomName] = useState<string>('');
@@ -374,6 +372,81 @@ export const WeaponsCard: React.FC = () => {
     );
   }, [groupedEquippedWeapons, leftSearchQuery]);
 
+  // Check if a weapon is starred
+  const isItemStarred = useCallback(
+    (targetItem: SupabaseWeapon | WeaponSlot | { name: string; id?: number | string }) => {
+      const starredList = activeCharacter?.sheet_data?.starred_weapons || [];
+      if (!starredList.length) return false;
+
+      const rawName = targetItem.name || '';
+      const baseName = getBaseWeaponName(rawName);
+      const targetId = (targetItem as any).id;
+
+      const catalogMatch = supabaseWeapons.find(
+        (w) =>
+          w.name.toLowerCase() === rawName.toLowerCase() ||
+          w.name.toLowerCase() === baseName.toLowerCase()
+      );
+
+      return starredList.some((k) => {
+        const kStr = String(k);
+        if (targetId && kStr === String(targetId)) return true;
+        if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return true;
+        if (kStr === String(rawName)) return true;
+        if (kStr === String(baseName)) return true;
+        return false;
+      });
+    },
+    [activeCharacter?.sheet_data?.starred_weapons, supabaseWeapons]
+  );
+
+  // Toggle Starred Weapon
+  const handleToggleStarItem = (targetItem: SupabaseWeapon | WeaponSlot | { name: string; id?: number | string }) => {
+    const rawName = targetItem.name || '';
+    const baseName = getBaseWeaponName(rawName);
+
+    const catalogMatch = supabaseWeapons.find(
+      (w) =>
+        w.name.toLowerCase() === rawName.toLowerCase() ||
+        w.name.toLowerCase() === baseName.toLowerCase()
+    );
+
+    const itemKey = (targetItem as any).id || (catalogMatch ? catalogMatch.id : null) || baseName || rawName;
+
+    updateActiveSheetData((prev) => {
+      const currentStarred = prev.starred_weapons || [];
+      const currentlyStarred = isItemStarred(targetItem);
+      let updated: (string | number)[];
+
+      if (currentlyStarred) {
+        updated = currentStarred.filter((k) => {
+          const kStr = String(k);
+          if ((targetItem as any).id && kStr === String((targetItem as any).id)) return false;
+          if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return false;
+          if (kStr === String(rawName)) return false;
+          if (kStr === String(baseName)) return false;
+          return true;
+        });
+      } else {
+        updated = currentStarred.some((k) => String(k) === String(itemKey))
+          ? currentStarred
+          : [...currentStarred, itemKey];
+      }
+
+      return {
+        ...prev,
+        starred_weapons: updated,
+      };
+    });
+    saveActiveCharacter();
+  };
+
+  const [weaponFilterCategory, setWeaponFilterCategory] = useState<'all' | 'starred' | 'learnable'>('all');
+
+  const starredWeaponsCount = useMemo(() => {
+    return supabaseWeapons.filter((w) => isItemStarred(w)).length;
+  }, [supabaseWeapons, isItemStarred]);
+
   // Set of lowercase equipped base weapon names for strict deduplication
   const equippedBaseNamesSet = useMemo(() => {
     const set = new Set<string>();
@@ -395,8 +468,11 @@ export const WeaponsCard: React.FC = () => {
       const variants = splitWeaponIntoVariants(weapon);
       const qualifying = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
 
-      // 2. Learnable toggle filter
-      if (learnableOnly && qualifying.length === 0) {
+      // 2. Category / Filter mode
+      if (weaponFilterCategory === 'starred' && !isItemStarred(weapon)) {
+        return false;
+      }
+      if (weaponFilterCategory === 'learnable' && qualifying.length === 0) {
         return false;
       }
 
@@ -410,7 +486,7 @@ export const WeaponsCard: React.FC = () => {
 
       return true;
     });
-  }, [supabaseWeapons, equippedBaseNamesSet, learnableOnly, rightSearchQuery, attributeDice]);
+  }, [supabaseWeapons, equippedBaseNamesSet, weaponFilterCategory, rightSearchQuery, attributeDice, isItemStarred]);
 
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3 h-fit">
@@ -558,13 +634,27 @@ export const WeaponsCard: React.FC = () => {
                                   })}
                                 </div>
 
-                                <button
-                                  onClick={() => handleDropWeapon(group.baseName)}
-                                  className="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1"
-                                  title="Drop Weapon Arsenal"
-                                >
-                                  Forget
-                                </button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleStarItem({ name: group.baseName })}
+                                    className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                      isItemStarred({ name: group.baseName })
+                                        ? 'text-amber-400'
+                                        : 'text-slate-600 hover:text-amber-400'
+                                    }`}
+                                    title={isItemStarred({ name: group.baseName }) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                  >
+                                    <Star className={`w-3.5 h-3.5 ${isItemStarred({ name: group.baseName }) ? 'fill-amber-400' : ''}`} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDropWeapon(group.baseName)}
+                                    className="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1"
+                                    title="Drop Weapon Arsenal"
+                                  >
+                                    Forget
+                                  </button>
+                                </div>
                               </div>
 
                               {/* Variant Sub-Rows */}
@@ -657,42 +747,18 @@ export const WeaponsCard: React.FC = () => {
                             />
                           </div>
 
-                          {/* Dyslexia-Friendly UI Peg-Slider Toggle */}
-                          <div className="flex items-center justify-between bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
-                            <span className="text-[11px] font-bold text-slate-400">Filter Mode:</span>
-                            <div className="flex items-center gap-3">
-                              <button
-                                type="button"
-                                onClick={() => setLearnableOnly(false)}
-                                className={`text-xs font-bold transition-all cursor-pointer select-none ${
-                                  !learnableOnly ? 'text-amber-300 opacity-100 font-extrabold scale-105' : 'text-slate-400 opacity-50 hover:opacity-80'
-                                }`}
-                              >
-                                All Weapons
-                              </button>
-                              <div
-                                onClick={() => setLearnableOnly(!learnableOnly)}
-                                className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors p-0.5 border border-slate-700 ${
-                                  learnableOnly ? 'bg-amber-600 border-amber-400' : 'bg-slate-800'
-                                }`}
-                                title="Toggle weapon learnability filter"
-                              >
-                                <div
-                                  className={`w-5 h-5 rounded-full bg-slate-100 shadow-md transform transition-transform ${
-                                    learnableOnly ? 'translate-x-5' : 'translate-x-0'
-                                  }`}
-                                />
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => setLearnableOnly(true)}
-                                className={`text-xs font-bold transition-all cursor-pointer select-none ${
-                                  learnableOnly ? 'text-amber-300 opacity-100 font-extrabold scale-105' : 'text-slate-400 opacity-50 hover:opacity-80'
-                                }`}
-                              >
-                                Learnable Only
-                              </button>
-                            </div>
+                          {/* Category / Filter Select */}
+                          <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
+                            <span className="text-[11px] font-bold text-slate-400 shrink-0">Filter:</span>
+                            <select
+                              value={weaponFilterCategory}
+                              onChange={(e) => setWeaponFilterCategory(e.target.value as any)}
+                              className="bg-slate-950 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
+                            >
+                              <option value="all">🌐 All Weapons</option>
+                              <option value="starred">⭐ Starred Favorites ({starredWeaponsCount})</option>
+                              <option value="learnable">⚡ Learnable Only</option>
+                            </select>
                           </div>
                         </div>
 
@@ -736,17 +802,31 @@ export const WeaponsCard: React.FC = () => {
                                       </span>
                                     </div>
 
-                                    <button
-                                      onClick={() => handleEquipWeapon(weapon, variants)}
-                                      className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
-                                        isAnyLearnable
-                                          ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
-                                          : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
-                                      }`}
-                                      title={isAnyLearnable ? 'Equip as Trained/Skilled' : 'Equip as Unskilled'}
-                                    >
-                                      + Learn
-                                    </button>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleStarItem(weapon)}
+                                        className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                          isItemStarred(weapon)
+                                            ? 'text-amber-400'
+                                            : 'text-slate-600 hover:text-amber-400'
+                                        }`}
+                                        title={isItemStarred(weapon) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                      >
+                                        <Star className={`w-3.5 h-3.5 ${isItemStarred(weapon) ? 'fill-amber-400' : ''}`} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleEquipWeapon(weapon, variants)}
+                                        className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
+                                          isAnyLearnable
+                                            ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
+                                            : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
+                                        }`}
+                                        title={isAnyLearnable ? 'Equip as Trained/Skilled' : 'Equip as Unskilled'}
+                                      >
+                                        + Learn
+                                      </button>
+                                    </div>
                                   </div>
 
                                   {/* Variant Stats Sub-Rows */}

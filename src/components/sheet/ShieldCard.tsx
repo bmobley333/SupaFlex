@@ -1,6 +1,6 @@
 // src/components/sheet/ShieldCard.tsx
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronUp, X, Check, Plus, Search, Globe, ShieldAlert, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { ChevronDown, ChevronUp, X, Check, Plus, Search, Globe, ShieldAlert, Loader2, AlertCircle, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -89,7 +89,6 @@ export const ShieldCard: React.FC = () => {
 
   const [shieldCatalog, setShieldCatalog] = useState<SupabaseShield[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
-  const [learnableOnly, setLearnableOnly] = useState<boolean>(true);
 
   const [newShieldName, setNewShieldName] = useState<string>('');
   const [newShieldReq, setNewShieldReq] = useState<string>('💪 4');
@@ -280,6 +279,72 @@ export const ShieldCard: React.FC = () => {
     }
   };
 
+  // Check if shield item is starred
+  const isItemStarred = useCallback(
+    (targetItem: SupabaseShield | ShieldData | { name: string; id?: number | string }) => {
+      const starredList = activeCharacter?.sheet_data?.starred_shields || [];
+      if (!starredList.length) return false;
+
+      const rawName = targetItem.name || '';
+      const targetId = (targetItem as any).id;
+
+      const catalogMatch = shieldCatalog.find(
+        (s) => s.name.toLowerCase() === rawName.toLowerCase()
+      );
+
+      return starredList.some((k) => {
+        const kStr = String(k);
+        if (targetId && kStr === String(targetId)) return true;
+        if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return true;
+        if (kStr === String(rawName)) return true;
+        return false;
+      });
+    },
+    [activeCharacter?.sheet_data?.starred_shields, shieldCatalog]
+  );
+
+  // Toggle Starred Shield Item
+  const handleToggleStarItem = (targetItem: SupabaseShield | ShieldData | { name: string; id?: number | string }) => {
+    const rawName = targetItem.name || '';
+    const catalogMatch = shieldCatalog.find(
+      (s) => s.name.toLowerCase() === rawName.toLowerCase()
+    );
+
+    const itemKey = (targetItem as any).id || (catalogMatch ? catalogMatch.id : null) || rawName;
+
+    updateActiveSheetData((prev) => {
+      const currentStarred = prev.starred_shields || [];
+      const currentlyStarred = isItemStarred(targetItem);
+      let updated: (string | number)[];
+
+      if (currentlyStarred) {
+        updated = currentStarred.filter((k) => {
+          const kStr = String(k);
+          if ((targetItem as any).id && kStr === String((targetItem as any).id)) return false;
+          if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return false;
+          if (kStr === String(rawName)) return false;
+          return true;
+        });
+      } else {
+        updated = currentStarred.some((k) => String(k) === String(itemKey))
+          ? currentStarred
+          : [...currentStarred, itemKey];
+      }
+
+      return {
+        ...prev,
+        starred_shields: updated,
+      };
+    });
+    saveActiveCharacter();
+  };
+
+  const [shieldFilterCategory, setShieldFilterCategory] = useState<'all' | 'starred' | 'learnable'>('all');
+
+  const starredShieldsCount = useMemo(() => {
+    return shieldCatalog.filter((s) => isItemStarred(s)).length;
+  }, [shieldCatalog, isItemStarred]);
+
   const armoryNamesSet = useMemo(() => new Set(armory.map((s) => s.name.toLowerCase())), [armory]);
   const filteredArmory = useMemo(
     () => armory.filter((s) => s.name.toLowerCase().includes(leftSearchQuery.toLowerCase().trim())),
@@ -290,10 +355,11 @@ export const ShieldCard: React.FC = () => {
       shieldCatalog.filter(
         (item) =>
           !armoryNamesSet.has(item.name.toLowerCase()) &&
-          (!learnableOnly || isRequirementLearnable(item.requirement, attributeDice)) &&
+          (shieldFilterCategory !== 'starred' || isItemStarred(item)) &&
+          (shieldFilterCategory !== 'learnable' || isRequirementLearnable(item.requirement, attributeDice)) &&
           item.name.toLowerCase().includes(rightSearchQuery.toLowerCase().trim())
       ),
-    [shieldCatalog, armoryNamesSet, learnableOnly, rightSearchQuery, attributeDice]
+    [shieldCatalog, armoryNamesSet, shieldFilterCategory, rightSearchQuery, attributeDice, isItemStarred]
   );
 
   return (
@@ -432,12 +498,26 @@ export const ShieldCard: React.FC = () => {
                                 <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
                               </div>
 
-                              <button
-                                onClick={() => handleDropFromArmory(item.name)}
-                                className="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0"
-                              >
-                                Forget
-                              </button>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStarItem(item)}
+                                  className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                    isItemStarred(item)
+                                      ? 'text-amber-400'
+                                      : 'text-slate-600 hover:text-amber-400'
+                                  }`}
+                                  title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                >
+                                  <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                </button>
+                                <button
+                                  onClick={() => handleDropFromArmory(item.name)}
+                                  className="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0"
+                                >
+                                  Forget
+                                </button>
+                              </div>
                             </div>
 
                             <div className="flex items-center justify-between text-xs font-mono pt-0.5 text-slate-300">
@@ -500,41 +580,18 @@ export const ShieldCard: React.FC = () => {
                           />
                         </div>
 
-                        {/* Dyslexia-Friendly Peg-Slider Toggle */}
-                        <div className="flex items-center justify-between bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
-                          <span className="text-[11px] font-bold text-slate-400">Filter Mode:</span>
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setLearnableOnly(false)}
-                              className={`text-xs font-bold cursor-pointer select-none ${
-                                !learnableOnly ? 'text-cyan-300 opacity-100 font-extrabold' : 'text-slate-400 opacity-50'
-                              }`}
-                            >
-                              All Shields
-                            </button>
-                            <div
-                              onClick={() => setLearnableOnly(!learnableOnly)}
-                              className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors p-0.5 border border-slate-700 ${
-                                learnableOnly ? 'bg-cyan-600 border-cyan-400' : 'bg-slate-800'
-                              }`}
-                            >
-                              <div
-                                className={`w-5 h-5 rounded-full bg-slate-100 shadow-md transform transition-transform ${
-                                  learnableOnly ? 'translate-x-5' : 'translate-x-0'
-                                }`}
-                              />
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setLearnableOnly(true)}
-                              className={`text-xs font-bold cursor-pointer select-none ${
-                                learnableOnly ? 'text-cyan-300 opacity-100 font-extrabold' : 'text-slate-400 opacity-50'
-                              }`}
-                            >
-                              Learnable Only
-                            </button>
-                          </div>
+                        {/* Category / Filter Select */}
+                        <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
+                          <span className="text-[11px] font-bold text-slate-400 shrink-0">Filter:</span>
+                          <select
+                            value={shieldFilterCategory}
+                            onChange={(e) => setShieldFilterCategory(e.target.value as any)}
+                            className="bg-slate-950 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
+                          >
+                            <option value="all">🌐 All Shields</option>
+                            <option value="starred">⭐ Starred Favorites ({starredShieldsCount})</option>
+                            <option value="learnable">⚡ Learnable Only</option>
+                          </select>
                         </div>
                       </div>
 
@@ -561,16 +618,31 @@ export const ShieldCard: React.FC = () => {
                                     </span>
                                   </div>
 
-                                  <button
-                                    onClick={() => handleAddToArmory(item)}
-                                    className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
-                                      qualifies
-                                        ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
-                                        : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
-                                    }`}
-                                  >
-                                    + Learn
-                                  </button>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStarItem(item)}
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                        isItemStarred(item)
+                                          ? 'text-amber-400'
+                                          : 'text-slate-600 hover:text-amber-400'
+                                      }`}
+                                      title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                    >
+                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleAddToArmory(item)}
+                                      className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
+                                        qualifies
+                                          ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
+                                          : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
+                                      }`}
+                                      title={qualifies ? 'Learn shield with skilled training' : 'Equip shield as unskilled'}
+                                    >
+                                      + Learn
+                                    </button>
+                                  </div>
                                 </div>
 
                                 <div className="flex items-center justify-between text-xs font-mono pt-0.5 text-slate-400">

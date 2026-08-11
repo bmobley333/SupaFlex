@@ -1,6 +1,6 @@
 // src/components/sheet/ArmorCard.tsx
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronUp, X, Check, Shirt, Plus, Search, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { ChevronDown, ChevronUp, X, Check, Shirt, Plus, Search, Loader2, AlertCircle, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -93,7 +93,6 @@ export const ArmorCard: React.FC = () => {
 
   const [armorCatalog, setArmorCatalog] = useState<SupabaseArmor[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
-  const [learnableOnly, setLearnableOnly] = useState<boolean>(true);
 
   const [newArmorName, setNewArmorName] = useState<string>('');
   const [newArmorReq, setNewArmorReq] = useState<string>('💪 4');
@@ -299,6 +298,72 @@ export const ArmorCard: React.FC = () => {
     }
   };
 
+  // Check if armor item is starred
+  const isItemStarred = useCallback(
+    (targetItem: SupabaseArmor | ArmorData | { name: string; id?: number | string }) => {
+      const starredList = activeCharacter?.sheet_data?.starred_armor || [];
+      if (!starredList.length) return false;
+
+      const rawName = targetItem.name || '';
+      const targetId = (targetItem as any).id;
+
+      const catalogMatch = armorCatalog.find(
+        (a) => a.name.toLowerCase() === rawName.toLowerCase()
+      );
+
+      return starredList.some((k) => {
+        const kStr = String(k);
+        if (targetId && kStr === String(targetId)) return true;
+        if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return true;
+        if (kStr === String(rawName)) return true;
+        return false;
+      });
+    },
+    [activeCharacter?.sheet_data?.starred_armor, armorCatalog]
+  );
+
+  // Toggle Starred Armor Item
+  const handleToggleStarItem = (targetItem: SupabaseArmor | ArmorData | { name: string; id?: number | string }) => {
+    const rawName = targetItem.name || '';
+    const catalogMatch = armorCatalog.find(
+      (a) => a.name.toLowerCase() === rawName.toLowerCase()
+    );
+
+    const itemKey = (targetItem as any).id || (catalogMatch ? catalogMatch.id : null) || rawName;
+
+    updateActiveSheetData((prev) => {
+      const currentStarred = prev.starred_armor || [];
+      const currentlyStarred = isItemStarred(targetItem);
+      let updated: (string | number)[];
+
+      if (currentlyStarred) {
+        updated = currentStarred.filter((k) => {
+          const kStr = String(k);
+          if ((targetItem as any).id && kStr === String((targetItem as any).id)) return false;
+          if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return false;
+          if (kStr === String(rawName)) return false;
+          return true;
+        });
+      } else {
+        updated = currentStarred.some((k) => String(k) === String(itemKey))
+          ? currentStarred
+          : [...currentStarred, itemKey];
+      }
+
+      return {
+        ...prev,
+        starred_armor: updated,
+      };
+    });
+    saveActiveCharacter();
+  };
+
+  const [armorFilterCategory, setArmorFilterCategory] = useState<'all' | 'starred' | 'learnable'>('all');
+
+  const starredArmorCount = useMemo(() => {
+    return armorCatalog.filter((a) => isItemStarred(a)).length;
+  }, [armorCatalog, isItemStarred]);
+
   const wardrobeNamesSet = useMemo(() => new Set(wardrobe.map((w) => w.name.toLowerCase())), [wardrobe]);
   const filteredWardrobe = useMemo(() => {
     if (!leftSearchQuery.trim()) return wardrobe;
@@ -308,14 +373,15 @@ export const ArmorCard: React.FC = () => {
   const filteredCatalogArmor = useMemo(() => {
     return armorCatalog.filter((item) => {
       if (wardrobeNamesSet.has(item.name.toLowerCase())) return false;
-      if (learnableOnly && !isRequirementLearnable(item.requirement, attributeDice)) return false;
+      if (armorFilterCategory === 'starred' && !isItemStarred(item)) return false;
+      if (armorFilterCategory === 'learnable' && !isRequirementLearnable(item.requirement, attributeDice)) return false;
       if (rightSearchQuery.trim()) {
         const q = rightSearchQuery.toLowerCase().trim();
         return item.name.toLowerCase().includes(q) || (item.requirement || '').toLowerCase().includes(q);
       }
       return true;
     });
-  }, [armorCatalog, wardrobeNamesSet, learnableOnly, rightSearchQuery, attributeDice]);
+  }, [armorCatalog, wardrobeNamesSet, armorFilterCategory, rightSearchQuery, attributeDice, isItemStarred]);
 
   const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
   const isShieldEquipped = shieldSlot?.equipped ?? false;
@@ -389,7 +455,21 @@ export const ArmorCard: React.FC = () => {
                           <div key={item.id} className={`p-3 rounded-xl border flex flex-col gap-2 ${isActive ? 'bg-amber-950/40 border-amber-500/60' : 'bg-slate-900/90 border-slate-800'}`}>
                             <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                               <div className="flex items-center gap-2"><button type="button" onClick={() => handleSelectActiveArmor(item)} className={`px-2 py-0.5 text-xs font-bold rounded-lg border ${isActive ? 'bg-emerald-600/30 text-emerald-200' : 'bg-slate-950 text-slate-400'}`}>{isActive ? '● Active' : '○ Wear'}</button><span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span></div>
-                              <button onClick={() => handleDropFromWardrobe(item.name)} className="px-2 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold rounded-lg">Forget</button>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStarItem(item)}
+                                  className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                    isItemStarred(item)
+                                      ? 'text-amber-400'
+                                      : 'text-slate-600 hover:text-amber-400'
+                                  }`}
+                                  title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                >
+                                  <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                </button>
+                                <button onClick={() => handleDropFromWardrobe(item.name)} className="px-2 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold rounded-lg">Forget</button>
+                              </div>
                             </div>
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400"><span>AR: {item.ar} | MR: {item.mr}</span></div>
                           </div>
@@ -415,41 +495,18 @@ export const ArmorCard: React.FC = () => {
                             />
                           </div>
 
-                          {/* Dyslexia-Friendly UI Peg-Slider Toggle */}
-                          <div className="flex items-center justify-between bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
-                            <span className="text-[11px] font-bold text-slate-400">Filter Mode:</span>
-                            <div className="flex items-center gap-3">
-                              <button
-                                type="button"
-                                onClick={() => setLearnableOnly(false)}
-                                className={`text-xs font-bold cursor-pointer select-none ${
-                                  !learnableOnly ? 'text-amber-300 opacity-100 font-extrabold' : 'text-slate-400 opacity-50'
-                                }`}
-                              >
-                                All Armor
-                              </button>
-                              <div
-                                onClick={() => setLearnableOnly(!learnableOnly)}
-                                className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors p-0.5 border border-slate-700 ${
-                                  learnableOnly ? 'bg-amber-600 border-amber-400' : 'bg-slate-800'
-                                }`}
-                              >
-                                <div
-                                  className={`w-5 h-5 rounded-full bg-slate-100 shadow-md transform transition-transform ${
-                                    learnableOnly ? 'translate-x-5' : 'translate-x-0'
-                                  }`}
-                                />
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => setLearnableOnly(true)}
-                                className={`text-xs font-bold cursor-pointer select-none ${
-                                  learnableOnly ? 'text-amber-300 opacity-100 font-extrabold' : 'text-slate-400 opacity-50'
-                                }`}
-                              >
-                                Learnable Only
-                              </button>
-                            </div>
+                          {/* Category / Filter Select */}
+                          <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
+                            <span className="text-[11px] font-bold text-slate-400 shrink-0">Filter:</span>
+                            <select
+                              value={armorFilterCategory}
+                              onChange={(e) => setArmorFilterCategory(e.target.value as any)}
+                              className="bg-slate-950 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
+                            >
+                              <option value="all">🌐 All Armor</option>
+                              <option value="starred">⭐ Starred Favorites ({starredArmorCount})</option>
+                              <option value="learnable">⚡ Learnable Only</option>
+                            </select>
                           </div>
                         </div>
 
@@ -474,16 +531,30 @@ export const ArmorCard: React.FC = () => {
                                         {item.cost}
                                       </span>
                                     </div>
-                                    <button
-                                      onClick={() => handleAddToWardrobe(item)}
-                                      className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
-                                        qualifies
-                                          ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
-                                          : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50'
-                                      }`}
-                                    >
-                                      + Learn
-                                    </button>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleStarItem(item)}
+                                        className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                          isItemStarred(item)
+                                            ? 'text-amber-400'
+                                            : 'text-slate-600 hover:text-amber-400'
+                                        }`}
+                                        title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                      >
+                                        <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleAddToWardrobe(item)}
+                                        className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
+                                          qualifies
+                                            ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
+                                            : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50'
+                                        }`}
+                                      >
+                                        + Learn
+                                      </button>
+                                    </div>
                                   </div>
                                   <div className="flex items-center justify-between text-xs font-mono text-slate-400">
                                     <span>Req: <strong className="text-slate-200">{item.requirement}</strong></span>
