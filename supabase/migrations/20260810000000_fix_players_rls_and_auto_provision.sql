@@ -2,6 +2,7 @@
 -- Fix RLS policies on public.players, drop fragile FK constraint, and add auto-provisioning trigger
 
 -- 1. Enable RLS and grant full permissions to public/authenticated playtest users on players table
+ALTER TABLE public.players ADD COLUMN IF NOT EXISTS allow_cloning BOOLEAN DEFAULT true;
 ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow select for authenticated players" ON public.players;

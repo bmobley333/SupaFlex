@@ -1,3 +1,9 @@
+CREATE TABLE IF NOT EXISTS public.parties (
+  id SERIAL PRIMARY KEY,
+  gm_email TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 ALTER TABLE public.parties
   ADD COLUMN IF NOT EXISTS name text DEFAULT 'GM Campaign',
   ADD COLUMN IF NOT EXISTS room_code text,
@@ -7,3 +13,4 @@ ALTER TABLE public.parties
 
 CREATE INDEX IF NOT EXISTS parties_room_code_idx ON public.parties (room_code) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS parties_gm_email_idx ON public.parties (gm_email);
+
