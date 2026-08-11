@@ -7,7 +7,6 @@ interface AccountInspectorModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentEmail: string | null;
-  onSelectReadOnlyCharacter: (character: Character, ownerEmail: string) => void;
   onCharacterCloned: (clonedChar: Character) => void;
 }
 
@@ -15,7 +14,6 @@ export const AccountInspectorModal: React.FC<AccountInspectorModalProps> = ({
   isOpen,
   onClose,
   currentEmail,
-  onSelectReadOnlyCharacter,
   onCharacterCloned,
 }) => {
   const [targetEmail, setTargetEmail] = useState('');
@@ -96,10 +94,10 @@ export const AccountInspectorModal: React.FC<AccountInspectorModalProps> = ({
         </button>
 
         <h2 className="text-xl font-bold text-amber-400 flex items-center gap-2 mb-2">
-          👁️ Inspect Player Account (Read-Only)
+          🧬 Clone Player Characters
         </h2>
         <p className="text-xs text-slate-400 mb-4">
-          Enter any player's email address to inspect their characters in Read-Only mode or clone them directly to your account.
+          Enter any player's email address to list their characters and clone them directly to your account.
         </p>
 
         {errorMsg && (
@@ -121,13 +119,14 @@ export const AccountInspectorModal: React.FC<AccountInspectorModalProps> = ({
             value={targetEmail}
             onChange={(e) => setTargetEmail(e.target.value)}
             className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-amber-400"
+            placeholder="Enter player email address..."
           />
           <button
             type="submit"
             disabled={loading}
-            className="px-5 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 text-slate-950 font-bold text-sm rounded-lg transition"
+            className="px-5 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 text-slate-950 font-bold text-sm rounded-lg transition shrink-0"
           >
-            {loading ? 'Searching...' : '🔍 Inspect'}
+            {loading ? 'Searching...' : '🔍 List Characters'}
           </button>
         </form>
 
@@ -160,16 +159,6 @@ export const AccountInspectorModal: React.FC<AccountInspectorModalProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      onSelectReadOnlyCharacter(char, inspectedOwner);
-                      onClose();
-                    }}
-                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-100 text-xs font-semibold rounded transition"
-                  >
-                    👁️ View Sheet
-                  </button>
-
                   <button
                     onClick={() => handleClone(char)}
                     disabled={cloningId === char.id}

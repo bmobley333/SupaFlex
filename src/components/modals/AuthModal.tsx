@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { signInWithGoogle } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
 import { useCharacterStore } from '../../store/useCharacterStore';
@@ -32,27 +32,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   }, [currentEmail]);
 
-  const handleSavePlayerName = async () => {
-    if (!currentEmail) return;
-    const trimmed = playerNameInput.trim();
-    setIsSavingName(true);
-    try {
-      const { tabSessionId, activePartyId } = useCharacterStore.getState();
-      await gameApi.updatePlayerName(currentEmail, trimmed, tabSessionId, activePartyId || undefined);
-      useCharacterStore.getState().setPlayerName(trimmed);
-      setNameSaveSuccess(true);
-      setTimeout(() => setNameSaveSuccess(false), 3000);
-    } catch (err) {
-      console.error('Failed to update player name:', err);
-    } finally {
-      setIsSavingName(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerAutoSavePlayerName = (nameValue: string, immediate = false) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    const performSave = async () => {
+      if (!currentEmail) return;
+      const trimmed = nameValue.trim();
+      setIsSavingName(true);
+      setNameSaveSuccess(false);
+      try {
+        const { tabSessionId, activePartyId } = useCharacterStore.getState();
+        await gameApi.updatePlayerName(currentEmail, trimmed, tabSessionId, activePartyId || undefined);
+        useCharacterStore.getState().setPlayerName(trimmed);
+        setNameSaveSuccess(true);
+        setTimeout(() => setNameSaveSuccess(false), 2500);
+      } catch (err) {
+        console.error('Failed to update player name:', err);
+      } finally {
+        setIsSavingName(false);
+      }
+    };
+
+    if (immediate) {
+      performSave();
+    } else {
+      saveTimeoutRef.current = setTimeout(performSave, 500);
     }
   };
 
   const handleCloseModal = () => {
     const storeName = useCharacterStore.getState().playerName;
     if (currentEmail && playerNameInput.trim() && playerNameInput.trim() !== storeName) {
-      handleSavePlayerName();
+      triggerAutoSavePlayerName(playerNameInput, true);
     }
     onClose();
   };
@@ -147,39 +163,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <label htmlFor="auth-modal-player-human-name-input" className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
                   Player Name
                 </label>
-                {nameSaveSuccess && (
+                {isSavingName ? (
+                  <span className="text-xs text-amber-400 font-bold animate-pulse flex items-center gap-1">
+                    Saving...
+                  </span>
+                ) : nameSaveSuccess ? (
                   <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
                     ✓ Saved
                   </span>
-                )}
+                ) : null}
               </div>
-              <div className="flex items-center gap-2">
+              <div>
                 <input
                   id="auth-modal-player-human-name-input"
                   type="text"
                   value={playerNameInput}
                   onChange={(e) => {
-                    setPlayerNameInput(e.target.value);
-                    setNameSaveSuccess(false);
+                    const val = e.target.value;
+                    setPlayerNameInput(val);
+                    triggerAutoSavePlayerName(val, false);
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      handleSavePlayerName();
+                      triggerAutoSavePlayerName(playerNameInput, true);
                     }
                   }}
                   onBlur={() => {
-                    handleSavePlayerName();
+                    triggerAutoSavePlayerName(playerNameInput, true);
                   }}
-                  className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm font-mono font-bold text-indigo-300 focus:outline-none focus:border-indigo-400 transition-colors"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm font-mono font-bold text-indigo-300 focus:outline-none focus:border-indigo-400 transition-colors"
+                  placeholder="e.g. Blake Mobley"
                 />
-                <button
-                  onClick={handleSavePlayerName}
-                  disabled={isSavingName}
-                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-xs rounded-lg transition-all shrink-0 cursor-pointer"
-                >
-                  {isSavingName ? 'Saving...' : 'Save Name'}
-                </button>
               </div>
             </div>
 
@@ -228,7 +243,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400 italic">
-                When enabled, other players who enter your email address can view your characters in Read-Only mode and clone them to their account.
+                When enabled, other players who enter your email address can clone your characters.
               </p>
             </div>
 

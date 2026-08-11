@@ -57,11 +57,10 @@ export default function App() {
     };
   }, []);
 
-  // Unified Launch Hub & Read-Only / Party Session State
+  // Unified Launch Hub & Party Session State
   const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(false);
   const [launchHubInitialTab, setLaunchHubInitialTab] = useState<'account' | 'inspect' | 'party'>('account');
   const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
-  const [readOnlyOwner, setReadOnlyOwner] = useState<string | null>(null);
 
   // GM Screen Active Room Code State
   const [activeRoomCode, setActiveRoomCode] = useState<string | null>(null);
@@ -90,6 +89,16 @@ export default function App() {
   useEffect(() => {
     fetchInitialData();
 
+    const resolveGoogleName = (user: any): string => {
+      if (!user?.user_metadata) return '';
+      const meta = user.user_metadata;
+      if (meta.full_name) return meta.full_name.trim();
+      if (meta.name) return meta.name.trim();
+      const parts = [meta.given_name, meta.family_name].filter(Boolean);
+      if (parts.length > 0) return parts.join(' ').trim();
+      return '';
+    };
+
     const handleAuthUser = async (userEmail: string, googleName: string) => {
       setPlayerEmail(userEmail);
       const profile = await gameApi.getUserProfile(userEmail, googleName);
@@ -109,7 +118,7 @@ export default function App() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user?.email) {
         const userEmail = user.email.trim().toLowerCase();
-        const userName = user.user_metadata?.full_name || user.user_metadata?.name || '';
+        const userName = resolveGoogleName(user);
         handleAuthUser(userEmail, userName);
       }
     });
@@ -118,7 +127,7 @@ export default function App() {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user?.email) {
         const userEmail = session.user.email.trim().toLowerCase();
-        const userName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || '';
+        const userName = resolveGoogleName(session.user);
         await handleAuthUser(userEmail, userName);
         fetchInitialData();
       }
@@ -332,19 +341,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* 👁️ Read-Only Mode Warning Banner */}
-      {readOnlyOwner && (
-        <div className="w-full bg-amber-600 text-slate-950 font-bold px-4 py-2 text-center text-xs flex items-center justify-center gap-4 shadow-md z-40 border-b border-amber-400 animate-fadeIn">
-          <span>👁️ READ-ONLY MODE — Viewing character owned by: <span className="underline font-mono">{readOnlyOwner}</span></span>
-          <button
-            onClick={() => setReadOnlyOwner(null)}
-            className="px-3 py-1 bg-slate-950 text-amber-300 hover:bg-slate-900 rounded text-xs font-bold transition"
-          >
-            Exit Read-Only Mode
-          </button>
-        </div>
-      )}
-
       {/* Persistent Header */}
       <header className="sticky top-0 z-30 w-full bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-4 py-2.5">
         <div className="max-w-[2500px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">

@@ -28,27 +28,8 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
   const { activeCharacter, playerEmail } = useCharacterStore();
   const heroKey = activeCharacter?.id ? `hero_${activeCharacter.id}` : 'no_hero';
 
-  const ownerEmail = activeCharacter?.owner_email;
-  const isReadOnly = Boolean(
-    ownerEmail &&
-    playerEmail &&
-    ownerEmail.trim().toLowerCase() !== playerEmail.trim().toLowerCase()
-  );
-
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-16 relative">
-      {/* 👁️ READ-ONLY MODE Banner (Blueprint Section 5.A) */}
-      {isReadOnly && (
-        <div className="w-full bg-cyan-950/90 border border-cyan-500/50 text-cyan-200 px-4 py-2.5 rounded-xl text-xs font-mono font-bold flex items-center justify-between shadow-lg shadow-cyan-950/40 animate-fadeIn">
-          <span className="flex items-center gap-2">
-            <span className="text-base">👁️</span> READ-ONLY MODE — Viewing character owned by: <strong className="text-cyan-100 font-extrabold">{ownerEmail}</strong>
-          </span>
-          <span className="text-[10px] text-cyan-300 uppercase tracking-wider bg-cyan-900/60 px-2 py-0.5 rounded border border-cyan-500/40 font-outfit font-black">
-            Inspection Only
-          </span>
-        </div>
-      )}
-
       {/* Collision-Free Responsive Top Section: Traits (Left), Money (Center), Gear (Right) */}
       <div id="section-top-cards" className="flex flex-wrap items-center gap-4 scroll-mt-32">
         <div className="flex-1 min-w-[200px]">

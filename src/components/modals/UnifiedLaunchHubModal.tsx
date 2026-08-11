@@ -1,5 +1,5 @@
 // src/components/modals/UnifiedLaunchHubModal.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase, signInWithGoogle } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
 import { Character, Party, PartySessionMember } from '../../types/game';
@@ -42,11 +42,24 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const setActiveRole = useCharacterStore((state) => state.setActiveRole);
   const [rightSubTab, setRightSubTab] = useState<'account' | 'inspect' | 'party'>(initialTab);
 
+  // Create Hero State
+  const [isCreatingHero, setIsCreatingHero] = useState(false);
+  const [newHeroName, setNewHeroName] = useState('');
+  const [newHeroClass, setNewHeroClass] = useState('Adventurer');
+  const [newHeroRace, setNewHeroRace] = useState('Human');
+
   useEffect(() => {
     if (isOpen && initialTab) {
-      setRightSubTab(initialTab);
+      setRightSubTab(currentEmail ? initialTab : 'account');
     }
-  }, [isOpen, initialTab]);
+  }, [isOpen, initialTab, currentEmail]);
+
+  useEffect(() => {
+    if (!currentEmail) {
+      if (rightSubTab !== 'account') setRightSubTab('account');
+      if (isCreatingHero) setIsCreatingHero(false);
+    }
+  }, [currentEmail, rightSubTab, isCreatingHero]);
 
   // Account Sub-Tab State
   const [allowCloning, setAllowCloning] = useState(true);
@@ -72,36 +85,46 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     }
   }, [activeRole]);
 
-  const handleSavePlayerName = async () => {
-    if (!currentEmail) return;
-    const trimmed = playerNameInput.trim();
-    setIsSavingName(true);
-    try {
-      const { tabSessionId, activePartyId } = useCharacterStore.getState();
-      await gameApi.updatePlayerName(currentEmail, trimmed, tabSessionId, activePartyId || undefined);
-      useCharacterStore.getState().setPlayerName(trimmed);
-      setNameSaveSuccess(true);
-      setTimeout(() => setNameSaveSuccess(false), 3000);
-    } catch (err) {
-      console.error('Failed to update player name:', err);
-    } finally {
-      setIsSavingName(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerAutoSavePlayerName = (nameValue: string, immediate = false) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    const performSave = async () => {
+      if (!currentEmail) return;
+      const trimmed = nameValue.trim();
+      setIsSavingName(true);
+      setNameSaveSuccess(false);
+      try {
+        const { tabSessionId, activePartyId } = useCharacterStore.getState();
+        await gameApi.updatePlayerName(currentEmail, trimmed, tabSessionId, activePartyId || undefined);
+        useCharacterStore.getState().setPlayerName(trimmed);
+        setNameSaveSuccess(true);
+        setTimeout(() => setNameSaveSuccess(false), 2500);
+      } catch (err) {
+        console.error('Failed to update player name:', err);
+      } finally {
+        setIsSavingName(false);
+      }
+    };
+
+    if (immediate) {
+      performSave();
+    } else {
+      saveTimeoutRef.current = setTimeout(performSave, 500);
     }
   };
 
   const handleCloseModal = () => {
     const storeName = useCharacterStore.getState().playerName;
     if (currentEmail && playerNameInput.trim() && playerNameInput.trim() !== storeName) {
-      handleSavePlayerName();
+      triggerAutoSavePlayerName(playerNameInput, true);
     }
     onClose();
   };
-
-  // Create Hero State
-  const [isCreatingHero, setIsCreatingHero] = useState(false);
-  const [newHeroName, setNewHeroName] = useState('');
-  const [newHeroClass, setNewHeroClass] = useState('Adventurer');
-  const [newHeroRace, setNewHeroRace] = useState('Human');
 
   // Inline Character Edit State
   const [editingCharId, setEditingCharId] = useState<number | null>(null);
@@ -548,19 +571,21 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                   <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
                     🛡️ Character Vault ({userCharacters.length})
                   </h3>
-                  <button
-                    onClick={() => {
-                      setIsCreatingHero(!isCreatingHero);
-                      setCreateHeroError(null);
-                    }}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-sm cursor-pointer"
-                  >
-                    {isCreatingHero ? '✕ Cancel' : '➕ Create New Hero'}
-                  </button>
+                  {currentEmail && (
+                    <button
+                      onClick={() => {
+                        setIsCreatingHero(!isCreatingHero);
+                        setCreateHeroError(null);
+                      }}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-sm cursor-pointer"
+                    >
+                      {isCreatingHero ? '✕ Cancel' : '➕ Create New Hero'}
+                    </button>
+                  )}
                 </div>
 
                 {/* Inline Hero Creation Form */}
-                {isCreatingHero && (
+                {currentEmail && isCreatingHero && (
                   <form onSubmit={handleCreateHeroSubmit} className="mb-4 p-3 bg-slate-900 border border-indigo-500/40 rounded-xl space-y-3 shrink-0">
                     {createHeroError && (
                       <div className="p-2.5 bg-red-900/60 border border-red-500/50 rounded-lg text-red-200 text-xs">
@@ -619,8 +644,17 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
                   {userCharacters.length === 0 ? (
                     <div className="p-6 bg-slate-900/60 border border-slate-800 rounded-xl text-center text-xs text-slate-400 space-y-2">
-                      <p className="font-semibold text-slate-300">You don't have any characters in your vault yet.</p>
-                      <p className="text-[11px]">Click "Create New Hero" above to make your first playtest hero!</p>
+                      {currentEmail ? (
+                        <>
+                          <p className="font-semibold text-slate-300">You don't have any characters in your vault yet.</p>
+                          <p className="text-[11px]">Click "Create New Hero" above to make your first playtest hero!</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-semibold text-slate-300">🔒 Vault Locked</p>
+                          <p className="text-[11px]">Please sign in with your Google account to create and manage hero characters.</p>
+                        </>
+                      )}
                     </div>
                   ) : (
                     [...userCharacters]
@@ -778,22 +812,34 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 👤 Account
               </button>
               <button
-                onClick={() => setRightSubTab('inspect')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
-                  rightSubTab === 'inspect'
-                    ? 'border-indigo-400 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                onClick={() => {
+                  if (currentEmail) setRightSubTab('inspect');
+                }}
+                disabled={!currentEmail}
+                title={!currentEmail ? 'Sign in required to clone characters' : 'Clone Characters'}
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                  !currentEmail
+                    ? 'opacity-40 cursor-not-allowed border-transparent text-slate-500'
+                    : rightSubTab === 'inspect'
+                    ? 'border-indigo-400 text-indigo-400 cursor-pointer'
+                    : 'border-transparent text-slate-400 hover:text-slate-200 cursor-pointer'
                 }`}
               >
-                👁️ Inspect & Clone
+                🧬 Clone Characters
               </button>
               {activeRole !== 'gm' && (
                 <button
-                  onClick={() => setRightSubTab('party')}
-                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
-                    rightSubTab === 'party'
-                      ? 'border-emerald-400 text-emerald-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  onClick={() => {
+                    if (currentEmail) setRightSubTab('party');
+                  }}
+                  disabled={!currentEmail}
+                  title={!currentEmail ? 'Sign in required to join party sessions' : 'Join Party Session'}
+                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                    !currentEmail
+                      ? 'opacity-40 cursor-not-allowed border-transparent text-slate-500'
+                      : rightSubTab === 'party'
+                      ? 'border-emerald-400 text-emerald-400 cursor-pointer'
+                      : 'border-transparent text-slate-400 hover:text-slate-200 cursor-pointer'
                   }`}
                 >
                   ⚔️ Join Party
@@ -820,39 +866,38 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           <label htmlFor="player-human-name-input" className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
                             Player Name
                           </label>
-                          {nameSaveSuccess && (
+                          {isSavingName ? (
+                            <span className="text-[10px] text-amber-400 font-bold animate-pulse flex items-center gap-1">
+                              Saving...
+                            </span>
+                          ) : nameSaveSuccess ? (
                             <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
                               ✓ Saved
                             </span>
-                          )}
+                          ) : null}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div>
                           <input
                             id="player-human-name-input"
                             type="text"
                             value={playerNameInput}
                             onChange={(e) => {
-                              setPlayerNameInput(e.target.value);
-                              setNameSaveSuccess(false);
+                              const val = e.target.value;
+                              setPlayerNameInput(val);
+                              triggerAutoSavePlayerName(val, false);
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 e.preventDefault();
-                                handleSavePlayerName();
+                                triggerAutoSavePlayerName(playerNameInput, true);
                               }
                             }}
                             onBlur={() => {
-                              handleSavePlayerName();
+                              triggerAutoSavePlayerName(playerNameInput, true);
                             }}
-                            className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm font-mono font-bold text-indigo-300 focus:outline-none focus:border-indigo-400 transition-colors"
+                            className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm font-mono font-bold text-indigo-300 focus:outline-none focus:border-indigo-400 transition-colors"
+                            placeholder="e.g. Blake Mobley"
                           />
-                          <button
-                            onClick={handleSavePlayerName}
-                            disabled={isSavingName}
-                            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-xs rounded-lg transition-all shadow-sm shrink-0 cursor-pointer"
-                          >
-                            {isSavingName ? 'Saving...' : 'Save Name'}
-                          </button>
                         </div>
                         <p className="text-[11px] text-slate-400 italic">
                           Enter your actual human name (e.g. Steve Tobin). This name is linked to your player profile across party rosters.
@@ -904,7 +949,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-400 italic">
-                          When enabled, other players who enter your email address can view your characters in Read-Only mode and clone them.
+                          When enabled, other players who enter your email address can clone your characters.
                         </p>
                       </div>
                     </div>
@@ -948,7 +993,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 </div>
               )}
 
-              {/* SUB-TAB 2: INSPECT & CLONE */}
+              {/* SUB-TAB 2: CLONE CHARACTERS */}
               {rightSubTab === 'inspect' && (
                 <div className="space-y-4">
                   {inspectError && <div className="p-3 bg-red-900/60 border border-red-500/50 rounded text-red-200 text-xs">{inspectError}</div>}
@@ -961,13 +1006,14 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       value={targetInspectEmail}
                       onChange={(e) => setTargetInspectEmail(e.target.value)}
                       className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
+                      placeholder="Enter player email address..."
                     />
                     <button
                       type="submit"
                       disabled={inspectLoading}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition cursor-pointer"
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition cursor-pointer shrink-0"
                     >
-                      {inspectLoading ? '...' : '🔍 Inspect'}
+                      {inspectLoading ? '...' : '🔍 List Characters'}
                     </button>
                   </form>
 
