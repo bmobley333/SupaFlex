@@ -398,6 +398,8 @@ export interface CharacterSheetData {
   starred_weapons?: (number | string)[]; // Starred Weapons Wishlist IDs
   starred_armor?: (number | string)[]; // Starred Armor Wishlist IDs
   starred_shields?: (number | string)[]; // Starred Shields Wishlist IDs
+  starred_skillsets?: (number | string)[]; // Starred Skillsets Wishlist IDs/Names
+  starred_skills?: (number | string)[]; // Starred Individual Skills Wishlist IDs/Names
   pity_level?: number; // 0-2 Draft Pity Escalator level
 }
 

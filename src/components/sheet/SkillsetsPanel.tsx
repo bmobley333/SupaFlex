@@ -1,6 +1,6 @@
 // src/components/sheet/SkillsetsPanel.tsx
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Check, ChevronDown, ChevronUp, Search, X, Sparkles, BookOpen, Scroll, GraduationCap, Plus, AlertCircle, Edit2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Check, ChevronDown, ChevronUp, Search, X, Sparkles, BookOpen, Scroll, GraduationCap, Plus, AlertCircle, Edit2, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -528,16 +528,96 @@ export const SkillsetsPanel: React.FC = () => {
     });
   }, [uniqueKnownSkillsetNames, effectiveSkillsets, leftSearchQuery]);
 
+  // Check if a skillset is starred
+  const isSkillsetStarred = useCallback(
+    (skillsetName: string) => {
+      const starredList = activeCharacter?.sheet_data?.starred_skillsets || [];
+      if (!starredList.length) return false;
+      const raw = skillsetName.toLowerCase();
+      return starredList.some((k) => String(k).toLowerCase() === raw);
+    },
+    [activeCharacter?.sheet_data?.starred_skillsets]
+  );
+
+  // Toggle Starred Skillset
+  const handleToggleStarSkillset = (skillsetName: string) => {
+    updateActiveSheetData((prev) => {
+      const current = prev.starred_skillsets || [];
+      const isStarred = isSkillsetStarred(skillsetName);
+      const raw = skillsetName.toLowerCase();
+
+      const updated = isStarred
+        ? current.filter((k) => String(k).toLowerCase() !== raw)
+        : [...current, skillsetName];
+
+      return {
+        ...prev,
+        starred_skillsets: updated,
+      };
+    });
+    saveActiveCharacter();
+  };
+
+  // Check if an individual skill is starred
+  const isSkillStarred = useCallback(
+    (skillName: string) => {
+      const starredList = activeCharacter?.sheet_data?.starred_skills || [];
+      if (!starredList.length) return false;
+      const cleanTarget = parseSkill(skillName, allCatalogSkillsMap).cleanName.toLowerCase();
+      return starredList.some((k) => {
+        const cleanK = parseSkill(String(k), allCatalogSkillsMap).cleanName.toLowerCase();
+        return cleanK === cleanTarget;
+      });
+    },
+    [activeCharacter?.sheet_data?.starred_skills, allCatalogSkillsMap]
+  );
+
+  // Toggle Starred Individual Skill
+  const handleToggleStarSkill = (skillName: string) => {
+    updateActiveSheetData((prev) => {
+      const current = prev.starred_skills || [];
+      const isStarred = isSkillStarred(skillName);
+      const cleanTarget = parseSkill(skillName, allCatalogSkillsMap).cleanName.toLowerCase();
+
+      const updated = isStarred
+        ? current.filter((k) => parseSkill(String(k), allCatalogSkillsMap).cleanName.toLowerCase() !== cleanTarget)
+        : [...current, skillName];
+
+      return {
+        ...prev,
+        starred_skills: updated,
+      };
+    });
+    saveActiveCharacter();
+  };
+
+  const [skillsetFilterCategory, setSkillsetFilterCategory] = useState<'all' | 'starred'>('all');
+  const [skillFilterCategory, setSkillFilterCategory] = useState<'all' | 'starred'>('all');
+
+  const starredSkillsetsCount = useMemo(() => {
+    return effectiveSkillsets.filter((ks) => isSkillsetStarred(ks.name)).length;
+  }, [effectiveSkillsets, isSkillsetStarred]);
+
+  const starredSkillsCount = useMemo(() => {
+    return sortedAllCatalogSkills.filter((sk) => isSkillStarred(sk.name)).length;
+  }, [sortedAllCatalogSkills, isSkillStarred]);
+
   const filteredCatalogSkillsets = useMemo(() => {
     const unlearned = effectiveSkillsets.filter((ks) => !uniqueKnownSkillsetNames.some((k) => k.toLowerCase() === ks.name.toLowerCase()));
-    if (!rightSearchQuery.trim()) return unlearned;
+    
+    let base = unlearned;
+    if (skillsetFilterCategory === 'starred') {
+      base = base.filter((ks) => isSkillsetStarred(ks.name));
+    }
+
+    if (!rightSearchQuery.trim()) return base;
     const query = rightSearchQuery.toLowerCase().trim();
-    return unlearned.filter((ks) => {
+    return base.filter((ks) => {
       const nameMatch = ks.name.toLowerCase().includes(query);
       const skillMatch = Array.isArray(ks.skills) && ks.skills.some((s) => s.toLowerCase().includes(query));
       return nameMatch || skillMatch;
     });
-  }, [effectiveSkillsets, uniqueKnownSkillsetNames, rightSearchQuery]);
+  }, [effectiveSkillsets, uniqueKnownSkillsetNames, skillsetFilterCategory, isSkillsetStarred, rightSearchQuery]);
 
   const filteredCatalogIndividualSkills = useMemo(() => {
     const unlearned = sortedAllCatalogSkills.filter((sk) => {
@@ -547,14 +627,20 @@ export const SkillsetsPanel: React.FC = () => {
       );
       return !isDerived && !isLearned;
     });
-    if (!rightSearchQuery.trim()) return unlearned;
+
+    let base = unlearned;
+    if (skillFilterCategory === 'starred') {
+      base = base.filter((sk) => isSkillStarred(sk.name));
+    }
+
+    if (!rightSearchQuery.trim()) return base;
     const query = rightSearchQuery.toLowerCase().trim();
-    return unlearned.filter((sk) => {
+    return base.filter((sk) => {
       const nameMatch = sk.name.toLowerCase().includes(query);
       const skillsetMatch = sk.parentSkillsets.some((ps) => ps.toLowerCase().includes(query));
       return nameMatch || skillsetMatch;
     });
-  }, [sortedAllCatalogSkills, skillsetDerivedSkillsSet, knownIndividualSkills, rightSearchQuery]);
+  }, [sortedAllCatalogSkills, skillsetDerivedSkillsSet, knownIndividualSkills, skillFilterCategory, isSkillStarred, allCatalogSkillsMap, rightSearchQuery]);
 
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">
@@ -808,14 +894,25 @@ export const SkillsetsPanel: React.FC = () => {
                     {/* TAB 1: SKILLSETS CATALOG VIEW */}
                     {activeRightTab === 'skillsets' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-hidden">
-                        <div className="relative mb-2 shrink-0">
-                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            value={rightSearchQuery}
-                            onChange={(e) => setRightSearchQuery(e.target.value)}
-                            className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-purple-500 w-full"
-                          />
+                        <div className="flex items-center gap-2 mb-2 shrink-0">
+                          <div className="relative flex-1">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              value={rightSearchQuery}
+                              onChange={(e) => setRightSearchQuery(e.target.value)}
+                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-purple-500 w-full"
+                            />
+                          </div>
+
+                          <select
+                            value={skillsetFilterCategory}
+                            onChange={(e) => setSkillsetFilterCategory(e.target.value as any)}
+                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-purple-500 truncate cursor-pointer max-w-[170px]"
+                          >
+                            <option value="all">🌐 All Skillsets</option>
+                            <option value="starred">⭐ Starred Favorites ({starredSkillsetsCount})</option>
+                          </select>
                         </div>
 
                         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 min-h-0">
@@ -857,6 +954,18 @@ export const SkillsetsPanel: React.FC = () => {
                                   </div>
 
                                   <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStarSkillset(ks.name)}
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                        isSkillsetStarred(ks.name)
+                                          ? 'text-amber-400'
+                                          : 'text-slate-600 hover:text-amber-400'
+                                      }`}
+                                      title={isSkillsetStarred(ks.name) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                    >
+                                      <Star className={`w-3.5 h-3.5 ${isSkillsetStarred(ks.name) ? 'fill-amber-400' : ''}`} />
+                                    </button>
                                     {isCustom && (
                                       <button
                                         onClick={() => handleStartEditCustomSkillset(ks.name)}
@@ -893,14 +1002,25 @@ export const SkillsetsPanel: React.FC = () => {
                     {/* TAB 2: INDIVIDUAL SKILLS VIEW */}
                     {activeRightTab === 'individual' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-hidden">
-                        <div className="relative mb-2 shrink-0">
-                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            value={rightSearchQuery}
-                            onChange={(e) => setRightSearchQuery(e.target.value)}
-                            className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 w-full"
-                          />
+                        <div className="flex items-center gap-2 mb-2 shrink-0">
+                          <div className="relative flex-1">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              value={rightSearchQuery}
+                              onChange={(e) => setRightSearchQuery(e.target.value)}
+                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 w-full"
+                            />
+                          </div>
+
+                          <select
+                            value={skillFilterCategory}
+                            onChange={(e) => setSkillFilterCategory(e.target.value as any)}
+                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 truncate cursor-pointer max-w-[170px]"
+                          >
+                            <option value="all">🌐 All Skills</option>
+                            <option value="starred">⭐ Starred Favorites ({starredSkillsCount})</option>
+                          </select>
                         </div>
 
                         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 min-h-0">
@@ -934,25 +1054,39 @@ export const SkillsetsPanel: React.FC = () => {
                                     </div>
                                   </div>
 
-                                  {isSkillsetDerived ? (
-                                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-purple-950 text-purple-300 rounded border border-purple-500/30 shrink-0">
-                                      🎓 From Skillset
-                                    </span>
-                                  ) : isIndividuallyLearned ? (
+                                  <div className="flex items-center gap-1.5 shrink-0">
                                     <button
-                                      onClick={() => handleToggleIndividualSkill(sk.name)}
-                                      className="px-2.5 py-1 text-xs font-bold rounded-lg border bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30 shrink-0 transition-all"
+                                      type="button"
+                                      onClick={() => handleToggleStarSkill(sk.name)}
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                        isSkillStarred(sk.name)
+                                          ? 'text-amber-400'
+                                          : 'text-slate-600 hover:text-amber-400'
+                                      }`}
+                                      title={isSkillStarred(sk.name) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
                                     >
-                                      Forget
+                                      <Star className={`w-3.5 h-3.5 ${isSkillStarred(sk.name) ? 'fill-amber-400' : ''}`} />
                                     </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleToggleIndividualSkill(sk.name)}
-                                      className="px-2.5 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/50 shrink-0 transition-all"
-                                    >
-                                      + Learn
-                                    </button>
-                                  )}
+                                    {isSkillsetDerived ? (
+                                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-purple-950 text-purple-300 rounded border border-purple-500/30 shrink-0">
+                                        🎓 From Skillset
+                                      </span>
+                                    ) : isIndividuallyLearned ? (
+                                      <button
+                                        onClick={() => handleToggleIndividualSkill(sk.name)}
+                                        className="px-2.5 py-1 text-xs font-bold rounded-lg border bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30 shrink-0 transition-all"
+                                      >
+                                        Forget
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleToggleIndividualSkill(sk.name)}
+                                        className="px-2.5 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/50 shrink-0 transition-all"
+                                      >
+                                        + Learn
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })
