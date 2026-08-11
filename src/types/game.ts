@@ -441,7 +441,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number;
     else if (s <= 15) magicSlotsApSpent += 3;
   }
 
-  const magicItemsNet = magicSlotsApSpent + sumLogCategory('Magic Item Slots') + sumLogCategory('Magic Items');
+  const magicItemsNet = magicSlotsApSpent;
 
   const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
   const skilledShields = armory.filter((s: any) => s && s.sk);

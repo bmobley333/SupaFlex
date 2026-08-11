@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Globe, Flame, Star, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Globe, Flame, Star, RotateCcw, ShoppingCart, CheckCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
-import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed } from '../../utils/magicSlotSchedule';
+import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed, getApCostForNextSlot, getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
 
 interface AbilitySlotsGridProps {
   title: string;
@@ -55,6 +55,22 @@ const MAIN_ABILITY_ICONS = [
   { icon: '🍀', label: 'Luck' },
 ];
 
+const SLOT_SCHEDULE_ROWS = [
+  { bracket: 'Level 1', maxSlots: 3, freeSlots: 3, apCost: '0 AP (Base Free)', cumAp: 0, minLvl: 1, maxLvl: 1, slotNum: 3 },
+  { bracket: 'Level 2–3', maxSlots: 4, freeSlots: 3, apCost: '1 AP (Slot 4)', cumAp: 1, minLvl: 2, maxLvl: 3, slotNum: 4 },
+  { bracket: 'Level 4–5', maxSlots: 5, freeSlots: 3, apCost: '1 AP (Slot 5)', cumAp: 2, minLvl: 4, maxLvl: 5, slotNum: 5 },
+  { bracket: 'Level 6–7', maxSlots: 6, freeSlots: 3, apCost: '1 AP (Slot 6)', cumAp: 3, minLvl: 6, maxLvl: 7, slotNum: 6 },
+  { bracket: 'Level 8–9', maxSlots: 7, freeSlots: 3, apCost: '1 AP (Slot 7)', cumAp: 4, minLvl: 8, maxLvl: 9, slotNum: 7 },
+  { bracket: 'Level 10–14', maxSlots: 8, freeSlots: 3, apCost: '1 AP (Slot 8)', cumAp: 5, minLvl: 10, maxLvl: 14, slotNum: 8 },
+  { bracket: 'Level 15–19', maxSlots: 9, freeSlots: 3, apCost: '2 AP (Slot 9)', cumAp: 7, minLvl: 15, maxLvl: 19, slotNum: 9 },
+  { bracket: 'Level 20–29', maxSlots: 10, freeSlots: 3, apCost: '2 AP (Slot 10)', cumAp: 9, minLvl: 20, maxLvl: 29, slotNum: 10 },
+  { bracket: 'Level 30–39', maxSlots: 11, freeSlots: 3, apCost: '2 AP (Slot 11)', cumAp: 11, minLvl: 30, maxLvl: 39, slotNum: 11 },
+  { bracket: 'Level 40–49', maxSlots: 12, freeSlots: 3, apCost: '2 AP (Slot 12)', cumAp: 13, minLvl: 40, maxLvl: 49, slotNum: 12 },
+  { bracket: 'Level 50–69', maxSlots: 13, freeSlots: 3, apCost: '3 AP (Slot 13)', cumAp: 16, minLvl: 50, maxLvl: 69, slotNum: 13 },
+  { bracket: 'Level 70–89', maxSlots: 14, freeSlots: 3, apCost: '3 AP (Slot 14)', cumAp: 19, minLvl: 70, maxLvl: 89, slotNum: 14 },
+  { bracket: 'Level 90–100+', maxSlots: 15, freeSlots: 3, apCost: '3 AP (Slot 15)', cumAp: 22, minLvl: 90, maxLvl: 999, slotNum: 15 },
+];
+
 const cleanName = (name: string) => name.replace(/\s*\[[A-Z]+\]$/i, '').trim();
 
 const parseUsageCount = (usage?: string): number => {
@@ -89,7 +105,7 @@ const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; 
   const str = `${itemObj.rarity || ''} ${subStr} ${itemObj.name || itemObj.title || ''}`.toLowerCase();
 
   if (str.includes('relic') || str.includes('epic') || str.includes('artifact')) {
-    return { label: 'Relic/Epic', icon: '💫', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40', slotsText: '🗲🗲🗲🗲 4 Slots' };
+    return { label: 'Epic', icon: '💫', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40', slotsText: '🗲🗲🗲🗲 4 Slots' };
   }
   if (str.includes('greater')) {
     return { label: 'Greater', icon: '✨', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40', slotsText: '🗲🗲🗲 3 Slots' };
@@ -175,8 +191,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [leftSearchQuery, setLeftSearchQuery] = useState('');
   const [rightSearchQuery, setRightSearchQuery] = useState('');
   
-  // Right Pane Active View: 'VAULT', 'CATALOG', 'CREATOR', or 'EDITOR'
-  const [activeRightTab, setActiveRightTab] = useState<'VAULT' | 'CATALOG' | 'CREATOR' | 'EDITOR'>(
+  // Right Pane Active View: 'VAULT', 'CATALOG', 'SLOTS', 'CREATOR', or 'EDITOR'
+  const [activeRightTab, setActiveRightTab] = useState<'VAULT' | 'CATALOG' | 'SLOTS' | 'CREATOR' | 'EDITOR'>(
     type === 'spells' ? 'VAULT' : 'CATALOG'
   );
 
@@ -896,7 +912,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         {type === 'powers' ? 'Powers Manager' : 'Magic Items Manager'}
                       </h3>
                       <p className="text-xs text-slate-400 hidden sm:block">
-                        Manage character {type === 'powers' ? 'powers' : 'magic items'} side-by-side with the SupaFlex stock catalog and custom creator.
+                        {type === 'powers'
+                          ? 'Manage character powers side-by-side with the SupaFlex stock catalog and custom creator.'
+                          : 'Manage character magic items moving items between the Vault and your Loadout, and upgrading your Loadout Slots with AP.'}
                       </p>
                     </div>
                   </div>
@@ -914,6 +932,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </span>
                     </div>
                   )}
+
+
 
                   <button
                     onClick={handleCloseManageModal}
@@ -1114,6 +1134,24 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           Stock Catalog ({filteredCatalogAbilities.length})
                         </button>
 
+                        {type === 'spells' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isVersionEditMode) setIsVersionEditMode(false);
+                              setActiveRightTab('SLOTS');
+                            }}
+                            className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                              activeRightTab === 'SLOTS'
+                                ? 'bg-pink-600/30 text-pink-200 border border-pink-500/40 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            <ShoppingCart className="w-3.5 h-3.5 text-pink-400" />
+                            🛒 Buy Slots
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => {
@@ -1226,6 +1264,149 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 );
                               })
                             )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* TAB: BUY SLOTS VIEW (spells mode) */}
+                    {activeRightTab === 'SLOTS' && type === 'spells' && (() => {
+                      const unlockedSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
+                      const charLevel = sheetData.level || 1;
+                      const maxSlotsCap = getMaxSlotsForLevel(charLevel);
+                      const slotUpgradeInfo = getApCostForNextSlot(unlockedSlots, charLevel);
+                      const totalApSpentOnSlots = calculateSpentApOnMagicSlots(unlockedSlots);
+
+                      return (
+                        <div className="flex flex-col gap-3 flex-1 min-h-0 mt-2.5 overflow-y-auto pr-1">
+                          {/* Top Status Header Pill (Image 2 Style) */}
+                          <div className="px-3.5 py-1.5 bg-pink-950/70 border border-pink-500/40 rounded-full font-mono font-bold text-xs text-pink-200 flex items-center justify-between shadow-md shrink-0">
+                            <div className="flex items-center gap-2.5">
+                              <span>Lvl <strong className="text-amber-300">{charLevel}</strong></span>
+                              <span className="text-pink-500/60">•</span>
+                              <span>Slots <strong className="text-pink-300">{unlockedSlots}/{maxSlotsCap}</strong></span>
+                              <span className="text-pink-500/60">•</span>
+                              <span>Spent <strong className="text-rose-400">{totalApSpentOnSlots} AP</strong></span>
+                            </div>
+                            <div>
+                              <span>Available <strong className="text-emerald-400">{availableAp} AP</strong></span>
+                            </div>
+                          </div>
+
+                          {/* Upgrade Action Box */}
+                          <div className="p-3 bg-slate-900/90 rounded-xl border border-pink-500/40 flex items-center justify-between gap-3 shrink-0 shadow-md">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <Sparkles className="w-4 h-4 text-pink-400" />
+                                <span className="font-outfit font-bold text-sm text-slate-100">
+                                  {slotUpgradeInfo.canUpgrade
+                                    ? `Next Slot Upgrade: Slot ${slotUpgradeInfo.nextSlotNum}`
+                                    : `Slot Capacity Status`}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 font-mono">
+                                {slotUpgradeInfo.canUpgrade
+                                  ? `Requires Level ${slotUpgradeInfo.reqLevel} | Cost: ${slotUpgradeInfo.apCost} AP`
+                                  : slotUpgradeInfo.reason || 'Maximum slots reached'}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={!slotUpgradeInfo.canUpgrade || availableAp < slotUpgradeInfo.apCost}
+                              onClick={() => {
+                                if (!slotUpgradeInfo.canUpgrade) return;
+                                if (availableAp < slotUpgradeInfo.apCost) {
+                                  alert(`❌ Insufficient Available AP! Requires ${slotUpgradeInfo.apCost} AP.`);
+                                  return;
+                                }
+                                recordApExpenditure(
+                                  slotUpgradeInfo.apCost,
+                                  'Magic Items' as any,
+                                  `Unlocked Magic Item Slot ${slotUpgradeInfo.nextSlotNum}`,
+                                  1,
+                                  'Magic Items Manager'
+                                );
+                                updateActiveSheetData((prev) => ({
+                                  ...prev,
+                                  unlocked_magic_slots: (prev.unlocked_magic_slots || 3) + 1,
+                                }));
+                                saveActiveCharacter();
+                              }}
+                              className={`px-3 py-1.5 rounded-xl font-outfit font-bold text-xs flex items-center gap-1.5 shadow-md transition-all shrink-0 ${
+                                slotUpgradeInfo.canUpgrade && availableAp >= slotUpgradeInfo.apCost
+                                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white cursor-pointer active:scale-95'
+                                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                              }`}
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-pink-300" />
+                              <span>Unlock Slot +1 ({slotUpgradeInfo.canUpgrade ? `${slotUpgradeInfo.apCost} AP` : 'Lvl Locked'})</span>
+                            </button>
+                          </div>
+
+                          {/* Complete Slot Progression & AP Cost Schedule Table */}
+                          <div className="flex flex-col gap-1.5 shrink-0 pb-2">
+                            <div className="flex items-center justify-between px-1">
+                              <span className="font-outfit font-bold text-xs uppercase text-slate-300 tracking-wider flex items-center gap-1.5">
+                                <span>📜</span> Slot Progression & AP Cost Schedule
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono">Master Blueprint Schedule</span>
+                            </div>
+
+                            <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/80 shadow-inner">
+                              <table className="w-full text-left text-[11px]">
+                                <thead className="bg-slate-900/90 text-slate-400 border-b border-slate-800 font-mono uppercase text-[10px]">
+                                  <tr>
+                                    <th className="py-1.5 px-2.5">Level Bracket</th>
+                                    <th className="py-1.5 px-2.5">Max Slots</th>
+                                    <th className="py-1.5 px-2.5">AP Cost</th>
+                                    <th className="py-1.5 px-2.5">Cumulative AP</th>
+                                    <th className="py-1.5 px-2.5 text-right">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800/60 font-mono">
+                                  {SLOT_SCHEDULE_ROWS.map((row, idx) => {
+                                    const isCurrentBracket = charLevel >= row.minLvl && charLevel <= row.maxLvl;
+                                    const isUnlocked = unlockedSlots >= row.slotNum;
+                                    const isNextTarget = row.slotNum === unlockedSlots + 1;
+
+                                    return (
+                                      <tr
+                                        key={idx}
+                                        className={`transition-colors ${
+                                          isCurrentBracket
+                                            ? 'bg-pink-950/40 text-pink-100 font-bold border-l-2 border-l-pink-400'
+                                            : isUnlocked
+                                            ? 'text-slate-300 bg-slate-900/30'
+                                            : 'text-slate-500'
+                                        }`}
+                                      >
+                                        <td className="py-1.5 px-2.5 flex items-center gap-1.5">
+                                          {isCurrentBracket && <span className="text-pink-400 text-xs">⭐</span>}
+                                          <span>{row.bracket}</span>
+                                        </td>
+                                        <td className="py-1.5 px-2.5 font-bold">{row.maxSlots} Slots</td>
+                                        <td className="py-1.5 px-2.5">{row.apCost}</td>
+                                        <td className="py-1.5 px-2.5 text-purple-300 font-bold">{row.cumAp} AP</td>
+                                        <td className="py-1.5 px-2.5 text-right">
+                                          {isUnlocked ? (
+                                            <span className="text-emerald-400 font-bold flex items-center justify-end gap-1">
+                                              <CheckCircle className="w-3 h-3 text-emerald-400" /> Unlocked
+                                            </span>
+                                          ) : isNextTarget ? (
+                                            <span className="text-pink-300 font-bold">⚡ Next Target</span>
+                                          ) : charLevel < row.minLvl ? (
+                                            <span className="text-slate-500">🔒 Req Lvl {row.minLvl}</span>
+                                          ) : (
+                                            <span className="text-amber-400">Available</span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
                         </div>
                       );

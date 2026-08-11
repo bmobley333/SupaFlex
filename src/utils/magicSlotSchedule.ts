@@ -32,7 +32,7 @@ const cleanName = (name: string) => name.replace(/\s*\[[A-Z]+\]$/i, '').trim();
  * Minor = 1 Slot
  * Lesser = 2 Slots
  * Greater = 3 Slots
- * Relic / Epic = 4 Slots
+ * Epic = 4 Slots
  */
 export const getItemSlotWeight = (item: MagicItemLike, catalog?: MagicItemLike[]): number => {
   if (!item) return 1;

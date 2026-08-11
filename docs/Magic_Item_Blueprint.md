@@ -15,7 +15,7 @@ The **Magic Item System** in SupaFlex balances high-dopamine loot acquisition wi
    - 🍺 **Minor Magic Item:** 1 Slot (🗲)
    - 🪄 **Lesser Magic Item:** 2 Slots (🗲🗲)
    - ✨ **Greater Magic Item:** 3 Slots (🗲🗲🗲)
-   - 💫 **Relic / Epic Magic Item:** 4 Slots (🗲🗲🗲🗲)
+   - 💫 **Epic Magic Item:** 4 Slots (🗲🗲🗲🗲)
 4. **GM-Approved Swap Windows (0 AP):** Equipping or un-equipping items between the Character Vault and Active Loadout costs `0 AP`, but can **ONLY** take place during GM-approved windows (e.g. leveling up, long rests, breaks, or GM toggle state).
 
 ---
