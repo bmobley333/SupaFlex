@@ -5,6 +5,7 @@ import { gameApi } from '../../services/api';
 import { Character, Party, PartySessionMember } from '../../types/game';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { RoleToggleSwitch } from '../common/RoleToggleSwitch';
+import { InfoTooltip } from '../common/InfoTooltip';
 import { sanitizeRoomCodeInput, isValidRoomCodeFormat } from '../../utils/roomId';
 
 interface UnifiedLaunchHubModalProps {
@@ -495,7 +496,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
             </h2>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
               {currentEmail
-                ? 'Manage your character vault, active party sessions, user account, and read-only inspection.'
+                ? 'Manage your character vault, active party sessions, and clone characters.'
                 : '🔒 Please sign in or create an account to access your character sheet.'}
             </p>
           </div>
@@ -865,9 +866,12 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       {/* Dedicated Editable Player Human Name Section */}
                       <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
                         <div className="flex items-center justify-between">
-                          <label htmlFor="player-human-name-input" className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
-                            Player Name
-                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <label htmlFor="player-human-name-input" className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
+                              Player Name
+                            </label>
+                            <InfoTooltip text="Enter your actual human name (e.g. John Doe)." />
+                          </div>
                           {isSavingName ? (
                             <span className="text-[10px] text-amber-400 font-bold animate-pulse flex items-center gap-1">
                               Saving...
@@ -901,17 +905,17 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                             placeholder="e.g. Blake Mobley"
                           />
                         </div>
-                        <p className="text-[11px] text-slate-400 italic">
-                          Enter your actual human name (e.g. Steve Tobin). This name is linked to your player profile across party rosters.
-                        </p>
                       </div>
 
                       {/* Dyslexia-Friendly Multi-Option Pill Switch for Vault Privacy */}
                       {activeRole !== 'gm' && (
                         <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
-                          <label className="text-xs font-bold text-slate-200 block">
-                            Character Vault Privacy & Cloning
-                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <label className="text-xs font-bold text-slate-200 block">
+                              Character Vault Privacy & Cloning
+                            </label>
+                            <InfoTooltip text="When enabled, other players who enter your email address can clone your characters." />
+                          </div>
 
                           <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
                             <button
@@ -937,9 +941,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                               🧬 Allow Cloning
                             </button>
                           </div>
-                          <p className="text-[11px] text-slate-400 italic">
-                            When enabled, other players who enter your email address can clone your characters.
-                          </p>
                         </div>
                       )}
                     </div>
