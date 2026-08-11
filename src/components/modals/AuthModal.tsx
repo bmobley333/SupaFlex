@@ -198,49 +198,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
 
-            {/* Dyslexia-Friendly Peg-Slider Toggle for Character Cloning Privacy */}
+            {/* Dyslexia-Friendly Multi-Option Pill Switch for Character Cloning Privacy */}
             <div className="bg-slate-800/60 p-4 rounded-lg border border-slate-700 space-y-3">
               <label className="text-sm font-semibold text-slate-200 block">
                 Character Vault Privacy & Cloning
               </label>
 
-              <div className="toggle-container flex items-center justify-between gap-3 bg-slate-950/70 p-3 rounded-lg border border-slate-800">
-                <span
-                  id="label-left"
-                  style={{
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    color: !allowCloning ? '#f87171' : '#94a3b8',
-                    opacity: !allowCloning ? 1.0 : 0.5,
-                    transition: 'all 0.3s ease',
-                  }}
+              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => handleToggleCloning(false)}
+                  className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    !allowCloning
+                      ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
                 >
                   🔒 Private Vault
-                </span>
-
-                <label className="switch relative inline-block w-[50px] h-[26px] m-0 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    id="slider-checkbox"
-                    checked={allowCloning}
-                    onChange={(e) => handleToggleCloning(e.target.checked)}
-                    className="opacity-0 w-0 h-0 peer"
-                  />
-                  <span className="slider absolute inset-0 bg-slate-700 peer-checked:bg-emerald-600 rounded-full transition-all duration-300 before:absolute before:content-[''] before:h-[20px] before:w-[20px] before:left-[3px] before:bottom-[3px] before:bg-white before:rounded-full before:transition-all before:duration-300 peer-checked:before:translate-x-[24px]"></span>
-                </label>
-
-                <span
-                  id="label-right"
-                  style={{
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    color: allowCloning ? '#34d399' : '#94a3b8',
-                    opacity: allowCloning ? 1.0 : 0.5,
-                    transition: 'all 0.3s ease',
-                  }}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleCloning(true)}
+                  className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    allowCloning
+                      ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
                 >
                   🧬 Allow Cloning
-                </span>
+                </button>
               </div>
               <p className="text-xs text-slate-400 italic">
                 When enabled, other players who enter your email address can clone your characters.

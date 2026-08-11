@@ -491,40 +491,30 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 font-mono outline-none focus:border-amber-500"
                   />
 
-                  {/* Dyslexia-Friendly Peg-Slider Toggle Design (Rule[user_global] Compliant) */}
-                  <div className="flex items-center justify-between bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800/90 my-1">
-                    <span
-                      id="label-left-pasted"
-                      className={`text-[11px] transition-all cursor-pointer ${
-                        !applyDifOnParse
-                          ? 'font-extrabold text-amber-300 opacity-100'
-                          : 'font-bold text-slate-400 opacity-50'
-                      }`}
+                  {/* Dyslexia-Friendly Multi-Option Pill Switch */}
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md my-1">
+                    <button
+                      type="button"
                       onClick={() => setApplyDifOnParse(false)}
-                    >
-                      As Pasted
-                    </span>
-                    <label className="switch relative inline-block w-10 h-5 m-0 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        id="slider-checkbox-dif"
-                        checked={applyDifOnParse}
-                        onChange={(e) => setApplyDifOnParse(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <span className="slider w-10 h-5 bg-slate-800 rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-amber-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500/40 peer-checked:border peer-checked:border-amber-500/60 block"></span>
-                    </label>
-                    <span
-                      id="label-right-dif"
-                      className={`text-[11px] transition-all cursor-pointer ${
-                        applyDifOnParse
-                          ? 'font-extrabold text-amber-300 opacity-100'
-                          : 'font-bold text-slate-400 opacity-50'
+                      className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        !applyDifOnParse
+                          ? 'bg-slate-800 text-slate-200 border border-slate-700 shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
                       }`}
-                      onClick={() => setApplyDifOnParse(true)}
                     >
-                      Apply Dif ({masterDif})
-                    </span>
+                      📝 As Pasted
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setApplyDifOnParse(true)}
+                      className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        applyDifOnParse
+                          ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🎚️ Apply Dif ({masterDif})
+                    </button>
                   </div>
 
                   <button

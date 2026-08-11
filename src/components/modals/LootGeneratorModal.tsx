@@ -961,23 +961,30 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                   );
                 })()}
 
-                {/* Mode Switcher Peg Slider */}
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between shrink-0">
-                  <span className={`text-xs font-bold transition-opacity ${!isGmMode ? 'text-amber-400 opacity-100' : 'text-slate-500 opacity-50'}`}>
-                    Player Single Roll
-                  </span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={isGmMode} 
-                      onChange={(e) => handleModeToggle(e.target.checked)}
-                      className="sr-only peer" 
-                    />
-                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-amber-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                  </label>
-                  <span className={`text-xs font-bold transition-opacity ${isGmMode ? 'text-indigo-400 opacity-100' : 'text-slate-500 opacity-50'}`}>
-                    GM Hoard Mode
-                  </span>
+                {/* Mode Switcher Multi-Option Pill Switch */}
+                <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleModeToggle(false)}
+                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      !isGmMode
+                        ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🛡️ Player Single Roll
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModeToggle(true)}
+                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      isGmMode
+                        ? 'bg-indigo-600 text-white font-extrabold shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    👑 GM Hoard Mode
+                  </button>
                 </div>
 
                 {/* GM Hoard Mode Section */}
