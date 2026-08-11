@@ -56,6 +56,8 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const [playerNameInput, setPlayerNameInput] = useState(useCharacterStore.getState().playerName || '');
   const [nameSaveSuccess, setNameSaveSuccess] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
+  const [createHeroError, setCreateHeroError] = useState<string | null>(null);
+  const [isSubmittingHero, setIsSubmittingHero] = useState(false);
 
   useEffect(() => {
     const storeName = useCharacterStore.getState().playerName;
@@ -351,8 +353,10 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   // --- HERO CREATION HANDLER ---
   const handleCreateHeroSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newHeroName.trim()) return;
+    if (!newHeroName.trim() || isSubmittingHero) return;
     setAuthError(null);
+    setCreateHeroError(null);
+    setIsSubmittingHero(true);
 
     try {
       const created = await onCreateNewCharacter(
@@ -367,11 +371,18 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
         setNewHeroRace('');
         setNewHeroClass('');
       } else {
-        setAuthError('Failed to create hero. Please check your connection and try again.');
+        const storeErr = useCharacterStore.getState().error;
+        const msg = storeErr || 'Failed to create hero. Please check your connection and try again.';
+        setCreateHeroError(msg);
+        setAuthError(msg);
       }
     } catch (err: any) {
       console.error('Error creating new hero:', err);
-      setAuthError(err.message || 'Error creating new hero.');
+      const msg = err.message || 'Error creating new hero.';
+      setCreateHeroError(msg);
+      setAuthError(msg);
+    } finally {
+      setIsSubmittingHero(false);
     }
   };
 
@@ -538,7 +549,10 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                     🛡️ Character Vault ({userCharacters.length})
                   </h3>
                   <button
-                    onClick={() => setIsCreatingHero(!isCreatingHero)}
+                    onClick={() => {
+                      setIsCreatingHero(!isCreatingHero);
+                      setCreateHeroError(null);
+                    }}
                     className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-sm cursor-pointer"
                   >
                     {isCreatingHero ? '✕ Cancel' : '➕ Create New Hero'}
@@ -548,6 +562,11 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 {/* Inline Hero Creation Form */}
                 {isCreatingHero && (
                   <form onSubmit={handleCreateHeroSubmit} className="mb-4 p-3 bg-slate-900 border border-indigo-500/40 rounded-xl space-y-3 shrink-0">
+                    {createHeroError && (
+                      <div className="p-2.5 bg-red-900/60 border border-red-500/50 rounded-lg text-red-200 text-xs">
+                        ⚠️ {createHeroError}
+                      </div>
+                    )}
                     <div>
                       <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Hero Name</label>
                       <input
@@ -581,10 +600,17 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                     </div>
                     <button
                       type="submit"
-                      disabled={!newHeroName.trim()}
-                      className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition shadow-sm cursor-pointer"
+                      disabled={!newHeroName.trim() || isSubmittingHero}
+                      className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
                     >
-                      Save & Create Hero
+                      {isSubmittingHero ? (
+                        <>
+                          <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                          Saving Hero...
+                        </>
+                      ) : (
+                        'Save & Create Hero'
+                      )}
                     </button>
                   </form>
                 )}

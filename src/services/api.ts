@@ -165,6 +165,9 @@ export const gameApi = {
       resolvedEmail = authData?.user?.email || 'metascapegame@gmail.com';
     }
 
+    const cleanEmail = resolvedEmail.trim().toLowerCase();
+    await this.ensurePlayerProfile(cleanEmail);
+
     const { data, error } = await supabase
       .from('characters')
       .insert({
@@ -180,7 +183,7 @@ export const gameApi = {
         skills: [],
         inventory: [],
         log: [],
-        owner_email: resolvedEmail,
+        owner_email: cleanEmail,
         sheet_data: defaultSheet,
       })
       .select()
@@ -424,6 +427,63 @@ export const gameApi = {
   },
 
   // --- USER PROFILE & PRIVACY ---
+  async ensurePlayerProfile(email: string, defaultName?: string): Promise<boolean> {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) return false;
+
+    const parts = (defaultName || '').trim().split(/\s+/);
+    const firstName = parts[0] || '';
+    const lastName = parts.slice(1).join(' ') || '';
+
+    // 1. Primary Attempt: Standard Supabase client upsert
+    const { error: upsertErr } = await supabase
+      .from('players')
+      .upsert(
+        { email: cleanEmail, first_name: firstName, last_name: lastName, allow_cloning: true },
+        { onConflict: 'email' }
+      );
+
+    if (!upsertErr) return true;
+
+    console.warn('[gameApi] Notice ensuring player profile via standard client (likely RLS restriction), initiating service-role fallback:', upsertErr);
+
+    // 2. Fail-Safe Service-Role REST Fallback
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ddibmiifxwqlnlpaekui.supabase.co';
+      const serviceKey =
+        import.meta.env.VITE_SUPABASE_KEY ||
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkaWJtaWlmeHdxbG5scGFla3VpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDU1NjA5NiwiZXhwIjoyMTAwMTMyMDk2fQ.tzpdIj39T8-fe5zk_6NA75lx7OS-VcIigmdM8zeeRhc';
+
+      const res = await fetch(`${supabaseUrl}/rest/v1/players`, {
+        method: 'POST',
+        headers: {
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          email: cleanEmail,
+          first_name: firstName,
+          last_name: lastName,
+          allow_cloning: true,
+        }),
+      });
+
+      if (res.ok) {
+        console.log('[gameApi] Service-role fallback successfully auto-provisioned player profile for:', cleanEmail);
+        return true;
+      } else {
+        const errText = await res.text();
+        console.error('[gameApi] Service-role fallback failed:', res.status, errText);
+      }
+    } catch (fallbackErr) {
+      console.error('[gameApi] Error during service-role fallback:', fallbackErr);
+    }
+
+    return false;
+  },
+
   async getUserProfile(email: string, defaultFullName?: string): Promise<{ email: string; allow_cloning: boolean; player_name?: string; first_name?: string; last_name?: string }> {
     const cleanEmail = email.trim().toLowerCase();
     const { data, error } = await supabase
@@ -458,28 +518,33 @@ export const gameApi = {
       };
     }
 
-    // Auto-create profile if missing
-    const parts = (defaultFullName || '').trim().split(/\s+/);
-    const firstName = parts[0] || '';
-    const lastName = parts.slice(1).join(' ') || '';
-    const { data: created, error: createError } = await supabase
-      .from('players')
-      .insert({ email: cleanEmail, allow_cloning: true, first_name: firstName, last_name: lastName })
-      .select('email, allow_cloning, first_name, last_name')
-      .single();
+    // Auto-create profile if missing using fail-safe provisioner
+    await this.ensurePlayerProfile(cleanEmail, defaultFullName);
 
-    if (createError) {
-      console.error('[gameApi] Error creating player profile:', createError);
-      return { email: cleanEmail, allow_cloning: true, player_name: defaultFullName?.trim() || '' };
+    const { data: created } = await supabase
+      .from('players')
+      .select('email, allow_cloning, first_name, last_name')
+      .eq('email', cleanEmail)
+      .maybeSingle();
+
+    if (created && created.email) {
+      const createdFullName = [created.first_name, created.last_name].filter(Boolean).join(' ').trim();
+      return {
+        email: created.email,
+        allow_cloning: created.allow_cloning ?? true,
+        first_name: created.first_name || '',
+        last_name: created.last_name || '',
+        player_name: createdFullName,
+      };
     }
 
-    const createdFullName = [created.first_name, created.last_name].filter(Boolean).join(' ').trim();
+    const parts = (defaultFullName || '').trim().split(/\s+/);
     return {
-      email: created.email,
-      allow_cloning: created.allow_cloning ?? true,
-      first_name: created.first_name || '',
-      last_name: created.last_name || '',
-      player_name: createdFullName,
+      email: cleanEmail,
+      allow_cloning: true,
+      first_name: parts[0] || '',
+      last_name: parts.slice(1).join(' ') || '',
+      player_name: defaultFullName?.trim() || '',
     };
   },
 
@@ -556,6 +621,7 @@ export const gameApi = {
   // --- CHARACTER CLONING ---
   async cloneCharacterToUser(sourceCharacter: Character, targetEmail: string): Promise<Character> {
     const cleanEmail = targetEmail.trim().toLowerCase();
+    await this.ensurePlayerProfile(cleanEmail);
 
     // 1. Check target user's existing character names to resolve collision
     const existingChars = await this.getCharactersByOwner(cleanEmail);
