@@ -395,6 +395,8 @@ export interface CharacterSheetData {
   movement_rate?: MovementRateData;
   bio: CharacterBio;
   essence_core?: number; // 0-100 Essence Core Progress Ring
+  character_vault?: MagicItem[]; // Unlimited storage vault for claimed magic items
+  unlocked_magic_slots?: number; // Total active Magic Item Slots capacity purchased with AP (default 3)
   starred_magic_items?: (number | string)[]; // Starred Magic Item Wishlist IDs
   starred_powers?: (number | string)[]; // Starred Powers Wishlist IDs
   starred_weapons?: (number | string)[]; // Starred Weapons Wishlist IDs
@@ -431,15 +433,15 @@ export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number;
   const totalPowerUnits = powerSlots.reduce((sum: number, slot: any) => sum + (slot?.version || 1), 0);
   const powersNet = Math.max(0, totalPowerUnits - 3);
 
-  const magicItemSlots = (sheetData.spell_slots || []).filter(
-    (s: any) => s && s.name && s.name.trim() !== ''
-  );
-  const magicItemsNet = magicItemSlots.reduce((sum: number, slot: any) => {
-    const v = typeof slot.version === 'number' && slot.version > 0
-      ? slot.version
-      : (parseAbilityVersion(slot.name).version || 1);
-    return sum + Math.max(0, v - 1);
-  }, 0);
+  const unlockedMagicSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
+  let magicSlotsApSpent = 0;
+  for (let s = 4; s <= Math.min(15, unlockedMagicSlots); s++) {
+    if (s <= 8) magicSlotsApSpent += 1;
+    else if (s <= 12) magicSlotsApSpent += 2;
+    else if (s <= 15) magicSlotsApSpent += 3;
+  }
+
+  const magicItemsNet = magicSlotsApSpent + sumLogCategory('Magic Item Slots') + sumLogCategory('Magic Items');
 
   const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
   const skilledShields = armory.filter((s: any) => s && s.sk);
@@ -664,6 +666,8 @@ export interface MagicItem {
   category?: string;
   version?: number;
   base_name?: string;
+  slot_weight?: 1 | 2 | 3 | 4;
+  rarity?: 'Minor' | 'Lesser' | 'Greater' | 'Relic' | 'Epic';
 }
 
 export interface Skillset {
@@ -693,6 +697,7 @@ export interface Party {
   invited_emails: string[];
   room_code?: string | null;
   is_active?: boolean;
+  is_gm_swap_window_active?: boolean; // GM toggle for Character Vault swapping
   last_active_at?: string | null;
   created_at: string;
 }

@@ -543,7 +543,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     if (ok) {
       res.claimed = true;
       setResults([...results]);
-      showToast(`✅ Moved '${res.title}' to ${characterName}'s Sheet!`);
+      const isMagic = res.type === 'magic_item' || !!res.magicItem || (res.categoryKey && res.categoryKey.startsWith('magic_'));
+      showToast(isMagic ? `✅ Saved '${res.title}' to ${characterName}'s Character Vault! (0 AP)` : `✅ Moved '${res.title}' to ${characterName}'s Sheet!`);
     } else {
       showToast(`❌ Failed to move '${res.title}' to Sheet.`);
     }

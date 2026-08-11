@@ -18,6 +18,7 @@ import {
   calculateAvailableAp,
   parseAbilityVersion,
 } from '../../types/game';
+import { getApCostForNextSlot, getMaxSlotsForLevel } from '../../utils/magicSlotSchedule';
 
 interface ApManagerModalProps {
   isOpen: boolean;
@@ -137,6 +138,9 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
   const spentAp = liveApData.totalSpent;
   const gmBonusAp = liveApData.gmBonus;
   const availableAp = calculateAvailableAp(level, sheetData);
+  const unlockedMagicSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
+  const maxSlotsCap = getMaxSlotsForLevel(level);
+  const slotUpgradeInfo = getApCostForNextSlot(unlockedMagicSlots, level);
 
   const rawFocus = sheetData.focus_die_max || sheetData.focus_die_current || 'd4';
   const focusDie = normalizeDie(rawFocus);
@@ -144,6 +148,28 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handlePurchaseMagicSlot = () => {
+    if (!slotUpgradeInfo.canUpgrade) return;
+    if (availableAp < slotUpgradeInfo.apCost) {
+      showToast(`❌ Insufficient Available AP! Requires ${slotUpgradeInfo.apCost} AP.`);
+      return;
+    }
+
+    recordApExpenditure(
+      slotUpgradeInfo.apCost,
+      'Magic Items' as any,
+      `Unlocked Magic Item Slot ${slotUpgradeInfo.nextSlotNum}`,
+      1,
+      'AP Manager'
+    );
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      unlocked_magic_slots: (prev.unlocked_magic_slots || 3) + 1,
+    }));
+    saveActiveCharacter();
+    showToast(`✨ Unlocked Magic Item Slot ${slotUpgradeInfo.nextSlotNum}! Total Capacity: ${unlockedMagicSlots + 1} Slots.`);
   };
 
   // Compute live current sheet cost details for each category in ALPHABETICAL order
@@ -246,7 +272,11 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: magicItemsNet,
         badgeColor: 'text-pink-300 bg-pink-950/60 border-pink-500/30',
         details: [
-          { label: `Magic Item Upgrades (v2+ Version Edits)`, value: `${magicItemsNet} AP (Base v1 Free)` },
+          { label: `Base Free Magic Item Slots`, value: `3 Free Slots (0 AP)` },
+          { label: `Unlocked Active Slot Capacity`, value: `${unlockedMagicSlots} / ${maxSlotsCap} Max Slots (Level ${level})` },
+          ...(slotUpgradeInfo.canUpgrade
+            ? [{ label: `Next Slot Upgrade (Slot ${slotUpgradeInfo.nextSlotNum})`, value: `${slotUpgradeInfo.apCost} AP (Requires Lvl ${slotUpgradeInfo.reqLevel})` }]
+            : [{ label: `Upgrade Status`, value: slotUpgradeInfo.reason || 'Max Cap Reached' }]),
         ],
       },
       {
@@ -504,6 +534,26 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                             <span className="font-mono font-bold text-indigo-300">{item.value}</span>
                           </div>
                         ))}
+                        {cat.id === 'magicItems' && slotUpgradeInfo.canUpgrade && (
+                          <div className="pt-2 flex justify-end">
+                            <button
+                              type="button"
+                              disabled={availableAp < slotUpgradeInfo.apCost}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePurchaseMagicSlot();
+                              }}
+                              className={`px-3 py-1.5 rounded-lg font-outfit font-bold text-xs flex items-center gap-1.5 shadow-md transition-all ${
+                                availableAp >= slotUpgradeInfo.apCost
+                                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white cursor-pointer active:scale-95'
+                                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                              }`}
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-pink-300" />
+                              <span>Unlock Slot +1 ({slotUpgradeInfo.apCost} AP)</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

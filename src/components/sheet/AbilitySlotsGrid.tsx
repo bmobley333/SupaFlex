@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Globe, 
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
+import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed } from '../../utils/magicSlotSchedule';
 
 interface AbilitySlotsGridProps {
   title: string;
@@ -68,8 +69,8 @@ const parseAbilityVersion = (name: string): { baseName: string; version: number 
   return match ? { baseName: match[1].trim(), version: parseInt(match[2], 10) } : { baseName: cleaned, version: 1 };
 };
 
-const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; icon: string; style: string } => {
-  if (!itemObj) return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' };
+const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; icon: string; style: string; slotsText: string } => {
+  if (!itemObj) return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '🗲 1 Slot' };
 
   let subStr = itemObj.sub || itemObj.table_name || itemObj.category || '';
 
@@ -85,18 +86,18 @@ const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; 
     }
   }
 
-  const str = `${subStr} ${itemObj.name || itemObj.title || ''}`.toLowerCase();
+  const str = `${itemObj.rarity || ''} ${subStr} ${itemObj.name || itemObj.title || ''}`.toLowerCase();
 
-  if (str.includes('epic') || str.includes('artifact')) {
-    return { label: 'Epic', icon: '💫', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40' };
+  if (str.includes('relic') || str.includes('epic') || str.includes('artifact')) {
+    return { label: 'Relic/Epic', icon: '💫', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40', slotsText: '🗲🗲🗲🗲 4 Slots' };
   }
   if (str.includes('greater')) {
-    return { label: 'Greater', icon: '✨', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40' };
+    return { label: 'Greater', icon: '✨', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40', slotsText: '🗲🗲🗲 3 Slots' };
   }
   if (str.includes('lesser')) {
-    return { label: 'Lesser', icon: '🪄', style: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40' };
+    return { label: 'Lesser', icon: '🪄', style: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40', slotsText: '🗲🗲 2 Slots' };
   }
-  return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' };
+  return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '🗲 1 Slot' };
 };
 
 const formatTableNameDisplay = (tblName: string): string => {
@@ -130,6 +131,7 @@ const calculateTotalPowerUnits = (abilitySlots: AbilitySlot[]): number => {
 
 export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type }) => {
   const { activeCharacter, powers, magicItems, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
+  const sheetData: any = activeCharacter?.sheet_data || {};
   const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
   const rawSlots: AbilitySlot[] = (activeCharacter?.sheet_data?.[slotKey as keyof typeof activeCharacter.sheet_data] as AbilitySlot[]) || [];
   const slots: AbilitySlot[] = useMemo(() => {
@@ -150,13 +152,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const apSpent = Math.max(0, totalPowerUnits - 3);
 
-  const magicItemsApSpent = useMemo(() => {
-    if (type !== 'spells') return 0;
-    return slots.reduce((sum, slot) => {
-      const { version } = parseAbilityVersion(slot.name);
-      return sum + Math.max(0, version - 1);
-    }, 0);
-  }, [slots, type]);
 
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
@@ -180,8 +175,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [leftSearchQuery, setLeftSearchQuery] = useState('');
   const [rightSearchQuery, setRightSearchQuery] = useState('');
   
-  // Right Pane Active View: 'CATALOG', 'CREATOR', or 'EDITOR'
-  const [activeRightTab, setActiveRightTab] = useState<'CATALOG' | 'CREATOR' | 'EDITOR'>('CATALOG');
+  // Right Pane Active View: 'VAULT', 'CATALOG', 'CREATOR', or 'EDITOR'
+  const [activeRightTab, setActiveRightTab] = useState<'VAULT' | 'CATALOG' | 'CREATOR' | 'EDITOR'>(
+    type === 'spells' ? 'VAULT' : 'CATALOG'
+  );
 
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -485,22 +482,27 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
         return { ...prev, [slotKey]: prunedCurrent };
       } else {
-        const existingIndex = current.findIndex(
-          (s) => cleanName(s.name).toLowerCase() === cleanName(item.name).toLowerCase()
-        );
-        if (existingIndex < 0) {
-          current.push({
-            select: true,
+        const currentVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];
+        const exists = currentVault.some((v) => cleanName(v.name).toLowerCase() === cleanName(item.name).toLowerCase());
+        if (!exists) {
+          const vaultItem: MagicItem = {
+            id: Date.now() + Math.floor(Math.random() * 1000),
             name: cleanName(item.name),
             base_name: baseName,
             version: version,
-            action: (item.action?.toUpperCase() as any) || 'A',
+            action: item.action || 'P',
             usage: item.usage || '1-Enc',
             effect: item.effect || '',
-            checked: [false, false, false],
-          });
+            source: 'Stock Catalog',
+            created_at: new Date().toISOString(),
+            dropdown: item.dropdown || null,
+            sub: item.sub || null,
+            table_name: item.table_name || null,
+            slot_weight: (getItemSlotWeight(item, fullCatalog) as 1 | 2 | 3 | 4),
+          };
+          return { ...prev, character_vault: [...currentVault, vaultItem] };
         }
-        return { ...prev, [slotKey]: current };
+        return prev;
       }
     });
     saveActiveCharacter();
@@ -536,18 +538,76 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         const targetSlot = current.find(
           (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
         );
-        const v = targetSlot ? parseAbilityVersion(targetSlot.name).version : 1;
-        const apRefund = Math.max(0, v - 1);
-
-        if (apRefund > 0) {
-          recordApExpenditure(-apRefund, 'Magic Items', `Unlearned Magic Item: ${cleanName(abilityName)} (-${apRefund} AP Refunded)`, 1, 'Manage Magic Items');
-        }
-
         const updated = current.filter(
           (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
         );
+
+        if (targetSlot) {
+          const currentVault = Array.isArray(prev.character_vault) ? prev.character_vault : [];
+          // Recover tier metadata from catalog for round-trip preservation
+          const catalogMatch = fullCatalog.find((c) => {
+            const cBase = parseAbilityVersion(cleanName(c.name || '')).baseName.toLowerCase();
+            const tBase = parseAbilityVersion(cleanName(targetSlot.name)).baseName.toLowerCase();
+            return cBase === tBase || cleanName(c.name || '').toLowerCase().includes(tBase);
+          });
+          const vaultItem: MagicItem = {
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            name: targetSlot.name,
+            usage: targetSlot.usage,
+            action: targetSlot.action,
+            effect: targetSlot.effect,
+            source: 'Unequipped from Loadout',
+            created_at: new Date().toISOString(),
+            dropdown: catalogMatch?.dropdown || (targetSlot as any).dropdown || null,
+            sub: catalogMatch?.sub || (targetSlot as any).sub || null,
+            table_name: catalogMatch?.table_name || (targetSlot as any).table_name || null,
+            slot_weight: (getItemSlotWeight(targetSlot, fullCatalog) as 1 | 2 | 3 | 4),
+          };
+          return { ...prev, [slotKey]: updated, character_vault: [...currentVault, vaultItem] };
+        }
         return { ...prev, [slotKey]: updated };
       }
+    });
+    saveActiveCharacter();
+  };
+
+  const handleEquipVaultItem = (vaultItem: MagicItem) => {
+    const weight = getItemSlotWeight(vaultItem, fullCatalog);
+    const currentSlots = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
+    const activeSlotsUsed = calculateTotalLoadoutSlotsUsed(currentSlots, fullCatalog);
+    const unlockedSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
+
+    if (activeSlotsUsed + weight > unlockedSlots) {
+      alert(`❌ Insufficient Magic Item Slots! Active loadout is ${activeSlotsUsed}/${unlockedSlots} slots. Item requires ${weight} slots. Unlock more slots in AP Manager.`);
+      return;
+    }
+
+    updateActiveSheetData((prev) => {
+      const currentVault = Array.isArray(prev.character_vault) ? prev.character_vault : [];
+      const currentSlots = Array.isArray(prev.spell_slots) ? prev.spell_slots : [];
+
+      const newVault = currentVault.filter((v) => v.id !== vaultItem.id && v.name !== vaultItem.name);
+      const newSlot: any = {
+        select: true,
+        name: vaultItem.name,
+        base_name: vaultItem.base_name || cleanName(vaultItem.name),
+        version: vaultItem.version || 1,
+        action: (vaultItem.action?.toUpperCase() as any) || 'P',
+        usage: vaultItem.usage || '1-Enc',
+        effect: vaultItem.effect || '',
+        checked: [false, false, false],
+        // Preserve tier metadata for round-trip slot weight resolution
+        sub: vaultItem.sub || null,
+        table_name: vaultItem.table_name || null,
+        dropdown: vaultItem.dropdown || null,
+        slot_weight: vaultItem.slot_weight || (getItemSlotWeight(vaultItem, fullCatalog) as 1 | 2 | 3 | 4),
+      };
+
+      return {
+        ...prev,
+        character_vault: newVault,
+        spell_slots: [...currentSlots, newSlot],
+      };
     });
     saveActiveCharacter();
   };
@@ -628,46 +688,27 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           [slotKey]: prunedSlots,
         };
       } else {
-        const existingIndex = currentSlots.findIndex(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-        );
-
-        const oldVersion = existingIndex >= 0 ? parseAbilityVersion(currentSlots[existingIndex].name).version : 1;
-        const newSlot: AbilitySlot = {
-          select: true,
+        const vaultItem: MagicItem = {
+          id: newItem.id,
           name: versionedName,
           base_name: baseName,
           version: version,
-          action: (createAction.toUpperCase() as any) || 'A',
+          action: createAction,
           usage: createUsage,
           effect: createEffect.trim(),
-          checked: [false, false, false],
+          source: 'Custom Creator',
+          created_at: new Date().toISOString(),
+          dropdown: null,
+          sub: createTier,
+          table_name: targetTable,
+          slot_weight: (getItemSlotWeight({ rarity: createTier, name: versionedName }) as 1 | 2 | 3 | 4),
         };
-
-        if (existingIndex >= 0) {
-          currentSlots[existingIndex] = newSlot;
-        } else {
-          currentSlots.push(newSlot);
-        }
-
-        const prunedSlots = pruneLesserPowerVersions(currentSlots);
-        const oldApSpent = Math.max(0, oldVersion - 1);
-        const newApSpent = Math.max(0, version - 1);
-        const apDiff = newApSpent - oldApSpent;
-
-        const isUpgrade = existingIndex >= 0;
-        const logAction = isUpgrade ? 'Upgraded Magic Item' : 'Created & Learned Magic Item';
-
-        if (apDiff > 0) {
-          recordApExpenditure(apDiff, 'Magic Items', `${logAction}: ${versionedName} (+${apDiff} AP)`, 1, 'Manage Magic Items');
-        } else if (apDiff < 0) {
-          recordApExpenditure(apDiff, 'Magic Items', `Downgraded Magic Item: ${versionedName} (${apDiff} AP Refunded)`, 1, 'Manage Magic Items');
-        }
+        const currentVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];
 
         return {
           ...prev,
           [customKey]: updatedCustom,
-          [slotKey]: prunedSlots,
+          character_vault: [...currentVault, vaultItem],
         };
       }
     });
@@ -678,7 +719,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setCreateUsage('1');
     setCreateEffect('');
     setIsVersionEditMode(false);
-    setActiveRightTab('CATALOG');
+    setActiveRightTab(type === 'spells' ? 'VAULT' : 'CATALOG');
   };
 
   // Filter catalog items by Category & Deduplication
@@ -874,19 +915,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     </div>
                   )}
 
-                  {type === 'spells' && (
-                    <div className="px-3.5 py-1 bg-pink-950/70 border border-pink-500/40 rounded-full font-mono font-bold text-xs text-pink-200 flex items-center gap-2 shadow-md">
-                      <span>
-                        Magic Items: <strong className="text-pink-300">{slots.length}</strong>; Upgrades:{' '}
-                        <strong className="text-rose-300">{magicItemsApSpent} AP</strong> (v1 Base Free)
-                        ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
-                      </span>
-                    </div>
-                  )}
-
                   <button
                     onClick={handleCloseManageModal}
-                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0"
+                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -895,14 +926,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 {/* 2-COLUMN SPLIT-PANE BODY */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
                   
-                  {/* --- LEFT COLUMN: LEARNED ABILITIES ROSTER --- */}
+                  {/* --- LEFT COLUMN: ACTIVE LOADOUT ONLY --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                     {/* Pane Header */}
                     <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <Flame className={`w-4 h-4 ${type === 'powers' ? 'text-amber-400' : 'text-cyan-400'}`} />
-                        <span className={`text-xs font-outfit font-bold uppercase tracking-wider ${type === 'powers' ? 'text-amber-300' : 'text-cyan-300'}`}>
-                          Learned {type === 'powers' ? 'Powers' : 'Magic Items'}
+                        <Flame className={`w-4 h-4 ${type === 'powers' ? 'text-amber-400' : 'text-pink-400'}`} />
+                        <span className={`text-xs font-outfit font-bold uppercase tracking-wider ${type === 'powers' ? 'text-amber-300' : 'text-pink-300'}`}>
+                          {type === 'powers' ? 'Learned Powers' : '⚡ Active Loadout'}
                         </span>
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
                           {type === 'powers' ? activeDisplaySlots.length : slots.length}
@@ -921,15 +952,40 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </div>
                     </div>
 
-                    {/* Scrollable Learned Abilities List */}
+                    {/* Left Pane Slots Status Pill (Magic Items Mode) */}
+                    {type === 'spells' && (() => {
+                      const maxSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
+                      const usedSlots = calculateTotalLoadoutSlotsUsed(slots, fullCatalog);
+                      const remainingSlots = Math.max(0, maxSlots - usedSlots);
+                      return (
+                        <div className="mt-2.5 px-3 py-1.5 bg-slate-900/90 border border-pink-500/40 rounded-xl text-xs font-mono flex items-center justify-between gap-2 shadow-inner shrink-0">
+                          <span className="text-pink-300 font-bold flex items-center gap-1">⚡ Slots:</span>
+                          <div className="flex items-center gap-2 text-[11px] font-bold">
+                            <span className="text-slate-300">Max <strong className="text-slate-100">{maxSlots}</strong></span>
+                            <span className="text-slate-600">|</span>
+                            <span className="text-amber-300">Used <strong className="text-amber-200">{usedSlots}</strong></span>
+                            <span className="text-slate-600">|</span>
+                            <span className={remainingSlots > 0 ? "text-emerald-400" : "text-rose-400"}>
+                              Remaining <strong className="text-emerald-300">{remainingSlots}</strong>
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Scrollable Active Loadout List */}
                     <div className="flex-1 overflow-y-auto pr-1 mt-2.5 flex flex-col gap-2.5 min-h-0">
                       {filteredRoster.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
                           <Flame className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
                           {leftSearchQuery ? (
-                            <span>No abilities matching "{leftSearchQuery}"</span>
+                            <span>No active items matching "{leftSearchQuery}"</span>
                           ) : (
-                            <span>No {type} learned yet. Select from catalog on the right.</span>
+                            <span>
+                              {type === 'powers'
+                                ? 'No powers learned yet. Select from catalog on the right.'
+                                : 'No active magic items equipped. Select items from Character Vault (Tab 1 on right) to equip.'}
+                            </span>
                           )}
                         </div>
                       ) : (
@@ -944,7 +1000,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               key={item.name + idx}
                               className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
                             >
-                              {/* Header Row: Name, Version, Tier Badge, Action & Usage (Adjacent), Buttons */}
                               <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -962,13 +1017,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
                                         <span>{badge.icon}</span>
                                         <span>{badge.label}</span>
+                                        <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
                                       </span>
                                     );
                                   })()}
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
-                                  {/* Action & Usage side-by-side */}
                                   <div className="flex items-center gap-1">
                                     {actionUpper && (
                                       <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
@@ -994,24 +1049,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   >
                                     <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
                                   </button>
+
                                   <button
-                                    onClick={() => handleLaunchVersionEditor(item)}
-                                    className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors"
-                                    title={`Create version ${version + 1} of ${baseName}`}
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
+                                    type="button"
                                     onClick={() => handleForgetAbility(item.name)}
-                                    className="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0"
-                                    title="Forget ability"
+                                    className="px-2 py-1 bg-pink-950/60 text-pink-300 border border-pink-500/40 hover:bg-pink-900/80 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+                                    title={type === 'spells' ? 'Send item back to Character Vault' : 'Forget power'}
                                   >
-                                    - Forget
+                                    <span>{type === 'spells' ? '➡️ Send to Vault' : '- Forget'}</span>
                                   </button>
                                 </div>
                               </div>
 
-                              {/* Sub-Row: Effect */}
                               <div className="text-xs pt-1">
                                 <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
                                   {item.effect || 'No description'}
@@ -1024,11 +1073,29 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     </div>
                   </div>
 
-                  {/* --- RIGHT COLUMN: STOCK CATALOG & CUSTOM CREATOR PANE --- */}
+                  {/* --- RIGHT COLUMN: 3-TAB INTERFACE (VAULT / CATALOG / CREATOR) --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                     {/* Pane Sub-Tab Header */}
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
                       <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800 w-full">
+                        {type === 'spells' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isVersionEditMode) setIsVersionEditMode(false);
+                              setActiveRightTab('VAULT');
+                            }}
+                            className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                              activeRightTab === 'VAULT'
+                                ? 'bg-pink-600/30 text-pink-200 border border-pink-500/40 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                            📦 Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => {
@@ -1039,7 +1106,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             activeRightTab === 'CATALOG'
                               ? type === 'powers'
                                 ? 'bg-amber-600/30 text-amber-200 border border-amber-500/40 shadow-sm'
-                                : 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
+                                : 'bg-pink-600/30 text-pink-200 border border-pink-500/40 shadow-sm'
                               : 'text-slate-400 hover:text-slate-200'
                           }`}
                         >
@@ -1063,7 +1130,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             activeRightTab === 'CREATOR'
                               ? type === 'powers'
                                 ? 'bg-amber-600/30 text-amber-200 border border-amber-500/40 shadow-sm'
-                                : 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
+                                : 'bg-pink-600/30 text-pink-200 border border-pink-500/40 shadow-sm'
                               : 'text-slate-400 hover:text-slate-200'
                           }`}
                         >
@@ -1079,18 +1146,92 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               activeRightTab === 'EDITOR'
                                 ? type === 'powers'
                                   ? 'bg-amber-600/30 text-amber-200 border border-amber-500/40 shadow-sm'
-                                  : 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
+                                  : 'bg-pink-600/30 text-pink-200 border border-pink-500/40 shadow-sm'
                                 : 'text-slate-400 hover:text-slate-200'
                             }`}
                           >
                             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                            Version Editor (v{versionEditNextVersion})
                           </button>
                         )}
                       </div>
                     </div>
 
-                    {/* TAB 1: STOCK CATALOG VIEW */}
+                    {/* TAB 1: CHARACTER VAULT VIEW (spells mode) */}
+                    {activeRightTab === 'VAULT' && type === 'spells' && (() => {
+                      const vaultList: MagicItem[] = Array.isArray(sheetData.character_vault) ? sheetData.character_vault : [];
+                      const filteredVault = rightSearchQuery.trim()
+                        ? vaultList.filter((v) => (v.name || '').toLowerCase().includes(rightSearchQuery.toLowerCase()) || (v.effect || '').toLowerCase().includes(rightSearchQuery.toLowerCase()))
+                        : vaultList;
+
+                      return (
+                        <div className="flex flex-col gap-2.5 flex-1 min-h-0 mt-2.5">
+                          {/* Search Bar for Vault */}
+                          <div className="shrink-0">
+                            <div className="relative">
+                              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                              <input
+                                type="text"
+                                value={rightSearchQuery}
+                                onChange={(e) => setRightSearchQuery(e.target.value)}
+                                className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-pink-500 w-full"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
+                            {filteredVault.length === 0 ? (
+                              <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
+                                <Sparkles className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
+                                {rightSearchQuery ? (
+                                  <span>No items matching "{rightSearchQuery}" in Character Vault.</span>
+                                ) : (
+                                  <span>Character Vault is empty. Claim items from Stock Catalog (Tab 2) or Loot Generator.</span>
+                                )}
+                              </div>
+                            ) : (
+                              filteredVault.map((item, idx) => {
+                                const weight = getItemSlotWeight(item, fullCatalog);
+                                const badge = getMagicItemTierBadge(item, fullCatalog);
+                                return (
+                                  <div
+                                    key={item.id || item.name + idx}
+                                    className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
+                                  >
+                                    <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
+                                      <div className="flex flex-col gap-1">
+                                        <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
+                                        {badge && (
+                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
+                                            <span>{badge.icon}</span>
+                                            <span>{badge.label}</span>
+                                            <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                                          </span>
+                                        )}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEquipVaultItem(item)}
+                                        className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        Equip ({weight} Slot{weight > 1 ? 's' : ''})
+                                      </button>
+                                    </div>
+                                    <div className="text-xs pt-1">
+                                      <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                                        {item.effect || 'No description'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* TAB 2: STOCK CATALOG VIEW */}
                     {activeRightTab === 'CATALOG' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
                         {/* Category Dropdown (Powers Mode Only) */}
@@ -1293,9 +1434,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       </button>
                                       <button
                                         onClick={() => handleLearnAbility(item)}
-                                        className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 flex items-center gap-1 transition-all shrink-0"
+                                        className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 flex items-center gap-1 transition-all shrink-0 cursor-pointer"
                                       >
-                                        + Learn
+                                        {type === 'spells' ? '+ Add to Vault (0 AP)' : '+ Learn'}
                                       </button>
                                     </div>
                                   </div>
@@ -1423,10 +1564,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
                           <button
                             type="submit"
-                            className="w-full mt-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
+                            className="w-full mt-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
                           >
                             <Plus className="w-4 h-4" />
-                            <span>Save & Learn Custom Ability</span>
+                            <span>{type === 'spells' ? 'Save Custom Item to Vault (0 AP)' : 'Save & Learn Custom Ability'}</span>
                           </button>
                         </form>
                       </div>
@@ -1603,6 +1744,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 mt-0.5 ${badge.style}`}>
                         <span>{badge.icon}</span>
                         <span>{badge.label}</span>
+                        <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
                       </span>
                     );
                   })()}

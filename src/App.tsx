@@ -2,7 +2,8 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { Database, Shield, Activity, BookOpen, Loader2, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { gameApi } from './services/api';
-import { Character, AbilitySlot, TreasureItem, SimpleGearItem } from './types/game';
+import { Character, TreasureItem, SimpleGearItem, MagicItem } from './types/game';
+import { getItemSlotWeight } from './utils/magicSlotSchedule';
 import { useCharacterStore } from './store/useCharacterStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { AdventureLogs } from './components/logs/AdventureLogs';
@@ -254,19 +255,24 @@ export default function App() {
 
       if (isMagic) {
         const m = itemPayload.magicItem || {};
-        const slotObj: AbilitySlot = {
-          select: false,
+        const magicItemObj: MagicItem = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
           name: m.name || itemPayload.title || 'Magic Item',
-          action: (m.action as any) || 'P',
           usage: m.usage || '1-Enc',
+          action: m.action || 'P',
           effect: m.effect || m.description || itemPayload.description || '',
-          checked: [false],
-          version: 1,
+          source: m.source || 'Loot Claim',
+          created_at: new Date().toISOString(),
+          dropdown: m.dropdown || null,
+          sub: m.sub || category || null,
+          table_name: m.table_name || null,
+          category: m.category || category || 'Magic Item',
+          slot_weight: (getItemSlotWeight({ ...m, name: itemPayload.title, category }) as 1 | 2 | 3 | 4),
         };
 
         updateActiveSheetData((prev) => ({
           ...prev,
-          spell_slots: [...(prev.spell_slots || []), slotObj],
+          character_vault: [...(prev.character_vault || []), magicItemObj],
         }));
       } else if (category === 'coins' || itemPayload.coinsSilver || itemPayload.coinsGold) {
         const s = itemPayload.coinsSilver || 0;

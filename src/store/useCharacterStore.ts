@@ -4,6 +4,7 @@
 import { create } from 'zustand';
 import { Character, CharacterSheetData, Power, MagicItem, Skillset } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
+import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 
 interface CharacterStore {
   // State
@@ -178,14 +179,18 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     sessionStorage.setItem('supaflex_last_active_char_id', String(id));
     const found = get().characters.find((c) => c.id === id);
     if (found) {
-      set({ activeCharacter: { ...found } });
+      const migratedFoundSheet = migrateCharacterMagicItemsToVault(found.sheet_data);
+      const migratedFound = { ...found, sheet_data: migratedFoundSheet };
+      set({ activeCharacter: migratedFound });
     }
     try {
       const updated = await gameApi.getCharacterById(id);
       if (updated) {
+        const migratedSheet = migrateCharacterMagicItemsToVault(updated.sheet_data);
+        const migratedChar = { ...updated, sheet_data: migratedSheet };
         set((state) => ({
-          activeCharacter: updated,
-          characters: state.characters.map((c) => (c.id === updated.id ? updated : c)),
+          activeCharacter: migratedChar,
+          characters: state.characters.map((c) => (c.id === updated.id ? migratedChar : c)),
         }));
       }
     } catch (err) {
