@@ -813,11 +813,11 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                         Master Difficulty Scaling
                       </h4>
                       <p className="text-[11px] text-slate-400">
-                        Adjust encounter threat rating (GM Dif: 3 to 30+).
+                        Adjust encounter threat rating.
                       </p>
                     </div>
                   </div>
-                  <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded-full border ${threatBadge.color}`}>
+                  <span className={`text-xs font-mono font-bold px-3 py-1 rounded-full border shrink-0 inline-flex items-center justify-center text-center whitespace-nowrap ${threatBadge.color}`}>
                     {threatBadge.text}
                   </span>
                 </div>
@@ -845,7 +845,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                             : `bg-slate-900 text-slate-300 border-slate-800 ${p.color}`
                         }`}
                       >
-                        {p.label} ({p.val})
+                        {p.label}
                       </button>
                     ))}
                   </div>
@@ -857,10 +857,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                   onBlur={handleSliderBlur}
                 >
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-300">GM Dif Rating</span>
-                    <span className="font-mono text-amber-300 font-extrabold text-sm px-2 py-0.5 rounded bg-slate-800 border border-slate-700">
-                      Dif {masterDif}
-                    </span>
+                    <span className="font-bold text-slate-300">Monster Level</span>
                   </div>
 
                   <input
@@ -875,10 +872,10 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                   />
 
                   <div className="flex justify-between text-[10px] font-mono text-slate-500 px-0.5">
-                    <span>3 (Min)</span>
-                    <span>10 (Base)</span>
-                    <span>18 (Deadly)</span>
-                    <span>30+ (Mythic)</span>
+                    <span>Min</span>
+                    <span>Base</span>
+                    <span>Deadly</span>
+                    <span>Mythic</span>
                   </div>
                 </div>
 
