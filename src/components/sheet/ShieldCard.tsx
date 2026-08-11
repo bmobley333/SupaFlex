@@ -1,6 +1,6 @@
 // src/components/sheet/ShieldCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, X, Check, Plus, Search, Globe, ShieldAlert, Loader2, AlertCircle, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, Check, Plus, Search, ShieldAlert, Loader2, AlertCircle, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -539,33 +539,31 @@ export const ShieldCard: React.FC = () => {
 
                 {/* --- RIGHT COLUMN: STOCK CATALOG & CREATOR PANE --- */}
                 <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
-                    <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800 w-full">
+                    <div className="flex border-b border-slate-800 mb-4 shrink-0">
                       <button
+                        type="button"
                         onClick={() => setActiveRightTab('CATALOG')}
-                        className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
                           activeRightTab === 'CATALOG'
-                            ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
-                            : 'text-slate-400 hover:text-slate-200'
+                            ? 'border-cyan-400 text-cyan-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                        Stock Catalog ({filteredCatalogShields.length})
+                        🌐 Stock Catalog ({filteredCatalogShields.length})
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => setActiveRightTab('CREATOR')}
-                        className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
                           activeRightTab === 'CREATOR'
-                            ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
-                            : 'text-slate-400 hover:text-slate-200'
+                            ? 'border-cyan-400 text-cyan-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        <Plus className="w-3.5 h-3.5 text-cyan-400" />
-                        Custom Creator
+                        ✨ Custom Creator
                       </button>
                     </div>
-                  </div>
 
                   {activeRightTab === 'CATALOG' && (
                     <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">

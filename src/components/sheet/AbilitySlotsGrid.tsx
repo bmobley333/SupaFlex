@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Globe, Flame, Star, RotateCcw, ShoppingCart, CheckCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
@@ -1096,102 +1096,94 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   {/* --- RIGHT COLUMN: 3-TAB INTERFACE (VAULT / CATALOG / CREATOR) --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                     {/* Pane Sub-Tab Header */}
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
-                      <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800 w-full">
-                        {type === 'spells' && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (isVersionEditMode) setIsVersionEditMode(false);
-                              setActiveRightTab('VAULT');
-                            }}
-                            className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                              activeRightTab === 'VAULT'
-                                ? 'bg-pink-600/30 text-pink-200 border border-pink-500/40 shadow-sm'
-                                : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                          >
-                            <Sparkles className="w-3.5 h-3.5 text-pink-400" />
-                            📦 Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
-                          </button>
-                        )}
-
+                    <div className="flex border-b border-slate-800 mb-4 shrink-0">
+                      {type === 'spells' && (
                         <button
                           type="button"
                           onClick={() => {
                             if (isVersionEditMode) setIsVersionEditMode(false);
-                            setActiveRightTab('CATALOG');
+                            setActiveRightTab('VAULT');
                           }}
-                          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'CATALOG'
-                              ? type === 'powers'
-                                ? 'bg-amber-600/30 text-amber-200 border border-amber-500/40 shadow-sm'
-                                : 'bg-pink-600/30 text-pink-200 border border-pink-500/40 shadow-sm'
-                              : 'text-slate-400 hover:text-slate-200'
+                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'VAULT'
+                              ? 'border-cyan-400 text-cyan-400'
+                              : 'border-transparent text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          <Globe className="w-3.5 h-3.5 text-amber-400" />
-                          Stock Catalog ({filteredCatalogAbilities.length})
+                          📦 Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
                         </button>
+                      )}
 
-                        {type === 'spells' && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (isVersionEditMode) setIsVersionEditMode(false);
-                              setActiveRightTab('SLOTS');
-                            }}
-                            className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                              activeRightTab === 'SLOTS'
-                                ? 'bg-pink-600/30 text-pink-200 border border-pink-500/40 shadow-sm'
-                                : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                          >
-                            <ShoppingCart className="w-3.5 h-3.5 text-pink-400" />
-                            🛒 Buy Slots
-                          </button>
-                        )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isVersionEditMode) setIsVersionEditMode(false);
+                          setActiveRightTab('CATALOG');
+                        }}
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          activeRightTab === 'CATALOG'
+                            ? type === 'powers'
+                              ? 'border-amber-400 text-amber-400'
+                              : 'border-pink-400 text-pink-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        🌐 Stock Catalog ({filteredCatalogAbilities.length})
+                      </button>
 
+                      {type === 'spells' && (
                         <button
                           type="button"
                           onClick={() => {
-                            if (isVersionEditMode) {
-                              setIsVersionEditMode(false);
-                              setCreateName('');
-                              setCreateAction('A');
-                              setCreateUsage('1');
-                              setCreateEffect('');
-                            }
-                            setActiveRightTab('CREATOR');
+                            if (isVersionEditMode) setIsVersionEditMode(false);
+                            setActiveRightTab('SLOTS');
                           }}
-                          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'CREATOR'
-                              ? type === 'powers'
-                                ? 'bg-amber-600/30 text-amber-200 border border-amber-500/40 shadow-sm'
-                                : 'bg-pink-600/30 text-pink-200 border border-pink-500/40 shadow-sm'
-                              : 'text-slate-400 hover:text-slate-200'
+                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'SLOTS'
+                              ? 'border-indigo-400 text-indigo-400'
+                              : 'border-transparent text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          <Plus className="w-3.5 h-3.5 text-amber-400" />
-                          Custom Creator
+                          🛒 Buy Slots
                         </button>
+                      )}
 
-                        {isVersionEditMode && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveRightTab('EDITOR')}
-                            className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                              activeRightTab === 'EDITOR'
-                                ? type === 'powers'
-                                  ? 'bg-amber-600/30 text-amber-200 border border-amber-500/40 shadow-sm'
-                                  : 'bg-pink-600/30 text-pink-200 border border-pink-500/40 shadow-sm'
-                                : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                          >
-                            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                          </button>
-                        )}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isVersionEditMode) {
+                            setIsVersionEditMode(false);
+                            setCreateName('');
+                            setCreateAction('A');
+                            setCreateUsage('1');
+                            setCreateEffect('');
+                          }
+                          setActiveRightTab('CREATOR');
+                        }}
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          activeRightTab === 'CREATOR'
+                            ? type === 'powers'
+                              ? 'border-emerald-400 text-emerald-400'
+                              : 'border-purple-400 text-purple-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        ➕ Custom Creator
+                      </button>
+
+                      {isVersionEditMode && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveRightTab('EDITOR')}
+                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'EDITOR'
+                              ? 'border-violet-400 text-violet-400'
+                              : 'border-transparent text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          ✨ Version Editor
+                        </button>
+                      )}
                     </div>
 
                     {/* TAB 1: CHARACTER VAULT VIEW (spells mode) */}

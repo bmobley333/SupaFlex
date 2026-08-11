@@ -3,7 +3,6 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   X,
   Sparkles,
-  Award,
   Gift,
   RotateCcw,
   ChevronDown,
@@ -546,29 +545,29 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
             </div>
 
             {/* Right Pane Navigation Sub-Tabs */}
-            <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-4 shrink-0 overflow-x-auto">
+            <div className="flex border-b border-slate-800 mb-4 shrink-0">
               <button
+                type="button"
                 onClick={() => setActiveTab('CAPSTONES')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                className={`flex-1 py-2 text-xs font-bold font-outfit border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeTab === 'CAPSTONES'
-                    ? 'bg-purple-600 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'border-purple-400 text-purple-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Award className="w-3.5 h-3.5" />
-                Capstones
+                🏆 Capstones
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveTab('GM_BONUS')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold font-outfit transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                className={`flex-1 py-2 text-xs font-bold font-outfit border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeTab === 'GM_BONUS'
-                    ? 'bg-purple-600 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'border-amber-400 text-amber-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Gift className="w-3.5 h-3.5" />
-                GM Bonus
+                🎁 GM Bonus
               </button>
             </div>
 

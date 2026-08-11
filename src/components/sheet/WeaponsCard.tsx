@@ -1,6 +1,6 @@
 // src/components/sheet/WeaponsCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Plus, X, Check, Swords, AlertCircle, Loader2, Search, Globe, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, X, Check, Swords, AlertCircle, Loader2, Search, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import {
@@ -728,32 +728,30 @@ export const WeaponsCard: React.FC = () => {
                   {/* --- RIGHT COLUMN: STOCK CATALOG & CUSTOM CREATOR PANE --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                     {/* Pane Sub-Tab Selector Header */}
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
-                      <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800 w-full">
-                        <button
-                          onClick={() => setActiveRightTab('CATALOG')}
-                          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'CATALOG'
-                              ? 'bg-rose-600/30 text-rose-200 border border-rose-500/40 shadow-sm'
-                              : 'text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          <Globe className="w-3.5 h-3.5 text-rose-400" />
-                          Stock Catalog ({filteredCatalogWeapons.length})
-                        </button>
+                    <div className="flex border-b border-slate-800 mb-4 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveRightTab('CATALOG')}
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          activeRightTab === 'CATALOG'
+                            ? 'border-rose-400 text-rose-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        🌐 Stock Catalog ({filteredCatalogWeapons.length})
+                      </button>
 
-                        <button
-                          onClick={() => setActiveRightTab('CREATOR')}
-                          className={`flex-1 py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'CREATOR'
-                              ? 'bg-rose-600/30 text-rose-200 border border-rose-500/40 shadow-sm'
-                              : 'text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          <Plus className="w-3.5 h-3.5 text-rose-400" />
-                          Custom Creator
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveRightTab('CREATOR')}
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          activeRightTab === 'CREATOR'
+                            ? 'border-amber-400 text-amber-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        ✨ Custom Creator
+                      </button>
                     </div>
 
                     {/* TAB 1: STOCK CATALOG VIEW */}

@@ -436,39 +436,39 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
           {/* Right Pane (md:col-span-5): Construction Tools, Codex Picker & Difficulty System */}
           <div className="md:col-span-5 flex flex-col gap-4 overflow-y-auto pr-1 relative">
             {/* Sticky Tab Navigation Controls (Fixed Top Header across ALL Tabs) */}
-            <div className="sticky top-0 bg-slate-900/95 backdrop-blur-md z-20 pb-2.5 border-b border-slate-800/80 shrink-0 flex items-center gap-1.5 pt-0.5">
+            <div className="sticky top-0 bg-slate-900/95 backdrop-blur-md z-20 border-b border-slate-800 shrink-0 flex items-center mb-4">
               <button
                 type="button"
                 onClick={() => setActiveRightTab('paste_quick')}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeRightTab === 'paste_quick'
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-sm'
-                    : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200'
+                    ? 'border-amber-400 text-amber-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>📋⚡</span> Paste / Quick
+                📋 Paste / Quick
               </button>
               <button
                 type="button"
                 onClick={() => setActiveRightTab('codex')}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeRightTab === 'codex'
-                    ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/50 shadow-sm'
-                    : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200'
+                    ? 'border-indigo-400 text-indigo-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>📚</span> Codex Catalog
+                📚 Codex Catalog
               </button>
               <button
                 type="button"
                 onClick={() => setActiveRightTab('difficulty')}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeRightTab === 'difficulty'
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50 shadow-sm'
-                    : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200'
+                    ? 'border-purple-400 text-purple-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Sliders className="w-3.5 h-3.5 text-purple-400 inline" /> Difficulty
+                🎚️ Difficulty
               </button>
             </div>
 

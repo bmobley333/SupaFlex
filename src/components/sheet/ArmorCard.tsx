@@ -478,9 +478,29 @@ export const ArmorCard: React.FC = () => {
                     </div>
                   </div>
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden">
-                    <div className="flex p-0.5 bg-slate-900 rounded-lg border border-slate-800">
-                      <button onClick={() => setActiveRightTab('CATALOG')} className={`flex-1 py-1 rounded-md text-xs font-bold ${activeRightTab === 'CATALOG' ? 'bg-amber-600/30 text-amber-200' : 'text-slate-400'}`}>Catalog</button>
-                      <button onClick={() => setActiveRightTab('CREATOR')} className={`flex-1 py-1 rounded-md text-xs font-bold ${activeRightTab === 'CREATOR' ? 'bg-amber-600/30 text-amber-200' : 'text-slate-400'}`}>Creator</button>
+                    <div className="flex border-b border-slate-800 mb-4 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveRightTab('CATALOG')}
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          activeRightTab === 'CATALOG'
+                            ? 'border-amber-400 text-amber-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        🌐 Stock Catalog ({filteredCatalogArmor.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveRightTab('CREATOR')}
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          activeRightTab === 'CREATOR'
+                            ? 'border-amber-400 text-amber-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        ✨ Custom Creator
+                      </button>
                     </div>
                     {activeRightTab === 'CATALOG' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">

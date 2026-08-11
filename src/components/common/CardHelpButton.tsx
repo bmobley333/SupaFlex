@@ -280,16 +280,16 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
           </div>
 
           {tabs && (
-            <div className="flex items-center gap-1.5 border-b border-slate-800/80 pb-2 mb-3 sticky top-8 bg-slate-900/90 backdrop-blur-md z-10">
+            <div className="flex border-b border-slate-800 mb-3 sticky top-8 bg-slate-900/90 backdrop-blur-md z-10">
               {tabs.map((tab, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => setActiveTabIdx(idx)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex-1 py-1.5 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
                     activeTabIdx === idx
-                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-transparent'
+                      ? 'border-amber-400 text-amber-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   {tab.label}

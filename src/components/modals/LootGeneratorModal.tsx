@@ -858,29 +858,29 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           <div className="md:col-span-5 flex flex-col h-full space-y-4 overflow-y-auto pr-1">
             
             {/* Position #1: Right Pane Tab Navigation Bar */}
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-2 shrink-0">
+            <div className="flex border-b border-slate-800 mb-4 shrink-0">
               <button
+                type="button"
                 onClick={() => setActiveRightTab('GENERATOR')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeRightTab === 'GENERATOR'
-                    ? 'bg-amber-500 text-slate-950 shadow-md'
-                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    ? 'border-amber-400 text-amber-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>🎲</span>
-                <span>Generator</span>
+                🎲 Generator
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveRightTab('VAULT')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeRightTab === 'VAULT'
-                    ? 'bg-cyan-500 text-slate-950 shadow-md'
-                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    ? 'border-cyan-400 text-cyan-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>📥</span>
-                <span>Party Vault ({partyVault.length})</span>
+                📥 Party Vault ({partyVault.length})
               </button>
             </div>
 

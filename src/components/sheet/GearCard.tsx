@@ -11,7 +11,6 @@ import {
   AlertCircle,
   Loader2,
   Package,
-  Globe,
   Sparkles,
   Star,
 } from 'lucide-react';
@@ -530,32 +529,30 @@ export const GearCard: React.FC = () => {
                   {/* --- RIGHT COLUMN: CATALOG & CREATOR PANE --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                     {/* Pane Sub-Tab Selector Header */}
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
-                      <div className="flex items-center gap-1.5 p-0.5 bg-slate-900 rounded-lg border border-slate-800">
-                        <button
-                          onClick={() => setActiveRightTab('CATALOG')}
-                          className={`px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
-                            activeRightTab === 'CATALOG'
-                              ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
-                              : 'text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                          Stock Catalog ({gearCatalog.length})
-                        </button>
+                    <div className="flex border-b border-slate-800 mb-4 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveRightTab('CATALOG')}
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          activeRightTab === 'CATALOG'
+                            ? 'border-emerald-400 text-emerald-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        🌐 Stock Catalog ({gearCatalog.length})
+                      </button>
 
-                        <button
-                          onClick={() => setActiveRightTab('CUSTOM')}
-                          className={`px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
-                            activeRightTab === 'CUSTOM'
-                              ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm'
-                              : 'text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          <Plus className="w-3.5 h-3.5 text-cyan-400" />
-                          + Custom Gear
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveRightTab('CUSTOM')}
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          activeRightTab === 'CUSTOM'
+                            ? 'border-emerald-400 text-emerald-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        ✨ Custom Creator
+                      </button>
                     </div>
 
                     {/* TAB 1: STOCK CATALOG VIEW */}
