@@ -518,6 +518,21 @@ export const gameApi = {
       };
     }
 
+    // Try RPC fallback (for target player clone permission checks under strict RLS)
+    try {
+      const { data: rpcRows, error: rpcErr } = await supabase.rpc('get_player_cloning_profile', { target_email: cleanEmail });
+      if (!rpcErr && Array.isArray(rpcRows) && rpcRows.length > 0 && rpcRows[0]) {
+        const targetProf = rpcRows[0];
+        return {
+          email: targetProf.email || cleanEmail,
+          allow_cloning: targetProf.allow_cloning ?? true,
+          player_name: targetProf.player_name || '',
+        };
+      }
+    } catch (rpcErr) {
+      console.warn('[gameApi] RPC fallback check failed for:', cleanEmail, rpcErr);
+    }
+
     // Auto-create profile if missing using fail-safe provisioner
     await this.ensurePlayerProfile(cleanEmail, defaultFullName);
 
