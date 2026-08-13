@@ -88,7 +88,7 @@ const parseAbilityVersion = (name: string): { baseName: string; version: number 
 const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; icon: string; style: string; slotsText: string } => {
   if (!itemObj) return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '🗲 1 Slot' };
 
-  let subStr = itemObj.sub || itemObj.table_name || itemObj.category || '';
+  let subStr = itemObj.category || itemObj.rarity || '';
 
   if (!subStr && catalog && catalog.length > 0) {
     const rawName = itemObj.name || itemObj.title || '';
@@ -98,7 +98,7 @@ const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; 
       return cBase === baseName || cleanName(c.name || '').toLowerCase().includes(baseName);
     });
     if (found) {
-      subStr = found.sub || found.table_name || found.category || '';
+      subStr = found.category || found.rarity || '';
     }
   }
 
@@ -511,9 +511,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             effect: item.effect || '',
             source: 'Stock Catalog',
             created_at: new Date().toISOString(),
-            dropdown: item.dropdown || null,
-            sub: item.sub || null,
-            table_name: item.table_name || null,
+            category: (item as any).category || null,
             slot_weight: (getItemSlotWeight(item, fullCatalog) as 1 | 2 | 3 | 4),
           };
           return { ...prev, character_vault: [...currentVault, vaultItem] };
@@ -574,9 +572,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             effect: targetSlot.effect,
             source: 'Unequipped from Loadout',
             created_at: new Date().toISOString(),
-            dropdown: catalogMatch?.dropdown || (targetSlot as any).dropdown || null,
-            sub: catalogMatch?.sub || (targetSlot as any).sub || null,
-            table_name: catalogMatch?.table_name || (targetSlot as any).table_name || null,
+            category: catalogMatch?.category || (targetSlot as any).category || null,
             slot_weight: (getItemSlotWeight(targetSlot, fullCatalog) as 1 | 2 | 3 | 4),
           };
           return { ...prev, [slotKey]: updated, character_vault: [...currentVault, vaultItem] };
@@ -613,9 +609,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         effect: vaultItem.effect || '',
         checked: [false, false, false],
         // Preserve tier metadata for round-trip slot weight resolution
-        sub: vaultItem.sub || null,
-        table_name: vaultItem.table_name || null,
-        dropdown: vaultItem.dropdown || null,
+        category: vaultItem.category || null,
         slot_weight: vaultItem.slot_weight || (getItemSlotWeight(vaultItem, fullCatalog) as 1 | 2 | 3 | 4),
       };
 
@@ -647,9 +641,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       effect: createEffect.trim(),
       source: 'Custom',
       created_at: new Date().toISOString(),
-      dropdown: null,
-      sub: type === 'powers' ? 'class' : createTier,
-      table_name: targetTable,
+      category: type === 'powers' ? undefined : createTier,
     };
 
     updateActiveSheetData((prev) => {
@@ -714,9 +706,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           effect: createEffect.trim(),
           source: 'Custom Creator',
           created_at: new Date().toISOString(),
-          dropdown: null,
-          sub: createTier,
-          table_name: targetTable,
+          category: createTier,
           slot_weight: (getItemSlotWeight({ rarity: createTier, name: versionedName }) as 1 | 2 | 3 | 4),
         };
         const currentVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];

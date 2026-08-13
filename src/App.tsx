@@ -272,9 +272,6 @@ export default function App() {
           effect: m.effect || m.description || itemPayload.description || '',
           source: m.source || 'Loot Claim',
           created_at: new Date().toISOString(),
-          dropdown: m.dropdown || null,
-          sub: m.sub || category || null,
-          table_name: m.table_name || null,
           category: m.category || category || 'Magic Item',
           slot_weight: (getItemSlotWeight({ ...m, name: itemPayload.title, category }) as 1 | 2 | 3 | 4),
         };

@@ -16,10 +16,7 @@ export interface MagicItemLike {
   usage?: string | null;
   action?: string | null;
   rarity?: string | null;
-  sub?: string | null;
   category?: string | null;
-  dropdown?: string | null;
-  table_name?: string | null;
   slot_weight?: number | null;
   [key: string]: any;
 }
@@ -37,7 +34,7 @@ const cleanName = (name: string) => name.replace(/\s*\[[A-Z]+\]$/i, '').trim();
 export const getItemSlotWeight = (item: MagicItemLike, catalog?: MagicItemLike[]): number => {
   if (!item) return 1;
 
-  let itemSub = `${item.rarity || ''} ${item.sub || ''} ${item.table_name || ''} ${item.category || ''} ${item.dropdown || ''}`.trim();
+  let itemSub = `${item.rarity || ''} ${item.category || ''}`.trim();
   let explicitWeight = typeof item.slot_weight === 'number' && item.slot_weight >= 1 && item.slot_weight <= 4 ? item.slot_weight : null;
 
   if (catalog && catalog.length > 0) {
@@ -56,7 +53,7 @@ export const getItemSlotWeight = (item: MagicItemLike, catalog?: MagicItemLike[]
       if (typeof found.slot_weight === 'number' && found.slot_weight >= 1 && found.slot_weight <= 4) {
         explicitWeight = found.slot_weight;
       }
-      const foundSub = `${found.rarity || ''} ${found.sub || ''} ${found.table_name || ''} ${found.category || ''} ${found.dropdown || ''}`.trim();
+      const foundSub = `${found.rarity || ''} ${found.category || ''}`.trim();
       itemSub = `${itemSub} ${foundSub}`.trim();
     }
   }
@@ -253,9 +250,6 @@ export const migrateCharacterMagicItemsToVault = (sheetData: any): any => {
         effect: slot.effect || '',
         source: 'Migrated from Sheet Loadout',
         created_at: new Date().toISOString(),
-        dropdown: null,
-        sub: null,
-        table_name: null,
         slot_weight: (weight as 1 | 2 | 3 | 4),
       });
     }

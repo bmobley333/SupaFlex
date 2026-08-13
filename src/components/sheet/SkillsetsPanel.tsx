@@ -92,9 +92,6 @@ export const SkillsetsPanel: React.FC = () => {
           skills: cs.skills,
           source: cs.source || 'Custom',
           created_at: cs.created_at || new Date().toISOString(),
-          dropdown: null,
-          sub: null,
-          table_name: null,
         });
       }
     });

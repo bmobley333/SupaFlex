@@ -52,24 +52,33 @@ export interface ArmorData {
 export interface SupabaseArmor {
   id?: number;
   name: string;
+  genres?: string[];
   requirement: string;
   ar: string;
   mr: string;
   cost: string;
+  notes?: string;
+  pic?: string;
   created_at?: string;
 }
 
 export interface SupabaseGear {
   id?: number;
   category: string;
+  genres?: string[];
   name: string;
   cost: string;
+  action?: string;
+  usage?: string;
+  notes?: string;
+  pic?: string;
   created_at?: string;
 }
 
 export interface SupabaseMonster {
   id?: number;
   name: string;
+  genres?: string[];
   nish: string;
   mr: string;
   atk_dmg_ftg: string;
@@ -77,6 +86,8 @@ export interface SupabaseMonster {
   vit: string;
   attributes?: string;
   abilities?: string;
+  weapons?: string;
+  armor?: string;
   created_at?: string;
 }
 
@@ -118,10 +129,11 @@ export const getArFromRequirement = (reqStr: string): string => {
 export interface SupabaseShield {
   id?: number;
   name: string;
+  genres?: string[];
   requirement: string;
   max_block: string;
   mr: string;
-  description?: string;
+  notes?: string;
   cost: string;
   created_at?: string;
 }
@@ -171,12 +183,15 @@ export const isRequirementLearnable = (reqStr: string, attributeDice: Record<str
 export interface SupabaseWeapon {
   id?: number;
   name: string;
+  genres?: string[];
   type: string;
   requirement: string;
   atk: string;
   dmg: string;
   max_block: string;
   cost: string;
+  notes?: string;
+  pic?: string;
   created_at?: string;
 }
 
@@ -624,14 +639,11 @@ export interface Character {
 export interface Power {
   id: number;
   name: string;
+  genres?: string[];
   usage: string | null;
   action: string | null;
   effect: string | null;
-  source: string | null;
   created_at: string;
-  dropdown: string | null;
-  sub: string | null;
-  table_name: string | null;
   version?: number;
   base_name?: string;
 }
@@ -655,14 +667,13 @@ export interface VaultItem {
 export interface MagicItem {
   id: number;
   name: string;
+  genres?: string[];
   usage: string | null;
   action: string | null;
   effect: string | null;
-  source: string | null;
+  notes?: string;
+  pic?: string;
   created_at: string;
-  dropdown: string | null;
-  sub: string | null;
-  table_name: string | null;
   category?: string;
   version?: number;
   base_name?: string;
@@ -673,12 +684,10 @@ export interface MagicItem {
 export interface Skillset {
   id: number;
   name: string;
+  genres?: string[];
   skills: string[];
   source: string | null;
   created_at: string;
-  dropdown: string | null;
-  sub: string | null;
-  table_name: string | null;
 }
 
 export interface UserProfile {

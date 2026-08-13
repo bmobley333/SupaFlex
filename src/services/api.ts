@@ -284,7 +284,7 @@ export const gameApi = {
     const { data, error } = await supabase
       .from('armor')
       .select('*')
-      .order('id', { ascending: true });
+      .order('name', { ascending: true });
 
     if (error) {
       console.error('[gameApi] Error fetching armor catalog:', error);
@@ -320,7 +320,7 @@ export const gameApi = {
     const { data, error } = await supabase
       .from('weapons')
       .select('*')
-      .order('id', { ascending: true });
+      .order('name', { ascending: true });
 
     if (error) {
       console.error('[gameApi] Error fetching weapons catalog:', error);
@@ -356,7 +356,7 @@ export const gameApi = {
     const { data, error } = await supabase
       .from('shields')
       .select('*')
-      .order('id', { ascending: true });
+      .order('name', { ascending: true });
 
     if (error) {
       console.error('[gameApi] Error fetching shields catalog:', error);

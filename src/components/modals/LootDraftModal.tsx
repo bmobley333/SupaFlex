@@ -63,7 +63,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
       } else {
         // Fallback: Random item from current tier or general pool
         const matchingTier = stockMagicItems.filter((m) =>
-          ((m as any).category || m.table_name || m.sub || m.name || '').toLowerCase().includes(draftTier.toLowerCase())
+          ((m as any).category || m.name || '').toLowerCase().includes(draftTier.toLowerCase())
         );
         const fallbackPool = matchingTier.length > 0 ? matchingTier : stockMagicItems;
         if (fallbackPool.length > 0) {
@@ -80,7 +80,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
       // 2. SLOT 2: MAGIC ITEM POOL (Random pull from matching tier)
       let slot2Item: any = null;
       const tierItems = stockMagicItems.filter((m) =>
-        ((m as any).category || m.table_name || m.sub || m.name || '').toLowerCase().includes(draftTier.toLowerCase())
+        ((m as any).category || m.name || '').toLowerCase().includes(draftTier.toLowerCase())
       );
 
       const pool2 = tierItems.length > 0 ? tierItems : stockMagicItems;

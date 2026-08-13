@@ -191,20 +191,20 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         const { data: epicData } = await supabase
           .from('magic_items')
           .select('*')
-          .or('sub.ilike.%Epic%,table_name.ilike.%Epic%,sub.ilike.%Artifact%,table_name.ilike.%Artifact%');
+          .or('category.ilike.%Epic%,category.ilike.%Artifact%');
         data = epicData;
       } else {
         const { data: tierData } = await supabase
           .from('magic_items')
           .select('*')
-          .or(`sub.ilike.%${rarity}%,table_name.ilike.%${rarity}%`);
+          .ilike('category', `%${rarity}%`);
         data = tierData;
       }
 
       if (!data || data.length === 0) {
         // In-memory catalog fallback from Zustand store
         const catalogPool = (magicItems || []).filter((m: any) => {
-          const mSub = (m.sub || m.table_name || m.category || '').toLowerCase();
+          const mSub = (m.category || '').toLowerCase();
           return isEpicTier
             ? mSub.includes('epic') || mSub.includes('artifact')
             : mSub.includes(rarity.toLowerCase());
@@ -217,7 +217,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             description: picked.effect || (picked as any).notes || (picked as any).description || `Enchanted ${cleanRarity} magic item.`
           };
         }
-        return { name: `${cleanRarity} Magic Item`, sub: cleanRarity, description: `Mystical ${cleanRarity.toLowerCase()} item of power.` };
+        return { name: `${cleanRarity} Magic Item`, category: cleanRarity, description: `Mystical ${cleanRarity.toLowerCase()} item of power.` };
       }
 
       const picked = data[Math.floor(Math.random() * data.length)];
