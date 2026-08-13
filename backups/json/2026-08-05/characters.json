@@ -1062,7 +1062,7 @@
   },
   {
     "id": 8,
-    "name": "Phantom Tainville",
+    "name": "Martial Artist - Blade Saint",
     "class": "Thief",
     "race": "Human",
     "hp": 28,
@@ -1882,9 +1882,9 @@
       "focus_die_current": "d4",
       "last_vit_roll_level": 19,
       "favorite_power_tables": [
-        "Human (Aethelgard Bloodline)",
+        "Human - Bloodmarked",
         "Trickster Powers",
-        "Phantom Tainville",
+        "Martial Artist - Blade Saint",
         "Dual Wield Power",
         "Luck Powers"
       ],
@@ -2931,7 +2931,7 @@
   },
   {
     "id": 17,
-    "name": "Phantom Tainville",
+    "name": "Martial Artist - Blade Saint",
     "class": "Thief",
     "race": "Human",
     "hp": 28,
@@ -3751,9 +3751,9 @@
       "focus_die_current": "d4",
       "last_vit_roll_level": 19,
       "favorite_power_tables": [
-        "Human (Aethelgard Bloodline)",
+        "Human - Bloodmarked",
         "Trickster Powers",
-        "Phantom Tainville",
+        "Martial Artist - Blade Saint",
         "Dual Wield Power",
         "Luck Powers"
       ],
