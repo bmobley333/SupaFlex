@@ -29,8 +29,10 @@ const ACTION_ORDER: Record<string, number> = {
 const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
 const USAGE_OPTIONS: { value: string; label: string }[] = [
   { value: '1', label: '1' },
-  { value: '1-⚡', label: '1-⚡(Spark)' },
-  { value: '1-🍀', label: '1-🍀(Luck)' },
+  { value: '2', label: '2' },
+  { value: '3', label: '3' },
+  { value: '1-⚡', label: '1-⚡' },
+  { value: '1-🍀', label: '1-🍀' },
   { value: '1-Enc', label: '1-Enc' },
   { value: '2-Enc', label: '2-Enc' },
   { value: '3-Enc', label: '3-Enc' },
@@ -628,8 +630,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     const rawClean = cleanName(createName.trim());
     const { baseName, version } = parseAbilityVersion(rawClean);
     const versionedName = `${baseName} v${version}`;
-    const tierEmoji = createTier === 'Minor' ? '🍺' : createTier === 'Lesser' ? '🪄' : createTier === 'Greater' ? '✨' : '💫';
-    const targetTable = activeTableName || (type === 'powers' ? '📁 Custom Powers' : `📁 ${createTier}${tierEmoji} Custom Magic Items`);
 
     const newItem: Power | MagicItem = {
       id: Date.now(),

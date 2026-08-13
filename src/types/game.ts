@@ -644,6 +644,10 @@ export interface Power {
   action: string | null;
   effect: string | null;
   created_at: string;
+  category?: string;
+  sub?: string;
+  table_name?: string;
+  source?: string;
   version?: number;
   base_name?: string;
 }
@@ -675,6 +679,9 @@ export interface MagicItem {
   pic?: string;
   created_at: string;
   category?: string;
+  sub?: string;
+  table_name?: string;
+  source?: string;
   version?: number;
   base_name?: string;
   slot_weight?: 1 | 2 | 3 | 4;
