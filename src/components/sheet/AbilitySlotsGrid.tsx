@@ -1024,6 +1024,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="font-outfit font-bold text-sm text-slate-100">{baseName}</span>
+                                    {(() => {
+                                      const resolvedNotes =
+                                        item.notes ||
+                                        fullCatalog.find(
+                                          (c) =>
+                                            c.name.toLowerCase() === baseName.toLowerCase() ||
+                                            c.name.toLowerCase() === cleanName(item.name).toLowerCase()
+                                        )?.notes;
+                                      return <ItemNotesPopover notes={resolvedNotes} itemName={baseName} />;
+                                    })()}
                                     {version > 1 && (
                                       <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
                                         v{version}
