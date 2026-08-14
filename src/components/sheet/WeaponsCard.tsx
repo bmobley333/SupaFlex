@@ -195,19 +195,24 @@ export const WeaponsCard: React.FC = () => {
 
   // Group active equipped weapon slots by base weapon name for Left Column pane
   const groupedEquippedWeapons = useMemo(() => {
-    const map = new Map<string, { baseName: string; slots: WeaponSlot[] }>();
+    const map = new Map<string, { baseName: string; slots: WeaponSlot[]; notes?: string }>();
 
     weapons.forEach((slot) => {
       const baseName = getBaseWeaponName(slot.name);
       const key = baseName.toLowerCase();
+      const stockMatch = supabaseWeapons.find((w) => w.name.toLowerCase() === key);
+      const resolvedNotes = slot.notes || stockMatch?.notes;
+
       if (!map.has(key)) {
-        map.set(key, { baseName, slots: [] });
+        map.set(key, { baseName, slots: [], notes: resolvedNotes });
+      } else if (!map.get(key)!.notes && resolvedNotes) {
+        map.get(key)!.notes = resolvedNotes;
       }
       map.get(key)!.slots.push(slot);
     });
 
     return Array.from(map.values()).sort((a, b) => a.baseName.localeCompare(b.baseName));
-  }, [weapons]);
+  }, [weapons, supabaseWeapons]);
 
   // Skilled weapon groups (groups containing at least 1 slot with sk === true)
   const skilledWeaponGroups = useMemo(() => {
@@ -654,7 +659,7 @@ export const WeaponsCard: React.FC = () => {
                               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-outfit font-bold text-sm text-slate-100">{group.baseName}</span>
-                                  <ItemNotesPopover notes={group.slots[0]?.notes} itemName={group.baseName} />
+                                  <ItemNotesPopover notes={group.notes} itemName={group.baseName} />
                                   {rawTypesList.map((t) => {
                                     const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
                                     const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
@@ -1128,7 +1133,11 @@ export const WeaponsCard: React.FC = () => {
                     <span className="font-semibold text-slate-100 text-xs truncate min-w-[100px]" title={item.name}>
                       {item.name}
                     </span>
-                    <ItemNotesPopover notes={item.notes} itemName={item.name} />
+                    {(() => {
+                      const baseName = getBaseWeaponName(item.name);
+                      const resolvedNotes = item.notes || supabaseWeapons.find((w) => w.name.toLowerCase() === baseName.toLowerCase())?.notes;
+                      return <ItemNotesPopover notes={resolvedNotes} itemName={item.name} />;
+                    })()}
                   </div>
 
                   {/* Atk Cell */}

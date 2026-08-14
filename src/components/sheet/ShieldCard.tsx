@@ -501,7 +501,7 @@ export const ShieldCard: React.FC = () => {
                                   <span>{isActive ? 'Active' : 'Equip'}</span>
                                 </button>
                                 <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
-                                <ItemNotesPopover notes={item.notes} itemName={item.name} />
+                                <ItemNotesPopover notes={item.notes || shieldCatalog.find((s) => s.name.toLowerCase() === item.name.toLowerCase())?.notes} itemName={item.name} />
                               </div>
 
                               <div className="flex items-center gap-2 shrink-0">
@@ -812,7 +812,7 @@ export const ShieldCard: React.FC = () => {
             <span className="font-semibold text-slate-100 text-xs truncate min-w-[100px]" title={shield.name}>
               {shield.name}
             </span>
-            <ItemNotesPopover notes={shield.notes} itemName={shield.name} />
+            <ItemNotesPopover notes={shield.notes || shieldCatalog.find((s) => s.name.toLowerCase() === shield.name.toLowerCase())?.notes} itemName={shield.name} />
           </div>
 
           {/* Block Cell (Auto-Updated from Might) */}

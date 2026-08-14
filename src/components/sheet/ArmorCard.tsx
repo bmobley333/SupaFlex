@@ -462,7 +462,7 @@ export const ArmorCard: React.FC = () => {
                               <div className="flex items-center gap-2">
                                 <button type="button" onClick={() => handleSelectActiveArmor(item)} className={`px-2 py-0.5 text-xs font-bold rounded-lg border ${isActive ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50' : 'bg-slate-950 text-slate-400 border-slate-800'}`}>{isActive ? '● Active' : '○ Wear'}</button>
                                 <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
-                                <ItemNotesPopover notes={item.notes} itemName={item.name} />
+                                <ItemNotesPopover notes={item.notes || armorCatalog.find((a) => a.name.toLowerCase() === item.name.toLowerCase())?.notes} itemName={item.name} />
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <button
@@ -683,7 +683,7 @@ export const ArmorCard: React.FC = () => {
           <span className="font-semibold text-slate-100 text-xs truncate min-w-[100px]" title={armor.name}>
             {armor.name}
           </span>
-          <ItemNotesPopover notes={armor.notes} itemName={armor.name} />
+          <ItemNotesPopover notes={armor.notes || armorCatalog.find((a) => a.name.toLowerCase() === armor.name.toLowerCase())?.notes} itemName={armor.name} />
         </div>
 
         {/* Dodge Cell (Auto-Updated from Motion) */}

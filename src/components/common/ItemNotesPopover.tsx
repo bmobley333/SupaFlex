@@ -51,7 +51,11 @@ export const ItemNotesPopover: React.FC<ItemNotesPopoverProps> = ({
   };
 
   const handleToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
+    if (e.nativeEvent) {
+      e.nativeEvent.stopImmediatePropagation();
+    }
     if (!isOpen) {
       updatePosition();
     }
@@ -85,16 +89,16 @@ export const ItemNotesPopover: React.FC<ItemNotesPopoverProps> = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside, true);
+    document.addEventListener('touchstart', handleClickOutside, true);
+    document.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('resize', handleScrollOrResize);
     window.addEventListener('scroll', handleScrollOrResize, true);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('touchstart', handleClickOutside, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('resize', handleScrollOrResize);
       window.removeEventListener('scroll', handleScrollOrResize, true);
     };
@@ -112,7 +116,15 @@ export const ItemNotesPopover: React.FC<ItemNotesPopoverProps> = ({
         top: `${coords.top}px`,
         left: `${coords.left}px`,
       }}
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.nativeEvent) e.nativeEvent.stopImmediatePropagation();
+      }}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        if (e.nativeEvent) e.nativeEvent.stopImmediatePropagation();
+      }}
       className="w-72 p-3 bg-slate-950/95 border border-indigo-500/60 rounded-xl shadow-2xl backdrop-blur-md z-[9999] text-xs text-slate-200 animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
     >
       {/* Popover Header */}
@@ -123,11 +135,13 @@ export const ItemNotesPopover: React.FC<ItemNotesPopoverProps> = ({
         <button
           type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
+            if (e.nativeEvent) e.nativeEvent.stopImmediatePropagation();
             setIsOpen(false);
           }}
           className="text-slate-400 hover:text-white p-0.5 rounded transition cursor-pointer"
-          title="Close"
+          title="Close Notes"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -146,6 +160,10 @@ export const ItemNotesPopover: React.FC<ItemNotesPopoverProps> = ({
         ref={triggerRef}
         type="button"
         onClick={handleToggle}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          if (e.nativeEvent) e.nativeEvent.stopImmediatePropagation();
+        }}
         className="p-0.5 text-xs select-none transition-transform hover:scale-125 cursor-pointer focus:outline-none inline-flex items-center justify-center shrink-0"
         title={`View notes for ${itemName}`}
         aria-label={`View notes for ${itemName}`}

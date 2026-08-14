@@ -1231,7 +1231,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       <div className="flex flex-col gap-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                           <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
-                                          <ItemNotesPopover notes={item.notes} itemName={item.name} />
+                                          <ItemNotesPopover notes={item.notes || fullCatalog.find((c) => c.name.toLowerCase() === cleanName(item.name).toLowerCase())?.notes} itemName={item.name} />
                                         </div>
                                         {badge && (
                                           <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
@@ -1909,7 +1909,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
                       {baseName}
                     </span>
-                    <ItemNotesPopover notes={slot.notes} itemName={baseName} />
+                    <ItemNotesPopover notes={slot.notes || fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase())?.notes} itemName={baseName} />
                   </div>
                   {version > 1 && (
                     <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">

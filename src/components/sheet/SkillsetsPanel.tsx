@@ -930,7 +930,7 @@ export const SkillsetsPanel: React.FC = () => {
                                       <span className="font-outfit font-bold text-xs text-slate-100 truncate">
                                         {ks.name}
                                       </span>
-                                      <ItemNotesPopover notes={ks.notes} itemName={ks.name} />
+                                      <ItemNotesPopover notes={ks.notes || effectiveSkillsets.find((s) => s.name.toLowerCase() === ks.name.toLowerCase())?.notes} itemName={ks.name} />
                                       {isCustom && (
                                         <span className="text-[9px] font-mono font-bold bg-purple-900/80 text-purple-200 px-1.5 py-0.2 rounded border border-purple-500/40 shrink-0">
                                           Custom

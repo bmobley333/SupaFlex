@@ -489,7 +489,7 @@ export const GearCard: React.FC = () => {
                                   <span className="text-xs font-semibold text-slate-100 truncate">
                                     {item.name}
                                   </span>
-                                  <ItemNotesPopover notes={item.notes} itemName={item.name} />
+                                  <ItemNotesPopover notes={item.notes || gearCatalog.find((g) => g.name.toLowerCase() === item.name.toLowerCase())?.notes} itemName={item.name} />
                                 </div>
                                 {(item.category || item.cost) && (
                                   <div className="flex items-center gap-1.5 text-[10px]">
