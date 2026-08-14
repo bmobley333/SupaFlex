@@ -497,7 +497,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
             </h2>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
               {currentEmail
-                ? 'Manage your character vault, active party sessions, and clone characters.'
+                ? 'Manage your character vault, game genre, active party sessions, and clone characters.'
                 : '🔒 Please sign in or create an account to access your character sheet.'}
             </p>
           </div>
@@ -814,11 +814,17 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 👤 Account
               </button>
               <button
-                onClick={() => setRightSubTab('genre')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
-                  rightSubTab === 'genre'
-                    ? 'border-cyan-400 text-cyan-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                onClick={() => {
+                  if (currentEmail) setRightSubTab('genre');
+                }}
+                disabled={!currentEmail}
+                title={!currentEmail ? 'Sign in required to configure genre filter' : 'Configure Genre Filter'}
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                  !currentEmail
+                    ? 'opacity-40 cursor-not-allowed border-transparent text-slate-500'
+                    : rightSubTab === 'genre'
+                    ? 'border-cyan-400 text-cyan-400 cursor-pointer'
+                    : 'border-transparent text-slate-400 hover:text-slate-200 cursor-pointer'
                 }`}
               >
                 🌐 Genre
@@ -1001,41 +1007,14 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                   <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3 shadow-md">
                     <div className="flex items-center gap-1.5">
                       <label className="text-xs font-bold text-slate-200 block uppercase tracking-wider font-outfit">
-                        🌐 Campaign & Catalog Genre Scope
+                        🌐 Campaign & Catalog Filter
                       </label>
                       <InfoTooltip text="Filters all stock item catalogs (Weapons, Armor, Shields, Gear, Powers, Magic Items, Skillsets, Bestiary) across the gaming suite." />
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Select the active campaign setting genre to scope all stock catalogs and inventory managers.
-                    </p>
 
                     <div className="pt-1">
                       <GenrePillSwitch size="md" />
                     </div>
-                  </div>
-
-                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80 space-y-2.5 text-xs text-slate-300">
-                    <div className="font-bold text-amber-400 text-xs flex items-center gap-1.5 uppercase tracking-wide">
-                      <span>ℹ️</span> Active Filter Information
-                    </div>
-                    <ul className="space-y-2 list-none text-slate-400 leading-relaxed text-[11px]">
-                      <li className="flex items-start gap-2">
-                        <span className="shrink-0 text-sm">🏰</span>
-                        <span><strong className="text-slate-200">Medieval:</strong> Limits stock catalogs to archaic blades, shields, magic items, and fantasy creatures.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="shrink-0 text-sm">⚙️</span>
-                        <span><strong className="text-slate-200">Modern:</strong> Limits stock catalogs to contemporary firearms, tactical gear, and modern equipment.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="shrink-0 text-sm">🚀</span>
-                        <span><strong className="text-slate-200">SciFi:</strong> Limits stock catalogs to futuristic energy weapons, anti-grav tech, and bio-armors.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="shrink-0 text-sm">🌌</span>
-                        <span><strong className="text-slate-200">All:</strong> Displays all items across all genres without filtering.</span>
-                      </li>
-                    </ul>
                   </div>
                 </div>
               )}
