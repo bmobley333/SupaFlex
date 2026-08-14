@@ -267,6 +267,7 @@ export const GearCard: React.FC = () => {
           name: stockItem.name,
           category: stockItem.category,
           cost: stockItem.cost,
+          notes: stockItem.notes,
         };
         return { ...prev, simple_gear: [...currentList, newItem] };
       }

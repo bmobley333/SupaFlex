@@ -178,6 +178,7 @@ export const ShieldCard: React.FC = () => {
       requirement: item.requirement,
       mr_adjustment: item.mr,
       cost: item.cost,
+      notes: item.notes,
     };
     updateActiveSheetData((prev) => {
       const existingArmory = prev.armory || armory;
@@ -806,15 +807,11 @@ export const ShieldCard: React.FC = () => {
             </button>
           </div>
 
-          {/* Name Text Input (Read-Only) + Notes Popover */}
-          <div className="flex items-center gap-1.5 flex-1 min-w-[130px] max-w-[240px]">
-            <input
-              type="text"
-              value={shield.name}
-              readOnly
-              className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none w-full cursor-default truncate"
-              title="Shield name set via Manage Shields modal"
-            />
+          {/* Shield Name (Unboxed Clean Text) + Notes Popover */}
+          <div className="flex items-center gap-1.5 flex-1 min-w-[130px] pr-1">
+            <span className="font-semibold text-slate-100 text-xs truncate min-w-[100px]" title={shield.name}>
+              {shield.name}
+            </span>
             <ItemNotesPopover notes={shield.notes} itemName={shield.name} />
           </div>
 

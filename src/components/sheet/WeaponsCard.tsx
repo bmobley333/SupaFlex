@@ -239,6 +239,7 @@ export const WeaponsCard: React.FC = () => {
         dmg: String(calculatedDmg),
         max_blk: cleanBlockNum,
         effect: `${variant.variantType} Weapon (Req ${variant.requirementStr}, Cost ${variant.cost})`,
+        notes: weapon.notes,
       };
     });
 
@@ -1122,15 +1123,11 @@ export const WeaponsCard: React.FC = () => {
                     {catKey === 'M' ? 'Melee' : catKey === 'H' ? 'Hurled' : 'Shot'}
                   </div>
 
-                  {/* Weapon Name Input (Read-Only) + Notes Popover */}
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <input
-                      type="text"
-                      value={item.name}
-                      readOnly
-                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-800 outline-none w-full min-w-[120px] max-w-[240px] cursor-default truncate"
-                      title="Weapon name set via Manage Weapons modal"
-                    />
+                  {/* Weapon Name (Unboxed Clean Text) + Notes Popover */}
+                  <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                    <span className="font-semibold text-slate-100 text-xs truncate min-w-[100px]" title={item.name}>
+                      {item.name}
+                    </span>
                     <ItemNotesPopover notes={item.notes} itemName={item.name} />
                   </div>
 

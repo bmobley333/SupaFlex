@@ -473,6 +473,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           action: (item.action?.toUpperCase() as any) || 'A',
           usage: item.usage || '1-Enc',
           effect: item.effect || '',
+          notes: item.notes,
           checked: [false, false, false],
         };
 
@@ -514,6 +515,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             action: item.action || 'P',
             usage: item.usage || '1-Enc',
             effect: item.effect || '',
+            notes: item.notes,
             source: 'Stock Catalog',
             created_at: new Date().toISOString(),
             category: (item as any).category || null,
@@ -1229,7 +1231,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       <div className="flex flex-col gap-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                           <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
-                                          <ItemNotesPopover notes={item.notes || item.effect} itemName={item.name} />
+                                          <ItemNotesPopover notes={item.notes} itemName={item.name} />
                                         </div>
                                         {badge && (
                                           <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
@@ -1553,7 +1555,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     <div className="flex flex-col gap-1">
                                       <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="font-bold text-sm text-slate-100">{baseName}</span>
-                                        <ItemNotesPopover notes={item.notes || item.effect} itemName={baseName} />
+                                        <ItemNotesPopover notes={item.notes} itemName={baseName} />
                                         {version > 1 && (
                                           <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
                                             v{version}
@@ -1907,7 +1909,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
                       {baseName}
                     </span>
-                    <ItemNotesPopover notes={slot.notes || slot.effect} itemName={baseName} />
+                    <ItemNotesPopover notes={slot.notes} itemName={baseName} />
                   </div>
                   {version > 1 && (
                     <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
