@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { gameApi } from '../../services/api';
 import { SimpleGearItem, SupabaseGear } from '../../types/game';
 
@@ -483,9 +484,12 @@ export const GearCard: React.FC = () => {
                                 className="w-11 bg-slate-950 text-cyan-300 text-xs font-mono font-extrabold px-1 py-1 rounded border border-slate-800 text-center outline-none focus:border-cyan-500 shrink-0"
                               />
                               <div className="flex flex-col min-w-0 flex-1">
-                                <span className="text-xs font-semibold text-slate-100 truncate">
-                                  {item.name}
-                                </span>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="text-xs font-semibold text-slate-100 truncate">
+                                    {item.name}
+                                  </span>
+                                  <ItemNotesPopover notes={item.notes} itemName={item.name} />
+                                </div>
                                 {(item.category || item.cost) && (
                                   <div className="flex items-center gap-1.5 text-[10px]">
                                     {item.category && (
@@ -615,6 +619,7 @@ export const GearCard: React.FC = () => {
                                       <span className="text-xs font-semibold text-slate-100 truncate">
                                         {item.name}
                                       </span>
+                                      <ItemNotesPopover notes={item.notes} itemName={item.name} />
                                       {inInventory && (
                                         <span className="text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 px-1.5 py-0.2 rounded border border-cyan-500/40">
                                           {inInventory.qty}x

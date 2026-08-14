@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Info, Trash2, Plus, Search, FileText, Skull, Check, Sliders } from 'lucide-react';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { supabase } from '../../lib/supabase';
 import { SupabaseMonster } from '../../types/game';
 import {
@@ -766,7 +767,10 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                             className="flex items-center justify-between p-3 bg-slate-900/90 rounded-xl border border-slate-800/80 text-xs hover:border-indigo-500/50 transition-all"
                           >
                             <div className="truncate pr-2">
-                              <span className="font-bold text-amber-300 font-outfit">{scaledSm.name}</span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-amber-300 font-outfit">{scaledSm.name}</span>
+                                <ItemNotesPopover notes={scaledSm.notes || scaledSm.abilities} itemName={scaledSm.name} />
+                              </div>
                               <span className="text-[11px] text-slate-400 font-mono flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-0.5">
                                 <span>🚩 {extractFirstInt(scaledSm.nish, 10)}</span>
                                 <span>⚔️ {(scaledSm.atk_dmg_ftg || '10/5').replace(/[⚔️⚔]/g, '').trim()}</span>

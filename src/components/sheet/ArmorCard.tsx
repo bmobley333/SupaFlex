@@ -5,6 +5,7 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import {
   ArmorData,
   MovementRateData,
@@ -457,7 +458,11 @@ export const ArmorCard: React.FC = () => {
                         return (
                           <div key={item.id} className={`p-3 rounded-xl border flex flex-col gap-2 ${isActive ? 'bg-amber-950/40 border-amber-500/60' : 'bg-slate-900/90 border-slate-800'}`}>
                             <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                              <div className="flex items-center gap-2"><button type="button" onClick={() => handleSelectActiveArmor(item)} className={`px-2 py-0.5 text-xs font-bold rounded-lg border ${isActive ? 'bg-emerald-600/30 text-emerald-200' : 'bg-slate-950 text-slate-400'}`}>{isActive ? '● Active' : '○ Wear'}</button><span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span></div>
+                              <div className="flex items-center gap-2">
+                                <button type="button" onClick={() => handleSelectActiveArmor(item)} className={`px-2 py-0.5 text-xs font-bold rounded-lg border ${isActive ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50' : 'bg-slate-950 text-slate-400 border-slate-800'}`}>{isActive ? '● Active' : '○ Wear'}</button>
+                                <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
+                                <ItemNotesPopover notes={item.notes} itemName={item.name} />
+                              </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <button
                                   type="button"
@@ -550,6 +555,7 @@ export const ArmorCard: React.FC = () => {
                                   <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span className="font-bold text-sm text-slate-100">{item.name}</span>
+                                      <ItemNotesPopover notes={item.notes} itemName={item.name} />
                                       <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
                                         {item.cost}
                                       </span>
@@ -671,14 +677,17 @@ export const ArmorCard: React.FC = () => {
           </button>
         </div>
 
-        {/* Armor Name Input (Read-Only) */}
-        <input
-          type="text"
-          value={armor.name}
-          readOnly
-          className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none flex-1 min-w-[130px] max-w-[240px] cursor-default truncate"
-          title="Armor name set via Manage Armor modal"
-        />
+        {/* Armor Name Input (Read-Only) + Notes Popover */}
+        <div className="flex items-center gap-1.5 flex-1 min-w-[130px] max-w-[240px]">
+          <input
+            type="text"
+            value={armor.name}
+            readOnly
+            className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none w-full cursor-default truncate"
+            title="Armor name set via Manage Armor modal"
+          />
+          <ItemNotesPopover notes={armor.notes} itemName={armor.name} />
+        </div>
 
         {/* Dodge Cell (Auto-Updated from Motion) */}
         <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">

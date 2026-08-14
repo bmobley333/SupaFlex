@@ -13,6 +13,7 @@ export interface AbilitySlot {
   checked: boolean[];
   version?: number;
   base_name?: string;
+  notes?: string;
 }
 
 export interface EquipmentSlot {
@@ -34,6 +35,7 @@ export interface WeaponSlot {
   dmg: string;
   max_blk: string;
   effect?: string;
+  notes?: string;
 }
 
 export interface ArmorData {
@@ -47,6 +49,7 @@ export interface ArmorData {
   mr?: string;
   cost?: string;
   effect?: string;
+  notes?: string;
 }
 
 export interface SupabaseArmor {
@@ -86,6 +89,7 @@ export interface SupabaseMonster {
   vit: string;
   attributes?: string;
   abilities?: string;
+  notes?: string;
   weapons?: string;
   armor?: string;
   created_at?: string;
@@ -290,6 +294,7 @@ export interface ShieldData {
   cost?: string;
   effect?: string;
   mr_adjustment?: string;
+  notes?: string;
 }
 
 export interface MovementRateData {
@@ -312,6 +317,7 @@ export interface SimpleGearItem {
   name: string;
   category?: string;
   cost?: string;
+  notes?: string;
 }
 
 export interface ApLogEntry {
@@ -643,6 +649,7 @@ export interface Power {
   usage: string | null;
   action: string | null;
   effect: string | null;
+  notes?: string;
   created_at: string;
   category?: string;
   sub?: string;
@@ -695,6 +702,7 @@ export interface Skillset {
   genres?: string[];
   skills: string[];
   source: string | null;
+  notes?: string;
   created_at: string;
 }
 

@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Flame, 
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
 import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed, getApCostForNextSlot, getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
 
@@ -1226,7 +1227,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   >
                                     <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
                                       <div className="flex flex-col gap-1">
-                                        <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
+                                          <ItemNotesPopover notes={item.notes || item.effect} itemName={item.name} />
+                                        </div>
                                         {badge && (
                                           <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
                                             <span>{badge.icon}</span>
@@ -1549,6 +1553,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     <div className="flex flex-col gap-1">
                                       <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="font-bold text-sm text-slate-100">{baseName}</span>
+                                        <ItemNotesPopover notes={item.notes || item.effect} itemName={baseName} />
                                         {version > 1 && (
                                           <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
                                             v{version}
@@ -1898,9 +1903,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
               >
                 {/* 1. Name Column with Version Badge */}
                 <div className="w-36 sm:w-44 shrink-0 flex flex-col gap-0.5">
-                  <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
-                    {baseName}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
+                      {baseName}
+                    </span>
+                    <ItemNotesPopover notes={slot.notes || slot.effect} itemName={baseName} />
+                  </div>
                   {version > 1 && (
                     <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
                       <Sparkles className="w-2.5 h-2.5 text-indigo-400" />

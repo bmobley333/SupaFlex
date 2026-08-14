@@ -5,6 +5,7 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import {
   ShieldData,
   SupabaseShield,
@@ -499,6 +500,7 @@ export const ShieldCard: React.FC = () => {
                                   <span>{isActive ? 'Active' : 'Equip'}</span>
                                 </button>
                                 <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
+                                <ItemNotesPopover notes={item.notes} itemName={item.name} />
                               </div>
 
                               <div className="flex items-center gap-2 shrink-0">
@@ -614,6 +616,7 @@ export const ShieldCard: React.FC = () => {
                                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-bold text-sm text-slate-100">{item.name}</span>
+                                    <ItemNotesPopover notes={item.notes} itemName={item.name} />
                                     <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
                                       {item.cost}
                                     </span>
@@ -803,14 +806,17 @@ export const ShieldCard: React.FC = () => {
             </button>
           </div>
 
-          {/* Name Text Input (Read-Only) */}
-          <input
-            type="text"
-            value={shield.name}
-            readOnly
-            className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none flex-1 min-w-[130px] max-w-[240px] cursor-default truncate"
-            title="Shield name set via Manage Shields modal"
-          />
+          {/* Name Text Input (Read-Only) + Notes Popover */}
+          <div className="flex items-center gap-1.5 flex-1 min-w-[130px] max-w-[240px]">
+            <input
+              type="text"
+              value={shield.name}
+              readOnly
+              className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-800 outline-none w-full cursor-default truncate"
+              title="Shield name set via Manage Shields modal"
+            />
+            <ItemNotesPopover notes={shield.notes} itemName={shield.name} />
+          </div>
 
           {/* Block Cell (Auto-Updated from Might) */}
           <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">

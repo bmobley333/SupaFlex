@@ -14,6 +14,7 @@ import {
 } from '../../types/game';
 
 import { CardHelpButton } from '../common/CardHelpButton';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 
 const DIE_SCALE = [4, 6, 8, 10, 12];
 const REQ_NUMBERS = [4, 6, 8, 10, 12];
@@ -652,6 +653,7 @@ export const WeaponsCard: React.FC = () => {
                               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-outfit font-bold text-sm text-slate-100">{group.baseName}</span>
+                                  <ItemNotesPopover notes={group.slots[0]?.notes} itemName={group.baseName} />
                                   {rawTypesList.map((t) => {
                                     const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
                                     const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
@@ -819,6 +821,7 @@ export const WeaponsCard: React.FC = () => {
                                   <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span className="font-bold text-sm text-slate-100">{weapon.name}</span>
+                                      <ItemNotesPopover notes={weapon.notes} itemName={weapon.name} />
                                       {rawTypesList.map((t) => {
                                         const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
                                         const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
@@ -1119,14 +1122,17 @@ export const WeaponsCard: React.FC = () => {
                     {catKey === 'M' ? 'Melee' : catKey === 'H' ? 'Hurled' : 'Shot'}
                   </div>
 
-                  {/* Weapon Name Input (Read-Only) */}
-                  <input
-                    type="text"
-                    value={item.name}
-                    readOnly
-                    className="bg-slate-900 text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-800 outline-none w-full min-w-[120px] max-w-[240px] cursor-default truncate"
-                    title="Weapon name set via Manage Weapons modal"
-                  />
+                  {/* Weapon Name Input (Read-Only) + Notes Popover */}
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <input
+                      type="text"
+                      value={item.name}
+                      readOnly
+                      className="bg-slate-900 text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-800 outline-none w-full min-w-[120px] max-w-[240px] cursor-default truncate"
+                      title="Weapon name set via Manage Weapons modal"
+                    />
+                    <ItemNotesPopover notes={item.notes} itemName={item.name} />
+                  </div>
 
                   {/* Atk Cell */}
                   <div

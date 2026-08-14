@@ -2,6 +2,7 @@
 // GM Monster Card - Single-line high-density layout with full combat specs, alphabetical attributes, & private GM notes.
 
 import React from 'react';
+import { ItemNotesPopover } from './ItemNotesPopover';
 
 export interface MonsterData {
   id: string | number;
@@ -58,8 +59,9 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
     <div className="bg-slate-900/90 border border-amber-500/30 hover:border-amber-500/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono shadow-sm flex flex-wrap items-center justify-between gap-x-3 gap-y-1 transition-all">
       {/* Main Content: Name, Combat Specs, and Alphabetical System Attributes */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 flex-1 min-w-0">
-        <span className="font-bold text-amber-300 text-xs shrink-0">
-          {countPrefix}{monster.name}{equipStr}
+        <span className="font-bold text-amber-300 text-xs shrink-0 flex items-center gap-1">
+          <span>{countPrefix}{monster.name}{equipStr}</span>
+          <ItemNotesPopover notes={monster.gm_notes} itemName={monster.name} />
         </span>
 
         {/* Combat Metrics */}

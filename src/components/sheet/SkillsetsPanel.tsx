@@ -5,6 +5,7 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
 import { CardHelpButton } from '../common/CardHelpButton';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { supabase } from '../../lib/supabase';
 
 interface DerivedSkill {
@@ -929,6 +930,7 @@ export const SkillsetsPanel: React.FC = () => {
                                       <span className="font-outfit font-bold text-xs text-slate-100 truncate">
                                         {ks.name}
                                       </span>
+                                      <ItemNotesPopover notes={ks.notes} itemName={ks.name} />
                                       {isCustom && (
                                         <span className="text-[9px] font-mono font-bold bg-purple-900/80 text-purple-200 px-1.5 py-0.2 rounded border border-purple-500/40 shrink-0">
                                           Custom
