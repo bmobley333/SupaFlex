@@ -646,6 +646,7 @@ export interface Power {
   created_at: string;
   category?: string;
   sub?: string;
+  table?: string;
   table_name?: string;
   source?: string;
   version?: number;

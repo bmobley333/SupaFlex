@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Info, Trash2, Plus, Search, FileText, Skull, Check, Sliders } from 'lucide-react';
+import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { supabase } from '../../lib/supabase';
 import { SupabaseMonster } from '../../types/game';
 import {
@@ -71,6 +72,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   onSaveMonsters,
   partyName,
 }) => {
+  const activeGenre = useGenreStore((state) => state.activeGenre);
   // Master Difficulty State (Standard base = 10, range 3..30+)
   const [masterDif, setMasterDif] = useState<number>(10);
   const [applyDifOnParse, setApplyDifOnParse] = useState<boolean>(true);
@@ -754,7 +756,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                 ) : (
                   <div className="max-h-[560px] overflow-y-auto space-y-2 pr-1">
                     {supabaseMonsters
-                      .filter((m) => !codexSearch || m.name?.toLowerCase().includes(codexSearch.toLowerCase()))
+                      .filter((m) => matchesGenre(m.genres, activeGenre) && (!codexSearch || m.name?.toLowerCase().includes(codexSearch.toLowerCase())))
                       .map((sm) => {
                         const scaledSm = masterDif !== 10 && applyDifOnParse ? scaleSupabaseMonster(sm, masterDif) : sm;
                         const isAdded = !!addedCodexIds[sm.id || sm.name];

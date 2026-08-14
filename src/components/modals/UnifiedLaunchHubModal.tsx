@@ -5,6 +5,7 @@ import { gameApi } from '../../services/api';
 import { Character, Party, PartySessionMember } from '../../types/game';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { RoleToggleSwitch } from '../common/RoleToggleSwitch';
+import { GenrePillSwitch } from '../common/GenrePillSwitch';
 import { InfoTooltip } from '../common/InfoTooltip';
 import { sanitizeRoomCodeInput, isValidRoomCodeFormat } from '../../utils/roomId';
 
@@ -21,7 +22,7 @@ interface UnifiedLaunchHubModalProps {
   onLogout: () => void;
   onCharacterCloned: (clonedChar: Character) => void;
   onRefreshCharacters?: () => void;
-  initialTab?: 'account' | 'inspect' | 'party';
+  initialTab?: 'account' | 'genre' | 'inspect' | 'party';
 }
 
 export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
@@ -41,7 +42,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 }) => {
   const activeRole = useCharacterStore((state) => state.activeRole);
   const setActiveRole = useCharacterStore((state) => state.setActiveRole);
-  const [rightSubTab, setRightSubTab] = useState<'account' | 'inspect' | 'party'>(initialTab);
+  const [rightSubTab, setRightSubTab] = useState<'account' | 'genre' | 'inspect' | 'party'>(initialTab);
 
   // Create Hero State
   const [isCreatingHero, setIsCreatingHero] = useState(false);
@@ -492,7 +493,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
         <div className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-6 py-4 flex items-start justify-between shrink-0 gap-4">
           <div className="min-w-0 flex-1 pr-2">
             <h2 className="text-xl font-extrabold text-amber-400 flex items-center gap-2 font-outfit tracking-wide">
-              <span>🌌</span> Character & Party Selector
+              <span>🌌</span> Character, Genre & Party Selector
             </h2>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
               {currentEmail
@@ -812,6 +813,16 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
               >
                 👤 Account
               </button>
+              <button
+                onClick={() => setRightSubTab('genre')}
+                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
+                  rightSubTab === 'genre'
+                    ? 'border-cyan-400 text-cyan-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🌐 Genre
+              </button>
               {activeRole !== 'gm' && (
                 <button
                   onClick={() => {
@@ -981,6 +992,51 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* SUB-TAB: GENRE FILTERING */}
+              {rightSubTab === 'genre' && (
+                <div className="space-y-4">
+                  <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3 shadow-md">
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs font-bold text-slate-200 block uppercase tracking-wider font-outfit">
+                        🌐 Campaign & Catalog Genre Scope
+                      </label>
+                      <InfoTooltip text="Filters all stock item catalogs (Weapons, Armor, Shields, Gear, Powers, Magic Items, Skillsets, Bestiary) across the gaming suite." />
+                    </div>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Select the active campaign setting genre to scope all stock catalogs and inventory managers.
+                    </p>
+
+                    <div className="pt-1">
+                      <GenrePillSwitch size="md" />
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80 space-y-2.5 text-xs text-slate-300">
+                    <div className="font-bold text-amber-400 text-xs flex items-center gap-1.5 uppercase tracking-wide">
+                      <span>ℹ️</span> Active Filter Information
+                    </div>
+                    <ul className="space-y-2 list-none text-slate-400 leading-relaxed text-[11px]">
+                      <li className="flex items-start gap-2">
+                        <span className="shrink-0 text-sm">🏰</span>
+                        <span><strong className="text-slate-200">Medieval:</strong> Limits stock catalogs to archaic blades, shields, magic items, and fantasy creatures.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="shrink-0 text-sm">⚙️</span>
+                        <span><strong className="text-slate-200">Modern:</strong> Limits stock catalogs to contemporary firearms, tactical gear, and modern equipment.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="shrink-0 text-sm">🚀</span>
+                        <span><strong className="text-slate-200">SciFi:</strong> Limits stock catalogs to futuristic energy weapons, anti-grav tech, and bio-armors.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="shrink-0 text-sm">🌌</span>
+                        <span><strong className="text-slate-200">All:</strong> Displays all items across all genres without filtering.</span>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               )}
 

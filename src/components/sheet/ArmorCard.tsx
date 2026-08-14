@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ChevronDown, ChevronUp, X, Check, Shirt, Plus, Search, Loader2, AlertCircle, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
 import {
@@ -24,6 +25,7 @@ const getDieNum = (dieRating?: string): number => {
 const REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
 
 export const ArmorCard: React.FC = () => {
+  const activeGenre = useGenreStore((state) => state.activeGenre);
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
 
   const armor: ArmorData = activeCharacter?.sheet_data?.armor_slot || {
@@ -372,6 +374,7 @@ export const ArmorCard: React.FC = () => {
   }, [wardrobe, leftSearchQuery]);
   const filteredCatalogArmor = useMemo(() => {
     return armorCatalog.filter((item) => {
+      if (!matchesGenre(item.genres, activeGenre)) return false;
       if (wardrobeNamesSet.has(item.name.toLowerCase())) return false;
       if (armorFilterCategory === 'starred' && !isItemStarred(item)) return false;
       if (armorFilterCategory === 'learnable' && !isRequirementLearnable(item.requirement, attributeDice)) return false;
@@ -381,7 +384,7 @@ export const ArmorCard: React.FC = () => {
       }
       return true;
     });
-  }, [armorCatalog, wardrobeNamesSet, armorFilterCategory, rightSearchQuery, attributeDice, isItemStarred]);
+  }, [armorCatalog, wardrobeNamesSet, armorFilterCategory, rightSearchQuery, attributeDice, isItemStarred, activeGenre]);
 
   const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
   const isShieldEquipped = shieldSlot?.equipped ?? false;

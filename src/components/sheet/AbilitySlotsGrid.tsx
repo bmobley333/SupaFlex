@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
 import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed, getApCostForNextSlot, getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
@@ -148,6 +149,7 @@ const calculateTotalPowerUnits = (abilitySlots: AbilitySlot[]): number => {
 };
 
 export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type }) => {
+  const activeGenre = useGenreStore((state) => state.activeGenre);
   const { activeCharacter, powers, magicItems, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
   const sheetData: any = activeCharacter?.sheet_data || {};
   const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
@@ -728,9 +730,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setActiveRightTab(type === 'spells' ? 'VAULT' : 'CATALOG');
   };
 
-  // Filter catalog items by Category & Deduplication
+  // Filter catalog items by Category & Deduplication & Genre Scope
   const categoryFilteredCatalog = useMemo(() => {
     return fullCatalog.filter((item) => {
+      // 0. Global Genre Scope Filtering
+      if (!matchesGenre(item.genres, activeGenre)) {
+        return false;
+      }
+
       // 1. Deduplication: Filter out items already in the character's learned roster
       if (knownAbilityNamesSet.has(cleanName(item.name).toLowerCase())) {
         return false;
@@ -740,17 +747,17 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         if (selectedCategory === 'favorites') {
           return isItemStarred(item);
         } else if (selectedCategory !== 'all') {
-          const itemSub = (item.sub || '').toLowerCase();
+          const itemSub = ((item as any).category || (item as any).sub || '').toLowerCase();
           return itemSub.includes(selectedCategory.toLowerCase());
         }
       }
       return true;
     });
-  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, favoriteTables, isItemStarred]);
+  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, favoriteTables, isItemStarred, activeGenre]);
 
   const groupedTables = useMemo(() => {
     const acc = categoryFilteredCatalog.reduce((map, item) => {
-      const tableName = item.table_name || (type === 'powers' ? 'General Powers' : 'General Magic Items');
+      const tableName = (item as any).table || (item as any).table_name || (type === 'powers' ? 'General Powers' : 'General Magic Items');
       if (!map[tableName]) map[tableName] = [];
       map[tableName].push(item);
       return map;

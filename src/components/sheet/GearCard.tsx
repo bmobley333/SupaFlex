@@ -15,6 +15,7 @@ import {
   Star,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import { SimpleGearItem, SupabaseGear } from '../../types/game';
 
@@ -65,6 +66,7 @@ export const calculateInventoryValue = (gearList: SimpleGearItem[]) => {
 };
 
 export const GearCard: React.FC = () => {
+  const activeGenre = useGenreStore((state) => state.activeGenre);
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
   const rawGearList: SimpleGearItem[] = activeCharacter?.sheet_data?.simple_gear || [];
   const gearList: SimpleGearItem[] = useMemo(() => {
@@ -221,9 +223,11 @@ export const GearCard: React.FC = () => {
     return gearCatalog.filter((g) => isItemStarred(g)).length;
   }, [gearCatalog, isItemStarred]);
 
-  // Filtered gear catalog based on search & category filter
+  // Filtered gear catalog based on search & category filter & active genre
   const filteredCatalog = useMemo(() => {
     return gearCatalog.filter((item) => {
+      if (!matchesGenre(item.genres, activeGenre)) return false;
+
       const matchesSearch =
         item.name.toLowerCase().includes(catalogSearchQuery.toLowerCase()) ||
         (item.category && item.category.toLowerCase().includes(catalogSearchQuery.toLowerCase()));
@@ -238,7 +242,7 @@ export const GearCard: React.FC = () => {
 
       return matchesSearch && matchesCategory;
     });
-  }, [gearCatalog, catalogSearchQuery, selectedCategoryFilter, isItemStarred]);
+  }, [gearCatalog, catalogSearchQuery, selectedCategoryFilter, isItemStarred, activeGenre]);
 
   // Add stock item from Supabase catalog to character sheet inventory
   const handleAddStockGear = (stockItem: SupabaseGear) => {

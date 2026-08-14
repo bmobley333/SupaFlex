@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Check, ChevronDown, ChevronUp, Search, X, Sparkles, Scroll, GraduationCap, Plus, AlertCircle, Edit2, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { supabase } from '../../lib/supabase';
@@ -75,6 +76,7 @@ const parseSkill = (
 };
 
 export const SkillsetsPanel: React.FC = () => {
+  const activeGenre = useGenreStore((state) => state.activeGenre);
   const { activeCharacter, skillsets, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
 
   // Merge stock database skillsets with character sheet custom skillsets
@@ -602,7 +604,7 @@ export const SkillsetsPanel: React.FC = () => {
   const filteredCatalogSkillsets = useMemo(() => {
     const unlearned = effectiveSkillsets.filter((ks) => !uniqueKnownSkillsetNames.some((k) => k.toLowerCase() === ks.name.toLowerCase()));
     
-    let base = unlearned;
+    let base = unlearned.filter((ks) => matchesGenre(ks.genres, activeGenre));
     if (skillsetFilterCategory === 'starred') {
       base = base.filter((ks) => isSkillsetStarred(ks.name));
     }
@@ -614,7 +616,7 @@ export const SkillsetsPanel: React.FC = () => {
       const skillMatch = Array.isArray(ks.skills) && ks.skills.some((s) => s.toLowerCase().includes(query));
       return nameMatch || skillMatch;
     });
-  }, [effectiveSkillsets, uniqueKnownSkillsetNames, skillsetFilterCategory, isSkillsetStarred, rightSearchQuery]);
+  }, [effectiveSkillsets, uniqueKnownSkillsetNames, skillsetFilterCategory, isSkillsetStarred, rightSearchQuery, activeGenre]);
 
   const filteredCatalogIndividualSkills = useMemo(() => {
     const unlearned = sortedAllCatalogSkills.filter((sk) => {

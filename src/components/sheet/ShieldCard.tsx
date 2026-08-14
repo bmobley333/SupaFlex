@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ChevronDown, ChevronUp, X, Check, Plus, Search, ShieldAlert, Loader2, AlertCircle, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
 import {
@@ -17,6 +18,7 @@ import {
 const REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
 
 export const ShieldCard: React.FC = () => {
+  const activeGenre = useGenreStore((state) => state.activeGenre);
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
 
   const shield: ShieldData = activeCharacter?.sheet_data?.shield_slot || {
@@ -354,12 +356,13 @@ export const ShieldCard: React.FC = () => {
     () =>
       shieldCatalog.filter(
         (item) =>
+          matchesGenre(item.genres, activeGenre) &&
           !armoryNamesSet.has(item.name.toLowerCase()) &&
           (shieldFilterCategory !== 'starred' || isItemStarred(item)) &&
           (shieldFilterCategory !== 'learnable' || isRequirementLearnable(item.requirement, attributeDice)) &&
           item.name.toLowerCase().includes(rightSearchQuery.toLowerCase().trim())
       ),
-    [shieldCatalog, armoryNamesSet, shieldFilterCategory, rightSearchQuery, attributeDice, isItemStarred]
+    [shieldCatalog, armoryNamesSet, shieldFilterCategory, rightSearchQuery, attributeDice, isItemStarred, activeGenre]
   );
 
   return (

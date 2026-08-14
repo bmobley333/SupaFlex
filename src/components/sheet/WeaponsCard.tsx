@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ChevronDown, ChevronUp, Plus, X, Check, Swords, AlertCircle, Loader2, Search, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import {
   WeaponSlot,
@@ -77,6 +78,7 @@ const calculateWeaponDmg = (name: string, mhsCategory: string, attributeDice: Re
 };
 
 export const WeaponsCard: React.FC = () => {
+  const activeGenre = useGenreStore((state) => state.activeGenre);
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
   const rawWeapons: WeaponSlot[] = activeCharacter?.sheet_data?.weapons || [];
   const weapons: WeaponSlot[] = useMemo(() => {
@@ -459,9 +461,14 @@ export const WeaponsCard: React.FC = () => {
     return set;
   }, [weapons]);
 
-  // Filter stock catalog weapons for Right Column pane (strict deduplication)
+  // Filter stock catalog weapons for Right Column pane (strict deduplication & genre filtering)
   const filteredCatalogWeapons = useMemo(() => {
     return supabaseWeapons.filter((weapon) => {
+      // 0. Global Genre Scope Filtering
+      if (!matchesGenre(weapon.genres, activeGenre)) {
+        return false;
+      }
+
       // 1. Strict Deduplication: If already equipped in arsenal, filter out of Stock Catalog
       if (equippedBaseNamesSet.has(weapon.name.toLowerCase())) {
         return false;
@@ -511,7 +518,7 @@ export const WeaponsCard: React.FC = () => {
 
       return true;
     });
-  }, [supabaseWeapons, equippedBaseNamesSet, weaponFilterCategory, rightSearchQuery, attributeDice, isItemStarred]);
+  }, [supabaseWeapons, equippedBaseNamesSet, weaponFilterCategory, rightSearchQuery, attributeDice, isItemStarred, activeGenre]);
 
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3 h-fit">
