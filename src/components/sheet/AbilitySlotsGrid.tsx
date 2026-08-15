@@ -197,7 +197,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [showTacticalPivotModal, setShowTacticalPivotModal] = useState(false);
   const [readyFeedback, setReadyFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [catalogReadyFilter, setCatalogReadyFilter] = useState<'all' | 'primary_arsenal' | 'mobility_defense' | 'contextual_passive'>('all');
+  const [catalogReadyFilter, setCatalogReadyFilter] = useState<'all' | 'primary_arsenal' | 'mobility_defense' | 'support_passive'>('all');
   const [activeTableName, setActiveTableName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1095,7 +1095,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         <div className="mt-2.5 px-3 py-1.5 bg-slate-900/90 border border-amber-500/40 rounded-xl text-xs font-mono flex items-center justify-between gap-2 shadow-inner shrink-0 flex-wrap">
                           <span className="text-amber-300 font-bold flex items-center gap-1">⚡ Ready Matrix:</span>
                           <div className="flex items-center gap-2 text-[11px] font-bold">
-                            <span className="text-slate-300">⚔️ Arsenal <strong className={liveVal.arsenalCount > readyConfig.maxArsenal ? "text-rose-400 font-extrabold" : "text-amber-200"}>{liveVal.arsenalCount}/{readyConfig.maxArsenal}</strong></span>
+                            <span className="text-slate-300">⚔️ Primary <strong className={liveVal.arsenalCount > readyConfig.maxArsenal ? "text-rose-400 font-extrabold" : "text-amber-200"}>{liveVal.arsenalCount}/{readyConfig.maxArsenal}</strong></span>
                             <span className="text-slate-600">|</span>
                             <span className="text-slate-300">👣 Mobility <strong className={liveVal.mobilityCount > readyConfig.maxMobilityDefense ? "text-rose-400 font-extrabold" : "text-indigo-200"}>{liveVal.mobilityCount}/{readyConfig.maxMobilityDefense}</strong></span>
                             <span className="text-slate-600">|</span>
@@ -1160,7 +1160,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
                                           : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
                                       }`}>
-                                        {cat === 'primary_arsenal' ? '⚔️ Arsenal' : cat === 'mobility_defense' ? '👣 Mobility' : '🎓 Passives (0)'}
+                                        {cat === 'primary_arsenal' ? '⚔️ Primary' : cat === 'mobility_defense' ? '👣 Mobility' : '🎓 Support (0)'}
                                       </span>
                                     )}
                                   </div>
@@ -1422,7 +1422,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                               ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
                                               : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
                                           }`}>
-                                            {cat === 'primary_arsenal' ? '⚔️ Arsenal' : cat === 'mobility_defense' ? '👣 Mobility/Def' : '🎓 Passives (0)'}
+                                            {cat === 'primary_arsenal' ? '⚔️ Primary' : cat === 'mobility_defense' ? '👣 Mobility/Def' : '🎓 Support (0)'}
                                           </span>
                                           {actionUpper && (
                                             <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
@@ -1763,7 +1763,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
                                 }`}
                               >
-                                ⚔️ Arsenal
+                                ⚔️ Primary
                               </button>
                               <button
                                 type="button"
@@ -1778,14 +1778,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setCatalogReadyFilter('contextual_passive')}
+                                onClick={() => setCatalogReadyFilter('support_passive')}
                                 className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                  catalogReadyFilter === 'contextual_passive'
+                                  catalogReadyFilter === 'support_passive'
                                     ? 'bg-emerald-900/70 text-emerald-200 border border-emerald-500/50 shadow-sm font-extrabold'
                                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
                                 }`}
                               >
-                                🎓 Contextual
+                                🎓 Support
                               </button>
                             </div>
 
@@ -2368,7 +2368,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             const readyConfig = getReadySlotConfig(level);
             const arsenalSlots = sortedSlots.filter((s) => getPowerReadyCategory(s) === 'primary_arsenal');
             const mobilitySlots = sortedSlots.filter((s) => getPowerReadyCategory(s) === 'mobility_defense');
-            const contextualSlots = sortedSlots.filter((s) => getPowerReadyCategory(s) === 'contextual_passive');
+            const supportSlots = sortedSlots.filter(
+              (s) => getPowerReadyCategory(s) === 'support_passive' || (getPowerReadyCategory(s) as any) === 'contextual_passive'
+            );
 
             const renderPowerCard = (slot: AbilitySlot, index: number) => {
               const cleaned = cleanName(slot.name);
@@ -2405,7 +2407,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
                           : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
                       }`}>
-                        {cat === 'primary_arsenal' ? '⚔️ Arsenal' : cat === 'mobility_defense' ? '👣 Mobility' : '🎓 Passives (0)'}
+                        {cat === 'primary_arsenal' ? '⚔️ Primary' : cat === 'mobility_defense' ? '👣 Mobility' : '🎓 Support (0)'}
                       </span>
                     </div>
                   </div>
@@ -2465,7 +2467,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
             return (
               <div className="flex flex-col gap-4">
-                {/* 1. Primary Arsenal Sub-Zone Container (🔴 Rose / 6px Stripe) */}
+                {/* 1. Primary / Arsenal Sub-Zone Container (🔴 Rose / 6px Stripe) */}
                 <div className="bg-gradient-to-br from-rose-950/25 via-slate-900/60 to-slate-950/80 rounded-2xl border border-rose-500/30 border-l-[6px] border-l-rose-500 p-3 sm:p-3.5 flex flex-col gap-2.5 shadow-lg shadow-rose-950/20">
                   {/* Container Header Bar */}
                   <div className="flex items-center justify-between pb-2 border-b border-rose-500/20">
@@ -2474,7 +2476,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         ⚔️
                       </div>
                       <span className="font-outfit font-extrabold text-xs text-rose-200 uppercase tracking-wider">
-                        Primary Arsenal
+                        Primary / Arsenal
                       </span>
                     </div>
                     <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-rose-950/90 text-rose-300 border border-rose-500/40 shadow-inner">
@@ -2488,7 +2490,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       arsenalSlots.map((slot, idx) => renderPowerCard(slot, idx))
                     ) : (
                       <div className="p-3 bg-slate-950/50 rounded-xl border border-rose-500/15 text-xs text-slate-500 italic text-center">
-                        No Primary Arsenal powers readied. Select from Codex or Catalog to ready.
+                        No Primary / Arsenal powers readied. Select from Codex or Catalog to ready.
                       </div>
                     )}
                   </div>
@@ -2523,7 +2525,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   </div>
                 </div>
 
-                {/* 3. Contextual & Passives Sub-Zone Container (🟢 Emerald / 6px Stripe) */}
+                {/* 3. Support & Passives Sub-Zone Container (🟢 Emerald / 6px Stripe) */}
                 <div className="bg-gradient-to-br from-emerald-950/25 via-slate-900/60 to-slate-950/80 rounded-2xl border border-emerald-500/30 border-l-[6px] border-l-emerald-500 p-3 sm:p-3.5 flex flex-col gap-2.5 shadow-lg shadow-emerald-950/20">
                   {/* Container Header Bar */}
                   <div className="flex items-center justify-between pb-2 border-b border-emerald-500/20">
@@ -2532,21 +2534,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         🎓
                       </div>
                       <span className="font-outfit font-extrabold text-xs text-emerald-200 uppercase tracking-wider">
-                        Contextual & Passives
+                        Support & Passives
                       </span>
                     </div>
                     <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 shadow-inner">
-                      {contextualSlots.length} ALWAYS ACTIVE • 0 SLOTS
+                      {supportSlots.length} ALWAYS ACTIVE • 0 SLOTS
                     </span>
                   </div>
 
                   {/* Power Sub-Cards */}
                   <div className="flex flex-col gap-2">
-                    {contextualSlots.length > 0 ? (
-                      contextualSlots.map((slot, idx) => renderPowerCard(slot, idx))
+                    {supportSlots.length > 0 ? (
+                      supportSlots.map((slot, idx) => renderPowerCard(slot, idx))
                     ) : (
                       <div className="p-3 bg-slate-950/50 rounded-xl border border-emerald-500/15 text-xs text-slate-500 italic text-center">
-                        No passives or contextual powers learned.
+                        No Support & Passive powers learned.
                       </div>
                     )}
                   </div>

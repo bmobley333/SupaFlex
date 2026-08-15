@@ -392,10 +392,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       const targetPower = codex[codexIndex];
       const cat = getPowerReadyCategory(targetPower);
 
-      // Contextual Passives cost 0 slots, always allowed
-      if (cat === 'contextual_passive') {
+      // Support & Passives cost 0 slots, always allowed
+      if (cat === 'support_passive' || (cat as any) === 'contextual_passive') {
         const [removed] = codex.splice(codexIndex, 1);
-        powerSlots.push({ ...removed, is_readied: true, ready: cat });
+        powerSlots.push({ ...removed, is_readied: true, ready: 'support_passive' });
 
         get().updateActiveSheetData((prev) => ({
           ...prev,

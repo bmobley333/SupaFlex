@@ -37,13 +37,18 @@ export const getReadySlotConfig = (levelOrTier: number = 1): ReadySlotConfig => 
 };
 
 /**
- * Categorizes an AbilitySlot or Power into 'primary_arsenal', 'mobility_defense', or 'contextual_passive'.
+ * Categorizes an AbilitySlot or Power into 'primary_arsenal', 'mobility_defense', or 'support_passive'.
  */
 export const getPowerReadyCategory = (power: AbilitySlot | Power | null | undefined): PowerReadyType => {
-  if (!power) return 'contextual_passive';
+  if (!power) return 'support_passive';
 
-  if (power.ready && (power.ready === 'primary_arsenal' || power.ready === 'mobility_defense' || power.ready === 'contextual_passive')) {
-    return power.ready;
+  if (power.ready) {
+    if (power.ready === 'primary_arsenal' || power.ready === 'mobility_defense' || power.ready === 'support_passive') {
+      return power.ready;
+    }
+    if ((power.ready as any) === 'contextual_passive') {
+      return 'support_passive';
+    }
   }
 
   const action = (power.action || '').trim().toUpperCase();
@@ -56,7 +61,7 @@ export const getPowerReadyCategory = (power: AbilitySlot | Power | null | undefi
     if (combined.includes('def+') || combined.includes('def +') || combined.includes('ar+') || combined.includes('dodge') || combined.includes('parry') || combined.includes('shield') || combined.includes('heal')) {
       return 'mobility_defense';
     }
-    return 'contextual_passive';
+    return 'support_passive';
   }
 
   if (action === 'M') {
@@ -70,7 +75,7 @@ export const getPowerReadyCategory = (power: AbilitySlot | Power | null | undefi
     return 'primary_arsenal';
   }
 
-  return 'contextual_passive';
+  return 'support_passive';
 };
 
 /**
@@ -103,7 +108,7 @@ export const validateReadyMatrix = (
   if (arsenalCount > config.maxArsenal) {
     return {
       valid: false,
-      error: `Primary Arsenal exceeds maximum of ${config.maxArsenal} slots for Tier ${config.tier}.`,
+      error: `Primary / Arsenal exceeds maximum of ${config.maxArsenal} slots for Tier ${config.tier}.`,
       arsenalCount,
       mobilityCount,
       config,
@@ -167,9 +172,9 @@ export const migrateCharacterPowersToCodex = (sheetData: any): CharacterSheetDat
   for (const power of allKnownPowers) {
     const cat = getPowerReadyCategory(power);
 
-    if (cat === 'contextual_passive') {
+    if (cat === 'support_passive' || (cat as any) === 'contextual_passive') {
       // 0-cost: always active on sheet
-      keptPowerSlots.push({ ...power, is_readied: true, ready: cat });
+      keptPowerSlots.push({ ...power, is_readied: true, ready: 'support_passive' });
     } else if (cat === 'primary_arsenal') {
       if (
         currentArsenal < config.maxArsenal &&

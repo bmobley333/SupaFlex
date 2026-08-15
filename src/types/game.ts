@@ -3,7 +3,7 @@
 
 export type AttributeKey = 'might' | 'motion' | 'mind' | 'magic' | 'moxie';
 export type DieRating = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'Exhausted';
-export type PowerReadyType = 'primary_arsenal' | 'mobility_defense' | 'contextual_passive';
+export type PowerReadyType = 'primary_arsenal' | 'mobility_defense' | 'support_passive' | 'contextual_passive';
 
 export interface ReadySlotConfig {
   tier: number;
