@@ -779,10 +779,46 @@ export const WeaponsCard: React.FC = () => {
                     {/* TAB 1: STOCK CATALOG VIEW */}
                     {activeRightTab === 'CATALOG' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
-                        {/* Search Filter Bar & Dyslexia-Friendly KISS Pill Switch */}
-                        <div className="flex flex-col gap-2 shrink-0">
-                          {/* Search Filter Bar */}
-                          <div className="relative">
+                        {/* 1. KISS Multi-Option Pill Switch: All / Skilled / Unskilled */}
+                        <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setSkillFilterMode('all')}
+                            className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              skillFilterMode === 'all'
+                                ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            🌐 All
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSkillFilterMode('skilled')}
+                            className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              skillFilterMode === 'skilled'
+                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            🎓 Skilled
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSkillFilterMode('unskilled')}
+                            className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              skillFilterMode === 'unskilled'
+                                ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            ⚪ Unskilled
+                          </button>
+                        </div>
+
+                        {/* 2. Search & Category Filter Bar (Directly above card list) */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="relative flex-1">
                             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                             <input
                               type="text"
@@ -793,59 +829,18 @@ export const WeaponsCard: React.FC = () => {
                             />
                           </div>
 
-                          {/* KISS Multi-Option Pill Switch: All / Skilled / Unskilled */}
-                          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                            <button
-                              type="button"
-                              onClick={() => setSkillFilterMode('all')}
-                              className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                skillFilterMode === 'all'
-                                  ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              🌐 All
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setSkillFilterMode('skilled')}
-                              className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                skillFilterMode === 'skilled'
-                                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              🎓 Skilled
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setSkillFilterMode('unskilled')}
-                              className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                skillFilterMode === 'unskilled'
-                                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              ⚪ Unskilled
-                            </button>
-                          </div>
-
-                          {/* Category / Filter Select */}
-                          <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
-                            <span className="text-[11px] font-bold text-slate-400 shrink-0">Filter:</span>
-                            <select
-                              value={weaponFilterCategory}
-                              onChange={(e) => setWeaponFilterCategory(e.target.value as any)}
-                              className="bg-slate-950 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
-                            >
-                              <option value="all">🌐 All Weapons / Types</option>
-                              <option value="starred">⭐ Starred Favorites ({starredWeaponsCount})</option>
-                              <option value="melee">🗡️ Melee</option>
-                              <option value="hurled">🪓 Hurled</option>
-                              <option value="shot">🏹 Shot</option>
-                              <option value="unarmed">🥊 Unarmed</option>
-                            </select>
-                          </div>
+                          <select
+                            value={weaponFilterCategory}
+                            onChange={(e) => setWeaponFilterCategory(e.target.value as any)}
+                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-rose-500 max-w-[180px] truncate cursor-pointer"
+                          >
+                            <option value="all">🌐 All Weapons</option>
+                            <option value="starred">⭐ Starred Favorites ({starredWeaponsCount})</option>
+                            <option value="melee">🗡️ Melee</option>
+                            <option value="hurled">🪓 Hurled</option>
+                            <option value="shot">🏹 Shot</option>
+                            <option value="unarmed">🥊 Unarmed</option>
+                          </select>
                         </div>
 
                         {/* Scrollable Catalog List */}

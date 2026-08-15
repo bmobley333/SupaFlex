@@ -573,30 +573,28 @@ export const ShieldCard: React.FC = () => {
 
                   {activeRightTab === 'CATALOG' && (
                     <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
-                      <div className="flex flex-col gap-2 shrink-0">
-                        <div className="relative">
+                      {/* Search & Category Filter Bar */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="relative flex-1">
                           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                           <input
                             type="text"
                             value={rightSearchQuery}
                             onChange={(e) => setRightSearchQuery(e.target.value)}
+                            placeholder="Search shields..."
                             className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 w-full"
                           />
                         </div>
 
-                        {/* Category / Filter Select */}
-                        <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800">
-                          <span className="text-[11px] font-bold text-slate-400 shrink-0">Filter:</span>
-                          <select
-                            value={shieldFilterCategory}
-                            onChange={(e) => setShieldFilterCategory(e.target.value as any)}
-                            className="bg-slate-950 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
-                          >
-                            <option value="all">🌐 All Shields</option>
-                            <option value="starred">⭐ Starred Favorites ({starredShieldsCount})</option>
-                            <option value="learnable">⚡ Learnable Only</option>
-                          </select>
-                        </div>
+                        <select
+                          value={shieldFilterCategory}
+                          onChange={(e) => setShieldFilterCategory(e.target.value as any)}
+                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 max-w-[180px] truncate cursor-pointer"
+                        >
+                          <option value="all">🌐 All Shields</option>
+                          <option value="starred">⭐ Starred Favorites ({starredShieldsCount})</option>
+                          <option value="learnable">⚡ Learnable Only</option>
+                        </select>
                       </div>
 
                       <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">

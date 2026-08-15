@@ -1522,133 +1522,162 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           </div>
                         )}
 
-                        {/* Category Dropdown (Powers Mode Only) */}
+                        {/* 2. Controls for Powers Mode */}
                         {type === 'powers' && (
+                          <>
+                            {/* Category Dropdown */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs font-bold text-slate-400 shrink-0">Category:</span>
+                              <select
+                                value={selectedCategory}
+                                onChange={(e) => {
+                                  const newCat = e.target.value;
+                                  setSelectedCategory(newCat);
+                                  if (newCat === 'all') {
+                                    setActiveTableName('ALL');
+                                  } else {
+                                    setActiveTableName(null);
+                                  }
+                                }}
+                                className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
+                              >
+                                {POWER_CATEGORY_BUTTONS.map((cat) => (
+                                  <option key={cat.id} value={cat.id}>
+                                    {cat.icon} {cat.label} {cat.id === 'favorites' ? `(${starredCatalogItems.length})` : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Table Selector Dropdown & + Table Button */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs font-bold text-slate-400 shrink-0">Table:</span>
+                              <select
+                                value={effectiveActiveTable || 'ALL'}
+                                onChange={(e) => setActiveTableName(e.target.value)}
+                                className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
+                              >
+                                <option value="ALL">🌐 All Tables ({categoryFilteredCatalog.length})</option>
+                                {availableTableNames.map((tblName) => (
+                                  <option key={tblName} value={tblName}>
+                                    📁 {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
+                                  </option>
+                                ))}
+                              </select>
+                              {effectiveActiveTable && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleFavoriteTable(effectiveActiveTable)}
+                                  className={`p-1.5 rounded-lg border transition-colors flex items-center justify-center shrink-0 ${
+                                    favoriteTables.includes(effectiveActiveTable)
+                                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
+                                      : 'bg-slate-900 text-slate-500 border-slate-700 hover:text-amber-400'
+                                  }`}
+                                  title={favoriteTables.includes(effectiveActiveTable) ? 'Remove table from Favorites' : 'Save table to Favorites'}
+                                >
+                                  <Star className={`w-3.5 h-3.5 ${favoriteTables.includes(effectiveActiveTable) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setIsCreatingTable(true)}
+                                className="px-2 py-1 rounded-lg text-[10px] font-bold border border-amber-500/40 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 shrink-0 transition-colors flex items-center gap-1 shadow-sm"
+                                title="Create custom table"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Table
+                              </button>
+                            </div>
+
+                            {/* Inline Table Creator Drawer */}
+                            {isCreatingTable && (
+                              <div className="p-2.5 bg-slate-950/90 rounded-xl border border-amber-500/40 flex flex-col gap-2 shadow-md shrink-0">
+                                <div className="flex items-center justify-between border-b border-amber-500/20 pb-1">
+                                  <span className="font-outfit font-bold text-[11px] text-amber-300 flex items-center gap-1">
+                                    📁 Create Custom Table
+                                  </span>
+                                  <button onClick={() => setIsCreatingTable(false)} className="text-slate-400 hover:text-slate-200">
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                <input
+                                  type="text"
+                                  value={newTableName}
+                                  onChange={(e) => setNewTableName(e.target.value)}
+                                  className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-100 outline-none focus:border-amber-400"
+                                />
+                                <div className="flex items-center gap-1.5">
+                                  <label className="text-[10px] text-slate-400 font-bold">Category:</label>
+                                  <select
+                                    value={newTableSub}
+                                    onChange={(e) => setNewTableSub(e.target.value)}
+                                    className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 text-[10px] text-amber-300 outline-none flex-1 font-semibold"
+                                  >
+                                    <option value="class">👤 Class</option>
+                                    <option value="racial">🧬 Racial</option>
+                                    <option value="combat_styles">⚔️ Combat Styles</option>
+                                    <option value="luck">🍀 Luck</option>
+                                  </select>
+                                </div>
+                                <div className="flex items-center justify-end gap-1.5 pt-1">
+                                  <button onClick={() => setIsCreatingTable(false)} className="px-2 py-0.5 text-[10px] text-slate-400 hover:text-slate-200">
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={handleSaveCustomTable}
+                                    disabled={!newTableName.trim()}
+                                    className="px-2.5 py-0.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-[10px] rounded transition-all shadow-sm"
+                                  >
+                                    Save Table
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Search Bar directly above powers list */}
+                            <div className="shrink-0">
+                              <div className="relative">
+                                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                                <input
+                                  type="text"
+                                  value={rightSearchQuery}
+                                  onChange={(e) => setRightSearchQuery(e.target.value)}
+                                  placeholder="Search powers..."
+                                  className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
+                                />
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {/* 3. Controls for Loadout / Spells Mode (Paired Search & Table Filter) */}
+                        {type === 'spells' && (
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-bold text-slate-400 shrink-0">Category:</span>
+                            <div className="relative flex-1">
+                              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                              <input
+                                type="text"
+                                value={rightSearchQuery}
+                                onChange={(e) => setRightSearchQuery(e.target.value)}
+                                placeholder="Search relics or hardware..."
+                                className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
+                              />
+                            </div>
+
                             <select
-                              value={selectedCategory}
-                              onChange={(e) => {
-                                const newCat = e.target.value;
-                                setSelectedCategory(newCat);
-                                if (newCat === 'all') {
-                                  setActiveTableName('ALL');
-                                } else {
-                                  setActiveTableName(null);
-                                }
-                              }}
-                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
+                              value={effectiveActiveTable || 'ALL'}
+                              onChange={(e) => setActiveTableName(e.target.value)}
+                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 max-w-[190px] truncate cursor-pointer"
                             >
-                              {POWER_CATEGORY_BUTTONS.map((cat) => (
-                                <option key={cat.id} value={cat.id}>
-                                  {cat.icon} {cat.label} {cat.id === 'favorites' ? `(${starredCatalogItems.length})` : ''}
+                              <option value="ALL">🌐 All Tables / Tiers ({categoryFilteredCatalog.length})</option>
+                              <option value="STARRED">⭐ Starred Favorites ({starredCatalogItems.length})</option>
+                              {availableTableNames.map((tblName) => (
+                                <option key={tblName} value={tblName}>
+                                  {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
                                 </option>
                               ))}
                             </select>
                           </div>
                         )}
-
-                        {/* Table Selector Dropdown & + Table Button */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs font-bold text-slate-400 shrink-0">Table:</span>
-                          <select
-                            value={effectiveActiveTable || 'ALL'}
-                            onChange={(e) => setActiveTableName(e.target.value)}
-                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
-                          >
-                            <option value="ALL">🌐 {type === 'spells' ? 'All Tables / Tiers' : 'All Tables'} ({categoryFilteredCatalog.length})</option>
-                            {type === 'spells' && (
-                              <option value="STARRED">⭐ Starred Favorites ({starredCatalogItems.length})</option>
-                            )}
-                            {availableTableNames.map((tblName) => (
-                              <option key={tblName} value={tblName}>
-                                {type === 'spells' ? formatTableNameDisplay(tblName) : `📁 ${formatTableNameDisplay(tblName)}`} ({groupedTables[tblName]?.length || 0})
-                              </option>
-                            ))}
-                          </select>
-                          {type === 'powers' && effectiveActiveTable && (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleFavoriteTable(effectiveActiveTable)}
-                              className={`p-1.5 rounded-lg border transition-colors flex items-center justify-center shrink-0 ${
-                                favoriteTables.includes(effectiveActiveTable)
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
-                                  : 'bg-slate-900 text-slate-500 border-slate-700 hover:text-amber-400'
-                              }`}
-                              title={favoriteTables.includes(effectiveActiveTable) ? 'Remove table from Favorites' : 'Save table to Favorites'}
-                            >
-                              <Star className={`w-3.5 h-3.5 ${favoriteTables.includes(effectiveActiveTable) ? 'fill-amber-400 text-amber-400' : ''}`} />
-                            </button>
-                          )}
-                          {type === 'powers' && (
-                            <button
-                              onClick={() => setIsCreatingTable(true)}
-                              className="px-2 py-1 rounded-lg text-[10px] font-bold border border-amber-500/40 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 shrink-0 transition-colors flex items-center gap-1 shadow-sm"
-                              title="Create custom table"
-                            >
-                              <Plus className="w-3 h-3" />
-                              Table
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Inline Table Creator Drawer */}
-                        {type === 'powers' && isCreatingTable && (
-                          <div className="p-2.5 bg-slate-950/90 rounded-xl border border-amber-500/40 flex flex-col gap-2 shadow-md shrink-0">
-                            <div className="flex items-center justify-between border-b border-amber-500/20 pb-1">
-                              <span className="font-outfit font-bold text-[11px] text-amber-300 flex items-center gap-1">
-                                📁 Create Custom Table
-                              </span>
-                              <button onClick={() => setIsCreatingTable(false)} className="text-slate-400 hover:text-slate-200">
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                            <input
-                              type="text"
-                              value={newTableName}
-                              onChange={(e) => setNewTableName(e.target.value)}
-                              className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-100 outline-none focus:border-amber-400"
-                            />
-                            <div className="flex items-center gap-1.5">
-                              <label className="text-[10px] text-slate-400 font-bold">Category:</label>
-                              <select
-                                value={newTableSub}
-                                onChange={(e) => setNewTableSub(e.target.value)}
-                                className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 text-[10px] text-amber-300 outline-none flex-1 font-semibold"
-                              >
-                                <option value="class">👤 Class</option>
-                                <option value="racial">🧬 Racial</option>
-                                <option value="combat_styles">⚔️ Combat Styles</option>
-                                <option value="luck">🍀 Luck</option>
-                              </select>
-                            </div>
-                            <div className="flex items-center justify-end gap-1.5 pt-1">
-                              <button onClick={() => setIsCreatingTable(false)} className="px-2 py-0.5 text-[10px] text-slate-400 hover:text-slate-200">
-                                Cancel
-                              </button>
-                              <button
-                                onClick={handleSaveCustomTable}
-                                disabled={!newTableName.trim()}
-                                className="px-2.5 py-0.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-[10px] rounded transition-all shadow-sm"
-                              >
-                                Save Table
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Search Bar */}
-                        <div className="shrink-0">
-                          <div className="relative">
-                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                            <input
-                              type="text"
-                              value={rightSearchQuery}
-                              onChange={(e) => setRightSearchQuery(e.target.value)}
-                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
-                            />
-                          </div>
-                        </div>
 
                         {/* Scrollable Catalog Abilities List */}
                         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
