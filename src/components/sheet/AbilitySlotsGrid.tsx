@@ -828,8 +828,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return roster.filter((s) => cleanName(s.name).toLowerCase().includes(q) || (s.effect || '').toLowerCase().includes(q));
   }, [type, activeDisplaySlots, slots, leftSearchQuery]);
 
-  const sectionIcon = type === 'powers' ? '🔥' : '✨';
-  const displayTitle = title || (type === 'powers' ? 'POWERS' : 'MAGIC ITEMS');
+  const sectionIcon = type === 'powers' ? '🔥' : '⚡';
+  const displayTitle = title || (type === 'powers' ? 'POWERS' : 'LOADOUT');
 
   // Default Action Economy Sorting for Active Sheet
   const sortedSlots = useMemo(() => {
@@ -861,7 +861,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             type="button"
             onClick={handleClearAllUses}
             className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-950/60 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-slate-100 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-            title={`Uncheck all ${type === 'powers' ? 'power' : 'magic item'} usage checkboxes`}
+            title={`Uncheck all ${type === 'powers' ? 'power' : 'loadout item'} usage checkboxes`}
           >
             <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
             <span className="font-outfit text-[11px] font-bold">Clear Uses</span>
@@ -881,10 +881,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 ? 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-300'
                 : 'bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300'
             }`}
-            title={`Manage ${type === 'powers' ? 'powers' : 'magic items'} roster and catalog`}
+            title={`Manage ${type === 'powers' ? 'powers' : 'loadout'} roster and catalog`}
           >
             <span className="font-outfit font-bold">
-              Manage {type === 'powers' ? 'Powers' : 'Magic Items'}
+              Manage {type === 'powers' ? 'Powers' : 'Loadout'}
             </span>
             <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
               {slots.length}
@@ -909,12 +909,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     </div>
                     <div>
                       <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                        {type === 'powers' ? 'Powers Manager' : 'Magic Items Manager'}
+                        {type === 'powers' ? 'Powers Manager' : 'Loadout Manager'}
                       </h3>
                       <p className="text-xs text-slate-400 hidden sm:block">
                         {type === 'powers'
                           ? 'Manage character powers side-by-side with the SupaFlex stock catalog and custom creator.'
-                          : 'Manage character magic items moving items between the Vault and your Loadout, and upgrading your Loadout Slots with AP.'}
+                          : 'Manage active Loadout items moving Relics & Hardware between the Vault and your Loadout, and unlocking Loadout Slots with AP.'}
                       </p>
                     </div>
                   </div>
@@ -972,14 +972,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </div>
                     </div>
 
-                    {/* Left Pane Slots Status Pill (Magic Items Mode) */}
+                    {/* Left Pane Slots Status Pill (Loadout Mode) */}
                     {type === 'spells' && (() => {
-                      const maxSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
+                      const maxSlots = typeof sheetData.unlocked_loadout_slots === 'number' 
+                        ? sheetData.unlocked_loadout_slots 
+                        : (typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3);
                       const usedSlots = calculateTotalLoadoutSlotsUsed(slots, fullCatalog);
                       const remainingSlots = Math.max(0, maxSlots - usedSlots);
                       return (
-                        <div className="mt-2.5 px-3 py-1.5 bg-slate-900/90 border border-pink-500/40 rounded-xl text-xs font-mono flex items-center justify-between gap-2 shadow-inner shrink-0">
-                          <span className="text-pink-300 font-bold flex items-center gap-1">⚡ Slots:</span>
+                        <div className="mt-2.5 px-3 py-1.5 bg-slate-900/90 border border-cyan-500/40 rounded-xl text-xs font-mono flex items-center justify-between gap-2 shadow-inner shrink-0">
+                          <span className="text-cyan-300 font-bold flex items-center gap-1">⚡ Loadout Slots:</span>
                           <div className="flex items-center gap-2 text-[11px] font-bold">
                             <span className="text-slate-300">Max <strong className="text-slate-100">{maxSlots}</strong></span>
                             <span className="text-slate-600">|</span>
@@ -1004,7 +1006,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             <span>
                               {type === 'powers'
                                 ? 'No powers learned yet. Select from catalog on the right.'
-                                : 'No active magic items equipped. Select items from Character Vault (Tab 1 on right) to equip.'}
+                                : 'No active loadout items equipped. Select items from Vault (Tab 1 on right) to equip.'}
                             </span>
                           )}
                         </div>
@@ -1120,7 +1122,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               : 'border-transparent text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          📦 Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
+                          🏺 Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
                         </button>
                       )}
 
@@ -1138,7 +1140,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             : 'border-transparent text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        🌐 Stock Catalog ({filteredCatalogAbilities.length})
+                        📖 Catalog ({filteredCatalogAbilities.length})
                       </button>
 
                       {type === 'spells' && (
@@ -1154,7 +1156,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               : 'border-transparent text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          🛒 Buy Slots
+                          ⚡ Buy Slots
                         </button>
                       )}
 
@@ -1178,7 +1180,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             : 'border-transparent text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        ➕ Custom Creator
+                        ➕ Custom {type === 'powers' ? 'Power' : 'Item'}
                       </button>
 
                       {isVersionEditMode && (
@@ -1223,9 +1225,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
                                 <Sparkles className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
                                 {rightSearchQuery ? (
-                                  <span>No items matching "{rightSearchQuery}" in Character Vault.</span>
+                                  <span>No items matching "{rightSearchQuery}" in Vault.</span>
                                 ) : (
-                                  <span>Character Vault is empty. Claim items from Stock Catalog (Tab 2) or Loot Generator.</span>
+                                  <span>Vault is empty. Claim items from Catalog (Tab 2) or Loot Generator.</span>
                                 )}
                               </div>
                             ) : (
@@ -1574,12 +1576,26 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       </div>
                                       {type === 'spells' && (() => {
                                         const badge = getMagicItemTierBadge(item, fullCatalog);
-                                        if (!badge) return null;
+                                        const isHardware = (item as any).is_hardware || (item as any).cost;
                                         return (
-                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                                            <span>{badge.icon}</span>
-                                            <span>{badge.label}</span>
-                                          </span>
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            {badge && (
+                                              <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
+                                                <span>{badge.icon}</span>
+                                                <span>{badge.label}</span>
+                                              </span>
+                                            )}
+                                            {isHardware ? (
+                                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
+                                                <span>⚙️ Hardware</span>
+                                                {(item as any).cost && <span className="text-amber-300 font-extrabold">• {(item as any).cost}</span>}
+                                              </span>
+                                            ) : (
+                                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-500/40 flex items-center gap-1">
+                                                <span>🏺 Relic (Loot)</span>
+                                              </span>
+                                            )}
+                                          </div>
                                         );
                                       })()}
                                     </div>
@@ -1879,7 +1895,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
                   <div className="flex items-center gap-3">
                     <span className="font-outfit font-bold text-slate-300">
-                      {type === 'powers' ? '⚡ Powers Manager' : '✨ Magic Items Manager'}
+                      {type === 'powers' ? '🔥 Powers Manager' : '⚡ Loadout Manager'}
                     </span>
                   </div>
                   
@@ -1994,7 +2010,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           })
         ) : (
           <div className="p-4 bg-slate-950/40 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
-            No {type === 'powers' ? 'powers' : 'magic items'} learned yet. Click "Manage {type === 'powers' ? 'Powers' : 'Magic Items'}" above to select abilities.
+            No {type === 'powers' ? 'powers' : 'loadout items'} equipped yet. Click "Manage {type === 'powers' ? 'Powers' : 'Loadout'}" above to select abilities.
           </div>
         )}
       </div>

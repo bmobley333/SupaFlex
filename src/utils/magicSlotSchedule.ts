@@ -216,15 +216,17 @@ export const calculateSpentApOnMagicSlots = (unlockedSlots: number = 3): number 
 };
 
 /**
- * Automatically migrates existing character sheet magic items from spell_slots to character_vault
- * if total active slot weight exceeds unlocked_magic_slots (default 3).
- * Keeps items up to unlocked_magic_slots weight in spell_slots (first-come-first-serve);
+ * Automatically migrates existing character sheet items from spell_slots to character_vault
+ * if total active slot weight exceeds unlocked_loadout_slots (default 3).
+ * Keeps items up to unlocked_loadout_slots weight in spell_slots (first-come-first-serve);
  * moves excess items into character_vault so zero items are lost.
  */
 export const migrateCharacterMagicItemsToVault = (sheetData: any): any => {
   if (!sheetData) return sheetData;
 
-  const unlockedSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
+  const unlockedSlots = typeof sheetData.unlocked_loadout_slots === 'number' 
+    ? sheetData.unlocked_loadout_slots 
+    : (typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3);
   const spellSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
   const vault: MagicItem[] = Array.isArray(sheetData.character_vault) ? sheetData.character_vault : [];
 
@@ -259,8 +261,14 @@ export const migrateCharacterMagicItemsToVault = (sheetData: any): any => {
 
   return {
     ...sheetData,
+    unlocked_loadout_slots: unlockedSlots,
     unlocked_magic_slots: unlockedSlots,
     spell_slots: keptSlots,
     character_vault: [...vault, ...migratedVaultItems],
   };
 };
+
+export const migrateCharacterLoadoutToVault = migrateCharacterMagicItemsToVault;
+export const getLoadoutSlotWeight = getItemSlotWeight;
+export const getApCostForNextLoadoutSlot = getApCostForNextSlot;
+export const calculateSpentApOnLoadoutSlots = calculateSpentApOnMagicSlots;

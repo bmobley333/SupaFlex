@@ -416,9 +416,11 @@ export interface CharacterSheetData {
   movement_rate?: MovementRateData;
   bio: CharacterBio;
   essence_core?: number; // 0-100 Essence Core Progress Ring
-  character_vault?: MagicItem[]; // Unlimited storage vault for claimed magic items
-  unlocked_magic_slots?: number; // Total active Magic Item Slots capacity purchased with AP (default 3)
-  starred_magic_items?: (number | string)[]; // Starred Magic Item Wishlist IDs
+  character_vault?: MagicItem[]; // Unlimited storage vault for claimed Relics and Hardware
+  unlocked_loadout_slots?: number; // Total active Loadout Slots capacity purchased with AP (default 3)
+  unlocked_magic_slots?: number; // Deprecated alias for unlocked_loadout_slots
+  starred_loadout_items?: (number | string)[]; // Starred Loadout Wishlist IDs
+  starred_magic_items?: (number | string)[]; // Starred Magic Item Wishlist IDs (alias)
   starred_powers?: (number | string)[]; // Starred Powers Wishlist IDs
   starred_weapons?: (number | string)[]; // Starred Weapons Wishlist IDs
   starred_armor?: (number | string)[]; // Starred Armor Wishlist IDs
@@ -694,7 +696,19 @@ export interface MagicItem {
   base_name?: string;
   slot_weight?: 1 | 2 | 3 | 4;
   rarity?: 'Minor' | 'Lesser' | 'Greater' | 'Relic' | 'Epic';
+  cost?: string; // Optional cost for Hardware items
+  is_hardware?: boolean; // True if purchased hardware item
 }
+
+/** Canonical S-Tier type aliases for Relic, Hardware, and Loadout */
+export type Relic = MagicItem;
+
+export interface HardwareItem extends MagicItem {
+  cost: string; // Required cost (e.g. "150s", "2g")
+  is_hardware: true;
+}
+
+export type LoadoutItem = MagicItem | HardwareItem;
 
 export interface Skillset {
   id: number;

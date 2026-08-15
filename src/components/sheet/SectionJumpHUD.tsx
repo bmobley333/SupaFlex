@@ -33,8 +33,8 @@ const HUD_ITEMS: HUDItem[] = [
   },
   {
     id: 'section-powers-magic',
-    label: 'Powers & Magic Items',
-    icons: '🔥 ✨',
+    label: 'Powers & Loadout',
+    icons: '🔥 ⚡',
     activeColorClass: 'bg-amber-900/60 text-amber-200 border-amber-400 shadow-amber-500/30',
     borderColorClass: 'hover:border-amber-500/50 hover:bg-amber-950/40 text-slate-300',
   },

@@ -252,17 +252,49 @@ export const gameApi = {
     return (data || []) as Power[];
   },
 
-  async getMagicItems(): Promise<MagicItem[]> {
+  // --- RELICS, HARDWARE & LOADOUT CATALOG ---
+  async getRelics(): Promise<MagicItem[]> {
     const { data, error } = await supabase
-      .from('magic_items')
+      .from('relics')
       .select('*')
       .order('name', { ascending: true });
 
     if (error) {
-      console.error('[gameApi] Error fetching magic items:', error);
-      return [];
+      console.warn('[gameApi] Error fetching relics (attempting magic_items fallback):', error);
+      const { data: fallbackData } = await supabase
+        .from('magic_items')
+        .select('*')
+        .order('name', { ascending: true });
+      return (fallbackData || []) as MagicItem[];
     }
     return (data || []) as MagicItem[];
+  },
+
+  async getHardware(): Promise<MagicItem[]> {
+    const { data, error } = await supabase
+      .from('hardware')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('[gameApi] Error fetching hardware catalog:', error);
+      return [];
+    }
+    return ((data || []).map((h) => ({ ...h, is_hardware: true }))) as MagicItem[];
+  },
+
+  async getLoadoutCatalog(): Promise<MagicItem[]> {
+    const [relics, hardware] = await Promise.all([
+      this.getRelics(),
+      this.getHardware(),
+    ]);
+    const combined = [...relics, ...hardware];
+    combined.sort((a, b) => a.name.localeCompare(b.name));
+    return combined;
+  },
+
+  async getMagicItems(): Promise<MagicItem[]> {
+    return this.getLoadoutCatalog();
   },
 
   // --- SKILLSETS ---

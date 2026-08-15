@@ -74,10 +74,10 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* 2-Column Responsive Section: 🔥 POWERS & ✨ MAGIC ITEMS */}
+      {/* 2-Column Responsive Section: 🔥 POWERS & ⚡ LOADOUT */}
       <div id="section-powers-magic" className="grid grid-cols-1 lg:grid-cols-2 gap-4 scroll-mt-32">
         <AbilitySlotsGrid title="POWERS" type="powers" />
-        <AbilitySlotsGrid title="MAGIC ITEMS" type="spells" />
+        <AbilitySlotsGrid title="LOADOUT" type="spells" />
       </div>
 
       {/* Quick Section Jump Navigation HUD Pill */}

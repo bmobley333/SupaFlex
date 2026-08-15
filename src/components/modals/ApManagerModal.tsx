@@ -235,15 +235,15 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         ],
       },
       {
-        id: 'magicItems',
-        name: 'Magic Items',
-        emoji: '💎',
+        id: 'loadoutSlots',
+        name: 'Loadout Slots',
+        emoji: '⚡',
         netAp: magicItemsNet,
-        badgeColor: 'text-pink-300 bg-pink-950/60 border-pink-500/30',
+        badgeColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-500/30',
         details: [
-          { label: `Base Free Magic Item Slots`, value: `3 Free Slots (0 AP)` },
+          { label: `Base Free Loadout Slots`, value: `3 Free Slots (0 AP)` },
           { label: `Unlocked Active Slot Capacity`, value: `${unlockedMagicSlots} / ${maxSlotsCap} Max Slots (Level ${level})` },
-          { label: `Total AP Spent on Magic Item Slots`, value: `${magicItemsNet} AP` },
+          { label: `Total AP Spent on Loadout Slots`, value: `${magicItemsNet} AP` },
         ],
       },
       {
@@ -595,6 +595,21 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                     </div>
                     <p className="text-xs text-slate-400">
                       Combine two known Powers into a single combined-action deployment during combat.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-outfit font-bold text-amber-300 text-sm">Loadout Burn (5 AP)</h4>
+                      <button
+                        onClick={() => handleBuyCapstone('Loadout Burn', 5)}
+                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 font-outfit font-bold text-white transition-all text-xs cursor-pointer"
+                      >
+                        Unlock (5 AP)
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      As a Free Action [F], push any active slotted Relic or Hardware to output maximum/Epic effect for 1 round before melting into inert slag, instantly freeing its Loadout Slots. (Excludes flat 1, 2, 3 consumables).
                     </p>
                   </div>
 
