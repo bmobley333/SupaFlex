@@ -27,21 +27,19 @@ def main():
 
     # List of all active tables to back up
     tables = [
-        "monsters",
+        "characters",
+        "players",
+        "powers",
+        "skillsets",
+        "relics",
+        "hardware",
         "weapons",
         "armor",
         "shields",
         "gear",
-        "powers",
-        "magic_items",
-        "skillsets",
-        "treasure_tables",
-        "treasure_entries",
-        "nish_tc",
+        "monsters",
         "parties",
-        "party_session_members",
-        "characters",
-        "players"
+        "party_session_members"
     ]
 
     timestamp_str = datetime.now().strftime("%Y-%m-%d")

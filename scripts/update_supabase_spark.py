@@ -171,18 +171,20 @@ def update_master_sheet(service, sheet_tab: str, dry_run: bool = False):
             act_val = r[act_idx].strip() if act_idx < len(r) else ""
             eff_val = r[eff_idx].strip() if eff_idx < len(r) else ""
 
-            if sheet_tab.lower() == "magic_items":
+            if sheet_tab.lower() == "relics":
                 sub_val = r[sub_idx].strip() if sub_idx < len(r) else ""
                 r[d_idx] = generate_magic_item_dropdown(sub_val, name_val, usage_val, act_val, eff_val)
             else:
                 tbl_val = r[tbl_idx].strip() if tbl_idx < len(r) else ""
                 r[d_idx] = generate_power_dropdown(tbl_val, name_val, usage_val, act_val, eff_val)
 
+        if len(r) > len(header):
+            r = r[:len(header)]
         updated_rows.append(r)
 
     print(f"[{sheet_tab}] Total Rows: {len(rows)-header_idx-1} | Modified ('Day' -> '1-⚡'): {modified_count}")
 
-    if not dry_run and modified_count > 0:
+    if not dry_run:
         body = {'values': updated_rows}
         service.spreadsheets().values().update(
             spreadsheetId=MASTER_SHEET_ID,
@@ -201,10 +203,10 @@ def main():
     client = load_supabase_client()
     service = get_sheets_service()
 
-    tot_m, mod_m = update_supabase_table(client, "magic_items", dry_run=args.dry_run)
+    tot_m, mod_m = update_supabase_table(client, "relics", dry_run=args.dry_run)
     tot_p, mod_p = update_supabase_table(client, "powers", dry_run=args.dry_run)
 
-    update_master_sheet(service, "magic_items", dry_run=args.dry_run)
+    update_master_sheet(service, "relics", dry_run=args.dry_run)
     update_master_sheet(service, "powers", dry_run=args.dry_run)
 
     print("\n" + "="*50)

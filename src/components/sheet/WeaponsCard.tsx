@@ -450,8 +450,9 @@ export const WeaponsCard: React.FC = () => {
     saveActiveCharacter();
   };
 
+  const [skillFilterMode, setSkillFilterMode] = useState<'all' | 'skilled' | 'unskilled'>('skilled');
   const [weaponFilterCategory, setWeaponFilterCategory] = useState<
-    'all' | 'starred' | 'learnable' | 'melee' | 'hurled' | 'shot' | 'unarmed'
+    'all' | 'starred' | 'melee' | 'hurled' | 'shot' | 'unarmed'
   >('all');
 
   const starredWeaponsCount = useMemo(() => {
@@ -483,12 +484,18 @@ export const WeaponsCard: React.FC = () => {
 
       const variants = splitWeaponIntoVariants(weapon);
       const qualifying = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
+      const isAnyLearnable = qualifying.length > 0;
+
+      // 1.5. Skill Filter (All vs Skilled vs Unskilled)
+      if (skillFilterMode === 'skilled' && !isAnyLearnable) {
+        return false;
+      }
+      if (skillFilterMode === 'unskilled' && isAnyLearnable) {
+        return false;
+      }
 
       // 2. Category / Filter mode
       if (weaponFilterCategory === 'starred' && !isItemStarred(weapon)) {
-        return false;
-      }
-      if (weaponFilterCategory === 'learnable' && qualifying.length === 0) {
         return false;
       }
       if (weaponFilterCategory === 'melee') {
@@ -525,7 +532,7 @@ export const WeaponsCard: React.FC = () => {
 
       return true;
     });
-  }, [supabaseWeapons, equippedBaseNamesSet, weaponFilterCategory, rightSearchQuery, attributeDice, isItemStarred, activeGenre]);
+  }, [supabaseWeapons, equippedBaseNamesSet, skillFilterMode, weaponFilterCategory, rightSearchQuery, attributeDice, isItemStarred, activeGenre]);
 
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3 h-fit">
@@ -772,7 +779,7 @@ export const WeaponsCard: React.FC = () => {
                     {/* TAB 1: STOCK CATALOG VIEW */}
                     {activeRightTab === 'CATALOG' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
-                        {/* Search Filter Bar & Dyslexia-Friendly Peg-Slider Toggle */}
+                        {/* Search Filter Bar & Dyslexia-Friendly KISS Pill Switch */}
                         <div className="flex flex-col gap-2 shrink-0">
                           {/* Search Filter Bar */}
                           <div className="relative">
@@ -781,8 +788,46 @@ export const WeaponsCard: React.FC = () => {
                               type="text"
                               value={rightSearchQuery}
                               onChange={(e) => setRightSearchQuery(e.target.value)}
+                              placeholder="Search weapons or type..."
                               className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-rose-500 w-full"
                             />
+                          </div>
+
+                          {/* KISS Multi-Option Pill Switch: All / Skilled / Unskilled */}
+                          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                            <button
+                              type="button"
+                              onClick={() => setSkillFilterMode('all')}
+                              className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                skillFilterMode === 'all'
+                                  ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                            >
+                              🌐 All
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSkillFilterMode('skilled')}
+                              className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                skillFilterMode === 'skilled'
+                                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                            >
+                              🎓 Skilled
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSkillFilterMode('unskilled')}
+                              className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                skillFilterMode === 'unskilled'
+                                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                            >
+                              ⚪ Unskilled
+                            </button>
                           </div>
 
                           {/* Category / Filter Select */}
@@ -793,9 +838,8 @@ export const WeaponsCard: React.FC = () => {
                               onChange={(e) => setWeaponFilterCategory(e.target.value as any)}
                               className="bg-slate-950 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
                             >
-                              <option value="all">🌐 All Weapons</option>
+                              <option value="all">🌐 All Weapons / Types</option>
                               <option value="starred">⭐ Starred Favorites ({starredWeaponsCount})</option>
-                              <option value="learnable">⚡ Learnable Only</option>
                               <option value="melee">🗡️ Melee</option>
                               <option value="hurled">🪓 Hurled</option>
                               <option value="shot">🏹 Shot</option>

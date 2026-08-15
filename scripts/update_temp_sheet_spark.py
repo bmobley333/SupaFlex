@@ -96,7 +96,7 @@ def process_tab(service, tab_name: str, dry_run: bool = False):
         effect_val = r[e_idx].strip()
 
         if name_val:
-            if tab_name == "magic_items":
+            if tab_name == "relics":
                 new_dropdown = generate_magic_item_dropdown(sub_val, name_val, usage_val, action_val, effect_val)
             else:
                 new_dropdown = generate_power_dropdown(tbl_val, name_val, usage_val, action_val, effect_val)
@@ -124,15 +124,27 @@ def process_tab(service, tab_name: str, dry_run: bool = False):
     return len(rows) - 1, modified_count
 
 def update_data_validation(service):
-    print("\n--- Updating Data Validation Rules for Usage Column (Column E) ---")
-    meta = service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
-    allowed_usages = ["1-⚡", "1-Enc", "2-Enc", "3-Enc", "1-Rnd", "1-Luck🍀", "1-Luck", "Perm", "Passive", "At-Will"]
+    print("\n--- Updating Data Validation Rules on Google Sheet ---")
+    sheet_metadata = service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
+    sheets = sheet_metadata.get('sheets', [])
+
+    allowed_usages = [
+        "1-Rnd",
+        "1-Enc",
+        "2-Enc",
+        "3-Enc",
+        "1-⚡",
+        "1-Luck",
+        "1",
+        "2",
+        "3"
+    ]
 
     requests = []
-    for sheet in meta.get('sheets', []):
-        sheet_id = sheet['properties']['sheetId']
-        title = sheet['properties']['title']
-        if title in ['magic_items', 'powers']:
+    for s in sheets:
+        title = s.get('properties', {}).get('title', '')
+        if title in ['relics', 'powers']:
+            sheet_id = s.get('properties', {}).get('sheetId')
             req = {
                 "setDataValidation": {
                     "range": {
@@ -166,7 +178,7 @@ def main():
     print("🌌 Starting Temp Magic & Powers Sheet Refactoring...")
     service = get_sheets_service()
 
-    total_m, mod_m = process_tab(service, "magic_items", dry_run=args.dry_run)
+    total_m, mod_m = process_tab(service, "relics", dry_run=args.dry_run)
     total_p, mod_p = process_tab(service, "powers", dry_run=args.dry_run)
 
     if not args.dry_run:
