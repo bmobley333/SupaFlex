@@ -122,10 +122,15 @@ const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; 
 
 const formatTableNameDisplay = (tblName: string): string => {
   if (!tblName) return '';
-  return tblName
+  const clean = tblName
     .replace(/Artifact🌀/g, 'Epic💫')
     .replace(/Artifact/g, 'Epic')
     .replace(/🌀/g, '💫');
+  if (clean === 'Minor' || clean.toLowerCase() === 'minor') return '🍺 Minor (1 Slot)';
+  if (clean === 'Lesser' || clean.toLowerCase() === 'lesser') return '🪄 Lesser (2 Slots)';
+  if (clean === 'Greater' || clean.toLowerCase() === 'greater') return '🪬 Greater (3 Slots)';
+  if (clean === 'Epic' || clean.toLowerCase() === 'epic') return '💫 Epic (4 Slots)';
+  return clean;
 };
 
 const pruneLesserPowerVersions = (abilitySlots: AbilitySlot[]): AbilitySlot[] => {
@@ -203,7 +208,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Loadout Catalog Filter Switch: 'ALL' | 'RELICS' | 'HARDWARE'
+  const [loadoutTypeFilter, setLoadoutTypeFilter] = useState<'ALL' | 'RELICS' | 'HARDWARE'>('ALL');
+
   // Custom / Version Creation Form State
+  const [createItemType, setCreateItemType] = useState<'relic' | 'hardware'>('relic');
+  const [createCostVal, setCreateCostVal] = useState<number>(100);
+  const [createCostUnit, setCreateCostUnit] = useState<'s' | 'g'>('s');
   const [createName, setCreateName] = useState('');
   const [createAction, setCreateAction] = useState('A');
   const [createUsage, setCreateUsage] = useState('1');
@@ -636,6 +647,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     const { baseName, version } = parseAbilityVersion(rawClean);
     const versionedName = `${baseName} v${version}`;
 
+    const isHardware = type === 'spells' && createItemType === 'hardware';
+    const costStr = isHardware ? `${createCostVal}${createCostUnit}` : undefined;
+    const tierIcon = createTier === 'Minor' ? '🍺' : createTier === 'Lesser' ? '🪄' : createTier === 'Greater' ? '🪬' : '💫';
+
     const newItem: Power | MagicItem = {
       id: Date.now(),
       name: versionedName,
@@ -644,9 +659,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       action: createAction,
       usage: createUsage,
       effect: createEffect.trim(),
-      source: 'Custom',
+      source: isHardware ? 'Custom Hardware' : 'Custom Relic',
       created_at: new Date().toISOString(),
-      category: type === 'powers' ? undefined : createTier,
+      category: type === 'powers' ? undefined : `${createTier}${tierIcon}`,
+      is_hardware: isHardware,
+      cost: costStr,
     };
 
     updateActiveSheetData((prev) => {
@@ -709,9 +726,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           action: createAction,
           usage: createUsage,
           effect: createEffect.trim(),
-          source: 'Custom Creator',
+          source: isHardware ? 'Custom Hardware' : 'Custom Relic',
           created_at: new Date().toISOString(),
-          category: createTier,
+          category: `${createTier}${tierIcon}`,
+          is_hardware: isHardware,
+          cost: costStr,
           slot_weight: (getItemSlotWeight({ rarity: createTier, name: versionedName }) as 1 | 2 | 3 | 4),
         };
         const currentVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];
@@ -753,14 +772,38 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           const itemSub = ((item as any).category || (item as any).sub || '').toLowerCase();
           return itemSub.includes(selectedCategory.toLowerCase());
         }
+      } else {
+        // Loadout Type Filter (All, Relics, Hardware)
+        const isHw = !!((item as any).is_hardware || (item as any).cost);
+        if (loadoutTypeFilter === 'RELICS' && isHw) {
+          return false;
+        }
+        if (loadoutTypeFilter === 'HARDWARE' && !isHw) {
+          return false;
+        }
+        if (selectedCategory === 'favorites') {
+          return isItemStarred(item);
+        }
       }
       return true;
     });
-  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, favoriteTables, isItemStarred, activeGenre]);
+  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, loadoutTypeFilter, favoriteTables, isItemStarred, activeGenre]);
 
   const groupedTables = useMemo(() => {
     const acc = categoryFilteredCatalog.reduce((map, item) => {
-      const tableName = (item as any).table || (item as any).table_name || (type === 'powers' ? 'General Powers' : 'General Magic Items');
+      let tableName = (item as any).table || (item as any).table_name;
+      if (!tableName) {
+        if (type === 'powers') {
+          tableName = 'General Powers';
+        } else {
+          const cat = ((item as any).category || (item as any).sub || '').toLowerCase();
+          if (cat.includes('minor') || cat.includes('🍺')) tableName = 'Minor';
+          else if (cat.includes('lesser') || cat.includes('🪄') || cat.includes('🔮')) tableName = 'Lesser';
+          else if (cat.includes('greater') || cat.includes('🪬')) tableName = 'Greater';
+          else if (cat.includes('epic') || cat.includes('💫') || cat.includes('artifact')) tableName = 'Epic';
+          else tableName = 'Minor';
+        }
+      }
       if (!map[tableName]) map[tableName] = [];
       map[tableName].push(item);
       return map;
@@ -778,6 +821,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           }
         }
       });
+    } else {
+      ['Minor', 'Lesser', 'Greater', 'Epic'].forEach((t) => {
+        if (!acc[t]) acc[t] = [];
+      });
     }
 
     return acc;
@@ -787,7 +834,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return fullCatalog.filter((item) => isItemStarred(item));
   }, [fullCatalog, isItemStarred]);
 
-  const availableTableNames = useMemo(() => Object.keys(groupedTables), [groupedTables]);
+  const availableTableNames = useMemo(() => {
+    const keys = Object.keys(groupedTables);
+    if (type === 'spells') {
+      const order = ['Minor', 'Lesser', 'Greater', 'Epic'];
+      return keys.sort((a, b) => {
+        const idxA = order.indexOf(a);
+        const idxB = order.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+    }
+    return keys;
+  }, [groupedTables, type]);
 
   const effectiveActiveTable = useMemo(() => {
     if (activeTableName === 'ALL') return 'ALL';
@@ -1422,6 +1483,45 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     {/* TAB 2: STOCK CATALOG VIEW */}
                     {activeRightTab === 'CATALOG' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
+                        {/* Loadout Type Multi-Option Pill Switch (Spells/Loadout Mode) */}
+                        {type === 'spells' && (
+                          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setLoadoutTypeFilter('ALL')}
+                              className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                loadoutTypeFilter === 'ALL'
+                                  ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                            >
+                              🌐 All ({stockCatalog.length})
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setLoadoutTypeFilter('RELICS')}
+                              className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                loadoutTypeFilter === 'RELICS'
+                                  ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                            >
+                              🏺 Relics ({stockCatalog.filter((m: any) => !m.is_hardware && !m.cost).length})
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setLoadoutTypeFilter('HARDWARE')}
+                              className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                loadoutTypeFilter === 'HARDWARE'
+                                  ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                            >
+                              ⚙️ Hardware ({stockCatalog.filter((m: any) => m.is_hardware || m.cost).length})
+                            </button>
+                          </div>
+                        )}
+
                         {/* Category Dropdown (Powers Mode Only) */}
                         {type === 'powers' && (
                           <div className="flex items-center gap-2 shrink-0">
@@ -1456,13 +1556,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             onChange={(e) => setActiveTableName(e.target.value)}
                             className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
                           >
-                            <option value="ALL">🌐 All Tables ({categoryFilteredCatalog.length})</option>
+                            <option value="ALL">🌐 {type === 'spells' ? 'All Tables / Tiers' : 'All Tables'} ({categoryFilteredCatalog.length})</option>
                             {type === 'spells' && (
                               <option value="STARRED">⭐ Starred Favorites ({starredCatalogItems.length})</option>
                             )}
                             {availableTableNames.map((tblName) => (
                               <option key={tblName} value={tblName}>
-                                📁 {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
+                                {type === 'spells' ? formatTableNameDisplay(tblName) : `📁 ${formatTableNameDisplay(tblName)}`} ({groupedTables[tblName]?.length || 0})
                               </option>
                             ))}
                           </select>
@@ -1678,6 +1778,34 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           </div>
 
                           <div className="flex flex-col gap-2">
+                            {/* Relic vs Hardware Multi-Option Pill Switch (Loadout Mode) */}
+                            {type === 'spells' && (
+                              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setCreateItemType('relic')}
+                                  className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                    createItemType === 'relic'
+                                      ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                  }`}
+                                >
+                                  🏺 Relic (Found Loot)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setCreateItemType('hardware')}
+                                  className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                    createItemType === 'hardware'
+                                      ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                  }`}
+                                >
+                                  ⚙️ Hardware (Store Device)
+                                </button>
+                              </div>
+                            )}
+
                             <div className="flex flex-col gap-1">
                               <span className="text-xs font-bold text-slate-300">Ability Name</span>
                               <input
@@ -1688,6 +1816,31 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 required
                               />
                             </div>
+
+                            {/* Store Cost Row (Hardware Mode Only) */}
+                            {type === 'spells' && createItemType === 'hardware' && (
+                              <div className="flex items-center gap-2 bg-slate-950 p-2 rounded-lg border border-cyan-500/30">
+                                <span className="text-xs font-bold text-cyan-300 shrink-0">Store Cost:</span>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={createCostVal}
+                                  onChange={(e) => setCreateCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                                  className="bg-slate-900 border border-slate-700 text-slate-100 text-xs font-mono font-bold px-2 py-1 rounded outline-none w-20"
+                                />
+                                <select
+                                  value={createCostUnit}
+                                  onChange={(e) => setCreateCostUnit(e.target.value as 's' | 'g')}
+                                  className="bg-slate-900 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded outline-none cursor-pointer"
+                                >
+                                  <option value="s">Silver (s)</option>
+                                  <option value="g">Gold (g)</option>
+                                </select>
+                                <span className="text-[11px] text-slate-400 italic">
+                                  ({createCostUnit === 'g' ? `${createCostVal * 100}s equivalent` : `${Math.floor(createCostVal / 100)}g ${createCostVal % 100}s`})
+                                </span>
+                              </div>
+                            )}
 
                             <div className={`grid ${type === 'spells' ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
                               <div className="flex items-center gap-2">
@@ -1728,7 +1881,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   >
                                     <option value="Minor">🍺 Minor</option>
                                     <option value="Lesser">🪄 Lesser</option>
-                                    <option value="Greater">✨ Greater</option>
+                                    <option value="Greater">🪬 Greater</option>
                                     <option value="Epic">💫 Epic</option>
                                   </select>
                                 </div>

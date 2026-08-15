@@ -95,12 +95,16 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
       onOpenPowersManager();
       return;
     }
-    if (catId === 'magicItems' && onOpenMagicItemsManager) {
+    if ((catId === 'loadoutSlots' || catId === 'magicItems') && onOpenMagicItemsManager) {
       onOpenMagicItemsManager();
       return;
     }
     if (catId === 'skills' && onOpenSkillsManager) {
       onOpenSkillsManager();
+      return;
+    }
+    if (catId === 'loadoutSlots') {
+      window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: 'spells' }));
       return;
     }
     window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: catId }));
@@ -249,7 +253,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
       {
         id: 'powers',
         name: 'Powers',
-        emoji: '⚡',
+        emoji: '🔥',
         netAp: powersNet,
         badgeColor: 'text-amber-400 bg-amber-950/60 border-amber-500/30',
         details: [
@@ -465,7 +469,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
 
                       {/* Center: Always-Visible Centered Manage Button */}
                       <div className="flex-1 flex justify-center px-1">
-                        {['armor', 'attributes', 'focus', 'magicItems', 'powers', 'shields', 'skills', 'vitality', 'weapons'].includes(cat.id) && (
+                        {['armor', 'attributes', 'focus', 'loadoutSlots', 'magicItems', 'powers', 'shields', 'skills', 'vitality', 'weapons'].includes(cat.id) && (
                           <button
                             type="button"
                             onClick={(e) => {
@@ -474,7 +478,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                             }}
                             className="px-3 py-1 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-outfit font-bold text-xs shadow-md hover:shadow-purple-500/30 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
                           >
-                            <span>Manage {cat.name}</span>
+                            <span>Manage {cat.id === 'loadoutSlots' ? 'Loadout' : cat.name}</span>
                           </button>
                         )}
                       </div>

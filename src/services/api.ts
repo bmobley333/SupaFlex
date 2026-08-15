@@ -260,12 +260,8 @@ export const gameApi = {
       .order('name', { ascending: true });
 
     if (error) {
-      console.warn('[gameApi] Error fetching relics (attempting magic_items fallback):', error);
-      const { data: fallbackData } = await supabase
-        .from('magic_items')
-        .select('*')
-        .order('name', { ascending: true });
-      return (fallbackData || []) as MagicItem[];
+      console.error('[gameApi] Error fetching relics:', error);
+      return [];
     }
     return (data || []) as MagicItem[];
   },

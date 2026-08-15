@@ -189,13 +189,13 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       let data: any[] | null = null;
       if (isEpicTier) {
         const { data: epicData } = await supabase
-          .from('magic_items')
+          .from('relics')
           .select('*')
           .or('category.ilike.%Epic%,category.ilike.%Artifact%');
         data = epicData;
       } else {
         const { data: tierData } = await supabase
-          .from('magic_items')
+          .from('relics')
           .select('*')
           .ilike('category', `%${rarity}%`);
         data = tierData;
