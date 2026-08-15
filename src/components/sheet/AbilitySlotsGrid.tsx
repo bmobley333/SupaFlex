@@ -181,10 +181,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return pruneLesserPowerVersions(slots);
   }, [slots]);
 
-  // Powers / Spells AP Metrics
+  // Powers / Spells AP Metrics across active slots and Vault
+  const allOwnedPowers = useMemo(() => {
+    if (type !== 'powers') return slots;
+    const codex: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex : [];
+    return [...slots, ...codex];
+  }, [type, slots, sheetData.character_power_codex]);
+
   const totalPowerUnits = useMemo(() => {
-    return calculateTotalPowerUnits(slots);
-  }, [slots]);
+    return calculateTotalPowerUnits(pruneLesserPowerVersions(allOwnedPowers));
+  }, [allOwnedPowers]);
 
   const apSpent = Math.max(0, totalPowerUnits - 3);
 
@@ -474,21 +480,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     saveActiveCharacter();
   };
 
-  // Learn an ability from catalog into active sheet slots
+  // Learn an ability from catalog into active sheet slots or Vault
   const handleLearnAbility = (item: Power | MagicItem) => {
     const { baseName, version } = parseAbilityVersion(item.name);
     updateActiveSheetData((prev) => {
-      const current = [...(prev[slotKey] || [])];
-
       if (type === 'powers') {
-        const oldTotalUnits = calculateTotalPowerUnits(current);
+        const currentSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
+        const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
+        const combinedOld = [...currentSlots, ...currentVault];
+        const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
         const oldApSpent = Math.max(0, oldTotalUnits - 3);
 
-        const existingIndex = current.findIndex(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-        );
-
-        const newSlot: AbilitySlot = {
+        const newPower: AbilitySlot = {
           select: true,
           name: cleanName(item.name),
           base_name: baseName,
@@ -498,25 +501,48 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           effect: item.effect || '',
           notes: item.notes,
           checked: [false, false, false],
+          is_readied: false,
+          ready: getPowerReadyCategory(item),
         };
 
-        if (existingIndex >= 0) {
-          const oldVersion = parseAbilityVersion(current[existingIndex].name).version;
+        const readiedIndex = currentSlots.findIndex(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+        );
+        const vaultIndex = currentVault.findIndex(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+        );
+
+        let updatedSlots = [...currentSlots];
+        let updatedVault = [...currentVault];
+        let isUpgrade = false;
+
+        if (readiedIndex >= 0) {
+          const oldVersion = parseAbilityVersion(currentSlots[readiedIndex].name).version;
           if (version > oldVersion) {
-            current[existingIndex] = newSlot;
+            updatedSlots[readiedIndex] = { ...newPower, is_readied: true };
+            isUpgrade = true;
+          } else {
+            return prev;
+          }
+        } else if (vaultIndex >= 0) {
+          const oldVersion = parseAbilityVersion(currentVault[vaultIndex].name).version;
+          if (version > oldVersion) {
+            updatedVault[vaultIndex] = newPower;
+            isUpgrade = true;
           } else {
             return prev;
           }
         } else {
-          current.push(newSlot);
+          // Brand new learned power -> add to Vault (un-readied)
+          updatedVault.push(newPower);
         }
 
-        const prunedCurrent = pruneLesserPowerVersions(current);
-        const newTotalUnits = calculateTotalPowerUnits(prunedCurrent);
+        const combinedNew = [...updatedSlots, ...updatedVault];
+        const prunedCombined = pruneLesserPowerVersions(combinedNew);
+        const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
         const newApSpent = Math.max(0, newTotalUnits - 3);
         const apDiff = newApSpent - oldApSpent;
 
-        const isUpgrade = existingIndex >= 0;
         const logAction = isUpgrade ? 'Upgraded Power' : 'Learned Power';
 
         if (apDiff > 0) {
@@ -525,7 +551,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           recordApExpenditure(0, 'Powers', `${logAction}: ${cleanName(item.name)} (0 AP - Covered by Free AP)`, 1, 'Manage Powers');
         }
 
-        return { ...prev, [slotKey]: prunedCurrent };
+        return {
+          ...prev,
+          power_slots: updatedSlots,
+          character_power_codex: updatedVault,
+        };
       } else {
         const currentVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];
         const exists = currentVault.some((v) => cleanName(v.name).toLowerCase() === cleanName(item.name).toLowerCase());
@@ -559,15 +589,22 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const current = [...(prev[slotKey] || [])];
 
       if (type === 'powers') {
-        const oldTotalUnits = calculateTotalPowerUnits(current);
+        const currentSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
+        const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
+        const combinedOld = [...currentSlots, ...currentVault];
+        const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
         const oldApSpent = Math.max(0, oldTotalUnits - 3);
 
-        const updated = current.filter(
+        const updatedSlots = currentSlots.filter(
           (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
         );
-        const prunedUpdated = pruneLesserPowerVersions(updated);
+        const updatedVault = currentVault.filter(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
+        );
 
-        const newTotalUnits = calculateTotalPowerUnits(prunedUpdated);
+        const combinedNew = [...updatedSlots, ...updatedVault];
+        const prunedCombined = pruneLesserPowerVersions(combinedNew);
+        const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
         const newApSpent = Math.max(0, newTotalUnits - 3);
         const apRefund = oldApSpent - newApSpent;
 
@@ -577,7 +614,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           recordApExpenditure(0, 'Powers', `Unlearned Power: ${cleanName(abilityName)} (0 AP - Free Slot Freed)`, 1, 'Manage Powers');
         }
 
-        return { ...prev, [slotKey]: prunedUpdated };
+        return {
+          ...prev,
+          power_slots: updatedSlots,
+          character_power_codex: updatedVault,
+        };
       } else {
         const targetSlot = current.find(
           (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
@@ -683,17 +724,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const existingCustom = prev[customKey] || [];
       const updatedCustom = [...existingCustom, newItem];
 
-      const currentSlots = [...(prev[slotKey] || [])];
-
       if (type === 'powers') {
-        const oldTotalUnits = calculateTotalPowerUnits(currentSlots);
+        const currentSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
+        const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
+        const combinedOld = [...currentSlots, ...currentVault];
+        const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
         const oldApSpent = Math.max(0, oldTotalUnits - 3);
 
-        const existingIndex = currentSlots.findIndex(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-        );
-
-        const newSlot: AbilitySlot = {
+        const newPower: AbilitySlot = {
           select: true,
           name: versionedName,
           base_name: baseName,
@@ -702,20 +740,37 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           usage: createUsage,
           effect: createEffect.trim(),
           checked: [false, false, false],
+          is_readied: false,
+          ready: getPowerReadyCategory(newItem),
         };
 
-        if (existingIndex >= 0) {
-          currentSlots[existingIndex] = newSlot;
+        const existingReadiedIdx = currentSlots.findIndex(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+        );
+        const existingVaultIdx = currentVault.findIndex(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+        );
+
+        let updatedSlots = [...currentSlots];
+        let updatedVault = [...currentVault];
+        let isUpgrade = false;
+
+        if (existingReadiedIdx >= 0) {
+          updatedSlots[existingReadiedIdx] = { ...newPower, is_readied: true };
+          isUpgrade = true;
+        } else if (existingVaultIdx >= 0) {
+          updatedVault[existingVaultIdx] = newPower;
+          isUpgrade = true;
         } else {
-          currentSlots.push(newSlot);
+          updatedVault.push(newPower);
         }
 
-        const prunedSlots = pruneLesserPowerVersions(currentSlots);
-        const newTotalUnits = calculateTotalPowerUnits(prunedSlots);
+        const combinedNew = [...updatedSlots, ...updatedVault];
+        const prunedCombined = pruneLesserPowerVersions(combinedNew);
+        const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
         const newApSpent = Math.max(0, newTotalUnits - 3);
         const apDiff = newApSpent - oldApSpent;
 
-        const isUpgrade = existingIndex >= 0;
         const logAction = isUpgrade ? 'Upgraded Power' : 'Created & Learned Power';
 
         if (apDiff > 0) {
@@ -727,7 +782,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         return {
           ...prev,
           [customKey]: updatedCustom,
-          [slotKey]: prunedSlots,
+          power_slots: updatedSlots,
+          character_power_codex: updatedVault,
         };
       } else {
         const vaultItem: MagicItem = {
@@ -1042,11 +1098,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   {/* Row 3: Global Ready Category Multi-Option Pill Switch (Powers Mode Only) */}
                   {type === 'powers' && (
                     <div className="flex items-center justify-center w-full">
-                      <div className="bg-slate-950/90 border border-slate-800 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md w-full max-w-lg">
+                      <div className="bg-slate-950/90 border border-slate-800 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md w-full max-w-2xl">
                         <button
                           type="button"
                           onClick={() => setCatalogReadyFilter('all')}
-                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
                             catalogReadyFilter === 'all'
                               ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
                               : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -1057,35 +1113,35 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         <button
                           type="button"
                           onClick={() => setCatalogReadyFilter('primary_arsenal')}
-                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
                             catalogReadyFilter === 'primary_arsenal'
                               ? 'bg-rose-900/70 text-rose-200 border border-rose-500/50 shadow-sm font-extrabold'
                               : 'text-slate-400 hover:text-slate-200 border border-transparent'
                           }`}
                         >
-                          ⚔️ Primary
+                          ⚔️ Primary / Arsenal
                         </button>
                         <button
                           type="button"
                           onClick={() => setCatalogReadyFilter('mobility_defense')}
-                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
                             catalogReadyFilter === 'mobility_defense'
                               ? 'bg-indigo-900/70 text-indigo-200 border border-indigo-500/50 shadow-sm font-extrabold'
                               : 'text-slate-400 hover:text-slate-200 border border-transparent'
                           }`}
                         >
-                          👣 Mobility
+                          👣 Mobility & Defense
                         </button>
                         <button
                           type="button"
                           onClick={() => setCatalogReadyFilter('support_passive')}
-                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
                             catalogReadyFilter === 'support_passive'
                               ? 'bg-emerald-900/70 text-emerald-200 border border-emerald-500/50 shadow-sm font-extrabold'
                               : 'text-slate-400 hover:text-slate-200 border border-transparent'
                           }`}
                         >
-                          🎓 Support
+                          🎓 Support & Passives
                         </button>
                       </div>
                     </div>
@@ -1102,7 +1158,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <Flame className={`w-4 h-4 ${type === 'powers' ? 'text-amber-400' : 'text-pink-400'}`} />
                         <span className={`text-xs font-outfit font-bold uppercase tracking-wider ${type === 'powers' ? 'text-amber-300' : 'text-pink-300'}`}>
-                          {type === 'powers' ? 'Learned Powers' : '⚡ Active Loadout'}
+                          {type === 'powers' ? 'Readied Powers' : '⚡ Active Loadout'}
                         </span>
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
                           {type === 'powers' ? activeDisplaySlots.length : slots.length}
@@ -1268,10 +1324,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                         type="button"
                                         onClick={() => toggleReadyPower(item.name)}
                                         className="px-2 py-1 bg-amber-950/60 text-amber-300 border border-amber-500/40 hover:bg-amber-900/80 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer"
-                                        title="Move power to un-readied Codex"
+                                        title="Move power to un-readied Vault"
                                       >
                                         <ArrowDownToLine className="w-3 h-3 text-amber-400" />
-                                        <span>To Codex</span>
+                                        <span>To Vault</span>
                                       </button>
                                       <button
                                         type="button"
@@ -1341,7 +1397,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               : 'border-transparent text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          📖 Codex ({(Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex.length : 0)})
+                          🔒 Vault ({(Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex.length : 0)})
                         </button>
                       )}
 
@@ -1447,15 +1503,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
                           <div className="px-3 py-1.5 bg-slate-900/90 border border-slate-800 rounded-xl text-xs flex items-center justify-between gap-2 shrink-0">
                             <span className="text-slate-400">
-                              Un-readied powers stored in character Codex.
+                              Un-readied powers stored in character Vault.
                             </span>
-                            <span className="font-mono text-amber-300 font-bold">{filteredCodex.length} in Codex</span>
+                            <span className="font-mono text-amber-300 font-bold">{filteredCodex.length} in Vault</span>
                           </div>
 
                           <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
                             {filteredCodex.length === 0 ? (
                               <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
-                                <span>No un-readied powers in Codex. Learn powers from Catalog or unready active powers on the left.</span>
+                                <span>No un-readied powers in Vault. Learn powers from Catalog or unready active powers on the left.</span>
                               </div>
                             ) : (
                               filteredCodex.map((p, pIdx) => {

@@ -90,7 +90,7 @@ export const TacticalPivotModal: React.FC<TacticalPivotModalProps> = ({ isOpen, 
                 ⚡ Tactical Pivot (In-Combat Swap)
               </h3>
               <p className="text-xs text-slate-400">
-                Spend <strong className="text-amber-300">1 Free Action (F) + 1 Spark (5⚡)</strong> to swap 1 un-readied Codex power into your active Ready Matrix.
+                Spend <strong className="text-amber-300">1 Free Action (F) + 1 Spark (5⚡)</strong> to swap 1 un-readied Vault power into your active Ready Matrix.
               </p>
             </div>
           </div>
@@ -144,11 +144,11 @@ export const TacticalPivotModal: React.FC<TacticalPivotModalProps> = ({ isOpen, 
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Step 1: Incoming Codex Power */}
+            {/* Step 1: Incoming Vault Power */}
             <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex flex-col gap-2 shadow-inner">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <span className="font-outfit font-bold text-xs text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                  1. Choose Codex Power to Swap IN
+                  1. Choose Vault Power to Swap IN
                 </span>
                 <span className="text-[10px] font-mono text-slate-400">({availableCodexPowers.length} Available)</span>
               </div>
@@ -157,7 +157,7 @@ export const TacticalPivotModal: React.FC<TacticalPivotModalProps> = ({ isOpen, 
                 <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Filter codex powers..."
+                  placeholder="Filter vault powers..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-slate-900 text-slate-200 text-xs pl-6 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500"
@@ -167,7 +167,7 @@ export const TacticalPivotModal: React.FC<TacticalPivotModalProps> = ({ isOpen, 
               <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
                 {availableCodexPowers.length === 0 ? (
                   <div className="p-4 text-center text-xs text-slate-500">
-                    No un-readied tactical powers in your Codex.
+                    No un-readied tactical powers in your Vault.
                   </div>
                 ) : (
                   availableCodexPowers.map((p) => {

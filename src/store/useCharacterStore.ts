@@ -423,7 +423,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       return { success: true };
     }
 
-    return { success: false, error: `Power "${powerName}" not found in sheet or codex.` };
+    return { success: false, error: `Power "${powerName}" not found in active sheet or Vault.` };
   },
 
   executeTacticalPivot: (unreadyPowerName: string, readyPowerName: string) => {
