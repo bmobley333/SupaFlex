@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, ArrowDownToLine, Trash2 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { TacticalPivotModal } from '../modals/TacticalPivotModal';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
 import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed, getApCostForNextSlot, getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
+import { getPowerReadyCategory, getReadySlotConfig, validateReadyMatrix } from '../../utils/readyMatrixSchedule';
 
 interface AbilitySlotsGridProps {
   title: string;
@@ -156,7 +158,15 @@ const calculateTotalPowerUnits = (abilitySlots: AbilitySlot[]): number => {
 
 export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
-  const { activeCharacter, powers, magicItems, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
+  const {
+    activeCharacter,
+    powers,
+    magicItems,
+    updateActiveSheetData,
+    saveActiveCharacter,
+    recordApExpenditure,
+    toggleReadyPower,
+  } = useCharacterStore();
   const sheetData: any = activeCharacter?.sheet_data || {};
   const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
   const rawSlots: AbilitySlot[] = (activeCharacter?.sheet_data?.[slotKey as keyof typeof activeCharacter.sheet_data] as AbilitySlot[]) || [];
@@ -178,14 +188,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const apSpent = Math.max(0, totalPowerUnits - 3);
 
-
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
   );
 
   const [showManageModal, setShowManageModal] = useState(false);
+  const [showTacticalPivotModal, setShowTacticalPivotModal] = useState(false);
+  const [readyFeedback, setReadyFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [catalogReadyFilter, setCatalogReadyFilter] = useState<'all' | 'primary_arsenal' | 'mobility_defense' | 'contextual_passive'>('all');
   const [activeTableName, setActiveTableName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -201,9 +213,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [leftSearchQuery, setLeftSearchQuery] = useState('');
   const [rightSearchQuery, setRightSearchQuery] = useState('');
   
-  // Right Pane Active View: 'VAULT', 'CATALOG', 'SLOTS', 'CREATOR', or 'EDITOR'
-  const [activeRightTab, setActiveRightTab] = useState<'VAULT' | 'CATALOG' | 'SLOTS' | 'CREATOR' | 'EDITOR'>(
-    type === 'spells' ? 'VAULT' : 'CATALOG'
+  // Right Pane Active View: 'VAULT', 'CODEX', 'CATALOG', 'SLOTS', 'CREATOR', or 'EDITOR'
+  const [activeRightTab, setActiveRightTab] = useState<'VAULT' | 'CODEX' | 'CATALOG' | 'SLOTS' | 'CREATOR' | 'EDITOR'>(
+    type === 'spells' ? 'VAULT' : 'CODEX'
   );
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -871,6 +883,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const filteredCatalogAbilities = useMemo(() => {
     return activeTableAbilities.filter((item) => {
+      // Ready category filter for Powers mode
+      if (type === 'powers' && catalogReadyFilter !== 'all') {
+        const cat = getPowerReadyCategory(item);
+        if (cat !== catalogReadyFilter) return false;
+      }
+
       if (!rightSearchQuery.trim()) return true;
       const q = rightSearchQuery.toLowerCase().trim();
       const nameMatch = item.name.toLowerCase().includes(q);
@@ -879,7 +897,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const effectMatch = (item.effect || '').toLowerCase().includes(q);
       return nameMatch || actionMatch || usageMatch || effectMatch;
     });
-  }, [activeTableAbilities, rightSearchQuery]);
+  }, [activeTableAbilities, rightSearchQuery, type, catalogReadyFilter]);
 
   // Filtered learned roster for Left Column search (Highest Version Only)
   const filteredRoster = useMemo(() => {
@@ -916,8 +934,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           <CardHelpButton ruleKey={type === 'powers' ? 'powers.basics' : 'magic_items.basics'} />
         </div>
 
-        {/* Clear Uses Button (Centered to align closer to the uses column) */}
-        <div className="flex items-center justify-center flex-1">
+        {/* Center Actions: Clear Uses & Tactical Pivot */}
+        <div className="flex items-center justify-center gap-2 flex-1 flex-wrap">
           <button
             type="button"
             onClick={handleClearAllUses}
@@ -927,6 +945,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
             <span className="font-outfit text-[11px] font-bold">Clear Uses</span>
           </button>
+
+          {type === 'powers' && (
+            <button
+              type="button"
+              onClick={() => setShowTacticalPivotModal(true)}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-950/70 hover:bg-amber-900/90 border border-amber-500/40 text-amber-300 hover:text-amber-100 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Spend 1 Free Action (F) + 1 Spark to swap a Codex power in combat"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span className="font-outfit text-[11px] font-bold">Tactical Pivot (1⚡)</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-2 flex-1">
@@ -1056,6 +1086,25 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       );
                     })()}
 
+                    {/* Left Pane Slots Status Pill (Powers Mode: Ready Matrix Model B) */}
+                    {type === 'powers' && (() => {
+                      const level = sheetData.level || 1;
+                      const readyConfig = getReadySlotConfig(level);
+                      const liveVal = validateReadyMatrix(slots, level);
+                      return (
+                        <div className="mt-2.5 px-3 py-1.5 bg-slate-900/90 border border-amber-500/40 rounded-xl text-xs font-mono flex items-center justify-between gap-2 shadow-inner shrink-0 flex-wrap">
+                          <span className="text-amber-300 font-bold flex items-center gap-1">⚡ Ready Matrix:</span>
+                          <div className="flex items-center gap-2 text-[11px] font-bold">
+                            <span className="text-slate-300">⚔️ Arsenal <strong className={liveVal.arsenalCount > readyConfig.maxArsenal ? "text-rose-400 font-extrabold" : "text-amber-200"}>{liveVal.arsenalCount}/{readyConfig.maxArsenal}</strong></span>
+                            <span className="text-slate-600">|</span>
+                            <span className="text-slate-300">👣 Mobility <strong className={liveVal.mobilityCount > readyConfig.maxMobilityDefense ? "text-rose-400 font-extrabold" : "text-indigo-200"}>{liveVal.mobilityCount}/{readyConfig.maxMobilityDefense}</strong></span>
+                            <span className="text-slate-600">|</span>
+                            <span className="text-emerald-400">Total <strong className="text-emerald-300">{liveVal.arsenalCount + liveVal.mobilityCount}/{readyConfig.totalSlots}</strong></span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Scrollable Active Loadout List */}
                     <div className="flex-1 overflow-y-auto pr-1 mt-2.5 flex flex-col gap-2.5 min-h-0">
                       {filteredRoster.length === 0 ? (
@@ -1066,7 +1115,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           ) : (
                             <span>
                               {type === 'powers'
-                                ? 'No powers learned yet. Select from catalog on the right.'
+                                ? 'No powers readied yet. Select from Codex or Catalog on the right.'
                                 : 'No active loadout items equipped. Select items from Vault (Tab 1 on right) to equip.'}
                             </span>
                           )}
@@ -1075,6 +1124,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         filteredRoster.map((item, idx) => {
                           const cleaned = cleanName(item.name);
                           const { baseName, version } = parseAbilityVersion(cleaned);
+                          const cat = type === 'powers' ? getPowerReadyCategory(item) : null;
                           const actionUpper = (item.action || '').toUpperCase();
                           const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
 
@@ -1100,6 +1150,17 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     {version > 1 && (
                                       <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
                                         v{version}
+                                      </span>
+                                    )}
+                                    {type === 'powers' && cat && (
+                                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${
+                                        cat === 'primary_arsenal'
+                                          ? 'bg-rose-950/80 text-rose-300 border-rose-500/40'
+                                          : cat === 'mobility_defense'
+                                          ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
+                                          : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                                      }`}>
+                                        {cat === 'primary_arsenal' ? '⚔️ Arsenal' : cat === 'mobility_defense' ? '👣 Mobility' : '🎓 Passives (0)'}
                                       </span>
                                     )}
                                   </div>
@@ -1143,14 +1204,36 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
                                   </button>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => handleForgetAbility(item.name)}
-                                    className="px-2 py-1 bg-pink-950/60 text-pink-300 border border-pink-500/40 hover:bg-pink-900/80 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer"
-                                    title={type === 'spells' ? 'Send item back to Character Vault' : 'Forget power'}
-                                  >
-                                    <span>{type === 'spells' ? '➡️ Send to Vault' : '- Forget'}</span>
-                                  </button>
+                                  {type === 'powers' ? (
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleReadyPower(item.name)}
+                                        className="px-2 py-1 bg-amber-950/60 text-amber-300 border border-amber-500/40 hover:bg-amber-900/80 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+                                        title="Move power to un-readied Codex"
+                                      >
+                                        <ArrowDownToLine className="w-3 h-3 text-amber-400" />
+                                        <span>To Codex</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleForgetAbility(item.name)}
+                                        className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                                        title="Forget Power permanently"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleForgetAbility(item.name)}
+                                      className="px-2 py-1 bg-pink-950/60 text-pink-300 border border-pink-500/40 hover:bg-pink-900/80 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+                                      title="Send item back to Character Vault"
+                                    >
+                                      <span>➡️ Send to Vault</span>
+                                    </button>
+                                  )}
                                 </div>
                               </div>
 
@@ -1166,7 +1249,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     </div>
                   </div>
 
-                  {/* --- RIGHT COLUMN: 3-TAB INTERFACE (VAULT / CATALOG / CREATOR) --- */}
+                  {/* --- RIGHT COLUMN: TABS INTERFACE --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                     {/* Pane Sub-Tab Header */}
                     <div className="flex border-b border-slate-800 mb-4 shrink-0">
@@ -1187,6 +1270,23 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         </button>
                       )}
 
+                      {type === 'powers' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isVersionEditMode) setIsVersionEditMode(false);
+                            setActiveRightTab('CODEX');
+                          }}
+                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'CODEX'
+                              ? 'border-amber-400 text-amber-400'
+                              : 'border-transparent text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          📖 Codex ({(Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex.length : 0)})
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => {
@@ -1201,7 +1301,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             : 'border-transparent text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        📖 Catalog ({filteredCatalogAbilities.length})
+                        🌐 Catalog ({filteredCatalogAbilities.length})
                       </button>
 
                       {type === 'spells' && (
@@ -1258,6 +1358,122 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         </button>
                       )}
                     </div>
+
+                    {/* TAB: POWER CODEX VIEW (powers mode) */}
+                    {activeRightTab === 'CODEX' && type === 'powers' && (() => {
+                      const codexList: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex : [];
+                      const filteredCodex = rightSearchQuery.trim()
+                        ? codexList.filter((p) => (p.name || '').toLowerCase().includes(rightSearchQuery.toLowerCase()) || (p.effect || '').toLowerCase().includes(rightSearchQuery.toLowerCase()))
+                        : codexList;
+
+                      return (
+                        <div className="flex flex-col gap-2.5 flex-1 min-h-0 mt-2.5">
+                          {readyFeedback && (
+                            <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 shrink-0 ${
+                              readyFeedback.type === 'error'
+                                ? 'bg-rose-950/80 border-rose-500/50 text-rose-200'
+                                : 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200'
+                            }`}>
+                              <span>{readyFeedback.message}</span>
+                              <button onClick={() => setReadyFeedback(null)} className="text-slate-400 hover:text-slate-100">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+
+                          <div className="px-3 py-1.5 bg-slate-900/90 border border-slate-800 rounded-xl text-xs flex items-center justify-between gap-2 shrink-0">
+                            <span className="text-slate-400">
+                              Un-readied powers stored in character Codex.
+                            </span>
+                            <span className="font-mono text-amber-300 font-bold">{filteredCodex.length} in Codex</span>
+                          </div>
+
+                          <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
+                            {filteredCodex.length === 0 ? (
+                              <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
+                                <span>No un-readied powers in Codex. Learn powers from Catalog or unready active powers on the left.</span>
+                              </div>
+                            ) : (
+                              filteredCodex.map((p, pIdx) => {
+                                const cleaned = cleanName(p.name);
+                                const { baseName, version } = parseAbilityVersion(cleaned);
+                                const cat = getPowerReadyCategory(p);
+                                const actionUpper = (p.action || '').toUpperCase();
+                                const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+
+                                return (
+                                  <div
+                                    key={p.name + pIdx}
+                                    className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
+                                  >
+                                    <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
+                                      <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="font-outfit font-bold text-sm text-slate-100">{baseName}</span>
+                                          {version > 1 && (
+                                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
+                                              v{version}
+                                            </span>
+                                          )}
+                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${
+                                            cat === 'primary_arsenal'
+                                              ? 'bg-rose-950/80 text-rose-300 border-rose-500/40'
+                                              : cat === 'mobility_defense'
+                                              ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
+                                              : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                                          }`}>
+                                            {cat === 'primary_arsenal' ? '⚔️ Arsenal' : cat === 'mobility_defense' ? '👣 Mobility/Def' : '🎓 Passives (0)'}
+                                          </span>
+                                          {actionUpper && (
+                                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
+                                              {actionUpper}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleLaunchVersionEditor(p)}
+                                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 transition-colors"
+                                          title="Open Version Editor"
+                                        >
+                                          <Edit2 className="w-3.5 h-3.5" />
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const res = toggleReadyPower(p.name);
+                                            if (!res.success) {
+                                              setReadyFeedback({ type: 'error', message: res.error || 'Failed to ready power.' });
+                                            } else {
+                                              setReadyFeedback({ type: 'success', message: `Readied ${p.name}!` });
+                                              setTimeout(() => setReadyFeedback(null), 2000);
+                                            }
+                                          }}
+                                          className="px-2.5 py-1 bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/50 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                                        >
+                                          <Zap className="w-3.5 h-3.5 text-amber-400" />
+                                          <span>Ready</span>
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    <div className="text-xs pt-1">
+                                      <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                                        {p.effect || 'No description'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* TAB 1: CHARACTER VAULT VIEW (spells mode) */}
                     {activeRightTab === 'VAULT' && type === 'spells' && (() => {
@@ -1525,6 +1741,54 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         {/* 2. Controls for Powers Mode */}
                         {type === 'powers' && (
                           <>
+                            {/* Ready Channel Multi-Option Pill Switch */}
+                            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setCatalogReadyFilter('all')}
+                                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                  catalogReadyFilter === 'all'
+                                    ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                }`}
+                              >
+                                🌐 All
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCatalogReadyFilter('primary_arsenal')}
+                                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                  catalogReadyFilter === 'primary_arsenal'
+                                    ? 'bg-rose-900/70 text-rose-200 border border-rose-500/50 shadow-sm font-extrabold'
+                                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                }`}
+                              >
+                                ⚔️ Arsenal
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCatalogReadyFilter('mobility_defense')}
+                                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                  catalogReadyFilter === 'mobility_defense'
+                                    ? 'bg-indigo-900/70 text-indigo-200 border border-indigo-500/50 shadow-sm font-extrabold'
+                                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                }`}
+                              >
+                                👣 Mobility
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCatalogReadyFilter('contextual_passive')}
+                                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                  catalogReadyFilter === 'contextual_passive'
+                                    ? 'bg-emerald-900/70 text-emerald-200 border border-emerald-500/50 shadow-sm font-extrabold'
+                                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                }`}
+                              >
+                                🎓 Contextual
+                              </button>
+                            </div>
+
                             {/* Category Dropdown */}
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="text-xs font-bold text-slate-400 shrink-0">Category:</span>
@@ -2096,106 +2360,306 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       </div>
     </div>
 
-      {/* Main Character Sheet Card View: Entire List of Learned Abilities */}
-      <div className="flex flex-col gap-2">
-        {sortedSlots.length > 0 ? (
-          sortedSlots.map((slot, index) => {
-            const cleaned = cleanName(slot.name);
-            const { baseName, version } = parseAbilityVersion(cleaned);
-            const actionUpper = (slot.action || '').toUpperCase();
-            const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
-            const usageCount = parseUsageCount(slot.usage);
+      {/* Main Character Sheet Card View */}
+      <div className="flex flex-col gap-4">
+        {type === 'powers' ? (
+          (() => {
+            const level = sheetData.level || 1;
+            const readyConfig = getReadySlotConfig(level);
+            const arsenalSlots = sortedSlots.filter((s) => getPowerReadyCategory(s) === 'primary_arsenal');
+            const mobilitySlots = sortedSlots.filter((s) => getPowerReadyCategory(s) === 'mobility_defense');
+            const contextualSlots = sortedSlots.filter((s) => getPowerReadyCategory(s) === 'contextual_passive');
+
+            const renderPowerCard = (slot: AbilitySlot, index: number) => {
+              const cleaned = cleanName(slot.name);
+              const { baseName, version } = parseAbilityVersion(cleaned);
+              const cat = getPowerReadyCategory(slot);
+              const actionUpper = (slot.action || '').toUpperCase();
+              const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+              const usageCount = parseUsageCount(slot.usage);
+
+              return (
+                <div
+                  key={index}
+                  className="p-3 bg-slate-950/60 rounded-xl border border-slate-850 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm hover:border-slate-800 transition-all"
+                >
+                  {/* 1. Name Column with Version & Category Badge */}
+                  <div className="w-36 sm:w-48 shrink-0 flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
+                        {baseName}
+                      </span>
+                      <ItemNotesPopover notes={slot.notes || fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase())?.notes} itemName={baseName} />
+                    </div>
+                    <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                      {version > 1 && (
+                        <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 flex items-center gap-0.5">
+                          <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
+                          v{version}
+                        </span>
+                      )}
+                      <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.2 rounded border ${
+                        cat === 'primary_arsenal'
+                          ? 'bg-rose-950/80 text-rose-300 border-rose-500/40'
+                          : cat === 'mobility_defense'
+                          ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
+                          : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                      }`}>
+                        {cat === 'primary_arsenal' ? '⚔️ Arsenal' : cat === 'mobility_defense' ? '👣 Mobility' : '🎓 Passives (0)'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 2. Action Badge Column */}
+                  <div className="w-12 shrink-0 flex items-center justify-center">
+                    {actionUpper ? (
+                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${actionClass}`}>
+                        {actionUpper}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-700 font-mono">-</span>
+                    )}
+                  </div>
+
+                  {/* 3. Uses Text Column */}
+                  <div className="w-20 shrink-0 flex items-center justify-start">
+                    {slot.usage ? (
+                      <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[11px] font-mono text-slate-300 truncate" title={slot.usage}>
+                        {slot.usage}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-700 font-mono">-</span>
+                    )}
+                  </div>
+
+                  {/* 4. Checkboxes Column */}
+                  <div className="w-16 shrink-0 flex items-center gap-1 min-w-[64px]">
+                    {usageCount > 0 ? (
+                      Array.from({ length: usageCount }).map((_, bIdx) => {
+                        const isChecked = !!(slot.checked && slot.checked[bIdx]);
+                        return (
+                          <input
+                            key={bIdx}
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleCheckboxToggle(slot, bIdx)}
+                            className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500 focus:ring-0 cursor-pointer accent-indigo-500"
+                            title={`Usage slot ${bIdx + 1}`}
+                          />
+                        );
+                      })
+                    ) : (
+                      <span className="text-[10px] text-slate-700 font-mono select-none">-</span>
+                    )}
+                  </div>
+
+                  {/* 5. Effect Description Column */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-300 whitespace-normal break-words leading-relaxed">
+                      {slot.effect || 'No effect description'}
+                    </p>
+                  </div>
+                </div>
+              );
+            };
 
             return (
-              <div
-                key={index}
-                className="p-3 bg-slate-950/60 rounded-xl border border-slate-850 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm hover:border-slate-800 transition-all"
-              >
-                {/* 1. Name Column with Version Badge */}
-                <div className="w-36 sm:w-44 shrink-0 flex flex-col gap-0.5">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
-                      {baseName}
-                    </span>
-                    <ItemNotesPopover notes={slot.notes || fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase())?.notes} itemName={baseName} />
-                  </div>
-                  {version > 1 && (
-                    <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
-                      <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                      v{version}
-                    </span>
-                  )}
-                  {type === 'spells' && (() => {
-                    const badge = getMagicItemTierBadge(slot, fullCatalog);
-                    if (!badge) return null;
-                    return (
-                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 mt-0.5 ${badge.style}`}>
-                        <span>{badge.icon}</span>
-                        <span>{badge.label}</span>
-                        <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+              <div className="flex flex-col gap-4">
+                {/* 1. Primary Arsenal Sub-Zone Container (🔴 Rose / 6px Stripe) */}
+                <div className="bg-gradient-to-br from-rose-950/25 via-slate-900/60 to-slate-950/80 rounded-2xl border border-rose-500/30 border-l-[6px] border-l-rose-500 p-3 sm:p-3.5 flex flex-col gap-2.5 shadow-lg shadow-rose-950/20">
+                  {/* Container Header Bar */}
+                  <div className="flex items-center justify-between pb-2 border-b border-rose-500/20">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-rose-950/80 border border-rose-500/40 text-rose-300 text-xs flex items-center justify-center shadow-inner">
+                        ⚔️
+                      </div>
+                      <span className="font-outfit font-extrabold text-xs text-rose-200 uppercase tracking-wider">
+                        Primary Arsenal
                       </span>
-                    );
-                  })()}
-                </div>
-
-                {/* 2. Action Badge Column */}
-                <div className="w-12 shrink-0 flex items-center justify-center">
-                  {actionUpper ? (
-                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${actionClass}`}>
-                      {actionUpper}
+                    </div>
+                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-rose-950/90 text-rose-300 border border-rose-500/40 shadow-inner">
+                      {arsenalSlots.length}/{readyConfig.maxArsenal} MAX
                     </span>
-                  ) : (
-                    <span className="text-[10px] text-slate-700 font-mono">-</span>
-                  )}
+                  </div>
+
+                  {/* Power Sub-Cards */}
+                  <div className="flex flex-col gap-2">
+                    {arsenalSlots.length > 0 ? (
+                      arsenalSlots.map((slot, idx) => renderPowerCard(slot, idx))
+                    ) : (
+                      <div className="p-3 bg-slate-950/50 rounded-xl border border-rose-500/15 text-xs text-slate-500 italic text-center">
+                        No Primary Arsenal powers readied. Select from Codex or Catalog to ready.
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* 3. Uses Text Column */}
-                <div className="w-20 shrink-0 flex items-center justify-start">
-                  {slot.usage ? (
-                    <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[11px] font-mono text-slate-300 truncate" title={slot.usage}>
-                      {slot.usage}
+                {/* 2. Mobility & Defense Sub-Zone Container (🔵 Indigo / 6px Stripe) */}
+                <div className="bg-gradient-to-br from-indigo-950/25 via-slate-900/60 to-slate-950/80 rounded-2xl border border-indigo-500/30 border-l-[6px] border-l-indigo-500 p-3 sm:p-3.5 flex flex-col gap-2.5 shadow-lg shadow-indigo-950/20">
+                  {/* Container Header Bar */}
+                  <div className="flex items-center justify-between pb-2 border-b border-indigo-500/20">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 text-xs flex items-center justify-center shadow-inner">
+                        👣
+                      </div>
+                      <span className="font-outfit font-extrabold text-xs text-indigo-200 uppercase tracking-wider">
+                        Mobility & Defense
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 shadow-inner">
+                      {mobilitySlots.length}/{readyConfig.maxMobilityDefense} MAX
                     </span>
-                  ) : (
-                    <span className="text-[10px] text-slate-700 font-mono">-</span>
-                  )}
+                  </div>
+
+                  {/* Power Sub-Cards */}
+                  <div className="flex flex-col gap-2">
+                    {mobilitySlots.length > 0 ? (
+                      mobilitySlots.map((slot, idx) => renderPowerCard(slot, idx))
+                    ) : (
+                      <div className="p-3 bg-slate-950/50 rounded-xl border border-indigo-500/15 text-xs text-slate-500 italic text-center">
+                        No Mobility & Defense powers readied. Select from Codex or Catalog to ready.
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* 4. Checkboxes Column */}
-                <div className="w-16 shrink-0 flex items-center gap-1 min-w-[64px]">
-                  {usageCount > 0 ? (
-                    Array.from({ length: usageCount }).map((_, bIdx) => {
-                      const isChecked = !!(slot.checked && slot.checked[bIdx]);
-                      return (
-                        <input
-                          key={bIdx}
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => handleCheckboxToggle(slot, bIdx)}
-                          className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500 focus:ring-0 cursor-pointer accent-indigo-500"
-                          title={`Usage slot ${bIdx + 1}`}
-                        />
-                      );
-                    })
-                  ) : (
-                    <span className="text-[10px] text-slate-700 font-mono select-none">-</span>
-                  )}
-                </div>
+                {/* 3. Contextual & Passives Sub-Zone Container (🟢 Emerald / 6px Stripe) */}
+                <div className="bg-gradient-to-br from-emerald-950/25 via-slate-900/60 to-slate-950/80 rounded-2xl border border-emerald-500/30 border-l-[6px] border-l-emerald-500 p-3 sm:p-3.5 flex flex-col gap-2.5 shadow-lg shadow-emerald-950/20">
+                  {/* Container Header Bar */}
+                  <div className="flex items-center justify-between pb-2 border-b border-emerald-500/20">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs flex items-center justify-center shadow-inner">
+                        🎓
+                      </div>
+                      <span className="font-outfit font-extrabold text-xs text-emerald-200 uppercase tracking-wider">
+                        Contextual & Passives
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 shadow-inner">
+                      {contextualSlots.length} ALWAYS ACTIVE • 0 SLOTS
+                    </span>
+                  </div>
 
-                {/* 5. Effect Description Column */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-300 whitespace-normal break-words leading-relaxed">
-                    {slot.effect || 'No effect description'}
-                  </p>
+                  {/* Power Sub-Cards */}
+                  <div className="flex flex-col gap-2">
+                    {contextualSlots.length > 0 ? (
+                      contextualSlots.map((slot, idx) => renderPowerCard(slot, idx))
+                    ) : (
+                      <div className="p-3 bg-slate-950/50 rounded-xl border border-emerald-500/15 text-xs text-slate-500 italic text-center">
+                        No passives or contextual powers learned.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
-          })
+          })()
         ) : (
-          <div className="p-4 bg-slate-950/40 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
-            No {type === 'powers' ? 'powers' : 'loadout items'} equipped yet. Click "Manage {type === 'powers' ? 'Powers' : 'Loadout'}" above to select abilities.
-          </div>
+          sortedSlots.length > 0 ? (
+            sortedSlots.map((slot, index) => {
+              const cleaned = cleanName(slot.name);
+              const { baseName, version } = parseAbilityVersion(cleaned);
+              const actionUpper = (slot.action || '').toUpperCase();
+              const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+              const usageCount = parseUsageCount(slot.usage);
+
+              return (
+                <div
+                  key={index}
+                  className="p-3 bg-slate-950/60 rounded-xl border border-slate-850 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm hover:border-slate-800 transition-all"
+                >
+                  {/* 1. Name Column with Version Badge */}
+                  <div className="w-36 sm:w-44 shrink-0 flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
+                        {baseName}
+                      </span>
+                      <ItemNotesPopover notes={slot.notes || fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase())?.notes} itemName={baseName} />
+                    </div>
+                    {version > 1 && (
+                      <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
+                        v{version}
+                      </span>
+                    )}
+                    {type === 'spells' && (() => {
+                      const badge = getMagicItemTierBadge(slot, fullCatalog);
+                      if (!badge) return null;
+                      return (
+                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 mt-0.5 ${badge.style}`}>
+                          <span>{badge.icon}</span>
+                          <span>{badge.label}</span>
+                          <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                        </span>
+                      );
+                    })()}
+                  </div>
+
+                  {/* 2. Action Badge Column */}
+                  <div className="w-12 shrink-0 flex items-center justify-center">
+                    {actionUpper ? (
+                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${actionClass}`}>
+                        {actionUpper}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-700 font-mono">-</span>
+                    )}
+                  </div>
+
+                  {/* 3. Uses Text Column */}
+                  <div className="w-20 shrink-0 flex items-center justify-start">
+                    {slot.usage ? (
+                      <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[11px] font-mono text-slate-300 truncate" title={slot.usage}>
+                        {slot.usage}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-700 font-mono">-</span>
+                    )}
+                  </div>
+
+                  {/* 4. Checkboxes Column */}
+                  <div className="w-16 shrink-0 flex items-center gap-1 min-w-[64px]">
+                    {usageCount > 0 ? (
+                      Array.from({ length: usageCount }).map((_, bIdx) => {
+                        const isChecked = !!(slot.checked && slot.checked[bIdx]);
+                        return (
+                          <input
+                            key={bIdx}
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleCheckboxToggle(slot, bIdx)}
+                            className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500 focus:ring-0 cursor-pointer accent-indigo-500"
+                            title={`Usage slot ${bIdx + 1}`}
+                          />
+                        );
+                      })
+                    ) : (
+                      <span className="text-[10px] text-slate-700 font-mono select-none">-</span>
+                    )}
+                  </div>
+
+                  {/* 5. Effect Description Column */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-300 whitespace-normal break-words leading-relaxed">
+                      {slot.effect || 'No effect description'}
+                    </p>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-4 bg-slate-950/40 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
+              No loadout items equipped yet. Click "Manage Loadout" above to select abilities.
+            </div>
+          )
         )}
       </div>
+
+      {/* In-Combat Tactical Pivot Modal */}
+      <TacticalPivotModal
+        isOpen={showTacticalPivotModal}
+        onClose={() => setShowTacticalPivotModal(false)}
+      />
     </div>
   );
 };

@@ -40,6 +40,8 @@ export const createDefaultSheetData = (): CharacterSheetData => ({
   essence_core: 0,
   known_skillsets: [],
   power_slots: [],
+  character_power_codex: [],
+  tactical_pivot_used_in_encounter: false,
   spell_slots: [],
   gear_slots: [],
   bio: {
@@ -71,6 +73,8 @@ export function ensureLatestSheetSchema(rawSheet: any): CharacterSheetData {
     },
     known_skillsets: Array.isArray(rawSheet.known_skillsets) ? rawSheet.known_skillsets : [],
     power_slots: Array.isArray(rawSheet.power_slots) ? rawSheet.power_slots : [],
+    character_power_codex: Array.isArray(rawSheet.character_power_codex) ? rawSheet.character_power_codex : [],
+    tactical_pivot_used_in_encounter: rawSheet.tactical_pivot_used_in_encounter ?? false,
     spell_slots: Array.isArray(rawSheet.spell_slots) ? rawSheet.spell_slots : [],
     gear_slots: Array.isArray(rawSheet.gear_slots) ? rawSheet.gear_slots : [],
     weapons: Array.isArray(rawSheet.weapons) ? rawSheet.weapons : [],

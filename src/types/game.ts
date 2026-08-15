@@ -3,6 +3,15 @@
 
 export type AttributeKey = 'might' | 'motion' | 'mind' | 'magic' | 'moxie';
 export type DieRating = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'Exhausted';
+export type PowerReadyType = 'primary_arsenal' | 'mobility_defense' | 'contextual_passive';
+
+export interface ReadySlotConfig {
+  tier: number;
+  totalSlots: number;
+  maxArsenal: number;
+  maxMobilityDefense: number;
+  minFloor: number;
+}
 
 export interface AbilitySlot {
   select: boolean;
@@ -13,6 +22,8 @@ export interface AbilitySlot {
   checked: boolean[];
   version?: number;
   base_name?: string;
+  ready?: PowerReadyType;
+  is_readied?: boolean;
   notes?: string;
 }
 
@@ -406,6 +417,8 @@ export interface CharacterSheetData {
   custom_magic_items?: MagicItem[]; // Custom user-created magic items
   ability_overrides?: Record<string, { action?: string; usage?: string; effect?: string }>; // Player edits for existing stock abilities
   power_slots: AbilitySlot[];
+  character_power_codex?: AbilitySlot[]; // Unlimited storage codex for un-readied powers (matching character_vault)
+  tactical_pivot_used_in_encounter?: boolean; // True if player has executed their 1-per-encounter Tactical Pivot
   spell_slots: AbilitySlot[];
   gear_slots: EquipmentSlot[];
   weapons?: WeaponSlot[];
@@ -428,6 +441,47 @@ export interface CharacterSheetData {
   starred_skillsets?: (number | string)[]; // Starred Skillsets Wishlist IDs/Names
   starred_skills?: (number | string)[]; // Starred Individual Skills Wishlist IDs/Names
   pity_level?: number; // 0-2 Draft Pity Escalator level
+  pity_counters?: Record<string, number>; // Accumulated pity points
+  rules_version?: number; // Schema rules version tracker
+}
+
+export interface Character {
+  id: number;
+  name: string;
+  class: string;
+  race: string;
+  level: number;
+  hp: number;
+  might: string | null;
+  motion: string | null;
+  mind: string | null;
+  magic: string | null;
+  moxie: string | null;
+  skills: string[];
+  owner_email: string | null;
+  sheet_data: CharacterSheetData;
+  inventory?: any[];
+  log?: any[];
+  updated_at?: string;
+}
+
+export interface Power {
+  id: number;
+  name: string;
+  genres?: string[];
+  usage: string | null;
+  action: string | null;
+  effect: string | null;
+  notes?: string;
+  created_at: string;
+  category?: string;
+  ready?: PowerReadyType;
+  sub?: string;
+  table?: string;
+  table_name?: string;
+  source?: string;
+  version?: number;
+  base_name?: string;
 }
 
 export const calculateLifetimeAp = (level: number): number => {
@@ -625,42 +679,6 @@ export interface Player {
   created_at: string;
 }
 
-export interface Character {
-  id: number;
-  name: string;
-  class: string | null;
-  race: string | null;
-  hp: number;
-  inventory: any[];
-  log: any[];
-  updated_at: string;
-  might: string | null;
-  motion: string | null;
-  mind: string | null;
-  magic: string | null;
-  moxie: string | null;
-  skills: string[];
-  owner_email: string | null;
-  sheet_data: CharacterSheetData;
-}
-
-export interface Power {
-  id: number;
-  name: string;
-  genres?: string[];
-  usage: string | null;
-  action: string | null;
-  effect: string | null;
-  notes?: string;
-  created_at: string;
-  category?: string;
-  sub?: string;
-  table?: string;
-  table_name?: string;
-  source?: string;
-  version?: number;
-  base_name?: string;
-}
 
 export interface VaultItem {
   id: string;

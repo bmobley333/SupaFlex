@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import { Character, CharacterSheetData, Power, MagicItem, Skillset } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
+import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
 
 interface CharacterStore {
   // State
@@ -40,6 +41,9 @@ interface CharacterStore {
   addSpark: (amount?: number) => void;
   spendMeta: () => void;
   resetSparks: () => void;
+  toggleReadyPower: (powerName: string) => { success: boolean; error?: string };
+  executeTacticalPivot: (unreadyPowerName: string, readyPowerName: string) => { success: boolean; error?: string };
+  resetTacticalPivot: () => void;
   setPlayerEmail: (email: string) => void;
   setPlayerName: (name: string) => void;
   setFilterMode: (mode: 'my_heroes' | 'all_heroes') => void;
@@ -156,6 +160,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       }
 
       if (selectedChar) {
+        const migratedSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(selectedChar.sheet_data));
+        selectedChar = { ...selectedChar, sheet_data: migratedSheet };
         sessionStorage.setItem('supaflex_last_active_char_id', String(selectedChar.id));
       }
 
@@ -179,14 +185,14 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     sessionStorage.setItem('supaflex_last_active_char_id', String(id));
     const found = get().characters.find((c) => c.id === id);
     if (found) {
-      const migratedFoundSheet = migrateCharacterMagicItemsToVault(found.sheet_data);
+      const migratedFoundSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(found.sheet_data));
       const migratedFound = { ...found, sheet_data: migratedFoundSheet };
       set({ activeCharacter: migratedFound });
     }
     try {
       const updated = await gameApi.getCharacterById(id);
       if (updated) {
-        const migratedSheet = migrateCharacterMagicItemsToVault(updated.sheet_data);
+        const migratedSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(updated.sheet_data));
         const migratedChar = { ...updated, sheet_data: migratedSheet };
         set((state) => ({
           activeCharacter: migratedChar,
@@ -356,6 +362,130 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   addSpark: (amount = 1) => get().addCharge(amount),
   spendMeta: () => get().spendSpark(),
   resetSparks: () => get().resetCharges(),
+
+  toggleReadyPower: (powerName: string) => {
+    const active = get().activeCharacter;
+    if (!active || !active.sheet_data) return { success: false, error: 'No active character.' };
+
+    const sheet = active.sheet_data;
+    const powerSlots = Array.isArray(sheet.power_slots) ? [...sheet.power_slots] : [];
+    const codex = Array.isArray(sheet.character_power_codex) ? [...sheet.character_power_codex] : [];
+
+    // Case 1: Power is currently in power_slots (Active Matrix) -> Unready to Codex
+    const readiedIndex = powerSlots.findIndex((p) => p && p.name && p.name.trim().toLowerCase() === powerName.trim().toLowerCase());
+    if (readiedIndex >= 0) {
+      const [removed] = powerSlots.splice(readiedIndex, 1);
+      const unreadied = { ...removed, is_readied: false };
+      codex.push(unreadied);
+
+      get().updateActiveSheetData((prev) => ({
+        ...prev,
+        power_slots: powerSlots,
+        character_power_codex: codex,
+      }));
+      return { success: true };
+    }
+
+    // Case 2: Power is currently in character_power_codex -> Ready into Matrix
+    const codexIndex = codex.findIndex((p) => p && p.name && p.name.trim().toLowerCase() === powerName.trim().toLowerCase());
+    if (codexIndex >= 0) {
+      const targetPower = codex[codexIndex];
+      const cat = getPowerReadyCategory(targetPower);
+
+      // Contextual Passives cost 0 slots, always allowed
+      if (cat === 'contextual_passive') {
+        const [removed] = codex.splice(codexIndex, 1);
+        powerSlots.push({ ...removed, is_readied: true, ready: cat });
+
+        get().updateActiveSheetData((prev) => ({
+          ...prev,
+          power_slots: powerSlots,
+          character_power_codex: codex,
+        }));
+        return { success: true };
+      }
+
+      // Tactical power -> validate against Tier capacity and caps
+      const testSlots = [...powerSlots, { ...targetPower, is_readied: true, ready: cat }];
+      const validation = validateReadyMatrix(testSlots, sheet.level);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
+      const [removed] = codex.splice(codexIndex, 1);
+      powerSlots.push({ ...removed, is_readied: true, ready: cat });
+
+      get().updateActiveSheetData((prev) => ({
+        ...prev,
+        power_slots: powerSlots,
+        character_power_codex: codex,
+      }));
+      return { success: true };
+    }
+
+    return { success: false, error: `Power "${powerName}" not found in sheet or codex.` };
+  },
+
+  executeTacticalPivot: (unreadyPowerName: string, readyPowerName: string) => {
+    const active = get().activeCharacter;
+    if (!active || !active.sheet_data) return { success: false, error: 'No active character.' };
+
+    const sheet = active.sheet_data;
+    if (sheet.tactical_pivot_used_in_encounter) {
+      return { success: false, error: 'Tactical Pivot has already been used in this encounter (1 per encounter).' };
+    }
+
+    const charges = typeof sheet.charges === 'number' ? sheet.charges : (sheet.sparks || 0);
+    const isSparked = sheet.is_sparked || charges >= 5;
+    if (!isSparked && charges < 5) {
+      return { success: false, error: 'Tactical Pivot requires 1 Full Spark (5 Charges).' };
+    }
+
+    const powerSlots = Array.isArray(sheet.power_slots) ? [...sheet.power_slots] : [];
+    const codex = Array.isArray(sheet.character_power_codex) ? [...sheet.character_power_codex] : [];
+
+    const codexIdx = codex.findIndex((p) => p && p.name && p.name.trim().toLowerCase() === unreadyPowerName.trim().toLowerCase());
+    const readyIdx = powerSlots.findIndex((p) => p && p.name && p.name.trim().toLowerCase() === readyPowerName.trim().toLowerCase());
+
+    if (codexIdx < 0) return { success: false, error: `Codex power "${unreadyPowerName}" not found.` };
+    if (readyIdx < 0) return { success: false, error: `Ready power "${readyPowerName}" not found.` };
+
+    const incomingPower = codex[codexIdx];
+    const outgoingPower = powerSlots[readyIdx];
+
+    const newPowerSlots = [...powerSlots];
+    newPowerSlots[readyIdx] = { ...incomingPower, is_readied: true, ready: getPowerReadyCategory(incomingPower) };
+
+    const validation = validateReadyMatrix(newPowerSlots, sheet.level);
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
+    }
+
+    const newCodex = [...codex];
+    newCodex[codexIdx] = { ...outgoingPower, is_readied: false, ready: getPowerReadyCategory(outgoingPower) };
+
+    const remainingCharges = Math.max(0, charges - 5);
+
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      power_slots: newPowerSlots,
+      character_power_codex: newCodex,
+      charges: remainingCharges,
+      sparks: remainingCharges,
+      is_sparked: remainingCharges >= 5,
+      is_charged: remainingCharges >= 5,
+      tactical_pivot_used_in_encounter: true,
+    }));
+
+    return { success: true };
+  },
+
+  resetTacticalPivot: () => {
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      tactical_pivot_used_in_encounter: false,
+    }));
+  },
 
   recordApExpenditure: (cost, category, description, tier, source) => {
     get().updateActiveSheetData((prev) => {
