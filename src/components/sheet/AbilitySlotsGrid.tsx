@@ -902,10 +902,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   // Filtered learned roster for Left Column search (Highest Version Only)
   const filteredRoster = useMemo(() => {
     const roster = type === 'powers' ? activeDisplaySlots : slots;
-    if (!leftSearchQuery.trim()) return roster;
-    const q = leftSearchQuery.toLowerCase().trim();
-    return roster.filter((s) => cleanName(s.name).toLowerCase().includes(q) || (s.effect || '').toLowerCase().includes(q));
-  }, [type, activeDisplaySlots, slots, leftSearchQuery]);
+    return roster.filter((s) => {
+      if (type === 'powers' && catalogReadyFilter !== 'all') {
+        const cat = getPowerReadyCategory(s);
+        if (cat !== catalogReadyFilter) return false;
+      }
+      if (!leftSearchQuery.trim()) return true;
+      const q = leftSearchQuery.toLowerCase().trim();
+      return cleanName(s.name).toLowerCase().includes(q) || (s.effect || '').toLowerCase().includes(q);
+    });
+  }, [type, activeDisplaySlots, slots, leftSearchQuery, catalogReadyFilter]);
 
   const sectionIcon = type === 'powers' ? '🔥' : '⚡';
   const displayTitle = title || (type === 'powers' ? 'POWERS' : 'LOADOUT');
@@ -991,47 +997,99 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-xs"
               >
                 {/* Modal Top Bar */}
-                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
-                  <div className="flex items-center gap-2.5 shrink-0">
-                    <div className={`p-2 rounded-xl border flex items-center justify-center ${
-                      type === 'powers' ? 'bg-amber-950/80 border-amber-500/30 text-amber-300' : 'bg-cyan-950/80 border-cyan-500/30 text-cyan-300'
-                    }`}>
-                      <span className="text-lg leading-none">{sectionIcon}</span>
+                <div className="px-4 py-2.5 border-b border-slate-800 bg-slate-950/80 flex flex-col gap-2 shrink-0">
+                  <div className="flex items-center justify-between gap-3 w-full">
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <div className={`p-2 rounded-xl border flex items-center justify-center ${
+                        type === 'powers' ? 'bg-amber-950/80 border-amber-500/30 text-amber-300' : 'bg-cyan-950/80 border-cyan-500/30 text-cyan-300'
+                      }`}>
+                        <span className="text-lg leading-none">{sectionIcon}</span>
+                      </div>
+                      <div>
+                        <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                          {type === 'powers' ? 'Powers Manager' : 'Loadout Manager'}
+                        </h3>
+                        <p className="text-xs text-slate-400 hidden sm:block">
+                          {type === 'powers'
+                            ? 'Manage character powers side-by-side with the SupaFlex stock catalog and custom creator.'
+                            : 'Manage active Loadout items moving Relics & Hardware between the Vault and your Loadout, and unlocking Loadout Slots with AP.'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                        {type === 'powers' ? 'Powers Manager' : 'Loadout Manager'}
-                      </h3>
-                      <p className="text-xs text-slate-400 hidden sm:block">
-                        {type === 'powers'
-                          ? 'Manage character powers side-by-side with the SupaFlex stock catalog and custom creator.'
-                          : 'Manage active Loadout items moving Relics & Hardware between the Vault and your Loadout, and unlocking Loadout Slots with AP.'}
-                      </p>
-                    </div>
+
+                    {/* Center: KISS Top-Center Header Status Pill */}
+                    {type === 'powers' && (
+                      <div className="px-3.5 py-1 bg-amber-950/70 border border-amber-500/40 rounded-full font-mono font-bold text-xs text-amber-200 flex items-center gap-2 shadow-md">
+                        <span>
+                          Learned <strong className="text-amber-300">{totalPowerUnits}</strong>; Used{' '}
+                          <strong className="text-rose-300">
+                            {apSpent}
+                            {totalPowerUnits > 0 ? `+${Math.min(3, totalPowerUnits)}Free` : ''} AP
+                          </strong>
+                          ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
+                        </span>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleCloseManageModal}
+                      className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
 
-                  {/* Center: KISS Top-Center Header Status Pill */}
+                  {/* Row 3: Global Ready Category Multi-Option Pill Switch (Powers Mode Only) */}
                   {type === 'powers' && (
-                    <div className="px-3.5 py-1 bg-amber-950/70 border border-amber-500/40 rounded-full font-mono font-bold text-xs text-amber-200 flex items-center gap-2 shadow-md">
-                      <span>
-                        Learned <strong className="text-amber-300">{totalPowerUnits}</strong>; Used{' '}
-                        <strong className="text-rose-300">
-                          {apSpent}
-                          {totalPowerUnits > 0 ? `+${Math.min(3, totalPowerUnits)}Free` : ''} AP
-                        </strong>
-                        ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
-                      </span>
+                    <div className="flex items-center justify-center w-full">
+                      <div className="bg-slate-950/90 border border-slate-800 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md w-full max-w-lg">
+                        <button
+                          type="button"
+                          onClick={() => setCatalogReadyFilter('all')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            catalogReadyFilter === 'all'
+                              ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          🌐 All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCatalogReadyFilter('primary_arsenal')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            catalogReadyFilter === 'primary_arsenal'
+                              ? 'bg-rose-900/70 text-rose-200 border border-rose-500/50 shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          ⚔️ Primary
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCatalogReadyFilter('mobility_defense')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            catalogReadyFilter === 'mobility_defense'
+                              ? 'bg-indigo-900/70 text-indigo-200 border border-indigo-500/50 shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          👣 Mobility
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCatalogReadyFilter('support_passive')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            catalogReadyFilter === 'support_passive'
+                              ? 'bg-emerald-900/70 text-emerald-200 border border-emerald-500/50 shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          🎓 Support
+                        </button>
+                      </div>
                     </div>
                   )}
-
-
-
-                  <button
-                    onClick={handleCloseManageModal}
-                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
                 </div>
 
                 {/* 2-COLUMN SPLIT-PANE BODY */}
@@ -1362,9 +1420,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     {/* TAB: POWER CODEX VIEW (powers mode) */}
                     {activeRightTab === 'CODEX' && type === 'powers' && (() => {
                       const codexList: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex : [];
-                      const filteredCodex = rightSearchQuery.trim()
-                        ? codexList.filter((p) => (p.name || '').toLowerCase().includes(rightSearchQuery.toLowerCase()) || (p.effect || '').toLowerCase().includes(rightSearchQuery.toLowerCase()))
-                        : codexList;
+                      const filteredCodex = codexList.filter((p) => {
+                        if (catalogReadyFilter !== 'all') {
+                          const cat = getPowerReadyCategory(p);
+                          if (cat !== catalogReadyFilter) return false;
+                        }
+                        if (!rightSearchQuery.trim()) return true;
+                        const q = rightSearchQuery.toLowerCase().trim();
+                        return (p.name || '').toLowerCase().includes(q) || (p.effect || '').toLowerCase().includes(q);
+                      });
 
                       return (
                         <div className="flex flex-col gap-2.5 flex-1 min-h-0 mt-2.5">
@@ -1741,54 +1805,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         {/* 2. Controls for Powers Mode */}
                         {type === 'powers' && (
                           <>
-                            {/* Ready Channel Multi-Option Pill Switch */}
-                            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => setCatalogReadyFilter('all')}
-                                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                  catalogReadyFilter === 'all'
-                                    ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
-                                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                                }`}
-                              >
-                                🌐 All
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setCatalogReadyFilter('primary_arsenal')}
-                                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                  catalogReadyFilter === 'primary_arsenal'
-                                    ? 'bg-rose-900/70 text-rose-200 border border-rose-500/50 shadow-sm font-extrabold'
-                                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                                }`}
-                              >
-                                ⚔️ Primary
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setCatalogReadyFilter('mobility_defense')}
-                                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                  catalogReadyFilter === 'mobility_defense'
-                                    ? 'bg-indigo-900/70 text-indigo-200 border border-indigo-500/50 shadow-sm font-extrabold'
-                                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                                }`}
-                              >
-                                👣 Mobility
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setCatalogReadyFilter('support_passive')}
-                                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                  catalogReadyFilter === 'support_passive'
-                                    ? 'bg-emerald-900/70 text-emerald-200 border border-emerald-500/50 shadow-sm font-extrabold'
-                                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                                }`}
-                              >
-                                🎓 Support
-                              </button>
-                            </div>
-
                             {/* Category Dropdown */}
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="text-xs font-bold text-slate-400 shrink-0">Category:</span>
@@ -2538,7 +2554,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </span>
                     </div>
                     <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 shadow-inner">
-                      {supportSlots.length} ALWAYS ACTIVE • 0 SLOTS
+                      UNLIMITED
                     </span>
                   </div>
 
