@@ -1158,7 +1158,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <Flame className={`w-4 h-4 ${type === 'powers' ? 'text-amber-400' : 'text-pink-400'}`} />
                         <span className={`text-xs font-outfit font-bold uppercase tracking-wider ${type === 'powers' ? 'text-amber-300' : 'text-pink-300'}`}>
-                          {type === 'powers' ? 'Readied Powers' : '⚡ Active Loadout'}
+                          {type === 'powers' ? 'Ready Powers' : '⚡ Active Loadout'}
                         </span>
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
                           {type === 'powers' ? activeDisplaySlots.length : slots.length}
@@ -1432,6 +1432,23 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           }`}
                         >
                           ⚡ Buy Slots
+                        </button>
+                      )}
+
+                      {type === 'powers' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isVersionEditMode) setIsVersionEditMode(false);
+                            setActiveRightTab('SLOTS');
+                          }}
+                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'SLOTS'
+                              ? 'border-amber-400 text-amber-400'
+                              : 'border-transparent text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          ⚡ Ready Slots
                         </button>
                       )}
 
@@ -1816,6 +1833,102 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       );
                     })()}
 
+                    {/* TAB: READY SLOTS LEVEL PROGRESSION VIEW (powers mode) */}
+                    {activeRightTab === 'SLOTS' && type === 'powers' && (() => {
+                      const charLevel = sheetData.level || 1;
+                      const activeConfig = getReadySlotConfig(charLevel);
+
+                      const SCHEDULE_TIERS = [
+                        { tier: 1, name: 'Tier 1 (Initiate)', levels: 'Lvl 1–4', total: 4, arsenal: 3, mobility: 3, floor: 'Min 1 per category' },
+                        { tier: 2, name: 'Tier 2 (Adept)', levels: 'Lvl 5–9', total: 5, arsenal: 4, mobility: 4, floor: 'Min 1 per category' },
+                        { tier: 3, name: 'Tier 3 (Paragon)', levels: 'Lvl 10–14', total: 6, arsenal: 4, mobility: 4, floor: 'Min 2 per category' },
+                        { tier: 4, name: 'Tier 4 (Master)', levels: 'Lvl 15–19', total: 7, arsenal: 5, mobility: 5, floor: 'Min 2 per category' },
+                        { tier: 5, name: 'Tier 5 (Legend)', levels: 'Lvl 20+', total: 8, arsenal: 5, mobility: 5, floor: 'Min 3 per category' },
+                      ];
+
+                      return (
+                        <div className="flex flex-col gap-3 flex-1 min-h-0 mt-2.5 overflow-y-auto pr-1">
+                          {/* Active Level & Tier Header Pill */}
+                          <div className="px-3.5 py-1.5 bg-amber-950/70 border border-amber-500/40 rounded-full font-mono font-bold text-xs text-amber-200 flex items-center justify-between shadow-md shrink-0 flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <span>Character Level <strong className="text-white">{charLevel}</strong></span>
+                              <span className="text-amber-500/60">•</span>
+                              <span className="text-amber-300">Tier {activeConfig.tier}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span>Active Capacity: <strong className="text-amber-300">{activeConfig.totalSlots} Tactical Slots</strong></span>
+                            </div>
+                          </div>
+
+                          {/* Informational Callout */}
+                          <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 flex items-center justify-between gap-2 shadow-inner">
+                            <div className="flex items-center gap-2">
+                              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                              <span className="text-[11px] leading-tight">
+                                Ready Slots scale <strong>automatically</strong> with Level / Tier at <strong>0 AP Cost</strong>.
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40 shrink-0">
+                              🎓 Passives: UNLIMITED
+                            </span>
+                          </div>
+
+                          {/* Tier Progression Cards */}
+                          <div className="space-y-2">
+                            {SCHEDULE_TIERS.map((t) => {
+                              const isCurrent = t.tier === activeConfig.tier;
+                              return (
+                                <div
+                                  key={t.tier}
+                                  className={`p-3 rounded-xl border transition-all flex flex-col gap-2 ${
+                                    isCurrent
+                                      ? 'bg-amber-950/40 border-amber-500/60 ring-1 ring-amber-500/50 shadow-md'
+                                      : 'bg-slate-900/70 border-slate-800 opacity-80'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`font-outfit font-extrabold text-xs uppercase tracking-wide ${isCurrent ? 'text-amber-300' : 'text-slate-200'}`}>
+                                        {t.name}
+                                      </span>
+                                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800">
+                                        {t.levels}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      {isCurrent && (
+                                        <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded bg-amber-500 text-slate-950">
+                                          CURRENT TIER
+                                        </span>
+                                      )}
+                                      <span className="text-xs font-mono font-extrabold text-white">
+                                        {t.total} Tactical Slots
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-3 gap-2 text-[11px] font-mono">
+                                    <div className="p-1.5 rounded-lg bg-rose-950/40 border border-rose-500/30 flex flex-col items-center justify-center text-center">
+                                      <span className="text-[10px] text-rose-300 font-bold">⚔️ Primary / Arsenal</span>
+                                      <span className="font-extrabold text-rose-200">{t.arsenal} Max</span>
+                                    </div>
+                                    <div className="p-1.5 rounded-lg bg-indigo-950/40 border border-indigo-500/30 flex flex-col items-center justify-center text-center">
+                                      <span className="text-[10px] text-indigo-300 font-bold">👣 Mobility & Def</span>
+                                      <span className="font-extrabold text-indigo-200">{t.mobility} Max</span>
+                                    </div>
+                                    <div className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 flex flex-col items-center justify-center text-center">
+                                      <span className="text-[10px] text-slate-400 font-bold">Category Floor</span>
+                                      <span className="font-bold text-slate-300 text-[10px]">{t.floor}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* TAB 2: STOCK CATALOG VIEW */}
                     {activeRightTab === 'CATALOG' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
@@ -2104,7 +2217,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                         onClick={() => handleLearnAbility(item)}
                                         className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 flex items-center gap-1 transition-all shrink-0 cursor-pointer"
                                       >
-                                        {type === 'spells' ? '+ Add to Vault (0 AP)' : '+ Learn'}
+                                        {type === 'spells' ? '+ Add to Vault (0 AP)' : '+ Learn to Vault'}
                                       </button>
                                     </div>
                                   </div>
@@ -2288,7 +2401,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             className="w-full mt-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
                           >
                             <Plus className="w-4 h-4" />
-                            <span>{type === 'spells' ? 'Save Custom Item to Vault (0 AP)' : 'Save & Learn Custom Ability'}</span>
+                            <span>{type === 'spells' ? 'Save Custom Item to Vault (0 AP)' : '+ Save & Learn to Vault'}</span>
                           </button>
                         </form>
                       </div>
@@ -2401,7 +2514,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             className="w-full mt-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
                           >
                             <Sparkles className="w-4 h-4" />
-                            <span>Save & Learn {createName}</span>
+                            <span>Save & Learn {createName} to Vault</span>
                           </button>
                         </form>
                       </div>
