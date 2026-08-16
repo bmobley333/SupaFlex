@@ -8,6 +8,7 @@ import { SkillsetsPanel } from './SkillsetsPanel';
 import { WeaponsCard } from './WeaponsCard';
 import { ArmorCard } from './ArmorCard';
 import { ShieldCard } from './ShieldCard';
+import { ChaosGauntletCard } from './ChaosGauntletCard';
 import { VitalsHeader } from './VitalsHeader';
 import { AbilitySlotsGrid } from './AbilitySlotsGrid';
 import { SectionJumpHUD } from './SectionJumpHUD';
@@ -56,10 +57,11 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
           <GmMonsterTrackerHud />
         </div>
 
-        {/* Column 2: Protection (Armor with integrated MR & Shield) */}
+        {/* Column 2: Protection (Armor with integrated MR, Shield, & Chaos Gauntlet) */}
         <div className="flex flex-col gap-4">
           <ArmorCard />
           <ShieldCard />
+          <ChaosGauntletCard />
         </div>
 
         {/* Column 3: Survival (Vitality & Party Roster HUD) */}

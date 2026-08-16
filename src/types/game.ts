@@ -107,6 +107,44 @@ export interface SupabaseMonster {
 }
 
 
+export interface SupabaseChaosGem {
+  id?: number;
+  name: string;
+  genres?: string[];
+  action: string;
+  usage: string;
+  effect: string;
+  notes?: string;
+  pic?: string;
+  created_at?: string;
+}
+
+export interface ChaosGemItem {
+  id?: number;
+  name: string;
+  action: string;
+  usage: number; // remaining uses (e.g. 3, 2, 1)
+  max_usage: number; // starting max uses (e.g. 3)
+  effect: string;
+  genres?: string[];
+}
+
+export interface ChaosGemSlot {
+  slot_id: string; // 'wrist' | 'finger_1' | 'finger_2' | 'finger_3' | 'finger_4' | 'finger_5'
+  slot_type: 'wrist' | 'finger';
+  slot_label: string; // 'Wrist (Mega Slot)', 'Thumb (Finger 1)', etc.
+  gem: ChaosGemItem | null;
+}
+
+export const DEFAULT_CHAOS_GAUNTLET_SLOTS: ChaosGemSlot[] = [
+  { slot_id: 'wrist', slot_type: 'wrist', slot_label: 'Wrist (Mega Slot)', gem: null },
+  { slot_id: 'finger_1', slot_type: 'finger', slot_label: 'Thumb (Finger 1)', gem: null },
+  { slot_id: 'finger_2', slot_type: 'finger', slot_label: 'Index (Finger 2)', gem: null },
+  { slot_id: 'finger_3', slot_type: 'finger', slot_label: 'Middle (Finger 3)', gem: null },
+  { slot_id: 'finger_4', slot_type: 'finger', slot_label: 'Ring (Finger 4)', gem: null },
+  { slot_id: 'finger_5', slot_type: 'finger', slot_label: 'Pinky (Finger 5)', gem: null },
+];
+
 export const REQUIREMENT_TO_MR_MAP: Record<number, string> = {
   4: '👣8',
   6: '👣7',
@@ -440,6 +478,7 @@ export interface CharacterSheetData {
   starred_shields?: (number | string)[]; // Starred Shields Wishlist IDs
   starred_skillsets?: (number | string)[]; // Starred Skillsets Wishlist IDs/Names
   starred_skills?: (number | string)[]; // Starred Individual Skills Wishlist IDs/Names
+  chaos_gauntlet_slots?: ChaosGemSlot[]; // 6 Chaos Gem Slots (1 Wrist Mega Slot + 5 Fingers)
   pity_level?: number; // 0-2 Draft Pity Escalator level
   pity_counters?: Record<string, number>; // Accumulated pity points
   rules_version?: number; // Schema rules version tracker

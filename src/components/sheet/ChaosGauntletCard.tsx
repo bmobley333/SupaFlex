@@ -1,0 +1,639 @@
+// src/components/sheet/ChaosGauntletCard.tsx
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import {
+  ChevronDown,
+  ChevronUp,
+  X,
+  Search,
+  AlertCircle,
+  Loader2,
+  Sparkles,
+  Trash2,
+  Zap,
+  Flame,
+  HelpCircle,
+} from 'lucide-react';
+import { useCharacterStore } from '../../store/useCharacterStore';
+import { useGenreStore, matchesGenre, GenreType } from '../../store/useGenreStore';
+import { gameApi } from '../../services/api';
+import {
+  ChaosGemSlot,
+  ChaosGemItem,
+  SupabaseChaosGem,
+  DEFAULT_CHAOS_GAUNTLET_SLOTS,
+} from '../../types/game';
+
+export const ChaosGauntletCard: React.FC = () => {
+  const activeGenre = useGenreStore((state) => state.activeGenre);
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+
+  const gauntletSlots: ChaosGemSlot[] = useMemo(() => {
+    const raw = activeCharacter?.sheet_data?.chaos_gauntlet_slots;
+    if (Array.isArray(raw) && raw.length === 6) {
+      return raw;
+    }
+    return DEFAULT_CHAOS_GAUNTLET_SLOTS;
+  }, [activeCharacter?.sheet_data?.chaos_gauntlet_slots]);
+
+  const equippedGemsCount = useMemo(() => {
+    return gauntletSlots.filter((s) => s.gem && s.gem.name && s.gem.name.trim() !== '').length;
+  }, [gauntletSlots]);
+
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Catalog State
+  const [catalog, setCatalog] = useState<SupabaseChaosGem[]>([]);
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
+  const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
+  const [selectedGenreFilter, setSelectedGenreFilter] = useState<GenreType>(activeGenre || 'All');
+  const [selectedTargetSlotId, setSelectedTargetSlotId] = useState<string>('wrist');
+
+  // Confirmation Modal State for Destroying on Removal
+  const [confirmRemovalSlotId, setConfirmRemovalSlotId] = useState<string | null>(null);
+
+  // Status/Toast Feedback Message
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'info' | 'success' | 'warning' } | null>(null);
+
+  const showToast = useCallback((text: string, type: 'info' | 'success' | 'warning' = 'info') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 4000);
+  }, []);
+
+  // Fetch catalog on modal open
+  useEffect(() => {
+    if (showModal) {
+      setIsLoadingCatalog(true);
+      gameApi
+        .getChaosGems()
+        .then((data) => {
+          setCatalog(data);
+        })
+        .catch((err) => {
+          console.error('[ChaosGauntletCard] Failed to load chaos gems catalog:', err);
+        })
+        .finally(() => {
+          setIsLoadingCatalog(false);
+        });
+    }
+  }, [showModal]);
+
+  // Filter Catalog
+  const filteredCatalog = useMemo(() => {
+    return catalog.filter((gem) => {
+      // 1. Genre match
+      const genreOk =
+        selectedGenreFilter === 'All' ? true : matchesGenre(gem.genres, selectedGenreFilter);
+      if (!genreOk) return false;
+
+      // 2. Search query match
+      if (!catalogSearchQuery.trim()) return true;
+      const q = catalogSearchQuery.toLowerCase().trim();
+      return (
+        gem.name.toLowerCase().includes(q) ||
+        (gem.effect && gem.effect.toLowerCase().includes(q))
+      );
+    });
+  }, [catalog, selectedGenreFilter, catalogSearchQuery]);
+
+  // First available open slot
+  const firstOpenSlot = useMemo(() => {
+    return gauntletSlots.find((s) => !s.gem);
+  }, [gauntletSlots]);
+
+  // Auto-set selected target slot if current target is occupied
+  useEffect(() => {
+    if (firstOpenSlot) {
+      setSelectedTargetSlotId(firstOpenSlot.slot_id);
+    }
+  }, [firstOpenSlot]);
+
+  // Handle Socketing a Gem
+  const handleEquipGem = (targetSlotId: string, gem: SupabaseChaosGem) => {
+    const newGem: ChaosGemItem = {
+      id: gem.id,
+      name: gem.name,
+      action: gem.action || 'F',
+      usage: 3,
+      max_usage: 3,
+      effect: gem.effect,
+      genres: gem.genres,
+    };
+
+    updateActiveSheetData((prev) => {
+      const currentSlots = Array.isArray(prev.chaos_gauntlet_slots) && prev.chaos_gauntlet_slots.length === 6
+        ? [...prev.chaos_gauntlet_slots]
+        : [...DEFAULT_CHAOS_GAUNTLET_SLOTS];
+
+      const targetIdx = currentSlots.findIndex((s) => s.slot_id === targetSlotId);
+      if (targetIdx !== -1) {
+        currentSlots[targetIdx] = {
+          ...currentSlots[targetIdx],
+          gem: newGem,
+        };
+      }
+      return { ...prev, chaos_gauntlet_slots: currentSlots };
+    });
+
+    saveActiveCharacter();
+    showToast(`💎 Socketed '${gem.name}' into ${gauntletSlots.find((s) => s.slot_id === targetSlotId)?.slot_label || 'Gauntlet'}!`, 'success');
+  };
+
+  // Handle Using a Gem (Durability -1, or Spark activation)
+  const handleUseGem = (slotId: string, useSpark: boolean = false) => {
+    const slot = gauntletSlots.find((s) => s.slot_id === slotId);
+    if (!slot || !slot.gem) return;
+
+    if (useSpark) {
+      // Mega Slot Spark Activation: preserves durability, expends 1 spark/charge
+      const currentCharges = activeCharacter?.sheet_data?.charges ?? activeCharacter?.sheet_data?.sparks ?? 0;
+      if (currentCharges < 1) {
+        showToast('⚠️ No Sparks available to power the Mega Slot!', 'warning');
+        return;
+      }
+
+      updateActiveSheetData((prev) => {
+        const newCharges = Math.max(0, (prev.charges ?? prev.sparks ?? 0) - 1);
+        return {
+          ...prev,
+          charges: newCharges,
+          sparks: newCharges,
+          is_sparked: newCharges === 5,
+          is_charged: newCharges === 5,
+        };
+      });
+      saveActiveCharacter();
+      showToast(`⚡ Mega Slot '${slot.gem.name}' triggered via Spark! Gem durability preserved.`, 'success');
+      return;
+    }
+
+    // Standard Usage Activation: decrements usage by 1
+    const newUsage = Math.max(0, slot.gem.usage - 1);
+
+    if (newUsage <= 0) {
+      // Gem is destroyed!
+      updateActiveSheetData((prev) => {
+        const currentSlots = [...(prev.chaos_gauntlet_slots || DEFAULT_CHAOS_GAUNTLET_SLOTS)];
+        const targetIdx = currentSlots.findIndex((s) => s.slot_id === slotId);
+        if (targetIdx !== -1) {
+          currentSlots[targetIdx] = {
+            ...currentSlots[targetIdx],
+            gem: null,
+          };
+        }
+        return { ...prev, chaos_gauntlet_slots: currentSlots };
+      });
+      saveActiveCharacter();
+      showToast(`💥 '${slot.gem.name}' reached 0 uses and shattered into dust!`, 'warning');
+    } else {
+      updateActiveSheetData((prev) => {
+        const currentSlots = [...(prev.chaos_gauntlet_slots || DEFAULT_CHAOS_GAUNTLET_SLOTS)];
+        const targetIdx = currentSlots.findIndex((s) => s.slot_id === slotId);
+        if (targetIdx !== -1 && currentSlots[targetIdx].gem) {
+          currentSlots[targetIdx] = {
+            ...currentSlots[targetIdx],
+            gem: {
+              ...currentSlots[targetIdx].gem!,
+              usage: newUsage,
+            },
+          };
+        }
+        return { ...prev, chaos_gauntlet_slots: currentSlots };
+      });
+      saveActiveCharacter();
+      showToast(`⚡ Activated '${slot.gem.name}' (${newUsage}/3 uses remaining).`, 'info');
+    }
+  };
+
+  // Handle Removal (Destroy Gem)
+  const handleConfirmRemove = () => {
+    if (!confirmRemovalSlotId) return;
+    const targetSlotId = confirmRemovalSlotId;
+    const slot = gauntletSlots.find((s) => s.slot_id === targetSlotId);
+    const gemName = slot?.gem?.name || 'Chaos Gem';
+
+    updateActiveSheetData((prev) => {
+      const currentSlots = [...(prev.chaos_gauntlet_slots || DEFAULT_CHAOS_GAUNTLET_SLOTS)];
+      const targetIdx = currentSlots.findIndex((s) => s.slot_id === targetSlotId);
+      if (targetIdx !== -1) {
+        currentSlots[targetIdx] = {
+          ...currentSlots[targetIdx],
+          gem: null,
+        };
+      }
+      return { ...prev, chaos_gauntlet_slots: currentSlots };
+    });
+
+    saveActiveCharacter();
+    setConfirmRemovalSlotId(null);
+    showToast(`💥 Removed and shattered '${gemName}'.`, 'warning');
+  };
+
+  const charges = activeCharacter?.sheet_data?.charges ?? activeCharacter?.sheet_data?.sparks ?? 0;
+
+  return (
+    <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex items-center justify-between transition-all">
+      {/* Header & Icon */}
+      <h3 className="font-outfit font-bold text-sm tracking-widest text-violet-300 uppercase flex items-center gap-2">
+        <span className="text-base">💎</span>
+        Chaos Gauntlet
+      </h3>
+
+      {/* Manage Gauntlet Trigger Button & Status Badge */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setShowModal(!showModal)}
+          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
+            showModal
+              ? 'bg-violet-600/30 text-violet-200 border-violet-400 shadow-violet-500/30'
+              : 'bg-violet-950/40 hover:bg-violet-900/50 border-violet-500/30 text-violet-300'
+          }`}
+          title="Manage Chaos Gauntlet and socketed Chaos Gems"
+        >
+          <span className="font-outfit font-bold">Manage Gauntlet</span>
+          <span
+            className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${
+              equippedGemsCount > 0
+                ? 'bg-violet-900/80 text-violet-200 border-violet-500/40'
+                : 'bg-slate-950 text-slate-400 border-slate-800'
+            }`}
+          >
+            {equippedGemsCount}/6
+          </span>
+          {showModal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
+      {/* 2-COLUMN MASTER SPLIT-PANE MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div
+            ref={modalRef}
+            className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[88vh] max-h-[680px] flex flex-col shadow-2xl overflow-hidden"
+          >
+            {/* Modal Top Bar */}
+            <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-violet-950/80 border border-violet-500/30 text-violet-300 flex items-center justify-center shadow-inner">
+                  <span className="text-lg leading-none">💎</span>
+                </div>
+                <div>
+                  <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                    Chaos Gauntlet Manager
+                  </h3>
+                  <p className="text-xs text-slate-400 hidden sm:block">
+                    Socket volatile Chaos Gems into the Wrist Mega Slot and 5 Finger conduits. (F Action • Max 1/Rnd • Destroyed at 0 uses)
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Toast Feedback Notification */}
+            {toastMessage && (
+              <div
+                className={`px-4 py-2 text-xs font-semibold flex items-center gap-2 border-b animate-fadeIn ${
+                  toastMessage.type === 'success'
+                    ? 'bg-emerald-950/90 text-emerald-200 border-emerald-500/40'
+                    : toastMessage.type === 'warning'
+                    ? 'bg-rose-950/90 text-rose-200 border-rose-500/40'
+                    : 'bg-slate-900 text-slate-200 border-slate-700'
+                }`}
+              >
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{toastMessage.text}</span>
+              </div>
+            )}
+
+            {/* 2-COLUMN SPLIT-PANE BODY */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
+              
+              {/* --- LEFT COLUMN: ACTIVE GAUNTLET SLOTS (6 SLOTS) --- */}
+              <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                {/* Pane Header */}
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-outfit font-bold uppercase tracking-wider text-violet-300 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                      Active Gauntlet Sockets
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
+                      {equippedGemsCount}/6
+                    </span>
+                  </div>
+
+                  {/* Spark Pool Indicator */}
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-amber-300 bg-amber-950/40 border border-amber-500/30 px-2 py-0.5 rounded-lg" title="Sparks available to activate Wrist Mega Slot without consuming gem durability">
+                    <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
+                    <span>{charges} Sparks</span>
+                  </div>
+                </div>
+
+                {/* Slots Scroll Container */}
+                <div className="flex-1 overflow-y-auto min-h-0 mt-2 pr-1 flex flex-col gap-2.5 custom-scrollbar">
+                  {gauntletSlots.map((slot) => {
+                    const isWrist = slot.slot_type === 'wrist';
+                    const gem = slot.gem;
+
+                    return (
+                      <div
+                        key={slot.slot_id}
+                        className={`rounded-xl border p-2.5 transition-all flex flex-col gap-2 ${
+                          isWrist
+                            ? gem
+                              ? 'bg-gradient-to-r from-amber-950/30 via-purple-950/20 to-slate-950/90 border-amber-500/40 shadow-sm shadow-amber-950/20'
+                              : 'bg-amber-950/10 border-amber-500/20 border-dashed'
+                            : gem
+                            ? 'bg-slate-900/90 border-slate-700/80 shadow-sm'
+                            : 'bg-slate-950/40 border-slate-800/60 border-dashed'
+                        }`}
+                      >
+                        {/* Slot Header */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
+                            {isWrist ? (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-outfit font-extrabold uppercase tracking-wide flex items-center gap-1">
+                                👑 Mega Slot (Wrist)
+                              </span>
+                            ) : (
+                              <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700 text-slate-300 font-semibold">
+                                🖐️ {slot.slot_label}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Action Badge */}
+                          {gem && (
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300">
+                              ⚡ Free Action [F]
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Slot Content */}
+                        {gem ? (
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="font-outfit font-bold text-sm text-slate-100 flex items-center gap-1.5">
+                                💎 {gem.name}
+                              </span>
+
+                              {/* Remaining Uses Dots */}
+                              <div className="flex items-center gap-1" title={`${gem.usage} of ${gem.max_usage} uses remaining`}>
+                                {[1, 2, 3].map((u) => (
+                                  <div
+                                    key={u}
+                                    className={`w-2 h-2 rounded-full transition-all ${
+                                      u <= gem.usage
+                                        ? isWrist
+                                          ? 'bg-amber-400 shadow-sm shadow-amber-400/80'
+                                          : 'bg-violet-400 shadow-sm shadow-violet-400/80'
+                                        : 'bg-slate-800 border border-slate-700'
+                                    }`}
+                                  />
+                                ))}
+                                <span className="text-[10px] font-mono text-slate-400 ml-1">
+                                  {gem.usage}/3
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Gem Effect Description */}
+                            <p className="text-xs text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 font-sans leading-relaxed">
+                              {gem.effect}
+                            </p>
+
+                            {/* Slot Controls */}
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-800/60">
+                              <div className="flex items-center gap-1.5">
+                                {/* Use Gem Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleUseGem(slot.slot_id, false)}
+                                  className="px-2.5 py-1 bg-violet-600/30 hover:bg-violet-600/40 active:bg-violet-600/50 text-violet-200 border border-violet-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                  title="Use this gem for Free Action. Decrements 1 use (Destroyed at 0 uses)."
+                                >
+                                  <span>⚡ Use Gem (-1)</span>
+                                </button>
+
+                                {/* Mega Slot Spark Activation Button */}
+                                {isWrist && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUseGem(slot.slot_id, true)}
+                                    disabled={charges < 1}
+                                    className="px-2.5 py-1 bg-amber-600/30 hover:bg-amber-600/40 active:bg-amber-600/50 disabled:opacity-40 disabled:hover:bg-amber-600/30 text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                                    title="Trigger Mega Slot using 1 Spark from character pool (Preserves gem durability!)"
+                                  >
+                                    <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                    <span>Spark Active</span>
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Remove & Destroy Button */}
+                              <button
+                                type="button"
+                                onClick={() => setConfirmRemovalSlotId(slot.slot_id)}
+                                className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer"
+                                title="Remove gem (WARNING: permanently destroys gem)"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="py-2.5 flex items-center justify-between text-xs text-slate-500 italic">
+                            <span>Empty Socket</span>
+                            <span className="text-[10px] font-mono text-slate-600 font-normal">
+                              Select gem from catalog to socket
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* --- RIGHT COLUMN: STOCK CHAOS GEMS CATALOG --- */}
+              <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                {/* Catalog Header & Genre Filter */}
+                <div className="flex flex-col gap-2 pb-2.5 border-b border-slate-800/80 shrink-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-outfit font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
+                      📖 Chaos Gems Catalog
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
+                      {filteredCatalog.length} available
+                    </span>
+                  </div>
+
+                  {/* Search and Genre Filters */}
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search gems or effects..."
+                        value={catalogSearchQuery}
+                        onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                        className="w-full bg-slate-900 text-slate-200 text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-800 outline-none focus:border-cyan-500 transition-all placeholder:text-slate-600"
+                      />
+                    </div>
+
+                    {/* Genre Selector */}
+                    <select
+                      value={selectedGenreFilter}
+                      onChange={(e) => setSelectedGenreFilter(e.target.value as GenreType)}
+                      className="bg-slate-900 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 outline-none focus:border-cyan-500 cursor-pointer"
+                    >
+                      <option value="All">All Genres</option>
+                      <option value="Medieval">Medieval</option>
+                      <option value="Modern">Modern</option>
+                      <option value="SciFi">SciFi</option>
+                    </select>
+                  </div>
+
+                  {/* Socket Target Selector */}
+                  <div className="flex items-center gap-2 bg-slate-900/60 px-2.5 py-1.5 rounded-lg border border-slate-800">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide shrink-0">
+                      Socket Target:
+                    </span>
+                    <select
+                      value={selectedTargetSlotId}
+                      onChange={(e) => setSelectedTargetSlotId(e.target.value)}
+                      className="bg-slate-950 text-amber-300 text-xs font-semibold px-2 py-1 rounded border border-slate-700 outline-none flex-1 focus:border-amber-500 cursor-pointer"
+                    >
+                      {gauntletSlots.map((s) => (
+                        <option key={s.slot_id} value={s.slot_id}>
+                          {s.slot_label} {s.gem ? `(Occupied: ${s.gem.name})` : '(Empty ✨)'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Catalog List */}
+                <div className="flex-1 overflow-y-auto min-h-0 mt-2 pr-1 flex flex-col gap-2 custom-scrollbar">
+                  {isLoadingCatalog ? (
+                    <div className="flex flex-col items-center justify-center h-48 gap-2 text-slate-500">
+                      <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                      <span className="text-xs">Loading Chaos Gems database...</span>
+                    </div>
+                  ) : filteredCatalog.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-48 text-slate-500 text-xs italic">
+                      No Chaos Gems found matching your criteria.
+                    </div>
+                  ) : (
+                    filteredCatalog.map((gem) => {
+                      const isOccupiedTarget = Boolean(
+                        gauntletSlots.find((s) => s.slot_id === selectedTargetSlotId)?.gem
+                      );
+
+                      return (
+                        <div
+                          key={gem.id || gem.name}
+                          className="p-2.5 bg-slate-900/80 hover:bg-slate-900 rounded-xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col gap-2 group"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="font-outfit font-bold text-xs text-slate-100 block group-hover:text-cyan-300 transition-colors">
+                                💎 {gem.name}
+                              </span>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                {(gem.genres || []).map((g) => (
+                                  <span
+                                    key={g}
+                                    className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-850"
+                                  >
+                                    {g}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Equip to Target Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleEquipGem(selectedTargetSlotId, gem)}
+                              className="px-2.5 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer shadow-sm"
+                            >
+                              <span>{isOccupiedTarget ? 'Overwrite & Socket' : 'Socket Gem'}</span>
+                            </button>
+                          </div>
+
+                          {/* Effect */}
+                          <p className="text-xs text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-850 font-sans leading-relaxed">
+                            {gem.effect}
+                          </p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
+                <span className="text-[11px]">Chaos Gems provide instant tactical surges. 1 Free Action activation allowed per round.</span>
+              </div>
+
+              <button
+                onClick={() => setShowModal(false)}
+                className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer text-xs"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION DESTRUCTION WARNING MODAL */}
+      {confirmRemovalSlotId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border border-rose-500/50 rounded-2xl p-5 max-w-md w-full shadow-2xl flex flex-col gap-3">
+            <div className="flex items-center gap-2.5 text-rose-400">
+              <Flame className="w-6 h-6 shrink-0 animate-pulse" />
+              <h4 className="font-outfit font-bold text-base text-rose-200 uppercase tracking-wide">
+                Permanent Destruction Warning
+              </h4>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed bg-rose-950/20 p-3 rounded-xl border border-rose-500/30">
+              Chaos Gems are bound to the gauntlet's energy lattice. <strong>Removing a socketed gem immediately shatters and destroys it forever.</strong> It cannot be recovered or stored in inventory.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmRemovalSlotId(null)}
+                className="px-4 py-1.5 rounded-xl text-xs font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRemove}
+                className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 border border-rose-400 shadow-md shadow-rose-950 transition-all cursor-pointer"
+              >
+                Confirm & Shatter Gem
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

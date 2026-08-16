@@ -2,7 +2,22 @@
 // Supabase Data Access Gateway for SupaFlex
 
 import { supabase } from '../lib/supabase';
-import { Character, Power, MagicItem, Skillset, CharacterSheetData, DieRating, SupabaseArmor, SupabaseWeapon, SupabaseShield, SupabaseGear, SupabaseMonster } from '../types/game';
+import {
+  Character,
+  Power,
+  MagicItem,
+  Skillset,
+  CharacterSheetData,
+  DieRating,
+  SupabaseArmor,
+  SupabaseWeapon,
+  SupabaseShield,
+  SupabaseGear,
+  SupabaseMonster,
+  SupabaseChaosGem,
+  ChaosGemSlot,
+  DEFAULT_CHAOS_GAUNTLET_SLOTS,
+} from '../types/game';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
 
 const DEFAULT_UNARMORED_SLOT = {
@@ -44,6 +59,7 @@ export const createDefaultSheetData = (): CharacterSheetData => ({
   tactical_pivot_used_in_encounter: false,
   spell_slots: [],
   gear_slots: [],
+  chaos_gauntlet_slots: DEFAULT_CHAOS_GAUNTLET_SLOTS,
   bio: {
     backstory: '',
     personality: '',
@@ -57,6 +73,12 @@ export function ensureLatestSheetSchema(rawSheet: any): CharacterSheetData {
   if (!rawSheet || typeof rawSheet !== 'object') {
     return defaultSheet;
   }
+
+  const rawGauntletSlots = Array.isArray(rawSheet.chaos_gauntlet_slots) ? rawSheet.chaos_gauntlet_slots : [];
+  const mergedGauntletSlots: ChaosGemSlot[] = DEFAULT_CHAOS_GAUNTLET_SLOTS.map((defSlot) => {
+    const found = rawGauntletSlots.find((s: any) => s && s.slot_id === defSlot.slot_id);
+    return found ? { ...defSlot, ...found } : defSlot;
+  });
 
   // Deep-merge fallback to guarantee no missing properties cause runtime exceptions
   return {
@@ -79,6 +101,7 @@ export function ensureLatestSheetSchema(rawSheet: any): CharacterSheetData {
     gear_slots: Array.isArray(rawSheet.gear_slots) ? rawSheet.gear_slots : [],
     weapons: Array.isArray(rawSheet.weapons) ? rawSheet.weapons : [],
     simple_gear: Array.isArray(rawSheet.simple_gear) ? rawSheet.simple_gear : [],
+    chaos_gauntlet_slots: mergedGauntletSlots,
   };
 }
 
@@ -1202,6 +1225,33 @@ export const gameApi = {
       });
     } catch (e) {
       console.error('[gameApi] Error saving party monsters:', e);
+    }
+  },
+
+  // --- CHAOS GEMS ---
+  async getChaosGems(): Promise<SupabaseChaosGem[]> {
+    try {
+      const { data, error } = await supabase
+        .from('chaos_gems')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.warn('[gameApi] Notice fetching chaos gems table:', error.message);
+        return [];
+      }
+
+      return (data || []).map((item: any) => ({
+        ...item,
+        genres: Array.isArray(item.genres)
+          ? item.genres
+          : typeof item.genres === 'string'
+          ? JSON.parse(item.genres || '[]')
+          : ['Medieval', 'Modern', 'SciFi'],
+      }));
+    } catch (e) {
+      console.error('[gameApi] Error in getChaosGems:', e);
+      return [];
     }
   },
 };
