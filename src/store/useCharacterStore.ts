@@ -28,7 +28,7 @@ interface CharacterStore {
   tabSessionId: string;
 
   // Actions
-  fetchInitialData: () => Promise<void>;
+  fetchInitialData: (options?: { silent?: boolean }) => Promise<void>;
   selectCharacter: (id: number) => void;
   createNewCharacter: (name: string, characterClass?: string, race?: string) => Promise<Character | null>;
   updateActiveSheetData: (updater: (prev: CharacterSheetData) => CharacterSheetData) => void;
@@ -119,8 +119,11 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     set({ activePartyId: partyId });
   },
 
-  fetchInitialData: async () => {
-    set({ isLoading: true, error: null });
+  fetchInitialData: async (options?: { silent?: boolean }) => {
+    const isSilent = options?.silent || get().characters.length > 0;
+    if (!isSilent) {
+      set({ isLoading: true, error: null });
+    }
     try {
       const isConnected = await gameApi.checkConnection();
       set({ dbConnected: isConnected });
@@ -149,20 +152,33 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         gameApi.getSkillsets(),
       ]);
 
-      const lastActiveIdStr = sessionStorage.getItem('supaflex_last_active_char_id');
-      const lastActiveId = lastActiveIdStr ? Number(lastActiveIdStr) : null;
-      let selectedChar = (lastActiveId ? chars.find((c) => c.id === lastActiveId) : null) || chars[0] || null;
+      const currentActive = get().activeCharacter;
+      let selectedChar: Character | null = null;
 
-      // If no character exists yet, auto-create a default Playtest hero
-      if (!selectedChar && isConnected) {
-        selectedChar = await gameApi.createCharacter('Hero of MetaScape', 'Vanguard', 'Human');
-        chars.push(selectedChar);
-      }
+      if (currentActive && chars.some((c) => c.id === currentActive.id)) {
+        const freshChar = chars.find((c) => c.id === currentActive.id)!;
+        const migratedSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(freshChar.sheet_data));
+        // Preserve active character object and unsaved local edits if present
+        selectedChar = {
+          ...freshChar,
+          sheet_data: currentActive.sheet_data ? currentActive.sheet_data : migratedSheet,
+        };
+      } else {
+        const lastActiveIdStr = sessionStorage.getItem('supaflex_last_active_char_id');
+        const lastActiveId = lastActiveIdStr ? Number(lastActiveIdStr) : null;
+        selectedChar = (lastActiveId ? chars.find((c) => c.id === lastActiveId) : null) || chars[0] || null;
 
-      if (selectedChar) {
-        const migratedSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(selectedChar.sheet_data));
-        selectedChar = { ...selectedChar, sheet_data: migratedSheet };
-        sessionStorage.setItem('supaflex_last_active_char_id', String(selectedChar.id));
+        // If no character exists yet, auto-create a default Playtest hero
+        if (!selectedChar && isConnected) {
+          selectedChar = await gameApi.createCharacter('Hero of MetaScape', 'Vanguard', 'Human');
+          chars.push(selectedChar);
+        }
+
+        if (selectedChar) {
+          const migratedSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(selectedChar.sheet_data));
+          selectedChar = { ...selectedChar, sheet_data: migratedSheet };
+          sessionStorage.setItem('supaflex_last_active_char_id', String(selectedChar.id));
+        }
       }
 
       set({

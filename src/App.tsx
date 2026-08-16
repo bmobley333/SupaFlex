@@ -23,6 +23,7 @@ import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { CardHelpButton } from './components/common/CardHelpButton';
 import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
 import { resolveCharFirstName } from './components/common/PartyCharacterCard';
+import { useScrollRestoration } from './hooks/useScrollRestoration';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'sheet' | 'logs'>('sheet');
@@ -69,6 +70,12 @@ export default function App() {
 
   const selectorRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
+
+  // Seamless Scroll Restoration Keyed to Active Hero / Mode / Tab
+  const activeRoleState = useCharacterStore((state) => state.activeRole);
+  const activeCharState = useCharacterStore((state) => state.activeCharacter);
+  const scrollKey = activeRoleState === 'gm' ? 'gm' : activeTab === 'logs' ? 'logs' : activeCharState?.id ? `hero_${activeCharState.id}` : 'sheet';
+  useScrollRestoration({ key: scrollKey });
 
   const {
     characters,
@@ -125,11 +132,21 @@ export default function App() {
 
     // Auth state listener — Handles OAuth logins, PASSWORD_RECOVERY redirect & URL cleanup.
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Ignore background token refresh events on tab focus to prevent redundant data fetching and UI unmounts
+      if (event === 'TOKEN_REFRESHED') {
+        return;
+      }
+
       if (session?.user?.email) {
         const userEmail = session.user.email.trim().toLowerCase();
         const userName = resolveGoogleName(session.user);
+        const currentEmail = useCharacterStore.getState().playerEmail;
         await handleAuthUser(userEmail, userName);
-        fetchInitialData();
+
+        // If user changed or fresh login event occurred, silently update data in background
+        if (currentEmail !== userEmail || event === 'SIGNED_IN') {
+          fetchInitialData({ silent: true });
+        }
       }
 
       if (event === 'PASSWORD_RECOVERY') {
