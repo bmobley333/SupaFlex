@@ -493,15 +493,6 @@ export const ChaosGauntletCard: React.FC = () => {
                       Active Sockets ({equippedGemsCount}/6)
                     </span>
                   </div>
-
-                  {/* Spark Pool Indicator */}
-                  <div
-                    className="flex items-center gap-1.5 text-[11px] font-mono text-amber-300 bg-amber-950/40 border border-amber-500/30 px-2 py-0.5 rounded-lg"
-                    title="Spark available to activate Wrist Mega Slot without consuming gem durability"
-                  >
-                    <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
-                    <span>{charges} Spark</span>
-                  </div>
                 </div>
 
                 {/* 6-SLOT SELECTOR RIBBON */}
@@ -514,25 +505,32 @@ export const ChaosGauntletCard: React.FC = () => {
                       const isSelected = selectedTargetSlotId === meta.slot_id;
                       const slotObj = gauntletSlots.find((s) => s.slot_id === meta.slot_id);
                       const isOccupied = Boolean(slotObj?.gem);
+                      const isWrist = meta.slot_type === 'wrist';
 
                       return (
                         <button
                           key={meta.slot_id}
                           type="button"
                           onClick={() => setSelectedTargetSlotId(meta.slot_id)}
-                          className={`py-1.5 px-1 text-[11px] font-bold rounded-lg border transition-all flex flex-col items-center justify-center cursor-pointer ${
+                          className={`py-1.5 px-1 text-[11px] rounded-lg border transition-all flex flex-col items-center justify-center cursor-pointer ${
+                            isWrist
+                              ? isOccupied
+                                ? 'bg-amber-600 text-white border-amber-400 font-extrabold shadow-sm'
+                                : 'bg-slate-950/80 text-amber-300 border-amber-500/30 hover:border-amber-400 hover:bg-slate-900 font-semibold'
+                              : isOccupied
+                              ? 'bg-slate-800 text-slate-100 border-slate-600 font-bold shadow-sm'
+                              : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700 hover:bg-slate-900 font-normal'
+                          } ${
                             isSelected
-                              ? meta.slot_type === 'wrist'
-                                ? 'bg-amber-600 text-white border-amber-400 shadow-md font-extrabold ring-1 ring-amber-300'
-                                : 'bg-cyan-600 text-white border-cyan-400 shadow-md font-extrabold ring-1 ring-cyan-300'
-                              : meta.slot_type === 'wrist'
-                              ? 'bg-amber-950/40 text-amber-300 border-amber-500/30 hover:border-amber-400 hover:bg-amber-900/40'
-                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700 hover:bg-slate-900'
+                              ? isWrist
+                                ? 'ring-2 ring-amber-300 border-amber-300 shadow-md shadow-amber-950/60'
+                                : 'ring-2 ring-cyan-400 border-cyan-300 shadow-md shadow-cyan-950/60'
+                              : 'ring-0'
                           }`}
-                          title={`Select ${meta.label} (${isOccupied ? 'Occupied' : 'Empty ✨'})`}
+                          title={`Select ${meta.label} (${isOccupied ? 'Occupied 💎' : 'Empty ✨'})`}
                         >
                           <span className="font-outfit font-bold">{meta.slot_number === 6 ? '👑 Mega Slot' : `Slot ${meta.slot_number}`}</span>
-                          <span className="text-[9.5px] opacity-80 font-normal">
+                          <span className="text-[9.5px] opacity-80">
                             {isOccupied ? '💎 In Use' : '✨ Empty'}
                           </span>
                         </button>
@@ -737,30 +735,6 @@ export const ChaosGauntletCard: React.FC = () => {
                           <p className="text-xs text-slate-300 leading-relaxed font-sans pt-0.5">
                             {gem.effect}
                           </p>
-
-                          {/* Direct Quick-Assign Mini-Pills (Slots 1 to 6) */}
-                          <div className="flex items-center justify-between pt-1 border-t border-slate-850/80 text-[10px]">
-                            <span className="text-slate-500 font-semibold">
-                              Direct Socket:
-                            </span>
-                            <div className="flex items-center gap-1 flex-wrap">
-                              {SLOT_METADATA.map((m) => (
-                                <button
-                                  key={m.slot_id}
-                                  type="button"
-                                  onClick={() => handleEquipGem(m.slot_id, gem)}
-                                  className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold border transition-all cursor-pointer ${
-                                    m.slot_type === 'wrist'
-                                      ? 'bg-amber-950/60 hover:bg-amber-800 text-amber-300 border-amber-500/40'
-                                      : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
-                                  }`}
-                                  title={`Socket directly into ${m.label}`}
-                                >
-                                  {m.slot_number === 6 ? '👑 Mega' : `Slot ${m.slot_number}`}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
                         </div>
                       );
                     })
