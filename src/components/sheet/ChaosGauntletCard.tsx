@@ -211,7 +211,7 @@ export const ChaosGauntletCard: React.FC = () => {
 
     const currentCharges = activeCharacter?.sheet_data?.charges ?? activeCharacter?.sheet_data?.sparks ?? 0;
     if (currentCharges < 1) {
-      showToast('⚠️ No Sparks available to power the Mega Slot!', 'warning');
+      showToast('⚠️ No Spark available to power the Mega Slot!', 'warning');
       return;
     }
 
@@ -275,10 +275,10 @@ export const ChaosGauntletCard: React.FC = () => {
           {/* Spark Pool Indicator */}
           <div
             className="flex items-center gap-1 text-[11px] font-mono font-bold text-amber-300 bg-amber-950/50 border border-amber-500/40 px-2 py-0.5 rounded-lg shadow-inner"
-            title="Sparks available to trigger Wrist Mega Slot without consuming gem durability"
+            title="Spark available to trigger Wrist Mega Slot without consuming gem durability"
           >
             <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
-            <span>{charges} Sparks</span>
+            <span>{charges} Spark</span>
           </div>
 
           {/* Manage Gauntlet Button */}
@@ -481,10 +481,10 @@ export const ChaosGauntletCard: React.FC = () => {
                   {/* Spark Pool Indicator */}
                   <div
                     className="flex items-center gap-1.5 text-[11px] font-mono text-amber-300 bg-amber-950/40 border border-amber-500/30 px-2 py-0.5 rounded-lg"
-                    title="Sparks available to activate Wrist Mega Slot without consuming gem durability"
+                    title="Spark available to activate Wrist Mega Slot without consuming gem durability"
                   >
                     <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
-                    <span>{charges} Sparks</span>
+                    <span>{charges} Spark</span>
                   </div>
                 </div>
 
