@@ -17,6 +17,7 @@ import {
   SupabaseChaosGem,
   ChaosGemSlot,
   DEFAULT_CHAOS_GAUNTLET_SLOTS,
+  LootMainEntry,
 } from '../types/game';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
 
@@ -1254,5 +1255,40 @@ export const gameApi = {
       return [];
     }
   },
+
+  async getRandomChaosGem(genre?: string): Promise<SupabaseChaosGem | null> {
+    try {
+      const allGems = await this.getChaosGems();
+      if (!allGems || allGems.length === 0) return null;
+      const filtered = (!genre || genre === 'All')
+        ? allGems
+        : allGems.filter(g => !g.genres || g.genres.length === 0 || g.genres.includes(genre) || g.genres.includes('All'));
+      const pool = filtered.length > 0 ? filtered : allGems;
+      return pool[Math.floor(Math.random() * pool.length)];
+    } catch (e) {
+      console.error('[gameApi] Error in getRandomChaosGem:', e);
+      return null;
+    }
+  },
+
+  // --- MASTER LOOT MATRIX (LOOT_MAIN) ---
+  async getLootMainEntries(): Promise<LootMainEntry[]> {
+    try {
+      const { data, error } = await supabase
+        .from('loot_main')
+        .select('*')
+        .order('range_min', { ascending: true });
+
+      if (error) {
+        console.warn('[gameApi] Notice fetching loot_main table:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (e) {
+      console.error('[gameApi] Error in getLootMainEntries:', e);
+      return [];
+    }
+  },
 };
+
 

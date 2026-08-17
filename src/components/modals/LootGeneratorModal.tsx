@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { useGenreStore } from '../../store/useGenreStore';
+import { gameApi } from '../../services/api';
 import { LootDraftModal } from './LootDraftModal';
 import { EchoVaultModal } from './EchoVaultModal';
-import { VaultItem } from '../../types/game';
+import { ChaosGauntletSocketModal } from './ChaosGauntletSocketModal';
+import { VaultItem, SupabaseChaosGem } from '../../types/game';
 
 export interface MoveToSheetPayload {
   title: string;
@@ -33,11 +36,12 @@ export interface RollResult {
   rollVal: number;
   title: string;
   description: string;
-  type: 'coins' | 'magic_item' | 'art_gem' | 'document' | 'junk' | 'quality' | 'special';
+  type: 'coins' | 'magic_item' | 'art_gem' | 'document' | 'junk' | 'quality' | 'special' | 'chaos_gem';
   categoryKey?: string;
   coinsSilver?: number;
   coinsGold?: number;
   magicItem?: any;
+  chaosGem?: SupabaseChaosGem;
   valuableName?: string;
   valuableVal?: string;
   valuableCurrency?: 'gp' | 'sp';
@@ -89,9 +93,10 @@ export const parseAndEvaluateFormula = (formula: string): { value: number; curre
 
 export const CATEGORY_OPTIONS = [
   { key: 'coins', label: '🪙 Coins (s/g)' },
+  { key: 'chaos_gems', label: '💎 Chaos Gem (Volatile)' },
   { key: 'magic_Minor', label: '🍺 Minor Magic Item' },
   { key: 'magic_Lesser', label: '🪄 Lesser Magic Item' },
-  {key: 'magic_Greater', label: '✨ Greater Magic Item' },
+  { key: 'magic_Greater', label: '✨ Greater Magic Item' },
   { key: 'magic_Epic', label: '💫 Epic Magic Item' },
   { key: 'gear_quality', label: '🧰 Gear Quality + Item' },
   { key: 'art_gems', label: '🎨 Art & Gems' },
@@ -112,6 +117,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
   const magicItems = useCharacterStore((state) => state.magicItems);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
+  const activeGenre = useGenreStore((state) => state.activeGenre);
 
   const [isGmMode, setIsGmMode] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('coins');
@@ -121,6 +127,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [socketingItem, setSocketingItem] = useState<{ res: RollResult; gem: SupabaseChaosGem } | null>(null);
   const [activeRightTab, setActiveRightTab] = useState<'GENERATOR' | 'VAULT'>('GENERATOR');
   const [lastDraftTier, setLastDraftTier] = useState<'Minor' | 'Lesser' | 'Greater' | 'Epic'>('Lesser');
   const [partyVault, setPartyVault] = useState<VaultItem[]>([]);
@@ -245,18 +252,19 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     return { name: 'Iron Lantern', cost: '5s' };
   };
 
-  // Master d100 Roll Handler
+  // Master d100 Roll Handler (Direct from Supabase loot_main)
   const handleRollMasterD100 = async () => {
     setIsRolling(true);
     const d100 = rollDice(100);
     
     try {
-      const { data: entries } = await supabase
-        .from('treasure_entries')
+      const { data: entries, error } = await supabase
+        .from('loot_main')
         .select('*')
-        .eq('table_key', 'master_d100')
         .lte('range_min', d100)
         .gte('range_max', d100);
+
+      if (error) throw error;
 
       const entry = entries && entries.length > 0 ? entries[0] : null;
       const resList: RollResult[] = [];
@@ -264,7 +272,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       if (!entry) {
         resList.push({
           id: `res-${Date.now()}`,
-          tableKey: 'master_d100',
+          tableKey: 'loot_main',
           tableName: 'Nothing Found',
           rollVal: d100,
           title: 'Nothing Found',
@@ -277,7 +285,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         if (rType === 'nothing') {
           resList.push({
             id: `res-${Date.now()}`,
-            tableKey: 'master_d100',
+            tableKey: 'loot_main',
             tableName: 'Nothing Found',
             rollVal: d100,
             title: entry.result_name,
@@ -289,7 +297,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           const coinText = [evalC.silver > 0 ? `${evalC.silver}s` : '', evalC.gold > 0 ? `${evalC.gold}g` : ''].filter(Boolean).join(', ');
           resList.push({
             id: `res-${Date.now()}`,
-            tableKey: 'master_d100',
+            tableKey: 'loot_main',
             tableName: '🪙 Coins',
             rollVal: d100,
             title: `Coins 💰 (${coinText || '0s'})`,
@@ -298,6 +306,21 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             coinsSilver: evalC.silver,
             coinsGold: evalC.gold
           });
+        } else if (rType === 'chaos_gem') {
+          const gem = await gameApi.getRandomChaosGem(activeGenre);
+          if (gem) {
+            resList.push({
+              id: `res-${Date.now()}`,
+              tableKey: 'loot_main',
+              categoryKey: 'chaos_gems',
+              tableName: '💎 Chaos Gem (Volatile)',
+              rollVal: d100,
+              title: gem.name,
+              description: gem.effect || gem.notes || 'Volatile Chaos Gem. Must be socketed into your Gauntlet upon claiming or discarded.',
+              type: 'chaos_gem',
+              chaosGem: gem,
+            });
+          }
         } else if (rType === 'magic_item') {
           const rawRarity = entry.subtable_key?.replace('magic_', '') || 'Lesser';
           const rarity = (rawRarity.toLowerCase() === 'artifact' || rawRarity.toLowerCase() === 'epic') ? 'Epic' : rawRarity;
@@ -305,7 +328,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           const iconStr = rarity === 'Minor' ? '🍺' : rarity === 'Lesser' ? '🪄' : rarity === 'Greater' ? '✨' : '💫';
           resList.push({
             id: `res-${Date.now()}`,
-            tableKey: 'master_d100',
+            tableKey: 'loot_main',
             tableName: `${iconStr} ${rarity} Magic Item`,
             rollVal: d100,
             title: `${item.name}`,
@@ -313,8 +336,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             type: 'magic_item',
             magicItem: item
           });
-        } else if (rType === 'art_gem' || rType === 'subtable') {
-          const subKey = entry.subtable_key || 'art_gems';
+        } else if (rType === 'art_gem' || rType === 'subtable' || rType === 'curio' || rType === 'junk' || rType === 'item') {
+          const subKey = entry.subtable_key || (rType === 'art_gem' ? 'art_gems' : rType === 'curio' ? 'curios' : rType === 'junk' ? 'junk' : 'art_gems');
           const subRoll = rollDice(8);
           const { data: subEntries } = await supabase
             .from('treasure_entries')
@@ -324,7 +347,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             .gte('range_max', subRoll);
 
           const subEntry = subEntries && subEntries.length > 0 ? subEntries[0] : null;
-          const badgeLabel = subKey === 'art_gems' ? '🎨 Art & Gems' : subKey === 'curios' ? '📜 Curio' : '🗑️ Junk';
+          const badgeLabel = subKey === 'art_gems' ? '🎨 Art & Gems' : subKey === 'curios' ? '📜 Curio' : subKey === 'junk' ? '🗑️ Junk' : '🏺 Collectible';
           const cleanDesc = subEntry ? (subEntry.notes || subEntry.result_name) : (entry.notes || 'A rare collectible item.');
           
           const rawFormula = subEntry ? (subEntry.val_formula || entry.val_formula) : entry.val_formula;
@@ -333,8 +356,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 
           resList.push({
             id: `res-${Date.now()}`,
-            tableKey: 'master_d100',
-            categoryKey: isArtGemItem ? 'art_gems' : subKey,
+            tableKey: 'loot_main',
+            categoryKey: subKey,
             tableName: badgeLabel,
             rollVal: d100,
             title: subEntry ? subEntry.result_name : entry.result_name,
@@ -352,7 +375,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             if (r1) resList.push(r1);
             resList.push({
               id: `res-${Date.now()}-2`,
-              tableKey: 'master_d100',
+              tableKey: 'loot_main',
               tableName: '🪄 Double Roll Magic',
               rollVal: d100,
               title: `${r2.name}`,
@@ -365,7 +388,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             const evalC = evaluateCoins('1d100g');
             resList.push({
               id: `res-${Date.now()}-epic1`,
-              tableKey: 'master_d100',
+              tableKey: 'loot_main',
               tableName: '💫 Epic Magic Item',
               rollVal: 100,
               title: `${artItem.name}`,
@@ -375,7 +398,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             });
             resList.push({
               id: `res-${Date.now()}-epic2`,
-              tableKey: 'master_d100',
+              tableKey: 'loot_main',
               tableName: '👑 Gold Hoard',
               rollVal: 100,
               title: `Gold Hoard 💰 (${evalC.gold}g)`,
@@ -447,6 +470,24 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         };
         if (append) setResults(prev => [resObj, ...prev]);
         return resObj;
+      } else if (tableKey === 'chaos_gems') {
+        const gem = await gameApi.getRandomChaosGem(activeGenre);
+        if (gem) {
+          const resObj: RollResult = {
+            id: `res-${Date.now()}`,
+            tableKey: 'chaos_gems',
+            categoryKey: 'chaos_gems',
+            tableName: '💎 Chaos Gem (Volatile)',
+            rollVal: rollDice(20),
+            title: gem.name,
+            description: gem.effect || gem.notes || 'Volatile Chaos Gem. Must be socketed into your Gauntlet upon claiming or discarded.',
+            type: 'chaos_gem',
+            chaosGem: gem,
+          };
+          if (append) setResults(prev => [resObj, ...prev]);
+          return resObj;
+        }
+        return null;
       } else if (tableKey === 'coins') {
         const evalC = evaluateCoins('2d6x10s+1d4g');
         const coinText = [evalC.silver > 0 ? `${evalC.silver}s` : '', evalC.gold > 0 ? `${evalC.gold}g` : ''].filter(Boolean).join(', ');
@@ -525,9 +566,52 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   };
 
   // Claim Handlers
+  const handleClaimChaosGem = async (res: RollResult) => {
+    if (res.claimed) return;
+    let gem = res.chaosGem;
+    if (!gem) {
+      const fetched = await gameApi.getRandomChaosGem(activeGenre);
+      if (fetched) gem = fetched;
+    }
+    if (gem) {
+      setSocketingItem({ res, gem });
+    } else {
+      showToast('Could not load Chaos Gem data.');
+    }
+  };
+
+  const handleSocketSuccess = (gemName: string, slotLabel: string) => {
+    if (socketingItem) {
+      socketingItem.res.claimed = true;
+      setResults([...results]);
+      setSocketingItem(null);
+      showToast(`💎 Socketed '${gemName}' into ${slotLabel}!`);
+    }
+  };
+
+  const handleSocketCancel = () => {
+    if (socketingItem) {
+      socketingItem.res.claimed = true;
+      setResults([...results]);
+      setSocketingItem(null);
+      showToast('💥 Volatile Chaos Gem was discarded and dissolved into cosmic dust.');
+    }
+  };
+
+  const handleDropResult = (res: RollResult) => {
+    if (res.claimed) return;
+    res.claimed = true;
+    setResults([...results]);
+    showToast(`💥 Discarded '${res.title}'.`);
+  };
+
   // Unified Claim Handler
   const claimMoveToSheet = async (res: RollResult) => {
     if (res.claimed) return;
+    if (res.type === 'chaos_gem') {
+      handleClaimChaosGem(res);
+      return;
+    }
     const ok = await onMoveToSheet({
       title: res.title,
       categoryKey: res.categoryKey || (res.type === 'art_gem' ? 'art_gems' : res.tableKey) || '',
@@ -555,13 +639,13 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 
     let fillPercentage = 8; // Default / Minor / Standard drop
 
-    if (res.tableName.includes('Lesser') || (res.type === 'magic_item' && !res.tableName.includes('Greater') && !res.tableName.includes('Epic') && !res.tableName.includes('Artifact'))) {
+    if (res.type === 'chaos_gem') {
+      fillPercentage = 15;
+    } else if (res.tableName.includes('Lesser') || (res.type === 'magic_item' && !res.tableName.includes('Greater') && !res.tableName.includes('Epic') && !res.tableName.includes('Artifact'))) {
       fillPercentage = 12;
-    }
-    if (res.tableName.includes('Greater')) {
+    } else if (res.tableName.includes('Greater')) {
       fillPercentage = 25;
-    }
-    if (res.tableName.includes('Artifact') || res.tableName.includes('Epic')) {
+    } else if (res.tableName.includes('Artifact') || res.tableName.includes('Epic')) {
       fillPercentage = 50;
     }
 
@@ -819,6 +903,41 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                           <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-2 py-0.5 rounded-lg flex items-center gap-1">
                             ✅ Claimed
                           </span>
+                        ) : res.type === 'chaos_gem' ? (
+                          <>
+                            <button
+                              onClick={() => handleClaimChaosGem(res)}
+                              className="bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer border border-violet-400/40"
+                              title="Socket volatile Chaos Gem into Gauntlet conduit"
+                            >
+                              <span>💎</span>
+                              <span>Socket</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleRefineResult(res)}
+                              className="bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 text-xs font-bold px-2 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                              title="Disenchant loot drop into personal Essence Core (+15%)"
+                            >
+                              🧪 Disenchant
+                            </button>
+
+                            <button
+                              onClick={() => handlePassResult(res)}
+                              className="bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-300 border border-cyan-500/40 text-xs font-bold px-2 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                              title="Pass item to Party Echo Vault for off-turn/rest claiming"
+                            >
+                              ➡️ Party
+                            </button>
+
+                            <button
+                              onClick={() => handleDropResult(res)}
+                              className="bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/40 text-xs font-bold px-2 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                              title="Drop and destroy volatile gem"
+                            >
+                              💥 Drop
+                            </button>
+                          </>
                         ) : (
                           <>
                             <button
@@ -1164,6 +1283,14 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         vaultItems={partyVault}
         onClaimVaultItem={handleClaimVaultItem}
         onTriggerRestSweep={handleTriggerRestSweep}
+      />
+
+      {/* Volatile Chaos Gauntlet Socketing Modal */}
+      <ChaosGauntletSocketModal
+        isOpen={!!socketingItem}
+        incomingGem={socketingItem?.gem || null}
+        onClose={handleSocketCancel}
+        onSocketSuccess={handleSocketSuccess}
       />
     </div>
   );

@@ -119,6 +119,20 @@ export interface SupabaseChaosGem {
   created_at?: string;
 }
 
+export interface LootMainEntry {
+  id: number;
+  range_min: number;
+  range_max: number;
+  roll_display: string;
+  result_name: string;
+  result_type: 'nothing' | 'junk' | 'currency' | 'art_gem' | 'curio' | 'item' | 'chaos_gem' | 'magic_item' | 'special';
+  subtable_key?: string;
+  val_formula?: string;
+  drop_rate_pct?: string;
+  notes?: string;
+  created_at?: string;
+}
+
 export interface ChaosGemItem {
   id?: number;
   name: string;
@@ -724,12 +738,13 @@ export interface VaultItem {
   id: string;
   title: string;
   description: string;
-  type: 'coins' | 'magic_item' | 'art_gem' | 'document' | 'junk' | 'quality' | 'special';
+  type: 'coins' | 'magic_item' | 'art_gem' | 'document' | 'junk' | 'quality' | 'special' | 'chaos_gem';
   rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic';
   essenceValue: number;
   coinsSilver?: number;
   coinsGold?: number;
   magicItem?: any;
+  chaosGem?: any;
   valuableName?: string;
   valuableVal?: string;
   passedBy: string;
