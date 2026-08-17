@@ -511,7 +511,6 @@ export interface Power {
   usage: string | null;
   action: string | null;
   effect: string | null;
-  notes?: string;
   created_at: string;
   category?: string;
   ready?: PowerReadyType;
