@@ -12,7 +12,6 @@ import {
   Zap,
   Flame,
   HelpCircle,
-  Plus,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre, GenreType } from '../../store/useGenreStore';
@@ -30,7 +29,7 @@ const SLOT_METADATA = [
   { slot_id: 'finger_3', slot_number: 3, slot_type: 'finger' as const, label: 'Middle (Slot 3)', shortLabel: '3️⃣ Middle', pillLabel: 'Slot 3 (Middle)' },
   { slot_id: 'finger_4', slot_number: 4, slot_type: 'finger' as const, label: 'Ring (Slot 4)', shortLabel: '4️⃣ Ring', pillLabel: 'Slot 4 (Ring)' },
   { slot_id: 'finger_5', slot_number: 5, slot_type: 'finger' as const, label: 'Pinky (Slot 5)', shortLabel: '5️⃣ Pinky', pillLabel: 'Slot 5 (Pinky)' },
-  { slot_id: 'wrist', slot_number: 6, slot_type: 'wrist' as const, label: 'Mega Slot (Wrist • Slot 6)', shortLabel: '👑 Slot 6 (Mega)', pillLabel: '👑 Slot 6 (Mega)' },
+  { slot_id: 'wrist', slot_number: 6, slot_type: 'wrist' as const, label: 'Mega Slot (Wrist)', shortLabel: '👑 Mega Slot', pillLabel: '👑 Mega Slot' },
 ];
 
 export const ChaosGauntletCard: React.FC = () => {
@@ -152,42 +151,56 @@ export const ChaosGauntletCard: React.FC = () => {
     showToast(`💎 Socketed '${gem.name}' into ${targetMeta?.label || 'Gauntlet'}!`, 'success');
   };
 
-  // Handle Toggle Checkbox on a Socketed Gem
+  // Handle Toggle Checkbox on a Socketed Gem (Auto-Shatter on 3rd Checked Box)
   const handleToggleCheckbox = (slotId: string, checkIndex: number) => {
     const slot = gauntletSlots.find((s) => s.slot_id === slotId);
     if (!slot || !slot.gem) return;
 
+    const gemName = slot.gem.name;
     const currentChecked = Array.isArray(slot.gem.checked)
       ? [...slot.gem.checked]
       : [false, false, false];
     
-    // Ensure array has 3 elements
     while (currentChecked.length < 3) currentChecked.push(false);
 
     currentChecked[checkIndex] = !currentChecked[checkIndex];
     const checkedCount = currentChecked.filter(Boolean).length;
-    const remainingUsage = Math.max(0, 3 - checkedCount);
 
-    updateActiveSheetData((prev) => {
-      const currentSlots = gauntletSlots.map((s) => ({ ...s }));
-      const targetIdx = currentSlots.findIndex((s) => s.slot_id === slotId);
-      if (targetIdx !== -1 && currentSlots[targetIdx].gem) {
-        currentSlots[targetIdx] = {
-          ...currentSlots[targetIdx],
-          gem: {
-            ...currentSlots[targetIdx].gem!,
-            checked: currentChecked,
-            usage: remainingUsage,
-          },
-        };
-      }
-      return { ...prev, chaos_gauntlet_slots: currentSlots };
-    });
+    if (checkedCount >= 3) {
+      // 3rd box checked -> Gem is shattered and removed!
+      updateActiveSheetData((prev) => {
+        const currentSlots = gauntletSlots.map((s) => ({ ...s }));
+        const targetIdx = currentSlots.findIndex((s) => s.slot_id === slotId);
+        if (targetIdx !== -1) {
+          currentSlots[targetIdx] = {
+            ...currentSlots[targetIdx],
+            gem: null,
+          };
+        }
+        return { ...prev, chaos_gauntlet_slots: currentSlots };
+      });
 
-    saveActiveCharacter();
+      saveActiveCharacter();
+      showToast(`💥 '${gemName}' reached 0 uses and shattered into dust!`, 'warning');
+    } else {
+      const remainingUsage = Math.max(0, 3 - checkedCount);
+      updateActiveSheetData((prev) => {
+        const currentSlots = gauntletSlots.map((s) => ({ ...s }));
+        const targetIdx = currentSlots.findIndex((s) => s.slot_id === slotId);
+        if (targetIdx !== -1 && currentSlots[targetIdx].gem) {
+          currentSlots[targetIdx] = {
+            ...currentSlots[targetIdx],
+            gem: {
+              ...currentSlots[targetIdx].gem!,
+              checked: currentChecked,
+              usage: remainingUsage,
+            },
+          };
+        }
+        return { ...prev, chaos_gauntlet_slots: currentSlots };
+      });
 
-    if (remainingUsage === 0) {
-      showToast(`💥 '${slot.gem.name}' uses exhausted (0/3 remaining). Shatter in Manage Gauntlet.`, 'warning');
+      saveActiveCharacter();
     }
   };
 
@@ -240,13 +253,9 @@ export const ChaosGauntletCard: React.FC = () => {
     showToast(`💥 Removed and shattered '${gemName}'.`, 'warning');
   };
 
-  // Open modal targeted to a specific slot
-  const handleOpenModalTargeted = (slotId: string) => {
-    setSelectedTargetSlotId(slotId);
-    setShowModal(true);
-  };
-
   const charges = activeCharacter?.sheet_data?.charges ?? activeCharacter?.sheet_data?.sparks ?? 0;
+  const activeSelectedSlot = gauntletSlots.find((s) => s.slot_id === selectedTargetSlotId);
+  const activeSelectedMeta = SLOT_METADATA.find((m) => m.slot_id === selectedTargetSlotId);
 
   return (
     <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex flex-col gap-2.5 transition-all shadow-sm">
@@ -322,7 +331,7 @@ export const ChaosGauntletCard: React.FC = () => {
               <div className="shrink-0 flex items-center">
                 {isWrist ? (
                   <span className="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold whitespace-nowrap shadow-inner">
-                    {meta?.shortLabel || '👑 Slot 6 (Mega)'}
+                    {meta?.shortLabel || '👑 Mega Slot'}
                   </span>
                 ) : (
                   <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800 text-[10px] font-mono font-bold whitespace-nowrap">
@@ -387,33 +396,21 @@ export const ChaosGauntletCard: React.FC = () => {
                 )}
               </div>
 
-              {/* 5. Quick Action Button */}
-              <div className="shrink-0 flex items-center gap-1">
-                {gem ? (
-                  isWrist && (
-                    <button
-                      type="button"
-                      onClick={() => handleSparkActivation(slot.slot_id)}
-                      disabled={charges < 1}
-                      className="px-1.5 py-0.5 rounded bg-amber-600/20 hover:bg-amber-600/40 active:bg-amber-600/50 disabled:opacity-30 disabled:hover:bg-amber-600/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold shrink-0 flex items-center gap-0.5 cursor-pointer transition-all shadow-sm"
-                      title="Activate Mega Slot with 1 Spark (Preserves gem durability!)"
-                    >
-                      <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                      <span>Spark</span>
-                    </button>
-                  )
-                ) : (
+              {/* 5. Spark Action (Mega Slot Only when Gem is Socketed) */}
+              {isWrist && gem && (
+                <div className="shrink-0 flex items-center">
                   <button
                     type="button"
-                    onClick={() => handleOpenModalTargeted(slot.slot_id)}
-                    className="px-1.5 py-0.5 rounded bg-violet-950/60 hover:bg-violet-900/80 text-violet-300 border border-violet-500/30 text-[10px] font-semibold shrink-0 flex items-center gap-0.5 cursor-pointer transition-all"
-                    title={`Open catalog to socket a gem into ${meta?.label || 'this slot'}`}
+                    onClick={() => handleSparkActivation(slot.slot_id)}
+                    disabled={charges < 1}
+                    className="px-1.5 py-0.5 rounded bg-amber-600/20 hover:bg-amber-600/40 active:bg-amber-600/50 disabled:opacity-30 disabled:hover:bg-amber-600/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold shrink-0 flex items-center gap-0.5 cursor-pointer transition-all shadow-sm"
+                    title="Activate Mega Slot with 1 Spark (Preserves gem durability!)"
                   >
-                    <Plus className="w-2.5 h-2.5 text-violet-400" />
-                    <span>Socket</span>
+                    <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                    <span>Spark</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -470,17 +467,14 @@ export const ChaosGauntletCard: React.FC = () => {
             {/* 2-COLUMN SPLIT-PANE BODY */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
               
-              {/* --- LEFT COLUMN: ACTIVE GAUNTLET SLOTS (6 SLOTS) --- */}
-              <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+              {/* --- LEFT COLUMN: SOCKET SELECTOR & ACTIVE SLOT INSPECTOR --- */}
+              <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner gap-2.5">
                 {/* Pane Header */}
-                <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-outfit font-bold uppercase tracking-wider text-violet-300 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-                      Active Gauntlet Sockets
-                    </span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
-                      {equippedGemsCount}/6
+                      Active Sockets ({equippedGemsCount}/6)
                     </span>
                   </div>
 
@@ -494,156 +488,149 @@ export const ChaosGauntletCard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Slots Scroll Container */}
-                <div className="flex-1 overflow-y-auto min-h-0 mt-2 pr-1 flex flex-col gap-2 custom-scrollbar">
-                  {gauntletSlots.map((slot) => {
-                    const isWrist = slot.slot_type === 'wrist';
-                    const gem = slot.gem;
-                    const meta = SLOT_METADATA.find((m) => m.slot_id === slot.slot_id);
-                    const isSelectedTarget = selectedTargetSlotId === slot.slot_id;
+                {/* 6-SLOT SELECTOR RIBBON */}
+                <div className="flex flex-col gap-1 shrink-0 bg-slate-900/90 p-2 rounded-xl border border-slate-800 shadow-inner">
+                  <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
+                    🎯 Select Target Conduit:
+                  </span>
+                  <div className="grid grid-cols-3 gap-1 mt-0.5">
+                    {SLOT_METADATA.map((meta) => {
+                      const isSelected = selectedTargetSlotId === meta.slot_id;
+                      const slotObj = gauntletSlots.find((s) => s.slot_id === meta.slot_id);
+                      const isOccupied = Boolean(slotObj?.gem);
 
-                    return (
-                      <div
-                        key={slot.slot_id}
-                        className={`rounded-xl border p-2.5 transition-all flex flex-col gap-2 ${
-                          isSelectedTarget
-                            ? 'ring-2 ring-cyan-500/60 border-cyan-400/80 bg-slate-900'
-                            : isWrist
-                            ? gem
-                              ? 'bg-gradient-to-r from-amber-950/30 via-purple-950/20 to-slate-950/90 border-amber-500/40 shadow-sm shadow-amber-950/20'
-                              : 'bg-amber-950/10 border-amber-500/20 border-dashed'
-                            : gem
-                            ? 'bg-slate-900/90 border-slate-700/80 shadow-sm'
-                            : 'bg-slate-950/40 border-slate-800/60 border-dashed'
-                        }`}
-                      >
-                        {/* Slot Header */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5">
-                            {isWrist ? (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-outfit font-extrabold uppercase tracking-wide flex items-center gap-1">
-                                👑 Mega Slot (Wrist • Slot 6)
-                              </span>
-                            ) : (
-                              <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700 text-slate-300 font-semibold">
-                                🖐️ {meta?.label || `Slot ${slot.slot_number}`}
-                              </span>
-                            )}
-                          </div>
+                      return (
+                        <button
+                          key={meta.slot_id}
+                          type="button"
+                          onClick={() => setSelectedTargetSlotId(meta.slot_id)}
+                          className={`py-1.5 px-1 text-[11px] font-bold rounded-lg border transition-all flex flex-col items-center justify-center cursor-pointer ${
+                            isSelected
+                              ? meta.slot_type === 'wrist'
+                                ? 'bg-amber-600 text-white border-amber-400 shadow-md font-extrabold ring-1 ring-amber-300'
+                                : 'bg-cyan-600 text-white border-cyan-400 shadow-md font-extrabold ring-1 ring-cyan-300'
+                              : meta.slot_type === 'wrist'
+                              ? 'bg-amber-950/40 text-amber-300 border-amber-500/30 hover:border-amber-400 hover:bg-amber-900/40'
+                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700 hover:bg-slate-900'
+                          }`}
+                          title={`Select ${meta.label} (${isOccupied ? 'Occupied' : 'Empty ✨'})`}
+                        >
+                          <span className="font-outfit font-bold">{meta.slot_number === 6 ? '👑 Mega Slot' : `Slot ${meta.slot_number}`}</span>
+                          <span className="text-[9.5px] opacity-80 font-normal">
+                            {isOccupied ? '💎 In Use' : '✨ Empty'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-                          <div className="flex items-center gap-1.5">
-                            {/* Action Badge */}
-                            {gem && (
-                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300">
-                                ⚡ Free [F]
+                {/* SELECTED SLOT INSPECTOR CARD */}
+                <div className="flex-1 overflow-y-auto min-h-0 bg-slate-900/60 rounded-xl border border-slate-800 p-3 flex flex-col justify-between custom-scrollbar">
+                  {activeSelectedSlot?.gem ? (
+                    <div className="flex flex-col gap-2.5">
+                      {/* Slot Header */}
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                          activeSelectedSlot.slot_type === 'wrist'
+                            ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
+                            : 'bg-slate-800 text-slate-200 border-slate-700'
+                        }`}>
+                          {activeSelectedMeta?.label}
+                        </span>
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300">
+                          ⚡ Free Action [F]
+                        </span>
+                      </div>
+
+                      {/* Gem Title & Checkboxes */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-outfit font-bold text-sm text-slate-100 block">
+                            💎 {activeSelectedSlot.gem.name}
+                          </span>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {(activeSelectedSlot.gem.genres || []).map((g) => (
+                              <span key={g} className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800">
+                                {g}
                               </span>
-                            )}
+                            ))}
                           </div>
                         </div>
 
-                        {/* Slot Content */}
-                        {gem ? (
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="font-outfit font-bold text-sm text-slate-100 flex items-center gap-1.5">
-                                💎 {gem.name}
-                              </span>
-
-                              {/* 3 Checkboxes */}
-                              <div className="flex items-center gap-1" title={`${gem.usage}/3 uses remaining`}>
-                                {[0, 1, 2].map((bIdx) => {
-                                  const isChecked = !!(gem.checked && gem.checked[bIdx]);
-                                  return (
-                                    <input
-                                      key={bIdx}
-                                      type="checkbox"
-                                      checked={isChecked}
-                                      onChange={() => handleToggleCheckbox(slot.slot_id, bIdx)}
-                                      className={`w-3.5 h-3.5 rounded border-slate-600 bg-slate-950 cursor-pointer ${
-                                        isWrist ? 'text-amber-400 accent-amber-400' : 'text-violet-400 accent-violet-400'
-                                      }`}
-                                    />
-                                  );
-                                })}
-                                <span className="text-[10px] font-mono text-slate-400 ml-1">
-                                  {gem.usage}/3
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Gem Effect Description */}
-                            <p className="text-xs text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 font-sans leading-relaxed">
-                              {gem.effect}
-                            </p>
-
-                            {/* Slot Controls */}
-                            <div className="flex items-center justify-between pt-1 border-t border-slate-800/60">
-                              <div className="flex items-center gap-1.5">
-                                {/* Mega Slot Spark Activation Button */}
-                                {isWrist && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSparkActivation(slot.slot_id)}
-                                    disabled={charges < 1}
-                                    className="px-2 py-1 bg-amber-600/30 hover:bg-amber-600/40 active:bg-amber-600/50 disabled:opacity-40 text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-sm"
-                                    title="Trigger Mega Slot using 1 Spark from pool (Durability preserved!)"
-                                  >
-                                    <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                    <span>Spark Active</span>
-                                  </button>
-                                )}
-
-                                {/* Target for Replacement */}
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedTargetSlotId(slot.slot_id)}
-                                  className={`px-2 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                                    isSelectedTarget
-                                      ? 'bg-cyan-600 text-white border-cyan-400'
-                                      : 'bg-slate-800 text-slate-300 hover:text-white border-slate-700'
-                                  }`}
-                                >
-                                  {isSelectedTarget ? '✓ Active Target' : 'Select Target'}
-                                </button>
-                              </div>
-
-                              {/* Remove & Destroy Button */}
-                              <button
-                                type="button"
-                                onClick={() => setConfirmRemovalSlotId(slot.slot_id)}
-                                className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer"
-                                title="Remove gem (WARNING: permanently destroys gem)"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="py-2 flex items-center justify-between text-xs text-slate-500">
-                            <span className="italic">Empty Socket</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedTargetSlotId(slot.slot_id)}
-                              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all flex items-center gap-1 cursor-pointer ${
-                                isSelectedTarget
-                                  ? 'bg-cyan-600 text-white border-cyan-400 shadow-sm'
-                                  : 'bg-violet-950/60 hover:bg-violet-900/80 text-violet-300 border-violet-500/30'
-                              }`}
-                            >
-                              <Plus className="w-3 h-3" />
-                              <span>{isSelectedTarget ? '✓ Target Selected' : 'Socket Here'}</span>
-                            </button>
-                          </div>
-                        )}
+                        {/* 3 Checkboxes */}
+                        <div className="flex items-center gap-1">
+                          {[0, 1, 2].map((bIdx) => {
+                            const isChecked = !!(activeSelectedSlot.gem?.checked && activeSelectedSlot.gem.checked[bIdx]);
+                            return (
+                              <input
+                                key={bIdx}
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => handleToggleCheckbox(activeSelectedSlot.slot_id, bIdx)}
+                                className={`w-4 h-4 rounded border-slate-600 bg-slate-950 cursor-pointer ${
+                                  activeSelectedSlot.slot_type === 'wrist' ? 'accent-amber-400' : 'accent-violet-400'
+                                }`}
+                              />
+                            );
+                          })}
+                          <span className="text-[11px] font-mono text-slate-400 ml-1">
+                            {activeSelectedSlot.gem.usage}/3
+                          </span>
+                        </div>
                       </div>
-                    );
-                  })}
+
+                      {/* Clean Read-Only Effect Description */}
+                      <div className="pt-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                          Effect:
+                        </span>
+                        <p className="text-xs text-slate-200 font-sans leading-relaxed">
+                          {activeSelectedSlot.gem.effect}
+                        </p>
+                      </div>
+
+                      {/* Inspector Action Controls */}
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-800 mt-2">
+                        {activeSelectedSlot.slot_type === 'wrist' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSparkActivation(activeSelectedSlot.slot_id)}
+                            disabled={charges < 1}
+                            className="px-3 py-1.5 bg-amber-600/30 hover:bg-amber-600/50 disabled:opacity-40 text-amber-200 border border-amber-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                            title="Trigger Mega Slot using 1 Spark from pool (Durability preserved!)"
+                          >
+                            <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                            <span>Spark Trigger</span>
+                          </button>
+                        ) : <div />}
+
+                        <button
+                          type="button"
+                          onClick={() => setConfirmRemovalSlotId(activeSelectedSlot.slot_id)}
+                          className="px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                          title="Remove and permanently shatter this gem"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remove & Shatter</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1.5">
+                      <Sparkles className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
+                      <span className="font-semibold text-slate-400 not-italic">
+                        {activeSelectedMeta?.label} is currently empty.
+                      </span>
+                      <span>Select any Chaos Gem from the catalog on the right to socket it into this conduit.</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* --- RIGHT COLUMN: STOCK CHAOS GEMS CATALOG --- */}
               <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                {/* Catalog Header & Top Controls */}
+                {/* Catalog Header & Filters */}
                 <div className="flex flex-col gap-2 pb-2.5 border-b border-slate-800/80 shrink-0">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-outfit font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
@@ -652,48 +639,6 @@ export const ChaosGauntletCard: React.FC = () => {
                     <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
                       {filteredCatalog.length} available
                     </span>
-                  </div>
-
-                  {/* 1-CLICK 6-SLOT TARGET SELECTOR RIBBON */}
-                  <div className="flex flex-col gap-1 bg-slate-900/80 p-2 rounded-xl border border-slate-800 shadow-inner">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">
-                        🎯 Socket Target Slot:
-                      </span>
-                      <span className="font-mono font-bold text-amber-300">
-                        {SLOT_METADATA.find((m) => m.slot_id === selectedTargetSlotId)?.label || 'Slot 1'}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 mt-0.5">
-                      {SLOT_METADATA.map((meta) => {
-                        const isSelected = selectedTargetSlotId === meta.slot_id;
-                        const isOccupied = Boolean(gauntletSlots.find((s) => s.slot_id === meta.slot_id)?.gem);
-
-                        return (
-                          <button
-                            key={meta.slot_id}
-                            type="button"
-                            onClick={() => setSelectedTargetSlotId(meta.slot_id)}
-                            className={`py-1 px-1 text-[10.5px] font-bold rounded-lg border transition-all flex flex-col items-center justify-center cursor-pointer ${
-                              isSelected
-                                ? meta.slot_type === 'wrist'
-                                  ? 'bg-amber-600 text-white border-amber-400 shadow-sm font-extrabold'
-                                  : 'bg-cyan-600 text-white border-cyan-400 shadow-sm font-extrabold'
-                                : meta.slot_type === 'wrist'
-                                ? 'bg-amber-950/40 text-amber-300 border-amber-500/30 hover:border-amber-400'
-                                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
-                            }`}
-                            title={`Select ${meta.label} (${isOccupied ? 'Occupied' : 'Empty ✨'})`}
-                          >
-                            <span>{meta.slot_number === 6 ? '👑 Mega 6' : `Slot ${meta.slot_number}`}</span>
-                            <span className="text-[9px] opacity-80 font-normal">
-                              {isOccupied ? '💎 In Use' : '✨ Empty'}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
                   </div>
 
                   {/* Search and Genre Filters */}
@@ -736,15 +681,12 @@ export const ChaosGauntletCard: React.FC = () => {
                     </div>
                   ) : (
                     filteredCatalog.map((gem) => {
-                      const targetSlotMeta = SLOT_METADATA.find((m) => m.slot_id === selectedTargetSlotId);
-                      const isOccupiedTarget = Boolean(
-                        gauntletSlots.find((s) => s.slot_id === selectedTargetSlotId)?.gem
-                      );
+                      const isOccupiedTarget = Boolean(activeSelectedSlot?.gem);
 
                       return (
                         <div
                           key={gem.id || gem.name}
-                          className="p-2.5 bg-slate-900/80 hover:bg-slate-900 rounded-xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col gap-2 group"
+                          className="p-2.5 bg-slate-900/80 hover:bg-slate-900 rounded-xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col gap-1.5 group"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -763,20 +705,20 @@ export const ChaosGauntletCard: React.FC = () => {
                               </div>
                             </div>
 
-                            {/* Primary Button: Socket to Selected Target Slot */}
+                            {/* Primary Button: Socket to Active Target Slot */}
                             <button
                               type="button"
                               onClick={() => handleEquipGem(selectedTargetSlotId, gem)}
                               className="px-2.5 py-1 bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-200 border border-cyan-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer shadow-sm"
                             >
                               <span>
-                                {isOccupiedTarget ? `Replace in ${targetSlotMeta?.pillLabel}` : `Socket into ${targetSlotMeta?.pillLabel}`}
+                                {isOccupiedTarget ? `Replace in ${activeSelectedMeta?.pillLabel}` : `Socket into ${activeSelectedMeta?.pillLabel}`}
                               </span>
                             </button>
                           </div>
 
-                          {/* Effect */}
-                          <p className="text-xs text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-850 font-sans leading-relaxed">
+                          {/* Effect (Clean, Read-Only, Flat text without bright input-like border) */}
+                          <p className="text-xs text-slate-300 leading-relaxed font-sans pt-0.5">
                             {gem.effect}
                           </p>
 
