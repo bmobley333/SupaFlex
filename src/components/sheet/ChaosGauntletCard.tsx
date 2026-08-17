@@ -64,6 +64,10 @@ export const ChaosGauntletCard: React.FC = () => {
     return gauntletSlots.filter((s) => s.gem && s.gem.name && s.gem.name.trim() !== '').length;
   }, [gauntletSlots]);
 
+  const occupiedSlots = useMemo(() => {
+    return gauntletSlots.filter((s) => s.gem && s.gem.name && s.gem.name.trim() !== '');
+  }, [gauntletSlots]);
+
   const [showModal, setShowModal] = useState<boolean>(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -82,7 +86,7 @@ export const ChaosGauntletCard: React.FC = () => {
 
   const showToast = useCallback((text: string, type: 'info' | 'success' | 'warning' = 'info') => {
     setToastMessage({ text, type });
-    setTimeout(() => setToastMessage(null), 4000);
+    setTimeout(() => setToastMessage(null), 5000);
   }, []);
 
   // Fetch catalog on modal open
@@ -307,114 +311,129 @@ export const ChaosGauntletCard: React.FC = () => {
         </div>
       </div>
 
-      {/* --- TABLE-LIKE 6-SLOT CONTAINER (GIANT PILLS, ULTRA-THIN) --- */}
-      <div className="flex flex-col gap-1">
-        {gauntletSlots.map((slot) => {
-          const isWrist = slot.slot_type === 'wrist';
-          const gem = slot.gem;
-          const meta = SLOT_METADATA.find((m) => m.slot_id === slot.slot_id);
+      {/* Card-Level Toast Feedback Notification */}
+      {toastMessage && (
+        <div
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-between gap-2 border animate-fadeIn ${
+            toastMessage.type === 'success'
+              ? 'bg-emerald-950/90 text-emerald-200 border-emerald-500/40'
+              : toastMessage.type === 'warning'
+              ? 'bg-rose-950/90 text-rose-200 border-rose-500/40 shadow-sm shadow-rose-950/50'
+              : 'bg-slate-900 text-slate-200 border-slate-700'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {toastMessage.type === 'warning' ? (
+              <Flame className="w-3.5 h-3.5 text-rose-400 shrink-0 animate-pulse" />
+            ) : (
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            )}
+            <span>{toastMessage.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="text-slate-400 hover:text-slate-200 p-0.5 cursor-pointer"
+            title="Dismiss alert"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
 
-          return (
-            <div
-              key={slot.slot_id}
-              className={`px-2.5 py-1 min-h-[34px] rounded-xl border flex items-center justify-between gap-2.5 transition-all text-xs ${
-                isWrist
-                  ? gem
+      {/* --- TABLE-LIKE SLOTS CONTAINER (ONLY OCCUPIED SLOTS) --- */}
+      {occupiedSlots.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          {occupiedSlots.map((slot) => {
+            const isWrist = slot.slot_type === 'wrist';
+            const gem = slot.gem!;
+            const meta = SLOT_METADATA.find((m) => m.slot_id === slot.slot_id);
+
+            return (
+              <div
+                key={slot.slot_id}
+                className={`px-2.5 py-1 min-h-[34px] rounded-xl border flex items-center justify-between gap-2.5 transition-all text-xs ${
+                  isWrist
                     ? 'bg-gradient-to-r from-amber-950/40 via-violet-950/20 to-slate-950/90 border-amber-500/50 shadow-sm shadow-amber-950/20 hover:border-amber-400'
-                    : 'bg-amber-950/15 border-amber-500/30 border-dashed hover:border-amber-400/50'
-                  : gem
-                  ? 'bg-slate-950/70 hover:bg-slate-950/90 border-slate-800/80 hover:border-slate-700 shadow-sm'
-                  : 'bg-slate-950/30 border-slate-850 border-dashed hover:border-slate-700/60'
-              }`}
-            >
-              {/* 1. Slot Identifier Badge */}
-              <div className="shrink-0 flex items-center">
-                {isWrist ? (
-                  <span className="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold whitespace-nowrap shadow-inner">
-                    {meta?.shortLabel || '👑 Mega Slot'}
-                  </span>
-                ) : (
-                  <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800 text-[10px] font-mono font-bold whitespace-nowrap">
-                    {meta?.shortLabel || `Slot ${slot.slot_number}`}
-                  </span>
-                )}
-              </div>
+                    : 'bg-slate-950/70 hover:bg-slate-950/90 border-slate-800/80 hover:border-slate-700 shadow-sm'
+                }`}
+              >
+                {/* 1. Slot Identifier Badge */}
+                <div className="shrink-0 flex items-center">
+                  {isWrist ? (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold whitespace-nowrap shadow-inner">
+                      {meta?.shortLabel || '👑 Mega Slot'}
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800 text-[10px] font-mono font-bold whitespace-nowrap">
+                      {meta?.shortLabel || `Slot ${slot.slot_number}`}
+                    </span>
+                  )}
+                </div>
 
-              {/* 2. Gem Name */}
-              <div className="w-28 sm:w-36 shrink-0 truncate">
-                {gem ? (
+                {/* 2. Gem Name */}
+                <div className="w-28 sm:w-36 shrink-0 truncate">
                   <span className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1">
                     <span className="text-[11px] leading-none">💎</span>
                     <span className="truncate" title={gem.name}>{gem.name}</span>
                   </span>
-                ) : (
-                  <span className="text-xs text-slate-500 italic">
-                    (Empty Socket)
-                  </span>
-                )}
-              </div>
+                </div>
 
-              {/* 3. Three Clickable Usage Checkboxes (ALWAYS 3) */}
-              <div className="w-16 shrink-0 flex items-center gap-1 justify-center">
-                {[0, 1, 2].map((bIdx) => {
-                  const isChecked = !!(gem?.checked && gem.checked[bIdx]);
-                  return (
-                    <input
-                      key={bIdx}
-                      type="checkbox"
-                      checked={isChecked}
-                      disabled={!gem}
-                      onChange={() => handleToggleCheckbox(slot.slot_id, bIdx)}
-                      className={`w-3.5 h-3.5 rounded border-slate-600 bg-slate-950 focus:ring-0 cursor-pointer ${
-                        isWrist
-                          ? 'text-amber-400 accent-amber-400'
-                          : 'text-violet-400 accent-violet-400'
-                      } disabled:opacity-20 disabled:cursor-not-allowed`}
-                      title={
-                        gem
-                          ? `Use slot ${bIdx + 1} (${isChecked ? 'Used' : 'Available'})`
-                          : 'No gem socketed'
-                      }
-                    />
-                  );
-                })}
-              </div>
+                {/* 3. Three Clickable Usage Checkboxes (ALWAYS 3) */}
+                <div className="w-16 shrink-0 flex items-center gap-1 justify-center">
+                  {[0, 1, 2].map((bIdx) => {
+                    const isChecked = !!(gem.checked && gem.checked[bIdx]);
+                    return (
+                      <input
+                        key={bIdx}
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleCheckbox(slot.slot_id, bIdx)}
+                        className={`w-3.5 h-3.5 rounded border-slate-600 bg-slate-950 focus:ring-0 cursor-pointer ${
+                          isWrist
+                            ? 'text-amber-400 accent-amber-400'
+                            : 'text-violet-400 accent-violet-400'
+                        }`}
+                        title={`Use slot ${bIdx + 1} (${isChecked ? 'Used' : 'Available'})`}
+                      />
+                    );
+                  })}
+                </div>
 
-              {/* 4. Wrappable Effect Description */}
-              <div className="flex-1 min-w-0 pr-1">
-                {gem ? (
+                {/* 4. Wrappable Effect Description */}
+                <div className="flex-1 min-w-0 pr-1">
                   <p
                     className="text-[11px] text-slate-300 leading-snug whitespace-normal break-words font-sans"
                     title={gem.effect}
                   >
                     {gem.effect}
                   </p>
-                ) : (
-                  <span className="text-[11px] text-slate-600 italic">
-                    Empty conduit
-                  </span>
+                </div>
+
+                {/* 5. Spark Action (Mega Slot Only) */}
+                {isWrist && (
+                  <div className="shrink-0 flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => handleSparkActivation(slot.slot_id)}
+                      disabled={charges < 1}
+                      className="px-1.5 py-0.5 rounded bg-amber-600/20 hover:bg-amber-600/40 active:bg-amber-600/50 disabled:opacity-30 disabled:hover:bg-amber-600/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold shrink-0 flex items-center gap-0.5 cursor-pointer transition-all shadow-sm"
+                      title="Activate Mega Slot with 1 Spark (Preserves gem durability!)"
+                    >
+                      <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                      <span>Spark</span>
+                    </button>
+                  </div>
                 )}
               </div>
-
-              {/* 5. Spark Action (Mega Slot Only when Gem is Socketed) */}
-              {isWrist && gem && (
-                <div className="shrink-0 flex items-center">
-                  <button
-                    type="button"
-                    onClick={() => handleSparkActivation(slot.slot_id)}
-                    disabled={charges < 1}
-                    className="px-1.5 py-0.5 rounded bg-amber-600/20 hover:bg-amber-600/40 active:bg-amber-600/50 disabled:opacity-30 disabled:hover:bg-amber-600/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold shrink-0 flex items-center gap-0.5 cursor-pointer transition-all shadow-sm"
-                    title="Activate Mega Slot with 1 Spark (Preserves gem durability!)"
-                  >
-                    <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                    <span>Spark</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="py-2 px-3 bg-slate-950/40 rounded-xl border border-slate-850 text-center text-xs text-slate-500 italic">
+          No Chaos Gems currently socketed. Click <span className="text-violet-300 font-semibold not-italic">Manage</span> to socket gems.
+        </div>
+      )}
 
       {/* --- 2-COLUMN MASTER SPLIT-PANE MODAL --- */}
       {showModal && (
