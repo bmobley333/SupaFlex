@@ -14,7 +14,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { useGenreStore, matchesGenre, GenreType } from '../../store/useGenreStore';
+import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import {
   ChaosGemSlot,
@@ -75,7 +75,6 @@ export const ChaosGauntletCard: React.FC = () => {
   const [catalog, setCatalog] = useState<SupabaseChaosGem[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
-  const [selectedGenreFilter, setSelectedGenreFilter] = useState<GenreType>(activeGenre || 'All');
   const [selectedTargetSlotId, setSelectedTargetSlotId] = useState<string>('finger_1');
 
   // Confirmation Modal State for Destroying on Removal
@@ -110,9 +109,9 @@ export const ChaosGauntletCard: React.FC = () => {
   // Filter Catalog
   const filteredCatalog = useMemo(() => {
     return catalog.filter((gem) => {
-      // 1. Genre match
+      // 1. Genre match with global active genre
       const genreOk =
-        selectedGenreFilter === 'All' ? true : matchesGenre(gem.genres, selectedGenreFilter);
+        !activeGenre || activeGenre === 'All' ? true : matchesGenre(gem.genres, activeGenre);
       if (!genreOk) return false;
 
       // 2. Search query match
@@ -123,7 +122,7 @@ export const ChaosGauntletCard: React.FC = () => {
         (gem.effect && gem.effect.toLowerCase().includes(q))
       );
     });
-  }, [catalog, selectedGenreFilter, catalogSearchQuery]);
+  }, [catalog, activeGenre, catalogSearchQuery]);
 
   // Handle Socketing a Gem into a Specific Slot
   const handleEquipGem = (targetSlotId: string, gem: SupabaseChaosGem) => {
@@ -264,9 +263,6 @@ export const ChaosGauntletCard: React.FC = () => {
           <h3 className="font-outfit font-bold text-sm tracking-widest text-violet-300 uppercase">
             Chaos Gauntlet
           </h3>
-          <span className="text-[10px] font-mono text-slate-400 hidden sm:inline-block">
-            (1 Free Action/Rnd)
-          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -281,7 +277,10 @@ export const ChaosGauntletCard: React.FC = () => {
             }`}
             title="Open Chaos Gauntlet Manager to socket or remove gems"
           >
-            <span className="font-outfit font-bold">Manage</span>
+            <span className="font-outfit font-bold flex items-center gap-1">
+              <span>💎</span>
+              <span>Manage Gauntlet</span>
+            </span>
             <span
               className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${
                 equippedGemsCount > 0
@@ -659,30 +658,16 @@ export const ChaosGauntletCard: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Search and Genre Filters */}
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Search gems or effects..."
-                        value={catalogSearchQuery}
-                        onChange={(e) => setCatalogSearchQuery(e.target.value)}
-                        className="w-full bg-slate-900 text-slate-200 text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-800 outline-none focus:border-cyan-500 transition-all placeholder:text-slate-600"
-                      />
-                    </div>
-
-                    {/* Genre Selector */}
-                    <select
-                      value={selectedGenreFilter}
-                      onChange={(e) => setSelectedGenreFilter(e.target.value as GenreType)}
-                      className="bg-slate-900 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 outline-none focus:border-cyan-500 cursor-pointer"
-                    >
-                      <option value="All">All Genres</option>
-                      <option value="Medieval">Medieval</option>
-                      <option value="Modern">Modern</option>
-                      <option value="SciFi">SciFi</option>
-                    </select>
+                  {/* Search Input (Full Width) */}
+                  <div className="relative w-full">
+                    <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search gems or effects..."
+                      value={catalogSearchQuery}
+                      onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                      className="w-full bg-slate-900 text-slate-200 text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-800 outline-none focus:border-cyan-500 transition-all placeholder:text-slate-600"
+                    />
                   </div>
                 </div>
 
