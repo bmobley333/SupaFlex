@@ -414,7 +414,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
         <div className="px-6 py-2.5 bg-slate-950/30 border-b border-slate-800/60 flex items-center justify-between gap-3 shrink-0 flex-wrap">
           {/* Sub-Filters */}
           <div className="flex items-center gap-1 flex-wrap">
-            {(['all', 'power', 'relic', 'hardware', 'skill', 'skillset'] as const).map((t) => (
+            {(['all', 'power', 'power_table', 'relic', 'hardware', 'skill', 'skillset'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTypeFilter(t)}
@@ -428,6 +428,8 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                   ? '🌐 All'
                   : t === 'power'
                   ? '🔥 Powers'
+                  : t === 'power_table'
+                  ? '📜 Tables'
                   : t === 'relic'
                   ? '🏺 Relics'
                   : t === 'hardware'

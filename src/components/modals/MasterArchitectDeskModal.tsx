@@ -155,7 +155,7 @@ export const MasterArchitectDeskModal: React.FC<MasterArchitectDeskModalProps> =
 
             {/* Type Filter */}
             <div className="flex items-center gap-1">
-              {(['all', 'power', 'relic', 'hardware', 'skillset'] as const).map((t) => (
+              {(['all', 'power', 'power_table', 'relic', 'hardware', 'skill', 'skillset'] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setTypeFilter(t)}
@@ -169,10 +169,14 @@ export const MasterArchitectDeskModal: React.FC<MasterArchitectDeskModalProps> =
                     ? '🌐 All'
                     : t === 'power'
                     ? '🔥 Powers'
+                    : t === 'power_table'
+                    ? '📜 Tables'
                     : t === 'relic'
                     ? '🏺 Relics'
                     : t === 'hardware'
                     ? '⚙️ Hardware'
+                    : t === 'skill'
+                    ? '🎯 Skills'
                     : '🎓 Skillsets'}
                 </button>
               ))}

@@ -828,7 +828,20 @@ export interface PartySessionMember {
 
 export type AuthMode = 'login' | 'signup' | 'reset_password' | 'profile';
 
-export type CustomCreationType = 'power' | 'relic' | 'hardware' | 'skill' | 'skillset';
+export type CustomCreationType = 'power' | 'power_table' | 'relic' | 'hardware' | 'skill' | 'skillset';
+
+export interface PowerTable {
+  id?: number;
+  name: string;
+  category: string;
+  genres?: string[];
+  created_at?: string;
+  author_name?: string;
+  author_email?: string;
+  party_id?: string | null;
+  gm_approved?: boolean;
+  notes?: string;
+}
 
 export interface CustomCreationData {
   action?: string;
@@ -838,6 +851,7 @@ export interface CustomCreationData {
   slot_weight?: 1 | 2 | 3 | 4;
   ready_category?: string;
   skills?: string[];
+  table?: string;
   [key: string]: any;
 }
 
@@ -857,4 +871,5 @@ export interface CustomCreationItem {
   created_at: string;
   updated_at?: string;
 }
+
 

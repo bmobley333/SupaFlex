@@ -2,7 +2,7 @@
 // Centralized Zustand store for active character, codex data, & Supabase sync
 
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, Skillset } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, Skillset, PowerTable } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
@@ -12,6 +12,7 @@ interface CharacterStore {
   characters: Character[];
   activeCharacter: Character | null;
   powers: Power[];
+  powerTables: PowerTable[];
   magicItems: MagicItem[];
   skillsets: Skillset[];
   isLoading: boolean;
@@ -49,6 +50,8 @@ interface CharacterStore {
   setFilterMode: (mode: 'my_heroes' | 'all_heroes') => void;
   setActiveRole: (role: 'player' | 'gm') => void;
   setActivePartyId: (partyId: string | null) => void;
+  setPowerTables: (tables: PowerTable[]) => void;
+  addPowerTable: (table: PowerTable) => void;
   recordApExpenditure: (
     cost: number,
     category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual',
@@ -64,6 +67,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   characters: [],
   activeCharacter: null,
   powers: [],
+  powerTables: [],
   magicItems: [],
   skillsets: [],
   isLoading: false,
@@ -119,6 +123,24 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     set({ activePartyId: partyId });
   },
 
+  setPowerTables: (tables: PowerTable[]) => {
+    set({ powerTables: tables });
+  },
+
+  addPowerTable: (table: PowerTable) => {
+    set((state) => {
+      const exists = state.powerTables.some((t) => t.name.toLowerCase() === table.name.toLowerCase());
+      if (exists) {
+        return {
+          powerTables: state.powerTables.map((t) => (t.name.toLowerCase() === table.name.toLowerCase() ? { ...t, ...table } : t)),
+        };
+      }
+      const updated = [...state.powerTables, table];
+      updated.sort((a, b) => (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name));
+      return { powerTables: updated };
+    });
+  },
+
   fetchInitialData: async (options?: { silent?: boolean }) => {
     const isSilent = options?.silent || get().characters.length > 0;
     if (!isSilent) {
@@ -129,11 +151,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       set({ dbConnected: isConnected });
 
       // Register window network status listeners for dynamic offline warning popups
-      if (typeof window !== 'undefined' && !(window as any)._supaflex_network_listeners_bound) {
-        (window as any)._supaflex_network_listeners_bound = true;
-        window.addEventListener('online', async () => {
-          const reconnected = await gameApi.checkConnection();
-          set({ dbConnected: reconnected });
+      if (typeof window !== 'undefined' && !(window as any)._supaflex_net_listeners_registered) {
+        (window as any)._supaflex_net_listeners_registered = true;
+        window.addEventListener('online', () => {
+          set({ dbConnected: true });
         });
         window.addEventListener('offline', () => {
           set({ dbConnected: false });
@@ -145,9 +166,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return;
       }
 
-      const [chars, powers, items, skillsets] = await Promise.all([
+      const [chars, powers, powerTables, items, skillsets] = await Promise.all([
         gameApi.getCharacters(),
         gameApi.getPowers(),
+        gameApi.getPowerTables(),
         gameApi.getMagicItems(),
         gameApi.getSkillsets(),
       ]);
@@ -185,6 +207,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         characters: chars,
         activeCharacter: selectedChar,
         powers,
+        powerTables,
         magicItems: items,
         skillsets,
         isLoading: false,

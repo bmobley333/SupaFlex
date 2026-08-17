@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Check, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationType, CustomCreationItem } from '../../types/game';
+import { CustomCreationType, CustomCreationItem, PowerTable } from '../../types/game';
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
 import { InfoTooltip } from '../common/InfoTooltip';
 
@@ -78,6 +78,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeRole = useCharacterStore((state) => state.activeRole);
   const skillsets = useCharacterStore((state) => state.skillsets);
+  const powerTables = useCharacterStore((state) => state.powerTables);
+  const addPowerTable = useCharacterStore((state) => state.addPowerTable);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
 
   const isGm = activeRole === 'gm';
@@ -94,7 +96,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   const [skillAttribute, setSkillAttribute] = useState<string>('💪');
   const [effect, setEffect] = useState('');
   const [notes, setNotes] = useState('');
-  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>(['Medieval', 'Modern', 'SciFi']);
+
+  // Power & Power Table State
+  const [selectedPowerTable, setSelectedPowerTable] = useState('');
+  const [tableCategory, setTableCategory] = useState('Class');
+  const [customCategoryInput, setCustomCategoryInput] = useState('');
 
   // Skillset State (2 to 5 selected existing skill strings)
   const [selectedSkillsetSkills, setSelectedSkillsetSkills] = useState<string[]>(['', '']);
@@ -214,6 +221,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       .map((entry) => entry[1]);
   }, [skillsets, activeCharacter, customSkillsList]);
 
+  // Group all available power tables by Category for clean <optgroup> dropdown selection
+  const groupedPowerTables = useMemo(() => {
+    const groups: Record<string, PowerTable[]> = {};
+    (powerTables || []).forEach((tbl) => {
+      const cat = tbl.category || 'Class';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(tbl);
+    });
+    return groups;
+  }, [powerTables]);
+
   if (!isOpen) return null;
 
   const insertIconAtCursor = (iconStr: string) => {
@@ -263,8 +281,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     setName('');
     setEffect('');
     setNotes('');
-    setSelectedGenres([]);
+    setSelectedGenres(['Medieval', 'Modern', 'SciFi']);
     setSelectedSkillsetSkills(['', '']);
+    setSelectedPowerTable('');
+    setTableCategory('Class');
+    setCustomCategoryInput('');
     setAction('AM');
     setUsage('1');
     setTier('Minor');
@@ -281,7 +302,69 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       return;
     }
 
-    if (creationType === 'skillset') {
+    if (creationType === 'power_table') {
+      const finalCategory = tableCategory === 'Custom' ? customCategoryInput.trim() : tableCategory.trim();
+      if (!finalCategory) {
+        setFeedback({ type: 'error', message: 'Please specify a category for this Power Table.' });
+        return;
+      }
+      if (selectedGenres.length === 0) {
+        setFeedback({
+          type: 'error',
+          message: 'Please select at least one compatible Genre (Medieval, Modern, or SciFi).',
+        });
+        return;
+      }
+
+      setIsSubmitting(true);
+      setFeedback(null);
+      const authorDisplayName = playerName?.trim() || playerEmail?.split('@')[0] || 'Hero';
+
+      try {
+        const newTable: Partial<PowerTable> = {
+          name: name.trim(),
+          category: finalCategory,
+          genres: selectedGenres,
+          author_name: isGm ? `${authorDisplayName} (GM)` : authorDisplayName,
+          author_email: playerEmail || 'guest@metascape.com',
+          party_id: activePartyId || null,
+          gm_approved: isGm ? true : false,
+          created_at: new Date().toISOString(),
+        };
+
+        const saved = await gameApi.savePowerTable(newTable);
+        if (saved) {
+          addPowerTable(saved);
+        }
+
+        setFeedback({
+          type: 'success',
+          message: isGm
+            ? `📜 Successfully forged Power Table '${name.trim()}' [${finalCategory}] and published live!`
+            : `📜 Successfully forged Power Table '${name.trim()}' [${finalCategory}]!`,
+        });
+
+        handleResetForm();
+        if (onItemSaved) onItemSaved();
+      } catch (err: any) {
+        console.error('[PlayerWorkshopModal] Error forging power table:', err);
+        setFeedback({ type: 'error', message: `❌ Error: ${err.message || 'Failed to save power table.'}` });
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (creationType === 'power') {
+      if (!selectedPowerTable) {
+        setFeedback({ type: 'error', message: 'Please select a required Power Table for this power.' });
+        return;
+      }
+      if (!effect.trim()) {
+        setFeedback({ type: 'error', message: 'Effect (rules) description is required.' });
+        return;
+      }
+    } else if (creationType === 'skillset') {
       if (selectedSkillsetSkills.length < 2 || selectedSkillsetSkills.length > 5) {
         setFeedback({ type: 'error', message: 'A Skillset must contain between 2 and 5 skills.' });
         return;
@@ -322,11 +405,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
     const authorDisplayName = playerName?.trim() || playerEmail?.split('@')[0] || 'Hero';
     const tierIcon = tier === 'Minor' ? '🍺' : tier === 'Lesser' ? '🪄' : tier === 'Greater' ? '✨' : '💫';
+    const targetTableObj = powerTables.find((t) => t.name === selectedPowerTable);
+    const assignedCategory = targetTableObj?.category || 'Class';
+
     const categoryStr =
       creationType === 'relic'
         ? `${tierIcon} ${tier}`
         : creationType === 'power'
-        ? 'Custom Power'
+        ? assignedCategory
         : creationType === 'hardware'
         ? 'Custom Hardware'
         : creationType === 'skill'
@@ -350,6 +436,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       itemDataPayload.effect = effect.trim();
       itemDataPayload.ready = powerReady;
       itemDataPayload.ready_category = powerReady;
+      itemDataPayload.table = selectedPowerTable;
+      itemDataPayload.category = assignedCategory;
     } else if (creationType === 'relic') {
       itemDataPayload.action = action;
       itemDataPayload.usage = usage;
@@ -404,7 +492,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-      <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-xl shadow-2xl shadow-amber-950/50 flex flex-col max-h-[90vh] overflow-hidden">
+      <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-xl shadow-2xl shadow-amber-950/50 flex flex-col h-[660px] max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 bg-slate-950/60 shrink-0">
           <div className="flex items-center gap-2.5">
@@ -457,6 +545,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </button>
             <button
               type="button"
+              onClick={() => setCreationType('power_table')}
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                creationType === 'power_table'
+                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              📜 Power Table
+            </button>
+            <button
+              type="button"
               onClick={() => setCreationType('relic')}
               className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'relic'
@@ -503,7 +602,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4 overflow-y-auto min-h-0 text-xs">
+        <form onSubmit={handleSubmit} className="p-5 flex-1 flex flex-col gap-4 overflow-y-auto min-h-0 text-xs">
           {/* Feedback Alert */}
           {feedback && (
             <div
@@ -522,22 +621,102 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </div>
           )}
 
-          {/* Name */}
+          {/* Name Field */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-slate-300">
-                {creationType === 'skill' ? 'Skill Name' : 'Creation Name'}
+                {creationType === 'skill'
+                  ? 'Skill Name'
+                  : creationType === 'power_table'
+                  ? 'Power Table Name'
+                  : creationType === 'power'
+                  ? 'Power Name'
+                  : 'Creation Name'}
               </span>
-              <InfoTooltip text="Enter the unique name of your custom creation." />
+              <InfoTooltip text="Enter the unique name of your custom creation or table." />
             </div>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              placeholder={
+                creationType === 'power_table'
+                  ? 'e.g. Chronomancer, Shadowblade, Vampire'
+                  : creationType === 'power'
+                  ? 'e.g. Flame Surge, Astral Aegis'
+                  : 'Enter name...'
+              }
               className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
               required
             />
           </div>
+
+          {/* Power Table Category Selector (Power Table Creation Mode Only) */}
+          {creationType === 'power_table' && (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-slate-300">Table Category</span>
+                <InfoTooltip text="Classify this power table (Class, Combat Style, Luck, Race, or Custom category)." />
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={tableCategory}
+                  onChange={(e) => setTableCategory(e.target.value)}
+                  className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer flex-1"
+                >
+                  {['Class', 'Combat Style', 'Luck', 'Race', 'Custom'].map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+                {tableCategory === 'Custom' && (
+                  <input
+                    type="text"
+                    placeholder="Enter custom category..."
+                    value={customCategoryInput}
+                    onChange={(e) => setCustomCategoryInput(e.target.value)}
+                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 flex-1"
+                    required
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* REQUIRED Power Table Dropdown (Power Mode Only) */}
+          {creationType === 'power' && (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-slate-300">Power Table (Required)</span>
+                <InfoTooltip text="Select the Power Table this power belongs to. This categorizes the power and establishes its table classification." />
+              </div>
+              <select
+                value={selectedPowerTable}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedPowerTable(val);
+                  const tbl = (powerTables || []).find((t) => t.name === val);
+                  if (tbl && Array.isArray(tbl.genres) && tbl.genres.length > 0) {
+                    setSelectedGenres(tbl.genres);
+                  }
+                }}
+                className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer"
+                required
+              >
+                <option value="">-- Select a Power Table --</option>
+                {Object.entries(groupedPowerTables).map(([category, tables]) => (
+                  <optgroup key={category} label={category}>
+                    {tables.map((t) => (
+                      <option key={t.name} value={t.name}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Single Skill Attribute Selector (Skill Mode Only) */}
           {creationType === 'skill' && (
@@ -596,8 +775,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </div>
           )}
 
-          {/* Action, Usage, Tier Grid (For Non-Skill/Skillset: Power, Relic, Hardware) */}
-          {creationType !== 'skillset' && creationType !== 'skill' && (
+          {/* Action, Usage, Tier Grid (For Non-Skill/Skillset/PowerTable: Power, Relic, Hardware) */}
+          {creationType !== 'skillset' && creationType !== 'skill' && creationType !== 'power_table' && (
             <div className={`grid ${creationType === 'relic' ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-1.5">
@@ -757,7 +936,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
           )}
 
           {/* Effect (rules) (Power, Relic, Hardware) */}
-          {creationType !== 'skillset' && creationType !== 'skill' && (
+          {creationType !== 'skillset' && creationType !== 'skill' && creationType !== 'power_table' && (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between flex-wrap gap-1">
                 <div className="flex items-center gap-1.5">
@@ -835,7 +1014,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
           </div>
 
           {/* Submit Button */}
-          <div className="pt-1">
+          <div className="pt-2 mt-auto shrink-0">
             <button
               type="submit"
               disabled={isSubmitting || !name.trim()}
@@ -845,6 +1024,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
               <span>
                 {isSubmitting
                   ? 'Forging Creation...'
+                  : creationType === 'power_table'
+                  ? isGm
+                    ? `👑 Forge & Publish Table '${name.trim() || 'Table'}' to Catalog`
+                    : `Save Table '${name.trim() || 'Table'}' to Catalog`
                   : isGm
                   ? `👑 Forge & Publish ${name.trim() || 'Creation'} to Party Mall`
                   : `Save ${name.trim() || 'Creation'} to My Creations Library`}

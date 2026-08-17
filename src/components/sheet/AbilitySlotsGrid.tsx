@@ -161,6 +161,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const {
     activeCharacter,
     powers,
+    powerTables,
     magicItems,
     updateActiveSheetData,
     saveActiveCharacter,
@@ -780,12 +781,30 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setActiveRightTab('CATALOG');
   };
 
-  // Filter catalog items by Category & Deduplication & Genre Scope
+  // Filter catalog items by Category & Deduplication & Genre Scope (Most Restrictive: Table Genres ∩ Power Genres)
   const categoryFilteredCatalog = useMemo(() => {
     return fullCatalog.filter((item) => {
       // 0. Global Genre Scope Filtering
-      if (!matchesGenre(item.genres, activeGenre)) {
-        return false;
+      if (type === 'powers') {
+        const powerItem = item as Power;
+        const tblName = powerItem.table || powerItem.table_name;
+        const matchingTable = powerTables?.find(
+          (t) => t.name.trim().toLowerCase() === tblName?.trim().toLowerCase()
+        );
+
+        // Power must match activeGenre
+        if (!matchesGenre(powerItem.genres, activeGenre)) {
+          return false;
+        }
+
+        // Parent table (if found) must ALSO match activeGenre (Most Restrictive intersection)
+        if (matchingTable && !matchesGenre(matchingTable.genres, activeGenre)) {
+          return false;
+        }
+      } else {
+        if (!matchesGenre(item.genres, activeGenre)) {
+          return false;
+        }
       }
 
       // 1. Deduplication: Filter out items already in the character's learned roster
@@ -812,7 +831,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       }
       return true;
     });
-  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, favoriteTables, isItemStarred, activeGenre]);
+  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, favoriteTables, isItemStarred, activeGenre, powerTables]);
 
   const groupedTables = useMemo(() => {
     const acc = categoryFilteredCatalog.reduce((map, item) => {
@@ -836,11 +855,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
     if (type === 'powers') {
       customPowerTables.forEach((tbl) => {
+        if (!matchesGenre((tbl as any).genres, activeGenre)) return;
         if (selectedCategory === 'favorites') {
           if (favoriteTables.includes(tbl.name) && !acc[tbl.name]) {
             acc[tbl.name] = [];
           }
-        } else if (selectedCategory === 'all' || tbl.sub.toLowerCase().includes(selectedCategory.toLowerCase())) {
+        } else if (selectedCategory === 'all' || (tbl.sub || '').toLowerCase().includes(selectedCategory.toLowerCase())) {
           if (!acc[tbl.name]) {
             acc[tbl.name] = [];
           }
@@ -853,7 +873,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     }
 
     return acc;
-  }, [categoryFilteredCatalog, type, customPowerTables, selectedCategory, favoriteTables]);
+  }, [categoryFilteredCatalog, type, customPowerTables, selectedCategory, favoriteTables, activeGenre]);
 
   const starredCatalogItems = useMemo(() => {
     return fullCatalog.filter((item) => isItemStarred(item));

@@ -19,6 +19,7 @@ import {
   DEFAULT_CHAOS_GAUNTLET_SLOTS,
   LootMainEntry,
   CustomCreationItem,
+  PowerTable,
 } from '../types/game';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
 
@@ -267,7 +268,40 @@ export const gameApi = {
     }
   },
 
-  // --- POWERS & MAGIC ITEMS ---
+  // --- POWERS & POWER TABLES ---
+  async getPowerTables(): Promise<PowerTable[]> {
+    const { data, error } = await supabase
+      .from('power_tables')
+      .select('*')
+      .order('category', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('[gameApi] Error fetching power tables:', error);
+      return [];
+    }
+    return (data || []) as PowerTable[];
+  },
+
+  async savePowerTable(payload: Partial<PowerTable>): Promise<PowerTable | null> {
+    const { data, error } = await supabase
+      .from('power_tables')
+      .insert([
+        {
+          ...payload,
+          created_at: payload.created_at || new Date().toISOString(),
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[gameApi] Error saving power table:', error);
+      throw error;
+    }
+    return data as PowerTable;
+  },
+
   async getPowers(): Promise<Power[]> {
     const { data, error } = await supabase
       .from('powers')
@@ -1438,6 +1472,22 @@ export const gameApi = {
 
   async promoteCustomItemToMaster(item: CustomCreationItem): Promise<boolean> {
     try {
+      if (item.type === 'power_table') {
+        const tablePayload = {
+          name: item.name,
+          category: item.category || 'Class',
+          genres: item.item_data?.genres && item.item_data.genres.length > 0 ? item.item_data.genres : ['Medieval', 'Modern', 'SciFi'],
+          author_name: item.author_name,
+          author_email: item.author_email,
+          gm_approved: true,
+          created_at: new Date().toISOString(),
+        };
+        const { error: insertError } = await supabase.from('power_tables').insert([tablePayload]);
+        if (insertError) throw insertError;
+        await this.updateCustomItem(item.id, { is_promoted: true });
+        return true;
+      }
+
       const targetTable =
         item.type === 'power'
           ? 'powers'
@@ -1458,6 +1508,14 @@ export const gameApi = {
         created_at: new Date().toISOString(),
       };
 
+      if (item.type === 'power') {
+        if (item.item_data?.table) {
+          masterPayload.table = item.item_data.table;
+        }
+        if (item.item_data?.ready_category || item.item_data?.ready) {
+          masterPayload.ready = item.item_data.ready_category || item.item_data.ready;
+        }
+      }
       if (item.type === 'hardware' && item.item_data?.cost) {
         masterPayload.cost = item.item_data.cost;
       }
