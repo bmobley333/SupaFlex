@@ -206,27 +206,23 @@ export const ChaosGauntletCard: React.FC = () => {
     }
   };
 
-  // Handle Spark Activation (Mega Slot only)
+  // Handle Spark Activation (Mega Slot only: consumes 5/5 Charges = 1 Full Spark)
   const handleSparkActivation = (slotId: string) => {
     const slot = gauntletSlots.find((s) => s.slot_id === slotId);
     if (!slot || !slot.gem) return;
 
-    const currentCharges = activeCharacter?.sheet_data?.charges ?? activeCharacter?.sheet_data?.sparks ?? 0;
-    if (currentCharges < 1) {
-      showToast('⚠️ No Spark available to power the Mega Slot!', 'warning');
+    if (!isSparkReady) {
+      showToast('⚠️ Requires a Full Spark (5/5 Charges)!', 'warning');
       return;
     }
 
-    updateActiveSheetData((prev) => {
-      const newCharges = Math.max(0, (prev.charges ?? prev.sparks ?? 0) - 1);
-      return {
-        ...prev,
-        charges: newCharges,
-        sparks: newCharges,
-        is_sparked: newCharges === 5,
-        is_charged: newCharges === 5,
-      };
-    });
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      charges: 0,
+      sparks: 0,
+      is_sparked: false,
+      is_charged: false,
+    }));
     saveActiveCharacter();
   };
 
@@ -254,7 +250,8 @@ export const ChaosGauntletCard: React.FC = () => {
     showToast(`💥 Removed and shattered '${gemName}'.`, 'warning');
   };
 
-  const charges = activeCharacter?.sheet_data?.charges ?? activeCharacter?.sheet_data?.sparks ?? 0;
+  const currentCharges = activeCharacter?.sheet_data?.charges ?? activeCharacter?.sheet_data?.sparks ?? 0;
+  const isSparkReady = currentCharges >= 5 || Boolean(activeCharacter?.sheet_data?.is_sparked);
   const activeSelectedSlot = gauntletSlots.find((s) => s.slot_id === selectedTargetSlotId);
   const activeSelectedMeta = SLOT_METADATA.find((m) => m.slot_id === selectedTargetSlotId);
 
@@ -273,15 +270,6 @@ export const ChaosGauntletCard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Spark Pool Indicator */}
-          <div
-            className="flex items-center gap-1 text-[11px] font-mono font-bold text-amber-300 bg-amber-950/50 border border-amber-500/40 px-2 py-0.5 rounded-lg shadow-inner"
-            title="Spark available to trigger Wrist Mega Slot without consuming gem durability"
-          >
-            <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
-            <span>{charges} Spark</span>
-          </div>
-
           {/* Manage Gauntlet Button */}
           <button
             type="button"
@@ -413,11 +401,19 @@ export const ChaosGauntletCard: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleSparkActivation(slot.slot_id)}
-                      disabled={charges < 1}
-                      className="px-1.5 py-0.5 rounded bg-amber-600/20 hover:bg-amber-600/40 active:bg-amber-600/50 disabled:opacity-30 disabled:hover:bg-amber-600/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold shrink-0 flex items-center gap-0.5 cursor-pointer transition-all shadow-sm"
-                      title="Activate Mega Slot with 1 Spark (Preserves gem durability!)"
+                      disabled={!isSparkReady}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 flex items-center gap-1 transition-all shadow-sm ${
+                        isSparkReady
+                          ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold border border-amber-200 shadow-md shadow-amber-500/50 animate-pulse cursor-pointer'
+                          : 'bg-amber-950/20 text-amber-500/40 border border-amber-500/20 cursor-not-allowed opacity-30'
+                      }`}
+                      title={
+                        isSparkReady
+                          ? '⚡ Full Spark Ready! Activate Mega Slot without consuming gem durability (Consumes 5/5 Charges).'
+                          : `Requires a Full Spark (5/5 Charges in Charge HUD, currently ${currentCharges}/5).`
+                      }
                     >
-                      <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                      <Zap className={`w-3 h-3 ${isSparkReady ? 'text-slate-950 fill-slate-950' : 'text-amber-500/40'}`} />
                       <span>Spark</span>
                     </button>
                   </div>
@@ -610,12 +606,20 @@ export const ChaosGauntletCard: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleSparkActivation(activeSelectedSlot.slot_id)}
-                            disabled={charges < 1}
-                            className="px-3 py-1.5 bg-amber-600/30 hover:bg-amber-600/50 disabled:opacity-40 text-amber-200 border border-amber-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-sm"
-                            title="Trigger Mega Slot using 1 Spark from pool (Durability preserved!)"
+                            disabled={!isSparkReady}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm ${
+                              isSparkReady
+                                ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold border border-amber-200 shadow-md shadow-amber-500/50 animate-pulse cursor-pointer'
+                                : 'bg-amber-950/20 text-amber-500/40 border border-amber-500/20 cursor-not-allowed opacity-30'
+                            }`}
+                            title={
+                              isSparkReady
+                                ? '⚡ Full Spark Ready! Activate Mega Slot without consuming gem durability (Consumes 5/5 Charges).'
+                                : `Requires a Full Spark (5/5 Charges in Charge HUD, currently ${currentCharges}/5).`
+                            }
                           >
-                            <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                            <span>Spark Trigger</span>
+                            <Zap className={`w-3.5 h-3.5 ${isSparkReady ? 'text-slate-950 fill-slate-950' : 'text-amber-500/40'}`} />
+                            <span>Spark Trigger (5 Charges)</span>
                           </button>
                         ) : <div />}
 
