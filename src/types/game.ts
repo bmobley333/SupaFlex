@@ -828,3 +828,33 @@ export interface PartySessionMember {
 
 export type AuthMode = 'login' | 'signup' | 'reset_password' | 'profile';
 
+export type CustomCreationType = 'power' | 'relic' | 'hardware' | 'skillset';
+
+export interface CustomCreationData {
+  action?: string;
+  usage?: string;
+  effect?: string;
+  cost?: string;
+  slot_weight?: 1 | 2 | 3 | 4;
+  ready_category?: string;
+  skills?: string[];
+  [key: string]: any;
+}
+
+export interface CustomCreationItem {
+  id: string;
+  party_id?: string | null;
+  type: CustomCreationType;
+  name: string;
+  category?: string;
+  author_name: string;
+  author_email: string;
+  gm_approved: boolean;
+  approved_by_gm_email?: string | null;
+  item_data: CustomCreationData;
+  notes?: string;
+  is_promoted?: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+

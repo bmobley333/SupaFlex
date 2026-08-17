@@ -94,6 +94,7 @@ export const parseAndEvaluateFormula = (formula: string): { value: number; curre
 export const CATEGORY_OPTIONS = [
   { key: 'coins', label: '🪙 Coins (s/g)' },
   { key: 'chaos_gems', label: '💎 Chaos Gem (Volatile)' },
+  { key: 'hardware', label: '⚙️ Hardware Device' },
   { key: 'magic_Minor', label: '🍺 Minor Magic Item' },
   { key: 'magic_Lesser', label: '🪄 Lesser Magic Item' },
   { key: 'magic_Greater', label: '✨ Greater Magic Item' },
@@ -237,6 +238,24 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     }
   };
 
+  // Fetch random hardware item from Supabase hardware table
+  const fetchRandomHardwareItem = async () => {
+    try {
+      const { data } = await supabase.from('hardware').select('*');
+      if (data && data.length > 0) {
+        const picked = data[Math.floor(Math.random() * data.length)];
+        return {
+          ...picked,
+          is_hardware: true,
+          description: picked.effect || picked.notes || picked.description || 'Advanced technological device.'
+        };
+      }
+    } catch {
+      // Fallback
+    }
+    return { name: 'Communicator', category: '🍺 Minor', is_hardware: true, cost: '1g', description: 'Text, audio, and audiovisual comms.' };
+  };
+
   // Fetch random gear item from Supabase gear table for Quality combination
   const fetchRandomGearItem = async () => {
     try {
@@ -321,6 +340,19 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
               chaosGem: gem,
             });
           }
+        } else if (rType === 'hardware') {
+          const hw = await fetchRandomHardwareItem();
+          resList.push({
+            id: `res-${Date.now()}`,
+            tableKey: 'loot_main',
+            categoryKey: 'hardware',
+            tableName: '⚙️ Hardware Device',
+            rollVal: d100,
+            title: hw.name,
+            description: hw.description || hw.effect || 'Advanced technological hardware item.',
+            type: 'magic_item',
+            magicItem: hw
+          });
         } else if (rType === 'magic_item') {
           const rawRarity = entry.subtable_key?.replace('magic_', '') || 'Lesser';
           const rarity = (rawRarity.toLowerCase() === 'artifact' || rawRarity.toLowerCase() === 'epic') ? 'Epic' : rawRarity;
@@ -467,6 +499,21 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           description: item.description || `Mystical ${rarity.toLowerCase()} magic item.`,
           type: 'magic_item',
           magicItem: item
+        };
+        if (append) setResults(prev => [resObj, ...prev]);
+        return resObj;
+      } else if (tableKey === 'hardware') {
+        const hw = await fetchRandomHardwareItem();
+        const resObj: RollResult = {
+          id: `res-${Date.now()}`,
+          tableKey: 'hardware',
+          categoryKey: 'hardware',
+          tableName: '⚙️ Hardware Device',
+          rollVal: 1,
+          title: hw.name,
+          description: hw.description || hw.effect || 'Advanced technological hardware item.',
+          type: 'magic_item',
+          magicItem: hw
         };
         if (append) setResults(prev => [resObj, ...prev]);
         return resObj;

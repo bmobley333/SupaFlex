@@ -18,6 +18,7 @@ import {
   ChaosGemSlot,
   DEFAULT_CHAOS_GAUNTLET_SLOTS,
   LootMainEntry,
+  CustomCreationItem,
 } from '../types/game';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
 
@@ -1287,6 +1288,192 @@ export const gameApi = {
     } catch (e) {
       console.error('[gameApi] Error in getLootMainEntries:', e);
       return [];
+    }
+  },
+
+  // --- DISTRIBUTED CREATION & CURATION ENGINE (DC2E) ---
+  async getPersonalCustomItems(authorEmail: string): Promise<CustomCreationItem[]> {
+    if (!authorEmail) return [];
+    try {
+      const { data, error } = await supabase
+        .from('party_custom_items')
+        .select('*')
+        .ilike('author_email', authorEmail.trim())
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('[gameApi] Notice fetching personal custom items:', error.message);
+        return [];
+      }
+      return (data || []) as CustomCreationItem[];
+    } catch (e) {
+      console.error('[gameApi] Error in getPersonalCustomItems:', e);
+      return [];
+    }
+  },
+
+  async getPartyCustomItems(partyId: string, gmEmail?: string): Promise<CustomCreationItem[]> {
+    if (!partyId) return [];
+    try {
+      const { data, error } = await supabase
+        .from('party_custom_items')
+        .select('*')
+        .eq('party_id', partyId.trim())
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('[gameApi] Notice fetching party custom items:', error.message);
+        return [];
+      }
+
+      const allPartyItems = (data || []) as CustomCreationItem[];
+      // Role-Aware Filter: Items approved by GM, OR authored by the active GM (auto-approved)
+      return allPartyItems.filter((item) => {
+        if (item.gm_approved) return true;
+        if (gmEmail && item.author_email?.toLowerCase().trim() === gmEmail.toLowerCase().trim()) {
+          return true;
+        }
+        return false;
+      });
+    } catch (e) {
+      console.error('[gameApi] Error in getPartyCustomItems:', e);
+      return [];
+    }
+  },
+
+  async getPendingPartySubmissions(partyId: string): Promise<CustomCreationItem[]> {
+    if (!partyId) return [];
+    try {
+      const { data, error } = await supabase
+        .from('party_custom_items')
+        .select('*')
+        .eq('party_id', partyId.trim())
+        .eq('gm_approved', false)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('[gameApi] Notice fetching pending party submissions:', error.message);
+        return [];
+      }
+      return (data || []) as CustomCreationItem[];
+    } catch (e) {
+      console.error('[gameApi] Error in getPendingPartySubmissions:', e);
+      return [];
+    }
+  },
+
+  async getAllCustomItems(): Promise<CustomCreationItem[]> {
+    try {
+      const { data, error } = await supabase
+        .from('party_custom_items')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('[gameApi] Notice fetching all custom items:', error.message);
+        return [];
+      }
+      return (data || []) as CustomCreationItem[];
+    } catch (e) {
+      console.error('[gameApi] Error in getAllCustomItems:', e);
+      return [];
+    }
+  },
+
+  async saveCustomItem(payload: Partial<CustomCreationItem>): Promise<CustomCreationItem | null> {
+    try {
+      const { data, error } = await supabase
+        .from('party_custom_items')
+        .insert([
+          {
+            ...payload,
+            updated_at: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as CustomCreationItem;
+    } catch (e) {
+      console.error('[gameApi] Error in saveCustomItem:', e);
+      throw e;
+    }
+  },
+
+  async updateCustomItem(id: string, updates: Partial<CustomCreationItem>): Promise<CustomCreationItem | null> {
+    try {
+      const { data, error } = await supabase
+        .from('party_custom_items')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as CustomCreationItem;
+    } catch (e) {
+      console.error('[gameApi] Error in updateCustomItem:', e);
+      throw e;
+    }
+  },
+
+  async deleteCustomItem(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('party_custom_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error('[gameApi] Error in deleteCustomItem:', e);
+      return false;
+    }
+  },
+
+  async promoteCustomItemToMaster(item: CustomCreationItem): Promise<boolean> {
+    try {
+      const targetTable =
+        item.type === 'power'
+          ? 'powers'
+          : item.type === 'hardware'
+          ? 'hardware'
+          : item.type === 'skillset'
+          ? 'skillsets'
+          : 'relics';
+
+      const masterPayload: any = {
+        name: item.name,
+        category: item.category || (item.type === 'relic' ? '🍺 Minor' : 'Universal'),
+        action: item.item_data?.action || 'A',
+        usage: item.item_data?.usage || '1-Enc',
+        effect: item.item_data?.effect || '',
+        notes: item.notes ? `${item.notes} (Official MetaScape Canon • Designed by ${item.author_name})` : `(Official MetaScape Canon • Designed by ${item.author_name})`,
+        genres: ['Universal'],
+        created_at: new Date().toISOString(),
+      };
+
+      if (item.type === 'hardware' && item.item_data?.cost) {
+        masterPayload.cost = item.item_data.cost;
+      }
+      if (item.type === 'skillset' && item.item_data?.skills) {
+        masterPayload.skills = item.item_data.skills;
+      }
+
+      const { error: insertError } = await supabase.from(targetTable).insert([masterPayload]);
+      if (insertError) throw insertError;
+
+      // Mark as promoted
+      await this.updateCustomItem(item.id, { is_promoted: true });
+      return true;
+    } catch (e) {
+      console.error('[gameApi] Error promoting custom item to master:', e);
+      throw e;
     }
   },
 };

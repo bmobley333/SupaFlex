@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Database, Shield, Activity, BookOpen, Loader2, ChevronDown, ChevronUp, Star } from 'lucide-react';
+import { Database, Shield, Activity, BookOpen, Loader2, ChevronDown, ChevronUp, Star, Crown } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { gameApi } from './services/api';
 import { Character, TreasureItem, SimpleGearItem, MagicItem } from './types/game';
@@ -12,8 +12,14 @@ import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { AccountPillButton } from './components/header/AccountPillButton';
 import { GmHeaderHUD } from './components/header/GmHeaderHUD';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
+import { GmToolsPopover } from './components/header/GmToolsPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
 import { NishTcModal } from './components/modals/NishTcModal';
+import { GmCustomItemModal } from './components/modals/GmCustomItemModal';
+import { PlayerWorkshopModal } from './components/modals/PlayerWorkshopModal';
+import { CraftingMallModal } from './components/modals/CraftingMallModal';
+import { GmSubmissionsModal } from './components/modals/GmSubmissionsModal';
+import { MasterArchitectDeskModal } from './components/modals/MasterArchitectDeskModal';
 import { ApManagerModal } from './components/modals/ApManagerModal';
 import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
 import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
@@ -31,6 +37,12 @@ export default function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSelectorBar, setShowSelectorBar] = useState(false);
   const [showResourcesPopover, setShowResourcesPopover] = useState(false);
+  const [showGmToolsPopover, setShowGmToolsPopover] = useState(false);
+  const [showGmCustomItemModal, setShowGmCustomItemModal] = useState(false);
+  const [showPlayerWorkshopModal, setShowPlayerWorkshopModal] = useState(false);
+  const [showCraftingMallModal, setShowCraftingMallModal] = useState(false);
+  const [showGmSubmissionsModal, setShowGmSubmissionsModal] = useState(false);
+  const [showMasterArchitectDeskModal, setShowMasterArchitectDeskModal] = useState(false);
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
   const [showNishTcModal, setShowNishTcModal] = useState(false);
   const [showApManagerModal, setShowApManagerModal] = useState(false);
@@ -70,6 +82,7 @@ export default function App() {
 
   const selectorRef = useRef<HTMLDivElement>(null);
   const resourcesRef = useRef<HTMLDivElement>(null);
+  const gmToolsRef = useRef<HTMLDivElement>(null);
 
   // Seamless Scroll Restoration Keyed to Active Hero / Mode / Tab
   const activeRoleState = useCharacterStore((state) => state.activeRole);
@@ -217,14 +230,17 @@ export default function App() {
       if (resourcesRef.current && !resourcesRef.current.contains(event.target as Node)) {
         setShowResourcesPopover(false);
       }
+      if (gmToolsRef.current && !gmToolsRef.current.contains(event.target as Node)) {
+        setShowGmToolsPopover(false);
+      }
     };
-    if (showSelectorBar || showResourcesPopover) {
+    if (showSelectorBar || showResourcesPopover || showGmToolsPopover) {
       document.addEventListener('pointerdown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('pointerdown', handleClickOutside);
     };
-  }, [showSelectorBar, showResourcesPopover]);
+  }, [showSelectorBar, showResourcesPopover, showGmToolsPopover]);
 
   const myHeroes = useMemo(() => {
     return characters
@@ -281,16 +297,19 @@ export default function App() {
 
       if (isMagic) {
         const m = itemPayload.magicItem || {};
+        const isHw = !!(m.is_hardware || category === 'hardware');
         const magicItemObj: MagicItem = {
           id: Date.now() + Math.floor(Math.random() * 1000),
-          name: m.name || itemPayload.title || 'Magic Item',
+          name: m.name || itemPayload.title || (isHw ? 'Hardware Device' : 'Magic Item'),
           usage: m.usage || '1-Enc',
           action: m.action || 'P',
           effect: m.effect || m.description || itemPayload.description || '',
-          source: m.source || 'Loot Claim',
+          source: m.source || (isHw ? 'Hardware Loot' : 'Loot Claim'),
           created_at: new Date().toISOString(),
-          category: m.category || category || 'Magic Item',
+          category: m.category || (isHw ? '⚙️ Hardware' : category) || 'Magic Item',
           slot_weight: (getItemSlotWeight({ ...m, name: itemPayload.title, category }) as 1 | 2 | 3 | 4),
+          is_hardware: isHw,
+          cost: m.cost,
         };
 
         updateActiveSheetData((prev) => ({
@@ -437,14 +456,51 @@ export default function App() {
             </nav>
           )}
 
-          {/* Right Zone: Resources Popover & Database Indicator */}
+          {/* Right Zone: GM Tools, Resources Popover & Database Indicator */}
           <div className="flex items-center gap-2">
+            {/* 👑 GM Tools Popover Trigger (GM Mode Only) */}
+            {activeRole === 'gm' && (
+              <div className="relative" ref={gmToolsRef}>
+                <button
+                  onClick={() => setShowGmToolsPopover(!showGmToolsPopover)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm cursor-pointer ${
+                    showGmToolsPopover
+                      ? 'bg-amber-500/20 border-amber-400 text-amber-200 shadow-amber-500/30'
+                      : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/35 text-amber-300 shadow-amber-950/40'
+                  }`}
+                  title="GM Screen Control Tools"
+                >
+                  <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="font-outfit font-extrabold tracking-wide">GM Tools</span>
+                  {showGmToolsPopover ? (
+                    <ChevronUp className="w-3 h-3 text-amber-300 shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3 text-amber-400 shrink-0" />
+                  )}
+                </button>
+
+                {/* 👑 GM Tools Floating Popover Card */}
+                {showGmToolsPopover && (
+                  <GmToolsPopover
+                    onClose={() => setShowGmToolsPopover(false)}
+                    onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
+                    onOpenNishTcGenerator={() => setShowNishTcModal(true)}
+                    onOpenCustomItemCreator={() => setShowGmCustomItemModal(true)}
+                    onOpenCraftingMall={() => setShowCraftingMallModal(true)}
+                    onOpenGmSubmissions={() => setShowGmSubmissionsModal(true)}
+                    onOpenMasterArchitectDesk={() => setShowMasterArchitectDeskModal(true)}
+                    isMasterArchitect={playerEmail?.toLowerCase().trim() === 'metascapegame@gmail.com'}
+                  />
+                )}
+              </div>
+            )}
+
             {/* 📚 Resources Popover Trigger */}
             <div className="relative" ref={resourcesRef}>
 
               <button
                 onClick={() => setShowResourcesPopover(!showResourcesPopover)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm cursor-pointer ${
                   showResourcesPopover
                     ? 'bg-indigo-500/20 border-indigo-400 text-indigo-200 shadow-indigo-500/30'
                     : 'bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/35 text-indigo-300 shadow-indigo-950/40'
@@ -466,6 +522,8 @@ export default function App() {
                   onClose={() => setShowResourcesPopover(false)} 
                   onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
                   onOpenNishTcGenerator={() => setShowNishTcModal(true)}
+                  onOpenCraftingMall={() => setShowCraftingMallModal(true)}
+                  onOpenPlayerWorkshop={() => setShowPlayerWorkshopModal(true)}
                   isGmMode={activeRole === 'gm'}
                 />
               )}
@@ -629,6 +687,47 @@ export default function App() {
           isOpen={showNishTcModal}
           onClose={() => setShowNishTcModal(false)}
           characterName={activeCharacter?.name || 'Active Hero'}
+        />
+      </ErrorBoundary>
+
+      {/* 🛠️ GM Custom Item Workshop Modal */}
+      <ErrorBoundary fallbackTitle="GM Item Workshop Error" onClose={() => setShowGmCustomItemModal(false)}>
+        <GmCustomItemModal
+          isOpen={showGmCustomItemModal}
+          onClose={() => setShowGmCustomItemModal(false)}
+        />
+      </ErrorBoundary>
+
+      {/* 🛠️ Player's Workshop Modal */}
+      <ErrorBoundary fallbackTitle="Player Workshop Error" onClose={() => setShowPlayerWorkshopModal(false)}>
+        <PlayerWorkshopModal
+          isOpen={showPlayerWorkshopModal}
+          onClose={() => setShowPlayerWorkshopModal(false)}
+        />
+      </ErrorBoundary>
+
+      {/* 🏪 The Crafting Mall Modal */}
+      <ErrorBoundary fallbackTitle="Crafting Mall Error" onClose={() => setShowCraftingMallModal(false)}>
+        <CraftingMallModal
+          isOpen={showCraftingMallModal}
+          onClose={() => setShowCraftingMallModal(false)}
+          onOpenWorkshop={() => setShowPlayerWorkshopModal(true)}
+        />
+      </ErrorBoundary>
+
+      {/* 📥 GM Submissions Queue Modal */}
+      <ErrorBoundary fallbackTitle="GM Submissions Error" onClose={() => setShowGmSubmissionsModal(false)}>
+        <GmSubmissionsModal
+          isOpen={showGmSubmissionsModal}
+          onClose={() => setShowGmSubmissionsModal(false)}
+        />
+      </ErrorBoundary>
+
+      {/* 🏰 Master Architect Curation Desk Modal */}
+      <ErrorBoundary fallbackTitle="Master Architect Desk Error" onClose={() => setShowMasterArchitectDeskModal(false)}>
+        <MasterArchitectDeskModal
+          isOpen={showMasterArchitectDeskModal}
+          onClose={() => setShowMasterArchitectDeskModal(false)}
         />
       </ErrorBoundary>
 

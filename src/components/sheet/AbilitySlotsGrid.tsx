@@ -226,17 +226,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Loadout Catalog Filter Switch: 'ALL' | 'RELICS' | 'HARDWARE'
-  const [loadoutTypeFilter, setLoadoutTypeFilter] = useState<'ALL' | 'RELICS' | 'HARDWARE'>('ALL');
-
-  // Custom / Version Creation Form State
-  const [createItemType, setCreateItemType] = useState<'relic' | 'hardware'>('relic');
-  const [createCostVal, setCreateCostVal] = useState<number>(100);
-  const [createCostUnit, setCreateCostUnit] = useState<'s' | 'g'>('s');
+  // Custom Power Form State
   const [createName, setCreateName] = useState('');
   const [createAction, setCreateAction] = useState('A');
   const [createUsage, setCreateUsage] = useState('1');
-  const [createTier, setCreateTier] = useState<'Minor' | 'Lesser' | 'Greater' | 'Epic'>('Minor');
   const [createEffect, setCreateEffect] = useState('');
   const createEffectRef = useRef<HTMLTextAreaElement>(null);
 
@@ -692,18 +685,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     saveActiveCharacter();
   };
 
-  // Custom Creation Save Handler
+  // Custom Creation Save Handler (Strictly for Powers)
   const handleSaveCustomAbility = () => {
     if (!createName.trim()) return;
     const rawClean = cleanName(createName.trim());
     const { baseName, version } = parseAbilityVersion(rawClean);
     const versionedName = `${baseName} v${version}`;
 
-    const isHardware = type === 'spells' && createItemType === 'hardware';
-    const costStr = isHardware ? `${createCostVal}${createCostUnit}` : undefined;
-    const tierIcon = createTier === 'Minor' ? '🍺' : createTier === 'Lesser' ? '🪄' : createTier === 'Greater' ? '🪬' : '💫';
-
-    const newItem: Power | MagicItem = {
+    const newItem: Power = {
       id: Date.now(),
       name: versionedName,
       base_name: baseName,
@@ -711,11 +700,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       action: createAction,
       usage: createUsage,
       effect: createEffect.trim(),
-      source: isHardware ? 'Custom Hardware' : 'Custom Relic',
+      source: 'Custom Power',
       created_at: new Date().toISOString(),
-      category: type === 'powers' ? undefined : `${createTier}${tierIcon}`,
-      is_hardware: isHardware,
-      cost: costStr,
     };
 
     updateActiveSheetData((prev) => {
@@ -723,91 +709,66 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const existingCustom = prev[customKey] || [];
       const updatedCustom = [...existingCustom, newItem];
 
-      if (type === 'powers') {
-        const currentSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
-        const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
-        const combinedOld = [...currentSlots, ...currentVault];
-        const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
-        const oldApSpent = Math.max(0, oldTotalUnits - 3);
+      const currentSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
+      const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
+      const combinedOld = [...currentSlots, ...currentVault];
+      const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
+      const oldApSpent = Math.max(0, oldTotalUnits - 3);
 
-        const newPower: AbilitySlot = {
-          select: true,
-          name: versionedName,
-          base_name: baseName,
-          version: version,
-          action: (createAction.toUpperCase() as any) || 'A',
-          usage: createUsage,
-          effect: createEffect.trim(),
-          checked: [false, false, false],
-          is_readied: false,
-          ready: getPowerReadyCategory(newItem),
-        };
+      const newPower: AbilitySlot = {
+        select: true,
+        name: versionedName,
+        base_name: baseName,
+        version: version,
+        action: (createAction.toUpperCase() as any) || 'A',
+        usage: createUsage,
+        effect: createEffect.trim(),
+        checked: [false, false, false],
+        is_readied: false,
+        ready: getPowerReadyCategory(newItem),
+      };
 
-        const existingReadiedIdx = currentSlots.findIndex(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-        );
-        const existingVaultIdx = currentVault.findIndex(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-        );
+      const existingReadiedIdx = currentSlots.findIndex(
+        (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+      );
+      const existingVaultIdx = currentVault.findIndex(
+        (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+      );
 
-        let updatedSlots = [...currentSlots];
-        let updatedVault = [...currentVault];
-        let isUpgrade = false;
+      let updatedSlots = [...currentSlots];
+      let updatedVault = [...currentVault];
+      let isUpgrade = false;
 
-        if (existingReadiedIdx >= 0) {
-          updatedSlots[existingReadiedIdx] = { ...newPower, is_readied: true };
-          isUpgrade = true;
-        } else if (existingVaultIdx >= 0) {
-          updatedVault[existingVaultIdx] = newPower;
-          isUpgrade = true;
-        } else {
-          updatedVault.push(newPower);
-        }
-
-        const combinedNew = [...updatedSlots, ...updatedVault];
-        const prunedCombined = pruneLesserPowerVersions(combinedNew);
-        const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
-        const newApSpent = Math.max(0, newTotalUnits - 3);
-        const apDiff = newApSpent - oldApSpent;
-
-        const logAction = isUpgrade ? 'Upgraded Power' : 'Created & Learned Power';
-
-        if (apDiff > 0) {
-          recordApExpenditure(apDiff, 'Powers', `${logAction}: ${versionedName} (+${apDiff} AP)`, 1, 'Manage Powers');
-        } else {
-          recordApExpenditure(0, 'Powers', `${logAction}: ${versionedName} (0 AP - Covered by Free AP)`, 1, 'Manage Powers');
-        }
-
-        return {
-          ...prev,
-          [customKey]: updatedCustom,
-          power_slots: updatedSlots,
-          character_power_codex: updatedVault,
-        };
+      if (existingReadiedIdx >= 0) {
+        updatedSlots[existingReadiedIdx] = { ...newPower, is_readied: true };
+        isUpgrade = true;
+      } else if (existingVaultIdx >= 0) {
+        updatedVault[existingVaultIdx] = newPower;
+        isUpgrade = true;
       } else {
-        const vaultItem: MagicItem = {
-          id: newItem.id,
-          name: versionedName,
-          base_name: baseName,
-          version: version,
-          action: createAction,
-          usage: createUsage,
-          effect: createEffect.trim(),
-          source: isHardware ? 'Custom Hardware' : 'Custom Relic',
-          created_at: new Date().toISOString(),
-          category: `${createTier}${tierIcon}`,
-          is_hardware: isHardware,
-          cost: costStr,
-          slot_weight: (getItemSlotWeight({ rarity: createTier, name: versionedName }) as 1 | 2 | 3 | 4),
-        };
-        const currentVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];
-
-        return {
-          ...prev,
-          [customKey]: updatedCustom,
-          character_vault: [...currentVault, vaultItem],
-        };
+        updatedVault.push(newPower);
       }
+
+      const combinedNew = [...updatedSlots, ...updatedVault];
+      const prunedCombined = pruneLesserPowerVersions(combinedNew);
+      const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
+      const newApSpent = Math.max(0, newTotalUnits - 3);
+      const apDiff = newApSpent - oldApSpent;
+
+      const logAction = isUpgrade ? 'Upgraded Power' : 'Created & Learned Power';
+
+      if (apDiff > 0) {
+        recordApExpenditure(apDiff, 'Powers', `${logAction}: ${versionedName} (+${apDiff} AP)`, 1, 'Manage Powers');
+      } else {
+        recordApExpenditure(0, 'Powers', `${logAction}: ${versionedName} (0 AP - Covered by Free AP)`, 1, 'Manage Powers');
+      }
+
+      return {
+        ...prev,
+        [customKey]: updatedCustom,
+        power_slots: updatedSlots,
+        character_power_codex: updatedVault,
+      };
     });
     saveActiveCharacter();
 
@@ -816,7 +777,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setCreateUsage('1');
     setCreateEffect('');
     setIsVersionEditMode(false);
-    setActiveRightTab(type === 'spells' ? 'VAULT' : 'CATALOG');
+    setActiveRightTab('CATALOG');
   };
 
   // Filter catalog items by Category & Deduplication & Genre Scope
@@ -840,12 +801,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           return itemSub.includes(selectedCategory.toLowerCase());
         }
       } else {
-        // Loadout Type Filter (All, Relics, Hardware)
+        // Loadout Mode (Hardware Catalog): Exclusively Hardware items (Relics are only found via Loot Rolls)
         const isHw = !!((item as any).is_hardware || (item as any).cost);
-        if (loadoutTypeFilter === 'RELICS' && isHw) {
-          return false;
-        }
-        if (loadoutTypeFilter === 'HARDWARE' && !isHw) {
+        if (!isHw) {
           return false;
         }
         if (selectedCategory === 'favorites') {
@@ -854,7 +812,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       }
       return true;
     });
-  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, loadoutTypeFilter, favoriteTables, isItemStarred, activeGenre]);
+  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, favoriteTables, isItemStarred, activeGenre]);
 
   const groupedTables = useMemo(() => {
     const acc = categoryFilteredCatalog.reduce((map, item) => {
@@ -1410,11 +1368,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           activeRightTab === 'CATALOG'
                             ? type === 'powers'
                               ? 'border-amber-400 text-amber-400'
-                              : 'border-pink-400 text-pink-400'
+                              : 'border-cyan-400 text-cyan-400'
                             : 'border-transparent text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        🌐 Catalog ({filteredCatalogAbilities.length})
+                        {type === 'powers'
+                          ? `🌐 Catalog (${filteredCatalogAbilities.length})`
+                          : `⚙️ Hardware Catalog (${filteredCatalogAbilities.length})`}
                       </button>
 
                       {type === 'spells' && (
@@ -1450,29 +1410,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           ⚡ Ready Slots
                         </button>
                       )}
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isVersionEditMode) {
-                            setIsVersionEditMode(false);
-                            setCreateName('');
-                            setCreateAction('A');
-                            setCreateUsage('1');
-                            setCreateEffect('');
-                          }
-                          setActiveRightTab('CREATOR');
-                        }}
-                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                          activeRightTab === 'CREATOR'
-                            ? type === 'powers'
-                              ? 'border-emerald-400 text-emerald-400'
-                              : 'border-purple-400 text-purple-400'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        ➕ Custom {type === 'powers' ? 'Power' : 'Item'}
-                      </button>
 
                       {isVersionEditMode && (
                         <button
@@ -1931,42 +1868,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     {/* TAB 2: STOCK CATALOG VIEW */}
                     {activeRightTab === 'CATALOG' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
-                        {/* Loadout Type Multi-Option Pill Switch (Spells/Loadout Mode) */}
+                        {/* Hardware Catalog Info Banner (Spells/Loadout Mode) */}
                         {type === 'spells' && (
-                          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => setLoadoutTypeFilter('ALL')}
-                              className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                loadoutTypeFilter === 'ALL'
-                                  ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              🌐 All ({stockCatalog.length})
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setLoadoutTypeFilter('RELICS')}
-                              className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                loadoutTypeFilter === 'RELICS'
-                                  ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              🏺 Relics ({stockCatalog.filter((m: any) => !m.is_hardware && !m.cost).length})
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setLoadoutTypeFilter('HARDWARE')}
-                              className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                loadoutTypeFilter === 'HARDWARE'
-                                  ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              ⚙️ Hardware ({stockCatalog.filter((m: any) => m.is_hardware || m.cost).length})
-                            </button>
+                          <div className="bg-slate-950/80 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center justify-between shadow-inner backdrop-blur-md shrink-0">
+                            <span className="text-xs font-bold text-cyan-300 flex items-center gap-1.5 font-outfit">
+                              ⚙️ Purchasable Hardware Catalog
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-medium">
+                              Relics are discovered exclusively via Loot Rolls
+                            </span>
                           </div>
                         )}
 
@@ -2106,7 +2016,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 type="text"
                                 value={rightSearchQuery}
                                 onChange={(e) => setRightSearchQuery(e.target.value)}
-                                placeholder="Search relics or hardware..."
+                                placeholder="Search hardware catalog..."
                                 className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
                               />
                             </div>
@@ -2234,175 +2144,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             </p>
                           )}
                         </div>
-                      </div>
-                    )}
-
-                    {/* TAB 2: CUSTOM CREATOR VIEW (strictly for brand new custom abilities) */}
-                    {activeRightTab === 'CREATOR' && (
-                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-y-auto">
-                        <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            handleSaveCustomAbility();
-                          }}
-                          className="p-3 bg-amber-950/20 border border-amber-500/30 rounded-xl flex flex-col gap-3"
-                        >
-                          <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5">
-                            <span className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-                              <Plus className="w-3.5 h-3.5 text-amber-400" />
-                              Custom Creator
-                            </span>
-                          </div>
-
-                          <div className="flex flex-col gap-2">
-                            {/* Relic vs Hardware Multi-Option Pill Switch (Loadout Mode) */}
-                            {type === 'spells' && (
-                              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => setCreateItemType('relic')}
-                                  className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                    createItemType === 'relic'
-                                      ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                                  }`}
-                                >
-                                  🏺 Relic (Found Loot)
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setCreateItemType('hardware')}
-                                  className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                    createItemType === 'hardware'
-                                      ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                                  }`}
-                                >
-                                  ⚙️ Hardware (Store Device)
-                                </button>
-                              </div>
-                            )}
-
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs font-bold text-slate-300">Ability Name</span>
-                              <input
-                                type="text"
-                                value={createName}
-                                onChange={(e) => setCreateName(e.target.value)}
-                                className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400"
-                                required
-                              />
-                            </div>
-
-                            {/* Store Cost Row (Hardware Mode Only) */}
-                            {type === 'spells' && createItemType === 'hardware' && (
-                              <div className="flex items-center gap-2 bg-slate-950 p-2 rounded-lg border border-cyan-500/30">
-                                <span className="text-xs font-bold text-cyan-300 shrink-0">Store Cost:</span>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  value={createCostVal}
-                                  onChange={(e) => setCreateCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                                  className="bg-slate-900 border border-slate-700 text-slate-100 text-xs font-mono font-bold px-2 py-1 rounded outline-none w-20"
-                                />
-                                <select
-                                  value={createCostUnit}
-                                  onChange={(e) => setCreateCostUnit(e.target.value as 's' | 'g')}
-                                  className="bg-slate-900 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded outline-none cursor-pointer"
-                                >
-                                  <option value="s">Silver (s)</option>
-                                  <option value="g">Gold (g)</option>
-                                </select>
-                                <span className="text-[11px] text-slate-400 italic">
-                                  ({createCostUnit === 'g' ? `${createCostVal * 100}s equivalent` : `${Math.floor(createCostVal / 100)}g ${createCostVal % 100}s`})
-                                </span>
-                              </div>
-                            )}
-
-                            <div className={`grid ${type === 'spells' ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-slate-300 shrink-0">Action:</span>
-                                <select
-                                  value={createAction}
-                                  onChange={(e) => setCreateAction(e.target.value)}
-                                  className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full cursor-pointer"
-                                >
-                                  {ACTION_OPTIONS.map((opt) => (
-                                    <option key={opt} value={opt}>{opt}</option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-slate-300 shrink-0">Usage:</span>
-                                <select
-                                  value={createUsage}
-                                  onChange={(e) => setCreateUsage(e.target.value)}
-                                  className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full cursor-pointer"
-                                >
-                                  {USAGE_OPTIONS.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              {type === 'spells' && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-bold text-slate-300 shrink-0">Tier:</span>
-                                  <select
-                                    value={createTier}
-                                    onChange={(e) => setCreateTier(e.target.value as any)}
-                                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full cursor-pointer"
-                                  >
-                                    <option value="Minor">🍺 Minor</option>
-                                    <option value="Lesser">🪄 Lesser</option>
-                                    <option value="Greater">🪬 Greater</option>
-                                    <option value="Epic">💫 Epic</option>
-                                  </select>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex flex-col gap-1 pt-1">
-                              <div className="flex items-center justify-between flex-wrap gap-1">
-                                <span className="text-xs font-bold text-slate-300">Effect Description</span>
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  <span className="text-[10px] text-slate-400 font-bold mr-0.5">Insert Icon:</span>
-                                  {MAIN_ABILITY_ICONS.map((item) => (
-                                    <button
-                                      key={item.label}
-                                      type="button"
-                                      onClick={() => insertIconAtCursor(item.icon)}
-                                      className="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded text-[11px] font-bold text-slate-200 transition-colors flex items-center gap-1 shadow-sm cursor-pointer"
-                                      title={`Insert ${item.icon} (${item.label}) at cursor`}
-                                    >
-                                      <span>{item.icon}</span>
-                                      <span className="hidden sm:inline text-[9px] text-slate-300">{item.label}</span>
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                              <textarea
-                                ref={createEffectRef}
-                                value={createEffect}
-                                onChange={(e) => setCreateEffect(e.target.value)}
-                                rows={3}
-                                className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400 resize-none"
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          <button
-                            type="submit"
-                            className="w-full mt-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
-                          >
-                            <Plus className="w-4 h-4" />
-                            <span>{type === 'spells' ? 'Save Custom Item to Vault (0 AP)' : '+ Save & Learn to Vault'}</span>
-                          </button>
-                        </form>
                       </div>
                     )}
 
