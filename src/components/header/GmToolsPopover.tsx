@@ -93,7 +93,7 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
           </div>
         </button>
 
-        {/* Tool 3: The Crafting Mall */}
+        {/* Tool 3: Player's Workshop */}
         {onOpenCraftingMall && (
           <button
             onClick={() => {
@@ -103,19 +103,19 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
             className="group flex items-start gap-3 p-2.5 rounded-lg bg-slate-950/80 hover:bg-amber-950/30 border border-slate-800 hover:border-amber-500/50 transition-all text-left w-full cursor-pointer"
           >
             <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 group-hover:bg-amber-500/20 group-hover:text-amber-300 transition-colors shrink-0">
-              🏪
+              🛠️
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1">
                 <span className="font-outfit font-bold text-slate-100 group-hover:text-amber-300 transition-colors truncate">
-                  The Crafting Mall
+                  Player's Workshop
                 </span>
                 <span className="text-[10px] font-bold text-amber-950 bg-amber-400 px-1.5 py-0.5 rounded uppercase shrink-0">
-                  Mall
+                  Workshop
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
-                Browse personal, party, & canon creations.
+                Browse personal creations, party mall, & hall of fame.
               </p>
             </div>
           </button>

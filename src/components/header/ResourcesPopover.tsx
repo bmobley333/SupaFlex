@@ -7,7 +7,6 @@ interface ResourcesPopoverProps {
   onOpenLootGenerator?: () => void;
   onOpenNishTcGenerator?: () => void;
   onOpenCraftingMall?: () => void;
-  onOpenPlayerWorkshop?: () => void;
   isGmMode?: boolean;
 }
 
@@ -16,7 +15,6 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
   onOpenLootGenerator, 
   onOpenNishTcGenerator,
   onOpenCraftingMall,
-  onOpenPlayerWorkshop,
   isGmMode = false,
 }) => {
   const { syncSheetRulesToDatabase } = useCharacterStore();
@@ -99,7 +97,7 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
           </button>
         )}
 
-        {/* Tool: The Crafting Mall */}
+        {/* Tool: Player's Workshop */}
         {onOpenCraftingMall && (
           <button
             onClick={() => {
@@ -109,47 +107,19 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
             className="group flex items-start gap-3 p-2.5 rounded-lg bg-slate-950/80 hover:bg-amber-950/40 border border-slate-800 hover:border-amber-500/50 transition-all text-left w-full cursor-pointer"
           >
             <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 group-hover:bg-amber-500/20 group-hover:text-amber-300 transition-colors shrink-0">
-              🏪
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-outfit font-bold text-slate-100 group-hover:text-amber-300 transition-colors truncate">
-                  The Crafting Mall
-                </span>
-                <span className="text-[10px] font-bold text-amber-950 bg-amber-400 px-1.5 py-0.5 rounded uppercase shrink-0">
-                  Mall
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
-                Browse personal, party, & canon creations.
-              </p>
-            </div>
-          </button>
-        )}
-
-        {/* Tool: Player's Workshop */}
-        {onOpenPlayerWorkshop && (
-          <button
-            onClick={() => {
-              onOpenPlayerWorkshop();
-              onClose();
-            }}
-            className="group flex items-start gap-3 p-2.5 rounded-lg bg-slate-950/80 hover:bg-cyan-950/40 border border-slate-800 hover:border-cyan-500/50 transition-all text-left w-full cursor-pointer"
-          >
-            <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 transition-colors shrink-0">
               🛠️
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1">
-                <span className="font-outfit font-bold text-slate-100 group-hover:text-cyan-300 transition-colors truncate">
+                <span className="font-outfit font-bold text-slate-100 group-hover:text-amber-300 transition-colors truncate">
                   Player's Workshop
                 </span>
-                <span className="text-[10px] font-bold text-cyan-950 bg-cyan-400 px-1.5 py-0.5 rounded uppercase shrink-0">
-                  Forge
+                <span className="text-[10px] font-bold text-amber-950 bg-amber-400 px-1.5 py-0.5 rounded uppercase shrink-0">
+                  Workshop
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
-                Craft custom Powers, Relics, Hardware, & Skillsets.
+                Browse personal creations, party mall, & hall of fame.
               </p>
             </div>
           </button>

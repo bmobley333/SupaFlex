@@ -2,7 +2,7 @@
 // Unified Player's Workshop: Craft custom Powers, Relics, Hardware, & Skillsets with zero global database pollution.
 
 import React, { useState, useRef } from 'react';
-import { X, Wrench, Plus, Check, AlertCircle } from 'lucide-react';
+import { X, Plus, Check, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CustomCreationType, CustomCreationItem, Power, MagicItem, AbilitySlot } from '../../types/game';
@@ -38,6 +38,21 @@ const MAIN_ABILITY_ICONS = [
   { icon: '⚡', label: 'Instant' },
   { icon: '💎', label: 'Gem' },
 ];
+
+export const AnvilIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+  >
+    <path d="M3 8c0-1.7 1.3-3 3-3h15v3c-1.5 0-3 1-3 2.5V13a4 4 0 0 1-3 3.9V19h2a1 1 0 0 1 1 1v1H6v-1a1 1 0 0 1 1-1h2v-2.1A4 4 0 0 1 6 13v-2.5C6 9 4.5 8 3 8z" />
+  </svg>
+);
 
 export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen, onClose, onItemSaved }) => {
   const playerEmail = useCharacterStore((state) => state.playerEmail);
@@ -214,7 +229,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
       setFeedback({
         type: 'success',
-        message: `✅ Successfully forged '${name.trim()}' and saved to your Personal Workshop library!`,
+        message: `✅ Successfully forged '${name.trim()}' and saved to your Creations library!`,
       });
 
       handleResetForm();
@@ -228,17 +243,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
       <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-xl shadow-2xl shadow-amber-950/50 flex flex-col max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-              <Wrench className="w-5 h-5" />
+              <AnvilIcon className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-outfit font-extrabold text-base text-amber-300 tracking-wide flex items-center gap-1.5">
-                Player's Workshop
+                Player's Forge
               </h3>
               <p className="text-xs text-slate-400">
                 Craft custom Powers, Relics, Hardware & Skillsets.
@@ -501,7 +516,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
               className="w-full py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-50 text-white font-outfit font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-950/50 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>{isSubmitting ? 'Forging Creation...' : `Save ${name.trim() || 'Creation'} to My Workshop Library`}</span>
+              <span>{isSubmitting ? 'Forging Creation...' : `Save ${name.trim() || 'Creation'} to My Creations Library`}</span>
             </button>
           </div>
         </form>

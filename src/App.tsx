@@ -523,7 +523,6 @@ export default function App() {
                   onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
                   onOpenNishTcGenerator={() => setShowNishTcModal(true)}
                   onOpenCraftingMall={() => setShowCraftingMallModal(true)}
-                  onOpenPlayerWorkshop={() => setShowPlayerWorkshopModal(true)}
                   isGmMode={activeRole === 'gm'}
                 />
               )}
@@ -698,16 +697,16 @@ export default function App() {
         />
       </ErrorBoundary>
 
-      {/* 🛠️ Player's Workshop Modal */}
-      <ErrorBoundary fallbackTitle="Player Workshop Error" onClose={() => setShowPlayerWorkshopModal(false)}>
+      {/* ⚒️ Player's Forge Modal */}
+      <ErrorBoundary fallbackTitle="Player's Forge Error" onClose={() => setShowPlayerWorkshopModal(false)}>
         <PlayerWorkshopModal
           isOpen={showPlayerWorkshopModal}
           onClose={() => setShowPlayerWorkshopModal(false)}
         />
       </ErrorBoundary>
 
-      {/* 🏪 The Crafting Mall Modal */}
-      <ErrorBoundary fallbackTitle="Crafting Mall Error" onClose={() => setShowCraftingMallModal(false)}>
+      {/* 🛠️ Player's Workshop Modal */}
+      <ErrorBoundary fallbackTitle="Player's Workshop Error" onClose={() => setShowCraftingMallModal(false)}>
         <CraftingMallModal
           isOpen={showCraftingMallModal}
           onClose={() => setShowCraftingMallModal(false)}

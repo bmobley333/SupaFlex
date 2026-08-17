@@ -2,7 +2,7 @@
 // The Crafting Mall: Shared marketplace for personal craftings, party-approved creations, & canon showcase.
 
 import React, { useState, useEffect } from 'react';
-import { X, Store, Send, Check, Trash2, Plus, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Send, Check, Trash2, Plus, AlertCircle, RefreshCw } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CustomCreationItem, CustomCreationType, Power, MagicItem, AbilitySlot } from '../../types/game';
@@ -231,12 +231,12 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-              <Store className="w-5 h-5" />
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-lg flex items-center justify-center">
+              🛠️
             </div>
             <div>
               <h3 className="font-outfit font-extrabold text-base text-amber-300 tracking-wide flex items-center gap-2">
-                The Crafting Mall
+                Player's Workshop
                 <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
                   {activePartyId ? `Party Room: ${activePartyId}` : 'Solo Mode'}
                 </span>
@@ -250,7 +250,6 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
             {onOpenWorkshop && (
               <button
                 onClick={() => {
-                  onClose();
                   onOpenWorkshop();
                 }}
                 className="px-3 py-1.5 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 text-amber-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
@@ -280,7 +279,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
             >
-              👤 My Library ({personalItems.length})
+              👤 My Creations ({personalItems.length})
             </button>
             <button
               type="button"
@@ -302,9 +301,31 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
             >
-              🌟 Canon Showcase ({showcaseItems.length})
+              🌟 Hall of Fame ({showcaseItems.length})
             </button>
           </div>
+        </div>
+
+        {/* Dynamic Contextual Subtitle Banner */}
+        <div className="px-6 py-2 bg-slate-950/70 border-b border-slate-800/80 text-xs text-center shrink-0">
+          {activeTab === 'my_creations' && (
+            <p className="text-amber-300/90 font-semibold tracking-wide flex items-center justify-center gap-1.5 animate-fadeIn">
+              <span>👤</span>
+              <span>Items & Abilities I've forged.</span>
+            </p>
+          )}
+          {activeTab === 'party_mall' && (
+            <p className="text-indigo-300/90 font-semibold tracking-wide flex items-center justify-center gap-1.5 animate-fadeIn">
+              <span>🏛️</span>
+              <span>GM approved Craftings available to the GM's party.</span>
+            </p>
+          )}
+          {activeTab === 'showcase' && (
+            <p className="text-emerald-300/90 font-semibold tracking-wide flex items-center justify-center gap-1.5 animate-fadeIn">
+              <span>🌟</span>
+              <span>Designer approved for ALL players. These are now incorporated fully into SupaFlex and available to everyone.</span>
+            </p>
+          )}
         </div>
 
         {/* Secondary Filter & Search Bar */}
@@ -515,16 +536,15 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-48 text-slate-500 text-xs italic gap-1">
-              <span>No creations found matching filters in {activeTab === 'my_creations' ? 'My Library' : activeTab === 'party_mall' ? 'Party Mall' : 'Canon Showcase'}.</span>
+              <span>No creations found matching filters in {activeTab === 'my_creations' ? 'My Creations' : activeTab === 'party_mall' ? 'Party Mall' : 'Hall of Fame'}.</span>
               {activeTab === 'my_creations' && (
                 <button
                   onClick={() => {
-                    onClose();
                     if (onOpenWorkshop) onOpenWorkshop();
                   }}
                   className="text-amber-400 hover:underline font-bold not-italic mt-1"
                 >
-                  + Forge your first custom creation in Player's Workshop
+                  + Forge your first custom creation in Player's Forge
                 </button>
               )}
             </div>
