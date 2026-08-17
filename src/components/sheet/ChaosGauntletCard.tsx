@@ -127,7 +127,6 @@ export const ChaosGauntletCard: React.FC = () => {
 
   // Handle Socketing a Gem into a Specific Slot
   const handleEquipGem = (targetSlotId: string, gem: SupabaseChaosGem) => {
-    const targetMeta = SLOT_METADATA.find((m) => m.slot_id === targetSlotId);
     const newGem: ChaosGemItem = {
       id: gem.id,
       name: gem.name,
@@ -152,7 +151,6 @@ export const ChaosGauntletCard: React.FC = () => {
     });
 
     saveActiveCharacter();
-    showToast(`💎 Socketed '${gem.name}' into ${targetMeta?.label || 'Gauntlet'}!`, 'success');
   };
 
   // Handle Toggle Checkbox on a Socketed Gem (Auto-Shatter on 3rd Checked Box)
@@ -230,7 +228,6 @@ export const ChaosGauntletCard: React.FC = () => {
       };
     });
     saveActiveCharacter();
-    showToast(`⚡ Mega Slot '${slot.gem.name}' triggered via Spark! Durability preserved.`, 'success');
   };
 
   // Handle Removal (Destroy Gem)
