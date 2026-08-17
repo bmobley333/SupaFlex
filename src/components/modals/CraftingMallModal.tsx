@@ -1,8 +1,5 @@
-// src/components/modals/CraftingMallModal.tsx
-// The Crafting Mall: Shared marketplace for personal craftings, party-approved creations, & canon showcase.
-
 import React, { useState, useEffect } from 'react';
-import { X, Send, Check, Trash2, Plus, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Send, Check, Trash2, Plus, AlertCircle, RefreshCw, Crown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CustomCreationItem, CustomCreationType, Power, MagicItem, AbilitySlot } from '../../types/game';
@@ -25,13 +22,14 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
 
   const isGm = activeRole === 'gm';
 
-  const [activeTab, setActiveTab] = useState<'my_creations' | 'party_mall' | 'showcase'>('my_creations');
+  const [activeTab, setActiveTab] = useState<'my_creations' | 'party_mall' | 'showcase' | 'submissions'>('my_creations');
   const [typeFilter, setTypeFilter] = useState<'all' | CustomCreationType>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [personalItems, setPersonalItems] = useState<CustomCreationItem[]>([]);
   const [partyItems, setPartyItems] = useState<CustomCreationItem[]>([]);
   const [showcaseItems, setShowcaseItems] = useState<CustomCreationItem[]>([]);
+  const [submissionItems, setSubmissionItems] = useState<CustomCreationItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -49,10 +47,15 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
 
       if (activePartyId) {
         // Party items: filtered by party_id and (gm_approved OR author is active GM)
-        const partyResult = await gameApi.getPartyCustomItems(activePartyId);
+        const [partyResult, pendingResult] = await Promise.all([
+          gameApi.getPartyCustomItems(activePartyId),
+          isGm ? gameApi.getPendingPartySubmissions(activePartyId) : Promise.resolve([]),
+        ]);
         setPartyItems(partyResult);
+        setSubmissionItems(pendingResult);
       } else {
         setPartyItems([]);
+        setSubmissionItems([]);
       }
     } catch (err: any) {
       console.error('[CraftingMallModal] Error loading items:', err);
@@ -70,7 +73,14 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
   if (!isOpen) return null;
 
   // Active items list based on tab
-  const currentList = activeTab === 'my_creations' ? personalItems : activeTab === 'party_mall' ? partyItems : showcaseItems;
+  const currentList =
+    activeTab === 'my_creations'
+      ? personalItems
+      : activeTab === 'party_mall'
+      ? partyItems
+      : activeTab === 'showcase'
+      ? showcaseItems
+      : submissionItems;
 
   const filteredItems = currentList.filter((item) => {
     if (typeFilter !== 'all' && item.type !== typeFilter) return false;
@@ -219,12 +229,50 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
       await gameApi.deleteCustomItem(item.id);
       setFeedback({
         type: 'success',
-        message: `🗑️ Deleted '${item.name}' from your library.`,
+        message: `Deleted '${item.name}' from your personal creations.`,
       });
       loadData();
     } catch (err: any) {
       console.error('[CraftingMallModal] Error deleting item:', err);
       setFeedback({ type: 'error', message: 'Failed to delete creation.' });
+    }
+  };
+
+  const handleApproveSubmission = async (item: CustomCreationItem) => {
+    try {
+      await gameApi.updateCustomItem(item.id, {
+        gm_approved: true,
+        approved_by_gm_email: playerEmail || undefined,
+      });
+
+      setFeedback({
+        type: 'success',
+        message: `👑 Approved '${item.name}' for Party [${activePartyId}]! It is now live in the Party Mall.`,
+      });
+      loadData();
+    } catch (err: any) {
+      console.error('[CraftingMallModal] Error approving submission:', err);
+      setFeedback({ type: 'error', message: 'Failed to approve submission.' });
+    }
+  };
+
+  const handleRejectSubmission = async (item: CustomCreationItem) => {
+    if (!window.confirm(`Reject '${item.name}' and return it to ${item.author_name}'s personal library?`)) return;
+
+    try {
+      await gameApi.updateCustomItem(item.id, {
+        party_id: null,
+        gm_approved: false,
+      });
+
+      setFeedback({
+        type: 'success',
+        message: `Returned '${item.name}' to ${item.author_name}'s personal drafts.`,
+      });
+      loadData();
+    } catch (err: any) {
+      console.error('[CraftingMallModal] Error rejecting submission:', err);
+      setFeedback({ type: 'error', message: 'Failed to reject submission.' });
     }
   };
 
@@ -274,7 +322,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
 
         {/* Primary Tabs (Multi-Option Pill Switch) */}
         <div className="px-6 pt-3 pb-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0">
-          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap sm:flex-nowrap">
             <button
               type="button"
               onClick={() => setActiveTab('my_creations')}
@@ -308,6 +356,19 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
             >
               🌟 Hall of Fame ({showcaseItems.length})
             </button>
+            {isGm && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('submissions')}
+                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeTab === 'submissions'
+                    ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                    : 'text-rose-400 hover:text-rose-200 border border-transparent'
+                }`}
+              >
+                📥 Player Submissions ({submissionItems.length})
+              </button>
+            )}
           </div>
         </div>
 
@@ -329,6 +390,12 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
             <p className="text-emerald-300/90 font-semibold tracking-wide flex items-center justify-center gap-1.5 animate-fadeIn">
               <span>🌟</span>
               <span>Designer approved for ALL players. These are now incorporated fully into SupaFlex and available to everyone.</span>
+            </p>
+          )}
+          {activeTab === 'submissions' && (
+            <p className="text-rose-300/90 font-semibold tracking-wide flex items-center justify-center gap-1.5 animate-fadeIn">
+              <span>📥</span>
+              <span>Review & approve party member custom drafts for this campaign's Party Mall.</span>
             </p>
           )}
         </div>
@@ -525,7 +592,25 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                         </div>
                       )}
 
-                      {activeTab !== 'my_creations' && <div />}
+                      {activeTab === 'submissions' && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleApproveSubmission(item)}
+                            className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border-emerald-500/50 flex items-center gap-1 transition-all shadow-sm cursor-pointer"
+                          >
+                            <Crown className="w-3.5 h-3.5 text-amber-300" />
+                            <span>Approve to Party Mall</span>
+                          </button>
+                          <button
+                            onClick={() => handleRejectSubmission(item)}
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border-slate-700 hover:border-rose-500/40 transition-colors cursor-pointer"
+                          >
+                            <span>Return to Drafts</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {activeTab !== 'my_creations' && activeTab !== 'submissions' && <div />}
 
                       <button
                         onClick={() => handleAcceptToHero(item)}
@@ -541,7 +626,13 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-48 text-slate-500 text-xs italic gap-1">
-              <span>No creations found matching filters in {activeTab === 'my_creations' ? 'My Creations' : activeTab === 'party_mall' ? 'Party Mall' : 'Hall of Fame'}.</span>
+              <span>
+                {activeTab === 'submissions'
+                  ? 'No pending player submissions found for this campaign room.'
+                  : `No creations found matching filters in ${
+                      activeTab === 'my_creations' ? 'My Creations' : activeTab === 'party_mall' ? 'Party Mall' : 'Hall of Fame'
+                    }.`}
+              </span>
               {activeTab === 'my_creations' && (
                 <button
                   onClick={() => {

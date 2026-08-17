@@ -17,7 +17,6 @@ import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
 import { NishTcModal } from './components/modals/NishTcModal';
 import { PlayerWorkshopModal } from './components/modals/PlayerWorkshopModal';
 import { CraftingMallModal } from './components/modals/CraftingMallModal';
-import { GmSubmissionsModal } from './components/modals/GmSubmissionsModal';
 import { MasterArchitectDeskModal } from './components/modals/MasterArchitectDeskModal';
 import { ApManagerModal } from './components/modals/ApManagerModal';
 import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
@@ -39,7 +38,6 @@ export default function App() {
   const [showGmToolsPopover, setShowGmToolsPopover] = useState(false);
   const [showPlayerWorkshopModal, setShowPlayerWorkshopModal] = useState(false);
   const [showCraftingMallModal, setShowCraftingMallModal] = useState(false);
-  const [showGmSubmissionsModal, setShowGmSubmissionsModal] = useState(false);
   const [showMasterArchitectDeskModal, setShowMasterArchitectDeskModal] = useState(false);
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
   const [showNishTcModal, setShowNishTcModal] = useState(false);
@@ -484,7 +482,6 @@ export default function App() {
                     onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
                     onOpenNishTcGenerator={() => setShowNishTcModal(true)}
                     onOpenCraftingMall={() => setShowCraftingMallModal(true)}
-                    onOpenGmSubmissions={() => setShowGmSubmissionsModal(true)}
                     onOpenMasterArchitectDesk={() => setShowMasterArchitectDeskModal(true)}
                     isMasterArchitect={playerEmail?.toLowerCase().trim() === 'metascapegame@gmail.com'}
                   />
@@ -704,13 +701,6 @@ export default function App() {
         />
       </ErrorBoundary>
 
-      {/* 📥 GM Submissions Queue Modal */}
-      <ErrorBoundary fallbackTitle="GM Submissions Error" onClose={() => setShowGmSubmissionsModal(false)}>
-        <GmSubmissionsModal
-          isOpen={showGmSubmissionsModal}
-          onClose={() => setShowGmSubmissionsModal(false)}
-        />
-      </ErrorBoundary>
 
       {/* 🏰 Master Architect Curation Desk Modal */}
       <ErrorBoundary fallbackTitle="Master Architect Desk Error" onClose={() => setShowMasterArchitectDeskModal(false)}>

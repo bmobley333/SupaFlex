@@ -6,7 +6,6 @@ interface GmToolsPopoverProps {
   onOpenLootGenerator: () => void;
   onOpenNishTcGenerator: () => void;
   onOpenCraftingMall?: () => void;
-  onOpenGmSubmissions?: () => void;
   onOpenMasterArchitectDesk?: () => void;
   isMasterArchitect?: boolean;
 }
@@ -16,7 +15,6 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
   onOpenLootGenerator,
   onOpenNishTcGenerator,
   onOpenCraftingMall,
-  onOpenGmSubmissions,
   onOpenMasterArchitectDesk,
   isMasterArchitect = false,
 }) => {
@@ -119,33 +117,7 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
           </button>
         )}
 
-        {/* Tool 4: Player Submissions Queue */}
-        {onOpenGmSubmissions && (
-          <button
-            onClick={() => {
-              onOpenGmSubmissions();
-              onClose();
-            }}
-            className="group flex items-start gap-3 p-2.5 rounded-lg bg-slate-950/80 hover:bg-indigo-950/40 border border-slate-800 hover:border-indigo-500/50 transition-all text-left w-full cursor-pointer"
-          >
-            <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-300 transition-colors shrink-0">
-              📥
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-outfit font-bold text-slate-100 group-hover:text-indigo-300 transition-colors truncate">
-                  Player Submissions
-                </span>
-                <span className="text-[10px] font-bold text-indigo-950 bg-indigo-400 px-1.5 py-0.5 rounded uppercase shrink-0">
-                  Queue
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
-                Review & approve party member custom drafts.
-              </p>
-            </div>
-          </button>
-        )}
+
 
 
 
