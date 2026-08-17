@@ -1454,7 +1454,7 @@ export const gameApi = {
         usage: item.item_data?.usage || '1-Enc',
         effect: item.item_data?.effect || '',
         notes: item.notes ? `${item.notes} (Official MetaScape Canon • Designed by ${item.author_name})` : `(Official MetaScape Canon • Designed by ${item.author_name})`,
-        genres: ['Universal'],
+        genres: item.item_data?.genres && item.item_data.genres.length > 0 ? item.item_data.genres : ['Medieval', 'Modern', 'SciFi'],
         created_at: new Date().toISOString(),
       };
 

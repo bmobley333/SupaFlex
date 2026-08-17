@@ -187,6 +187,16 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
           };
         });
         saveActiveCharacter();
+      } else if (type === 'skill') {
+        const formattedSkill = item_data?.formatted_skill || `${name} ${item_data?.attribute || '✨'}`;
+        updateActiveSheetData((prev) => {
+          const existingIndividual = prev.known_individual_skills || [];
+          return {
+            ...prev,
+            known_individual_skills: Array.from(new Set([...existingIndividual, formattedSkill])),
+          };
+        });
+        saveActiveCharacter();
       }
 
       setFeedback({
@@ -404,7 +414,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
         <div className="px-6 py-2.5 bg-slate-950/30 border-b border-slate-800/60 flex items-center justify-between gap-3 shrink-0 flex-wrap">
           {/* Sub-Filters */}
           <div className="flex items-center gap-1 flex-wrap">
-            {(['all', 'power', 'relic', 'hardware', 'skillset'] as const).map((t) => (
+            {(['all', 'power', 'relic', 'hardware', 'skill', 'skillset'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTypeFilter(t)}
@@ -422,6 +432,8 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                   ? '🏺 Relics'
                   : t === 'hardware'
                   ? '⚙️ Hardware'
+                  : t === 'skill'
+                  ? '🎯 Skills'
                   : '🎓 Skillsets'}
               </button>
             ))}
@@ -482,6 +494,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                 const isPower = item.type === 'power';
                 const isRelic = item.type === 'relic';
                 const isHardware = item.type === 'hardware';
+                const isSkill = item.type === 'skill';
                 const isSkillset = item.type === 'skillset';
 
                 return (
@@ -504,10 +517,12 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                                 ? 'bg-purple-950 text-purple-300 border-purple-500/40'
                                 : isHardware
                                 ? 'bg-cyan-950 text-cyan-300 border-cyan-500/40'
+                                : isSkill
+                                ? 'bg-amber-950 text-amber-300 border-amber-500/40'
                                 : 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
                             }`}
                           >
-                            {isPower ? '🔥 Power' : isRelic ? '🏺 Relic' : isHardware ? '⚙️ Hardware' : '🎓 Skillset'}
+                            {isPower ? '🔥 Power' : isRelic ? '🏺 Relic' : isHardware ? '⚙️ Hardware' : isSkill ? '🎯 Skill' : '🎓 Skillset'}
                           </span>
                         </div>
 
@@ -531,7 +546,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                       </div>
 
                       {/* Action & Usage Pill */}
-                      {!isSkillset && (
+                      {!isSkillset && !isSkill && (
                         <div className="flex items-center gap-1 shrink-0">
                           {item.item_data?.action && (
                             <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-300">
@@ -560,6 +575,10 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                             ))}
                           </div>
                         </div>
+                      ) : isSkill ? (
+                        <p className="text-[11px] leading-relaxed font-sans text-amber-200">
+                          Assigned Attribute: <span className="font-bold">{item.item_data?.attribute || '✨'}</span>
+                        </p>
                       ) : (
                         <p className="text-[11px] leading-relaxed font-sans">{item.item_data?.effect || 'No description provided.'}</p>
                       )}

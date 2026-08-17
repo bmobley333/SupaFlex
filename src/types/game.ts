@@ -828,7 +828,7 @@ export interface PartySessionMember {
 
 export type AuthMode = 'login' | 'signup' | 'reset_password' | 'profile';
 
-export type CustomCreationType = 'power' | 'relic' | 'hardware' | 'skillset';
+export type CustomCreationType = 'power' | 'relic' | 'hardware' | 'skill' | 'skillset';
 
 export interface CustomCreationData {
   action?: string;

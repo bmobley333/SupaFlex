@@ -1,22 +1,18 @@
 // src/components/modals/PlayerWorkshopModal.tsx
-// Unified Player's Workshop / Player's Forge: Craft custom Powers, Relics, Hardware, & Skillsets.
+// Unified Player's Workshop / Player's Forge: Craft custom Powers, Relics, Hardware, Skills, & Skillsets.
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Check, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CustomCreationType, CustomCreationItem } from '../../types/game';
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
+import { InfoTooltip } from '../common/InfoTooltip';
 
 interface PlayerWorkshopModalProps {
   isOpen: boolean;
   onClose: () => void;
   onItemSaved?: () => void;
-}
-
-interface SkillsetItem {
-  name: string;
-  attribute: string;
 }
 
 const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
@@ -49,6 +45,18 @@ const SKILLSET_ATTRIBUTE_OPTIONS = [
   { label: 'Moxie🫀', icon: '🫀' },
 ];
 
+const POWER_READY_CATEGORIES = [
+  { id: 'primary_arsenal', label: 'Primary / Arsenal', icon: '⚔️' },
+  { id: 'mobility_defense', label: 'Mobility & Defense', icon: '🛡️' },
+  { id: 'support_passive', label: 'Support & Passives', icon: '✨' },
+];
+
+const GENRE_OPTIONS = [
+  { id: 'Medieval', label: 'Medieval', icon: '🏰' },
+  { id: 'Modern', label: 'Modern', icon: '🏙️' },
+  { id: 'SciFi', label: 'SciFi', icon: '🚀' },
+];
+
 export const AnvilIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
   <svg
     viewBox="0 0 24 24"
@@ -69,6 +77,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   const playerName = useCharacterStore((state) => state.playerName);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeRole = useCharacterStore((state) => state.activeRole);
+  const skillsets = useCharacterStore((state) => state.skillsets);
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter);
 
   const isGm = activeRole === 'gm';
 
@@ -80,19 +90,129 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   const [tier, setTier] = useState<'Minor' | 'Lesser' | 'Greater' | 'Epic'>('Minor');
   const [costVal, setCostVal] = useState<number>(10);
   const [costUnit, setCostUnit] = useState<'s' | 'g'>('g');
+  const [powerReady, setPowerReady] = useState<string>('primary_arsenal');
+  const [skillAttribute, setSkillAttribute] = useState<string>('💪');
   const [effect, setEffect] = useState('');
   const [notes, setNotes] = useState('');
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
-  // Skillset State (2 to 5 items with required attribute)
-  const [skillsetItems, setSkillsetItems] = useState<SkillsetItem[]>([
-    { name: '', attribute: '✨' },
-    { name: '', attribute: '💪' },
-  ]);
+  // Skillset State (2 to 5 selected existing skill strings)
+  const [selectedSkillsetSkills, setSelectedSkillsetSkills] = useState<string[]>(['', '']);
+
+  // Custom skills loaded from database / API
+  const [customSkillsList, setCustomSkillsList] = useState<CustomCreationItem[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const effectTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load custom items when modal is opened to ensure dropdown catalog has latest custom/party creations
+  useEffect(() => {
+    if (isOpen) {
+      const loadCustomItems = async () => {
+        try {
+          const [personal, all] = await Promise.all([
+            playerEmail ? gameApi.getPersonalCustomItems(playerEmail) : Promise.resolve([]),
+            gameApi.getAllCustomItems(),
+          ]);
+          const customSkills = [...personal, ...all].filter((it) => it.type === 'skill' || it.type === 'skillset');
+          setCustomSkillsList(customSkills);
+        } catch (err) {
+          console.error('[PlayerWorkshopModal] Error loading custom skills for catalog:', err);
+        }
+      };
+      loadCustomItems();
+    }
+  }, [isOpen, playerEmail, activePartyId]);
+
+  // Aggregate all unique skills across stock database skillsets, custom sheet skills, and custom creations
+  const availableSkillsCatalog = useMemo(() => {
+    const map = new Map<string, string>(); // cleanNameKey -> formattedSkillString
+
+    // 1. Stock database skillsets
+    if (Array.isArray(skillsets)) {
+      skillsets.forEach((ss) => {
+        if (Array.isArray(ss.skills)) {
+          ss.skills.forEach((rawSkill) => {
+            if (typeof rawSkill === 'string' && rawSkill.trim()) {
+              const trimmed = rawSkill.trim();
+              let cleanName = trimmed;
+              for (const icon of ['✨', '💪', '👁️', '🏃', '🫀']) {
+                cleanName = cleanName.replace(icon, '').trim();
+              }
+              if (cleanName && !map.has(cleanName.toLowerCase())) {
+                map.set(cleanName.toLowerCase(), trimmed);
+              }
+            }
+          });
+        }
+      });
+    }
+
+    // 2. Character sheet custom skillsets & individual skills
+    const customSkillsets = activeCharacter?.sheet_data?.custom_skillsets || [];
+    customSkillsets.forEach((cs) => {
+      if (Array.isArray(cs.skills)) {
+        cs.skills.forEach((rawSkill) => {
+          if (typeof rawSkill === 'string' && rawSkill.trim()) {
+            const trimmed = rawSkill.trim();
+            let cleanName = trimmed;
+            for (const icon of ['✨', '💪', '👁️', '🏃', '🫀']) {
+              cleanName = cleanName.replace(icon, '').trim();
+            }
+            if (cleanName && !map.has(cleanName.toLowerCase())) {
+              map.set(cleanName.toLowerCase(), trimmed);
+            }
+          }
+        });
+      }
+    });
+
+    const individualSkills = activeCharacter?.sheet_data?.known_individual_skills || [];
+    individualSkills.forEach((rawSkill) => {
+      if (typeof rawSkill === 'string' && rawSkill.trim()) {
+        const trimmed = rawSkill.trim();
+        let cleanName = trimmed;
+        for (const icon of ['✨', '💪', '👁️', '🏃', '🫀']) {
+          cleanName = cleanName.replace(icon, '').trim();
+        }
+        if (cleanName && !map.has(cleanName.toLowerCase())) {
+          map.set(cleanName.toLowerCase(), trimmed);
+        }
+      }
+    });
+
+    // 3. Custom creation skills & skillsets from API
+    customSkillsList.forEach((it) => {
+      if (it.type === 'skill' && it.name) {
+        const attr = it.item_data?.attribute || '✨';
+        const formatted = it.item_data?.formatted_skill || `${it.name.trim()} ${attr}`;
+        const cleanName = it.name.trim();
+        if (cleanName && !map.has(cleanName.toLowerCase())) {
+          map.set(cleanName.toLowerCase(), formatted);
+        }
+      } else if (it.type === 'skillset' && Array.isArray(it.item_data?.skills)) {
+        it.item_data.skills.forEach((rawSkill: string) => {
+          if (typeof rawSkill === 'string' && rawSkill.trim()) {
+            const trimmed = rawSkill.trim();
+            let cleanName = trimmed;
+            for (const icon of ['✨', '💪', '👁️', '🏃', '🫀']) {
+              cleanName = cleanName.replace(icon, '').trim();
+            }
+            if (cleanName && !map.has(cleanName.toLowerCase())) {
+              map.set(cleanName.toLowerCase(), trimmed);
+            }
+          }
+        });
+      }
+    });
+
+    // Sort alphabetically by clean skill name
+    return Array.from(map.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map((entry) => entry[1]);
+  }, [skillsets, activeCharacter, customSkillsList]);
 
   if (!isOpen) return null;
 
@@ -113,47 +233,45 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     }, 0);
   };
 
-  const handleAddSkillsetItem = () => {
-    if (skillsetItems.length < 5) {
-      setSkillsetItems((prev) => [...prev, { name: '', attribute: '✨' }]);
+  const handleAddSkillsetRow = () => {
+    if (selectedSkillsetSkills.length < 5) {
+      setSelectedSkillsetSkills((prev) => [...prev, '']);
     }
   };
 
-  const handleRemoveSkillsetItem = (index: number) => {
-    if (skillsetItems.length > 2) {
-      setSkillsetItems((prev) => prev.filter((_, i) => i !== index));
+  const handleRemoveSkillsetRow = (index: number) => {
+    if (selectedSkillsetSkills.length > 2) {
+      setSelectedSkillsetSkills((prev) => prev.filter((_, i) => i !== index));
     }
   };
 
-  const handleUpdateSkillName = (index: number, skillName: string) => {
-    setSkillsetItems((prev) => {
+  const handleSelectSkill = (index: number, skillVal: string) => {
+    setSelectedSkillsetSkills((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], name: skillName };
+      next[index] = skillVal;
       return next;
     });
   };
 
-  const handleUpdateSkillAttribute = (index: number, attrIcon: string) => {
-    setSkillsetItems((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], attribute: attrIcon };
-      return next;
-    });
+  const handleToggleGenre = (genreId: string) => {
+    setSelectedGenres((prev) =>
+      prev.includes(genreId) ? prev.filter((g) => g !== genreId) : [...prev, genreId]
+    );
   };
 
   const handleResetForm = () => {
     setName('');
     setEffect('');
     setNotes('');
-    setSkillsetItems([
-      { name: '', attribute: '✨' },
-      { name: '', attribute: '💪' },
-    ]);
+    setSelectedGenres([]);
+    setSelectedSkillsetSkills(['', '']);
     setAction('AM');
     setUsage('1');
     setTier('Minor');
     setCostVal(10);
     setCostUnit('g');
+    setPowerReady('primary_arsenal');
+    setSkillAttribute('💪');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,25 +282,39 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     }
 
     if (creationType === 'skillset') {
-      if (skillsetItems.length < 2 || skillsetItems.length > 5) {
+      if (selectedSkillsetSkills.length < 2 || selectedSkillsetSkills.length > 5) {
         setFeedback({ type: 'error', message: 'A Skillset must contain between 2 and 5 skills.' });
         return;
       }
-      for (let i = 0; i < skillsetItems.length; i++) {
-        if (!skillsetItems[i].name.trim()) {
-          setFeedback({ type: 'error', message: `Skill #${i + 1} name cannot be empty.` });
+      for (let i = 0; i < selectedSkillsetSkills.length; i++) {
+        if (!selectedSkillsetSkills[i]) {
+          setFeedback({ type: 'error', message: `Please select a valid skill for slot #${i + 1}.` });
           return;
         }
-        if (!skillsetItems[i].attribute) {
-          setFeedback({ type: 'error', message: `Skill #${i + 1} must have a required attribute icon selected.` });
-          return;
-        }
+      }
+      const uniqueSelected = new Set(selectedSkillsetSkills);
+      if (uniqueSelected.size !== selectedSkillsetSkills.length) {
+        setFeedback({ type: 'error', message: 'Duplicate skills detected. Each skill in a skillset must be unique.' });
+        return;
+      }
+    } else if (creationType === 'skill') {
+      if (!skillAttribute) {
+        setFeedback({ type: 'error', message: 'Please select a required attribute for this skill.' });
+        return;
       }
     } else {
       if (!effect.trim()) {
-        setFeedback({ type: 'error', message: 'Effect description is required.' });
+        setFeedback({ type: 'error', message: 'Effect (rules) description is required.' });
         return;
       }
+    }
+
+    if (selectedGenres.length === 0) {
+      setFeedback({
+        type: 'error',
+        message: 'Please select at least one compatible Genre (Medieval, Modern, or SciFi).',
+      });
+      return;
     }
 
     setIsSubmitting(true);
@@ -197,31 +329,43 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
         ? 'Custom Power'
         : creationType === 'hardware'
         ? 'Custom Hardware'
+        : creationType === 'skill'
+        ? `${skillAttribute} Skill`
         : 'Custom Skillset';
     const costStr = creationType === 'hardware' ? `${costVal}${costUnit}` : undefined;
 
     const formattedSkills =
       creationType === 'skillset'
-        ? skillsetItems.map((item) => `${item.name.trim()} ${item.attribute}`)
+        ? selectedSkillsetSkills.map((s) => s.trim()).filter(Boolean)
         : undefined;
 
     const itemDataPayload: any = {
+      genres: selectedGenres,
       created_at: new Date().toISOString(),
     };
 
-    if (creationType !== 'skillset') {
+    if (creationType === 'power') {
       itemDataPayload.action = action;
       itemDataPayload.usage = usage;
       itemDataPayload.effect = effect.trim();
-    }
-
-    if (creationType === 'hardware') {
+      itemDataPayload.ready = powerReady;
+      itemDataPayload.ready_category = powerReady;
+    } else if (creationType === 'relic') {
+      itemDataPayload.action = action;
+      itemDataPayload.usage = usage;
+      itemDataPayload.effect = effect.trim();
+      itemDataPayload.slot_weight = getItemSlotWeight({ name: name.trim(), category: categoryStr }) as 1 | 2 | 3 | 4;
+      itemDataPayload.is_hardware = false;
+    } else if (creationType === 'hardware') {
+      itemDataPayload.action = action;
+      itemDataPayload.usage = usage;
+      itemDataPayload.effect = effect.trim();
       itemDataPayload.cost = costStr;
       itemDataPayload.is_hardware = true;
       itemDataPayload.slot_weight = getItemSlotWeight({ name: name.trim(), category: categoryStr }) as 1 | 2 | 3 | 4;
-    } else if (creationType === 'relic') {
-      itemDataPayload.slot_weight = getItemSlotWeight({ name: name.trim(), category: categoryStr }) as 1 | 2 | 3 | 4;
-      itemDataPayload.is_hardware = false;
+    } else if (creationType === 'skill') {
+      itemDataPayload.attribute = skillAttribute;
+      itemDataPayload.formatted_skill = `${name.trim()} ${skillAttribute}`;
     } else if (creationType === 'skillset') {
       itemDataPayload.skills = formattedSkills;
     }
@@ -262,7 +406,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
       <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-xl shadow-2xl shadow-amber-950/50 flex flex-col max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 bg-slate-950/60">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 bg-slate-950/60 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
               <AnvilIcon className="w-5 h-5" />
@@ -284,8 +428,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
               </h3>
               <p className="text-xs text-slate-400">
                 {isGm
-                  ? 'Craft custom Powers, Relics, Hardware & Skillsets with instant Party Mall auto-approval.'
-                  : 'Craft custom Powers, Relics, Hardware & Skillsets.'}
+                  ? 'Craft custom Powers, Relics, Hardware, Skills & Skillsets with instant Party Mall auto-approval.'
+                  : 'Craft custom Powers, Relics, Hardware, Skills & Skillsets.'}
               </p>
             </div>
           </div>
@@ -295,6 +439,67 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Primary Classification Tabs (Multi-Option Pill Switch) */}
+        <div className="px-5 pt-3 pb-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0">
+          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap sm:flex-nowrap">
+            <button
+              type="button"
+              onClick={() => setCreationType('power')}
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                creationType === 'power'
+                  ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🔥 Power
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreationType('relic')}
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                creationType === 'relic'
+                  ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🏺 Relic
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreationType('hardware')}
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                creationType === 'hardware'
+                  ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              ⚙️ Hardware
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreationType('skill')}
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                creationType === 'skill'
+                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🎯 Skill
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreationType('skillset')}
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                creationType === 'skillset'
+                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🎓 Skillset
+            </button>
+          </div>
         </div>
 
         {/* Form Body */}
@@ -317,84 +522,59 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </div>
           )}
 
-          {/* Type Selector Multi-Option Pill Switch */}
-          <div className="flex flex-col gap-1.5">
-            <span className="font-bold text-slate-300 font-outfit uppercase tracking-wider text-[11px]">
-              Creation Classification
-            </span>
-            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-              <button
-                type="button"
-                onClick={() => setCreationType('power')}
-                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  creationType === 'power'
-                    ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🔥 Power
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreationType('relic')}
-                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  creationType === 'relic'
-                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🏺 Relic
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreationType('hardware')}
-                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  creationType === 'hardware'
-                    ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                ⚙️ Hardware
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreationType('skillset')}
-                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  creationType === 'skillset'
-                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🎓 Skillset
-              </button>
-            </div>
-          </div>
-
           {/* Name */}
           <div className="flex flex-col gap-1">
-            <span className="font-bold text-slate-300">Creation Name</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-slate-300">
+                {creationType === 'skill' ? 'Skill Name' : 'Creation Name'}
+              </span>
+              <InfoTooltip text="Enter the unique name of your custom creation." />
+            </div>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={
-                creationType === 'power'
-                  ? 'e.g. Kinetic Repulsion, Void Tether...'
-                  : creationType === 'relic'
-                  ? 'e.g. Ring of the Sunken King...'
-                  : creationType === 'hardware'
-                  ? 'e.g. Sub-Dermal Comms Array...'
-                  : 'e.g. Infiltration Ops...'
-              }
               className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
               required
             />
           </div>
 
+          {/* Single Skill Attribute Selector (Skill Mode Only) */}
+          {creationType === 'skill' && (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-slate-300">Required Attribute</span>
+                <InfoTooltip text="Assign exactly one core attribute icon (Magic✨, Might💪, Mind👁️, Motion🏃, Moxie🫀) to this skill." />
+              </div>
+              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                {SKILLSET_ATTRIBUTE_OPTIONS.map((attr) => {
+                  const isSelected = skillAttribute === attr.icon;
+                  return (
+                    <button
+                      key={attr.icon}
+                      type="button"
+                      onClick={() => setSkillAttribute(attr.icon)}
+                      className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        isSelected
+                          ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <span>{attr.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Hardware Cost Row */}
           {creationType === 'hardware' && (
             <div className="flex items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-cyan-500/30">
-              <span className="font-bold text-cyan-300 shrink-0">Store Cost:</span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="font-bold text-cyan-300">Store Cost</span>
+                <InfoTooltip text="Enter the purchase cost in silver or gold pieces." />
+              </div>
               <input
                 type="number"
                 min={1}
@@ -416,11 +596,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </div>
           )}
 
-          {/* Action, Usage, Tier Grid (For Non-Skillset: Power, Relic, Hardware) */}
-          {creationType !== 'skillset' && (
+          {/* Action, Usage, Tier Grid (For Non-Skill/Skillset: Power, Relic, Hardware) */}
+          {creationType !== 'skillset' && creationType !== 'skill' && (
             <div className={`grid ${creationType === 'relic' ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
               <div className="flex flex-col gap-1">
-                <span className="font-bold text-slate-300">Action:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-300">Action</span>
+                  <InfoTooltip text="AM = Action/Move, A = Action, M = Move, P = Passive, F = Free." />
+                </div>
                 <select
                   value={action}
                   onChange={(e) => setAction(e.target.value)}
@@ -435,7 +618,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="font-bold text-slate-300">Usage:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-300">Usage</span>
+                  <InfoTooltip text="Frequency of activation (e.g. 1, 2, 3, 1-🍀 Luck, 1-⚡ Instant, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
+                </div>
                 <select
                   value={usage}
                   onChange={(e) => setUsage(e.target.value)}
@@ -451,7 +637,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
               {creationType === 'relic' && (
                 <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Tier:</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Tier</span>
+                    <InfoTooltip text="Relic tier classification (Minor, Lesser, Greater, Epic)." />
+                  </div>
                   <select
                     value={tier}
                     onChange={(e) => setTier(e.target.value as any)}
@@ -467,63 +656,84 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </div>
           )}
 
-          {/* Skillset Dynamic Skill Items List (2 to 5 with required attribute icon) */}
+          {/* Ready Category Selector Pill Switch (Power Only) */}
+          {creationType === 'power' && (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-slate-300">Ready Category</span>
+                <InfoTooltip text="Classify this power for the Ready Matrix: Primary / Arsenal (attacks/damage), Mobility & Defense (movement/shields), or Support & Passives (buffs/utility)." />
+              </div>
+              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                {POWER_READY_CATEGORIES.map((cat) => {
+                  const isSelected = powerReady === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setPowerReady(cat.id)}
+                      className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        isSelected
+                          ? cat.id === 'primary_arsenal'
+                            ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                            : cat.id === 'mobility_defense'
+                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                            : 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <span>{cat.icon}</span>
+                      <span>{cat.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Skillset Dynamic Skill Items List (2 to 5 with alphabetized dropdown catalog) */}
           {creationType === 'skillset' && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-300 font-outfit uppercase tracking-wider text-[11px]">
-                  Included Skills (2–5 Required)
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-300 font-outfit uppercase tracking-wider text-[11px]">
+                    Included Skills (2–5 Required)
+                  </span>
+                  <InfoTooltip text="Select 2 to 5 existing skills from the alphabetized catalog (stock, personal, and party creations) to compose this skillset." />
+                </div>
                 <span className="text-[10px] text-slate-400 font-semibold">
-                  {skillsetItems.length} of 5 Skills
+                  {selectedSkillsetSkills.length} of 5 Skills
                 </span>
               </div>
 
               <div className="flex flex-col gap-2">
-                {skillsetItems.map((item, idx) => (
+                {selectedSkillsetSkills.map((skillVal, idx) => (
                   <div
                     key={idx}
-                    className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
+                    className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center gap-2"
                   >
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                      <span className="text-[11px] font-mono font-bold text-slate-500 w-4 shrink-0 text-center">
-                        #{idx + 1}
-                      </span>
-                      <input
-                        type="text"
-                        value={item.name}
-                        onChange={(e) => handleUpdateSkillName(idx, e.target.value)}
-                        placeholder={`Skill ${idx + 1} name (e.g. Stealth, Lockpicking)`}
-                        className="flex-1 bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400 font-semibold min-w-0"
-                        required
-                      />
-                    </div>
-
-                    {/* Single-Choice Attribute Selector Pills */}
-                    <div className="bg-slate-900 border border-slate-800 p-0.5 rounded-lg flex items-center gap-0.5 shrink-0">
-                      {SKILLSET_ATTRIBUTE_OPTIONS.map((attr) => (
-                        <button
-                          key={attr.icon}
-                          type="button"
-                          onClick={() => handleUpdateSkillAttribute(idx, attr.icon)}
-                          className={`py-1 px-1.5 text-[11px] font-bold rounded transition-all flex items-center justify-center gap-0.5 cursor-pointer ${
-                            item.attribute === attr.icon
-                              ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm'
-                              : 'text-slate-400 hover:text-slate-200 border-transparent'
-                          }`}
-                          title={`Assign ${attr.label}`}
-                        >
-                          <span>{attr.label}</span>
-                        </button>
+                    <span className="text-[11px] font-mono font-bold text-slate-500 w-5 shrink-0 text-center">
+                      #{idx + 1}
+                    </span>
+                    <select
+                      value={skillVal}
+                      onChange={(e) => handleSelectSkill(idx, e.target.value)}
+                      className="flex-1 bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400 font-semibold min-w-0 cursor-pointer"
+                      required
+                    >
+                      <option value="">-- Select a Skill --</option>
+                      {availableSkillsCatalog.map((sk) => (
+                        <option key={sk} value={sk}>
+                          {sk}
+                        </option>
                       ))}
-                    </div>
+                    </select>
 
                     {/* Remove Button */}
-                    {skillsetItems.length > 2 && (
+                    {selectedSkillsetSkills.length > 2 && (
                       <button
                         type="button"
-                        onClick={() => handleRemoveSkillsetItem(idx)}
-                        className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-500/40 transition-colors shrink-0 cursor-pointer self-end sm:self-center"
+                        onClick={() => handleRemoveSkillsetRow(idx)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-500/40 transition-colors shrink-0 cursor-pointer"
                         title="Remove skill"
                       >
                         <X className="w-4 h-4" />
@@ -533,24 +743,27 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 ))}
               </div>
 
-              {skillsetItems.length < 5 && (
+              {selectedSkillsetSkills.length < 5 && (
                 <button
                   type="button"
-                  onClick={handleAddSkillsetItem}
+                  onClick={handleAddSkillsetRow}
                   className="py-1.5 px-3 rounded-xl border border-dashed border-slate-700 hover:border-amber-500/60 bg-slate-950/40 hover:bg-slate-900 text-slate-300 hover:text-amber-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>+ Add Skill ({skillsetItems.length}/5)</span>
+                  <span>+ Add Skill ({selectedSkillsetSkills.length}/5)</span>
                 </button>
               )}
             </div>
           )}
 
-          {/* Effect Description (Power, Relic, Hardware) */}
-          {creationType !== 'skillset' && (
+          {/* Effect (rules) (Power, Relic, Hardware) */}
+          {creationType !== 'skillset' && creationType !== 'skill' && (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between flex-wrap gap-1">
-                <span className="font-bold text-slate-300">Effect Description</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-300">Effect (rules)</span>
+                  <InfoTooltip text="Describe mechanical rules, damage dice, bonuses, or utility." />
+                </div>
                 <div className="flex items-center gap-1 flex-wrap">
                   <span className="text-[10px] text-slate-400 font-bold mr-0.5">Insert Icon:</span>
                   {ATTRIBUTE_EFFECT_ICONS.map((item) => (
@@ -571,7 +784,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 value={effect}
                 onChange={(e) => setEffect(e.target.value)}
                 rows={3}
-                placeholder="Describe mechanical effect, damage dice, bonuses, or utility..."
                 className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 resize-none"
                 required
               />
@@ -581,16 +793,46 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
           {/* Visual Description (Relic & Hardware Only) */}
           {(creationType === 'relic' || creationType === 'hardware') && (
             <div className="flex flex-col gap-1">
-              <span className="font-bold text-slate-300">Visual Description</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-slate-300">Visual Description</span>
+                <InfoTooltip text="Physical traits, materials, appearance, and visual cues (stored in notes)." />
+              </div>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="e.g. Ornate bronze band with azure runes, sleek matte-black titanium weave..."
                 className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400"
               />
             </div>
           )}
+
+          {/* Compatible Genres Multi-Select (Last Item Under Form Fields) */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-slate-300">Compatible Genres</span>
+              <InfoTooltip text="Select all campaign genres where this creation is available (Medieval, Modern, SciFi). At least one is required." />
+            </div>
+            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+              {GENRE_OPTIONS.map((g) => {
+                const isSelected = selectedGenres.includes(g.id);
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => handleToggleGenre(g.id)}
+                    className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      isSelected
+                        ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <span>{g.icon}</span>
+                    <span>{g.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Submit Button */}
           <div className="pt-1">
