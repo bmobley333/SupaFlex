@@ -1,11 +1,10 @@
 import React from 'react';
-import { Crown, Dices, Wrench, X } from 'lucide-react';
+import { Crown, Dices, X } from 'lucide-react';
 
 interface GmToolsPopoverProps {
   onClose: () => void;
   onOpenLootGenerator: () => void;
   onOpenNishTcGenerator: () => void;
-  onOpenCustomItemCreator: () => void;
   onOpenCraftingMall?: () => void;
   onOpenGmSubmissions?: () => void;
   onOpenMasterArchitectDesk?: () => void;
@@ -16,7 +15,6 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
   onClose,
   onOpenLootGenerator,
   onOpenNishTcGenerator,
-  onOpenCustomItemCreator,
   onOpenCraftingMall,
   onOpenGmSubmissions,
   onOpenMasterArchitectDesk,
@@ -149,31 +147,7 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
           </button>
         )}
 
-        {/* Tool 5: Custom Item Workshop */}
-        <button
-          onClick={() => {
-            onOpenCustomItemCreator();
-            onClose();
-          }}
-          className="group flex items-start gap-3 p-2.5 rounded-lg bg-slate-950/80 hover:bg-cyan-950/30 border border-slate-800 hover:border-cyan-500/50 transition-all text-left w-full cursor-pointer"
-        >
-          <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 transition-colors shrink-0">
-            <Wrench className="w-4 h-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-1">
-              <span className="font-outfit font-bold text-slate-100 group-hover:text-cyan-300 transition-colors truncate">
-                GM Item Workshop
-              </span>
-              <span className="text-[10px] font-bold text-cyan-950 bg-cyan-400 px-1.5 py-0.5 rounded uppercase shrink-0">
-                Workshop
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
-              Forge custom Relics & Hardware; inject into player Vaults.
-            </p>
-          </div>
-        </button>
+
 
         {/* Tool 6: Master Architect Desk (Blake Exclusive) */}
         {isMasterArchitect && onOpenMasterArchitectDesk && (

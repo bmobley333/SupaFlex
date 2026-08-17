@@ -15,7 +15,6 @@ import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { GmToolsPopover } from './components/header/GmToolsPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
 import { NishTcModal } from './components/modals/NishTcModal';
-import { GmCustomItemModal } from './components/modals/GmCustomItemModal';
 import { PlayerWorkshopModal } from './components/modals/PlayerWorkshopModal';
 import { CraftingMallModal } from './components/modals/CraftingMallModal';
 import { GmSubmissionsModal } from './components/modals/GmSubmissionsModal';
@@ -38,7 +37,6 @@ export default function App() {
   const [showSelectorBar, setShowSelectorBar] = useState(false);
   const [showResourcesPopover, setShowResourcesPopover] = useState(false);
   const [showGmToolsPopover, setShowGmToolsPopover] = useState(false);
-  const [showGmCustomItemModal, setShowGmCustomItemModal] = useState(false);
   const [showPlayerWorkshopModal, setShowPlayerWorkshopModal] = useState(false);
   const [showCraftingMallModal, setShowCraftingMallModal] = useState(false);
   const [showGmSubmissionsModal, setShowGmSubmissionsModal] = useState(false);
@@ -485,7 +483,6 @@ export default function App() {
                     onClose={() => setShowGmToolsPopover(false)}
                     onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
                     onOpenNishTcGenerator={() => setShowNishTcModal(true)}
-                    onOpenCustomItemCreator={() => setShowGmCustomItemModal(true)}
                     onOpenCraftingMall={() => setShowCraftingMallModal(true)}
                     onOpenGmSubmissions={() => setShowGmSubmissionsModal(true)}
                     onOpenMasterArchitectDesk={() => setShowMasterArchitectDeskModal(true)}
@@ -689,13 +686,6 @@ export default function App() {
         />
       </ErrorBoundary>
 
-      {/* 🛠️ GM Custom Item Workshop Modal */}
-      <ErrorBoundary fallbackTitle="GM Item Workshop Error" onClose={() => setShowGmCustomItemModal(false)}>
-        <GmCustomItemModal
-          isOpen={showGmCustomItemModal}
-          onClose={() => setShowGmCustomItemModal(false)}
-        />
-      </ErrorBoundary>
 
       {/* ⚒️ Player's Forge Modal */}
       <ErrorBoundary fallbackTitle="Player's Forge Error" onClose={() => setShowPlayerWorkshopModal(false)}>

@@ -59,8 +59,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   const playerName = useCharacterStore((state) => state.playerName);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
+  const characters = useCharacterStore((state) => state.characters);
+  const activeRole = useCharacterStore((state) => state.activeRole);
+  const fetchInitialData = useCharacterStore((state) => state.fetchInitialData);
   const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
+
+  const isGm = activeRole === 'gm';
 
   // Form State
   const [creationType, setCreationType] = useState<CustomCreationType>('power');
@@ -74,6 +79,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   const [effect, setEffect] = useState('');
   const [notes, setNotes] = useState('');
   const [alsoAddToSheet, setAlsoAddToSheet] = useState(true);
+  const [selectedHeroId, setSelectedHeroId] = useState<number>(activeCharacter?.id || characters[0]?.id || 0);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -145,23 +151,29 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     }
 
     try {
-      // 1. Save to party_custom_items table (personal library)
+      // 1. Save to party_custom_items table (personal library + auto-approved for Party Mall if GM)
       const newCustomItem: Partial<CustomCreationItem> = {
         name: name.trim(),
         type: creationType,
         category: categoryStr,
-        author_name: authorDisplayName,
+        author_name: isGm ? `${authorDisplayName} (GM)` : authorDisplayName,
         author_email: playerEmail || 'guest@metascape.com',
         party_id: activePartyId || null,
-        gm_approved: false,
+        gm_approved: isGm ? true : false,
         item_data: itemDataPayload,
         notes: notes.trim() || undefined,
       };
 
       await gameApi.saveCustomItem(newCustomItem);
 
-      // 2. Optionally inject directly into active character sheet
-      if (alsoAddToSheet && activeCharacter) {
+      // 2. Optionally inject directly into target character sheet
+      const targetHero = isGm 
+        ? characters.find((c) => c.id === Number(selectedHeroId)) || activeCharacter
+        : activeCharacter;
+
+      if (alsoAddToSheet && targetHero) {
+        const isTargetActiveHero = targetHero.id === activeCharacter?.id;
+
         if (creationType === 'power') {
           const powerObj: Power = {
             id: Date.now(),
@@ -171,7 +183,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             action,
             usage,
             effect: effect.trim(),
-            source: `Player Workshop (${authorDisplayName})`,
+            source: isGm ? `GM Forge (${authorDisplayName})` : `Player Forge (${authorDisplayName})`,
             created_at: new Date().toISOString(),
           };
 
@@ -188,16 +200,29 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             ready: getPowerReadyCategory(powerObj),
           };
 
-          updateActiveSheetData((prev) => {
-            const existingVault = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
-            const existingCustom = prev.custom_powers || [];
-            return {
-              ...prev,
+          if (isTargetActiveHero) {
+            updateActiveSheetData((prev) => {
+              const existingVault = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
+              const existingCustom = prev.custom_powers || [];
+              return {
+                ...prev,
+                custom_powers: [...existingCustom, powerObj],
+                character_power_codex: [...existingVault, powerSlotObj],
+              };
+            });
+            saveActiveCharacter();
+          } else {
+            const currentSheet = targetHero.sheet_data || {};
+            const existingVault = Array.isArray(currentSheet.character_power_codex) ? currentSheet.character_power_codex : [];
+            const existingCustom = currentSheet.custom_powers || [];
+            const updatedSheet = {
+              ...currentSheet,
               custom_powers: [...existingCustom, powerObj],
               character_power_codex: [...existingVault, powerSlotObj],
             };
-          });
-          saveActiveCharacter();
+            await gameApi.updateCharacter(targetHero.id, { sheet_data: updatedSheet });
+            await fetchInitialData({ silent: true });
+          }
         } else if (creationType === 'relic' || creationType === 'hardware') {
           const magicItemObj: MagicItem = {
             id: Date.now(),
@@ -209,27 +234,42 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             is_hardware: creationType === 'hardware',
             cost: costStr,
             slot_weight: (getItemSlotWeight({ name: name.trim(), category: categoryStr }) as 1 | 2 | 3 | 4),
-            source: `Player Workshop (${authorDisplayName})`,
+            source: isGm ? `GM Forge (${authorDisplayName})` : `Player Forge (${authorDisplayName})`,
             created_at: new Date().toISOString(),
             notes: notes.trim() || undefined,
           };
 
-          updateActiveSheetData((prev) => {
-            const currentVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];
-            const existingCustom = prev.custom_magic_items || [];
-            return {
-              ...prev,
+          if (isTargetActiveHero) {
+            updateActiveSheetData((prev) => {
+              const currentVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];
+              const existingCustom = prev.custom_magic_items || [];
+              return {
+                ...prev,
+                custom_magic_items: [...existingCustom, magicItemObj],
+                character_vault: [...currentVault, magicItemObj],
+              };
+            });
+            saveActiveCharacter();
+          } else {
+            const currentSheet = targetHero.sheet_data || {};
+            const currentVault: MagicItem[] = Array.isArray(currentSheet.character_vault) ? currentSheet.character_vault : [];
+            const existingCustom = currentSheet.custom_magic_items || [];
+            const updatedSheet = {
+              ...currentSheet,
               custom_magic_items: [...existingCustom, magicItemObj],
               character_vault: [...currentVault, magicItemObj],
             };
-          });
-          saveActiveCharacter();
+            await gameApi.updateCharacter(targetHero.id, { sheet_data: updatedSheet });
+            await fetchInitialData({ silent: true });
+          }
         }
       }
 
       setFeedback({
         type: 'success',
-        message: `✅ Successfully forged '${name.trim()}' and saved to your Creations library!`,
+        message: isGm
+          ? `👑 Successfully forged '${name.trim()}' and published live to Party Mall${activePartyId ? ` [${activePartyId}]` : ''}!${alsoAddToSheet && targetHero ? ` Granted to ${targetHero.name}'s sheet (0 AP).` : ''}`
+          : `✅ Successfully forged '${name.trim()}' and saved to your Creations library!`,
       });
 
       handleResetForm();
@@ -252,11 +292,24 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
               <AnvilIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-outfit font-extrabold text-base text-amber-300 tracking-wide flex items-center gap-1.5">
+              <h3 className="font-outfit font-extrabold text-base text-amber-300 tracking-wide flex items-center gap-2">
                 Player's Forge
+                {isGm ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    👑 GM Mode {activePartyId ? `[Party: ${activePartyId}]` : ''}
+                  </span>
+                ) : (
+                  activePartyId && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                      Party: {activePartyId}
+                    </span>
+                  )
+                )}
               </h3>
               <p className="text-xs text-slate-400">
-                Craft custom Powers, Relics, Hardware & Skillsets.
+                {isGm 
+                  ? "Craft custom Powers, Relics, Hardware & Skillsets with instant Party Mall auto-approval."
+                  : "Craft custom Powers, Relics, Hardware & Skillsets."}
               </p>
             </div>
           </div>
@@ -493,19 +546,40 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             />
           </div>
 
-          {/* Also Add to Sheet Checkbox */}
-          {activeCharacter && (
-            <label className="flex items-center gap-2 p-2 rounded-xl bg-slate-950/80 border border-slate-800 cursor-pointer hover:border-slate-700 transition-colors">
-              <input
-                type="checkbox"
-                checked={alsoAddToSheet}
-                onChange={(e) => setAlsoAddToSheet(e.target.checked)}
-                className="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 focus:ring-amber-400 cursor-pointer"
-              />
-              <span className="text-xs text-slate-200 font-semibold">
-                Also inject directly into active hero's vault/codex ({activeCharacter.name})
-              </span>
-            </label>
+          {/* Also Add to Sheet / Grant to Hero Checkbox & Selector */}
+          {(activeCharacter || (isGm && characters.length > 0)) && (
+            <div className="flex flex-col gap-2 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
+              <label className="flex items-center gap-2 cursor-pointer hover:border-slate-700 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={alsoAddToSheet}
+                  onChange={(e) => setAlsoAddToSheet(e.target.checked)}
+                  className="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 focus:ring-amber-400 cursor-pointer"
+                />
+                <span className="text-xs text-slate-200 font-semibold">
+                  {isGm 
+                    ? "Also inject directly into a Party Hero's sheet/vault (0 AP)" 
+                    : `Also inject directly into active hero's vault/codex (${activeCharacter?.name || 'Active Hero'})`}
+                </span>
+              </label>
+
+              {isGm && alsoAddToSheet && characters.length > 0 && (
+                <div className="flex items-center gap-2 pl-6 pt-1">
+                  <span className="text-[11px] text-slate-400 font-medium shrink-0">Target Hero:</span>
+                  <select
+                    value={selectedHeroId}
+                    onChange={(e) => setSelectedHeroId(Number(e.target.value))}
+                    className="flex-1 bg-slate-900 text-slate-100 text-xs px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-400 font-semibold cursor-pointer"
+                  >
+                    {characters.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.class ? `(${c.class})` : ''} {c.id === activeCharacter?.id ? '⭐ (Active)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Submit Button */}
@@ -516,7 +590,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
               className="w-full py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-50 text-white font-outfit font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-950/50 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>{isSubmitting ? 'Forging Creation...' : `Save ${name.trim() || 'Creation'} to My Creations Library`}</span>
+              <span>
+                {isSubmitting 
+                  ? 'Forging Creation...' 
+                  : isGm 
+                  ? `👑 Forge & Publish ${name.trim() || 'Creation'} to Party Mall` 
+                  : `Save ${name.trim() || 'Creation'} to My Creations Library`}
+              </span>
             </button>
           </div>
         </form>

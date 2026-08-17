@@ -19,8 +19,11 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
   const playerEmail = useCharacterStore((state) => state.playerEmail);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
+  const activeRole = useCharacterStore((state) => state.activeRole);
   const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
+
+  const isGm = activeRole === 'gm';
 
   const [activeTab, setActiveTab] = useState<'my_creations' | 'party_mall' | 'showcase'>('my_creations');
   const [typeFilter, setTypeFilter] = useState<'all' | CustomCreationType>('all');
@@ -238,7 +241,9 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
               <h3 className="font-outfit font-extrabold text-base text-amber-300 tracking-wide flex items-center gap-2">
                 Player's Workshop
                 <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-                  {activePartyId ? `Party Room: ${activePartyId}` : 'Solo Mode'}
+                  {isGm 
+                    ? (activePartyId ? `👑 GM Mode: Party ${activePartyId}` : '👑 GM Mode') 
+                    : (activePartyId ? `Party Room: ${activePartyId}` : 'Solo Mode')}
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
