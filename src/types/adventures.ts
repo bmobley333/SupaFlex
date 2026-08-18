@@ -49,6 +49,7 @@ export interface GmAdventure {
   genre?: string;
   is_active?: boolean;
   is_published?: boolean;  // Whether published to Supabase community
+  links?: EncounterLink[]; // Adventure-specific URL links
   structure: AdventureStructure;
   created_at?: string;
   updated_at?: string;

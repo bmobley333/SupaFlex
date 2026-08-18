@@ -59,6 +59,20 @@ interface AdventureStoreState {
   duplicateEncounter: (adventureId: string, actId: string, encounterId: string) => Promise<void>;
   reorderEncounters: (adventureId: string, actId: string, encounters: GmEncounter[]) => Promise<void>;
 
+  // Adventure Links CRUD & Reordering
+  addAdventureLink: (adventureId: string, name: string, url: string) => Promise<void>;
+  updateAdventureLink: (adventureId: string, linkId: string, name: string, url: string) => Promise<void>;
+  deleteAdventureLink: (adventureId: string, linkId: string) => Promise<void>;
+  reorderAdventureLinkByIndex: (adventureId: string, fromIdx: number, toIdx: number) => Promise<void>;
+
+  // GM Global Links CRUD & Reordering
+  gmLinks: EncounterLink[];
+  fetchGmLinks: () => void;
+  addGmLink: (name: string, url: string) => Promise<void>;
+  updateGmLink: (linkId: string, name: string, url: string) => Promise<void>;
+  deleteGmLink: (linkId: string) => Promise<void>;
+  reorderGmLinkByIndex: (fromIdx: number, toIdx: number) => Promise<void>;
+
   // Encounter Links CRUD & Reordering
   addEncounterLink: (adventureId: string, actId: string, encounterId: string, name: string, url: string) => Promise<void>;
   updateEncounterLink: (adventureId: string, actId: string, encounterId: string, linkId: string, name: string, url: string) => Promise<void>;
@@ -77,6 +91,27 @@ const STORAGE_ACTIVE_ADV = 'supaflex_active_adv_id';
 const STORAGE_ACTIVE_ACT = 'supaflex_active_act_id';
 const STORAGE_ACTIVE_ENC = 'supaflex_active_enc_id';
 const STORAGE_SESSION_MODE = 'supaflex_gm_session_mode';
+const STORAGE_GM_LINKS = 'supaflex_gm_global_links';
+
+const getInitialGmLinks = (): EncounterLink[] => {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(STORAGE_GM_LINKS);
+      if (saved) return JSON.parse(saved);
+      const legacy = localStorage.getItem('supaflex_gm_doc_links_default');
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        return parsed.map((item: any) => ({
+          id: item.id || `gm_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          name: item.title || item.name || 'GM Link',
+          url: item.url || '',
+          created_at: item.created_at || new Date().toISOString(),
+        }));
+      }
+    } catch {}
+  }
+  return [];
+};
 
 const getInitialSessionMode = (): GmSessionMode => {
   if (typeof window !== 'undefined') {
@@ -93,6 +128,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
   activeEncounterId: typeof window !== 'undefined' ? localStorage.getItem(STORAGE_ACTIVE_ENC) : null,
   sessionMode: getInitialSessionMode(),
   isLoading: false,
+  gmLinks: getInitialGmLinks(),
   gameDaySandbox: {},
   gameDayDifficulty: {},
 
@@ -604,6 +640,100 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     }));
 
     await get().updateAdventure(adventureId, { structure: newStructure });
+  },
+
+  // --- ADVENTURE LINKS ---
+  addAdventureLink: async (adventureId: string, name: string, url: string) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv) return;
+
+    const newLink: EncounterLink = {
+      id: `adv_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name: name.trim(),
+      url: url.trim(),
+      created_at: new Date().toISOString(),
+    };
+
+    const updatedLinks = [...(adv.links || []), newLink];
+    await get().updateAdventure(adventureId, { links: updatedLinks });
+  },
+
+  updateAdventureLink: async (adventureId: string, linkId: string, name: string, url: string) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv || !adv.links) return;
+
+    const updatedLinks = adv.links.map((l) =>
+      l.id === linkId ? { ...l, name: name.trim(), url: url.trim() } : l
+    );
+    await get().updateAdventure(adventureId, { links: updatedLinks });
+  },
+
+  deleteAdventureLink: async (adventureId: string, linkId: string) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv || !adv.links) return;
+
+    const updatedLinks = adv.links.filter((l) => l.id !== linkId);
+    await get().updateAdventure(adventureId, { links: updatedLinks });
+  },
+
+  reorderAdventureLinkByIndex: async (adventureId: string, fromIdx: number, toIdx: number) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv || !adv.links) return;
+
+    const links = [...adv.links];
+    if (fromIdx < 0 || fromIdx >= links.length || toIdx < 0 || toIdx >= links.length) return;
+    const [moved] = links.splice(fromIdx, 1);
+    links.splice(toIdx, 0, moved);
+    await get().updateAdventure(adventureId, { links });
+  },
+
+  // --- GM GLOBAL LINKS ---
+  fetchGmLinks: () => {
+    const links = getInitialGmLinks();
+    set({ gmLinks: links });
+  },
+
+  addGmLink: async (name: string, url: string) => {
+    const newLink: EncounterLink = {
+      id: `gm_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name: name.trim(),
+      url: url.trim(),
+      created_at: new Date().toISOString(),
+    };
+    const updated = [...get().gmLinks, newLink];
+    set({ gmLinks: updated });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_GM_LINKS, JSON.stringify(updated));
+    }
+  },
+
+  updateGmLink: async (linkId: string, name: string, url: string) => {
+    const updated = get().gmLinks.map((l) =>
+      l.id === linkId ? { ...l, name: name.trim(), url: url.trim() } : l
+    );
+    set({ gmLinks: updated });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_GM_LINKS, JSON.stringify(updated));
+    }
+  },
+
+  deleteGmLink: async (linkId: string) => {
+    const updated = get().gmLinks.filter((l) => l.id !== linkId);
+    set({ gmLinks: updated });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_GM_LINKS, JSON.stringify(updated));
+    }
+  },
+
+  reorderGmLinkByIndex: async (fromIdx: number, toIdx: number) => {
+    const links = [...get().gmLinks];
+    if (fromIdx < 0 || fromIdx >= links.length || toIdx < 0 || toIdx >= links.length) return;
+    const [moved] = links.splice(fromIdx, 1);
+    links.splice(toIdx, 0, moved);
+    set({ gmLinks: links });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_GM_LINKS, JSON.stringify(links));
+    }
   },
 
   addEncounterLink: async (adventureId: string, actId: string, encounterId: string, name: string, url: string) => {

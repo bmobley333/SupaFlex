@@ -2,14 +2,13 @@
 // Game Master Command Console: Party Roster, Party Management & Monster Roster View
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowUpDown, Link2, StickyNote, Rocket } from 'lucide-react';
+import { ArrowUpDown, StickyNote, Rocket } from 'lucide-react';
 import { gameApi } from '../../services/api';
-import { Party, PartySessionMember, CharacterSheetData, GmDocLink } from '../../types/game';
+import { Party, PartySessionMember, CharacterSheetData } from '../../types/game';
 import { parseMonsterLine, ParsedMonster, sortMonstersByPreset, MonsterSortPreset } from '../../utils/monsterStatParser';
 import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { useRosterOrdering } from '../../hooks/useRosterOrdering';
-import { LinksManagerModal } from '../modals/LinksManagerModal';
 import { MonsterManagerModal } from '../modals/MonsterManagerModal';
 import { GmModePillSwitch } from '../common/GmModePillSwitch';
 import { GmCompactDifficultyBar } from '../common/GmCompactDifficultyBar';
@@ -37,28 +36,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
   // Storage Keys
   const partyIdOrDef = selectedParty?.id || 'default';
-  const gmDocLinksStorageKey = `supaflex_gm_doc_links_${partyIdOrDef}`;
-  const gmTagsStorageKey = `supaflex_gm_tags_${partyIdOrDef}`;
   const monsterPresetKey = `supaflex_gm_monster_preset_${partyIdOrDef}`;
-
-  // GM Document Vault & Adventure Tagging State
-  const [gmDocLinks, setGmDocLinks] = useState<GmDocLink[]>(() => {
-    try {
-      const saved = localStorage.getItem(gmDocLinksStorageKey);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [adventureTags, setAdventureTags] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem(gmTagsStorageKey);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
 
   const [monsterPreset, setMonsterPreset] = useState<MonsterSortPreset>(() => {
     try {
@@ -73,7 +51,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const [isMonsterSortMenuOpen, setIsMonsterSortMenuOpen] = useState(false);
 
   // Modal triggers
-  const [isLinksManagerOpen, setIsLinksManagerOpen] = useState(false);
   const [isMonsterManagerOpen, setIsMonsterManagerOpen] = useState(false);
 
   // Adventure Store State
@@ -141,43 +118,15 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Effective monsters list displayed in the GM Monster Tracker strictly mirrors the active encounter
   const effectiveMonsters = activeMonsters;
 
-  // Re-sync GM Document Links & Adventure Tags when selected party changes
+  // Re-sync Monster Preset when selected party changes
   useEffect(() => {
     try {
-      const savedLinks = localStorage.getItem(`supaflex_gm_doc_links_${selectedParty?.id || 'default'}`);
-      setGmDocLinks(savedLinks ? JSON.parse(savedLinks) : []);
-
-      const savedTags = localStorage.getItem(`supaflex_gm_tags_${selectedParty?.id || 'default'}`);
-      setAdventureTags(savedTags ? JSON.parse(savedTags) : []);
-
       const savedPreset = localStorage.getItem(`supaflex_gm_monster_preset_${selectedParty?.id || 'default'}`);
       if (savedPreset && (savedPreset === 'alphabetical' || savedPreset === 'nish' || savedPreset === 'vitality')) {
         setMonsterPreset(savedPreset as MonsterSortPreset);
       }
-    } catch (e) {
-      setGmDocLinks([]);
-      setAdventureTags([]);
-    }
+    } catch (e) {}
   }, [selectedParty?.id]);
-
-  // Persistence Helpers
-  const persistGmDocLinks = (updated: GmDocLink[]) => {
-    setGmDocLinks(updated);
-    try {
-      localStorage.setItem(gmDocLinksStorageKey, JSON.stringify(updated));
-    } catch (err) {
-      console.error('[GmWorkspaceView] LocalStorage doc links save error:', err);
-    }
-  };
-
-  const persistAdventureTags = (updated: string[]) => {
-    setAdventureTags(updated);
-    try {
-      localStorage.setItem(gmTagsStorageKey, JSON.stringify(updated));
-    } catch (err) {
-      console.error('[GmWorkspaceView] LocalStorage tags save error:', err);
-    }
-  };
 
   const handleSaveMonsters = (updated: ParsedMonster[]) => {
     const sorted = sortMonstersByPreset(updated, monsterPreset);
@@ -476,7 +425,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="space-y-2.5 overflow-y-auto max-h-[520px] pr-1">
+              <div className="space-y-2.5 overflow-y-auto max-h-[720px] pr-1">
                 {orderedSessionMembers.map((member, idx) => (
                   <PartyCharacterCard
                     key={member.id || member.character_id || `pm_${idx}`}
@@ -495,31 +444,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Card 2: LINKS (High-Density Summary Bar & Manage Links Modal Launcher) */}
-          <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-2 shadow-lg flex flex-col font-outfit">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-              <div className="flex items-center gap-1.5">
-                <Link2 className="w-4 h-4 text-teal-400" />
-                <h3 className="font-bold text-xs text-slate-100 uppercase tracking-wider font-outfit">
-                  LINKS ({gmDocLinks.length})
-                </h3>
-              </div>
-
-              <button
-                onClick={() => setIsLinksManagerOpen(true)}
-                className="px-2.5 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-600/30 text-xs font-bold rounded-lg transition-all shrink-0 font-outfit"
-              >
-                Manage Links
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-400 font-outfit">
-              {gmDocLinks.length === 0
-                ? 'No GM document links configured.'
-                : `${gmDocLinks.length} GM external link${gmDocLinks.length === 1 ? '' : 's'} configured.`}
-            </p>
           </div>
         </div>
 
@@ -731,18 +655,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Master Links Manager Modal */}
-      <LinksManagerModal
-        isOpen={isLinksManagerOpen}
-        onClose={() => setIsLinksManagerOpen(false)}
-        mode="gm"
-        gmLinks={gmDocLinks}
-        onSaveGmLinks={persistGmDocLinks}
-        adventureTags={adventureTags}
-        onSaveAdventureTags={persistAdventureTags}
-        partyName={selectedParty?.name}
-      />
 
       {/* Master Monster Manager Modal */}
       <MonsterManagerModal
