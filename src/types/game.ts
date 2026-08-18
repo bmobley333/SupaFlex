@@ -1,6 +1,9 @@
 // src/types/game.ts
 // Strongly typed TypeScript models for SupaFlex DB tables & sheet JSONB data
 
+import { EncounterLink } from './adventures';
+export type { EncounterLink };
+
 export type AttributeKey = 'might' | 'motion' | 'mind' | 'magic' | 'moxie';
 export type DieRating = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'Exhausted';
 export type PowerReadyType = 'primary_arsenal' | 'mobility_defense' | 'support_passive' | 'contextual_passive';
@@ -480,6 +483,7 @@ export interface CharacterSheetData {
   wardrobe?: ArmorData[];
   shield_slot?: ShieldData;
   armory?: ShieldData[];
+  character_links?: EncounterLink[]; // Unique links tied to this specific character
   movement_rate?: MovementRateData;
   bio: CharacterBio;
   essence_core?: number; // 0-100 Essence Core Progress Ring

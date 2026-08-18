@@ -1,11 +1,19 @@
-// src/store/useCharacterStore.ts
-// Centralized Zustand store for active character, codex data, & Supabase sync
-
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, Skillset, PowerTable } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, Skillset, PowerTable, EncounterLink } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
+
+const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
+  if (typeof window !== 'undefined') {
+    try {
+      const em = email || sessionStorage.getItem('supaflex_player_email') || 'default';
+      const saved = localStorage.getItem(`supaflex_player_links_${em}`);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+  }
+  return [];
+};
 
 interface CharacterStore {
   // State
@@ -61,6 +69,20 @@ interface CharacterStore {
   ) => void;
   revertApExpenditure: (entryId: string) => void;
   syncSheetRulesToDatabase: () => Promise<{ updatedCount: number; preservedCount: number }>;
+
+  // Player Links (Account-Wide)
+  playerLinks: EncounterLink[];
+  fetchPlayerLinks: () => void;
+  addPlayerLink: (name: string, url: string) => void;
+  updatePlayerLink: (linkId: string, name: string, url: string) => void;
+  deletePlayerLink: (linkId: string) => void;
+  reorderPlayerLinkByIndex: (fromIdx: number, toIdx: number) => void;
+
+  // Character Links (Character-Specific)
+  addCharacterLink: (name: string, url: string) => void;
+  updateCharacterLink: (linkId: string, name: string, url: string) => void;
+  deleteCharacterLink: (linkId: string) => void;
+  reorderCharacterLinkByIndex: (fromIdx: number, toIdx: number) => void;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
@@ -108,6 +130,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   filterMode: (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('supaflex_filter_mode') as any) : null) || 'my_heroes',
   activeRole: (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('supaflex_active_role') as 'player' | 'gm') : null) || 'player',
   activePartyId: typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('supaflex_active_party_id') : null,
+  playerLinks: getInitialPlayerLinks(),
 
   setActiveRole: (role: 'player' | 'gm') => {
     sessionStorage.setItem('supaflex_active_role', role);
@@ -697,5 +720,111 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       console.error('Error syncing sheet rules:', err);
       return { updatedCount: 0, preservedCount: 0 };
     }
+  },
+
+  // --- PLAYER LINKS (Account-Wide) ---
+  fetchPlayerLinks: () => {
+    const email = get().playerEmail || 'default';
+    try {
+      const saved = localStorage.getItem(`supaflex_player_links_${email}`);
+      if (saved) {
+        set({ playerLinks: JSON.parse(saved) });
+        return;
+      }
+    } catch {}
+    set({ playerLinks: [] });
+  },
+
+  addPlayerLink: (name: string, url: string) => {
+    const email = get().playerEmail || 'default';
+    const newLink: EncounterLink = {
+      id: `pl_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name: name.trim(),
+      url: url.trim(),
+      created_at: new Date().toISOString(),
+    };
+    const updated = [...get().playerLinks, newLink];
+    set({ playerLinks: updated });
+    try {
+      localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(updated));
+    } catch {}
+  },
+
+  updatePlayerLink: (linkId: string, name: string, url: string) => {
+    const email = get().playerEmail || 'default';
+    const updated = get().playerLinks.map((l) =>
+      l.id === linkId ? { ...l, name: name.trim(), url: url.trim() } : l
+    );
+    set({ playerLinks: updated });
+    try {
+      localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(updated));
+    } catch {}
+  },
+
+  deletePlayerLink: (linkId: string) => {
+    const email = get().playerEmail || 'default';
+    const updated = get().playerLinks.filter((l) => l.id !== linkId);
+    set({ playerLinks: updated });
+    try {
+      localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(updated));
+    } catch {}
+  },
+
+  reorderPlayerLinkByIndex: (fromIdx: number, toIdx: number) => {
+    const email = get().playerEmail || 'default';
+    const links = [...get().playerLinks];
+    if (fromIdx < 0 || fromIdx >= links.length || toIdx < 0 || toIdx >= links.length) return;
+    const [moved] = links.splice(fromIdx, 1);
+    links.splice(toIdx, 0, moved);
+    set({ playerLinks: links });
+    try {
+      localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(links));
+    } catch {}
+  },
+
+  // --- CHARACTER LINKS (Character-Specific) ---
+  addCharacterLink: (name: string, url: string) => {
+    const newLink: EncounterLink = {
+      id: `char_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name: name.trim(),
+      url: url.trim(),
+      created_at: new Date().toISOString(),
+    };
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      character_links: [...(prev.character_links || []), newLink],
+    }));
+    get().saveActiveCharacter();
+  },
+
+  updateCharacterLink: (linkId: string, name: string, url: string) => {
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      character_links: (prev.character_links || []).map((l) =>
+        l.id === linkId ? { ...l, name: name.trim(), url: url.trim() } : l
+      ),
+    }));
+    get().saveActiveCharacter();
+  },
+
+  deleteCharacterLink: (linkId: string) => {
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      character_links: (prev.character_links || []).filter((l) => l.id !== linkId),
+    }));
+    get().saveActiveCharacter();
+  },
+
+  reorderCharacterLinkByIndex: (fromIdx: number, toIdx: number) => {
+    const charLinks = get().activeCharacter?.sheet_data?.character_links || [];
+    if (fromIdx < 0 || fromIdx >= charLinks.length || toIdx < 0 || toIdx >= charLinks.length) return;
+    const links = [...charLinks];
+    const [moved] = links.splice(fromIdx, 1);
+    links.splice(toIdx, 0, moved);
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      character_links: links,
+    }));
+    get().saveActiveCharacter();
   },
 }));

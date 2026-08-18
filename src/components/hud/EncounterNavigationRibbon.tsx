@@ -96,34 +96,6 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
       <div className="flex flex-wrap items-end justify-between gap-2.5 bg-slate-950/90 border border-slate-800 p-2.5 rounded-xl backdrop-blur-md shadow-md">
         {/* Left: 3 Labeled Dropdowns + Right-Adjacent Stepper */}
         <div className="flex items-end flex-wrap gap-2 flex-1 min-w-[320px]">
-          {/* 0. ADVENTURE LINKS Dropdown */}
-          <UniversalLinksDropdown
-            topLabel="Adventure Links"
-            label="Adventure Links"
-            links={activeAdv?.links || []}
-            disabled={!activeAdv}
-            disabledTooltip="Select an adventure first"
-            themeColor="indigo"
-            onAddLink={async (name, url) => {
-              if (!activeAdv) return;
-              await addAdventureLink(activeAdv.id, name, url);
-            }}
-            onUpdateLink={async (linkId, name, url) => {
-              if (!activeAdv) return;
-              await updateAdventureLink(activeAdv.id, linkId, name, url);
-            }}
-            onDeleteLink={async (linkId) => {
-              if (!activeAdv) return;
-              await deleteAdventureLink(activeAdv.id, linkId);
-            }}
-            onReorderLinkByIndex={async (fromIdx, toIdx) => {
-              if (!activeAdv) return;
-              await reorderAdventureLinkByIndex(activeAdv.id, fromIdx, toIdx);
-            }}
-          />
-
-          <span className="text-slate-600 font-bold text-xs pb-2">›</span>
-
           {/* 1. ADVENTURE Dropdown */}
           <div className="flex flex-col items-center gap-1 relative" ref={advMenuRef}>
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-400 font-mono text-center">
@@ -536,6 +508,32 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
             </div>
           </div>
         </div>
+
+        {/* Right: Adventure Links Dropdown (Teal Theme) */}
+        <UniversalLinksDropdown
+          topLabel="Adventure Links"
+          label="Adventure Links"
+          links={activeAdv?.links || []}
+          disabled={!activeAdv}
+          disabledTooltip="Select an adventure first"
+          themeColor="teal"
+          onAddLink={async (name, url) => {
+            if (!activeAdv) return;
+            await addAdventureLink(activeAdv.id, name, url);
+          }}
+          onUpdateLink={async (linkId, name, url) => {
+            if (!activeAdv) return;
+            await updateAdventureLink(activeAdv.id, linkId, name, url);
+          }}
+          onDeleteLink={async (linkId) => {
+            if (!activeAdv) return;
+            await deleteAdventureLink(activeAdv.id, linkId);
+          }}
+          onReorderLinkByIndex={async (fromIdx, toIdx) => {
+            if (!activeAdv) return;
+            await reorderAdventureLinkByIndex(activeAdv.id, fromIdx, toIdx);
+          }}
+        />
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import { GmWorkspaceView } from './components/directory/GmWorkspaceView';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { AccountPillButton } from './components/header/AccountPillButton';
 import { GmHeaderHUD } from './components/header/GmHeaderHUD';
+import { UniversalLinksDropdown } from './components/hud/UniversalLinksDropdown';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { GmToolsPopover } from './components/header/GmToolsPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
@@ -100,6 +101,11 @@ export default function App() {
     updateActiveSheetData,
     setPlayerEmail,
     setPlayerName,
+    playerLinks,
+    addPlayerLink,
+    updatePlayerLink,
+    deletePlayerLink,
+    reorderPlayerLinkByIndex,
   } = useCharacterStore();
 
   useEffect(() => {
@@ -491,6 +497,19 @@ export default function App() {
                   />
                 )}
               </div>
+            )}
+
+            {/* 🔗 Player Links Dropdown (Player Mode Only, Top Right just before Resources) */}
+            {activeRole !== 'gm' && (
+              <UniversalLinksDropdown
+                label="Player Links"
+                links={playerLinks}
+                themeColor="teal"
+                onAddLink={addPlayerLink}
+                onUpdateLink={updatePlayerLink}
+                onDeleteLink={deletePlayerLink}
+                onReorderLinkByIndex={reorderPlayerLinkByIndex}
+              />
             )}
 
             {/* 📚 Resources Popover Trigger (Player Mode Only) */}

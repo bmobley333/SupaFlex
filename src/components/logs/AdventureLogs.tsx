@@ -5,11 +5,8 @@ import {
   BookMarked,
   Check,
   Loader2,
-  Link2,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { ExternalDocLink } from '../../types/game';
-import { LinksManagerModal } from '../modals/LinksManagerModal';
 
 export interface LogEntry {
   id: string;
@@ -27,16 +24,13 @@ export const AdventureLogs: React.FC = () => {
   const bioNotes = activeCharacter?.sheet_data?.bio?.notes || '';
   const backstory = activeCharacter?.sheet_data?.bio?.backstory || '';
   const personality = activeCharacter?.sheet_data?.bio?.personality || '';
-  const initialDocLinks = activeCharacter?.sheet_data?.bio?.doc_links || [];
 
   const [notesText, setNotesText] = useState(bioNotes);
   const [backstoryText, setBackstoryText] = useState(backstory);
   const [personalityText, setPersonalityText] = useState(personality);
-  const [docLinks, setDocLinks] = useState<ExternalDocLink[]>(initialDocLinks);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
-  const [isLinksManagerOpen, setIsLinksManagerOpen] = useState(false);
 
-  const latestRef = useRef({ notes: bioNotes, backstory, personality, docLinks: initialDocLinks });
+  const latestRef = useRef({ notes: bioNotes, backstory, personality });
   const activeCharRef = useRef(activeCharacter);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -46,10 +40,9 @@ export const AdventureLogs: React.FC = () => {
       notes: notesText,
       backstory: backstoryText,
       personality: personalityText,
-      docLinks,
     };
     activeCharRef.current = activeCharacter;
-  }, [notesText, backstoryText, personalityText, docLinks, activeCharacter]);
+  }, [notesText, backstoryText, personalityText, activeCharacter]);
 
   // Re-initialize state when active character changes
   useEffect(() => {
@@ -57,13 +50,11 @@ export const AdventureLogs: React.FC = () => {
     const n = curBio?.notes || '';
     const b = curBio?.backstory || '';
     const p = curBio?.personality || '';
-    const dl = curBio?.doc_links || [];
 
     setNotesText(n);
     setBackstoryText(b);
     setPersonalityText(p);
-    setDocLinks(dl);
-    latestRef.current = { notes: n, backstory: b, personality: p, docLinks: dl };
+    latestRef.current = { notes: n, backstory: b, personality: p };
     setSaveStatus('saved');
   }, [activeCharacter?.id]);
 
@@ -79,8 +70,7 @@ export const AdventureLogs: React.FC = () => {
     if (
       savedBio?.notes === current.notes &&
       savedBio?.backstory === current.backstory &&
-      savedBio?.personality === current.personality &&
-      JSON.stringify(savedBio?.doc_links || []) === JSON.stringify(current.docLinks)
+      savedBio?.personality === current.personality
     ) {
       setSaveStatus('saved');
       return;
@@ -95,7 +85,6 @@ export const AdventureLogs: React.FC = () => {
           notes: current.notes,
           backstory: current.backstory,
           personality: current.personality,
-          doc_links: current.docLinks,
         },
       }));
       await saveActiveCharacter();
@@ -122,28 +111,6 @@ export const AdventureLogs: React.FC = () => {
     }
   };
 
-  // Direct persistence for explicit CRUD actions on Document Links
-  const persistDocLinks = (updatedLinks: ExternalDocLink[]) => {
-    setDocLinks(updatedLinks);
-    setSaveStatus('saving');
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      bio: {
-        ...prev.bio,
-        notes: notesText,
-        backstory: backstoryText,
-        personality: personalityText,
-        doc_links: updatedLinks,
-      },
-    }));
-    saveActiveCharacter()
-      .then(() => setSaveStatus('saved'))
-      .catch((err) => {
-        console.error('[AdventureLogs] Direct doc link save error:', err);
-        setSaveStatus('unsaved');
-      });
-  };
-
   // Flush unsaved changes on unmount (tab switch or exit)
   useEffect(() => {
     return () => {
@@ -155,8 +122,7 @@ export const AdventureLogs: React.FC = () => {
       if (
         savedBio?.notes !== current.notes ||
         savedBio?.backstory !== current.backstory ||
-        savedBio?.personality !== current.personality ||
-        JSON.stringify(savedBio?.doc_links || []) !== JSON.stringify(current.docLinks)
+        savedBio?.personality !== current.personality
       ) {
         flushAutoSave();
       }
@@ -257,44 +223,7 @@ export const AdventureLogs: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Card 2: Links (High-Density Summary Bar & Manage Links Modal Launcher) */}
-        <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <Link2 className="w-5 h-5 text-teal-400 shrink-0" />
-            <div>
-              <div className="flex items-center gap-2 font-outfit">
-                <h3 className="font-bold text-base text-slate-100">Links</h3>
-                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-teal-300 font-bold border border-slate-700">
-                  {docLinks.length}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">
-                {docLinks.length === 0
-                  ? 'No external document links configured yet.'
-                  : `${docLinks.length} external link${docLinks.length === 1 ? '' : 's'} configured.`}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setIsLinksManagerOpen(true)}
-            className="px-3.5 py-1.5 bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-600/30 text-xs font-bold rounded-lg transition-all shrink-0 font-outfit"
-          >
-            Manage Links
-          </button>
-        </div>
       </div>
-
-      {/* Master Links Manager Modal */}
-      <LinksManagerModal
-        isOpen={isLinksManagerOpen}
-        onClose={() => setIsLinksManagerOpen(false)}
-        mode="player"
-        playerLinks={docLinks}
-        onSavePlayerLinks={persistDocLinks}
-        heroName={activeCharacter?.name}
-      />
     </div>
   );
 };
