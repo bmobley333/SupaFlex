@@ -1434,7 +1434,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-300">Cost</span>
-                    <GuardrailBadge isValid={costVal >= 1} />
                     <InfoTooltip text="Purchase or craft cost in Gold (g) or Silver (s)." />
                   </div>
                   <div className="flex items-center gap-2">
@@ -1498,13 +1497,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
               {/* Row 3: Read-Only Calculated Attributes */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-400">Atk / Dmg Die:</span>
-                  <span className="text-xs font-mono font-extrabold text-rose-300">{getWeaponAtkDmg(weaponTypeMode)}</span>
+                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
+                  <span className="text-[11px] font-bold text-slate-400">Atk/Dmg Attribute:</span>
+                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-rose-300 shadow-sm">
+                    {getWeaponAtkDmg(weaponTypeMode)}
+                  </div>
                 </div>
-                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
                   <span className="text-[11px] font-bold text-slate-400">Block Cap:</span>
-                  <span className="text-xs font-mono font-extrabold text-amber-300">{getWeaponMaxBlock(weaponTypeMode, weaponReqNum)}</span>
+                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-amber-300 shadow-sm">
+                    {getWeaponMaxBlock(weaponTypeMode, weaponReqNum)}
+                  </div>
                 </div>
               </div>
             </>
@@ -1534,7 +1537,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-300">Cost</span>
-                    <GuardrailBadge isValid={costVal >= 1} />
                     <InfoTooltip text="Purchase or craft cost in Gold (g) or Silver (s)." />
                   </div>
                   <div className="flex items-center gap-2">
@@ -1581,13 +1583,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
               {/* Row 3: Read-Only Calculated Attributes */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
                   <span className="text-[11px] font-bold text-slate-400">Armor Rating (AR):</span>
-                  <span className="text-xs font-mono font-extrabold text-amber-300">{getArmorArStr(armorReq)}</span>
+                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-amber-300 shadow-sm">
+                    {getArmorArStr(armorReq)}
+                  </div>
                 </div>
-                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
                   <span className="text-[11px] font-bold text-slate-400">Movement Rate Mod (MR):</span>
-                  <span className="text-xs font-mono font-extrabold text-teal-300">{getArmorMrStr(armorReq)}</span>
+                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-teal-300 shadow-sm">
+                    {getArmorMrStr(armorReq)}
+                  </div>
                 </div>
               </div>
             </>
@@ -1617,7 +1623,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-300">Cost</span>
-                    <GuardrailBadge isValid={costVal >= 1} />
                     <InfoTooltip text="Purchase or craft cost in Gold (g) or Silver (s)." />
                   </div>
                   <div className="flex items-center gap-2">
@@ -1664,13 +1669,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
               {/* Row 3: Read-Only Calculated Attributes */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
                   <span className="text-[11px] font-bold text-slate-400">Block Cap (Blk):</span>
-                  <span className="text-xs font-mono font-extrabold text-amber-300">🛡️{getShieldMaxBlockStr(shieldReq)}</span>
+                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-amber-300 shadow-sm">
+                    🛡️{getShieldMaxBlockStr(shieldReq)}
+                  </div>
                 </div>
-                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
                   <span className="text-[11px] font-bold text-slate-400">Movement Rate Mod (MR):</span>
-                  <span className="text-xs font-mono font-extrabold text-teal-300">{getShieldMrStr(shieldReq)}</span>
+                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-teal-300 shadow-sm">
+                    {getShieldMrStr(shieldReq)}
+                  </div>
                 </div>
               </div>
             </>
@@ -1700,7 +1709,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-300">Cost</span>
-                    <GuardrailBadge isValid={costVal >= 1} />
                     <InfoTooltip text="Purchase or craft cost in Silver (s) or Gold (g)." />
                   </div>
                   <div className="flex items-center gap-2">
