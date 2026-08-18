@@ -11,7 +11,6 @@ import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { useRosterOrdering } from '../../hooks/useRosterOrdering';
 import { LinksManagerModal } from '../modals/LinksManagerModal';
 import { MonsterManagerModal } from '../modals/MonsterManagerModal';
-import { AdventureStagingModal } from '../modals/AdventureStagingModal';
 import { GmModePillSwitch } from '../common/GmModePillSwitch';
 import { GmCompactDifficultyBar } from '../common/GmCompactDifficultyBar';
 import { EncounterNavigationRibbon } from '../hud/EncounterNavigationRibbon';
@@ -86,7 +85,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Modal triggers
   const [isLinksManagerOpen, setIsLinksManagerOpen] = useState(false);
   const [isMonsterManagerOpen, setIsMonsterManagerOpen] = useState(false);
-  const [isStagingModalOpen, setIsStagingModalOpen] = useState(false);
 
   // Adventure Store State
   const fetchAdventures = useAdventureStore((state) => state.fetchAdventures);
@@ -509,7 +507,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           {/* Staged Encounter Navigation Ribbon */}
           <EncounterNavigationRibbon
             partyId={selectedParty?.id}
-            onOpenStagingModal={() => setIsStagingModalOpen(true)}
           />
 
           {/* On-Screen Master Difficulty Scaling Bar */}
@@ -629,13 +626,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           )}
         </div>
       </div>
-
-      {/* Adventure Staging Studio Modal */}
-      <AdventureStagingModal
-        isOpen={isStagingModalOpen}
-        onClose={() => setIsStagingModalOpen(false)}
-        partyId={selectedParty?.id}
-      />
 
       {/* Master Links Manager Modal */}
       <LinksManagerModal

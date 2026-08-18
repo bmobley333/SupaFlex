@@ -33,25 +33,32 @@ interface AdventureStoreState {
   nextEncounter: () => void;
   prevEncounter: () => void;
 
-  // Adventure CRUD
+  // Adventure CRUD & Publishing
   createAdventure: (title: string, gmEmail: string, genre?: string) => Promise<GmAdventure | null>;
   updateAdventure: (id: string, updates: Partial<GmAdventure>) => Promise<void>;
   deleteAdventure: (id: string) => Promise<void>;
+  renameAdventure: (id: string, newTitle: string) => Promise<void>;
+  publishAdventure: (adventureId: string, isPublished: boolean) => Promise<void>;
 
-  // Act CRUD
+  // Act CRUD & Reordering
   addAct: (adventureId: string, title?: string) => Promise<void>;
   updateAct: (adventureId: string, actId: string, updates: Partial<GmAct>) => Promise<void>;
   deleteAct: (adventureId: string, actId: string) => Promise<void>;
+  renameAct: (adventureId: string, actId: string, newTitle: string) => Promise<void>;
+  reorderActByIndex: (adventureId: string, fromIdx: number, toIdx: number) => Promise<void>;
   reorderActs: (adventureId: string, acts: GmAct[]) => Promise<void>;
 
-  // Encounter CRUD
+  // Encounter CRUD & Reordering
   addEncounter: (adventureId: string, actId: string, title?: string) => Promise<void>;
   updateEncounter: (adventureId: string, actId: string, encounterId: string, updates: Partial<GmEncounter>) => Promise<void>;
   deleteEncounter: (adventureId: string, actId: string, encounterId: string) => Promise<void>;
+  renameEncounter: (adventureId: string, actId: string, encounterId: string, newTitle: string) => Promise<void>;
+  reorderEncounterByIndex: (adventureId: string, actId: string, fromIdx: number, toIdx: number) => Promise<void>;
   duplicateEncounter: (adventureId: string, actId: string, encounterId: string) => Promise<void>;
   reorderEncounters: (adventureId: string, actId: string, encounters: GmEncounter[]) => Promise<void>;
 
-  // Live Monster & Difficulty Manipulation
+  // Tactical Notes & Live Monsters Manipulation
+  setEncounterNotes: (notes: string) => void;
   setEncounterMonsters: (monsters: PreStagedMonster[]) => void;
   scaleEncounterDifficulty: (targetDif: number) => void;
   resetGameDayEncounter: () => void;
@@ -300,6 +307,30 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     }
   },
 
+  renameAdventure: async (id: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    await get().updateAdventure(id, { title: newTitle.trim() });
+  },
+
+  publishAdventure: async (adventureId: string, isPublished: boolean) => {
+    await get().updateAdventure(adventureId, { is_published: isPublished });
+  },
+
+  renameAct: async (adventureId: string, actId: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    await get().updateAct(adventureId, actId, { title: newTitle.trim() });
+  },
+
+  reorderActByIndex: async (adventureId: string, fromIdx: number, toIdx: number) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv || !adv.structure?.acts) return;
+    const acts = [...adv.structure.acts];
+    if (fromIdx < 0 || fromIdx >= acts.length || toIdx < 0 || toIdx >= acts.length) return;
+    const [moved] = acts.splice(fromIdx, 1);
+    acts.splice(toIdx, 0, moved);
+    await get().reorderActs(adventureId, acts);
+  },
+
   addAct: async (adventureId: string, title?: string) => {
     const adv = get().adventures.find((a) => a.id === adventureId);
     if (!adv) return;
@@ -505,6 +536,23 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     await get().updateAdventure(adventureId, { structure: newStructure });
   },
 
+  renameEncounter: async (adventureId: string, actId: string, encounterId: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    await get().updateEncounter(adventureId, actId, encounterId, { title: newTitle.trim() });
+  },
+
+  reorderEncounterByIndex: async (adventureId: string, actId: string, fromIdx: number, toIdx: number) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv || !adv.structure?.acts) return;
+    const act = adv.structure.acts.find((a) => a.id === actId);
+    if (!act || !act.encounters) return;
+    const encounters = [...act.encounters];
+    if (fromIdx < 0 || fromIdx >= encounters.length || toIdx < 0 || toIdx >= encounters.length) return;
+    const [moved] = encounters.splice(fromIdx, 1);
+    encounters.splice(toIdx, 0, moved);
+    await get().reorderEncounters(adventureId, actId, encounters);
+  },
+
   reorderEncounters: async (adventureId: string, actId: string, encounters: GmEncounter[]) => {
     const adv = get().adventures.find((a) => a.id === adventureId);
     if (!adv) return;
@@ -520,6 +568,41 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     }));
 
     await get().updateAdventure(adventureId, { structure: newStructure });
+  },
+
+  setEncounterNotes: (notes: string) => {
+    const { sessionMode, activeAdventureId, activeActId, activeEncounterId } = get();
+    if (!activeAdventureId || !activeActId || !activeEncounterId) return;
+
+    if (sessionMode === 'design') {
+      get().updateEncounter(activeAdventureId, activeActId, activeEncounterId, {
+        notes,
+        tactical_notes: notes,
+      });
+    } else {
+      const adv = get().getActiveAdventure();
+      const act = get().getActiveAct();
+      if (!adv || !act) return;
+      const updatedAdv = {
+        ...adv,
+        structure: {
+          ...adv.structure,
+          acts: adv.structure.acts.map((a) =>
+            a.id === act.id
+              ? {
+                  ...a,
+                  encounters: a.encounters.map((e) =>
+                    e.id === activeEncounterId ? { ...e, notes, tactical_notes: notes } : e
+                  ),
+                }
+              : a
+          ),
+        },
+      };
+      set((state) => ({
+        adventures: state.adventures.map((a) => (a.id === adv.id ? updatedAdv : a)),
+      }));
+    }
   },
 
   setEncounterMonsters: (monsters: PreStagedMonster[]) => {

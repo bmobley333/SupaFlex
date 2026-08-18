@@ -15,6 +15,7 @@ export interface GmEncounter {
   id: string;              // UUID or nanoid
   title: string;           // e.g. "Room 4: Skeleton Crypt Guard"
   notes?: string;          // Tactical GM notes, room traps, terrain effects
+  tactical_notes?: string; // Explicit tactical notes
   master_dif?: number;     // Encounter Difficulty rating (default 10)
   monsters: PreStagedMonster[];
   created_at?: string;
@@ -39,6 +40,7 @@ export interface GmAdventure {
   description?: string;
   genre?: string;
   is_active?: boolean;
+  is_published?: boolean;  // Whether published to Supabase community
   structure: AdventureStructure;
   created_at?: string;
   updated_at?: string;
