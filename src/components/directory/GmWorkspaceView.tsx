@@ -640,7 +640,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           {/* Monster List View */}
           {effectiveMonsters.length === 0 ? (
             <div className="text-xs font-medium text-slate-400 italic p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center space-y-2 font-outfit">
-              <div>No monsters in active roster.</div>
+              <div>No monsters in active encounter.</div>
               <div className="text-[11px] text-slate-500 font-outfit">
                 Use the Adventure Ribbon above or click "🐉 Manage Encounter Monsters" to construct, paste statblocks, or pick codex monsters.
               </div>

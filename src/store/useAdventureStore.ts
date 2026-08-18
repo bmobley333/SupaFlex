@@ -173,7 +173,9 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
 
     if (typeof window !== 'undefined') {
       if (actId) localStorage.setItem(STORAGE_ACTIVE_ACT, actId);
+      else localStorage.removeItem(STORAGE_ACTIVE_ACT);
       if (encId) localStorage.setItem(STORAGE_ACTIVE_ENC, encId);
+      else localStorage.removeItem(STORAGE_ACTIVE_ENC);
     }
 
     set({
@@ -197,8 +199,9 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     const firstEnc = targetAct.encounters?.[0];
     const encId = firstEnc ? firstEnc.id : null;
 
-    if (typeof window !== 'undefined' && encId) {
-      localStorage.setItem(STORAGE_ACTIVE_ENC, encId);
+    if (typeof window !== 'undefined') {
+      if (encId) localStorage.setItem(STORAGE_ACTIVE_ENC, encId);
+      else localStorage.removeItem(STORAGE_ACTIVE_ENC);
     }
 
     set({

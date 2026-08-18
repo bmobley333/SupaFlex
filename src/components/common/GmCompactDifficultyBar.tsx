@@ -60,15 +60,10 @@ export const GmCompactDifficultyBar: React.FC<GmCompactDifficultyBarProps> = ({ 
 
   return (
     <div className={`bg-slate-950/90 border border-slate-800/90 p-2 rounded-xl shadow-inner flex flex-wrap items-center justify-between gap-2.5 font-outfit ${className}`}>
-      {/* Left: Threat Badge & Title */}
-      <div className="flex items-center gap-2 shrink-0">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
-          <Sliders className="w-3.5 h-3.5 text-purple-400" />
-          <span className="uppercase tracking-wide text-[11px] text-slate-400">Threat:</span>
-        </div>
-        <span className={`text-[11px] font-mono px-2 py-0.5 rounded-md font-extrabold border ${threat.badge}`}>
-          {threat.text} (Dif {localDif})
-        </span>
+      {/* Left: Threat Label */}
+      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300 shrink-0">
+        <Sliders className="w-3.5 h-3.5 text-purple-400" />
+        <span className="uppercase tracking-wide text-[11px] text-slate-400 font-mono font-extrabold">Threat:</span>
       </div>
 
       {/* Center: Quick Presets (Auto-Applies) */}
@@ -99,20 +94,26 @@ export const GmCompactDifficultyBar: React.FC<GmCompactDifficultyBarProps> = ({ 
         })}
       </div>
 
-      {/* Right: Fine-Tuning Slider */}
-      <div className="flex items-center gap-2 flex-1 min-w-[140px] max-w-[220px]">
-        <span className="text-[10px] font-mono text-slate-500 font-bold shrink-0">3</span>
-        <input
-          type="range"
-          min={3}
-          max={25}
-          step={1}
-          value={localDif}
-          onChange={(e) => handleSliderChange(parseInt(e.target.value, 10))}
-          className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500 hover:accent-purple-400"
-          title={`Master Difficulty Slider: ${localDif}`}
-        />
-        <span className="text-[10px] font-mono text-slate-500 font-bold shrink-0">25</span>
+      {/* Right: Threat Badge & Fine-Tuning Slider */}
+      <div className="flex items-center gap-2.5 flex-1 min-w-[220px] max-w-[340px] justify-end">
+        <span className={`text-[11px] font-mono px-2 py-0.5 rounded-md font-extrabold border shrink-0 ${threat.badge}`}>
+          {threat.text} ({localDif})
+        </span>
+
+        <div className="flex items-center gap-1.5 flex-1 min-w-[120px]">
+          <span className="text-[10px] font-mono text-slate-500 font-bold shrink-0">3</span>
+          <input
+            type="range"
+            min={3}
+            max={25}
+            step={1}
+            value={localDif}
+            onChange={(e) => handleSliderChange(parseInt(e.target.value, 10))}
+            className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500 hover:accent-purple-400"
+            title={`Master Difficulty Slider: ${localDif}`}
+          />
+          <span className="text-[10px] font-mono text-slate-500 font-bold shrink-0">25</span>
+        </div>
       </div>
     </div>
   );

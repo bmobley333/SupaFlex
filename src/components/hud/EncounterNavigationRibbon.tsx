@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  RotateCcw,
   Plus,
   Compass,
   Scroll,
@@ -34,7 +33,6 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
   const activeAct = useAdventureStore((state) => state.getActiveAct());
   const activeEnc = useAdventureStore((state) => state.getActiveEncounter());
   const activeMonsters = useAdventureStore((state) => state.getActiveMonsters());
-  const sessionMode = useAdventureStore((state) => state.sessionMode);
 
   const selectAdventure = useAdventureStore((state) => state.selectAdventure);
   const selectAct = useAdventureStore((state) => state.selectAct);
@@ -56,8 +54,6 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
   const deleteEncounter = useAdventureStore((state) => state.deleteEncounter);
   const renameEncounter = useAdventureStore((state) => state.renameEncounter);
   const reorderEncounterByIndex = useAdventureStore((state) => state.reorderEncounterByIndex);
-
-  const resetGameDayEncounter = useAdventureStore((state) => state.resetGameDayEncounter);
 
   // Dropdown open states
   const [isAdvMenuOpen, setIsAdvMenuOpen] = useState(false);
@@ -505,21 +501,6 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Right: Reset Action Button (for Game Day Scratchpad) */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {sessionMode === 'game_day' && (
-            <button
-              type="button"
-              onClick={resetGameDayEncounter}
-              className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg transition border border-slate-700 flex items-center gap-1 cursor-pointer"
-              title="Reset live combat scratchpad back to original encounter template"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
-              <span>Reset</span>
-            </button>
-          )}
         </div>
       </div>
     </div>

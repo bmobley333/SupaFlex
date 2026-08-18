@@ -1674,24 +1674,7 @@ export const gameApi = {
       const cleanEmail = (gmEmail || '').trim().toLowerCase();
       const nowIso = new Date().toISOString();
       const defaultStructure = {
-        acts: [
-          {
-            id: `act_${Date.now()}`,
-            title: 'Act 1: The Beginning',
-            description: 'Introductory chapter',
-            encounters: [
-              {
-                id: `enc_${Date.now()}`,
-                title: 'Encounter 1: Opening Scene',
-                notes: '',
-                master_dif: 10,
-                monsters: [],
-                created_at: nowIso,
-              },
-            ],
-            created_at: nowIso,
-          },
-        ],
+        acts: [],
       };
 
       const payload = {

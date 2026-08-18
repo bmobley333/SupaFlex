@@ -422,8 +422,12 @@ export default function App() {
             )}
           </div>
 
-          {/* Center Zone: S-Tier Glassmorphic Pill Tab Navigation Bar (Player Mode Only) */}
-          {activeRole !== 'gm' && (
+          {/* Center Zone: S-Tier Glassmorphic Pill Tab Navigation Bar (Player) OR Compact GM Screen + Party ID (GM) */}
+          {activeRole === 'gm' ? (
+            <div className="flex-1 flex justify-center min-w-[280px]">
+              <GmHeaderHUD activeRoomCode={activeRoomCode} />
+            </div>
+          ) : (
             <nav className="flex-1 flex justify-center min-w-[280px]">
               <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl shadow-inner backdrop-blur-md">
                 <button
@@ -532,20 +536,14 @@ export default function App() {
           </div>
         </div>
 
-        {/* Sub-Header Row 2: GM Header Ribbon vs Player Attribute HUD */}
-        {activeRole === 'gm' ? (
-          <GmHeaderHUD
-            activeRoomCode={activeRoomCode}
-          />
-        ) : (
-          activeTab === 'sheet' && (
-            <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
-              <PersistentHeaderHUD
-                onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
-                onOpenFocusManager={() => setShowFocusManagerModal(true)}
-              />
-            </div>
-          )
+        {/* Sub-Header Row 2: Player Attribute HUD (Omitted in GM Mode) */}
+        {activeRole !== 'gm' && activeTab === 'sheet' && (
+          <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
+            <PersistentHeaderHUD
+              onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
+              onOpenFocusManager={() => setShowFocusManagerModal(true)}
+            />
+          </div>
         )}
       </header>
 
