@@ -11,16 +11,16 @@ interface GmCompactDifficultyBarProps {
 
 export const GmCompactDifficultyBar: React.FC<GmCompactDifficultyBarProps> = ({ className = '' }) => {
   const activeEncounter = useAdventureStore((state) => state.getActiveEncounter());
+  const activeEncounterDifficulty = useAdventureStore((state) => state.getActiveEncounterDifficulty());
   const scaleEncounterDifficulty = useAdventureStore((state) => state.scaleEncounterDifficulty);
 
-  const initialDif = activeEncounter?.master_dif || 10;
-  const [localDif, setLocalDif] = useState<number>(initialDif);
+  const [localDif, setLocalDif] = useState<number>(activeEncounterDifficulty);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync with encounter change
+  // Sync with encounter change or difficulty change
   useEffect(() => {
-    setLocalDif(activeEncounter?.master_dif || 10);
-  }, [activeEncounter?.id, activeEncounter?.master_dif]);
+    setLocalDif(activeEncounterDifficulty);
+  }, [activeEncounter?.id, activeEncounterDifficulty]);
 
   // Clean up debounce timer on unmount
   useEffect(() => {

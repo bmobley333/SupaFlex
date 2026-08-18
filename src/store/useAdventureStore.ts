@@ -15,13 +15,15 @@ interface AdventureStoreState {
   sessionMode: GmSessionMode;
   isLoading: boolean;
 
-  // Game Day Temporary In-Memory Sandbox (encounterId -> monsters)
+  // Game Day Temporary In-Memory Sandbox (encounterId -> monsters & difficulty)
   gameDaySandbox: Record<string, PreStagedMonster[]>;
+  gameDayDifficulty: Record<string, number>;
 
   // Getters / Selectors
   getActiveAdventure: () => GmAdventure | null;
   getActiveAct: () => GmAct | null;
   getActiveEncounter: () => GmEncounter | null;
+  getActiveEncounterDifficulty: () => number;
   getActiveMonsters: () => PreStagedMonster[];
 
   // Mode & Navigation
@@ -86,6 +88,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
   sessionMode: getInitialSessionMode(),
   isLoading: false,
   gameDaySandbox: {},
+  gameDayDifficulty: {},
 
   getActiveAdventure: () => {
     const { adventures, activeAdventureId } = get();
@@ -107,6 +110,17 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     const { activeEncounterId } = get();
     if (!activeEncounterId) return act.encounters[0] || null;
     return act.encounters.find((enc) => enc.id === activeEncounterId) || null;
+  },
+
+  getActiveEncounterDifficulty: () => {
+    const { sessionMode, gameDayDifficulty } = get();
+    const enc = get().getActiveEncounter();
+    if (!enc) return 10;
+
+    if (sessionMode === 'game_day' && gameDayDifficulty[enc.id] !== undefined) {
+      return gameDayDifficulty[enc.id];
+    }
+    return enc.master_dif ?? 10;
   },
 
   getActiveMonsters: () => {
@@ -640,9 +654,10 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
   },
 
   scaleEncounterDifficulty: (targetDif: number) => {
-    const currentMonsters = get().getActiveMonsters();
-    if (currentMonsters.length === 0) return;
+    const { sessionMode, activeAdventureId, activeActId, activeEncounterId } = get();
+    if (!activeAdventureId || !activeActId || !activeEncounterId) return;
 
+    const currentMonsters = get().getActiveMonsters();
     const scaled = currentMonsters.map((m) => {
       const baseText = m.baseFullText || m.fullText || m.nameWithEquip;
       const baseParsed = parseMonsterLine(baseText);
@@ -655,21 +670,30 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
       };
     });
 
-    const { sessionMode, activeAdventureId, activeActId, activeEncounterId } = get();
-    if (!activeAdventureId || !activeActId || !activeEncounterId) return;
-
     if (sessionMode === 'game_day') {
       set((state) => ({
-        gameDaySandbox: {
-          ...state.gameDaySandbox,
-          [activeEncounterId]: scaled,
+        gameDayDifficulty: {
+          ...state.gameDayDifficulty,
+          [activeEncounterId]: targetDif,
         },
+        gameDaySandbox: currentMonsters.length > 0
+          ? {
+              ...state.gameDaySandbox,
+              [activeEncounterId]: scaled,
+            }
+          : state.gameDaySandbox,
       }));
     } else {
-      get().updateEncounter(activeAdventureId, activeActId, activeEncounterId, {
-        master_dif: targetDif,
-        monsters: scaled,
-      });
+      if (currentMonsters.length > 0) {
+        get().updateEncounter(activeAdventureId, activeActId, activeEncounterId, {
+          master_dif: targetDif,
+          monsters: scaled,
+        });
+      } else {
+        get().updateEncounter(activeAdventureId, activeActId, activeEncounterId, {
+          master_dif: targetDif,
+        });
+      }
     }
   },
 
@@ -680,7 +704,12 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     set((state) => {
       const updatedSandbox = { ...state.gameDaySandbox };
       delete updatedSandbox[enc.id];
-      return { gameDaySandbox: updatedSandbox };
+      const updatedDifficulty = { ...state.gameDayDifficulty };
+      delete updatedDifficulty[enc.id];
+      return {
+        gameDaySandbox: updatedSandbox,
+        gameDayDifficulty: updatedDifficulty,
+      };
     });
   },
 
