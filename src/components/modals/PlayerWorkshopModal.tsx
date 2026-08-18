@@ -693,198 +693,202 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </div>
           )}
 
-          {/* Name Field */}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-300">
-                {creationType === 'skill'
-                  ? 'Skill Name'
-                  : creationType === 'power_table'
-                  ? 'Power Table Name'
-                  : creationType === 'power'
-                  ? 'Power Name'
-                  : 'Creation Name'}
-              </span>
-              <GuardrailBadge isValid={isNameValid} />
-              <InfoTooltip text="Enter the unique name of your custom creation or table." />
-            </div>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={
-                creationType === 'power_table'
-                  ? 'e.g. Chronomancer, Shadowblade, Vampire'
-                  : creationType === 'power'
-                  ? 'e.g. Flame Surge, Astral Aegis'
-                  : 'Enter name...'
-              }
-              className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
-              required
-            />
-          </div>
-
-          {/* Power Table Category Selector (Power Table Creation Mode Only) */}
-          {creationType === 'power_table' && (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-300">Table Category</span>
-                <GuardrailBadge isValid={isTableCategoryValid} />
-                <InfoTooltip text="Classify this power table (Class, Combat Style, Luck, Race, or Custom category)." />
-              </div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={tableCategory}
-                  onChange={(e) => setTableCategory(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer flex-1"
-                >
-                  <option value="">-- Select a Category --</option>
-                  {['Class', 'Combat Style', 'Luck', 'Race', 'Custom'].map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-                {tableCategory === 'Custom' && (
+          {/* --- TAB 1: POWER MODE --- */}
+          {creationType === 'power' && (
+            <>
+              {/* Row 1: Power Name + Power Table (Required) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Power Name</span>
+                    <GuardrailBadge isValid={isNameValid} />
+                    <InfoTooltip text="Enter the unique name of your custom power." />
+                  </div>
                   <input
                     type="text"
-                    placeholder="Enter custom category..."
-                    value={customCategoryInput}
-                    onChange={(e) => setCustomCategoryInput(e.target.value)}
-                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 flex-1"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Flame Surge, Astral Aegis"
+                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
                     required
                   />
-                )}
-              </div>
-            </div>
-          )}
+                </div>
 
-          {/* REQUIRED Power Table Dropdown (Power Mode Only) */}
-          {creationType === 'power' && (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-300">Power Table (Required)</span>
-                <GuardrailBadge isValid={isPowerTableValid} />
-                <InfoTooltip text="Select the Power Table this power belongs to. This categorizes the power and establishes its table classification." />
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Power Table (Required)</span>
+                    <GuardrailBadge isValid={isPowerTableValid} />
+                    <InfoTooltip text="Select the Power Table this power belongs to. This categorizes the power and establishes its table classification." />
+                  </div>
+                  <select
+                    value={selectedPowerTable}
+                    onChange={(e) => setSelectedPowerTable(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer"
+                    required
+                  >
+                    <option value="">-- Select a Power Table --</option>
+                    {Object.entries(groupedPowerTables).map(([category, tables]) => (
+                      <optgroup key={category} label={category}>
+                        {tables.map((t) => (
+                          <option key={t.name} value={t.name}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <select
-                value={selectedPowerTable}
-                onChange={(e) => setSelectedPowerTable(e.target.value)}
-                className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer"
-                required
-              >
-                <option value="">-- Select a Power Table --</option>
-                {Object.entries(groupedPowerTables).map(([category, tables]) => (
-                  <optgroup key={category} label={category}>
-                    {tables.map((t) => (
-                      <option key={t.name} value={t.name}>
-                        {t.name}
+
+              {/* Row 2: Action & Usage (2-col grid) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Action</span>
+                    <InfoTooltip text="AM = Action/Move, A = Action, M = Move, P = Passive, F = Free." />
+                  </div>
+                  <select
+                    value={action}
+                    onChange={(e) => setAction(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
+                  >
+                    {ACTION_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
                       </option>
                     ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Usage</span>
+                    <InfoTooltip text="Frequency of activation (e.g. 1, 2, 3, 1-🍀 Luck, 1-⚡ Instant, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
+                  </div>
+                  <select
+                    value={usage}
+                    onChange={(e) => setUsage(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
+                  >
+                    {USAGE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 3: Ready Category Selector Pill Switch */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-300">Ready Category</span>
+                  <InfoTooltip text="Classify this power for the Ready Matrix: Primary / Arsenal (attacks/damage), Mobility & Defense (movement/shields), or Support & Passives (buffs/utility)." />
+                </div>
+                <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                  {POWER_READY_CATEGORIES.map((cat) => {
+                    const isSelected = powerReady === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setPowerReady(cat.id)}
+                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          isSelected
+                            ? cat.id === 'primary_arsenal'
+                              ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                              : cat.id === 'mobility_defense'
+                              ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                              : 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>{cat.icon}</span>
+                        <span>{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
           )}
 
-          {/* Single Skill Attribute Selector (Skill Mode Only) */}
-          {creationType === 'skill' && (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-300">Required Attribute</span>
-                <GuardrailBadge isValid={isSkillAttributeValid} />
-                <InfoTooltip text="Assign exactly one core attribute icon (Magic✨, Might💪, Mind👁️, Motion🏃, Moxie🫀) to this skill." />
-              </div>
-              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                {SKILLSET_ATTRIBUTE_OPTIONS.map((attr) => {
-                  const isSelected = skillAttribute === attr.icon;
-                  return (
-                    <button
-                      key={attr.icon}
-                      type="button"
-                      onClick={() => setSkillAttribute(attr.icon)}
-                      className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        isSelected
-                          ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      <span>{attr.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Hardware Cost Row */}
-          {creationType === 'hardware' && (
-            <div className="flex items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-cyan-500/30">
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="font-bold text-cyan-300">Store Cost</span>
-                <InfoTooltip text="Enter the purchase cost in silver or gold pieces." />
-              </div>
-              <input
-                type="number"
-                min={1}
-                value={costVal}
-                onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                className="bg-slate-900 border border-slate-700 text-slate-100 text-xs font-mono font-bold px-2 py-1 rounded outline-none w-20"
-              />
-              <select
-                value={costUnit}
-                onChange={(e) => setCostUnit(e.target.value as 's' | 'g')}
-                className="bg-slate-900 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded outline-none cursor-pointer"
-              >
-                <option value="s">Silver (s)</option>
-                <option value="g">Gold (g)</option>
-              </select>
-              <span className="text-[11px] text-slate-400 italic">
-                ({costUnit === 'g' ? `${costVal * 100}s equivalent` : `${Math.floor(costVal / 100)}g ${costVal % 100}s`})
-              </span>
-            </div>
-          )}
-
-          {/* Action, Usage, Tier Grid (For Non-Skill/Skillset/PowerTable: Power, Relic, Hardware) */}
-          {creationType !== 'skillset' && creationType !== 'skill' && creationType !== 'power_table' && (
-            <div className={`grid ${creationType === 'relic' ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
+          {/* --- TAB 2: POWER TABLE MODE --- */}
+          {creationType === 'power_table' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Power Table Name */}
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-300">Action</span>
-                  <InfoTooltip text="AM = Action/Move, A = Action, M = Move, P = Passive, F = Free." />
+                  <span className="font-bold text-slate-300">Power Table Name</span>
+                  <GuardrailBadge isValid={isNameValid} />
+                  <InfoTooltip text="Enter the unique name of your custom power table." />
                 </div>
-                <select
-                  value={action}
-                  onChange={(e) => setAction(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1.5 rounded-lg outline-none cursor-pointer"
-                >
-                  {ACTION_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Chronomancer, Shadowblade, Vampire"
+                  className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+                  required
+                />
               </div>
 
+              {/* Table Category */}
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-300">Usage</span>
-                  <InfoTooltip text="Frequency of activation (e.g. 1, 2, 3, 1-🍀 Luck, 1-⚡ Instant, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
+                  <span className="font-bold text-slate-300">Table Category</span>
+                  <GuardrailBadge isValid={isTableCategoryValid} />
+                  <InfoTooltip text="Classify this power table (Class, Combat Style, Luck, Race, or Custom category)." />
                 </div>
-                <select
-                  value={usage}
-                  onChange={(e) => setUsage(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-2 py-1.5 rounded-lg outline-none cursor-pointer"
-                >
-                  {USAGE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={tableCategory}
+                    onChange={(e) => setTableCategory(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer flex-1"
+                  >
+                    <option value="">-- Select a Category --</option>
+                    {['Class', 'Combat Style', 'Luck', 'Race', 'Custom'].map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                  {tableCategory === 'Custom' && (
+                    <input
+                      type="text"
+                      placeholder="Enter custom category..."
+                      value={customCategoryInput}
+                      onChange={(e) => setCustomCategoryInput(e.target.value)}
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 flex-1"
+                      required
+                    />
+                  )}
+                </div>
               </div>
+            </div>
+          )}
 
-              {creationType === 'relic' && (
+          {/* --- TAB 3: RELIC MODE --- */}
+          {creationType === 'relic' && (
+            <>
+              {/* Row 1: Relic Name + Tier */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Relic Name</span>
+                    <GuardrailBadge isValid={isNameValid} />
+                    <InfoTooltip text="Enter the unique name of your custom relic." />
+                  </div>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Ring of Celerity, Sunblade"
+                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+                    required
+                  />
+                </div>
+
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-300">Tier</span>
@@ -893,7 +897,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                   <select
                     value={tier}
                     onChange={(e) => setTier(e.target.value as any)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1.5 rounded-lg outline-none cursor-pointer"
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
                   >
                     <option value="Minor">🍺 Minor</option>
                     <option value="Lesser">🪄 Lesser</option>
@@ -901,109 +905,277 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                     <option value="Epic">💫 Epic</option>
                   </select>
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Ready Category Selector Pill Switch (Power Only) */}
-          {creationType === 'power' && (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-300">Ready Category</span>
-                <InfoTooltip text="Classify this power for the Ready Matrix: Primary / Arsenal (attacks/damage), Mobility & Defense (movement/shields), or Support & Passives (buffs/utility)." />
-              </div>
-              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                {POWER_READY_CATEGORIES.map((cat) => {
-                  const isSelected = powerReady === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setPowerReady(cat.id)}
-                      className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                        isSelected
-                          ? cat.id === 'primary_arsenal'
-                            ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                            : cat.id === 'mobility_defense'
-                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                            : 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      <span>{cat.icon}</span>
-                      <span>{cat.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Skillset Dynamic Skill Items List (2 to 5 with alphabetized dropdown catalog) */}
-          {creationType === 'skillset' && (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-300 font-outfit uppercase tracking-wider text-[11px]">
-                    Included Skills (2–5 Required)
-                  </span>
-                  <GuardrailBadge isValid={isSkillsetSkillsValid} />
-                  <InfoTooltip text="Select 2 to 5 existing skills from the alphabetized catalog (stock, personal, and party creations) to compose this skillset." />
-                </div>
-                <span className="text-[10px] text-slate-400 font-semibold">
-                  {selectedSkillsetSkills.length} of 5 Skills
-                </span>
               </div>
 
-              <div className="flex flex-col gap-2">
-                {selectedSkillsetSkills.map((skillVal, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center gap-2"
-                  >
-                    <span className="text-[11px] font-mono font-bold text-slate-500 w-5 shrink-0 text-center">
-                      #{idx + 1}
-                    </span>
-                    <select
-                      value={skillVal}
-                      onChange={(e) => handleSelectSkill(idx, e.target.value)}
-                      className="flex-1 bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400 font-semibold min-w-0 cursor-pointer"
-                      required
-                    >
-                      <option value="">-- Select a Skill --</option>
-                      {availableSkillsCatalog.map((sk) => (
-                        <option key={sk} value={sk}>
-                          {sk}
-                        </option>
-                      ))}
-                    </select>
-
-                    {/* Remove Button */}
-                    {selectedSkillsetSkills.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSkillsetRow(idx)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-500/40 transition-colors shrink-0 cursor-pointer"
-                        title="Remove skill"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
+              {/* Row 2: Action & Usage (2-col grid) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Action</span>
+                    <InfoTooltip text="AM = Action/Move, A = Action, M = Move, P = Passive, F = Free." />
                   </div>
-                ))}
+                  <select
+                    value={action}
+                    onChange={(e) => setAction(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
+                  >
+                    {ACTION_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Usage</span>
+                    <InfoTooltip text="Frequency of activation (e.g. 1, 2, 3, 1-🍀 Luck, 1-⚡ Instant, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
+                  </div>
+                  <select
+                    value={usage}
+                    onChange={(e) => setUsage(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
+                  >
+                    {USAGE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* --- TAB 4: HARDWARE MODE --- */}
+          {creationType === 'hardware' && (
+            <>
+              {/* Row 1: Hardware Name + Store Cost */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Hardware Name</span>
+                    <GuardrailBadge isValid={isNameValid} />
+                    <InfoTooltip text="Enter the unique name of your custom hardware item." />
+                  </div>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Grappling Hook, Field Medic Kit"
+                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-cyan-300">Store Cost</span>
+                    <InfoTooltip text="Enter the purchase cost in silver or gold pieces." />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      value={costVal}
+                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="bg-slate-950 border border-slate-700 text-slate-100 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none focus:border-cyan-400 w-24"
+                    />
+                    <select
+                      value={costUnit}
+                      onChange={(e) => setCostUnit(e.target.value as 's' | 'g')}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer flex-1"
+                    >
+                      <option value="s">Silver (s)</option>
+                      <option value="g">Gold (g)</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              {selectedSkillsetSkills.length < 5 && (
-                <button
-                  type="button"
-                  onClick={handleAddSkillsetRow}
-                  className="py-1.5 px-3 rounded-xl border border-dashed border-slate-700 hover:border-amber-500/60 bg-slate-950/40 hover:bg-slate-900 text-slate-300 hover:text-amber-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>+ Add Skill ({selectedSkillsetSkills.length}/5)</span>
-                </button>
-              )}
-            </div>
+              {/* Row 2: Action & Usage (2-col grid) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Action</span>
+                    <InfoTooltip text="AM = Action/Move, A = Action, M = Move, P = Passive, F = Free." />
+                  </div>
+                  <select
+                    value={action}
+                    onChange={(e) => setAction(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
+                  >
+                    {ACTION_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Usage</span>
+                    <InfoTooltip text="Frequency of activation (e.g. 1, 2, 3, 1-🍀 Luck, 1-⚡ Instant, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
+                  </div>
+                  <select
+                    value={usage}
+                    onChange={(e) => setUsage(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
+                  >
+                    {USAGE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* --- TAB 5: SKILL MODE --- */}
+          {creationType === 'skill' && (
+            <>
+              {/* Row 1: Skill Name (Half-width) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Skill Name</span>
+                    <GuardrailBadge isValid={isNameValid} />
+                    <InfoTooltip text="Enter the unique name of your custom skill." />
+                  </div>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Acrobatics, Lockpicking"
+                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Single Skill Attribute Selector */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-300">Required Attribute</span>
+                  <GuardrailBadge isValid={isSkillAttributeValid} />
+                  <InfoTooltip text="Assign exactly one core attribute icon (Magic✨, Might💪, Mind👁️, Motion🏃, Moxie🫀) to this skill." />
+                </div>
+                <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                  {SKILLSET_ATTRIBUTE_OPTIONS.map((attr) => {
+                    const isSelected = skillAttribute === attr.icon;
+                    return (
+                      <button
+                        key={attr.icon}
+                        type="button"
+                        onClick={() => setSkillAttribute(attr.icon)}
+                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>{attr.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* --- TAB 6: SKILLSET MODE --- */}
+          {creationType === 'skillset' && (
+            <>
+              {/* Row 1: Skillset Name (Half-width) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Skillset Name</span>
+                    <GuardrailBadge isValid={isNameValid} />
+                    <InfoTooltip text="Enter the unique name of your custom skillset." />
+                  </div>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Infiltrator, Elementalist"
+                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Dynamic Skills List (2 to 5 Required) */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300 font-outfit uppercase tracking-wider text-[11px]">
+                      Included Skills (2–5 Required)
+                    </span>
+                    <GuardrailBadge isValid={isSkillsetSkillsValid} />
+                    <InfoTooltip text="Select 2 to 5 existing skills from the alphabetized catalog (stock, personal, and party creations) to compose this skillset." />
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-semibold">
+                    {selectedSkillsetSkills.length} of 5 Skills
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  {selectedSkillsetSkills.map((skillVal, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center gap-2"
+                    >
+                      <span className="text-[11px] font-mono font-bold text-slate-500 w-5 shrink-0 text-center">
+                        #{idx + 1}
+                      </span>
+                      <select
+                        value={skillVal}
+                        onChange={(e) => handleSelectSkill(idx, e.target.value)}
+                        className="flex-1 bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400 font-semibold min-w-0 cursor-pointer"
+                        required
+                      >
+                        <option value="">
+                          -- Select Skill #{idx + 1} {idx < 2 ? '(Required)' : ''} --
+                        </option>
+                        {availableSkillsCatalog.map((sk) => (
+                          <option key={sk} value={sk}>
+                            {sk}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Remove Button */}
+                      {selectedSkillsetSkills.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSkillsetRow(idx)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-500/40 transition-colors shrink-0 cursor-pointer"
+                          title="Remove skill"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {selectedSkillsetSkills.length < 5 && (
+                  <button
+                    type="button"
+                    onClick={handleAddSkillsetRow}
+                    className="py-1.5 px-3 rounded-xl border border-dashed border-slate-700 hover:border-amber-500/60 bg-slate-950/40 hover:bg-slate-900 text-slate-300 hover:text-amber-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-0.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Skill ({selectedSkillsetSkills.length}/5)</span>
+                  </button>
+                )}
+              </div>
+            </>
           )}
 
           {/* Effect (rules) (Power, Relic, Hardware) */}
