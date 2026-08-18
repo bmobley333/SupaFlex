@@ -2,7 +2,7 @@
 // Game Master Command Console: Party Roster, Party Management & Monster Roster View
 
 import React, { useState, useEffect } from 'react';
-import { ArrowUpDown, Link2 } from 'lucide-react';
+import { ArrowUpDown, Link2, StickyNote } from 'lucide-react';
 import { gameApi } from '../../services/api';
 import { Party, PartySessionMember, CharacterSheetData, GmDocLink } from '../../types/game';
 import { parseMonsterLine, ParsedMonster, sortMonstersByPreset, MonsterSortPreset } from '../../utils/monsterStatParser';
@@ -38,7 +38,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const partyIdOrDef = selectedParty?.id || 'default';
   const gmDocLinksStorageKey = `supaflex_gm_doc_links_${partyIdOrDef}`;
   const gmTagsStorageKey = `supaflex_gm_tags_${partyIdOrDef}`;
-  const monsterStorageKey = `supaflex_gm_monsters_${partyIdOrDef}`;
   const monsterPresetKey = `supaflex_gm_monster_preset_${partyIdOrDef}`;
 
   // GM Document Vault & Adventure Tagging State
@@ -54,16 +53,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const [adventureTags, setAdventureTags] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(gmTagsStorageKey);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Active Encounter Monsters State
-  const [monsters, setMonsters] = useState<ParsedMonster[]>(() => {
-    try {
-      const saved = localStorage.getItem(monsterStorageKey);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -89,7 +78,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Adventure Store State
   const fetchAdventures = useAdventureStore((state) => state.fetchAdventures);
   const activeMonsters = useAdventureStore((state) => state.getActiveMonsters());
+  const activeEncounter = useAdventureStore((state) => state.getActiveEncounter());
   const setEncounterMonsters = useAdventureStore((state) => state.setEncounterMonsters);
+  const setEncounterNotes = useAdventureStore((state) => state.setEncounterNotes);
 
   useEffect(() => {
     if (currentEmail) {
@@ -101,10 +92,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
 
-  // Effective monsters list displayed in the GM Monster Tracker
-  const effectiveMonsters = activeMonsters.length > 0 ? activeMonsters : monsters;
+  // Effective monsters list displayed in the GM Monster Tracker strictly mirrors the active encounter
+  const effectiveMonsters = activeMonsters;
 
-  // Re-sync GM Document Links, Adventure Tags & Monsters when selected party changes
+  // Re-sync GM Document Links & Adventure Tags when selected party changes
   useEffect(() => {
     try {
       const savedLinks = localStorage.getItem(`supaflex_gm_doc_links_${selectedParty?.id || 'default'}`);
@@ -113,9 +104,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       const savedTags = localStorage.getItem(`supaflex_gm_tags_${selectedParty?.id || 'default'}`);
       setAdventureTags(savedTags ? JSON.parse(savedTags) : []);
 
-      const savedMonsters = localStorage.getItem(`supaflex_gm_monsters_${selectedParty?.id || 'default'}`);
-      setMonsters(savedMonsters ? JSON.parse(savedMonsters) : []);
-
       const savedPreset = localStorage.getItem(`supaflex_gm_monster_preset_${selectedParty?.id || 'default'}`);
       if (savedPreset && (savedPreset === 'alphabetical' || savedPreset === 'nish' || savedPreset === 'vitality')) {
         setMonsterPreset(savedPreset as MonsterSortPreset);
@@ -123,7 +111,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     } catch (e) {
       setGmDocLinks([]);
       setAdventureTags([]);
-      setMonsters([]);
     }
   }, [selectedParty?.id]);
 
@@ -149,15 +136,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const handleSaveMonsters = (updated: ParsedMonster[]) => {
     const sorted = sortMonstersByPreset(updated, monsterPreset);
     setEncounterMonsters(sorted);
-    setMonsters(sorted);
-    if (selectedParty?.id) {
-      gameApi.savePartyMonsters(selectedParty.id, sorted);
-    }
-    try {
-      localStorage.setItem(monsterStorageKey, JSON.stringify(sorted));
-    } catch (err) {
-      console.error('[GmWorkspaceView] LocalStorage monsters save error:', err);
-    }
   };
 
   const applyMonsterPreset = (preset: MonsterSortPreset) => {
@@ -624,6 +602,31 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
               )}
             </div>
           )}
+
+          {/* Permanent Always-Open Encounter Tactical Notes Card */}
+          <div className="bg-slate-950/90 border border-slate-800 p-3 rounded-xl shadow-inner flex flex-col gap-2 font-outfit mt-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                <StickyNote className="w-3.5 h-3.5 text-amber-400" />
+                <span>Encounter Tactical Notes & Traps</span>
+                {activeEncounter && (
+                  <span className="text-slate-400 font-normal">({activeEncounter.title})</span>
+                )}
+              </h4>
+            </div>
+            <textarea
+              rows={3}
+              value={activeEncounter?.notes || activeEncounter?.tactical_notes || ''}
+              onChange={(e) => setEncounterNotes(e.target.value)}
+              placeholder={
+                activeEncounter
+                  ? 'e.g. Floor spikes trigger on round 2; 2 skeleton archers on catwalks; secret door behind altar...'
+                  : 'Select or create an encounter above to write tactical notes...'
+              }
+              disabled={!activeEncounter}
+              className="w-full bg-slate-900/90 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 font-mono outline-none focus:border-amber-500/80 transition placeholder:text-slate-600 disabled:opacity-40"
+            />
+          </div>
         </div>
       </div>
 

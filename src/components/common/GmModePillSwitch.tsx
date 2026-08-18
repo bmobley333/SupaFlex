@@ -13,18 +13,18 @@ export const GmModePillSwitch: React.FC<GmModePillSwitchProps> = ({ className = 
   const setSessionMode = useAdventureStore((state) => state.setSessionMode);
 
   return (
-    <div className={`flex flex-col gap-1 ${className}`}>
-      {/* Dyslexia-Friendly Side-by-Side Pill Switch */}
-      <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+    <div className={`flex flex-wrap items-center gap-3 ${className}`}>
+      {/* Dyslexia-Friendly Compact Side-by-Side Pill Switch */}
+      <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0 w-[240px]">
         <button
           type="button"
           onClick={() => setSessionMode('design')}
-          className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             sessionMode === 'design'
               ? 'bg-amber-600 text-white shadow-sm font-extrabold border border-amber-400/40'
               : 'text-slate-400 hover:text-slate-200 border border-transparent'
           }`}
-          title="Design Mode: All changes and monster stagings are permanently saved to your Adventure database"
+          title="Design Mode: All changes, monsters & notes auto-save permanently to database"
         >
           <span>🛠️</span> Design Mode
         </button>
@@ -32,7 +32,7 @@ export const GmModePillSwitch: React.FC<GmModePillSwitchProps> = ({ className = 
         <button
           type="button"
           onClick={() => setSessionMode('game_day')}
-          className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             sessionMode === 'game_day'
               ? 'bg-emerald-600 text-white shadow-sm font-extrabold border border-emerald-400/40'
               : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -43,15 +43,15 @@ export const GmModePillSwitch: React.FC<GmModePillSwitchProps> = ({ className = 
         </button>
       </div>
 
-      {/* Explainer Subtext */}
-      <div className="text-[11px] px-1 font-medium text-slate-400 flex items-center gap-1 font-outfit">
+      {/* Explainer Subtext listed to the right */}
+      <div className="text-xs font-medium text-slate-300 flex items-center gap-1 font-outfit flex-1 min-w-[260px]">
         {sessionMode === 'design' ? (
-          <span className="text-amber-300/90">
-            • <strong>Design Mode:</strong> Changes & stat scalings auto-save permanently to your Adventure.
+          <span className="text-amber-300/90 flex items-center gap-1">
+            <span className="text-amber-400 font-bold">🛠️ Design Mode:</span> All changes, monsters & notes auto-save permanently to database.
           </span>
         ) : (
-          <span className="text-emerald-300/90">
-            • <strong>Game Day Mode:</strong> Live combat scratchpad — changes are temporary and won't overwrite your master template.
+          <span className="text-emerald-300/90 flex items-center gap-1">
+            <span className="text-emerald-400 font-bold">🎲 Game Day Mode:</span> Live combat scratchpad — temporary in-memory changes that reset when closed.
           </span>
         )}
       </div>

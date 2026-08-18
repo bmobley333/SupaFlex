@@ -90,7 +90,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
   getActiveAdventure: () => {
     const { adventures, activeAdventureId } = get();
     if (!activeAdventureId) return adventures[0] || null;
-    return adventures.find((a) => a.id === activeAdventureId) || adventures[0] || null;
+    return adventures.find((a) => a.id === activeAdventureId) || null;
   },
 
   getActiveAct: () => {
@@ -98,7 +98,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     if (!adv || !adv.structure?.acts?.length) return null;
     const { activeActId } = get();
     if (!activeActId) return adv.structure.acts[0] || null;
-    return adv.structure.acts.find((act) => act.id === activeActId) || adv.structure.acts[0] || null;
+    return adv.structure.acts.find((act) => act.id === activeActId) || null;
   },
 
   getActiveEncounter: () => {
@@ -106,7 +106,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     if (!act || !act.encounters?.length) return null;
     const { activeEncounterId } = get();
     if (!activeEncounterId) return act.encounters[0] || null;
-    return act.encounters.find((enc) => enc.id === activeEncounterId) || act.encounters[0] || null;
+    return act.encounters.find((enc) => enc.id === activeEncounterId) || null;
   },
 
   getActiveMonsters: () => {
@@ -295,11 +295,19 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
           return {
             adventures: filtered,
             activeAdventureId: filtered[0]?.id || null,
+            activeActId: filtered[0]?.structure?.acts?.[0]?.id || null,
+            activeEncounterId: filtered[0]?.structure?.acts?.[0]?.encounters?.[0]?.id || null,
           };
         });
         const remaining = get().adventures;
         if (remaining[0]) {
           get().selectAdventure(remaining[0].id);
+        } else {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(STORAGE_ACTIVE_ADV);
+            localStorage.removeItem(STORAGE_ACTIVE_ACT);
+            localStorage.removeItem(STORAGE_ACTIVE_ENC);
+          }
         }
       }
     } catch (e) {
@@ -387,19 +395,25 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     const updatedActs = (adv.structure?.acts || []).filter((act) => act.id !== actId);
     const newStructure = { ...adv.structure, acts: updatedActs };
 
+    const remainingAct = updatedActs[0] || null;
+    const remainingEnc = remainingAct?.encounters?.[0] || null;
+
     set((state) => ({
       adventures: state.adventures.map((a) => (a.id === adventureId ? { ...a, structure: newStructure } : a)),
+      activeActId: get().activeActId === actId ? (remainingAct?.id || null) : get().activeActId,
+      activeEncounterId: get().activeActId === actId ? (remainingEnc?.id || null) : get().activeEncounterId,
     }));
 
-    await get().updateAdventure(adventureId, { structure: newStructure });
-
-    // Reselect remaining act if current was deleted
     if (get().activeActId === actId) {
-      const remainingAct = updatedActs[0];
-      if (remainingAct) {
-        get().selectAct(remainingAct.id);
+      if (typeof window !== 'undefined') {
+        if (remainingAct) localStorage.setItem(STORAGE_ACTIVE_ACT, remainingAct.id);
+        else localStorage.removeItem(STORAGE_ACTIVE_ACT);
+        if (remainingEnc) localStorage.setItem(STORAGE_ACTIVE_ENC, remainingEnc.id);
+        else localStorage.removeItem(STORAGE_ACTIVE_ENC);
       }
     }
+
+    await get().updateAdventure(adventureId, { structure: newStructure });
   },
 
   reorderActs: async (adventureId: string, acts: GmAct[]) => {
@@ -484,19 +498,22 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     });
 
     const newStructure = { ...adv.structure, acts: updatedActs };
+    const currentAct = updatedActs.find((a) => a.id === actId);
+    const remainingEnc = currentAct?.encounters?.[0] || null;
 
     set((state) => ({
       adventures: state.adventures.map((a) => (a.id === adventureId ? { ...a, structure: newStructure } : a)),
+      activeEncounterId: get().activeEncounterId === encounterId ? (remainingEnc?.id || null) : get().activeEncounterId,
     }));
 
-    await get().updateAdventure(adventureId, { structure: newStructure });
-
     if (get().activeEncounterId === encounterId) {
-      const currentAct = updatedActs.find((a) => a.id === actId);
-      if (currentAct && currentAct.encounters?.length) {
-        get().selectEncounter(currentAct.encounters[0].id);
+      if (typeof window !== 'undefined') {
+        if (remainingEnc) localStorage.setItem(STORAGE_ACTIVE_ENC, remainingEnc.id);
+        else localStorage.removeItem(STORAGE_ACTIVE_ENC);
       }
     }
+
+    await get().updateAdventure(adventureId, { structure: newStructure });
   },
 
   duplicateEncounter: async (adventureId: string, actId: string, encounterId: string) => {

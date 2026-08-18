@@ -2,7 +2,7 @@
 // High-Density On-Screen Master Difficulty Scaling Bar for the GM Screen
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Sliders, Zap } from 'lucide-react';
+import { Sliders } from 'lucide-react';
 import { useAdventureStore } from '../../store/useAdventureStore';
 
 interface GmCompactDifficultyBarProps {
@@ -12,7 +12,6 @@ interface GmCompactDifficultyBarProps {
 export const GmCompactDifficultyBar: React.FC<GmCompactDifficultyBarProps> = ({ className = '' }) => {
   const activeEncounter = useAdventureStore((state) => state.getActiveEncounter());
   const scaleEncounterDifficulty = useAdventureStore((state) => state.scaleEncounterDifficulty);
-  const sessionMode = useAdventureStore((state) => state.sessionMode);
 
   const initialDif = activeEncounter?.master_dif || 10;
   const [localDif, setLocalDif] = useState<number>(initialDif);
@@ -114,12 +113,6 @@ export const GmCompactDifficultyBar: React.FC<GmCompactDifficultyBarProps> = ({ 
           title={`Master Difficulty Slider: ${localDif}`}
         />
         <span className="text-[10px] font-mono text-slate-500 font-bold shrink-0">25</span>
-      </div>
-
-      {/* Mode Indicator Pill Tag */}
-      <div className="hidden sm:flex items-center gap-1 text-[10px] font-bold font-mono text-slate-400 shrink-0">
-        <Zap className="w-3 h-3 text-amber-400" />
-        <span>{sessionMode === 'design' ? 'Permanent Scale' : 'Live Temp Scale'}</span>
       </div>
     </div>
   );
