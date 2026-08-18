@@ -684,16 +684,16 @@ export default function App() {
       </ErrorBoundary>
 
 
-      {/* ⚒️ Player's Forge Modal */}
-      <ErrorBoundary fallbackTitle="Player's Forge Error" onClose={() => setShowPlayerWorkshopModal(false)}>
+      {/* ⚒️ Forge Modal */}
+      <ErrorBoundary fallbackTitle="Forge Error" onClose={() => setShowPlayerWorkshopModal(false)}>
         <PlayerWorkshopModal
           isOpen={showPlayerWorkshopModal}
           onClose={() => setShowPlayerWorkshopModal(false)}
         />
       </ErrorBoundary>
 
-      {/* 🛠️ Player's Workshop Modal */}
-      <ErrorBoundary fallbackTitle="Player's Workshop Error" onClose={() => setShowCraftingMallModal(false)}>
+      {/* 🛠️ Workshop Modal */}
+      <ErrorBoundary fallbackTitle="Workshop Error" onClose={() => setShowCraftingMallModal(false)}>
         <CraftingMallModal
           isOpen={showCraftingMallModal}
           onClose={() => setShowCraftingMallModal(false)}

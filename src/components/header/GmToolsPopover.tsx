@@ -104,7 +104,7 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1">
                 <span className="font-outfit font-bold text-slate-100 group-hover:text-amber-300 transition-colors truncate">
-                  Player's Workshop
+                  Workshop
                 </span>
                 <span className="text-[10px] font-bold text-amber-950 bg-amber-400 px-1.5 py-0.5 rounded uppercase shrink-0">
                   Workshop

@@ -297,7 +297,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
             </div>
             <div>
               <h3 className="font-outfit font-extrabold text-base text-amber-300 tracking-wide flex items-center gap-2">
-                Player's Workshop
+                Workshop
                 <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
                   {isGm 
                     ? (activePartyId ? `👑 GM Mode: Party ${activePartyId}` : '👑 GM Mode') 
@@ -661,7 +661,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                   }}
                   className="text-amber-400 hover:underline font-bold not-italic mt-1"
                 >
-                  + Forge your first custom creation in Player's Forge
+                  + Forge your first custom creation in Forge
                 </button>
               )}
             </div>
