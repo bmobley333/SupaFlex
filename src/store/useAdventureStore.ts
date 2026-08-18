@@ -2,7 +2,7 @@
 // Centralized Zustand store for GM Adventure, Act & Encounter pre-staging hierarchy & live play modes
 
 import { create } from 'zustand';
-import { GmAdventure, GmAct, GmEncounter, PreStagedMonster, GmSessionMode } from '../types/adventures';
+import { GmAdventure, GmAct, GmEncounter, PreStagedMonster, GmSessionMode, EncounterLink } from '../types/adventures';
 import { gameApi } from '../services/api';
 import { parseMonsterLine } from '../utils/monsterStatParser';
 import { scaleParsedMonster } from '../utils/monsterStatScaler';
@@ -58,6 +58,12 @@ interface AdventureStoreState {
   reorderEncounterByIndex: (adventureId: string, actId: string, fromIdx: number, toIdx: number) => Promise<void>;
   duplicateEncounter: (adventureId: string, actId: string, encounterId: string) => Promise<void>;
   reorderEncounters: (adventureId: string, actId: string, encounters: GmEncounter[]) => Promise<void>;
+
+  // Encounter Links CRUD & Reordering
+  addEncounterLink: (adventureId: string, actId: string, encounterId: string, name: string, url: string) => Promise<void>;
+  updateEncounterLink: (adventureId: string, actId: string, encounterId: string, linkId: string, name: string, url: string) => Promise<void>;
+  deleteEncounterLink: (adventureId: string, actId: string, encounterId: string, linkId: string) => Promise<void>;
+  reorderEncounterLinkByIndex: (adventureId: string, actId: string, encounterId: string, fromIdx: number, toIdx: number) => Promise<void>;
 
   // Tactical Notes & Live Monsters Manipulation
   setEncounterNotes: (notes: string) => void;
@@ -598,6 +604,66 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     }));
 
     await get().updateAdventure(adventureId, { structure: newStructure });
+  },
+
+  addEncounterLink: async (adventureId: string, actId: string, encounterId: string, name: string, url: string) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv) return;
+    const act = (adv.structure?.acts || []).find((a) => a.id === actId);
+    if (!act) return;
+    const enc = (act.encounters || []).find((e) => e.id === encounterId);
+    if (!enc) return;
+
+    const newLink: EncounterLink = {
+      id: `link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name: name.trim(),
+      url: url.trim(),
+      created_at: new Date().toISOString(),
+    };
+
+    const updatedLinks = [...(enc.links || []), newLink];
+    await get().updateEncounter(adventureId, actId, encounterId, { links: updatedLinks });
+  },
+
+  updateEncounterLink: async (adventureId: string, actId: string, encounterId: string, linkId: string, name: string, url: string) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv) return;
+    const act = (adv.structure?.acts || []).find((a) => a.id === actId);
+    if (!act) return;
+    const enc = (act.encounters || []).find((e) => e.id === encounterId);
+    if (!enc || !enc.links) return;
+
+    const updatedLinks = enc.links.map((l) =>
+      l.id === linkId ? { ...l, name: name.trim(), url: url.trim() } : l
+    );
+    await get().updateEncounter(adventureId, actId, encounterId, { links: updatedLinks });
+  },
+
+  deleteEncounterLink: async (adventureId: string, actId: string, encounterId: string, linkId: string) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv) return;
+    const act = (adv.structure?.acts || []).find((a) => a.id === actId);
+    if (!act) return;
+    const enc = (act.encounters || []).find((e) => e.id === encounterId);
+    if (!enc || !enc.links) return;
+
+    const updatedLinks = enc.links.filter((l) => l.id !== linkId);
+    await get().updateEncounter(adventureId, actId, encounterId, { links: updatedLinks });
+  },
+
+  reorderEncounterLinkByIndex: async (adventureId: string, actId: string, encounterId: string, fromIdx: number, toIdx: number) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv) return;
+    const act = (adv.structure?.acts || []).find((a) => a.id === actId);
+    if (!act) return;
+    const enc = (act.encounters || []).find((e) => e.id === encounterId);
+    if (!enc || !enc.links) return;
+
+    const links = [...enc.links];
+    if (fromIdx < 0 || fromIdx >= links.length || toIdx < 0 || toIdx >= links.length) return;
+    const [moved] = links.splice(fromIdx, 1);
+    links.splice(toIdx, 0, moved);
+    await get().updateEncounter(adventureId, actId, encounterId, { links });
   },
 
   setEncounterNotes: (notes: string) => {

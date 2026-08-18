@@ -11,12 +11,20 @@ export interface PreStagedMonster extends ParsedMonster {
   scaled_dif?: number;
 }
 
+export interface EncounterLink {
+  id: string;              // UUID or nanoid
+  name: string;            // e.g. "Dungeon Map"
+  url: string;             // e.g. "https://..."
+  created_at?: string;
+}
+
 export interface GmEncounter {
   id: string;              // UUID or nanoid
   title: string;           // e.g. "Room 4: Skeleton Crypt Guard"
   notes?: string;          // Tactical GM notes, room traps, terrain effects
   tactical_notes?: string; // Explicit tactical notes
   master_dif?: number;     // Encounter Difficulty rating (default 10)
+  links?: EncounterLink[]; // Encounter-specific URL links
   monsters: PreStagedMonster[];
   created_at?: string;
 }

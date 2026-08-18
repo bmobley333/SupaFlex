@@ -14,6 +14,7 @@ import { MonsterManagerModal } from '../modals/MonsterManagerModal';
 import { GmModePillSwitch } from '../common/GmModePillSwitch';
 import { GmCompactDifficultyBar } from '../common/GmCompactDifficultyBar';
 import { EncounterNavigationRibbon } from '../hud/EncounterNavigationRibbon';
+import { EncounterLinksDropdown } from '../hud/EncounterLinksDropdown';
 import { useAdventureStore } from '../../store/useAdventureStore';
 
 interface GmWorkspaceViewProps {
@@ -684,13 +685,18 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           {/* Permanent Always-Open Encounter Notes Card */}
           <div className="bg-slate-950/90 border border-slate-800 p-3 rounded-xl shadow-inner flex flex-col gap-2 font-outfit mt-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h4 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                <StickyNote className="w-3.5 h-3.5 text-amber-400" />
-                <span>Encounter Notes</span>
-                {activeEncounter && (
-                  <span className="text-slate-400 font-normal">({activeEncounter.title})</span>
-                )}
-              </h4>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h4 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                  <StickyNote className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Encounter Notes</span>
+                  {activeEncounter && (
+                    <span className="text-slate-400 font-normal">({activeEncounter.title})</span>
+                  )}
+                </h4>
+
+                {/* High-Density Encounter Links Dropdown */}
+                <EncounterLinksDropdown />
+              </div>
 
               {/* Insert Icon Buttons */}
               <div className="flex items-center gap-1 flex-wrap">
