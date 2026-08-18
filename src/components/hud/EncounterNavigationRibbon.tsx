@@ -1,12 +1,11 @@
 // src/components/hud/EncounterNavigationRibbon.tsx
-// High-Density Breadcrumb Navigation Ribbon with Centered Labels, Adjacent Stepping & In-Dropdown CRUD
+// High-Density Breadcrumb Navigation Ribbon with Centered Labels, Right-Adjacent Stepping & In-Dropdown CRUD
 
 import React, { useState, useRef, useEffect } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Rocket,
   RotateCcw,
   Plus,
   Compass,
@@ -27,7 +26,6 @@ interface EncounterNavigationRibbonProps {
 }
 
 export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps> = ({
-  partyId,
   className = '',
 }) => {
   const playerEmail = useCharacterStore((state) => state.playerEmail);
@@ -59,17 +57,12 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
   const renameEncounter = useAdventureStore((state) => state.renameEncounter);
   const reorderEncounterByIndex = useAdventureStore((state) => state.reorderEncounterByIndex);
 
-  const deployToLiveParty = useAdventureStore((state) => state.deployToLiveParty);
   const resetGameDayEncounter = useAdventureStore((state) => state.resetGameDayEncounter);
 
   // Dropdown open states
   const [isAdvMenuOpen, setIsAdvMenuOpen] = useState(false);
   const [isActMenuOpen, setIsActMenuOpen] = useState(false);
   const [isEncMenuOpen, setIsEncMenuOpen] = useState(false);
-
-  // Deploy / Push state
-  const [isDeploying, setIsDeploying] = useState(false);
-  const [deploySuccess, setDeploySuccess] = useState(false);
 
   const advMenuRef = useRef<HTMLDivElement>(null);
   const actMenuRef = useRef<HTMLDivElement>(null);
@@ -92,18 +85,6 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handlePushToPlayers = async () => {
-    if (!partyId) return;
-    setIsDeploying(true);
-    try {
-      await deployToLiveParty(partyId);
-      setDeploySuccess(true);
-      setTimeout(() => setDeploySuccess(false), 2000);
-    } finally {
-      setIsDeploying(false);
-    }
-  };
-
   const acts = activeAdv?.structure?.acts || [];
   const encounters = activeAct?.encounters || [];
 
@@ -111,7 +92,7 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
     <div className={`flex flex-col gap-1.5 font-outfit ${className}`}>
       {/* Master Ribbon Bar */}
       <div className="flex flex-wrap items-end justify-between gap-2.5 bg-slate-950/90 border border-slate-800 p-2.5 rounded-xl backdrop-blur-md shadow-md">
-        {/* Left: 3 Labeled Dropdowns in Unified Hierarchy */}
+        {/* Left: 3 Labeled Dropdowns + Right-Adjacent Stepper */}
         <div className="flex items-end flex-wrap gap-2 flex-1 min-w-[320px]">
           {/* 1. ADVENTURE Dropdown */}
           <div className="flex flex-col items-center gap-1 relative" ref={advMenuRef}>
@@ -236,10 +217,10 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
 
           <span className="text-slate-600 font-bold text-xs pb-2">›</span>
 
-          {/* 2. ACT / CHAPTER Dropdown */}
+          {/* 2. ACT Dropdown */}
           <div className="flex flex-col items-center gap-1 relative" ref={actMenuRef}>
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-400 font-mono text-center">
-              Act / Chapter
+              Act
             </span>
             <button
               type="button"
@@ -249,7 +230,7 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
                 setIsEncMenuOpen(false);
               }}
               className="px-2.5 py-1.5 bg-amber-950/70 hover:bg-amber-900/80 text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition-all flex items-center justify-between gap-1.5 cursor-pointer min-w-[130px] max-w-[190px]"
-              title={activeAct ? `Act/Chapter: ${activeAct.title}` : 'Select Act / Chapter'}
+              title={activeAct ? `Act: ${activeAct.title}` : 'Select Act'}
             >
               <div className="flex items-center gap-1.5 truncate">
                 <Scroll className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -265,7 +246,7 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
                   type="button"
                   onClick={async () => {
                     if (activeAdv) {
-                      const title = prompt('Enter new Act / Chapter title:');
+                      const title = prompt('Enter new Act title:');
                       await addAct(activeAdv.id, title?.trim() || undefined);
                       setIsActMenuOpen(false);
                     }
@@ -273,7 +254,7 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
                   className="w-full text-left px-3 py-2 hover:bg-amber-950/60 text-amber-300 font-bold border-b border-slate-800/80 flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5 text-amber-400" />
-                  <span>+ Create New Act / Chapter</span>
+                  <span>+ Create New Act</span>
                 </button>
 
                 {/* Acts List with In-Dropdown Up/Down, Edit, Delete */}
@@ -326,7 +307,7 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
                               type="button"
                               onClick={async () => {
                                 if (!activeAdv) return;
-                                const newTitle = prompt('Rename Act / Chapter:', act.title);
+                                const newTitle = prompt('Rename Act:', act.title);
                                 if (newTitle?.trim()) {
                                   await renameAct(activeAdv.id, act.id, newTitle.trim());
                                 }
@@ -363,33 +344,8 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
 
           <span className="text-slate-600 font-bold text-xs pb-2">›</span>
 
-          {/* 3. ENCOUNTER Section (Prev/Next Stepper immediately adjacent to Encounter) */}
+          {/* 3. ENCOUNTER Section + Right-Adjacent Stepper */}
           <div className="flex items-end gap-1.5">
-            {/* Prev / Next Encounter Stepper */}
-            <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg p-0.5 shadow-inner">
-              <button
-                type="button"
-                onClick={prevEncounter}
-                disabled={!activeEnc}
-                className="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition cursor-pointer text-xs font-bold flex items-center gap-0.5 disabled:opacity-30"
-                title="Previous Encounter (Traverses across Acts)"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-                <span>Prev</span>
-              </button>
-              <div className="h-3.5 w-[1px] bg-slate-800 mx-0.5" />
-              <button
-                type="button"
-                onClick={nextEncounter}
-                disabled={!activeEnc}
-                className="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition cursor-pointer text-xs font-bold flex items-center gap-0.5 disabled:opacity-30"
-                title="Next Encounter (Traverses across Acts)"
-              >
-                <span>Next</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
             {/* Encounter Dropdown */}
             <div className="flex flex-col items-center gap-1 relative" ref={encMenuRef}>
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-400 font-mono text-center">
@@ -523,12 +479,36 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
                 </div>
               )}
             </div>
+
+            {/* Prev / Next Encounter Stepper (Directly to the RIGHT of Encounter Dropdown) */}
+            <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg p-0.5 shadow-inner">
+              <button
+                type="button"
+                onClick={prevEncounter}
+                disabled={!activeEnc}
+                className="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition cursor-pointer text-xs font-bold flex items-center gap-0.5 disabled:opacity-30"
+                title="Previous Encounter (Traverses across Acts)"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Prev</span>
+              </button>
+              <div className="h-3.5 w-[1px] bg-slate-800 mx-0.5" />
+              <button
+                type="button"
+                onClick={nextEncounter}
+                disabled={!activeEnc}
+                className="px-2 py-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition cursor-pointer text-xs font-bold flex items-center gap-0.5 disabled:opacity-30"
+                title="Next Encounter (Traverses across Acts)"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Right: Action Buttons */}
+        {/* Right: Reset Action Button (for Game Day Scratchpad) */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* Game Day Reset Button */}
           {sessionMode === 'game_day' && (
             <button
               type="button"
@@ -540,26 +520,11 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
               <span>Reset</span>
             </button>
           )}
-
-          {/* 🚀 Push to Players Button */}
-          <button
-            type="button"
-            onClick={handlePushToPlayers}
-            disabled={isDeploying || !partyId}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-md cursor-pointer ${
-              deploySuccess
-                ? 'bg-emerald-600 text-white border border-emerald-400/50'
-                : 'bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white border border-rose-400/40 shadow-rose-950/40'
-            }`}
-            title="Broadcast active encounter monsters directly to players' screens"
-          >
-            <Rocket className={`w-3.5 h-3.5 ${isDeploying ? 'animate-bounce' : ''}`} />
-            <span>{deploySuccess ? 'Pushed!' : 'Push to Players'}</span>
-          </button>
         </div>
       </div>
     </div>
   );
 };
+
 
 

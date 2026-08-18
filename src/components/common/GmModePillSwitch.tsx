@@ -15,31 +15,33 @@ export const GmModePillSwitch: React.FC<GmModePillSwitchProps> = ({ className = 
   return (
     <div className={`flex flex-wrap items-center gap-3 ${className}`}>
       {/* Dyslexia-Friendly Compact Side-by-Side Pill Switch */}
-      <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0 w-[240px]">
+      <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0 w-[270px] whitespace-nowrap flex-nowrap">
         <button
           type="button"
           onClick={() => setSessionMode('design')}
-          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
             sessionMode === 'design'
               ? 'bg-amber-600 text-white shadow-sm font-extrabold border border-amber-400/40'
               : 'text-slate-400 hover:text-slate-200 border border-transparent'
           }`}
           title="Design Mode: All changes, monsters & notes auto-save permanently to database"
         >
-          <span>🛠️</span> Design Mode
+          <span>🛠️</span>
+          <span>Design Mode</span>
         </button>
 
         <button
           type="button"
           onClick={() => setSessionMode('game_day')}
-          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
             sessionMode === 'game_day'
               ? 'bg-emerald-600 text-white shadow-sm font-extrabold border border-emerald-400/40'
               : 'text-slate-400 hover:text-slate-200 border border-transparent'
           }`}
           title="Game Day Mode: Live combat scratchpad. Changes are temporary and reset when closed"
         >
-          <span>🎲</span> Game Day
+          <span>🎲</span>
+          <span>Game Day</span>
         </button>
       </div>
 

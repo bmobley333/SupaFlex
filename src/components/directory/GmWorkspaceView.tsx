@@ -1,8 +1,8 @@
 // src/components/directory/GmWorkspaceView.tsx
 // Game Master Command Console: Party Roster, Party Management & Monster Roster View
 
-import React, { useState, useEffect } from 'react';
-import { ArrowUpDown, Link2, StickyNote } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowUpDown, Link2, StickyNote, Rocket } from 'lucide-react';
 import { gameApi } from '../../services/api';
 import { Party, PartySessionMember, CharacterSheetData, GmDocLink } from '../../types/game';
 import { parseMonsterLine, ParsedMonster, sortMonstersByPreset, MonsterSortPreset } from '../../utils/monsterStatParser';
@@ -81,12 +81,57 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const activeEncounter = useAdventureStore((state) => state.getActiveEncounter());
   const setEncounterMonsters = useAdventureStore((state) => state.setEncounterMonsters);
   const setEncounterNotes = useAdventureStore((state) => state.setEncounterNotes);
+  const sessionMode = useAdventureStore((state) => state.sessionMode);
+  const deployToLiveParty = useAdventureStore((state) => state.deployToLiveParty);
 
   useEffect(() => {
     if (currentEmail) {
       fetchAdventures(currentEmail);
     }
   }, [currentEmail, fetchAdventures]);
+
+  // Deploy / Push to Players state
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deploySuccess, setDeploySuccess] = useState(false);
+
+  const handlePushToPlayers = async () => {
+    if (!selectedParty?.id || sessionMode === 'design') return;
+    setIsDeploying(true);
+    try {
+      await deployToLiveParty(selectedParty.id);
+      setDeploySuccess(true);
+      setTimeout(() => setDeploySuccess(false), 2000);
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
+  // Notes Textarea Ref & Icon Insertion
+  const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const ATTRIBUTE_EFFECT_ICONS = [
+    { label: 'Magic ✨', icon: '✨' },
+    { label: 'Might 💪', icon: '💪' },
+    { label: 'Mind 👁️', icon: '👁️' },
+    { label: 'Motion 🏃', icon: '🏃' },
+    { label: 'Moxie 💗', icon: '💗' },
+  ];
+
+  const insertIconAtNotesCursor = (iconStr: string) => {
+    const currentNotes = activeEncounter?.notes || activeEncounter?.tactical_notes || '';
+    const textarea = notesTextareaRef.current;
+    if (!textarea) {
+      setEncounterNotes(currentNotes + iconStr);
+      return;
+    }
+    const start = textarea.selectionStart ?? currentNotes.length;
+    const end = textarea.selectionEnd ?? currentNotes.length;
+    const nextVal = currentNotes.substring(0, start) + iconStr + currentNotes.substring(end);
+    setEncounterNotes(nextVal);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + iconStr.length, start + iconStr.length);
+    }, 0);
+  };
 
   // Inline Monster Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -477,24 +522,31 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Monster Tracker & Adventure Staging (8 cols) */}
+        {/* Right Column: Adventure Encounters Suite (8 cols) */}
         <div className="lg:col-span-8 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-4 shadow-lg flex flex-col font-outfit">
+          {/* Section Header: Adventure Encounters */}
+          <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2.5">
+            <span className="text-lg">🗺️</span>
+            <h2 className="text-sm font-extrabold text-slate-100 uppercase tracking-wider font-outfit">
+              Adventure Encounters
+            </h2>
+          </div>
+
           {/* Top Row: GM Session Mode Pill Switch (Design vs. Game Day) */}
           <GmModePillSwitch />
 
           {/* Staged Encounter Navigation Ribbon */}
-          <EncounterNavigationRibbon
-            partyId={selectedParty?.id}
-          />
+          <EncounterNavigationRibbon />
 
           {/* On-Screen Master Difficulty Scaling Bar */}
           <GmCompactDifficultyBar />
 
-          {/* Header Controls */}
+          {/* Encounter Monsters Header Controls */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3 pt-1">
+            {/* Left: Title & Quick Sort */}
             <div className="flex items-center gap-2">
               <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-2 font-outfit">
-                <span>🐉</span> MONSTER TRACKER ({effectiveMonsters.length})
+                <span>🐉</span> ENCOUNTER MONSTERS ({effectiveMonsters.length})
               </h3>
               {effectiveMonsters.length > 1 && (
                 <div className="relative">
@@ -549,12 +601,38 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
               )}
             </div>
 
+            {/* Center: Push to Players Button (Disabled & Greyed Out in Design Mode) */}
+            <div className="flex items-center justify-center">
+              <button
+                type="button"
+                onClick={handlePushToPlayers}
+                disabled={sessionMode === 'design' || isDeploying || !selectedParty?.id}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-md ${
+                  sessionMode === 'design'
+                    ? 'bg-slate-800 text-slate-500 border border-slate-700 opacity-40 cursor-not-allowed'
+                    : deploySuccess
+                    ? 'bg-emerald-600 text-white border border-emerald-400/50 cursor-pointer'
+                    : 'bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white border border-rose-400/40 shadow-rose-950/40 cursor-pointer'
+                }`}
+                title={
+                  sessionMode === 'design'
+                    ? 'Switch to Game Day mode to push encounter to live players'
+                    : 'Broadcast active encounter monsters directly to players\' screens'
+                }
+              >
+                <Rocket className={`w-3.5 h-3.5 ${isDeploying ? 'animate-bounce' : ''}`} />
+                <span>{deploySuccess ? 'Pushed!' : 'Push to Players'}</span>
+              </button>
+            </div>
+
+            {/* Right: Manage Monsters Button */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsMonsterManagerOpen(true)}
-                className="px-3 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-600/30 text-xs font-bold rounded-lg transition-all shrink-0 font-outfit cursor-pointer"
+                className="px-3 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-600/30 text-xs font-bold rounded-lg transition-all shrink-0 font-outfit cursor-pointer flex items-center gap-1"
               >
-                Manage Monsters
+                <span>🐉</span>
+                <span>Manage Encounter Monsters</span>
               </button>
             </div>
           </div>
@@ -564,7 +642,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
             <div className="text-xs font-medium text-slate-400 italic p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center space-y-2 font-outfit">
               <div>No monsters in active roster.</div>
               <div className="text-[11px] text-slate-500 font-outfit">
-                Use the Adventure Ribbon above or click "Manage Monsters" to construct, paste statblocks, or pick codex monsters.
+                Use the Adventure Ribbon above or click "🐉 Manage Encounter Monsters" to construct, paste statblocks, or pick codex monsters.
               </div>
             </div>
           ) : (
@@ -603,25 +681,43 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
             </div>
           )}
 
-          {/* Permanent Always-Open Encounter Tactical Notes Card */}
+          {/* Permanent Always-Open Encounter Notes Card */}
           <div className="bg-slate-950/90 border border-slate-800 p-3 rounded-xl shadow-inner flex flex-col gap-2 font-outfit mt-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <h4 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
                 <StickyNote className="w-3.5 h-3.5 text-amber-400" />
-                <span>Encounter Tactical Notes & Traps</span>
+                <span>Encounter Notes</span>
                 {activeEncounter && (
                   <span className="text-slate-400 font-normal">({activeEncounter.title})</span>
                 )}
               </h4>
+
+              {/* Insert Icon Buttons */}
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-[10px] text-slate-400 font-bold mr-0.5 font-mono">Insert Icon:</span>
+                {ATTRIBUTE_EFFECT_ICONS.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => insertIconAtNotesCursor(item.icon)}
+                    disabled={!activeEncounter}
+                    className="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded text-[11px] font-bold text-slate-200 transition-colors flex items-center gap-1 shadow-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={`Insert ${item.icon} into Encounter Notes`}
+                  >
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <textarea
+              ref={notesTextareaRef}
               rows={3}
               value={activeEncounter?.notes || activeEncounter?.tactical_notes || ''}
               onChange={(e) => setEncounterNotes(e.target.value)}
               placeholder={
                 activeEncounter
                   ? 'e.g. Floor spikes trigger on round 2; 2 skeleton archers on catwalks; secret door behind altar...'
-                  : 'Select or create an encounter above to write tactical notes...'
+                  : 'Select or create an encounter above to write notes...'
               }
               disabled={!activeEncounter}
               className="w-full bg-slate-900/90 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 font-mono outline-none focus:border-amber-500/80 transition placeholder:text-slate-600 disabled:opacity-40"

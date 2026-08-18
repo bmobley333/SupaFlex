@@ -347,7 +347,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     const actCount = (adv.structure?.acts?.length || 0) + 1;
     const newAct: GmAct = {
       id: `act_${Date.now()}`,
-      title: title?.trim() || `Act ${actCount}: New Chapter`,
+      title: title?.trim() || `Act ${actCount}`,
       description: '',
       encounters: [
         {
