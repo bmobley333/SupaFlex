@@ -21,6 +21,7 @@ import {
   CustomCreationItem,
   PowerTable,
 } from '../types/game';
+import { GmAdventure } from '../types/adventures';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
 
 const DEFAULT_UNARMORED_SLOT = {
@@ -1644,6 +1645,123 @@ export const gameApi = {
     } catch (e) {
       console.error('[gameApi] Error promoting custom item to master:', e);
       throw e;
+    }
+  },
+
+  // --- GM ADVENTURES & ENCOUNTER PRE-STAGING ---
+  async getAdventuresForUser(gmEmail: string): Promise<GmAdventure[]> {
+    try {
+      const cleanEmail = (gmEmail || '').trim().toLowerCase();
+      const { data, error } = await supabase
+        .from('adventures')
+        .select('*')
+        .or(`gm_email.ilike.${cleanEmail},gm_email.eq.metascapegame@gmail.com`)
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.warn('[gameApi] Notice fetching adventures:', error.message);
+        return [];
+      }
+      return (data || []) as GmAdventure[];
+    } catch (e) {
+      console.error('[gameApi] Error in getAdventuresForUser:', e);
+      return [];
+    }
+  },
+
+  async createAdventure(title: string, gmEmail: string, genre = 'Medieval'): Promise<GmAdventure | null> {
+    try {
+      const cleanEmail = (gmEmail || '').trim().toLowerCase();
+      const nowIso = new Date().toISOString();
+      const defaultStructure = {
+        acts: [
+          {
+            id: `act_${Date.now()}`,
+            title: 'Act 1: The Beginning',
+            description: 'Introductory chapter',
+            encounters: [
+              {
+                id: `enc_${Date.now()}`,
+                title: 'Encounter 1: Opening Scene',
+                notes: '',
+                master_dif: 10,
+                monsters: [],
+                created_at: nowIso,
+              },
+            ],
+            created_at: nowIso,
+          },
+        ],
+      };
+
+      const payload = {
+        title: title.trim(),
+        gm_email: cleanEmail,
+        genre,
+        is_active: true,
+        structure: defaultStructure,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+
+      const { data, error } = await supabase
+        .from('adventures')
+        .insert([payload])
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('[gameApi] Error creating adventure:', error);
+        throw error;
+      }
+      return data as GmAdventure;
+    } catch (e) {
+      console.error('[gameApi] Error in createAdventure:', e);
+      throw e;
+    }
+  },
+
+  async updateAdventure(id: string, updates: Partial<GmAdventure>): Promise<GmAdventure | null> {
+    try {
+      const payload: any = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+      delete payload.id;
+
+      const { data, error } = await supabase
+        .from('adventures')
+        .update(payload)
+        .eq('id', id)
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('[gameApi] Error updating adventure:', error);
+        throw error;
+      }
+      return data as GmAdventure;
+    } catch (e) {
+      console.error('[gameApi] Error in updateAdventure:', e);
+      throw e;
+    }
+  },
+
+  async deleteAdventure(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('adventures')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('[gameApi] Error deleting adventure:', error);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error('[gameApi] Error in deleteAdventure:', e);
+      return false;
     }
   },
 };

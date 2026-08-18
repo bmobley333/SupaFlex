@@ -1,9 +1,8 @@
 // src/components/modals/MonsterManagerModal.tsx
 // Master Two-Pane Modal for Managing GM Encounter Monsters with Master Difficulty Scaling & Tab Navigation
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Info, Trash2, Plus, Search, FileText, Skull, Check, Sliders } from 'lucide-react';
-import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
+import React, { useState, useEffect } from 'react';
+import { Trash2, Plus, Search, FileText, Skull, Check } from 'lucide-react';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { supabase } from '../../lib/supabase';
 import { SupabaseMonster } from '../../types/game';
@@ -14,8 +13,6 @@ import {
 } from '../../utils/monsterStatParser';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import {
-  scaleParsedMonster,
-  scaleSupabaseMonster,
   extractFirstInt,
   extractAllInts,
 } from '../../utils/monsterStatScaler';
@@ -73,14 +70,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   onSaveMonsters,
   partyName,
 }) => {
-  const activeGenre = useGenreStore((state) => state.activeGenre);
-  // Master Difficulty State (Standard base = 10, range 3..30+)
-  const [masterDif, setMasterDif] = useState<number>(10);
-  const [applyDifOnParse, setApplyDifOnParse] = useState<boolean>(true);
-
-  // Debounce Timer Ref for Slider Movement (350ms short bounce)
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // Paste Statblock Area State
   const [pasteInputText, setPasteInputText] = useState('');
 
@@ -93,21 +82,12 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   const [isLoadingCodex, setIsLoadingCodex] = useState(false);
   const [addedCodexIds, setAddedCodexIds] = useState<Record<string, boolean>>({});
 
-  // Right Pane Tab Navigation State ('paste_quick' | 'codex' | 'difficulty')
-  const [activeRightTab, setActiveRightTab] = useState<'paste_quick' | 'codex' | 'difficulty'>('paste_quick');
+  // Right Pane Tab Navigation State ('paste_quick' | 'codex')
+  const [activeRightTab, setActiveRightTab] = useState<'paste_quick' | 'codex'>('paste_quick');
 
   // Inline Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-
-  // Clean up debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
 
   // Fetch Supabase Codex monsters when modal opens
   useEffect(() => {
@@ -212,12 +192,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
 
   const handleParsePasteBlock = () => {
     if (!pasteInputText.trim()) return;
-    let parsedList = parseMultiRowMonsterBlock(pasteInputText.trim());
-
-    if (applyDifOnParse && masterDif !== 10) {
-      parsedList = parsedList.map((m) => scaleParsedMonster(m, masterDif));
-    }
-
+    const parsedList = parseMultiRowMonsterBlock(pasteInputText.trim());
     if (parsedList.length > 0) {
       onSaveMonsters([...monsters, ...parsedList]);
       setPasteInputText('');
@@ -236,32 +211,23 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const notesStr = quickAdd.abilities.trim() ? ` (${quickAdd.abilities.trim()})` : '';
 
     const fullStatStr = `${fullTitle} 🚩${quickAdd.init} 👣${quickAdd.mr} ⚔️${quickAdd.atk}/${quickAdd.dmg} 🧥${quickAdd.def}/${quickAdd.armor} ❤️${quickAdd.vit} [✨${quickAdd.magic}/💪${quickAdd.might}/👁️${quickAdd.mind}/🏃${quickAdd.motion}/🫀${quickAdd.moxie}]${notesStr}`;
-
-    let parsed = parseMonsterLine(fullStatStr);
-
-    if (applyDifOnParse && masterDif !== 10) {
-      parsed = scaleParsedMonster(parsed, masterDif);
-    }
-
+    const parsed = parseMonsterLine(fullStatStr);
     onSaveMonsters([...monsters, parsed]);
     setQuickAdd(DEFAULT_QUICK_ADD);
   };
 
   const handleAddCodexMonster = (sm: SupabaseMonster) => {
-    const targetSm = masterDif !== 10 && applyDifOnParse ? scaleSupabaseMonster(sm, masterDif) : sm;
-
-    const nameStr = targetSm.name || 'Codex Monster';
-    const nish = extractFirstInt(targetSm.nish, 10);
-    const mr = extractFirstInt(targetSm.mr, 10);
-    const vit = extractFirstInt(targetSm.vit, 10);
-    const atk = String(targetSm.atk_dmg_ftg || '10/5').replace(/[⚔️⚔]/g, '').trim();
-    const def = String(targetSm.dod_ar || '10/1').replace(/[🧥🛡️]/g, '').trim();
+    const nameStr = sm.name || 'Codex Monster';
+    const nish = extractFirstInt(sm.nish, 10);
+    const mr = extractFirstInt(sm.mr, 10);
+    const vit = extractFirstInt(sm.vit, 10);
+    const atk = String(sm.atk_dmg_ftg || '10/5').replace(/[⚔️⚔]/g, '').trim();
+    const def = String(sm.dod_ar || '10/1').replace(/[🧥🛡️]/g, '').trim();
     
-    let attrNums = extractAllInts(targetSm.attributes);
+    let attrNums = extractAllInts(sm.attributes);
     while (attrNums.length < 5) attrNums.push(10);
     const attrStr = `[✨${attrNums[0]}/💪${attrNums[1]}/👁️${attrNums[2]}/🏃${attrNums[3]}/🫀${attrNums[4]}]`;
-
-    const notes = targetSm.abilities ? ` (${targetSm.abilities})` : '';
+    const notes = sm.abilities ? ` (${sm.abilities})` : '';
 
     const fullStatStr = `${nameStr} 🚩${nish} 👣${mr} ⚔️${atk} 🧥${def} ❤️${vit} ${attrStr}${notes}`;
     const parsed = parseMonsterLine(fullStatStr);
@@ -272,63 +238,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
       setAddedCodexIds((prev) => ({ ...prev, [sm.id || sm.name]: false }));
     }, 1500);
   };
-
-  // Auto-apply difficulty scaling across active encounter roster
-  const applyDifToRoster = (targetDif: number) => {
-    if (monsters.length === 0) return;
-    const updated = monsters.map((m) => {
-      const baseText = m.baseFullText || m.fullText || m.nameWithEquip;
-      const baseParsed = parseMonsterLine(baseText);
-      const scaled = scaleParsedMonster(baseParsed, targetDif);
-      return {
-        ...scaled,
-        id: m.id,
-        baseFullText: baseText,
-      };
-    });
-    onSaveMonsters(updated);
-  };
-
-  // Instant Quick Preset handler with immediate auto-apply
-  const handlePresetClick = (presetVal: number) => {
-    setMasterDif(presetVal);
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-    applyDifToRoster(presetVal);
-  };
-
-  // Debounced Slider Change Handler (350ms short bounce)
-  const handleSliderChange = (newDif: number) => {
-    setMasterDif(newDif);
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      applyDifToRoster(newDif);
-    }, 350);
-  };
-
-  // Blur Handler to commit pending difficulty on focus loss
-  const handleSliderBlur = () => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-    applyDifToRoster(masterDif);
-  };
-
-  // Threat Rating Badge Label Helper
-  const getThreatLabel = (dif: number) => {
-    if (dif < 7) return { text: 'Easy (Low Threat)', color: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10' };
-    if (dif <= 11) return { text: 'Standard (Balanced)', color: 'text-amber-400 border-amber-500/40 bg-amber-500/10' };
-    if (dif <= 15) return { text: 'Hard (Challenging)', color: 'text-orange-400 border-orange-500/40 bg-orange-500/10' };
-    if (dif <= 21) return { text: 'Deadly (High Danger)', color: 'text-rose-400 border-rose-500/40 bg-rose-500/10' };
-    return { text: 'Mythic / Boss', color: 'text-purple-400 border-purple-500/40 bg-purple-500/10' };
-  };
-
-  const threatBadge = getThreatLabel(masterDif);
 
   return (
     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -345,14 +254,9 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                 <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 font-bold border border-slate-700">
                   {monsters.length}
                 </span>
-                {masterDif !== 10 && (
-                  <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full font-bold border ${threatBadge.color}`}>
-                    Dif {masterDif}
-                  </span>
-                )}
               </h2>
               <p className="text-xs text-slate-400">
-                Construct, paste raw statblocks, search the Supabase codex, and scale encounter difficulties dynamically.
+                Construct, paste raw statblocks, and search the Supabase master monster codex.
               </p>
             </div>
           </div>
@@ -436,7 +340,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
             </div>
           </div>
 
-          {/* Right Pane (md:col-span-5): Construction Tools, Codex Picker & Difficulty System */}
+          {/* Right Pane (md:col-span-5): Construction Tools, Codex Picker */}
           <div className="md:col-span-5 flex flex-col gap-4 overflow-y-auto pr-1 relative">
             {/* Sticky Tab Navigation Controls (Fixed Top Header across ALL Tabs) */}
             <div className="sticky top-0 bg-slate-900/95 backdrop-blur-md z-20 border-b border-slate-800 shrink-0 flex items-center mb-4">
@@ -462,17 +366,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
               >
                 📚 Codex Catalog
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveRightTab('difficulty')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  activeRightTab === 'difficulty'
-                    ? 'border-purple-400 text-purple-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                🎚️ Difficulty
-              </button>
             </div>
 
             {/* TAB 1: Paste Statblock + Quick Add Form */}
@@ -493,75 +386,44 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     onChange={(e) => setPasteInputText(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 font-mono outline-none focus:border-amber-500"
                   />
-
-                  {/* Dyslexia-Friendly Multi-Option Pill Switch */}
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md my-1">
+                  <div className="flex justify-end mt-1">
                     <button
                       type="button"
-                      onClick={() => setApplyDifOnParse(false)}
-                      className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                        !applyDifOnParse
-                          ? 'bg-slate-800 text-slate-200 border border-slate-700 shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
+                      onClick={handleParsePasteBlock}
+                      disabled={!pasteInputText.trim()}
+                      className="px-4 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-600/30 text-xs font-bold rounded-lg transition-all disabled:opacity-40"
                     >
-                      📝 As Pasted
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setApplyDifOnParse(true)}
-                      className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                        applyDifOnParse
-                          ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🎚️ Apply Dif ({masterDif})
+                      Add Parsed Monsters to Roster
                     </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={handleParsePasteBlock}
-                    className="w-full py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-600/30 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Parse & Add Statblocks
-                  </button>
                 </div>
 
                 {/* Section 2: Quick Add Single Monster Form */}
-                <form onSubmit={handleSaveQuickMonster} className="p-4 bg-slate-950/90 rounded-xl border border-slate-800 flex flex-col gap-3">
-                  <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
+                <form
+                  onSubmit={handleSaveQuickMonster}
+                  className="p-4 bg-slate-950/90 rounded-xl border border-slate-800 flex flex-col gap-3 font-outfit"
+                >
+                  <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
                     <Plus className="w-4 h-4 text-amber-400" />
-                    Quick Add Single Monster
+                    Quick Add Custom Monster
                   </span>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     <div>
-                      <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-0.5">
-                        Monster Name *
-                        <span title="e.g. Goblin Scout, Ancient Red Dragon">
-                          <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer" />
-                        </span>
-                      </label>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-0.5">Monster Name</label>
                       <input
                         type="text"
-                        required
+                        placeholder="e.g. Shadow Stalker"
                         value={quickAdd.name}
                         onChange={(e) => handleQuickAddChange('name', e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-amber-500"
                       />
                     </div>
                     <div>
-                      <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-0.5">
-                        Gear / Weapon
-                        <span title="e.g. Shortsword, Longbow">
-                          <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer" />
-                        </span>
-                      </label>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-0.5">Gear / Subtitle (Optional)</label>
                       <input
                         type="text"
+                        placeholder="e.g. Scythe & Plate"
                         value={quickAdd.gear}
                         onChange={(e) => handleQuickAddChange('gear', e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-amber-500"
@@ -569,140 +431,103 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Combat Stats Grid (2-Row Responsive Proportional Layout) */}
-                  <div className="flex flex-col gap-2">
-                    {/* Row 1: Single Metrics (Nish, MR, Vit) */}
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5">🚩 Nish</label>
-                        <input
-                          type="number"
-                          value={quickAdd.init}
-                          onChange={(e) => handleQuickAddChange('init', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center text-slate-100 font-mono text-xs"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5">👣 MR</label>
-                        <input
-                          type="number"
-                          value={quickAdd.mr}
-                          onChange={(e) => handleQuickAddChange('mr', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center text-slate-100 font-mono text-xs"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5">❤️ Vit</label>
-                        <input
-                          type="number"
-                          value={quickAdd.vit}
-                          onChange={(e) => handleQuickAddChange('vit', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-center text-slate-100 font-mono text-xs"
-                        />
-                      </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800/80 text-center">
+                      <label className="block text-[9px] font-bold text-amber-400">🚩 Init</label>
+                      <input
+                        type="number"
+                        value={quickAdd.init}
+                        onChange={(e) => handleQuickAddChange('init', parseInt(e.target.value, 10) || 0)}
+                        className="w-full bg-transparent text-center text-slate-100 font-mono text-xs font-bold outline-none"
+                      />
                     </div>
-
-                    {/* Row 2: Composite Metrics (Atk/Dmg & Def/Armor Split 50%/50%) */}
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5" title="Attack / Damage">
-                          ⚔️ Atk / Dmg
-                        </label>
-                        <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
-                          <input
-                            type="number"
-                            value={quickAdd.atk}
-                            onChange={(e) => handleQuickAddChange('atk', parseInt(e.target.value, 10) || 0)}
-                            className="w-full bg-transparent text-center text-slate-100 font-mono text-xs outline-none"
-                            title="Attack"
-                          />
-                          <span className="text-slate-500 font-bold text-xs select-none">/</span>
-                          <input
-                            type="number"
-                            value={quickAdd.dmg}
-                            onChange={(e) => handleQuickAddChange('dmg', parseInt(e.target.value, 10) || 0)}
-                            className="w-full bg-transparent text-center text-slate-100 font-mono text-xs outline-none"
-                            title="Damage"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 mb-0.5">🧥 Def / Armor</label>
-                        <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
-                          <input
-                            type="number"
-                            value={quickAdd.def}
-                            onChange={(e) => handleQuickAddChange('def', parseInt(e.target.value, 10) || 0)}
-                            className="w-full bg-transparent text-center text-slate-100 font-mono text-xs outline-none"
-                            title="Defense"
-                          />
-                          <span className="text-slate-500 font-bold text-xs select-none">/</span>
-                          <input
-                            type="number"
-                            value={quickAdd.armor}
-                            onChange={(e) => handleQuickAddChange('armor', parseInt(e.target.value, 10) || 0)}
-                            className="w-full bg-transparent text-center text-slate-100 font-mono text-xs outline-none"
-                            title="Armor"
-                          />
-                        </div>
-                      </div>
+                    <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800/80 text-center">
+                      <label className="block text-[9px] font-bold text-amber-400">👣 MR</label>
+                      <input
+                        type="number"
+                        value={quickAdd.mr}
+                        onChange={(e) => handleQuickAddChange('mr', parseInt(e.target.value, 10) || 0)}
+                        className="w-full bg-transparent text-center text-slate-100 font-mono text-xs font-bold outline-none"
+                      />
+                    </div>
+                    <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800/80 text-center">
+                      <label className="block text-[9px] font-bold text-amber-400">⚔️ Atk</label>
+                      <input
+                        type="number"
+                        value={quickAdd.atk}
+                        onChange={(e) => handleQuickAddChange('atk', parseInt(e.target.value, 10) || 0)}
+                        className="w-full bg-transparent text-center text-slate-100 font-mono text-xs font-bold outline-none"
+                      />
+                    </div>
+                    <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800/80 text-center">
+                      <label className="block text-[9px] font-bold text-amber-400">💥 Dmg</label>
+                      <input
+                        type="number"
+                        value={quickAdd.dmg}
+                        onChange={(e) => handleQuickAddChange('dmg', parseInt(e.target.value, 10) || 0)}
+                        className="w-full bg-transparent text-center text-slate-100 font-mono text-xs font-bold outline-none"
+                      />
+                    </div>
+                    <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800/80 text-center">
+                      <label className="block text-[9px] font-bold text-amber-400">🧥 Def</label>
+                      <input
+                        type="number"
+                        value={quickAdd.def}
+                        onChange={(e) => handleQuickAddChange('def', parseInt(e.target.value, 10) || 0)}
+                        className="w-full bg-transparent text-center text-slate-100 font-mono text-xs font-bold outline-none"
+                      />
+                    </div>
+                    <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800/80 text-center">
+                      <label className="block text-[9px] font-bold text-amber-400">🛡️ Armor</label>
+                      <input
+                        type="number"
+                        value={quickAdd.armor}
+                        onChange={(e) => handleQuickAddChange('armor', parseInt(e.target.value, 10) || 0)}
+                        className="w-full bg-transparent text-center text-slate-100 font-mono text-xs font-bold outline-none"
+                      />
                     </div>
                   </div>
 
-                  {/* System Attributes (High-Density Inline Icon Input Fields) */}
-                  <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-1">
-                    <div className="grid grid-cols-5 gap-1.5 text-xs">
-                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
-                        <span className="text-xs mr-1 select-none text-amber-400">✨</span>
-                        <input
-                          type="number"
-                          title="Magic"
-                          value={quickAdd.magic}
-                          onChange={(e) => handleQuickAddChange('magic', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-transparent text-center text-slate-100 font-mono text-[11px] outline-none"
-                        />
-                      </div>
-                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
-                        <span className="text-xs mr-1 select-none text-amber-400">💪</span>
-                        <input
-                          type="number"
-                          title="Might"
-                          value={quickAdd.might}
-                          onChange={(e) => handleQuickAddChange('might', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-transparent text-center text-slate-100 font-mono text-[11px] outline-none"
-                        />
-                      </div>
-                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
-                        <span className="text-xs mr-1 select-none text-amber-400">👁️</span>
-                        <input
-                          type="number"
-                          title="Mind"
-                          value={quickAdd.mind}
-                          onChange={(e) => handleQuickAddChange('mind', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-transparent text-center text-slate-100 font-mono text-[11px] outline-none"
-                        />
-                      </div>
-                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
-                        <span className="text-xs mr-1 select-none text-amber-400">🏃</span>
-                        <input
-                          type="number"
-                          title="Motion"
-                          value={quickAdd.motion}
-                          onChange={(e) => handleQuickAddChange('motion', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-transparent text-center text-slate-100 font-mono text-[11px] outline-none"
-                        />
-                      </div>
-                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded px-1.5 py-1">
-                        <span className="text-xs mr-1 select-none text-rose-400">🫀</span>
-                        <input
-                          type="number"
-                          title="Moxie"
-                          value={quickAdd.moxie}
-                          onChange={(e) => handleQuickAddChange('moxie', parseInt(e.target.value, 10) || 0)}
-                          className="w-full bg-transparent text-center text-slate-100 font-mono text-[11px] outline-none"
-                        />
-                      </div>
+                  <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800/80 flex flex-col gap-1">
+                    <label className="text-[9px] font-bold text-amber-400 uppercase tracking-wider text-center">
+                      Attributes [✨ Magic / 💪 Might / 👁️ Mind / 🏃 Motion / 🫀 Moxie]
+                    </label>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      <input
+                        type="number"
+                        placeholder="Magic"
+                        value={quickAdd.magic}
+                        onChange={(e) => handleQuickAddChange('magic', parseInt(e.target.value, 10) || 0)}
+                        className="bg-slate-950 border border-slate-800 rounded p-1 text-center text-slate-100 font-mono text-xs"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Might"
+                        value={quickAdd.might}
+                        onChange={(e) => handleQuickAddChange('might', parseInt(e.target.value, 10) || 0)}
+                        className="bg-slate-950 border border-slate-800 rounded p-1 text-center text-slate-100 font-mono text-xs"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Mind"
+                        value={quickAdd.mind}
+                        onChange={(e) => handleQuickAddChange('mind', parseInt(e.target.value, 10) || 0)}
+                        className="bg-slate-950 border border-slate-800 rounded p-1 text-center text-slate-100 font-mono text-xs"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Motion"
+                        value={quickAdd.motion}
+                        onChange={(e) => handleQuickAddChange('motion', parseInt(e.target.value, 10) || 0)}
+                        className="bg-slate-950 border border-slate-800 rounded p-1 text-center text-slate-100 font-mono text-xs"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Moxie"
+                        value={quickAdd.moxie}
+                        onChange={(e) => handleQuickAddChange('moxie', parseInt(e.target.value, 10) || 0)}
+                        className="bg-slate-950 border border-slate-800 rounded p-1 text-center text-slate-100 font-mono text-xs"
+                      />
                     </div>
                   </div>
 
@@ -735,11 +560,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     <Search className="w-4 h-4 text-indigo-400" />
                     Pick from Supabase Codex
                   </span>
-                  {masterDif !== 10 && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold">
-                      Scaled to Dif {masterDif}
-                    </span>
-                  )}
                 </div>
 
                 <div className="relative">
@@ -757,9 +577,8 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                 ) : (
                   <div className="max-h-[560px] overflow-y-auto space-y-2 pr-1">
                     {supabaseMonsters
-                      .filter((m) => matchesGenre(m.genres, activeGenre) && (!codexSearch || m.name?.toLowerCase().includes(codexSearch.toLowerCase())))
+                      .filter((m) => (!codexSearch || m.name?.toLowerCase().includes(codexSearch.toLowerCase())))
                       .map((sm) => {
-                        const scaledSm = masterDif !== 10 && applyDifOnParse ? scaleSupabaseMonster(sm, masterDif) : sm;
                         const isAdded = !!addedCodexIds[sm.id || sm.name];
                         return (
                           <div
@@ -768,14 +587,14 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                           >
                             <div className="truncate pr-2">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-amber-300 font-outfit">{scaledSm.name}</span>
-                                <ItemNotesPopover notes={scaledSm.notes || scaledSm.abilities} itemName={scaledSm.name} />
+                                <span className="font-bold text-amber-300 font-outfit">{sm.name}</span>
+                                <ItemNotesPopover notes={sm.notes || sm.abilities} itemName={sm.name} />
                               </div>
                               <span className="text-[11px] text-slate-400 font-mono flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-0.5">
-                                <span>🚩 {extractFirstInt(scaledSm.nish, 10)}</span>
-                                <span>⚔️ {(scaledSm.atk_dmg_ftg || '10/5').replace(/[⚔️⚔]/g, '').trim()}</span>
-                                <span>🧥 {(scaledSm.dod_ar || '10/0').replace(/[🧥🛡️]/g, '').trim()}</span>
-                                <span>❤️ {extractFirstInt(scaledSm.vit, 10)}</span>
+                                <span>🚩 {extractFirstInt(sm.nish, 10)}</span>
+                                <span>⚔️ {(sm.atk_dmg_ftg || '10/5').replace(/[⚔️⚔]/g, '').trim()}</span>
+                                <span>🧥 {(sm.dod_ar || '10/0').replace(/[🧥🛡️]/g, '').trim()}</span>
+                                <span>❤️ {extractFirstInt(sm.vit, 10)}</span>
                               </span>
                             </div>
                             <button
@@ -794,123 +613,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                       })}
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* TAB 3: Master Difficulty System */}
-            {activeRightTab === 'difficulty' && (
-              <div className="p-4 bg-slate-950/90 rounded-xl border border-slate-800 flex flex-col gap-4">
-                {/* 1. Header Section */}
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2">
-                    <Sliders className="w-5 h-5 text-purple-400" />
-                    <div>
-                      <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider">
-                        Master Difficulty Scaling
-                      </h4>
-                      <p className="text-[11px] text-slate-400">
-                        Adjust encounter threat rating.
-                      </p>
-                    </div>
-                  </div>
-                  <span className={`text-xs font-mono font-bold px-3 py-1 rounded-full border shrink-0 inline-flex items-center justify-center text-center whitespace-nowrap ${threatBadge.color}`}>
-                    {threatBadge.text}
-                  </span>
-                </div>
-
-                {/* 2. Quick Difficulty Presets (MOVED UP: Directly below header area) */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Quick Presets (Auto-Applies)
-                  </label>
-                  <div className="grid grid-cols-5 gap-1.5 text-xs">
-                    {[
-                      { label: 'Easy', val: 6, color: 'hover:border-emerald-500/60' },
-                      { label: 'Base', val: 10, color: 'hover:border-amber-500/60' },
-                      { label: 'Hard', val: 14, color: 'hover:border-orange-500/60' },
-                      { label: 'Deadly', val: 18, color: 'hover:border-rose-500/60' },
-                      { label: 'Mythic', val: 24, color: 'hover:border-purple-500/60' },
-                    ].map((p) => (
-                      <button
-                        key={p.val}
-                        type="button"
-                        onClick={() => handlePresetClick(p.val)}
-                        className={`py-1.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${
-                          masterDif === p.val
-                            ? 'bg-purple-500/30 text-purple-200 border-purple-500 shadow-sm'
-                            : `bg-slate-900 text-slate-300 border-slate-800 ${p.color}`
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 3. Master Slider Control Card (below Quick Presets, featuring debounced auto-apply and onBlur) */}
-                <div
-                  className="flex flex-col gap-2 bg-slate-900/90 p-4 rounded-xl border border-slate-800"
-                  onBlur={handleSliderBlur}
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-300">Monster Level</span>
-                  </div>
-
-                  <input
-                    type="range"
-                    min={3}
-                    max={30}
-                    step={1}
-                    value={masterDif}
-                    onChange={(e) => handleSliderChange(parseInt(e.target.value, 10))}
-                    onBlur={handleSliderBlur}
-                    className="w-full accent-purple-500 h-2 bg-slate-800 rounded-lg cursor-pointer"
-                  />
-
-                  <div className="flex justify-between text-[10px] font-mono text-slate-500 px-0.5">
-                    <span>Min</span>
-                    <span>Base</span>
-                    <span>Deadly</span>
-                    <span>Mythic</span>
-                  </div>
-                </div>
-
-                {/* 4. Live Stat Scaling Breakdown Matrix */}
-                <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex flex-col gap-2">
-                  <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider">
-                    Live Stat Scaling Matrix (Dif {masterDif})
-                  </span>
-                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-300">
-                    <div className="p-2 bg-slate-950/60 rounded border border-slate-800/60 flex justify-between">
-                      <span className="text-slate-400">Nish & Atk:</span>
-                      <span className="text-amber-300 font-bold">
-                        {masterDif >= 10 ? `+${Math.round((masterDif - 10) * 8)}%` : `${Math.round((masterDif - 10) * 8)}%`}
-                      </span>
-                    </div>
-                    <div className="p-2 bg-slate-950/60 rounded border border-slate-800/60 flex justify-between">
-                      <span className="text-slate-400">Defense:</span>
-                      <span className="text-amber-300 font-bold">
-                        {masterDif >= 10 ? `+${Math.round((masterDif - 10) * 5)}%` : `${Math.round((masterDif - 10) * 5)}%`}
-                      </span>
-                    </div>
-                    <div className="p-2 bg-slate-950/60 rounded border border-slate-800/60 flex justify-between">
-                      <span className="text-slate-400">Dmg & Vit:</span>
-                      <span className="text-purple-300 font-bold">{(masterDif / 10).toFixed(1)}x</span>
-                    </div>
-                    <div className="p-2 bg-slate-950/60 rounded border border-slate-800/60 flex justify-between">
-                      <span className="text-slate-400">Armor (AR):</span>
-                      <span className="text-purple-300 font-bold">
-                        {masterDif >= 10 ? `+${Math.round((masterDif - 10) * 4)}%` : `${Math.round((masterDif - 10) * 4)}%`}
-                      </span>
-                    </div>
-                    <div className="p-2 bg-slate-950/60 rounded border border-slate-800/60 flex justify-between">
-                      <span className="text-slate-400">Movement (MR):</span>
-                      <span className="text-slate-400 font-bold">
-                        {masterDif >= 7 && masterDif <= 15 ? '0% (Locked)' : `${masterDif > 15 ? '+20% (Cap)' : '-20% (Cap)'}`}
-                      </span>
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
           </div>

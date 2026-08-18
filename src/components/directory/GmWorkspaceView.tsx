@@ -11,6 +11,11 @@ import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { useRosterOrdering } from '../../hooks/useRosterOrdering';
 import { LinksManagerModal } from '../modals/LinksManagerModal';
 import { MonsterManagerModal } from '../modals/MonsterManagerModal';
+import { AdventureStagingModal } from '../modals/AdventureStagingModal';
+import { GmModePillSwitch } from '../common/GmModePillSwitch';
+import { GmCompactDifficultyBar } from '../common/GmCompactDifficultyBar';
+import { EncounterNavigationRibbon } from '../hud/EncounterNavigationRibbon';
+import { useAdventureStore } from '../../store/useAdventureStore';
 
 interface GmWorkspaceViewProps {
   activeParty: Party | null;
@@ -81,10 +86,25 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Modal triggers
   const [isLinksManagerOpen, setIsLinksManagerOpen] = useState(false);
   const [isMonsterManagerOpen, setIsMonsterManagerOpen] = useState(false);
+  const [isStagingModalOpen, setIsStagingModalOpen] = useState(false);
+
+  // Adventure Store State
+  const fetchAdventures = useAdventureStore((state) => state.fetchAdventures);
+  const activeMonsters = useAdventureStore((state) => state.getActiveMonsters());
+  const setEncounterMonsters = useAdventureStore((state) => state.setEncounterMonsters);
+
+  useEffect(() => {
+    if (currentEmail) {
+      fetchAdventures(currentEmail);
+    }
+  }, [currentEmail, fetchAdventures]);
 
   // Inline Monster Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+
+  // Effective monsters list displayed in the GM Monster Tracker
+  const effectiveMonsters = activeMonsters.length > 0 ? activeMonsters : monsters;
 
   // Re-sync GM Document Links, Adventure Tags & Monsters when selected party changes
   useEffect(() => {
@@ -130,7 +150,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
   const handleSaveMonsters = (updated: ParsedMonster[]) => {
     const sorted = sortMonstersByPreset(updated, monsterPreset);
+    setEncounterMonsters(sorted);
     setMonsters(sorted);
+    if (selectedParty?.id) {
+      gameApi.savePartyMonsters(selectedParty.id, sorted);
+    }
     try {
       localStorage.setItem(monsterStorageKey, JSON.stringify(sorted));
     } catch (err) {
@@ -143,12 +167,12 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     try {
       localStorage.setItem(monsterPresetKey, preset);
     } catch {}
-    setMonsters((prev) => sortMonstersByPreset(prev, preset));
+    handleSaveMonsters(sortMonstersByPreset(effectiveMonsters, preset));
     setIsMonsterSortMenuOpen(false);
   };
 
   const handleDeleteMonster = (id: string) => {
-    handleSaveMonsters(monsters.filter((m) => m.id !== id));
+    handleSaveMonsters(effectiveMonsters.filter((m) => m.id !== id));
   };
 
   const handleStartEdit = (m: ParsedMonster) => {
@@ -159,7 +183,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const handleSaveEdit = (id: string) => {
     if (!editText.trim()) return;
     const parsed = parseMonsterLine(editText.trim());
-    const updated = monsters.map((m) => (m.id === id ? { ...parsed, id } : m));
+    const updated = effectiveMonsters.map((m) => (m.id === id ? { ...parsed, id, baseFullText: editText.trim() } : m));
     handleSaveMonsters(updated);
     setEditingId(null);
   };
@@ -477,15 +501,27 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Monster Roster (8 cols) */}
+        {/* Right Column: Monster Tracker & Adventure Staging (8 cols) */}
         <div className="lg:col-span-8 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-4 shadow-lg flex flex-col font-outfit">
+          {/* Top Row: GM Session Mode Pill Switch (Design vs. Game Day) */}
+          <GmModePillSwitch />
+
+          {/* Staged Encounter Navigation Ribbon */}
+          <EncounterNavigationRibbon
+            partyId={selectedParty?.id}
+            onOpenStagingModal={() => setIsStagingModalOpen(true)}
+          />
+
+          {/* On-Screen Master Difficulty Scaling Bar */}
+          <GmCompactDifficultyBar />
+
           {/* Header Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3 pt-1">
             <div className="flex items-center gap-2">
               <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-2 font-outfit">
-                <span>🐉</span> MONSTER TRACKER ({monsters.length})
+                <span>🐉</span> MONSTER TRACKER ({effectiveMonsters.length})
               </h3>
-              {monsters.length > 1 && (
+              {effectiveMonsters.length > 1 && (
                 <div className="relative">
                   <button
                     type="button"
@@ -538,25 +574,27 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
               )}
             </div>
 
-            <button
-              onClick={() => setIsMonsterManagerOpen(true)}
-              className="px-3.5 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-600/30 text-xs font-bold rounded-lg transition-all shrink-0 font-outfit"
-            >
-              Manage Monsters
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsMonsterManagerOpen(true)}
+                className="px-3 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-600/30 text-xs font-bold rounded-lg transition-all shrink-0 font-outfit cursor-pointer"
+              >
+                Manage Monsters
+              </button>
+            </div>
           </div>
 
           {/* Monster List View */}
-          {monsters.length === 0 ? (
+          {effectiveMonsters.length === 0 ? (
             <div className="text-xs font-medium text-slate-400 italic p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center space-y-2 font-outfit">
               <div>No monsters in active roster.</div>
               <div className="text-[11px] text-slate-500 font-outfit">
-                Click "Manage Monsters" to construct, paste statblocks, or pick codex monsters.
+                Use the Adventure Ribbon above or click "Manage Monsters" to construct, paste statblocks, or pick codex monsters.
               </div>
             </div>
           ) : (
             <div className="space-y-1.5 overflow-y-auto max-h-[600px] pr-1">
-              {monsters.map((m) =>
+              {effectiveMonsters.map((m) =>
                 editingId === m.id ? (
                   <div key={m.id} className="p-2 bg-slate-950 border border-amber-500/60 rounded-lg flex items-center gap-2">
                     <input
@@ -567,13 +605,13 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     />
                     <button
                       onClick={() => handleSaveEdit(m.id)}
-                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold rounded"
+                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold rounded cursor-pointer"
                     >
                       Save
                     </button>
                     <button
                       onClick={() => setEditingId(null)}
-                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded"
+                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -592,6 +630,13 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         </div>
       </div>
 
+      {/* Adventure Staging Studio Modal */}
+      <AdventureStagingModal
+        isOpen={isStagingModalOpen}
+        onClose={() => setIsStagingModalOpen(false)}
+        partyId={selectedParty?.id}
+      />
+
       {/* Master Links Manager Modal */}
       <LinksManagerModal
         isOpen={isLinksManagerOpen}
@@ -608,7 +653,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       <MonsterManagerModal
         isOpen={isMonsterManagerOpen}
         onClose={() => setIsMonsterManagerOpen(false)}
-        monsters={monsters}
+        monsters={effectiveMonsters}
         onSaveMonsters={handleSaveMonsters}
         partyName={selectedParty?.name}
       />
