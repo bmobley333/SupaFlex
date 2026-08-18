@@ -609,34 +609,34 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           {/* Permanent Always-Open Encounter Notes Card */}
           <div className="bg-slate-950/90 border border-slate-800 p-3 rounded-xl shadow-inner flex flex-col gap-2 font-outfit mt-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
+              <h4 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                <StickyNote className="w-3.5 h-3.5 text-amber-400" />
+                <span>Encounter Notes</span>
+                {activeEncounter && (
+                  <span className="text-slate-400 font-normal">({activeEncounter.title})</span>
+                )}
+              </h4>
+
               <div className="flex items-center gap-3 flex-wrap">
-                <h4 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                  <StickyNote className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Encounter Notes</span>
-                  {activeEncounter && (
-                    <span className="text-slate-400 font-normal">({activeEncounter.title})</span>
-                  )}
-                </h4>
+                {/* Insert Icon Buttons */}
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-[10px] text-slate-400 font-bold mr-0.5 font-mono">Insert Icon:</span>
+                  {ATTRIBUTE_EFFECT_ICONS.map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => insertIconAtNotesCursor(item.icon)}
+                      disabled={!activeEncounter}
+                      className="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded text-[11px] font-bold text-slate-200 transition-colors flex items-center gap-1 shadow-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      title={`Insert ${item.icon} into Encounter Notes`}
+                    >
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
 
-                {/* High-Density Encounter Links Dropdown */}
+                {/* High-Density Encounter Links Dropdown (Far Right past Moxie) */}
                 <EncounterLinksDropdown />
-              </div>
-
-              {/* Insert Icon Buttons */}
-              <div className="flex items-center gap-1 flex-wrap">
-                <span className="text-[10px] text-slate-400 font-bold mr-0.5 font-mono">Insert Icon:</span>
-                {ATTRIBUTE_EFFECT_ICONS.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => insertIconAtNotesCursor(item.icon)}
-                    disabled={!activeEncounter}
-                    className="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded text-[11px] font-bold text-slate-200 transition-colors flex items-center gap-1 shadow-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                    title={`Insert ${item.icon} into Encounter Notes`}
-                  >
-                    <span>{item.label}</span>
-                  </button>
-                ))}
               </div>
             </div>
             <textarea

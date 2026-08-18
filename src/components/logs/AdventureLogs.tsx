@@ -156,8 +156,8 @@ export const AdventureLogs: React.FC = () => {
       );
     }
     return (
-      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/40 border border-emerald-800/40 text-emerald-400 text-xs font-semibold transition-all">
-        <Check className="w-3.5 h-3.5" />
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/70 border border-slate-800 text-slate-400 text-xs font-medium transition-all shadow-inner">
+        <Check className="w-3.5 h-3.5 text-slate-400" />
         <span>All changes saved</span>
       </div>
     );
@@ -169,23 +169,10 @@ export const AdventureLogs: React.FC = () => {
       <div className="lg:col-span-2 flex flex-col gap-6">
         <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-3">
-              <h3 className="font-outfit font-bold text-base text-slate-100 flex items-center gap-2">
-                <Scroll className="w-5 h-5 text-amber-400" />
-                Hero's Log & Notes
-              </h3>
-
-              {/* 🔗 Character Links Dropdown (Immediately following title) */}
-              <UniversalLinksDropdown
-                label="Character Links"
-                links={activeCharacter?.sheet_data?.character_links || []}
-                themeColor="teal"
-                onAddLink={addCharacterLink}
-                onUpdateLink={updateCharacterLink}
-                onDeleteLink={deleteCharacterLink}
-                onReorderLinkByIndex={reorderCharacterLinkByIndex}
-              />
-            </div>
+            <h3 className="font-outfit font-bold text-base text-slate-100 flex items-center gap-2">
+              <Scroll className="w-5 h-5 text-amber-400" />
+              Hero's Log & Notes
+            </h3>
             {renderStatusBadge()}
           </div>
 
@@ -210,7 +197,20 @@ export const AdventureLogs: React.FC = () => {
               <BookMarked className="w-5 h-5 text-indigo-400" />
               <h3 className="font-outfit font-bold text-base text-slate-100">Hero Lore & Bio</h3>
             </div>
-            {renderStatusBadge()}
+            <div className="flex items-center gap-2">
+              {renderStatusBadge()}
+
+              {/* 🔗 Character Links Dropdown (Far Right past All changes saved) */}
+              <UniversalLinksDropdown
+                label="Character Links"
+                links={activeCharacter?.sheet_data?.character_links || []}
+                themeColor="teal"
+                onAddLink={addCharacterLink}
+                onUpdateLink={updateCharacterLink}
+                onDeleteLink={deleteCharacterLink}
+                onReorderLinkByIndex={reorderCharacterLinkByIndex}
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-3">
