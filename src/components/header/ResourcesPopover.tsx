@@ -119,7 +119,7 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
-                Browse personal creations, party mall, & hall of fame.
+                Browse personal creations, party mall, & forge new items / abilities.
               </p>
             </div>
           </button>

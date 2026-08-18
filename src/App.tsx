@@ -489,38 +489,39 @@ export default function App() {
               </div>
             )}
 
-            {/* 📚 Resources Popover Trigger */}
-            <div className="relative" ref={resourcesRef}>
+            {/* 📚 Resources Popover Trigger (Player Mode Only) */}
+            {activeRole !== 'gm' && (
+              <div className="relative" ref={resourcesRef}>
+                <button
+                  onClick={() => setShowResourcesPopover(!showResourcesPopover)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm cursor-pointer ${
+                    showResourcesPopover
+                      ? 'bg-indigo-500/20 border-indigo-400 text-indigo-200 shadow-indigo-500/30'
+                      : 'bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/35 text-indigo-300 shadow-indigo-950/40'
+                  }`}
+                  title="SupaFlex Gemini Notebook & Official Rules Website"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span className="font-outfit font-extrabold tracking-wide">Resources</span>
+                  {showResourcesPopover ? (
+                    <ChevronUp className="w-3 h-3 text-indigo-300 shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3 text-indigo-400 shrink-0" />
+                  )}
+                </button>
 
-              <button
-                onClick={() => setShowResourcesPopover(!showResourcesPopover)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm cursor-pointer ${
-                  showResourcesPopover
-                    ? 'bg-indigo-500/20 border-indigo-400 text-indigo-200 shadow-indigo-500/30'
-                    : 'bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/35 text-indigo-300 shadow-indigo-950/40'
-                }`}
-                title="SupaFlex Gemini Notebook & Official Rules Website"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                <span className="font-outfit font-extrabold tracking-wide">Resources</span>
-                {showResourcesPopover ? (
-                  <ChevronUp className="w-3 h-3 text-indigo-300 shrink-0" />
-                ) : (
-                  <ChevronDown className="w-3 h-3 text-indigo-400 shrink-0" />
+                {/* 📚 Resources Floating Glass Popover Card */}
+                {showResourcesPopover && (
+                  <ResourcesPopover 
+                    onClose={() => setShowResourcesPopover(false)} 
+                    onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
+                    onOpenNishTcGenerator={() => setShowNishTcModal(true)}
+                    onOpenCraftingMall={() => setShowCraftingMallModal(true)}
+                    isGmMode={false}
+                  />
                 )}
-              </button>
-
-              {/* 📚 Resources Floating Glass Popover Card */}
-              {showResourcesPopover && (
-                <ResourcesPopover 
-                  onClose={() => setShowResourcesPopover(false)} 
-                  onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
-                  onOpenNishTcGenerator={() => setShowNishTcModal(true)}
-                  onOpenCraftingMall={() => setShowCraftingMallModal(true)}
-                  isGmMode={activeRole === 'gm'}
-                />
-              )}
-            </div>
+              </div>
+            )}
 
             {!dbConnected && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-950/80 rounded-lg border border-rose-500/50 text-rose-300 text-xs font-semibold animate-pulse shadow-md shadow-rose-950/50">

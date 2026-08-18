@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crown, Dices, X } from 'lucide-react';
+import { Crown, Dices, X, Brain, BookOpen, ExternalLink } from 'lucide-react';
 
 interface GmToolsPopoverProps {
   onClose: () => void;
@@ -111,17 +111,59 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
-                Browse personal creations, party mall, & hall of fame.
+                Browse personal creations, party mall, & forge new items / abilities.
               </p>
             </div>
           </button>
         )}
 
+        {/* Link 1: SupaFlex Gemini Notebook */}
+        <a
+          href="https://notebooklm.google.com/notebook/8a1b90e8-17e0-44a2-a926-667dc08234a7"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex items-start gap-3 p-2.5 rounded-lg bg-slate-950/80 hover:bg-amber-950/30 border border-slate-800 hover:border-amber-500/50 transition-all text-left"
+        >
+          <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 group-hover:bg-purple-500/20 group-hover:text-purple-300 transition-colors shrink-0">
+            <Brain className="w-4 h-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-outfit font-bold text-slate-100 group-hover:text-purple-300 transition-colors truncate">
+                Gemini Notebook
+              </span>
+              <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-purple-400 shrink-0" />
+            </div>
+            <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
+              AI Rulebook & Lore Q&A assistant in NotebookLM.
+            </p>
+          </div>
+        </a>
 
+        {/* Link 2: SupaFlex Official Website */}
+        <a
+          href="https://bmobley333.github.io/MetaScape-VitePress-GitHub-Pages/player-guide/supaflex/rules.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex items-start gap-3 p-2.5 rounded-lg bg-slate-950/80 hover:bg-amber-950/30 border border-slate-800 hover:border-amber-500/50 transition-all text-left"
+        >
+          <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-300 transition-colors shrink-0">
+            <BookOpen className="w-4 h-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-outfit font-bold text-slate-100 group-hover:text-indigo-300 transition-colors truncate">
+                Official Website
+              </span>
+              <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-indigo-400 shrink-0" />
+            </div>
+            <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
+              Complete SupaFlex rules, bestiary, & gear guide.
+            </p>
+          </div>
+        </a>
 
-
-
-        {/* Tool 6: Master Architect Desk (Blake Exclusive) */}
+        {/* Tool 4: Master Architect Desk (Blake Exclusive) */}
         {isMasterArchitect && onOpenMasterArchitectDesk && (
           <button
             onClick={() => {
