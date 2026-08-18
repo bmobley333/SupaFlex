@@ -72,6 +72,19 @@ export const AnvilIcon: React.FC<{ className?: string }> = ({ className = "w-5 h
   </svg>
 );
 
+export const GuardrailBadge: React.FC<{ isValid: boolean }> = ({ isValid }) => (
+  <span
+    className={`inline-flex items-center justify-center text-[10px] font-extrabold px-1.5 py-0.5 rounded transition-all select-none ${
+      isValid
+        ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/50 shadow-sm'
+        : 'bg-rose-950/80 text-rose-400 border border-rose-500/50 shadow-sm'
+    }`}
+    title={isValid ? 'Requirement fulfilled' : 'Required field'}
+  >
+    {isValid ? '✅' : '❌'}
+  </span>
+);
+
 export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen, onClose, onItemSaved }) => {
   const playerEmail = useCharacterStore((state) => state.playerEmail);
   const playerName = useCharacterStore((state) => state.playerName);
@@ -96,11 +109,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   const [skillAttribute, setSkillAttribute] = useState<string>('💪');
   const [effect, setEffect] = useState('');
   const [notes, setNotes] = useState('');
-  const [selectedGenres, setSelectedGenres] = useState<string[]>(['Medieval', 'Modern', 'SciFi']);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
   // Power & Power Table State
   const [selectedPowerTable, setSelectedPowerTable] = useState('');
-  const [tableCategory, setTableCategory] = useState('Class');
+  const [tableCategory, setTableCategory] = useState('');
   const [customCategoryInput, setCustomCategoryInput] = useState('');
 
   // Skillset State (2 to 5 selected existing skill strings)
@@ -114,9 +127,65 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
   const effectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load custom items when modal is opened to ensure dropdown catalog has latest custom/party creations
+  // Switch tabs and reset genres to none selected per directive
+  const handleSwitchTab = (newType: CustomCreationType) => {
+    if (newType !== creationType) {
+      setCreationType(newType);
+      setSelectedGenres([]);
+      setFeedback(null);
+    }
+  };
+
+  // Real-time Guardrail Validation Flags
+  const isNameValid = name.trim().length > 0;
+  const isPowerTableValid = selectedPowerTable.trim().length > 0;
+  const isTableCategoryValid =
+    tableCategory.trim().length > 0 &&
+    (tableCategory !== 'Custom' || customCategoryInput.trim().length > 0);
+  const isEffectValid = effect.trim().length > 0;
+  const isGenresValid = selectedGenres.length > 0;
+  const isSkillAttributeValid = !!skillAttribute && skillAttribute.trim().length > 0;
+  const isSkillsetSkillsValid =
+    selectedSkillsetSkills.length >= 2 &&
+    selectedSkillsetSkills.length <= 5 &&
+    selectedSkillsetSkills.every((s) => typeof s === 'string' && s.trim().length > 0);
+
+  const isFormValid = useMemo(() => {
+    if (!isNameValid) return false;
+    if (!isGenresValid) return false;
+
+    if (creationType === 'power') {
+      return isPowerTableValid && isEffectValid;
+    }
+    if (creationType === 'power_table') {
+      return isTableCategoryValid;
+    }
+    if (creationType === 'relic' || creationType === 'hardware') {
+      return isEffectValid;
+    }
+    if (creationType === 'skill') {
+      return isSkillAttributeValid;
+    }
+    if (creationType === 'skillset') {
+      return isSkillsetSkillsValid;
+    }
+    return false;
+  }, [
+    creationType,
+    isNameValid,
+    isGenresValid,
+    isPowerTableValid,
+    isTableCategoryValid,
+    isEffectValid,
+    isSkillAttributeValid,
+    isSkillsetSkillsValid,
+  ]);
+
+  // Load custom items when modal is opened and reset genres to empty on open/blur
   useEffect(() => {
     if (isOpen) {
+      setSelectedGenres([]);
+      setFeedback(null);
       const loadCustomItems = async () => {
         try {
           const [personal, all] = await Promise.all([
@@ -130,6 +199,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
         }
       };
       loadCustomItems();
+    } else {
+      setSelectedGenres([]);
+      setFeedback(null);
     }
   }, [isOpen, playerEmail, activePartyId]);
 
@@ -281,10 +353,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     setName('');
     setEffect('');
     setNotes('');
-    setSelectedGenres(['Medieval', 'Modern', 'SciFi']);
+    setSelectedGenres([]);
     setSelectedSkillsetSkills(['', '']);
     setSelectedPowerTable('');
-    setTableCategory('Class');
+    setTableCategory('');
     setCustomCategoryInput('');
     setAction('AM');
     setUsage('1');
@@ -534,7 +606,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
           <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap sm:flex-nowrap">
             <button
               type="button"
-              onClick={() => setCreationType('power')}
+              onClick={() => handleSwitchTab('power')}
               className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'power'
                   ? 'bg-rose-600 text-white shadow-sm font-extrabold'
@@ -545,7 +617,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </button>
             <button
               type="button"
-              onClick={() => setCreationType('power_table')}
+              onClick={() => handleSwitchTab('power_table')}
               className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'power_table'
                   ? 'bg-amber-600 text-white shadow-sm font-extrabold'
@@ -556,7 +628,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </button>
             <button
               type="button"
-              onClick={() => setCreationType('relic')}
+              onClick={() => handleSwitchTab('relic')}
               className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'relic'
                   ? 'bg-purple-600 text-white shadow-sm font-extrabold'
@@ -567,7 +639,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </button>
             <button
               type="button"
-              onClick={() => setCreationType('hardware')}
+              onClick={() => handleSwitchTab('hardware')}
               className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'hardware'
                   ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
@@ -578,7 +650,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </button>
             <button
               type="button"
-              onClick={() => setCreationType('skill')}
+              onClick={() => handleSwitchTab('skill')}
               className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'skill'
                   ? 'bg-amber-600 text-white shadow-sm font-extrabold'
@@ -589,7 +661,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </button>
             <button
               type="button"
-              onClick={() => setCreationType('skillset')}
+              onClick={() => handleSwitchTab('skillset')}
               className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'skillset'
                   ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
@@ -633,6 +705,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                   ? 'Power Name'
                   : 'Creation Name'}
               </span>
+              <GuardrailBadge isValid={isNameValid} />
               <InfoTooltip text="Enter the unique name of your custom creation or table." />
             </div>
             <input
@@ -656,6 +729,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-300">Table Category</span>
+                <GuardrailBadge isValid={isTableCategoryValid} />
                 <InfoTooltip text="Classify this power table (Class, Combat Style, Luck, Race, or Custom category)." />
               </div>
               <div className="flex items-center gap-2">
@@ -664,6 +738,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                   onChange={(e) => setTableCategory(e.target.value)}
                   className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer flex-1"
                 >
+                  <option value="">-- Select a Category --</option>
                   {['Class', 'Combat Style', 'Luck', 'Race', 'Custom'].map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
@@ -689,18 +764,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-300">Power Table (Required)</span>
+                <GuardrailBadge isValid={isPowerTableValid} />
                 <InfoTooltip text="Select the Power Table this power belongs to. This categorizes the power and establishes its table classification." />
               </div>
               <select
                 value={selectedPowerTable}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedPowerTable(val);
-                  const tbl = (powerTables || []).find((t) => t.name === val);
-                  if (tbl && Array.isArray(tbl.genres) && tbl.genres.length > 0) {
-                    setSelectedGenres(tbl.genres);
-                  }
-                }}
+                onChange={(e) => setSelectedPowerTable(e.target.value)}
                 className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer"
                 required
               >
@@ -723,6 +792,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-300">Required Attribute</span>
+                <GuardrailBadge isValid={isSkillAttributeValid} />
                 <InfoTooltip text="Assign exactly one core attribute icon (Magic✨, Might💪, Mind👁️, Motion🏃, Moxie🫀) to this skill." />
               </div>
               <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
@@ -877,6 +947,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                   <span className="font-bold text-slate-300 font-outfit uppercase tracking-wider text-[11px]">
                     Included Skills (2–5 Required)
                   </span>
+                  <GuardrailBadge isValid={isSkillsetSkillsValid} />
                   <InfoTooltip text="Select 2 to 5 existing skills from the alphabetized catalog (stock, personal, and party creations) to compose this skillset." />
                 </div>
                 <span className="text-[10px] text-slate-400 font-semibold">
@@ -941,6 +1012,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
               <div className="flex items-center justify-between flex-wrap gap-1">
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-slate-300">Effect (rules)</span>
+                  <GuardrailBadge isValid={isEffectValid} />
                   <InfoTooltip text="Describe mechanical rules, damage dice, bonuses, or utility." />
                 </div>
                 <div className="flex items-center gap-1 flex-wrap">
@@ -989,6 +1061,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-slate-300">Compatible Genres</span>
+              <GuardrailBadge isValid={isGenresValid} />
               <InfoTooltip text="Select all campaign genres where this creation is available (Medieval, Modern, SciFi). At least one is required." />
             </div>
             <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
@@ -1017,8 +1090,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
           <div className="pt-2 mt-auto shrink-0">
             <button
               type="submit"
-              disabled={isSubmitting || !name.trim()}
-              className="w-full py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-50 text-white font-outfit font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-950/50 cursor-pointer"
+              disabled={isSubmitting || !isFormValid}
+              className="w-full py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:from-amber-600 disabled:hover:to-amber-500 text-white font-outfit font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-950/50 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>
