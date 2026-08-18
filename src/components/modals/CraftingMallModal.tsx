@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Send, Check, Trash2, Plus, AlertCircle, RefreshCw, Crown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationItem, CustomCreationType, Power, MagicItem, AbilitySlot } from '../../types/game';
+import { CustomCreationItem, CustomCreationType, Power, MagicItem, AbilitySlot, WeaponSlot, ArmorData, ShieldData, SimpleGearItem } from '../../types/game';
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
 import { getPowerReadyCategory } from '../../utils/readyMatrixSchedule';
 
@@ -194,6 +194,82 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
           return {
             ...prev,
             known_individual_skills: Array.from(new Set([...existingIndividual, formattedSkill])),
+          };
+        });
+        saveActiveCharacter();
+      } else if (type === 'weapon') {
+        const weaponObj: WeaponSlot = {
+          id: `wpn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          name: name,
+          sk: true,
+          mhs: item_data?.type?.startsWith('H') ? 'H' : item_data?.type?.startsWith('S') ? 'S' : 'M',
+          atk: item_data?.atk || '💪',
+          dmg: item_data?.dmg || '💪',
+          max_blk: item_data?.max_block || 'n/a',
+          notes: notes || undefined,
+        };
+        updateActiveSheetData((prev) => {
+          const existingWeapons = prev.weapons || [];
+          return {
+            ...prev,
+            weapons: [...existingWeapons, weaponObj],
+          };
+        });
+        saveActiveCharacter();
+      } else if (type === 'armor') {
+        const numericAr = parseInt((item_data?.ar || '1').replace(/[^\d]/g, ''), 10) || 1;
+        const armorObj: ArmorData = {
+          id: `arm_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          name: name,
+          requirement: item_data?.requirement || '💪 4',
+          ar: numericAr,
+          mr: item_data?.mr || '👣0',
+          cost: item_data?.cost || '1g',
+          notes: notes || undefined,
+          sk: true,
+        };
+        updateActiveSheetData((prev) => {
+          const existingWardrobe = prev.wardrobe || [];
+          return {
+            ...prev,
+            wardrobe: [...existingWardrobe, armorObj],
+          };
+        });
+        saveActiveCharacter();
+      } else if (type === 'shield') {
+        const shieldObj: ShieldData = {
+          id: `shd_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          name: name,
+          requirement: item_data?.requirement || '💪 4',
+          max_block: item_data?.max_block || '4',
+          mr_adjustment: item_data?.mr || '👣0',
+          cost: item_data?.cost || '1g',
+          notes: notes || undefined,
+          sk: true,
+          equipped: false,
+        };
+        updateActiveSheetData((prev) => {
+          const existingArmory = prev.armory || [];
+          return {
+            ...prev,
+            armory: [...existingArmory, shieldObj],
+          };
+        });
+        saveActiveCharacter();
+      } else if (type === 'gear') {
+        const gearObj: SimpleGearItem = {
+          id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          qty: 1,
+          name: name,
+          category: item_data?.category || 'Adventuring',
+          cost: item_data?.cost || '1s',
+          notes: notes || undefined,
+        };
+        updateActiveSheetData((prev) => {
+          const existingGear = prev.simple_gear || [];
+          return {
+            ...prev,
+            simple_gear: [...existingGear, gearObj],
           };
         });
         saveActiveCharacter();
@@ -414,7 +490,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
         <div className="px-6 py-2.5 bg-slate-950/30 border-b border-slate-800/60 flex items-center justify-between gap-3 shrink-0 flex-wrap">
           {/* Sub-Filters */}
           <div className="flex items-center gap-1 flex-wrap">
-            {(['all', 'power', 'power_table', 'relic', 'hardware', 'skill', 'skillset'] as const).map((t) => (
+            {(['all', 'power', 'power_table', 'relic', 'hardware', 'skill', 'skillset', 'weapon', 'armor', 'shield', 'gear'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTypeFilter(t)}
@@ -436,7 +512,15 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                   ? '⚙️ Hardware'
                   : t === 'skill'
                   ? '🎯 Skills'
-                  : '🎓 Skillsets'}
+                  : t === 'skillset'
+                  ? '🎓 Skillsets'
+                  : t === 'weapon'
+                  ? '⚔️ Weapons'
+                  : t === 'armor'
+                  ? '🧥 Armor'
+                  : t === 'shield'
+                  ? '🛡️ Shields'
+                  : '🎒 Gear'}
               </button>
             ))}
           </div>
@@ -494,10 +578,15 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {filteredItems.map((item) => {
                 const isPower = item.type === 'power';
+                const isTable = item.type === 'power_table';
                 const isRelic = item.type === 'relic';
                 const isHardware = item.type === 'hardware';
                 const isSkill = item.type === 'skill';
                 const isSkillset = item.type === 'skillset';
+                const isWeapon = item.type === 'weapon';
+                const isArmor = item.type === 'armor';
+                const isShield = item.type === 'shield';
+                const isGear = item.type === 'gear';
 
                 return (
                   <div
@@ -515,16 +604,44 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                             className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${
                               isPower
                                 ? 'bg-rose-950 text-rose-300 border-rose-500/40'
+                                : isTable
+                                ? 'bg-violet-950 text-violet-300 border-violet-500/40'
                                 : isRelic
                                 ? 'bg-purple-950 text-purple-300 border-purple-500/40'
                                 : isHardware
                                 ? 'bg-cyan-950 text-cyan-300 border-cyan-500/40'
                                 : isSkill
                                 ? 'bg-amber-950 text-amber-300 border-amber-500/40'
-                                : 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
+                                : isSkillset
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
+                                : isWeapon
+                                ? 'bg-orange-950 text-orange-300 border-orange-500/40'
+                                : isArmor
+                                ? 'bg-blue-950 text-blue-300 border-blue-500/40'
+                                : isShield
+                                ? 'bg-cyan-950 text-cyan-300 border-cyan-500/40'
+                                : 'bg-teal-950 text-teal-300 border-teal-500/40'
                             }`}
                           >
-                            {isPower ? '🔥 Power' : isRelic ? '🏺 Relic' : isHardware ? '⚙️ Hardware' : isSkill ? '🎯 Skill' : '🎓 Skillset'}
+                            {isPower
+                              ? '🔥 Power'
+                              : isTable
+                              ? '📜 Table'
+                              : isRelic
+                              ? '🏺 Relic'
+                              : isHardware
+                              ? '⚙️ Hardware'
+                              : isSkill
+                              ? '🎯 Skill'
+                              : isSkillset
+                              ? '🎓 Skillset'
+                              : isWeapon
+                              ? '⚔️ Weapon'
+                              : isArmor
+                              ? '🧥 Armor'
+                              : isShield
+                              ? '🛡️ Shield'
+                              : '🎒 Gear'}
                           </span>
                         </div>
 
@@ -548,7 +665,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                       </div>
 
                       {/* Action & Usage Pill */}
-                      {!isSkillset && !isSkill && (
+                      {!isSkillset && !isSkill && !isWeapon && !isArmor && !isShield && !isGear && (
                         <div className="flex items-center gap-1 shrink-0">
                           {item.item_data?.action && (
                             <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-300">
@@ -581,6 +698,35 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                         <p className="text-[11px] leading-relaxed font-sans text-amber-200">
                           Assigned Attribute: <span className="font-bold">{item.item_data?.attribute || '✨'}</span>
                         </p>
+                      ) : isWeapon ? (
+                        <div className="flex flex-col gap-1 text-[11px] font-mono text-slate-300">
+                          <div className="flex items-center justify-between">
+                            <span>Type: <strong className="text-orange-300">{item.item_data?.type || 'Melee'}</strong></span>
+                            <span>Req: <strong className="text-slate-200">{item.item_data?.requirement || '💪 4'}</strong></span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Atk: <strong className="text-amber-300">{item.item_data?.atk || '💪'}</strong></span>
+                            <span>Dmg: <strong className="text-rose-300">{item.item_data?.dmg || '💪'}</strong></span>
+                            <span>Blk: <strong className="text-cyan-300">{item.item_data?.max_block || 'n/a'}</strong></span>
+                          </div>
+                        </div>
+                      ) : isArmor ? (
+                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-300">
+                          <span>Req: <strong className="text-slate-200">{item.item_data?.requirement || '💪 4'}</strong></span>
+                          <span>AR: <strong className="text-amber-300">{item.item_data?.ar || '1'}</strong></span>
+                          <span>MR: <strong className="text-cyan-300">{item.item_data?.mr || '👣0'}</strong></span>
+                        </div>
+                      ) : isShield ? (
+                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-300">
+                          <span>Req: <strong className="text-slate-200">{item.item_data?.requirement || '💪 4'}</strong></span>
+                          <span>Blk: <strong className="text-amber-300">{item.item_data?.max_block || '4'}</strong></span>
+                          <span>MR: <strong className="text-cyan-300">{item.item_data?.mr || '👣0'}</strong></span>
+                        </div>
+                      ) : isGear ? (
+                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-300">
+                          <span>Category: <strong className="text-teal-300">{item.item_data?.category || 'Adventuring'}</strong></span>
+                          <span>Cost: <strong className="text-amber-300">{item.item_data?.cost || '1s'}</strong></span>
+                        </div>
                       ) : (
                         <p className="text-[11px] leading-relaxed font-sans">{item.item_data?.effect || 'No description provided.'}</p>
                       )}

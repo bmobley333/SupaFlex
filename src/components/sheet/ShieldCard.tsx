@@ -1,6 +1,6 @@
 // src/components/sheet/ShieldCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, X, Check, Plus, Search, ShieldAlert, Loader2, AlertCircle, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, Check, Search, ShieldAlert, Loader2, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
@@ -9,14 +9,10 @@ import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import {
   ShieldData,
   SupabaseShield,
-  getShieldMrFromRequirement,
-  getShieldMaxBlockFromRequirement,
   isRequirementLearnable,
   calculateAvailableAp,
   calculateMovementRate,
 } from '../../types/game';
-
-const REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
 
 export const ShieldCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
@@ -88,20 +84,8 @@ export const ShieldCard: React.FC = () => {
 
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
   const [rightSearchQuery, setRightSearchQuery] = useState<string>('');
-  const [activeRightTab, setActiveRightTab] = useState<'CATALOG' | 'CREATOR'>('CATALOG');
-
   const [shieldCatalog, setShieldCatalog] = useState<SupabaseShield[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
-
-  const [newShieldName, setNewShieldName] = useState<string>('');
-  const [newShieldReq, setNewShieldReq] = useState<string>('💪 4');
-  const [newShieldCostVal, setNewShieldCostVal] = useState<number>(1);
-  const [newShieldCostUnit, setNewShieldCostUnit] = useState<'g' | 's'>('g');
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
-  const derivedMaxBlockStr = getShieldMaxBlockFromRequirement(newShieldReq);
-  const derivedMrStr = getShieldMrFromRequirement(newShieldReq);
 
   useEffect(() => {
     if (showManageModal) {
@@ -237,51 +221,7 @@ export const ShieldCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const handleCreateShield = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-    const trimmedName = newShieldName.trim();
-    if (!trimmedName) {
-      setFormError('Shield name is required.');
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      const shieldCost = `${Math.max(1, newShieldCostVal)}${newShieldCostUnit}`;
-      let created: SupabaseShield;
-      try {
-        created = await gameApi.createShield({
-          name: trimmedName,
-          requirement: newShieldReq,
-          max_block: derivedMaxBlockStr,
-          mr: derivedMrStr,
-          cost: shieldCost,
-        });
-      } catch (dbErr: any) {
-        console.warn('[ShieldCard] Remote catalog insert restricted by RLS; generating local custom item:', dbErr);
-        created = {
-          id: Date.now(),
-          name: trimmedName,
-          requirement: newShieldReq,
-          max_block: derivedMaxBlockStr,
-          mr: derivedMrStr,
-          cost: shieldCost,
-          created_at: new Date().toISOString(),
-        };
-      }
-      setShieldCatalog((prev) => [...prev, created]);
-      handleAddToArmory(created);
-      setNewShieldName('');
-      setNewShieldReq('💪 4');
-      setNewShieldCostVal(1);
-      setNewShieldCostUnit('g');
-      setActiveRightTab('CATALOG');
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to create shield.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
   // Check if shield item is starred
   const isItemStarred = useCallback(
@@ -543,219 +483,107 @@ export const ShieldCard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* --- RIGHT COLUMN: STOCK CATALOG & CREATOR PANE --- */}
+                {/* --- RIGHT COLUMN: STOCK CATALOG PANE --- */}
                 <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                    <div className="flex border-b border-slate-800 mb-4 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setActiveRightTab('CATALOG')}
-                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                          activeRightTab === 'CATALOG'
-                            ? 'border-cyan-400 text-cyan-400'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        🌐 Stock Catalog ({filteredCatalogShields.length})
-                      </button>
+                  {/* Catalog Header */}
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 shrink-0">
+                    <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                      🌐 Stock Catalog ({filteredCatalogShields.length})
+                    </span>
+                  </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setActiveRightTab('CREATOR')}
-                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                          activeRightTab === 'CREATOR'
-                            ? 'border-cyan-400 text-cyan-400'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        ✨ Custom Creator
-                      </button>
-                    </div>
-
-                  {activeRightTab === 'CATALOG' && (
-                    <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
-                      {/* Search & Category Filter Bar */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="relative flex-1">
-                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            value={rightSearchQuery}
-                            onChange={(e) => setRightSearchQuery(e.target.value)}
-                            placeholder="Search shields..."
-                            className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 w-full"
-                          />
-                        </div>
-
-                        <select
-                          value={shieldFilterCategory}
-                          onChange={(e) => setShieldFilterCategory(e.target.value as any)}
-                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 max-w-[180px] truncate cursor-pointer"
-                        >
-                          <option value="all">🌐 All Shields</option>
-                          <option value="starred">⭐ Starred Favorites ({starredShieldsCount})</option>
-                          <option value="learnable">⚡ Learnable Only</option>
-                        </select>
+                  {/* Stock Catalog Content */}
+                  <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
+                    {/* Search & Category Filter Bar */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="relative flex-1">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={rightSearchQuery}
+                          onChange={(e) => setRightSearchQuery(e.target.value)}
+                          placeholder="Search shields..."
+                          className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 w-full"
+                        />
                       </div>
 
-                      <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
-                        {isLoadingCatalog ? (
-                          <div className="h-full flex items-center justify-center p-6 text-slate-400 text-xs gap-2">
-                            <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
-                            <span>Loading SupaFlex shields catalog...</span>
-                          </div>
-                        ) : filteredCatalogShields.length > 0 ? (
-                          filteredCatalogShields.map((item, idx) => {
-                            const qualifies = isRequirementLearnable(item.requirement, attributeDice);
+                      <select
+                        value={shieldFilterCategory}
+                        onChange={(e) => setShieldFilterCategory(e.target.value as any)}
+                        className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 max-w-[180px] truncate cursor-pointer"
+                      >
+                        <option value="all">🌐 All Shields</option>
+                        <option value="starred">⭐ Starred Favorites ({starredShieldsCount})</option>
+                        <option value="learnable">⚡ Learnable Only</option>
+                      </select>
+                    </div>
 
-                            return (
-                              <div
-                                key={item.id || idx}
-                                className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-cyan-500/40 transition-all shrink-0"
-                              >
-                                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="font-bold text-sm text-slate-100">{item.name}</span>
-                                    <ItemNotesPopover notes={item.notes} itemName={item.name} />
-                                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
-                                      {item.cost}
-                                    </span>
-                                  </div>
+                    <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
+                      {isLoadingCatalog ? (
+                        <div className="h-full flex items-center justify-center p-6 text-slate-400 text-xs gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                          <span>Loading SupaFlex shields catalog...</span>
+                        </div>
+                      ) : filteredCatalogShields.length > 0 ? (
+                        filteredCatalogShields.map((item, idx) => {
+                          const qualifies = isRequirementLearnable(item.requirement, attributeDice);
 
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleStarItem(item)}
-                                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                        isItemStarred(item)
-                                          ? 'text-amber-400'
-                                          : 'text-slate-600 hover:text-amber-400'
-                                      }`}
-                                      title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                    >
-                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
-                                    </button>
-                                    <button
-                                      onClick={() => handleAddToArmory(item)}
-                                      className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
-                                        qualifies
-                                          ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
-                                          : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
-                                      }`}
-                                      title={qualifies ? 'Learn shield with skilled training' : 'Equip shield as unskilled'}
-                                    >
-                                      + Learn
-                                    </button>
-                                  </div>
+                          return (
+                            <div
+                              key={item.id || idx}
+                              className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-cyan-500/40 transition-all shrink-0"
+                            >
+                              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-sm text-slate-100">{item.name}</span>
+                                  <ItemNotesPopover notes={item.notes} itemName={item.name} />
+                                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
+                                    {item.cost}
+                                  </span>
                                 </div>
 
-                                <div className="flex items-center justify-between text-xs font-mono pt-0.5 text-slate-400">
-                                  <span>Req: <strong className="text-slate-200">{item.requirement}</strong></span>
-                                  <span>Blk: <strong className="text-amber-300">{item.max_block}</strong></span>
-                                  <span>MR: <strong className="text-cyan-300">{item.mr}</strong></span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleStarItem(item)}
+                                    className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                      isItemStarred(item)
+                                        ? 'text-amber-400'
+                                        : 'text-slate-600 hover:text-amber-400'
+                                    }`}
+                                    title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                  >
+                                    <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleAddToArmory(item)}
+                                    className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
+                                      qualifies
+                                        ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
+                                        : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
+                                    }`}
+                                    title={qualifies ? 'Learn shield with skilled training' : 'Equip shield as unskilled'}
+                                  >
+                                    + Learn
+                                  </button>
                                 </div>
                               </div>
-                            );
-                          })
-                        ) : (
-                          <p className="text-xs text-slate-500 italic py-6 text-center">
-                            No shields match "{rightSearchQuery}"
-                          </p>
-                        )}
-                      </div>
+
+                              <div className="flex items-center justify-between text-xs font-mono pt-0.5 text-slate-400">
+                                <span>Req: <strong className="text-slate-200">{item.requirement}</strong></span>
+                                <span>Blk: <strong className="text-amber-300">{item.max_block}</strong></span>
+                                <span>MR: <strong className="text-cyan-300">{item.mr}</strong></span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-xs text-slate-500 italic py-6 text-center">
+                          No shields match "{rightSearchQuery}"
+                        </p>
+                      )}
                     </div>
-                  )}
-
-                  {activeRightTab === 'CREATOR' && (
-                    <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-y-auto">
-                      <form
-                        onSubmit={handleCreateShield}
-                        className="p-3 bg-cyan-950/20 border border-cyan-500/30 rounded-xl flex flex-col gap-3"
-                      >
-                        <div className="flex items-center justify-between border-b border-cyan-500/20 pb-1.5">
-                          <span className="text-xs font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
-                            <Plus className="w-3.5 h-3.5" />
-                            Create Custom Shield
-                          </span>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                          <div className="flex flex-col gap-1">
-                            <span className="text-xs font-bold text-slate-300">Shield Name</span>
-                            <input
-                              type="text"
-                              value={newShieldName}
-                              onChange={(e) => setNewShieldName(e.target.value)}
-                              className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-400"
-                              required
-                            />
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-300 shrink-0">Cost:</span>
-                            <input
-                              type="number"
-                              min="1"
-                              value={newShieldCostVal}
-                              onChange={(e) => setNewShieldCostVal(parseInt(e.target.value, 10) || 1)}
-                              className="bg-slate-950 text-slate-100 text-xs font-mono font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none w-16 text-center focus:border-cyan-400"
-                              required
-                            />
-                            <select
-                              value={newShieldCostUnit}
-                              onChange={(e) => setNewShieldCostUnit(e.target.value as 'g' | 's')}
-                              className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none focus:border-cyan-400 cursor-pointer"
-                            >
-                              <option value="g">g (Gold 🪙)</option>
-                              <option value="s">s (Silver 🥈)</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800">
-                          <span className="text-xs font-bold text-slate-300">Req Rating</span>
-                          <select
-                            value={newShieldReq}
-                            onChange={(e) => setNewShieldReq(e.target.value)}
-                            className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none focus:border-cyan-400 cursor-pointer"
-                          >
-                            {REQ_OPTIONS.map((req) => (
-                              <option key={req} value={req}>
-                                {req}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 pt-1">
-                          <div className="px-2.5 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-slate-400">Block Cap:</span>
-                            <span className="text-xs font-mono font-extrabold text-amber-300">{derivedMaxBlockStr}</span>
-                          </div>
-
-                          <div className="px-2.5 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-slate-400">MR Penalty:</span>
-                            <span className="text-xs font-mono font-extrabold text-cyan-300">{derivedMrStr}</span>
-                          </div>
-                        </div>
-
-                        {formError && (
-                          <div className="p-2 bg-rose-950/40 border border-rose-500/30 rounded-lg text-rose-300 text-xs flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                            <span>{formError}</span>
-                          </div>
-                        )}
-
-                        <button
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="w-full mt-1 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
-                        >
-                          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Plus className="w-4 h-4" />}
-                          <span>Save & Learn Custom Shield</span>
-                        </button>
-                      </form>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
 

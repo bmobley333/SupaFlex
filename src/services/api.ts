@@ -1488,6 +1488,74 @@ export const gameApi = {
         return true;
       }
 
+      if (item.type === 'weapon') {
+        const weaponPayload = {
+          name: item.name,
+          type: item.item_data?.type || 'Melee',
+          requirement: item.item_data?.requirement || '💪 4',
+          atk: item.item_data?.atk || '💪',
+          dmg: item.item_data?.dmg || '💪',
+          max_block: item.item_data?.max_block || 'n/a',
+          cost: item.item_data?.cost || '1g',
+          notes: item.notes ? `${item.notes} (Official MetaScape Canon • Designed by ${item.author_name})` : `(Official MetaScape Canon • Designed by ${item.author_name})`,
+          genres: item.item_data?.genres && item.item_data.genres.length > 0 ? item.item_data.genres : ['Medieval', 'Modern', 'SciFi'],
+          created_at: new Date().toISOString(),
+        };
+        const { error: insertError } = await supabase.from('weapons').insert([weaponPayload]);
+        if (insertError) throw insertError;
+        await this.updateCustomItem(item.id, { is_promoted: true });
+        return true;
+      }
+
+      if (item.type === 'armor') {
+        const armorPayload = {
+          name: item.name,
+          requirement: item.item_data?.requirement || '💪 4',
+          ar: item.item_data?.ar || '4',
+          mr: item.item_data?.mr || '-0',
+          cost: item.item_data?.cost || '1g',
+          notes: item.notes ? `${item.notes} (Official MetaScape Canon • Designed by ${item.author_name})` : `(Official MetaScape Canon • Designed by ${item.author_name})`,
+          genres: item.item_data?.genres && item.item_data.genres.length > 0 ? item.item_data.genres : ['Medieval', 'Modern', 'SciFi'],
+          created_at: new Date().toISOString(),
+        };
+        const { error: insertError } = await supabase.from('armor').insert([armorPayload]);
+        if (insertError) throw insertError;
+        await this.updateCustomItem(item.id, { is_promoted: true });
+        return true;
+      }
+
+      if (item.type === 'shield') {
+        const shieldPayload = {
+          name: item.name,
+          requirement: item.item_data?.requirement || '💪 4',
+          max_block: item.item_data?.max_block || '4',
+          mr: item.item_data?.mr || '-0',
+          cost: item.item_data?.cost || '1g',
+          notes: item.notes ? `${item.notes} (Official MetaScape Canon • Designed by ${item.author_name})` : `(Official MetaScape Canon • Designed by ${item.author_name})`,
+          genres: item.item_data?.genres && item.item_data.genres.length > 0 ? item.item_data.genres : ['Medieval', 'Modern', 'SciFi'],
+          created_at: new Date().toISOString(),
+        };
+        const { error: insertError } = await supabase.from('shields').insert([shieldPayload]);
+        if (insertError) throw insertError;
+        await this.updateCustomItem(item.id, { is_promoted: true });
+        return true;
+      }
+
+      if (item.type === 'gear') {
+        const gearPayload = {
+          name: item.name,
+          category: item.category || item.item_data?.category || 'Adventure',
+          cost: item.item_data?.cost || '1s',
+          notes: item.notes ? `${item.notes} (Official MetaScape Canon • Designed by ${item.author_name})` : `(Official MetaScape Canon • Designed by ${item.author_name})`,
+          genres: item.item_data?.genres && item.item_data.genres.length > 0 ? item.item_data.genres : ['Medieval', 'Modern', 'SciFi'],
+          created_at: new Date().toISOString(),
+        };
+        const { error: insertError } = await supabase.from('gear').insert([gearPayload]);
+        if (insertError) throw insertError;
+        await this.updateCustomItem(item.id, { is_promoted: true });
+        return true;
+      }
+
       const targetTable =
         item.type === 'power'
           ? 'powers'

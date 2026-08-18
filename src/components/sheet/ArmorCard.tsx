@@ -1,6 +1,6 @@
 // src/components/sheet/ArmorCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, X, Check, Shirt, Plus, Search, Loader2, AlertCircle, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, Check, Shirt, Search, Loader2, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
@@ -10,8 +10,6 @@ import {
   ArmorData,
   MovementRateData,
   SupabaseArmor,
-  getMrFromRequirement,
-  getArFromRequirement,
   isRequirementLearnable,
   calculateAvailableAp,
   calculateMovementRate,
@@ -22,8 +20,6 @@ const getDieNum = (dieRating?: string): number => {
   const num = parseInt(dieRating.replace('d', ''), 10);
   return isNaN(num) ? 4 : num;
 };
-
-const REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
 
 export const ArmorCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
@@ -92,20 +88,8 @@ export const ArmorCard: React.FC = () => {
 
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
   const [rightSearchQuery, setRightSearchQuery] = useState<string>('');
-  const [activeRightTab, setActiveRightTab] = useState<'CATALOG' | 'CREATOR'>('CATALOG');
-
   const [armorCatalog, setArmorCatalog] = useState<SupabaseArmor[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
-
-  const [newArmorName, setNewArmorName] = useState<string>('');
-  const [newArmorReq, setNewArmorReq] = useState<string>('💪 4');
-  const [newArmorCostVal, setNewArmorCostVal] = useState<number>(1);
-  const [newArmorCostUnit, setNewArmorCostUnit] = useState<'g' | 's'>('g');
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
-  const derivedArStr = getArFromRequirement(newArmorReq);
-  const derivedMrStr = getMrFromRequirement(newArmorReq);
 
   useEffect(() => {
     if (showManageModal) {
@@ -259,48 +243,7 @@ export const ArmorCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const handleCreateArmor = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-    const trimmedName = newArmorName.trim();
-    if (!trimmedName) { setFormError('Name required.'); return; }
-    const combinedCost = `${Math.max(1, newArmorCostVal)}${newArmorCostUnit}`;
-    setIsSubmitting(true);
-    try {
-      let created: SupabaseArmor;
-      try {
-        created = await gameApi.createArmor({
-          name: trimmedName,
-          requirement: newArmorReq,
-          ar: derivedArStr,
-          mr: derivedMrStr,
-          cost: combinedCost,
-        });
-      } catch (dbErr: any) {
-        console.warn('[ArmorCard] Remote catalog insert restricted by RLS; generating local custom item:', dbErr);
-        created = {
-          id: Date.now(),
-          name: trimmedName,
-          requirement: newArmorReq,
-          ar: derivedArStr,
-          mr: derivedMrStr,
-          cost: combinedCost,
-          created_at: new Date().toISOString(),
-        };
-      }
-      setArmorCatalog((prev) => [...prev, created]);
-      handleAddToWardrobe(created);
-      setNewArmorName('');
-      setNewArmorReq('💪 4');
-      setNewArmorCostVal(1);
-      setNewArmorCostUnit('g');
-      setActiveRightTab('CATALOG');
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to create.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
   // Check if armor item is starred
   const isItemStarred = useCallback(
@@ -486,148 +429,103 @@ export const ArmorCard: React.FC = () => {
                       })}
                     </div>
                   </div>
-                  <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden">
-                    <div className="flex border-b border-slate-800 mb-4 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setActiveRightTab('CATALOG')}
-                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                          activeRightTab === 'CATALOG'
-                            ? 'border-amber-400 text-amber-400'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
+                  {/* --- RIGHT COLUMN: STOCK CATALOG PANE --- */}
+                  <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                    {/* Catalog Header */}
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 shrink-0">
+                      <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
                         🌐 Stock Catalog ({filteredCatalogArmor.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveRightTab('CREATOR')}
-                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                          activeRightTab === 'CREATOR'
-                            ? 'border-amber-400 text-amber-400'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        ✨ Custom Creator
-                      </button>
+                      </span>
                     </div>
-                    {activeRightTab === 'CATALOG' && (
-                      <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
-                        {/* Search & Category Filter Bar */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="relative flex-1">
-                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                            <input
-                              type="text"
-                              value={rightSearchQuery}
-                              onChange={(e) => setRightSearchQuery(e.target.value)}
-                              placeholder="Search armor..."
-                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
-                            />
-                          </div>
 
-                          <select
-                            value={armorFilterCategory}
-                            onChange={(e) => setArmorFilterCategory(e.target.value as any)}
-                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 max-w-[180px] truncate cursor-pointer"
-                          >
-                            <option value="all">🌐 All Armor</option>
-                            <option value="starred">⭐ Starred Favorites ({starredArmorCount})</option>
-                            <option value="learnable">⚡ Learnable Only</option>
-                          </select>
+                    {/* Stock Catalog Content */}
+                    <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
+                      {/* Search & Category Filter Bar */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="relative flex-1">
+                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            value={rightSearchQuery}
+                            onChange={(e) => setRightSearchQuery(e.target.value)}
+                            placeholder="Search armor..."
+                            className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
+                          />
                         </div>
 
-                        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
-                          {isLoadingCatalog ? (
-                            <div className="h-full flex items-center justify-center p-6 text-slate-400 text-xs gap-2">
-                              <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
-                              <span>Loading catalog...</span>
-                            </div>
-                          ) : filteredCatalogArmor.length > 0 ? (
-                            filteredCatalogArmor.map((item, idx) => {
-                              const qualifies = isRequirementLearnable(item.requirement, attributeDice);
-                              return (
-                                <div
-                                  key={item.id || idx}
-                                  className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-amber-500/40 transition-all shrink-0"
-                                >
-                                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-bold text-sm text-slate-100">{item.name}</span>
-                                      <ItemNotesPopover notes={item.notes} itemName={item.name} />
-                                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
-                                        {item.cost}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleToggleStarItem(item)}
-                                        className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                          isItemStarred(item)
-                                            ? 'text-amber-400'
-                                            : 'text-slate-600 hover:text-amber-400'
-                                        }`}
-                                        title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                      >
-                                        <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
-                                      </button>
-                                      <button
-                                        onClick={() => handleAddToWardrobe(item)}
-                                        className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
-                                          qualifies
-                                            ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
-                                            : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50'
-                                        }`}
-                                      >
-                                        + Learn
-                                      </button>
-                                    </div>
+                        <select
+                          value={armorFilterCategory}
+                          onChange={(e) => setArmorFilterCategory(e.target.value as any)}
+                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 max-w-[180px] truncate cursor-pointer"
+                        >
+                          <option value="all">🌐 All Armor</option>
+                          <option value="starred">⭐ Starred Favorites ({starredArmorCount})</option>
+                          <option value="learnable">⚡ Learnable Only</option>
+                        </select>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
+                        {isLoadingCatalog ? (
+                          <div className="h-full flex items-center justify-center p-6 text-slate-400 text-xs gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                            <span>Loading catalog...</span>
+                          </div>
+                        ) : filteredCatalogArmor.length > 0 ? (
+                          filteredCatalogArmor.map((item, idx) => {
+                            const qualifies = isRequirementLearnable(item.requirement, attributeDice);
+                            return (
+                              <div
+                                key={item.id || idx}
+                                className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-amber-500/40 transition-all shrink-0"
+                              >
+                                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-bold text-sm text-slate-100">{item.name}</span>
+                                    <ItemNotesPopover notes={item.notes} itemName={item.name} />
+                                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
+                                      {item.cost}
+                                    </span>
                                   </div>
-                                  <div className="flex items-center justify-between text-xs font-mono text-slate-400">
-                                    <span>Req: <strong className="text-slate-200">{item.requirement}</strong></span>
-                                    <span>AR: <strong className="text-amber-300">{item.ar}</strong></span>
-                                    <span>MR: <strong className="text-cyan-300">{item.mr}</strong></span>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStarItem(item)}
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                        isItemStarred(item)
+                                          ? 'text-amber-400'
+                                          : 'text-slate-600 hover:text-amber-400'
+                                      }`}
+                                      title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                    >
+                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleAddToWardrobe(item)}
+                                      className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
+                                        qualifies
+                                          ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
+                                          : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50'
+                                      }`}
+                                    >
+                                      + Learn
+                                    </button>
                                   </div>
                                 </div>
-                              );
-                            })
-                          ) : (
-                            <p className="text-xs text-slate-500 italic py-6 text-center">
-                              No armor sets match catalog search.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {activeRightTab === 'CREATOR' && (
-                      <form onSubmit={handleCreateArmor} className="mt-3 p-3 bg-amber-950/20 rounded-xl border border-amber-500/30 flex flex-col gap-3">
-                        <div className="flex items-center justify-between border-b border-amber-500/20 pb-1">
-                          <span className="text-xs font-bold text-amber-300 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Create Custom Armor</span>
-                        </div>
-                        <input type="text" value={newArmorName} onChange={(e) => setNewArmorName(e.target.value)} className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-amber-400" required />
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-slate-300">Requirement</span>
-                          <select value={newArmorReq} onChange={(e) => setNewArmorReq(e.target.value)} className="bg-slate-950 text-xs px-2 py-1 rounded border border-slate-700 text-amber-300 outline-none">
-                            {REQ_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                          </select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                          <div className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between"><span>AR:</span><strong className="text-amber-300">{derivedArStr}</strong></div>
-                          <div className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between"><span>MR:</span><strong className="text-cyan-300">{derivedMrStr}</strong></div>
-                        </div>
-                        {formError && (
-                          <div className="p-2 bg-rose-950/40 border border-rose-500/30 rounded text-rose-300 text-xs flex items-center gap-1.5">
-                            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                            <span>{formError}</span>
-                          </div>
+                                <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+                                  <span>Req: <strong className="text-slate-200">{item.requirement}</strong></span>
+                                  <span>AR: <strong className="text-amber-300">{item.ar}</strong></span>
+                                  <span>MR: <strong className="text-cyan-300">{item.mr}</strong></span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-slate-500 italic py-6 text-center">
+                            No armor sets match catalog search.
+                          </p>
                         )}
-                        <button type="submit" disabled={isSubmitting} className="bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 text-white font-bold text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow">
-                          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                          <span>Save & Learn Custom Armor</span>
-                        </button>
-                      </form>
-                    )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

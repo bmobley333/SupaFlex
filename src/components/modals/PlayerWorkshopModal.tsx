@@ -57,6 +57,69 @@ const GENRE_OPTIONS = [
   { id: 'SciFi', label: 'SciFi', icon: '🚀' },
 ];
 
+const WEAPON_REQ_NUMBERS = [4, 6, 8, 10, 12];
+const ARMOR_REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
+const SHIELD_REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
+const GEAR_DEFAULT_CATEGORIES = [
+  'Adventure',
+  'Clothing',
+  'Containers',
+  'General',
+  'Lighting',
+  'Lodging',
+  'Medical',
+  'Provisions',
+  'Storage',
+  'Survival',
+  'Tools',
+];
+
+const getWeaponAtkDmg = (typeMode: string): string => {
+  if (typeMode === 'Melee, Hurled') return '💪, 🏃';
+  if (typeMode === 'Hurled') return '🏃';
+  if (typeMode === 'Shot') return '👁️';
+  return '💪';
+};
+
+const getWeaponMaxBlock = (typeMode: string, reqNum: number): string => {
+  if (typeMode.includes('Melee')) {
+    return `🛡️${reqNum * 2}`;
+  }
+  return 'n/a';
+};
+
+const getArmorArStr = (req: string): string => {
+  if (req.includes('12')) return '12';
+  if (req.includes('10')) return '10';
+  if (req.includes('8')) return '8';
+  if (req.includes('6')) return '6';
+  return '4';
+};
+
+const getArmorMrStr = (req: string): string => {
+  if (req.includes('12')) return '-2';
+  if (req.includes('10')) return '-2';
+  if (req.includes('8')) return '-1';
+  if (req.includes('6')) return '-1';
+  return '-0';
+};
+
+const getShieldMaxBlockStr = (req: string): string => {
+  if (req.includes('12')) return '12';
+  if (req.includes('10')) return '10';
+  if (req.includes('8')) return '8';
+  if (req.includes('6')) return '6';
+  return '4';
+};
+
+const getShieldMrStr = (req: string): string => {
+  if (req.includes('12')) return '-2';
+  if (req.includes('10')) return '-2';
+  if (req.includes('8')) return '-1';
+  if (req.includes('6')) return '-1';
+  return '-0';
+};
+
 export const AnvilIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
   <svg
     viewBox="0 0 24 24"
@@ -119,6 +182,20 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   // Skillset State (2 to 5 selected existing skill strings)
   const [selectedSkillsetSkills, setSelectedSkillsetSkills] = useState<string[]>(['', '']);
 
+  // Weapon State
+  const [weaponTypeMode, setWeaponTypeMode] = useState<'Melee' | 'Hurled' | 'Shot' | 'Melee, Hurled'>('Melee');
+  const [weaponReqNum, setWeaponReqNum] = useState<number>(4);
+
+  // Armor State
+  const [armorReq, setArmorReq] = useState<string>('💪 4');
+
+  // Shield State
+  const [shieldReq, setShieldReq] = useState<string>('💪 4');
+
+  // Gear State
+  const [gearCategory, setGearCategory] = useState<string>('Adventure');
+  const [gearCategoryNewText, setGearCategoryNewText] = useState<string>('');
+
   // Custom skills loaded from database / API
   const [customSkillsList, setCustomSkillsList] = useState<CustomCreationItem[]>([]);
 
@@ -149,6 +226,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     selectedSkillsetSkills.length >= 2 &&
     selectedSkillsetSkills.length <= 5 &&
     selectedSkillsetSkills.every((s) => typeof s === 'string' && s.trim().length > 0);
+  const isGearCategoryValid =
+    gearCategory === 'CUSTOM_NEW' ? gearCategoryNewText.trim().length > 0 : gearCategory.trim().length > 0;
 
   const isFormValid = useMemo(() => {
     if (!isNameValid) return false;
@@ -169,6 +248,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     if (creationType === 'skillset') {
       return isSkillsetSkillsValid;
     }
+    if (creationType === 'weapon' || creationType === 'armor' || creationType === 'shield') {
+      return costVal >= 1;
+    }
+    if (creationType === 'gear') {
+      return isGearCategoryValid && costVal >= 1;
+    }
     return false;
   }, [
     creationType,
@@ -179,6 +264,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     isEffectValid,
     isSkillAttributeValid,
     isSkillsetSkillsValid,
+    isGearCategoryValid,
+    costVal,
   ]);
 
   // Load custom items when modal is opened and reset genres to empty on open/blur
@@ -365,6 +452,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     setCostUnit('g');
     setPowerReady('primary_arsenal');
     setSkillAttribute('💪');
+    setWeaponTypeMode('Melee');
+    setWeaponReqNum(4);
+    setArmorReq('💪 4');
+    setShieldReq('💪 4');
+    setGearCategory('Adventure');
+    setGearCategoryNewText('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -457,7 +550,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
         setFeedback({ type: 'error', message: 'Please select a required attribute for this skill.' });
         return;
       }
-    } else {
+    } else if (creationType === 'gear') {
+      const finalGearCat = gearCategory === 'CUSTOM_NEW' ? gearCategoryNewText.trim() : gearCategory.trim();
+      if (!finalGearCat) {
+        setFeedback({ type: 'error', message: 'Please select or provide a category for this gear.' });
+        return;
+      }
+    } else if (creationType === 'relic' || creationType === 'hardware') {
       if (!effect.trim()) {
         setFeedback({ type: 'error', message: 'Effect (rules) description is required.' });
         return;
@@ -489,8 +588,26 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
         ? 'Custom Hardware'
         : creationType === 'skill'
         ? `${skillAttribute} Skill`
-        : 'Custom Skillset';
-    const costStr = creationType === 'hardware' ? `${costVal}${costUnit}` : undefined;
+        : creationType === 'skillset'
+        ? 'Custom Skillset'
+        : creationType === 'weapon'
+        ? weaponTypeMode
+        : creationType === 'armor'
+        ? 'Custom Armor'
+        : creationType === 'shield'
+        ? 'Custom Shield'
+        : gearCategory === 'CUSTOM_NEW'
+        ? gearCategoryNewText.trim()
+        : gearCategory.trim();
+
+    const costStr =
+      creationType === 'hardware' ||
+      creationType === 'weapon' ||
+      creationType === 'armor' ||
+      creationType === 'shield' ||
+      creationType === 'gear'
+        ? `${Math.max(1, costVal)}${costUnit}`
+        : undefined;
 
     const formattedSkills =
       creationType === 'skillset'
@@ -528,6 +645,38 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       itemDataPayload.formatted_skill = `${name.trim()} ${skillAttribute}`;
     } else if (creationType === 'skillset') {
       itemDataPayload.skills = formattedSkills;
+    } else if (creationType === 'weapon') {
+      let weaponReqStr = `💪 ${weaponReqNum}`;
+      if (weaponTypeMode === 'Hurled') weaponReqStr = `🏃 ${weaponReqNum}`;
+      if (weaponTypeMode === 'Shot') weaponReqStr = `👁️ ${weaponReqNum}`;
+      if (weaponTypeMode === 'Melee, Hurled') weaponReqStr = `💪 ${weaponReqNum}, 🏃 ${weaponReqNum}`;
+
+      const weaponAtkDmg = getWeaponAtkDmg(weaponTypeMode);
+      const weaponMaxBlock = getWeaponMaxBlock(weaponTypeMode, weaponReqNum);
+      itemDataPayload.type = weaponTypeMode;
+      itemDataPayload.requirement = weaponReqStr;
+      itemDataPayload.atk = weaponAtkDmg;
+      itemDataPayload.dmg = weaponAtkDmg;
+      itemDataPayload.max_block = weaponMaxBlock;
+      itemDataPayload.cost = costStr;
+    } else if (creationType === 'armor') {
+      const armorAr = getArmorArStr(armorReq);
+      const armorMr = getArmorMrStr(armorReq);
+      itemDataPayload.requirement = armorReq;
+      itemDataPayload.ar = armorAr;
+      itemDataPayload.mr = armorMr;
+      itemDataPayload.cost = costStr;
+    } else if (creationType === 'shield') {
+      const shieldMaxBlock = getShieldMaxBlockStr(shieldReq);
+      const shieldMr = getShieldMrStr(shieldReq);
+      itemDataPayload.requirement = shieldReq;
+      itemDataPayload.max_block = shieldMaxBlock;
+      itemDataPayload.mr = shieldMr;
+      itemDataPayload.cost = costStr;
+    } else if (creationType === 'gear') {
+      const finalGearCat = gearCategory === 'CUSTOM_NEW' ? gearCategoryNewText.trim() : gearCategory.trim();
+      itemDataPayload.category = finalGearCat;
+      itemDataPayload.cost = costStr;
     }
 
     try {
@@ -540,10 +689,49 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
         party_id: activePartyId || null,
         gm_approved: isGm ? true : false,
         item_data: itemDataPayload,
-        notes: (creationType === 'relic' || creationType === 'hardware') && notes.trim() ? notes.trim() : undefined,
+        notes: notes.trim() ? notes.trim() : undefined,
       };
 
       await gameApi.saveCustomItem(newCustomItem);
+
+      // Attempt auxiliary creation in stock catalog tables
+      try {
+        if (creationType === 'weapon') {
+          await gameApi.createWeapon({
+            name: name.trim(),
+            type: weaponTypeMode,
+            requirement: itemDataPayload.requirement,
+            atk: itemDataPayload.atk,
+            dmg: itemDataPayload.dmg,
+            max_block: itemDataPayload.max_block,
+            cost: costStr || '1g',
+          });
+        } else if (creationType === 'armor') {
+          await gameApi.createArmor({
+            name: name.trim(),
+            requirement: itemDataPayload.requirement,
+            ar: itemDataPayload.ar,
+            mr: itemDataPayload.mr,
+            cost: costStr || '1g',
+          });
+        } else if (creationType === 'shield') {
+          await gameApi.createShield({
+            name: name.trim(),
+            requirement: itemDataPayload.requirement,
+            max_block: itemDataPayload.max_block,
+            mr: itemDataPayload.mr,
+            cost: costStr || '1g',
+          });
+        } else if (creationType === 'gear') {
+          await gameApi.createGear({
+            name: name.trim(),
+            category: itemDataPayload.category,
+            cost: costStr || '1s',
+          });
+        }
+      } catch (catErr) {
+        console.warn('[PlayerWorkshopModal] Direct catalog sync notice (RLS or duplicate):', catErr);
+      }
 
       setFeedback({
         type: 'success',
@@ -603,11 +791,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
         {/* Primary Classification Tabs (Multi-Option Pill Switch) */}
         <div className="px-5 pt-3 pb-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0">
-          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap sm:flex-nowrap">
+          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
             <button
               type="button"
               onClick={() => handleSwitchTab('power')}
-              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'power'
                   ? 'bg-rose-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -618,18 +806,18 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             <button
               type="button"
               onClick={() => handleSwitchTab('power_table')}
-              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'power_table'
                   ? 'bg-amber-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
             >
-              📜 Power Table
+              📜 Table
             </button>
             <button
               type="button"
               onClick={() => handleSwitchTab('relic')}
-              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'relic'
                   ? 'bg-purple-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -640,7 +828,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             <button
               type="button"
               onClick={() => handleSwitchTab('hardware')}
-              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'hardware'
                   ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -651,7 +839,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             <button
               type="button"
               onClick={() => handleSwitchTab('skill')}
-              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'skill'
                   ? 'bg-amber-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -662,13 +850,57 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             <button
               type="button"
               onClick={() => handleSwitchTab('skillset')}
-              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 creationType === 'skillset'
                   ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
             >
               🎓 Skillset
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('weapon')}
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                creationType === 'weapon'
+                  ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              ⚔️ Weapon
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('armor')}
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                creationType === 'armor'
+                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🧥 Armor
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('shield')}
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                creationType === 'shield'
+                  ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🛡️ Shield
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('gear')}
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                creationType === 'gear'
+                  ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🎒 Gear
             </button>
           </div>
         </div>
@@ -1178,8 +1410,358 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </>
           )}
 
+          {/* --- TAB 7: WEAPON MODE --- */}
+          {creationType === 'weapon' && (
+            <>
+              {/* Row 1: Weapon Name + Cost */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Weapon Name</span>
+                    <GuardrailBadge isValid={isNameValid} />
+                    <InfoTooltip text="Enter the unique name of your custom weapon." />
+                  </div>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Battle Greataxe, Elven Shortbow"
+                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-rose-400"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Cost</span>
+                    <GuardrailBadge isValid={costVal >= 1} />
+                    <InfoTooltip text="Purchase or craft cost in Gold (g) or Silver (s)." />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={costVal}
+                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="w-24 bg-slate-950 text-rose-300 font-mono font-bold text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-rose-400 text-center"
+                      required
+                    />
+                    <select
+                      value={costUnit}
+                      onChange={(e) => setCostUnit(e.target.value as 's' | 'g')}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer flex-1"
+                    >
+                      <option value="g">Gold (g 🪙)</option>
+                      <option value="s">Silver (s 🥈)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Type Category + Req Rating # */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Type Category</span>
+                    <InfoTooltip text="Governs which attribute die scales attack and damage rolls." />
+                  </div>
+                  <select
+                    value={weaponTypeMode}
+                    onChange={(e) => setWeaponTypeMode(e.target.value as any)}
+                    className="bg-slate-950 border border-slate-700 text-rose-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-rose-400 cursor-pointer"
+                  >
+                    <option value="Melee">Melee (Might 💪)</option>
+                    <option value="Hurled">Hurled (Motion 🏃)</option>
+                    <option value="Shot">Shot (Mind 👁️)</option>
+                    <option value="Melee, Hurled">Melee & Hurled (💪 & 🏃)</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Requirement Rating #</span>
+                    <InfoTooltip text="Minimum attribute requirement to wield without penalty." />
+                  </div>
+                  <select
+                    value={weaponReqNum}
+                    onChange={(e) => setWeaponReqNum(parseInt(e.target.value, 10))}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none focus:border-rose-400 cursor-pointer"
+                  >
+                    {WEAPON_REQ_NUMBERS.map((num) => (
+                      <option key={num} value={num}>
+                        Rating {num} (d{num})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 3: Read-Only Calculated Attributes */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400">Atk / Dmg Die:</span>
+                  <span className="text-xs font-mono font-extrabold text-rose-300">{getWeaponAtkDmg(weaponTypeMode)}</span>
+                </div>
+                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400">Block Cap:</span>
+                  <span className="text-xs font-mono font-extrabold text-amber-300">{getWeaponMaxBlock(weaponTypeMode, weaponReqNum)}</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* --- TAB 8: ARMOR MODE --- */}
+          {creationType === 'armor' && (
+            <>
+              {/* Row 1: Armor Name + Cost */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Armor Name</span>
+                    <GuardrailBadge isValid={isNameValid} />
+                    <InfoTooltip text="Enter the unique name of your custom armor set." />
+                  </div>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Dragonscale Hauberk, Stealth Bodysuit"
+                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Cost</span>
+                    <GuardrailBadge isValid={costVal >= 1} />
+                    <InfoTooltip text="Purchase or craft cost in Gold (g) or Silver (s)." />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={costVal}
+                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="w-24 bg-slate-950 text-amber-300 font-mono font-bold text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 text-center"
+                      required
+                    />
+                    <select
+                      value={costUnit}
+                      onChange={(e) => setCostUnit(e.target.value as 's' | 'g')}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer flex-1"
+                    >
+                      <option value="g">Gold (g 🪙)</option>
+                      <option value="s">Silver (s 🥈)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Requirement Selector */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Might Requirement</span>
+                    <InfoTooltip text="Governs required Might rating to wear without encumbrance." />
+                  </div>
+                  <select
+                    value={armorReq}
+                    onChange={(e) => setArmorReq(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer"
+                  >
+                    {ARMOR_REQ_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 3: Read-Only Calculated Attributes */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400">Armor Rating (AR):</span>
+                  <span className="text-xs font-mono font-extrabold text-amber-300">{getArmorArStr(armorReq)}</span>
+                </div>
+                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400">Movement Rate Mod (MR):</span>
+                  <span className="text-xs font-mono font-extrabold text-teal-300">{getArmorMrStr(armorReq)}</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* --- TAB 9: SHIELD MODE --- */}
+          {creationType === 'shield' && (
+            <>
+              {/* Row 1: Shield Name + Cost */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Shield Name</span>
+                    <GuardrailBadge isValid={isNameValid} />
+                    <InfoTooltip text="Enter the unique name of your custom shield." />
+                  </div>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Aegis of Dawn, Heavy Tower Shield"
+                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-cyan-400"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Cost</span>
+                    <GuardrailBadge isValid={costVal >= 1} />
+                    <InfoTooltip text="Purchase or craft cost in Gold (g) or Silver (s)." />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={costVal}
+                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="w-24 bg-slate-950 text-cyan-300 font-mono font-bold text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-cyan-400 text-center"
+                      required
+                    />
+                    <select
+                      value={costUnit}
+                      onChange={(e) => setCostUnit(e.target.value as 's' | 'g')}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer flex-1"
+                    >
+                      <option value="g">Gold (g 🪙)</option>
+                      <option value="s">Silver (s 🥈)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Requirement Selector */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Might Requirement</span>
+                    <InfoTooltip text="Governs required Might rating to equip this shield." />
+                  </div>
+                  <select
+                    value={shieldReq}
+                    onChange={(e) => setShieldReq(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none focus:border-cyan-400 cursor-pointer"
+                  >
+                    {SHIELD_REQ_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 3: Read-Only Calculated Attributes */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400">Block Cap (Blk):</span>
+                  <span className="text-xs font-mono font-extrabold text-amber-300">🛡️{getShieldMaxBlockStr(shieldReq)}</span>
+                </div>
+                <div className="px-3 py-2 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400">Movement Rate Mod (MR):</span>
+                  <span className="text-xs font-mono font-extrabold text-teal-300">{getShieldMrStr(shieldReq)}</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* --- TAB 10: GEAR MODE --- */}
+          {creationType === 'gear' && (
+            <>
+              {/* Row 1: Gear Name + Cost */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Gear Item Name</span>
+                    <GuardrailBadge isValid={isNameValid} />
+                    <InfoTooltip text="Enter the unique name of your custom gear item." />
+                  </div>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Grappling Hook, Survival Kit"
+                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-teal-400"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Cost</span>
+                    <GuardrailBadge isValid={costVal >= 1} />
+                    <InfoTooltip text="Purchase or craft cost in Silver (s) or Gold (g)." />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={costVal}
+                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="w-24 bg-slate-950 text-teal-300 font-mono font-bold text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-teal-400 text-center"
+                      required
+                    />
+                    <select
+                      value={costUnit}
+                      onChange={(e) => setCostUnit(e.target.value as 's' | 'g')}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer flex-1"
+                    >
+                      <option value="s">Silver (s 🥈)</option>
+                      <option value="g">Gold (g 🪙)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Category Selector / Custom New Category */}
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-300">Gear Category</span>
+                  <GuardrailBadge isValid={isGearCategoryValid} />
+                  <InfoTooltip text="Select standard gear classification or define a new category." />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <select
+                    value={gearCategory}
+                    onChange={(e) => setGearCategory(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-teal-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-teal-400 cursor-pointer"
+                  >
+                    {GEAR_DEFAULT_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                    <option value="CUSTOM_NEW">+ New Custom Category...</option>
+                  </select>
+
+                  {gearCategory === 'CUSTOM_NEW' && (
+                    <input
+                      type="text"
+                      value={gearCategoryNewText}
+                      onChange={(e) => setGearCategoryNewText(e.target.value)}
+                      placeholder="Type custom category name..."
+                      className="bg-slate-950 text-teal-300 text-xs px-3 py-2 rounded-xl border border-teal-500/50 outline-none focus:border-teal-400"
+                      required
+                    />
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Effect (rules) (Power, Relic, Hardware) */}
-          {creationType !== 'skillset' && creationType !== 'skill' && creationType !== 'power_table' && (
+          {(creationType === 'power' || creationType === 'relic' || creationType === 'hardware') && (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between flex-wrap gap-1">
                 <div className="flex items-center gap-1.5">
@@ -1213,17 +1795,23 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </div>
           )}
 
-          {/* Visual Description (Relic & Hardware Only) */}
-          {(creationType === 'relic' || creationType === 'hardware') && (
+          {/* Visual Description / Notes */}
+          {(creationType === 'relic' ||
+            creationType === 'hardware' ||
+            creationType === 'weapon' ||
+            creationType === 'armor' ||
+            creationType === 'shield' ||
+            creationType === 'gear') && (
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-300">Visual Description</span>
-                <InfoTooltip text="Physical traits, materials, appearance, and visual cues (stored in notes)." />
+                <span className="font-bold text-slate-300">Visual Description / Notes</span>
+                <InfoTooltip text="Physical traits, materials, appearance, visual cues, or lore notes." />
               </div>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optional lore, description, or crafting notes..."
                 className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400"
               />
             </div>

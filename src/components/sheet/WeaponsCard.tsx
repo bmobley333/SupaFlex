@@ -1,6 +1,6 @@
 // src/components/sheet/WeaponsCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Plus, X, Check, Swords, AlertCircle, Loader2, Search, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, Check, Swords, Loader2, Search, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
@@ -17,7 +17,6 @@ import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 
 const DIE_SCALE = [4, 6, 8, 10, 12];
-const REQ_NUMBERS = [4, 6, 8, 10, 12];
 
 const MHS_COLORS: Record<string, { select: string; badge: string }> = {
   M: {
@@ -108,40 +107,10 @@ export const WeaponsCard: React.FC = () => {
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
   const [rightSearchQuery, setRightSearchQuery] = useState<string>('');
 
-  // Right Pane View Tab: 'CATALOG' or 'CREATOR'
-  const [activeRightTab, setActiveRightTab] = useState<'CATALOG' | 'CREATOR'>('CATALOG');
-
   // Supabase Weapons Catalog State
   const [supabaseWeapons, setSupabaseWeapons] = useState<SupabaseWeapon[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
 
-
-  // Custom Weapon Creator Form State
-  const [customName, setCustomName] = useState<string>('');
-  const [customTypeMode, setCustomTypeMode] = useState<'Melee' | 'Hurled' | 'Shot' | 'Melee, Hurled'>('Melee');
-  const [customReqNum, setCustomReqNum] = useState<number>(4);
-  const [customCostVal, setCustomCostVal] = useState<number>(1);
-  const [customCostUnit, setCustomCostUnit] = useState<'g' | 's'>('g');
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
-  // Derived Auto-Filled Read-Only Attributes for Custom Weapon Creation
-  const getDerivedAtkDmg = (typeMode: string): string => {
-    if (typeMode === 'Melee, Hurled') return '💪, 🏃';
-    if (typeMode === 'Hurled') return '🏃';
-    if (typeMode === 'Shot') return '👁️';
-    return '💪';
-  };
-
-  const getDerivedMaxBlock = (typeMode: string, reqNum: number): string => {
-    if (typeMode.includes('Melee')) {
-      return `🛡️${reqNum * 2}`;
-    }
-    return 'n/a';
-  };
-
-  const derivedAtkDmg = getDerivedAtkDmg(customTypeMode);
-  const derivedMaxBlock = getDerivedMaxBlock(customTypeMode, customReqNum);
 
   // Helper to extract base name from slot name like "Hand Axe (Melee)" -> "Hand Axe"
   const getBaseWeaponName = (slotName: string): string => {
@@ -300,73 +269,7 @@ export const WeaponsCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const handleCreateCustomWeapon = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
 
-    const trimmedName = customName.trim();
-    if (!trimmedName) {
-      setFormError('Weapon name is required.');
-      return;
-    }
-
-    const costInt = Math.max(1, customCostVal);
-    const combinedCost = `${costInt}${customCostUnit}`;
-
-    let reqStr = `💪 ${customReqNum}`;
-    if (customTypeMode === 'Hurled') reqStr = `🏃 ${customReqNum}`;
-    if (customTypeMode === 'Shot') reqStr = `👁️ ${customReqNum}`;
-    if (customTypeMode === 'Melee, Hurled') reqStr = `💪 ${customReqNum}, 🏃 ${customReqNum}`;
-
-    setIsSubmitting(true);
-    try {
-      let created: SupabaseWeapon;
-      try {
-        created = await gameApi.createWeapon({
-          name: trimmedName,
-          type: customTypeMode,
-          requirement: reqStr,
-          atk: derivedAtkDmg,
-          dmg: derivedAtkDmg,
-          max_block: derivedMaxBlock,
-          cost: combinedCost,
-        });
-      } catch (dbErr: any) {
-        console.warn('[WeaponsCard] Remote catalog insert restricted by RLS; generating local custom item:', dbErr);
-        created = {
-          id: Date.now(),
-          name: trimmedName,
-          type: customTypeMode,
-          requirement: reqStr,
-          atk: derivedAtkDmg,
-          dmg: derivedAtkDmg,
-          max_block: derivedMaxBlock,
-          cost: combinedCost,
-          created_at: new Date().toISOString(),
-        };
-      }
-
-      setSupabaseWeapons((prev) => [...prev, created]);
-
-      // Equip all variants of newly created weapon
-      const variants = splitWeaponIntoVariants(created);
-      if (variants.length > 0) {
-        handleEquipWeapon(created, variants);
-      }
-
-      setCustomName('');
-      setCustomTypeMode('Melee');
-      setCustomReqNum(4);
-      setCustomCostVal(1);
-      setCustomCostUnit('g');
-      setActiveRightTab('CATALOG');
-    } catch (err: any) {
-      console.error('Error creating custom weapon:', err);
-      setFormError(err.message || 'Failed to create custom weapon.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
 
 
@@ -747,338 +650,200 @@ export const WeaponsCard: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* --- RIGHT COLUMN: STOCK CATALOG & CUSTOM CREATOR PANE --- */}
+                  {/* --- RIGHT COLUMN: STOCK CATALOG PANE --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                    {/* Pane Sub-Tab Selector Header */}
-                    <div className="flex border-b border-slate-800 mb-4 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setActiveRightTab('CATALOG')}
-                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                          activeRightTab === 'CATALOG'
-                            ? 'border-rose-400 text-rose-400'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
+                    {/* Catalog Header */}
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 shrink-0">
+                      <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
                         🌐 Stock Catalog ({filteredCatalogWeapons.length})
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveRightTab('CREATOR')}
-                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                          activeRightTab === 'CREATOR'
-                            ? 'border-amber-400 text-amber-400'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        ✨ Custom Creator
-                      </button>
+                      </span>
                     </div>
 
-                    {/* TAB 1: STOCK CATALOG VIEW */}
-                    {activeRightTab === 'CATALOG' && (
-                      <div className="flex-1 flex flex-col min-h-0 mt-2 gap-2 overflow-hidden">
-                        {/* 1. KISS Multi-Option Pill Switch: All / Skilled / Unskilled */}
-                        <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => setSkillFilterMode('all')}
-                            className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              skillFilterMode === 'all'
-                                ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            🌐 All
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSkillFilterMode('skilled')}
-                            className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              skillFilterMode === 'skilled'
-                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            🎓 Skilled
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSkillFilterMode('unskilled')}
-                            className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              skillFilterMode === 'unskilled'
-                                ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            ⚪ Unskilled
-                          </button>
+                    {/* Stock Catalog Content */}
+                    <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
+                      {/* 1. KISS Multi-Option Pill Switch: All / Skilled / Unskilled */}
+                      <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setSkillFilterMode('all')}
+                          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            skillFilterMode === 'all'
+                              ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          🌐 All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSkillFilterMode('skilled')}
+                          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            skillFilterMode === 'skilled'
+                              ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          🎓 Skilled
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSkillFilterMode('unskilled')}
+                          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            skillFilterMode === 'unskilled'
+                              ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          ⚪ Unskilled
+                        </button>
+                      </div>
+
+                      {/* 2. Search & Category Filter Bar (Directly above card list) */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="relative flex-1">
+                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            value={rightSearchQuery}
+                            onChange={(e) => setRightSearchQuery(e.target.value)}
+                            placeholder="Search weapons or type..."
+                            className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-rose-500 w-full"
+                          />
                         </div>
 
-                        {/* 2. Search & Category Filter Bar (Directly above card list) */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="relative flex-1">
-                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                            <input
-                              type="text"
-                              value={rightSearchQuery}
-                              onChange={(e) => setRightSearchQuery(e.target.value)}
-                              placeholder="Search weapons or type..."
-                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-rose-500 w-full"
-                            />
+                        <select
+                          value={weaponFilterCategory}
+                          onChange={(e) => setWeaponFilterCategory(e.target.value as any)}
+                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-rose-500 max-w-[180px] truncate cursor-pointer"
+                        >
+                          <option value="all">🌐 All Weapons</option>
+                          <option value="starred">⭐ Starred Favorites ({starredWeaponsCount})</option>
+                          <option value="melee">🗡️ Melee</option>
+                          <option value="hurled">🪓 Hurled</option>
+                          <option value="shot">🏹 Shot</option>
+                          <option value="unarmed">🥊 Unarmed</option>
+                        </select>
+                      </div>
+
+                      {/* Scrollable Catalog List */}
+                      <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
+                        {isLoadingCatalog ? (
+                          <div className="h-full flex items-center justify-center p-6 text-slate-400 text-xs gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
+                            <span>Loading SupaFlex weapons catalog...</span>
                           </div>
+                        ) : filteredCatalogWeapons.length > 0 ? (
+                          filteredCatalogWeapons.map((weapon, idx) => {
+                            const variants = splitWeaponIntoVariants(weapon);
+                            const qualifyingVariants = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
+                            const isAnyLearnable = qualifyingVariants.length > 0;
+                            const rawTypesList = (weapon.type || 'Melee').split(',').map((t) => t.trim());
 
-                          <select
-                            value={weaponFilterCategory}
-                            onChange={(e) => setWeaponFilterCategory(e.target.value as any)}
-                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-rose-500 max-w-[180px] truncate cursor-pointer"
-                          >
-                            <option value="all">🌐 All Weapons</option>
-                            <option value="starred">⭐ Starred Favorites ({starredWeaponsCount})</option>
-                            <option value="melee">🗡️ Melee</option>
-                            <option value="hurled">🪓 Hurled</option>
-                            <option value="shot">🏹 Shot</option>
-                            <option value="unarmed">🥊 Unarmed</option>
-                          </select>
-                        </div>
-
-                        {/* Scrollable Catalog List */}
-                        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
-                          {isLoadingCatalog ? (
-                            <div className="h-full flex items-center justify-center p-6 text-slate-400 text-xs gap-2">
-                              <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
-                              <span>Loading SupaFlex weapons catalog...</span>
-                            </div>
-                          ) : filteredCatalogWeapons.length > 0 ? (
-                            filteredCatalogWeapons.map((weapon, idx) => {
-                              const variants = splitWeaponIntoVariants(weapon);
-                              const qualifyingVariants = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
-                              const isAnyLearnable = qualifyingVariants.length > 0;
-                              const rawTypesList = (weapon.type || 'Melee').split(',').map((t) => t.trim());
-
-                              return (
-                                <div
-                                  key={weapon.id || idx}
-                                  className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-rose-500/40 transition-all shrink-0"
-                                >
-                                  {/* Card Header Row: Name, Type Badges, Cost, SINGLE + Equip Button */}
-                                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-bold text-sm text-slate-100">{weapon.name}</span>
-                                      <ItemNotesPopover notes={weapon.notes} itemName={weapon.name} />
-                                      {rawTypesList.map((t) => {
-                                        const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
-                                        const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
-                                        return (
-                                          <span
-                                            key={t}
-                                            className={`text-[10px] font-mono px-1.5 py-0.2 rounded border font-semibold ${badgeClass}`}
-                                          >
-                                            {t}
-                                          </span>
-                                        );
-                                      })}
-                                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
-                                        {weapon.cost}
-                                      </span>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleToggleStarItem(weapon)}
-                                        className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                          isItemStarred(weapon)
-                                            ? 'text-amber-400'
-                                            : 'text-slate-600 hover:text-amber-400'
-                                        }`}
-                                        title={isItemStarred(weapon) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                      >
-                                        <Star className={`w-3.5 h-3.5 ${isItemStarred(weapon) ? 'fill-amber-400' : ''}`} />
-                                      </button>
-                                      <button
-                                        onClick={() => handleEquipWeapon(weapon, variants)}
-                                        className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
-                                          isAnyLearnable
-                                            ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
-                                            : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
-                                        }`}
-                                        title={isAnyLearnable ? 'Equip as Trained/Skilled' : 'Equip as Unskilled'}
-                                      >
-                                        + Learn
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* Variant Stats Sub-Rows */}
-                                  <div className="flex flex-col gap-1.5 pt-0.5">
-                                    {variants.map((v) => {
-                                      const calculatedAtk = calculateWeaponAtk(v.name, v.mhs, attributeDice);
-                                      const calculatedDmg = calculateWeaponDmg(v.name, v.mhs, attributeDice);
-                                      const qualifies = isWeaponVariantLearnable(v, attributeDice);
-
+                            return (
+                              <div
+                                key={weapon.id || idx}
+                                className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-rose-500/40 transition-all shrink-0"
+                              >
+                                {/* Card Header Row: Name, Type Badges, Cost, SINGLE + Equip Button */}
+                                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-bold text-sm text-slate-100">{weapon.name}</span>
+                                    <ItemNotesPopover notes={weapon.notes} itemName={weapon.name} />
+                                    {rawTypesList.map((t) => {
+                                      const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
+                                      const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
                                       return (
-                                        <div
-                                          key={v.variantType}
-                                          className={`p-2 rounded-lg border flex items-center justify-between text-xs font-mono transition-all ${
-                                            qualifies
-                                              ? 'bg-slate-900/80 border-slate-800'
-                                              : 'bg-slate-950/40 border-slate-850 opacity-60'
-                                          }`}
+                                        <span
+                                          key={t}
+                                          className={`text-[10px] font-mono px-1.5 py-0.2 rounded border font-semibold ${badgeClass}`}
                                         >
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-bold text-slate-300 w-16">{v.variantType}:</span>
-                                            <span>Req: <strong className="text-slate-200">{v.requirementStr}</strong></span>
-                                          </div>
-
-                                          <div className="flex items-center gap-3">
-                                            <span>Atk: <strong className="text-rose-200">{calculatedAtk}</strong></span>
-                                            <span>•</span>
-                                            <span>Dmg: <strong className="text-rose-300">{calculatedDmg}</strong></span>
-                                            <span>•</span>
-                                            <span>Blk: <strong className="text-amber-300">{v.max_block}</strong></span>
-                                            {qualifies ? (
-                                              <span className="text-[10px] text-emerald-400 font-sans font-bold flex items-center gap-0.5 ml-1">
-                                                Qualified
-                                              </span>
-                                            ) : (
-                                              <span className="text-[10px] text-amber-400/80 font-sans font-semibold ml-1">
-                                                Unskilled Fallback
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
+                                          {t}
+                                        </span>
                                       );
                                     })}
+                                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
+                                      {weapon.cost}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStarItem(weapon)}
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                        isItemStarred(weapon)
+                                          ? 'text-amber-400'
+                                          : 'text-slate-600 hover:text-amber-400'
+                                      }`}
+                                      title={isItemStarred(weapon) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                    >
+                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(weapon) ? 'fill-amber-400' : ''}`} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleEquipWeapon(weapon, variants)}
+                                      className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
+                                        isAnyLearnable
+                                          ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
+                                          : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
+                                      }`}
+                                      title={isAnyLearnable ? 'Equip as Trained/Skilled' : 'Equip as Unskilled'}
+                                    >
+                                      + Learn
+                                    </button>
                                   </div>
                                 </div>
-                              );
-                            })
-                          ) : (
-                            <p className="text-xs text-slate-500 italic py-6 text-center">
-                              No weapons match "{rightSearchQuery}"
-                            </p>
-                          )}
-                        </div>
+
+                                {/* Variant Stats Sub-Rows */}
+                                <div className="flex flex-col gap-1.5 pt-0.5">
+                                  {variants.map((v) => {
+                                    const calculatedAtk = calculateWeaponAtk(v.name, v.mhs, attributeDice);
+                                    const calculatedDmg = calculateWeaponDmg(v.name, v.mhs, attributeDice);
+                                    const qualifies = isWeaponVariantLearnable(v, attributeDice);
+
+                                    return (
+                                      <div
+                                        key={v.variantType}
+                                        className={`p-2 rounded-lg border flex items-center justify-between text-xs font-mono transition-all ${
+                                          qualifies
+                                            ? 'bg-slate-900/80 border-slate-800'
+                                            : 'bg-slate-950/40 border-slate-850 opacity-60'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-bold text-slate-300 w-16">{v.variantType}:</span>
+                                          <span>Req: <strong className="text-slate-200">{v.requirementStr}</strong></span>
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                          <span>Atk: <strong className="text-rose-200">{calculatedAtk}</strong></span>
+                                          <span>•</span>
+                                          <span>Dmg: <strong className="text-rose-300">{calculatedDmg}</strong></span>
+                                          <span>•</span>
+                                          <span>Blk: <strong className="text-amber-300">{v.max_block}</strong></span>
+                                          {qualifies ? (
+                                            <span className="text-[10px] text-emerald-400 font-sans font-bold flex items-center gap-0.5 ml-1">
+                                              Qualified
+                                            </span>
+                                          ) : (
+                                            <span className="text-[10px] text-amber-400/80 font-sans font-semibold ml-1">
+                                              Unskilled Fallback
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-slate-500 italic py-6 text-center">
+                            No weapons match "{rightSearchQuery}"
+                          </p>
+                        )}
                       </div>
-                    )}
-
-                    {/* TAB 2: CUSTOM CREATOR VIEW */}
-                    {activeRightTab === 'CREATOR' && (
-                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-y-auto">
-                        <form
-                          onSubmit={handleCreateCustomWeapon}
-                          className="p-3 bg-rose-950/20 border border-rose-500/30 rounded-xl flex flex-col gap-3"
-                        >
-                          <div className="flex items-center justify-between border-b border-rose-500/20 pb-1.5">
-                            <span className="text-xs font-bold uppercase tracking-wider text-rose-300 flex items-center gap-1.5">
-                              <Plus className="w-3.5 h-3.5" />
-                              Create Custom Weapon
-                            </span>
-                            <span className="text-[10px] text-rose-400/70 font-mono">Guardrails Active</span>
-                          </div>
-
-                          {/* Line 1: Name & Two-Cell Cost Inputs */}
-                          <div className="flex flex-col gap-2">
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs font-bold text-slate-300">Weapon Name</span>
-                              <input
-                                type="text"
-                                value={customName}
-                                onChange={(e) => setCustomName(e.target.value)}
-                                className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none w-full focus:border-rose-400"
-                                required
-                              />
-                            </div>
-
-                            {/* Two-Cell Cost Input */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-slate-300 shrink-0">Cost:</span>
-                              <input
-                                type="number"
-                                min="1"
-                                value={customCostVal}
-                                onChange={(e) => setCustomCostVal(parseInt(e.target.value, 10) || 1)}
-                                className="bg-slate-950 text-slate-100 text-xs font-mono font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none w-16 text-center focus:border-rose-400"
-                                required
-                              />
-                              <select
-                                value={customCostUnit}
-                                onChange={(e) => setCustomCostUnit(e.target.value as 'g' | 's')}
-                                className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none focus:border-amber-400 cursor-pointer"
-                              >
-                                <option value="g">g (Gold 🪙)</option>
-                                <option value="s">s (Silver 🥈)</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Line 2: Type Mode Select & Req Number Select */}
-                          <div className="flex flex-col gap-2 pt-1 border-t border-slate-800">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-bold text-slate-300">Type Category</span>
-                              <select
-                                value={customTypeMode}
-                                onChange={(e) => setCustomTypeMode(e.target.value as 'Melee' | 'Hurled' | 'Shot' | 'Melee, Hurled')}
-                                className="bg-slate-950 border border-slate-700 text-rose-300 text-xs font-semibold px-2 py-1 rounded-lg outline-none focus:border-rose-400 cursor-pointer"
-                              >
-                                <option value="Melee">Melee (Might 💪)</option>
-                                <option value="Hurled">Hurled (Motion 🏃)</option>
-                                <option value="Shot">Shot (Mind 👁️)</option>
-                                <option value="Melee, Hurled">Melee & Hurled (💪 & 🏃)</option>
-                              </select>
-                            </div>
-
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-bold text-slate-300">Req Rating #</span>
-                              <select
-                                value={customReqNum}
-                                onChange={(e) => setCustomReqNum(parseInt(e.target.value, 10))}
-                                className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none focus:border-amber-400 cursor-pointer"
-                              >
-                                {REQ_NUMBERS.map((num) => (
-                                  <option key={num} value={num}>
-                                    {num}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Line 3: Read-Only Calculated Cells */}
-                          <div className="grid grid-cols-2 gap-2 pt-1">
-                            <div className="px-2.5 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-slate-400">Atk/Dmg:</span>
-                              <span className="text-xs font-mono font-extrabold text-rose-300">{derivedAtkDmg}</span>
-                            </div>
-
-                            <div className="px-2.5 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-slate-400">Blk Cap:</span>
-                              <span className="text-xs font-mono font-extrabold text-amber-300">{derivedMaxBlock}</span>
-                            </div>
-                          </div>
-
-                          {/* Form Error Message */}
-                          {formError && (
-                            <div className="p-2 bg-rose-950/40 border border-rose-500/30 rounded-lg text-rose-300 text-xs flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                              <span>{formError}</span>
-                            </div>
-                          )}
-
-                          {/* Submit Button */}
-                          <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="w-full mt-1 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
-                          >
-                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Plus className="w-4 h-4" />}
-                            <span>Save & Learn Custom Weapon</span>
-                          </button>
-                        </form>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </div>
 

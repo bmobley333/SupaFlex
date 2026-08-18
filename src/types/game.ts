@@ -828,7 +828,17 @@ export interface PartySessionMember {
 
 export type AuthMode = 'login' | 'signup' | 'reset_password' | 'profile';
 
-export type CustomCreationType = 'power' | 'power_table' | 'relic' | 'hardware' | 'skill' | 'skillset';
+export type CustomCreationType =
+  | 'power'
+  | 'power_table'
+  | 'relic'
+  | 'hardware'
+  | 'skill'
+  | 'skillset'
+  | 'weapon'
+  | 'armor'
+  | 'shield'
+  | 'gear';
 
 export interface PowerTable {
   id?: number;
