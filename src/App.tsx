@@ -5,6 +5,7 @@ import { gameApi } from './services/api';
 import { Character, TreasureItem, SimpleGearItem, MagicItem } from './types/game';
 import { getItemSlotWeight } from './utils/magicSlotSchedule';
 import { useCharacterStore } from './store/useCharacterStore';
+import { useAdventureStore } from './store/useAdventureStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { AdventureLogs } from './components/logs/AdventureLogs';
 import { GmWorkspaceView } from './components/directory/GmWorkspaceView';
@@ -107,6 +108,12 @@ export default function App() {
     deletePlayerLink,
     reorderPlayerLinkByIndex,
   } = useCharacterStore();
+
+  const gmLinks = useAdventureStore((state) => state.gmLinks);
+  const addGmLink = useAdventureStore((state) => state.addGmLink);
+  const updateGmLink = useAdventureStore((state) => state.updateGmLink);
+  const deleteGmLink = useAdventureStore((state) => state.deleteGmLink);
+  const reorderGmLinkByIndex = useAdventureStore((state) => state.reorderGmLinkByIndex);
 
   useEffect(() => {
     fetchInitialData();
@@ -464,6 +471,19 @@ export default function App() {
 
           {/* Right Zone: GM Tools, Resources Popover & Database Indicator */}
           <div className="flex items-center gap-2">
+            {/* 🔗 GM Links Dropdown (GM Mode Only, Left of GM Tools) */}
+            {activeRole === 'gm' && (
+              <UniversalLinksDropdown
+                label="GM Links"
+                links={gmLinks}
+                themeColor="teal"
+                onAddLink={addGmLink}
+                onUpdateLink={updateGmLink}
+                onDeleteLink={deleteGmLink}
+                onReorderLinkByIndex={reorderGmLinkByIndex}
+              />
+            )}
+
             {/* 👑 GM Tools Popover Trigger (GM Mode Only) */}
             {activeRole === 'gm' && (
               <div className="relative" ref={gmToolsRef}>

@@ -7,6 +7,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
 
 export interface LogEntry {
   id: string;
@@ -19,7 +20,15 @@ export interface LogEntry {
 type SaveStatus = 'saved' | 'unsaved' | 'saving';
 
 export const AdventureLogs: React.FC = () => {
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+  const {
+    activeCharacter,
+    updateActiveSheetData,
+    saveActiveCharacter,
+    addCharacterLink,
+    updateCharacterLink,
+    deleteCharacterLink,
+    reorderCharacterLinkByIndex,
+  } = useCharacterStore();
 
   const bioNotes = activeCharacter?.sheet_data?.bio?.notes || '';
   const backstory = activeCharacter?.sheet_data?.bio?.backstory || '';
@@ -160,10 +169,23 @@ export const AdventureLogs: React.FC = () => {
       <div className="lg:col-span-2 flex flex-col gap-6">
         <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="font-outfit font-bold text-base text-slate-100 flex items-center gap-2">
-              <Scroll className="w-5 h-5 text-amber-400" />
-              Adventure & Session Journal
-            </h3>
+            <div className="flex items-center gap-3">
+              <h3 className="font-outfit font-bold text-base text-slate-100 flex items-center gap-2">
+                <Scroll className="w-5 h-5 text-amber-400" />
+                Hero's Log & Notes
+              </h3>
+
+              {/* 🔗 Character Links Dropdown (Immediately following title) */}
+              <UniversalLinksDropdown
+                label="Character Links"
+                links={activeCharacter?.sheet_data?.character_links || []}
+                themeColor="teal"
+                onAddLink={addCharacterLink}
+                onUpdateLink={updateCharacterLink}
+                onDeleteLink={deleteCharacterLink}
+                onReorderLinkByIndex={reorderCharacterLinkByIndex}
+              />
+            </div>
             {renderStatusBadge()}
           </div>
 

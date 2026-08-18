@@ -1,8 +1,6 @@
 // src/components/header/GmHeaderHUD.tsx
 import React, { useState } from 'react';
 import { Crown, Copy, Check, RefreshCw } from 'lucide-react';
-import { useAdventureStore } from '../../store/useAdventureStore';
-import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
 
 interface GmHeaderHUDProps {
   activeRoomCode: string | null;
@@ -18,11 +16,6 @@ export const GmHeaderHUD: React.FC<GmHeaderHUDProps> = ({
   className = '',
 }) => {
   const [copied, setCopied] = useState(false);
-  const gmLinks = useAdventureStore((state) => state.gmLinks);
-  const addGmLink = useAdventureStore((state) => state.addGmLink);
-  const updateGmLink = useAdventureStore((state) => state.updateGmLink);
-  const deleteGmLink = useAdventureStore((state) => state.deleteGmLink);
-  const reorderGmLinkByIndex = useAdventureStore((state) => state.reorderGmLinkByIndex);
 
   const handleCopy = () => {
     if (onCopyRoomCode) {
@@ -45,17 +38,6 @@ export const GmHeaderHUD: React.FC<GmHeaderHUDProps> = ({
           GM Screen
         </span>
       </div>
-
-      {/* 🔗 GM Links Dropdown */}
-      <UniversalLinksDropdown
-        label="GM Links"
-        links={gmLinks}
-        themeColor="teal"
-        onAddLink={addGmLink}
-        onUpdateLink={updateGmLink}
-        onDeleteLink={deleteGmLink}
-        onReorderLinkByIndex={reorderGmLinkByIndex}
-      />
 
       {/* Party ID Pill */}
       <div className="flex items-center gap-1.5 bg-slate-950/90 border border-amber-500/50 px-2.5 py-1 rounded-xl shadow-inner shrink-0">
