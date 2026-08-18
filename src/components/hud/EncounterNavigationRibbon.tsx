@@ -511,7 +511,6 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
 
         {/* Right: Adventure Links Dropdown (Teal Theme) */}
         <UniversalLinksDropdown
-          topLabel="Adventure Links"
           label="Adventure Links"
           links={activeAdv?.links || []}
           disabled={!activeAdv}
