@@ -113,7 +113,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     { label: 'Might 💪', icon: '💪' },
     { label: 'Mind 👁️', icon: '👁️' },
     { label: 'Motion 🏃', icon: '🏃' },
-    { label: 'Moxie 💗', icon: '💗' },
+    { label: 'Moxie 🫀', icon: '🫀' },
   ];
 
   const insertIconAtNotesCursor = (iconStr: string) => {
