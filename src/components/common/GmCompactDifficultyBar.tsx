@@ -31,7 +31,7 @@ export const GmCompactDifficultyBar: React.FC<GmCompactDifficultyBarProps> = ({ 
 
   const getThreatLabel = (dif: number) => {
     if (dif < 7) return { text: 'Easy', badge: 'text-emerald-300 border-emerald-500/40 bg-emerald-950/60' };
-    if (dif <= 11) return { text: 'Standard', badge: 'text-amber-300 border-amber-500/40 bg-amber-950/60' };
+    if (dif <= 11) return { text: 'Normal', badge: 'text-amber-300 border-amber-500/40 bg-amber-950/60' };
     if (dif <= 15) return { text: 'Hard', badge: 'text-orange-300 border-orange-500/40 bg-orange-950/60' };
     if (dif <= 21) return { text: 'Deadly', badge: 'text-rose-300 border-rose-500/40 bg-rose-950/60' };
     return { text: 'Mythic', badge: 'text-purple-300 border-purple-500/40 bg-purple-950/60' };
@@ -70,7 +70,7 @@ export const GmCompactDifficultyBar: React.FC<GmCompactDifficultyBarProps> = ({ 
       <div className="flex items-center gap-1 bg-slate-900/80 p-0.5 rounded-lg border border-slate-800 shrink-0">
         {[
           { label: 'Easy', val: 6 },
-          { label: 'Base', val: 10 },
+          { label: 'Normal', val: 10 },
           { label: 'Hard', val: 14 },
           { label: 'Deadly', val: 18 },
           { label: 'Mythic', val: 22 },

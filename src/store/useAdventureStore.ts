@@ -352,26 +352,22 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
       id: `act_${Date.now()}`,
       title: title?.trim() || `Act ${actCount}`,
       description: '',
-      encounters: [
-        {
-          id: `enc_${Date.now()}`,
-          title: `Encounter 1`,
-          notes: '',
-          master_dif: 10,
-          monsters: [],
-          created_at: nowIso,
-        },
-      ],
+      encounters: [],
       created_at: nowIso,
     };
 
     const updatedActs = [...(adv.structure?.acts || []), newAct];
     const newStructure = { ...adv.structure, acts: updatedActs };
 
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_ACTIVE_ACT, newAct.id);
+      localStorage.removeItem(STORAGE_ACTIVE_ENC);
+    }
+
     set((state) => ({
       adventures: state.adventures.map((a) => (a.id === adventureId ? { ...a, structure: newStructure } : a)),
       activeActId: newAct.id,
-      activeEncounterId: newAct.encounters[0].id,
+      activeEncounterId: null,
     }));
 
     await get().updateAdventure(adventureId, { structure: newStructure });
