@@ -239,7 +239,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     if (creationType === 'power_table') {
       return isTableCategoryValid;
     }
-    if (creationType === 'relic' || creationType === 'hardware') {
+    if (creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
       return isEffectValid;
     }
     if (creationType === 'skill') {
@@ -556,7 +556,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
         setFeedback({ type: 'error', message: 'Please select or provide a category for this gear.' });
         return;
       }
-    } else if (creationType === 'relic' || creationType === 'hardware') {
+    } else if (creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
       if (!effect.trim()) {
         setFeedback({ type: 'error', message: 'Effect (rules) description is required.' });
         return;
@@ -596,6 +596,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
         ? 'Custom Armor'
         : creationType === 'shield'
         ? 'Custom Shield'
+        : creationType === 'chaos_gem'
+        ? '💎 Chaos Gem'
         : gearCategory === 'CUSTOM_NEW'
         ? gearCategoryNewText.trim()
         : gearCategory.trim();
@@ -677,6 +679,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       const finalGearCat = gearCategory === 'CUSTOM_NEW' ? gearCategoryNewText.trim() : gearCategory.trim();
       itemDataPayload.category = finalGearCat;
       itemDataPayload.cost = costStr;
+    } else if (creationType === 'chaos_gem') {
+      itemDataPayload.action = 'F';
+      itemDataPayload.usage = '3';
+      itemDataPayload.effect = effect.trim();
     }
 
     try {
@@ -727,6 +733,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             name: name.trim(),
             category: itemDataPayload.category,
             cost: costStr || '1s',
+          });
+        } else if (creationType === 'chaos_gem') {
+          await gameApi.createChaosGem({
+            name: name.trim(),
+            effect: effect.trim(),
+            genres: selectedGenres,
+            notes: notes.trim() || undefined,
+            action: 'F',
+            usage: '3',
           });
         }
       } catch (catErr) {
@@ -894,13 +909,24 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             <button
               type="button"
               onClick={() => handleSwitchTab('gear')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
                 creationType === 'gear'
                   ? 'bg-teal-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
             >
               🎒 Gear
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('chaos_gem')}
+              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
+                creationType === 'chaos_gem'
+                  ? 'bg-violet-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              💎 Chaos Gem
             </button>
           </div>
         </div>
@@ -1768,8 +1794,48 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             </>
           )}
 
-          {/* Effect (rules) (Power, Relic, Hardware) */}
-          {(creationType === 'power' || creationType === 'relic' || creationType === 'hardware') && (
+          {/* --- TAB 11: CHAOS GEM MODE --- */}
+          {creationType === 'chaos_gem' && (
+            <>
+              {/* Row 1: Gem Name (Half-width) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Chaos Gem Name</span>
+                    <GuardrailBadge isValid={isNameValid} />
+                    <InfoTooltip text="Enter the unique name of your volatile Chaos Gem." />
+                  </div>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Gem of Temporal Surge, Void Ember"
+                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-violet-400"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Read-Only Calculated Attributes / Rules */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
+                  <span className="text-[11px] font-bold text-slate-400">Action:</span>
+                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-violet-300 shadow-sm">
+                    F (Free Action)
+                  </div>
+                </div>
+                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
+                  <span className="text-[11px] font-bold text-slate-400">Durability / Uses:</span>
+                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-amber-300 shadow-sm">
+                    3 Uses (Shatters at 0)
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Effect (rules) (Power, Relic, Hardware, Chaos Gem) */}
+          {(creationType === 'power' || creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') && (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between flex-wrap gap-1">
                 <div className="flex items-center gap-1.5">
@@ -1809,7 +1875,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             creationType === 'weapon' ||
             creationType === 'armor' ||
             creationType === 'shield' ||
-            creationType === 'gear') && (
+            creationType === 'gear' ||
+            creationType === 'chaos_gem') && (
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-300">Visual Description / Notes</span>

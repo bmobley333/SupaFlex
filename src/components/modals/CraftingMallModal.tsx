@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { X, Send, Check, Trash2, Plus, AlertCircle, RefreshCw, Crown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationItem, CustomCreationType, Power, MagicItem, AbilitySlot, WeaponSlot, ArmorData, ShieldData, SimpleGearItem } from '../../types/game';
+import { CustomCreationItem, CustomCreationType, Power, MagicItem, AbilitySlot, WeaponSlot, ArmorData, ShieldData, SimpleGearItem, SupabaseChaosGem } from '../../types/game';
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
 import { getPowerReadyCategory } from '../../utils/readyMatrixSchedule';
+import { ChaosGauntletSocketModal } from './ChaosGauntletSocketModal';
 
 interface CraftingMallModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
   const [partyItems, setPartyItems] = useState<CustomCreationItem[]>([]);
   const [showcaseItems, setShowcaseItems] = useState<CustomCreationItem[]>([]);
   const [submissionItems, setSubmissionItems] = useState<CustomCreationItem[]>([]);
+  const [socketingGem, setSocketingGem] = useState<SupabaseChaosGem | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -273,6 +275,17 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
           };
         });
         saveActiveCharacter();
+      } else if (type === 'chaos_gem') {
+        const incomingGem: SupabaseChaosGem = {
+          name,
+          action: 'F',
+          usage: '3',
+          effect: item_data?.effect || '',
+          genres: item_data?.genres,
+          notes: notes,
+        };
+        setSocketingGem(incomingGem);
+        return;
       }
 
       setFeedback({
@@ -490,7 +503,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
         <div className="px-6 py-2.5 bg-slate-950/30 border-b border-slate-800/60 flex items-center justify-between gap-3 shrink-0 flex-wrap">
           {/* Sub-Filters */}
           <div className="flex items-center gap-1 flex-wrap">
-            {(['all', 'power', 'power_table', 'relic', 'hardware', 'skill', 'skillset', 'weapon', 'armor', 'shield', 'gear'] as const).map((t) => (
+            {(['all', 'power', 'power_table', 'relic', 'hardware', 'skill', 'skillset', 'weapon', 'armor', 'shield', 'gear', 'chaos_gem'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTypeFilter(t)}
@@ -520,7 +533,9 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                   ? '🧥 Armor'
                   : t === 'shield'
                   ? '🛡️ Shields'
-                  : '🎒 Gear'}
+                  : t === 'gear'
+                  ? '🎒 Gear'
+                  : '💎 Chaos Gems'}
               </button>
             ))}
           </div>
@@ -587,6 +602,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                 const isArmor = item.type === 'armor';
                 const isShield = item.type === 'shield';
                 const isGear = item.type === 'gear';
+                const isChaosGem = item.type === 'chaos_gem';
 
                 return (
                   <div
@@ -620,7 +636,9 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                                 ? 'bg-blue-950 text-blue-300 border-blue-500/40'
                                 : isShield
                                 ? 'bg-cyan-950 text-cyan-300 border-cyan-500/40'
-                                : 'bg-teal-950 text-teal-300 border-teal-500/40'
+                                : isGear
+                                ? 'bg-teal-950 text-teal-300 border-teal-500/40'
+                                : 'bg-violet-950 text-violet-300 border-violet-500/40'
                             }`}
                           >
                             {isPower
@@ -641,7 +659,9 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                               ? '🧥 Armor'
                               : isShield
                               ? '🛡️ Shield'
-                              : '🎒 Gear'}
+                              : isGear
+                              ? '🎒 Gear'
+                              : '💎 Chaos Gem'}
                           </span>
                         </div>
 
@@ -665,18 +685,28 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                       </div>
 
                       {/* Action & Usage Pill */}
-                      {!isSkillset && !isSkill && !isWeapon && !isArmor && !isShield && !isGear && (
+                      {!isSkillset && !isSkill && !isWeapon && !isArmor && !isShield && !isGear && !isChaosGem && (
                         <div className="flex items-center gap-1 shrink-0">
                           {item.item_data?.action && (
-                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-300">
+                            <span className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono font-bold text-amber-300">
                               {item.item_data.action}
                             </span>
                           )}
                           {item.item_data?.usage && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                            <span className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-300">
                               {item.item_data.usage}
                             </span>
                           )}
+                        </div>
+                      )}
+                      {isChaosGem && (
+                        <div className="flex items-center gap-1 shrink-0 font-mono text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">
+                            F
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">
+                            3 Uses
+                          </span>
                         </div>
                       )}
                     </div>
@@ -784,7 +814,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                         className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border-emerald-500/50 flex items-center gap-1 transition-all shadow-sm cursor-pointer ml-auto"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Accept to {activeCharacter?.name ? `${activeCharacter.name}'s Sheet` : 'Sheet (0 AP)'}</span>
+                        <span>{isChaosGem ? 'Socket to Gauntlet' : `Accept to ${activeCharacter?.name ? `${activeCharacter.name}'s Sheet` : 'Sheet (0 AP)'}`}</span>
                       </button>
                     </div>
                   </div>
@@ -829,6 +859,20 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
           </button>
         </div>
       </div>
+
+      {/* Volatile Chaos Gauntlet Socketing Modal */}
+      <ChaosGauntletSocketModal
+        isOpen={!!socketingGem}
+        incomingGem={socketingGem}
+        onClose={() => setSocketingGem(null)}
+        onSocketSuccess={(gemName, slotName) => {
+          setSocketingGem(null);
+          setFeedback({
+            type: 'success',
+            message: `💎 Successfully socketed '${gemName}' into ${slotName}!`,
+          });
+        }}
+      />
     </div>
   );
 };

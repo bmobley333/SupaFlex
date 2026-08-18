@@ -111,8 +111,8 @@ export interface SupabaseChaosGem {
   id?: number;
   name: string;
   genres?: string[];
-  action: string;
-  usage: string;
+  action?: string;
+  usage?: string;
   effect: string;
   notes?: string;
   pic?: string;
@@ -838,7 +838,8 @@ export type CustomCreationType =
   | 'weapon'
   | 'armor'
   | 'shield'
-  | 'gear';
+  | 'gear'
+  | 'chaos_gem';
 
 export interface PowerTable {
   id?: number;

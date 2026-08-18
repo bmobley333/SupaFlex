@@ -1306,6 +1306,34 @@ export const gameApi = {
     }
   },
 
+  async createChaosGem(gem: Partial<SupabaseChaosGem>): Promise<SupabaseChaosGem | null> {
+    try {
+      const payload: any = {
+        name: gem.name,
+        effect: gem.effect || '',
+        genres: gem.genres && gem.genres.length > 0 ? gem.genres : ['Medieval', 'Modern', 'SciFi'],
+        notes: gem.notes || null,
+        action: gem.action || 'F',
+        usage: gem.usage || '3',
+        created_at: new Date().toISOString(),
+      };
+      const { data, error } = await supabase
+        .from('chaos_gems')
+        .insert([payload])
+        .select('*')
+        .single();
+
+      if (error) {
+        console.warn('[gameApi] Warning inserting into chaos_gems:', error.message);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.error('[gameApi] Error in createChaosGem:', e);
+      return null;
+    }
+  },
+
   // --- MASTER LOOT MATRIX (LOOT_MAIN) ---
   async getLootMainEntries(): Promise<LootMainEntry[]> {
     try {
@@ -1551,6 +1579,22 @@ export const gameApi = {
           created_at: new Date().toISOString(),
         };
         const { error: insertError } = await supabase.from('gear').insert([gearPayload]);
+        if (insertError) throw insertError;
+        await this.updateCustomItem(item.id, { is_promoted: true });
+        return true;
+      }
+
+      if (item.type === 'chaos_gem') {
+        const chaosGemPayload: any = {
+          name: item.name,
+          effect: item.item_data?.effect || '',
+          genres: item.item_data?.genres && item.item_data.genres.length > 0 ? item.item_data.genres : ['Medieval', 'Modern', 'SciFi'],
+          notes: item.notes ? `${item.notes} (Official MetaScape Canon • Designed by ${item.author_name})` : `(Official MetaScape Canon • Designed by ${item.author_name})`,
+          action: 'F',
+          usage: '3',
+          created_at: new Date().toISOString(),
+        };
+        const { error: insertError } = await supabase.from('chaos_gems').insert([chaosGemPayload]);
         if (insertError) throw insertError;
         await this.updateCustomItem(item.id, { is_promoted: true });
         return true;

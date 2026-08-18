@@ -155,7 +155,7 @@ export const MasterArchitectDeskModal: React.FC<MasterArchitectDeskModalProps> =
 
             {/* Type Filter */}
             <div className="flex items-center gap-1 flex-wrap">
-              {(['all', 'power', 'power_table', 'relic', 'hardware', 'skill', 'skillset', 'weapon', 'armor', 'shield', 'gear'] as const).map((t) => (
+              {(['all', 'power', 'power_table', 'relic', 'hardware', 'skill', 'skillset', 'weapon', 'armor', 'shield', 'gear', 'chaos_gem'] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setTypeFilter(t)}
@@ -185,7 +185,9 @@ export const MasterArchitectDeskModal: React.FC<MasterArchitectDeskModalProps> =
                     ? '🧥 Armor'
                     : t === 'shield'
                     ? '🛡️ Shields'
-                    : '🎒 Gear'}
+                    : t === 'gear'
+                    ? '🎒 Gear'
+                    : '💎 Chaos Gems'}
                 </button>
               ))}
             </div>
