@@ -19,6 +19,7 @@ import {
 import { useAdventureStore } from '../../store/useAdventureStore';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { UniversalLinksDropdown } from './UniversalLinksDropdown';
+import { UniversalLootDropdown } from './UniversalLootDropdown';
 
 interface EncounterNavigationRibbonProps {
   partyId?: string;
@@ -26,9 +27,11 @@ interface EncounterNavigationRibbonProps {
 }
 
 export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps> = ({
+  partyId,
   className = '',
 }) => {
   const playerEmail = useCharacterStore((state) => state.playerEmail);
+  const activePartyId = useCharacterStore((state) => state.activePartyId);
   const adventures = useAdventureStore((state) => state.adventures);
   const activeAdv = useAdventureStore((state) => state.getActiveAdventure());
   const activeAct = useAdventureStore((state) => state.getActiveAct());
@@ -50,6 +53,11 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
   const updateAdventureLink = useAdventureStore((state) => state.updateAdventureLink);
   const deleteAdventureLink = useAdventureStore((state) => state.deleteAdventureLink);
   const reorderAdventureLinkByIndex = useAdventureStore((state) => state.reorderAdventureLinkByIndex);
+
+  const addAdventureLoot = useAdventureStore((state) => state.addAdventureLoot);
+  const deleteAdventureLoot = useAdventureStore((state) => state.deleteAdventureLoot);
+  const clearAdventureLoot = useAdventureStore((state) => state.clearAdventureLoot);
+  const sendLootToPartyVault = useAdventureStore((state) => state.sendLootToPartyVault);
 
   const addAct = useAdventureStore((state) => state.addAct);
   const deleteAct = useAdventureStore((state) => state.deleteAct);
@@ -509,30 +517,57 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
           </div>
         </div>
 
-        {/* Right: Adventure Links Dropdown (Teal Theme) */}
-        <UniversalLinksDropdown
-          label="Adventure Links"
-          links={activeAdv?.links || []}
-          disabled={!activeAdv}
-          disabledTooltip="Select an adventure first"
-          themeColor="teal"
-          onAddLink={async (name, url) => {
-            if (!activeAdv) return;
-            await addAdventureLink(activeAdv.id, name, url);
-          }}
-          onUpdateLink={async (linkId, name, url) => {
-            if (!activeAdv) return;
-            await updateAdventureLink(activeAdv.id, linkId, name, url);
-          }}
-          onDeleteLink={async (linkId) => {
-            if (!activeAdv) return;
-            await deleteAdventureLink(activeAdv.id, linkId);
-          }}
-          onReorderLinkByIndex={async (fromIdx, toIdx) => {
-            if (!activeAdv) return;
-            await reorderAdventureLinkByIndex(activeAdv.id, fromIdx, toIdx);
-          }}
-        />
+        {/* Right Section: Adventure Loot Dropdown + Adventure Links Dropdown */}
+        <div className="flex items-center gap-2">
+          {/* Adventure Loot Dropdown (Amber Theme) */}
+          <UniversalLootDropdown
+            label="Adventure Loot"
+            loot={activeAdv?.loot || []}
+            disabled={!activeAdv}
+            disabledTooltip="Select an adventure first"
+            themeColor="amber"
+            onAddLoot={async (item) => {
+              if (!activeAdv) return;
+              await addAdventureLoot(activeAdv.id, item);
+            }}
+            onDeleteLoot={async (lootId) => {
+              if (!activeAdv) return;
+              await deleteAdventureLoot(activeAdv.id, lootId);
+            }}
+            onClearLoot={async () => {
+              if (!activeAdv) return;
+              await clearAdventureLoot(activeAdv.id);
+            }}
+            onSendToPartyVault={async (items, sourceLabel) => {
+              return await sendLootToPartyVault(items, partyId || activePartyId || 'default', sourceLabel);
+            }}
+          />
+
+          {/* Adventure Links Dropdown (Teal Theme) */}
+          <UniversalLinksDropdown
+            label="Adventure Links"
+            links={activeAdv?.links || []}
+            disabled={!activeAdv}
+            disabledTooltip="Select an adventure first"
+            themeColor="teal"
+            onAddLink={async (name, url) => {
+              if (!activeAdv) return;
+              await addAdventureLink(activeAdv.id, name, url);
+            }}
+            onUpdateLink={async (linkId, name, url) => {
+              if (!activeAdv) return;
+              await updateAdventureLink(activeAdv.id, linkId, name, url);
+            }}
+            onDeleteLink={async (linkId) => {
+              if (!activeAdv) return;
+              await deleteAdventureLink(activeAdv.id, linkId);
+            }}
+            onReorderLinkByIndex={async (fromIdx, toIdx) => {
+              if (!activeAdv) return;
+              await reorderAdventureLinkByIndex(activeAdv.id, fromIdx, toIdx);
+            }}
+          />
+        </div>
       </div>
     </div>
   );

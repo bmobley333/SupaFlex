@@ -2,7 +2,8 @@
 // Centralized Zustand store for GM Adventure, Act & Encounter pre-staging hierarchy & live play modes
 
 import { create } from 'zustand';
-import { GmAdventure, GmAct, GmEncounter, PreStagedMonster, GmSessionMode, EncounterLink } from '../types/adventures';
+import { GmAdventure, GmAct, GmEncounter, PreStagedMonster, GmSessionMode, EncounterLink, StagedLootItem } from '../types/adventures';
+import { VaultItem } from '../types/game';
 import { gameApi } from '../services/api';
 import { parseMonsterLine } from '../utils/monsterStatParser';
 import { scaleParsedMonster } from '../utils/monsterStatScaler';
@@ -78,6 +79,15 @@ interface AdventureStoreState {
   updateEncounterLink: (adventureId: string, actId: string, encounterId: string, linkId: string, name: string, url: string) => Promise<void>;
   deleteEncounterLink: (adventureId: string, actId: string, encounterId: string, linkId: string) => Promise<void>;
   reorderEncounterLinkByIndex: (adventureId: string, actId: string, encounterId: string, fromIdx: number, toIdx: number) => Promise<void>;
+
+  // Adventure & Encounter Staged Loot CRUD
+  addAdventureLoot: (adventureId: string, item: Omit<StagedLootItem, 'id' | 'created_at'>) => Promise<void>;
+  deleteAdventureLoot: (adventureId: string, lootId: string) => Promise<void>;
+  clearAdventureLoot: (adventureId: string) => Promise<void>;
+  addEncounterLoot: (adventureId: string, actId: string, encounterId: string, item: Omit<StagedLootItem, 'id' | 'created_at'>) => Promise<void>;
+  deleteEncounterLoot: (adventureId: string, actId: string, encounterId: string, lootId: string) => Promise<void>;
+  clearEncounterLoot: (adventureId: string, actId: string, encounterId: string) => Promise<void>;
+  sendLootToPartyVault: (items: StagedLootItem[], partyId: string, sourceLabel: string) => Promise<boolean>;
 
   // Tactical Notes & Live Monsters Manipulation
   setEncounterNotes: (notes: string) => void;
@@ -794,6 +804,120 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     const [moved] = links.splice(fromIdx, 1);
     links.splice(toIdx, 0, moved);
     await get().updateEncounter(adventureId, actId, encounterId, { links });
+  },
+
+  // --- ADVENTURE & ENCOUNTER STAGED LOOT ---
+  addAdventureLoot: async (adventureId: string, item: Omit<StagedLootItem, 'id' | 'created_at'>) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv) return;
+
+    const newItem: StagedLootItem = {
+      ...item,
+      id: `loot_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      created_at: new Date().toISOString(),
+    };
+
+    const updatedLoot = [...(adv.loot || []), newItem];
+    await get().updateAdventure(adventureId, { loot: updatedLoot });
+  },
+
+  deleteAdventureLoot: async (adventureId: string, lootId: string) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv || !adv.loot) return;
+
+    const updatedLoot = adv.loot.filter((l) => l.id !== lootId);
+    await get().updateAdventure(adventureId, { loot: updatedLoot });
+  },
+
+  clearAdventureLoot: async (adventureId: string) => {
+    await get().updateAdventure(adventureId, { loot: [] });
+  },
+
+  addEncounterLoot: async (adventureId: string, actId: string, encounterId: string, item: Omit<StagedLootItem, 'id' | 'created_at'>) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv) return;
+    const act = (adv.structure?.acts || []).find((a) => a.id === actId);
+    if (!act) return;
+    const enc = (act.encounters || []).find((e) => e.id === encounterId);
+    if (!enc) return;
+
+    const newItem: StagedLootItem = {
+      ...item,
+      id: `enc_loot_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      created_at: new Date().toISOString(),
+    };
+
+    const updatedLoot = [...(enc.loot || []), newItem];
+    await get().updateEncounter(adventureId, actId, encounterId, { loot: updatedLoot });
+  },
+
+  deleteEncounterLoot: async (adventureId: string, actId: string, encounterId: string, lootId: string) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv) return;
+    const act = (adv.structure?.acts || []).find((a) => a.id === actId);
+    if (!act) return;
+    const enc = (act.encounters || []).find((e) => e.id === encounterId);
+    if (!enc || !enc.loot) return;
+
+    const updatedLoot = enc.loot.filter((l) => l.id !== lootId);
+    await get().updateEncounter(adventureId, actId, encounterId, { loot: updatedLoot });
+  },
+
+  clearEncounterLoot: async (adventureId: string, actId: string, encounterId: string) => {
+    await get().updateEncounter(adventureId, actId, encounterId, { loot: [] });
+  },
+
+  sendLootToPartyVault: async (items: StagedLootItem[], partyId: string, sourceLabel: string): Promise<boolean> => {
+    if (!items || items.length === 0) return false;
+    const resolvedPartyId = partyId || 'default';
+    const storageKey = `supaflex_party_echo_vault_${resolvedPartyId}`;
+
+    let currentVault: VaultItem[] = [];
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) currentVault = JSON.parse(saved);
+    } catch {}
+
+    const newVaultItems: VaultItem[] = items.map((item) => {
+      let mappedType: 'coins' | 'magic_item' | 'art_gem' | 'document' | 'junk' | 'quality' | 'special' | 'chaos_gem' = 'quality';
+      if (item.categoryKey === 'coins' || item.coinsSilver || item.coinsGold) mappedType = 'coins';
+      else if (item.categoryKey === 'chaos_gems' || item.chaosGem) mappedType = 'chaos_gem';
+      else if (item.categoryKey.startsWith('magic') || item.categoryKey === 'relics' || item.magicItem) mappedType = 'magic_item';
+      else if (item.categoryKey === 'art_gems') mappedType = 'art_gem';
+      else if (item.categoryKey === 'curios') mappedType = 'document';
+      else if (item.categoryKey === 'junk') mappedType = 'junk';
+
+      const rarity = item.rarity || (item.magicItem?.category?.includes('Epic') ? 'Epic' : item.magicItem?.category?.includes('Greater') ? 'Greater' : item.magicItem?.category?.includes('Minor') ? 'Minor' : 'Lesser');
+      const essenceVal = rarity === 'Epic' ? 100 : rarity === 'Greater' ? 50 : rarity === 'Minor' ? 15 : 25;
+
+      const targetTag = item.targetPlayer && item.targetPlayer !== 'Party' ? ` (for ${item.targetPlayer})` : '';
+
+      return {
+        id: `vault_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        title: item.title,
+        description: item.description || '',
+        type: mappedType,
+        rarity,
+        essenceValue: essenceVal,
+        coinsSilver: item.coinsSilver,
+        coinsGold: item.coinsGold,
+        magicItem: item.magicItem,
+        chaosGem: item.chaosGem,
+        valuableVal: item.valuableVal,
+        valuableName: item.valuableVal ? item.title : undefined,
+        passedBy: `${sourceLabel}${targetTag}`,
+        timestamp: new Date().toISOString(),
+      };
+    });
+
+    const updatedVault = [...currentVault, ...newVaultItems];
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(updatedVault));
+      return true;
+    } catch (e) {
+      console.error('[useAdventureStore] Error saving to party vault:', e);
+      return false;
+    }
   },
 
   setEncounterNotes: (notes: string) => {

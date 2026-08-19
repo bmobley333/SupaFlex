@@ -14,6 +14,7 @@ import { GmModePillSwitch } from '../common/GmModePillSwitch';
 import { GmCompactDifficultyBar } from '../common/GmCompactDifficultyBar';
 import { EncounterNavigationRibbon } from '../hud/EncounterNavigationRibbon';
 import { EncounterLinksDropdown } from '../hud/EncounterLinksDropdown';
+import { EncounterLootDropdown } from '../hud/EncounterLootDropdown';
 import { useAdventureStore } from '../../store/useAdventureStore';
 
 interface GmWorkspaceViewProps {
@@ -635,8 +636,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   ))}
                 </div>
 
-                {/* High-Density Encounter Links Dropdown (Far Right past Moxie) */}
-                <EncounterLinksDropdown />
+                {/* High-Density Encounter Loot Dropdown + Encounter Links Dropdown */}
+                <div className="flex items-center gap-2">
+                  <EncounterLootDropdown partyId={selectedParty?.id} />
+                  <EncounterLinksDropdown />
+                </div>
               </div>
             </div>
             <textarea

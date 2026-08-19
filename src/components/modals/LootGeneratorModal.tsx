@@ -129,12 +129,50 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [socketingItem, setSocketingItem] = useState<{ res: RollResult; gem: SupabaseChaosGem } | null>(null);
-  const [activeRightTab, setActiveRightTab] = useState<'GENERATOR' | 'VAULT'>('GENERATOR');
+  const [activeRightTab, setActiveRightTab] = useState<'GENERATOR' | 'SPECIFIC' | 'VAULT'>('GENERATOR');
   const [lastDraftTier, setLastDraftTier] = useState<'Minor' | 'Lesser' | 'Greater' | 'Epic'>('Lesser');
   const [partyVault, setPartyVault] = useState<VaultItem[]>([]);
 
+  // Specific Item Tab State
+  const [specificCategory, setSpecificCategory] = useState<'coins' | 'weapons' | 'armor' | 'shields' | 'gear' | 'relics' | 'hardware' | 'chaos_gems'>('coins');
+  const [specificSearchQuery, setSpecificSearchQuery] = useState('');
+  const [specificTargetPlayer, setSpecificTargetPlayer] = useState('Party');
+  const [specificSilver, setSpecificSilver] = useState('');
+  const [specificGold, setSpecificGold] = useState('');
+  const [specificTitle, setSpecificTitle] = useState('');
+  const [specificVal, setSpecificVal] = useState('');
+  const [specificDesc, setSpecificDesc] = useState('');
+  const [specificCatalog, setSpecificCatalog] = useState<any[]>([]);
+  const [isLoadingSpecificCatalog, setIsLoadingSpecificCatalog] = useState(false);
+
   const essenceCore = activeCharacter?.sheet_data?.essence_core || 0;
   const starredItemIds = activeCharacter?.sheet_data?.starred_magic_items || [];
+
+  // Load specific catalog on category change
+  useEffect(() => {
+    if (!isOpen || activeRightTab !== 'SPECIFIC' || specificCategory === 'coins') return;
+
+    const loadCat = async () => {
+      setIsLoadingSpecificCatalog(true);
+      try {
+        let tableName = 'gear';
+        if (specificCategory === 'weapons') tableName = 'weapons';
+        else if (specificCategory === 'armor') tableName = 'armor';
+        else if (specificCategory === 'shields') tableName = 'shields';
+        else if (specificCategory === 'relics') tableName = 'relics';
+        else if (specificCategory === 'hardware') tableName = 'hardware';
+        else if (specificCategory === 'chaos_gems') tableName = 'chaos_gems';
+
+        const { data } = await supabase.from(tableName).select('*');
+        setSpecificCatalog(data || []);
+      } catch {
+        setSpecificCatalog([]);
+      } finally {
+        setIsLoadingSpecificCatalog(false);
+      }
+    };
+    loadCat();
+  }, [isOpen, activeRightTab, specificCategory]);
 
   useEffect(() => {
     if (isOpen) {
@@ -850,6 +888,55 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     showToast(`🔥 Rest Sweep Completed! +${share}% Essence deposited to all party members!`);
   };
 
+  const handleSendSpecificToVault = (itemPayload: {
+    title: string;
+    categoryKey: string;
+    rarity?: 'Minor' | 'Lesser' | 'Greater' | 'Epic';
+    description?: string;
+    coinsSilver?: number;
+    coinsGold?: number;
+    valuableVal?: string;
+    magicItem?: any;
+    chaosGem?: any;
+  }) => {
+    const partyId = activePartyId || 'default';
+    const storageKey = `supaflex_party_echo_vault_${partyId}`;
+
+    let mappedType: 'coins' | 'magic_item' | 'art_gem' | 'document' | 'junk' | 'quality' | 'special' | 'chaos_gem' = 'quality';
+    if (itemPayload.categoryKey === 'coins' || itemPayload.coinsSilver || itemPayload.coinsGold) mappedType = 'coins';
+    else if (itemPayload.categoryKey === 'chaos_gems' || itemPayload.chaosGem) mappedType = 'chaos_gem';
+    else if (itemPayload.categoryKey.startsWith('magic') || itemPayload.categoryKey === 'relics' || itemPayload.magicItem) mappedType = 'magic_item';
+    else if (itemPayload.categoryKey === 'art_gems') mappedType = 'art_gem';
+    else if (itemPayload.categoryKey === 'curios') mappedType = 'document';
+    else if (itemPayload.categoryKey === 'junk') mappedType = 'junk';
+
+    const rarity = itemPayload.rarity || 'Lesser';
+    const essenceVal = rarity === 'Epic' ? 100 : rarity === 'Greater' ? 50 : rarity === 'Minor' ? 15 : 25;
+    const targetTag = specificTargetPlayer && specificTargetPlayer !== 'Party' ? ` (for ${specificTargetPlayer})` : '';
+
+    const newVaultItem: VaultItem = {
+      id: `vault_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      title: itemPayload.title,
+      description: itemPayload.description || '',
+      type: mappedType,
+      rarity,
+      essenceValue: essenceVal,
+      coinsSilver: itemPayload.coinsSilver,
+      coinsGold: itemPayload.coinsGold,
+      magicItem: itemPayload.magicItem,
+      chaosGem: itemPayload.chaosGem,
+      valuableVal: itemPayload.valuableVal,
+      valuableName: itemPayload.valuableVal ? itemPayload.title : undefined,
+      passedBy: `GM${targetTag}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    const updated = [...partyVault, newVaultItem];
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+    setPartyVault(updated);
+    showToast(`🎁 Awarded "${itemPayload.title}" to Party Vault!`);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">
       <div className="bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden text-slate-100">
@@ -1036,6 +1123,20 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
               >
                 🎲 Generator
               </button>
+
+              {isGmMode && (
+                <button
+                  type="button"
+                  onClick={() => setActiveRightTab('SPECIFIC')}
+                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    activeRightTab === 'SPECIFIC'
+                      ? 'border-indigo-400 text-indigo-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  🎁 Specific Item
+                </button>
+              )}
 
               <button
                 type="button"
@@ -1227,6 +1328,252 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* TAB: GM SPECIFIC ITEM GIFTING */}
+            {activeRightTab === 'SPECIFIC' && isGmMode && (
+              <div className="space-y-3.5 flex-1 flex flex-col min-h-0">
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 shrink-0">
+                  <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🎁</span> Specific Item Gifting
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono">GM Mode Only</span>
+                </div>
+
+                {/* Zone 1: Category Pill Switch */}
+                <div className="flex flex-wrap gap-1 shrink-0">
+                  {[
+                    { key: 'coins', label: '🪙 Coins/Val' },
+                    { key: 'relics', label: '🪄 Relic' },
+                    { key: 'weapons', label: '⚔️ Weapon' },
+                    { key: 'armor', label: '🧥 Armor' },
+                    { key: 'shields', label: '🛡️ Shield' },
+                    { key: 'gear', label: '🎒 Gear' },
+                    { key: 'hardware', label: '⚙️ Hardw' },
+                    { key: 'chaos_gems', label: '💎 Gem' },
+                  ].map((cat) => (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => {
+                        setSpecificCategory(cat.key as any);
+                        setSpecificSearchQuery('');
+                      }}
+                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition cursor-pointer border ${
+                        specificCategory === cat.key
+                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                          : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Zone 2: Recipient Target Selector */}
+                <div className="flex items-center gap-2 text-xs bg-slate-950 p-2 rounded-xl border border-slate-800 shrink-0">
+                  <span className="text-slate-400 font-bold shrink-0">🎯 Recipient:</span>
+                  <select
+                    value={specificTargetPlayer}
+                    onChange={(e) => setSpecificTargetPlayer(e.target.value)}
+                    className="flex-1 bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1 outline-none font-semibold"
+                  >
+                    <option value="Party">🌐 Party (Shared Stash)</option>
+                    {characterName && <option value={characterName}>👤 {characterName}</option>}
+                  </select>
+                </div>
+
+                {/* Zone 3: Form or Catalog Picker */}
+                {specificCategory === 'coins' ? (
+                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5 shrink-0">
+                    <span className="text-xs font-bold text-amber-400 block">Custom Currency Reward</span>
+                    <div className="flex gap-1 flex-wrap">
+                      {[
+                        { s: 50, g: 0, label: '+50s' },
+                        { s: 100, g: 0, label: '+100s' },
+                        { s: 0, g: 10, label: '+10g' },
+                        { s: 0, g: 50, label: '+50g' },
+                        { s: 0, g: 100, label: '+100g' },
+                      ].map((p) => (
+                        <button
+                          key={p.label}
+                          type="button"
+                          onClick={() => {
+                            setSpecificSilver(p.s ? String(p.s) : '');
+                            setSpecificGold(p.g ? String(p.g) : '');
+                          }}
+                          className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-300 rounded text-[10px] font-mono font-bold"
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="flex-1 flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5">
+                        <span className="text-slate-400 text-xs mr-1">🪙</span>
+                        <input
+                          type="number"
+                          placeholder="Silver (s)"
+                          value={specificSilver}
+                          onChange={(e) => setSpecificSilver(e.target.value)}
+                          className="w-full bg-transparent text-xs text-slate-100 outline-none font-mono"
+                        />
+                      </div>
+                      <div className="flex-1 flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5">
+                        <span className="text-amber-400 text-xs mr-1">💰</span>
+                        <input
+                          type="number"
+                          placeholder="Gold (g)"
+                          value={specificGold}
+                          onChange={(e) => setSpecificGold(e.target.value)}
+                          className="w-full bg-transparent text-xs text-slate-100 outline-none font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-800 pt-2 space-y-1.5">
+                      <span className="text-[11px] text-slate-400 font-bold block">Or Custom Valuable Document / Art:</span>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Title (e.g. Flawless Sapphire)"
+                          value={specificTitle}
+                          onChange={(e) => setSpecificTitle(e.target.value)}
+                          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Val (e.g. 250g)"
+                          value={specificVal}
+                          onChange={(e) => setSpecificVal(e.target.value)}
+                          className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 font-mono outline-none"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Description / rules..."
+                        value={specificDesc}
+                        onChange={(e) => setSpecificDesc(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 outline-none"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const s = parseInt(specificSilver, 10) || 0;
+                        const g = parseInt(specificGold, 10) || 0;
+                        if (s > 0 || g > 0) {
+                          handleSendSpecificToVault({
+                            title: `${g > 0 ? `${g} Gold ` : ''}${s > 0 ? `${s} Silver` : ''}`.trim(),
+                            categoryKey: 'coins',
+                            coinsSilver: s,
+                            coinsGold: g,
+                            description: specificDesc.trim() || `Coin award (${g}g, ${s}s)`,
+                          });
+                          setSpecificSilver('');
+                          setSpecificGold('');
+                          setSpecificDesc('');
+                          return;
+                        }
+                        if (specificTitle.trim()) {
+                          handleSendSpecificToVault({
+                            title: specificTitle.trim(),
+                            categoryKey: specificVal.trim() ? 'art_gems' : 'curios',
+                            valuableVal: specificVal.trim() || undefined,
+                            description: specificDesc.trim() || undefined,
+                          });
+                          setSpecificTitle('');
+                          setSpecificVal('');
+                          setSpecificDesc('');
+                        }
+                      }}
+                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                    >
+                      <span>🎁 Send Custom Loot to Party Vault</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col min-h-0 space-y-2">
+                    <input
+                      type="text"
+                      placeholder={`Search ${specificCategory}...`}
+                      value={specificSearchQuery}
+                      onChange={(e) => setSpecificSearchQuery(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 outline-none shrink-0"
+                    />
+
+                    {isLoadingSpecificCatalog ? (
+                      <div className="py-8 text-center text-slate-400 text-xs">Loading catalog...</div>
+                    ) : (
+                      <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+                        {specificCatalog
+                          .filter((i) => {
+                            if (!specificSearchQuery.trim()) return true;
+                            const q = specificSearchQuery.toLowerCase();
+                            return (
+                              (i.name || '').toLowerCase().includes(q) ||
+                              (i.category || '').toLowerCase().includes(q) ||
+                              (i.effect || '').toLowerCase().includes(q) ||
+                              (i.description || '').toLowerCase().includes(q)
+                            );
+                          })
+                          .slice(0, 50)
+                          .map((item) => (
+                            <div
+                              key={item.id || item.name}
+                              className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between gap-2 hover:border-indigo-500/40 transition"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <h5 className="font-bold text-xs text-slate-100 truncate">{item.name}</h5>
+                                  {item.category && (
+                                    <span className="text-[9px] text-amber-400/80 font-mono">
+                                      {item.category}
+                                    </span>
+                                  )}
+                                </div>
+                                {(item.effect || item.description || item.notes) && (
+                                  <p className="text-[10px] text-slate-400 line-clamp-1">
+                                    {item.effect || item.description || item.notes}
+                                  </p>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  let rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' | undefined = undefined;
+                                  if (specificCategory === 'relics') {
+                                    const cat = (item.category || '').toLowerCase();
+                                    if (cat.includes('epic') || cat.includes('artifact')) rarity = 'Epic';
+                                    else if (cat.includes('greater')) rarity = 'Greater';
+                                    else if (cat.includes('minor')) rarity = 'Minor';
+                                    else rarity = 'Lesser';
+                                  }
+
+                                  handleSendSpecificToVault({
+                                    title: item.name,
+                                    categoryKey: specificCategory,
+                                    rarity,
+                                    description: item.effect || item.notes || item.description,
+                                    magicItem: specificCategory === 'relics' ? item : undefined,
+                                    chaosGem: specificCategory === 'chaos_gems' ? item : undefined,
+                                  });
+                                }}
+                                className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition shadow-sm shrink-0 cursor-pointer flex items-center gap-1"
+                              >
+                                <span>🎁</span>
+                                <span>Award</span>
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

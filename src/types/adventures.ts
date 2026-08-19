@@ -18,6 +18,22 @@ export interface EncounterLink {
   created_at?: string;
 }
 
+export interface StagedLootItem {
+  id: string;                      // UUID or nanoid
+  title: string;                   // e.g. "Flametongue Longsword", "100 Gold Coins"
+  categoryKey: string;             // 'weapons' | 'armor' | 'shields' | 'gear' | 'relics' | 'hardware' | 'chaos_gems' | 'coins' | 'art_gems' | 'curios' | 'junk'
+  rarity?: 'Minor' | 'Lesser' | 'Greater' | 'Epic';
+  description?: string;            // Effect / Rules / Visual details
+  coinsSilver?: number;            // Silver coins
+  coinsGold?: number;              // Gold coins
+  valuableVal?: string;            // e.g. "250g"
+  magicItem?: any;                 // Full relic payload
+  chaosGem?: any;                  // Full chaos gem payload
+  item_data?: any;                 // Generic item data payload (weapon, armor, shield, gear)
+  targetPlayer?: string;           // Optional targeted player name / 'Party'
+  created_at?: string;
+}
+
 export interface GmEncounter {
   id: string;              // UUID or nanoid
   title: string;           // e.g. "Room 4: Skeleton Crypt Guard"
@@ -26,6 +42,7 @@ export interface GmEncounter {
   master_dif?: number;     // Encounter Difficulty rating (default 10)
   links?: EncounterLink[]; // Encounter-specific URL links
   monsters: PreStagedMonster[];
+  loot?: StagedLootItem[]; // Encounter-specific pre-staged loot
   created_at?: string;
 }
 
@@ -50,6 +67,7 @@ export interface GmAdventure {
   is_active?: boolean;
   is_published?: boolean;  // Whether published to Supabase community
   links?: EncounterLink[]; // Adventure-specific URL links
+  loot?: StagedLootItem[];  // Adventure-level staged loot (Ad-lib / Character creation)
   structure: AdventureStructure;
   created_at?: string;
   updated_at?: string;
