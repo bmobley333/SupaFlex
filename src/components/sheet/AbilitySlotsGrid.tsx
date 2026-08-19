@@ -44,15 +44,6 @@ const USAGE_OPTIONS: { value: string; label: string }[] = [
   { value: '1-Rnd', label: '1-Rnd' },
 ];
 
-const POWER_CATEGORY_BUTTONS = [
-  { id: 'all', label: 'All Categories', icon: '🌐' },
-  { id: 'class', label: 'Class', icon: '👤' },
-  { id: 'race', label: 'Racial', icon: '🧬' },
-  { id: 'combat style', label: 'Combat Styles', icon: '⚔️' },
-  { id: 'luck', label: 'Luck', icon: '🍀' },
-  { id: 'favorites', label: 'Starred Favorites', icon: '⭐' },
-];
-
 const MAIN_ABILITY_ICONS = [
   { icon: '✨', label: 'Magic' },
   { icon: '💪', label: 'Might' },
@@ -205,7 +196,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [showTacticalPivotModal, setShowTacticalPivotModal] = useState(false);
   const [readyFeedback, setReadyFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [catalogFeedback, setCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [catalogReadyFilter, setCatalogReadyFilter] = useState<'all' | 'primary_arsenal' | 'mobility_defense' | 'support_passive'>('all');
   const [activeTableName, setActiveTableName] = useState<string | null>(null);
 
@@ -292,11 +282,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     saveActiveCharacter();
   };
 
-  // Custom Power Table Creation State (Powers Mode Only)
-  const [isCreatingTable, setIsCreatingTable] = useState(false);
-  const [newTableName, setNewTableName] = useState('');
-  const [newTableSub, setNewTableSub] = useState('class');
-
   const handleCloseManageModal = () => {
     setShowManageModal(false);
     window.dispatchEvent(new CustomEvent('supaflex:close-manager'));
@@ -346,23 +331,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       };
     });
     saveActiveCharacter();
-  };
-
-  const handleSaveCustomTable = () => {
-    if (!newTableName.trim()) return;
-    const rawClean = newTableName.trim();
-    const cleanTblName = rawClean.startsWith('📁') ? rawClean : `📁 ${rawClean}`;
-
-    updateActiveSheetData((prev) => {
-      const existing = prev.custom_power_tables || [];
-      const updated = [...existing.filter((t) => t.name !== cleanTblName), { name: cleanTblName, sub: newTableSub }];
-      return { ...prev, custom_power_tables: updated };
-    });
-    saveActiveCharacter();
-
-    setActiveTableName(cleanTblName);
-    setIsCreatingTable(false);
-    setNewTableName('');
   };
 
   // Custom Items & Ability Overrides
@@ -872,26 +840,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         return false;
       }
 
-      if (type === 'powers') {
-        if (selectedCategory === 'favorites') {
-          return isItemStarred(item);
-        } else if (selectedCategory !== 'all') {
-          const itemSub = ((item as any).category || (item as any).sub || '').toLowerCase();
-          return itemSub.includes(selectedCategory.toLowerCase());
-        }
-      } else {
+      if (type !== 'powers') {
         // Loadout Mode (Hardware Catalog): Exclusively Hardware items (Relics are only found via Loot Rolls)
         const isHw = !!((item as any).is_hardware || (item as any).cost);
         if (!isHw) {
           return false;
         }
-        if (selectedCategory === 'favorites') {
-          return isItemStarred(item);
-        }
       }
       return true;
     });
-  }, [fullCatalog, knownAbilityNamesSet, type, selectedCategory, favoriteTables, isItemStarred, activeGenre, powerTables]);
+  }, [fullCatalog, knownAbilityNamesSet, type, favoriteTables, isItemStarred, activeGenre, powerTables]);
 
   const groupedTables = useMemo(() => {
     const acc = categoryFilteredCatalog.reduce((map, item) => {
@@ -916,14 +874,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     if (type === 'powers') {
       customPowerTables.forEach((tbl) => {
         if (!matchesGenre((tbl as any).genres, activeGenre)) return;
-        if (selectedCategory === 'favorites') {
-          if (favoriteTables.includes(tbl.name) && !acc[tbl.name]) {
-            acc[tbl.name] = [];
-          }
-        } else if (selectedCategory === 'all' || (tbl.sub || '').toLowerCase().includes(selectedCategory.toLowerCase())) {
-          if (!acc[tbl.name]) {
-            acc[tbl.name] = [];
-          }
+        if (!acc[tbl.name]) {
+          acc[tbl.name] = [];
         }
       });
     } else {
@@ -933,7 +885,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     }
 
     return acc;
-  }, [categoryFilteredCatalog, type, customPowerTables, selectedCategory, favoriteTables, activeGenre]);
+  }, [categoryFilteredCatalog, type, customPowerTables, favoriteTables, activeGenre]);
 
   const starredCatalogItems = useMemo(() => {
     return fullCatalog.filter((item) => isItemStarred(item));
@@ -952,8 +904,167 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         return a.localeCompare(b);
       });
     }
-    return keys;
+    return keys.sort((a, b) => a.localeCompare(b));
   }, [groupedTables, type]);
+
+  const heroTablesList = useMemo(() => {
+    if (type !== 'powers') return [];
+
+    const charClass = (activeCharacter?.class || (activeCharacter as any)?.character_class || '').trim();
+    const charRace = (activeCharacter?.race || '').trim();
+    const favTables: string[] = sheetData.favorite_power_tables || [];
+
+    const heroTables: {
+      id: string;
+      name: string;
+      label: string;
+      icon: string;
+      badgeCount: number;
+      type: 'class' | 'race' | 'luck' | 'favorite';
+    }[] = [];
+
+    const addedNames = new Set<string>();
+
+    // 1. Class Table(s)
+    if (charClass) {
+      const classLower = charClass.toLowerCase();
+      availableTableNames.forEach((tbl) => {
+        const tblLower = tbl.toLowerCase();
+        if (tblLower.includes(classLower) || classLower.includes(tblLower)) {
+          if (!addedNames.has(tbl)) {
+            addedNames.add(tbl);
+            heroTables.push({
+              id: `class-${tbl}`,
+              name: tbl,
+              label: formatTableNameDisplay(tbl),
+              icon: '👤',
+              badgeCount: groupedTables[tbl]?.length || 0,
+              type: 'class',
+            });
+          }
+        }
+      });
+    }
+
+    // 2. Race Table(s)
+    if (charRace) {
+      const raceLower = charRace.toLowerCase();
+      availableTableNames.forEach((tbl) => {
+        const tblLower = tbl.toLowerCase();
+        if (tblLower.includes(raceLower) || raceLower.includes(tblLower)) {
+          if (!addedNames.has(tbl)) {
+            addedNames.add(tbl);
+            heroTables.push({
+              id: `race-${tbl}`,
+              name: tbl,
+              label: formatTableNameDisplay(tbl),
+              icon: '🧬',
+              badgeCount: groupedTables[tbl]?.length || 0,
+              type: 'race',
+            });
+          }
+        }
+      });
+    }
+
+    // 3. Luck Table (always present for all heroes)
+    availableTableNames.forEach((tbl) => {
+      const tblLower = tbl.toLowerCase();
+      if (tblLower.includes('luck')) {
+        if (!addedNames.has(tbl)) {
+          addedNames.add(tbl);
+          heroTables.push({
+            id: `luck-${tbl}`,
+            name: tbl,
+            label: formatTableNameDisplay(tbl),
+            icon: '🍀',
+            badgeCount: groupedTables[tbl]?.length || 0,
+            type: 'luck',
+          });
+        }
+      }
+    });
+
+    // 4. Favorite / Starred Tables
+    favTables.forEach((tbl) => {
+      if (availableTableNames.includes(tbl) && !addedNames.has(tbl)) {
+        addedNames.add(tbl);
+        heroTables.push({
+          id: `fav-${tbl}`,
+          name: tbl,
+          label: formatTableNameDisplay(tbl),
+          icon: '⭐',
+          badgeCount: groupedTables[tbl]?.length || 0,
+          type: 'favorite',
+        });
+      }
+    });
+
+    return heroTables;
+  }, [type, activeCharacter, sheetData.favorite_power_tables, availableTableNames, groupedTables]);
+
+  const categorizedTableGroups = useMemo(() => {
+    const groups: Record<string, string[]> = {
+      '👤 Class Tables': [],
+      '🧬 Racial Tables': [],
+      '⚔️ Combat Style Tables': [],
+      '🍀 Luck & General Tables': [],
+      '📁 Custom & Other Tables': [],
+    };
+
+    availableTableNames.forEach((tblName) => {
+      const sampleItem = groupedTables[tblName]?.[0];
+      const sub = ((sampleItem as any)?.category || (sampleItem as any)?.sub || '').toLowerCase();
+      const nameLower = tblName.toLowerCase();
+
+      if (
+        sub.includes('class') ||
+        nameLower.includes('thief') ||
+        nameLower.includes('mage') ||
+        nameLower.includes('warrior') ||
+        nameLower.includes('cleric') ||
+        nameLower.includes('paladin') ||
+        nameLower.includes('bard') ||
+        nameLower.includes('ranger') ||
+        nameLower.includes('druid') ||
+        nameLower.includes('monk') ||
+        nameLower.includes('sorcerer') ||
+        nameLower.includes('warlock') ||
+        nameLower.includes('artificer')
+      ) {
+        groups['👤 Class Tables'].push(tblName);
+      } else if (
+        sub.includes('race') ||
+        sub.includes('racial') ||
+        nameLower.includes('human') ||
+        nameLower.includes('elf') ||
+        nameLower.includes('dwarf') ||
+        nameLower.includes('halfling') ||
+        nameLower.includes('gnome') ||
+        nameLower.includes('orc') ||
+        nameLower.includes('dragonborn') ||
+        nameLower.includes('tiefling')
+      ) {
+        groups['🧬 Racial Tables'].push(tblName);
+      } else if (
+        sub.includes('combat') ||
+        sub.includes('style') ||
+        nameLower.includes('dual wield') ||
+        nameLower.includes('two-handed') ||
+        nameLower.includes('archery') ||
+        nameLower.includes('brawler') ||
+        nameLower.includes('shield')
+      ) {
+        groups['⚔️ Combat Style Tables'].push(tblName);
+      } else if (sub.includes('luck') || nameLower.includes('luck') || nameLower.includes('general')) {
+        groups['🍀 Luck & General Tables'].push(tblName);
+      } else {
+        groups['📁 Custom & Other Tables'].push(tblName);
+      }
+    });
+
+    return groups;
+  }, [availableTableNames, groupedTables]);
 
   const effectiveActiveTable = useMemo(() => {
     if (activeTableName === 'ALL') return 'ALL';
@@ -961,8 +1072,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     if (activeTableName && availableTableNames.includes(activeTableName)) {
       return activeTableName;
     }
+    if (type === 'powers' && heroTablesList.length > 0) {
+      return heroTablesList[0].name;
+    }
     return 'ALL';
-  }, [activeTableName, availableTableNames]);
+  }, [activeTableName, availableTableNames, type, heroTablesList]);
 
   const activeTableAbilities = useMemo(() => {
     if (effectiveActiveTable === 'ALL') {
@@ -991,6 +1105,44 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       return nameMatch || actionMatch || usageMatch || effectMatch;
     });
   }, [activeTableAbilities, rightSearchQuery, type, catalogReadyFilter]);
+
+  const groupedFilteredAbilities = useMemo(() => {
+    const map: Record<string, (Power | MagicItem)[]> = {};
+    filteredCatalogAbilities.forEach((item) => {
+      let tbl = (item as any).table || (item as any).table_name;
+      if (!tbl) {
+        if (type === 'powers') {
+          tbl = 'General Powers';
+        } else {
+          const cat = ((item as any).category || (item as any).sub || '').toLowerCase();
+          if (cat.includes('minor') || cat.includes('🍺')) tbl = 'Minor';
+          else if (cat.includes('lesser') || cat.includes('🪄') || cat.includes('🔮')) tbl = 'Lesser';
+          else if (cat.includes('greater') || cat.includes('🪬')) tbl = 'Greater';
+          else if (cat.includes('epic') || cat.includes('💫') || cat.includes('artifact')) tbl = 'Epic';
+          else tbl = 'Minor';
+        }
+      }
+      if (!map[tbl]) map[tbl] = [];
+      map[tbl].push(item);
+    });
+    return map;
+  }, [filteredCatalogAbilities, type]);
+
+  const sortedGroupedTableKeys = useMemo(() => {
+    const keys = Object.keys(groupedFilteredAbilities);
+    if (type === 'spells') {
+      const order = ['Minor', 'Lesser', 'Greater', 'Epic'];
+      return keys.sort((a, b) => {
+        const idxA = order.indexOf(a);
+        const idxB = order.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+    }
+    return keys.sort((a, b) => a.localeCompare(b));
+  }, [groupedFilteredAbilities, type]);
 
   // Filtered learned roster for Left Column search (Highest Version Only)
   const filteredRoster = useMemo(() => {
@@ -1087,7 +1239,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
               <div
                 ref={modalRef}
-                className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-xs"
+                className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl h-[88vh] max-h-[680px] flex flex-col shadow-2xl overflow-hidden text-xs"
               >
                 {/* Modal Top Bar */}
                 <div className="px-4 py-2.5 border-b border-slate-800 bg-slate-950/80 flex flex-col gap-2 shrink-0">
@@ -1353,6 +1505,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
                                   >
                                     <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleLaunchVersionEditor(item)}
+                                    className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 transition-colors shrink-0"
+                                    title={`Version edit ${baseName}`}
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
                                   </button>
 
                                   {type === 'powers' ? (
@@ -1957,134 +2118,130 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           </div>
                         )}
 
-                        {/* 2. Controls for Powers Mode */}
+                        {/* 1. SMART HERO TABLE DECK & CONTROLS (Powers Mode) */}
                         {type === 'powers' && (
-                          <>
-                            {/* Category Dropdown */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-xs font-bold text-slate-400 shrink-0">Category:</span>
-                              <select
-                                value={selectedCategory}
-                                onChange={(e) => {
-                                  const newCat = e.target.value;
-                                  setSelectedCategory(newCat);
-                                  if (newCat === 'all') {
-                                    setActiveTableName('ALL');
-                                  } else {
-                                    setActiveTableName(null);
-                                  }
-                                }}
-                                className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
-                              >
-                                {POWER_CATEGORY_BUTTONS.map((cat) => (
-                                  <option key={cat.id} value={cat.id}>
-                                    {cat.icon} {cat.label} {cat.id === 'favorites' ? `(${starredCatalogItems.length})` : ''}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                          <div className="flex flex-col gap-2 shrink-0">
+                            {/* Smart Hero Table Deck: Quick Pills Ribbon */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {heroTablesList.map((hTbl) => {
+                                const isActive = effectiveActiveTable === hTbl.name;
+                                return (
+                                  <button
+                                    key={hTbl.id}
+                                    type="button"
+                                    onClick={() => setActiveTableName(hTbl.name)}
+                                    className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
+                                      isActive
+                                        ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
+                                        : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80'
+                                    }`}
+                                  >
+                                    <span>{hTbl.icon}</span>
+                                    <span>{hTbl.label}</span>
+                                    <span
+                                      className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                                        isActive
+                                          ? 'bg-amber-800/80 text-amber-100'
+                                          : 'bg-slate-950 text-slate-400 border border-slate-800'
+                                      }`}
+                                    >
+                                      {hTbl.badgeCount}
+                                    </span>
+                                  </button>
+                                );
+                              })}
 
-                            {/* Table Selector Dropdown & + Table Button */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-xs font-bold text-slate-400 shrink-0">Table:</span>
-                              <select
-                                value={effectiveActiveTable || 'ALL'}
-                                onChange={(e) => setActiveTableName(e.target.value)}
-                                className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none flex-1 min-w-0 truncate cursor-pointer"
+                              {/* ALL TABLES PILL */}
+                              <button
+                                type="button"
+                                onClick={() => setActiveTableName('ALL')}
+                                className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
+                                  effectiveActiveTable === 'ALL'
+                                    ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
+                                    : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80'
+                                }`}
                               >
-                                <option value="ALL">🌐 All Tables ({categoryFilteredCatalog.length})</option>
-                                {availableTableNames.map((tblName) => (
-                                  <option key={tblName} value={tblName}>
-                                    📁 {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
-                                  </option>
-                                ))}
-                              </select>
-                              {effectiveActiveTable && (
+                                <span>🌐</span>
+                                <span>All Tables</span>
+                                <span
+                                  className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                                    effectiveActiveTable === 'ALL'
+                                      ? 'bg-amber-800/80 text-amber-100'
+                                      : 'bg-slate-950 text-slate-400 border border-slate-800'
+                                  }`}
+                                >
+                                  {categoryFilteredCatalog.length}
+                                </span>
+                              </button>
+
+                              {/* STARRED FAVORITES PILL */}
+                              {starredCatalogItems.length > 0 && (
                                 <button
                                   type="button"
-                                  onClick={() => handleToggleFavoriteTable(effectiveActiveTable)}
-                                  className={`p-1.5 rounded-lg border transition-colors flex items-center justify-center shrink-0 ${
-                                    favoriteTables.includes(effectiveActiveTable)
-                                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
-                                      : 'bg-slate-900 text-slate-500 border-slate-700 hover:text-amber-400'
+                                  onClick={() => setActiveTableName('STARRED')}
+                                  className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
+                                    effectiveActiveTable === 'STARRED'
+                                      ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
+                                      : 'bg-slate-900/90 text-amber-300 hover:text-amber-200 hover:bg-slate-800 border border-amber-500/30'
                                   }`}
-                                  title={favoriteTables.includes(effectiveActiveTable) ? 'Remove table from Favorites' : 'Save table to Favorites'}
                                 >
-                                  <Star className={`w-3.5 h-3.5 ${favoriteTables.includes(effectiveActiveTable) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                  <span>⭐</span>
+                                  <span>Starred Powers</span>
+                                  <span
+                                    className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                                      effectiveActiveTable === 'STARRED'
+                                        ? 'bg-amber-800/80 text-amber-100'
+                                        : 'bg-slate-950 text-amber-400 border border-slate-800'
+                                    }`}
+                                  >
+                                    {starredCatalogItems.length}
+                                  </span>
                                 </button>
                               )}
-                              <button
-                                onClick={() => setIsCreatingTable(true)}
-                                className="px-2 py-1 rounded-lg text-[10px] font-bold border border-amber-500/40 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 shrink-0 transition-colors flex items-center gap-1 shadow-sm"
-                                title="Create custom table"
-                              >
-                                <Plus className="w-3 h-3" />
-                                Table
-                              </button>
                             </div>
 
-                            {/* Inline Table Creator Drawer */}
-                            {isCreatingTable && (
-                              <div className="p-2.5 bg-slate-950/90 rounded-xl border border-amber-500/40 flex flex-col gap-2 shadow-md shrink-0">
-                                <div className="flex items-center justify-between border-b border-amber-500/20 pb-1">
-                                  <span className="font-outfit font-bold text-[11px] text-amber-300 flex items-center gap-1">
-                                    📁 Create Custom Table
-                                  </span>
-                                  <button onClick={() => setIsCreatingTable(false)} className="text-slate-400 hover:text-slate-200">
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </div>
-                                <input
-                                  type="text"
-                                  value={newTableName}
-                                  onChange={(e) => setNewTableName(e.target.value)}
-                                  className="bg-slate-900 px-2 py-1 rounded-lg border border-slate-700 text-xs text-slate-100 outline-none focus:border-amber-400"
-                                />
-                                <div className="flex items-center gap-1.5">
-                                  <label className="text-[10px] text-slate-400 font-bold">Category:</label>
-                                  <select
-                                    value={newTableSub}
-                                    onChange={(e) => setNewTableSub(e.target.value)}
-                                    className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 text-[10px] text-amber-300 outline-none flex-1 font-semibold"
-                                  >
-                                    <option value="class">👤 Class</option>
-                                    <option value="racial">🧬 Racial</option>
-                                    <option value="combat_styles">⚔️ Combat Styles</option>
-                                    <option value="luck">🍀 Luck</option>
-                                  </select>
-                                </div>
-                                <div className="flex items-center justify-end gap-1.5 pt-1">
-                                  <button onClick={() => setIsCreatingTable(false)} className="px-2 py-0.5 text-[10px] text-slate-400 hover:text-slate-200">
-                                    Cancel
-                                  </button>
-                                  <button
-                                    onClick={handleSaveCustomTable}
-                                    disabled={!newTableName.trim()}
-                                    className="px-2.5 py-0.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-[10px] rounded transition-all shadow-sm"
-                                  >
-                                    Save Table
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Search Bar directly above powers list */}
-                            <div className="shrink-0">
-                              <div className="relative">
+                            {/* Paired Search & Browse Other Tables Selector Row */}
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-1">
                                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                                 <input
                                   type="text"
                                   value={rightSearchQuery}
                                   onChange={(e) => setRightSearchQuery(e.target.value)}
-                                  placeholder="Search powers..."
+                                  placeholder={`Search ${
+                                    effectiveActiveTable && effectiveActiveTable !== 'ALL' && effectiveActiveTable !== 'STARRED'
+                                      ? formatTableNameDisplay(effectiveActiveTable)
+                                      : 'all catalog powers'
+                                  }...`}
                                   className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
                                 />
                               </div>
+
+                              <select
+                                value={effectiveActiveTable || 'ALL'}
+                                onChange={(e) => setActiveTableName(e.target.value)}
+                                className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 max-w-[210px] truncate cursor-pointer"
+                              >
+                                <option value="ALL">🌐 All Tables ({categoryFilteredCatalog.length})</option>
+                                <option value="STARRED">⭐ Starred Powers ({starredCatalogItems.length})</option>
+                                {Object.entries(categorizedTableGroups).map(([groupLabel, tableNames]) => {
+                                  if (tableNames.length === 0) return null;
+                                  return (
+                                    <optgroup key={groupLabel} label={groupLabel} className="bg-slate-950 text-slate-400 font-bold">
+                                      {tableNames.map((tblName) => (
+                                        <option key={tblName} value={tblName} className="bg-slate-900 text-amber-300 font-normal">
+                                          {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  );
+                                })}
+                              </select>
                             </div>
-                          </>
+                          </div>
                         )}
 
-                        {/* 3. Controls for Loadout / Spells Mode (Paired Search & Table Filter) */}
+                        {/* 2. Controls for Loadout / Spells Mode (Paired Search & Table Filter) */}
                         {type === 'spells' && (
                           <div className="flex items-center gap-2 shrink-0">
                             <div className="relative flex-1">
@@ -2142,100 +2299,156 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           </div>
                         )}
 
-                        {/* Scrollable Catalog Abilities List */}
-                        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
-                          {filteredCatalogAbilities.length > 0 ? (
-                            filteredCatalogAbilities.map((item, idx) => {
-                              const { baseName, version } = parseAbilityVersion(item.name);
-                              const actionUpper = (item.action || '').toUpperCase();
-                              const isSpells = type === 'spells';
-                              const rawCost = (item as any).cost;
-                              const itemCostSilver = isSpells ? parseCostToSilver(rawCost) : 0;
-                              const costAbbrev = isSpells ? formatCostAbbreviated(rawCost) : '';
-
-                              const curGold = sheetData.gold ?? 0;
-                              const curSilver = sheetData.silver ?? 0;
-                              const totalCharSilver = curGold * 100 + curSilver;
-                              const hasFunds = isSpells ? totalCharSilver >= itemCostSilver : true;
+                        {/* Scrollable Catalog Abilities List Grouped Per Table */}
+                        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3 min-h-0">
+                          {sortedGroupedTableKeys.length > 0 ? (
+                            sortedGroupedTableKeys.map((tableName) => {
+                              const tablePowers = groupedFilteredAbilities[tableName] || [];
+                              if (tablePowers.length === 0) return null;
 
                               return (
-                                <div
-                                  key={item.id || idx}
-                                  className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-amber-500/40 transition-all shrink-0"
-                                >
-                                  {/* Header Row: Name, Version, Action & Usage (Adjacent), Buttons */}
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="font-bold text-sm text-slate-100">{baseName}</span>
-                                      {type !== 'powers' && <ItemNotesPopover notes={(item as any).notes} itemName={baseName} />}
-                                      {version > 1 && (
-                                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
-                                          v{version}
-                                        </span>
-                                      )}
+                                <div key={tableName} className="flex flex-col gap-2 shrink-0">
+                                  {/* Table Section Header Banner */}
+                                  <div className="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between shadow-sm shrink-0">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-xs font-bold text-amber-300 font-outfit uppercase tracking-wide truncate">
+                                        📁 {formatTableNameDisplay(tableName)}
+                                      </span>
+                                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-slate-300 border border-slate-800">
+                                        {tablePowers.length}
+                                      </span>
                                     </div>
 
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      {/* Action & Usage side-by-side */}
-                                      <div className="flex items-center gap-1">
-                                        {actionUpper && (
-                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${ACTION_COLORS[actionUpper] || 'bg-slate-800'}`}>
-                                            {actionUpper}
-                                          </span>
-                                        )}
-                                        {item.usage && (
-                                          <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
-                                            {item.usage}
-                                          </span>
-                                        )}
-                                      </div>
-
+                                    {type === 'powers' && (
                                       <button
                                         type="button"
-                                        onClick={() => handleToggleStarItem(item)}
-                                        className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                          isItemStarred(item)
-                                            ? 'text-amber-400'
-                                            : 'text-slate-600 hover:text-amber-400'
-                                        }`}
-                                        title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                      >
-                                        <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleLaunchVersionEditor(item)}
-                                        className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors"
-                                        title={`Version edit ${baseName}`}
-                                      >
-                                        <Edit2 className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleLearnAbility(item)}
-                                        className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
-                                          isSpells
-                                            ? hasFunds
-                                              ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
-                                              : 'bg-rose-600/30 text-rose-200 border-rose-500/50 hover:bg-rose-600/50'
-                                            : 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
+                                        onClick={() => handleToggleFavoriteTable(tableName)}
+                                        className={`p-1 rounded-lg border transition-colors flex items-center justify-center shrink-0 ${
+                                          favoriteTables.includes(tableName)
+                                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
+                                            : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-400'
                                         }`}
                                         title={
-                                          isSpells
-                                            ? hasFunds
-                                              ? `Purchase for ${costAbbrev} and add to Vault`
-                                              : `Insufficient funds! Requires ${costAbbrev} (${itemCostSilver}s). You have ${formatCostAbbreviated(totalCharSilver)} (${totalCharSilver}s).`
-                                            : 'Learn Power to Vault'
+                                          favoriteTables.includes(tableName)
+                                            ? 'Remove table from Favorites'
+                                            : 'Save table to Favorites'
                                         }
                                       >
-                                        {isSpells ? `+ Add to Vault [${costAbbrev}]` : '+ Learn to Vault'}
+                                        <Star
+                                          className={`w-3.5 h-3.5 ${
+                                            favoriteTables.includes(tableName) ? 'fill-amber-400 text-amber-400' : ''
+                                          }`}
+                                        />
                                       </button>
-                                    </div>
+                                    )}
                                   </div>
 
-                                  {/* Sub-Row: Effect */}
-                                  <div className="text-xs text-slate-300 pt-1">
-                                    <p className="text-[11px] leading-relaxed font-sans">{item.effect || 'No description'}</p>
+                                  {/* Table Powers Cards */}
+                                  <div className="flex flex-col gap-2">
+                                    {tablePowers.map((item, idx) => {
+                                      const { baseName, version } = parseAbilityVersion(item.name);
+                                      const actionUpper = (item.action || '').toUpperCase();
+                                      const isSpells = type === 'spells';
+                                      const rawCost = (item as any).cost;
+                                      const itemCostSilver = isSpells ? parseCostToSilver(rawCost) : 0;
+                                      const costAbbrev = isSpells ? formatCostAbbreviated(rawCost) : '';
+
+                                      const curGold = sheetData.gold ?? 0;
+                                      const curSilver = sheetData.silver ?? 0;
+                                      const totalCharSilver = curGold * 100 + curSilver;
+                                      const hasFunds = isSpells ? totalCharSilver >= itemCostSilver : true;
+
+                                      return (
+                                        <div
+                                          key={item.id || idx}
+                                          className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-amber-500/40 transition-all shrink-0"
+                                        >
+                                          {/* Header Row: Name, Version, Action & Usage (Adjacent), Buttons */}
+                                          <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <span className="font-bold text-sm text-slate-100">{baseName}</span>
+                                              {type !== 'powers' && (
+                                                <ItemNotesPopover notes={(item as any).notes} itemName={baseName} />
+                                              )}
+                                              {version > 1 && (
+                                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
+                                                  v{version}
+                                                </span>
+                                              )}
+                                            </div>
+
+                                            <div className="flex items-center gap-2 shrink-0">
+                                              {/* Action & Usage side-by-side */}
+                                              <div className="flex items-center gap-1">
+                                                {actionUpper && (
+                                                  <span
+                                                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                                                      ACTION_COLORS[actionUpper] || 'bg-slate-800'
+                                                    }`}
+                                                  >
+                                                    {actionUpper}
+                                                  </span>
+                                                )}
+                                                {item.usage && (
+                                                  <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
+                                                    {item.usage}
+                                                  </span>
+                                                )}
+                                              </div>
+
+                                              <button
+                                                type="button"
+                                                onClick={() => handleToggleStarItem(item)}
+                                                className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                                  isItemStarred(item)
+                                                    ? 'text-amber-400'
+                                                    : 'text-slate-600 hover:text-amber-400'
+                                                }`}
+                                                title={
+                                                  isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'
+                                                }
+                                              >
+                                                <Star
+                                                  className={`w-3.5 h-3.5 ${
+                                                    isItemStarred(item) ? 'fill-amber-400' : ''
+                                                  }`}
+                                                />
+                                              </button>
+
+                                              <button
+                                                type="button"
+                                                onClick={() => handleLearnAbility(item)}
+                                                className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
+                                                  isSpells
+                                                    ? hasFunds
+                                                      ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
+                                                      : 'bg-rose-600/30 text-rose-200 border-rose-500/50 hover:bg-rose-600/50'
+                                                    : 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
+                                                }`}
+                                                title={
+                                                  isSpells
+                                                    ? hasFunds
+                                                      ? `Purchase for ${costAbbrev} and add to Vault`
+                                                      : `Insufficient funds! Requires ${costAbbrev} (${itemCostSilver}s). You have ${formatCostAbbreviated(
+                                                          totalCharSilver
+                                                        )} (${totalCharSilver}s).`
+                                                    : 'Learn Power to Vault'
+                                                }
+                                              >
+                                                {isSpells ? `+ Add to Vault [${costAbbrev}]` : '+ Learn to Vault'}
+                                              </button>
+                                            </div>
+                                          </div>
+
+                                          {/* Sub-Row: Effect */}
+                                          <div className="text-xs text-slate-300 pt-1">
+                                            <p className="text-[11px] leading-relaxed font-sans">
+                                              {item.effect || 'No description'}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               );
