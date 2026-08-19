@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore } from '../../store/useGenreStore';
@@ -137,11 +138,12 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const [specificCategory, setSpecificCategory] = useState<'coins' | 'weapons' | 'armor' | 'shields' | 'gear' | 'relics' | 'hardware' | 'chaos_gems'>('coins');
   const [specificSearchQuery, setSpecificSearchQuery] = useState('');
   const [specificTargetPlayer, setSpecificTargetPlayer] = useState('Party');
+  const [specificCoinsTargetPlayer, setSpecificCoinsTargetPlayer] = useState('Party');
+  const [specificCustomItemTargetPlayer, setSpecificCustomItemTargetPlayer] = useState('Party');
   const [specificSilver, setSpecificSilver] = useState('');
   const [specificGold, setSpecificGold] = useState('');
   const [specificTitle, setSpecificTitle] = useState('');
   const [specificVal, setSpecificVal] = useState('');
-  const [specificDesc, setSpecificDesc] = useState('');
   const [specificCatalog, setSpecificCatalog] = useState<any[]>([]);
   const [isLoadingSpecificCatalog, setIsLoadingSpecificCatalog] = useState(false);
 
@@ -888,6 +890,21 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     showToast(`🔥 Rest Sweep Completed! +${share}% Essence deposited to all party members!`);
   };
 
+  const handleSpecificQuickAdd = (type: 'gold' | 'silver', sides: number) => {
+    const roll = Math.floor(Math.random() * sides) + 1;
+    if (type === 'gold') {
+      const current = parseInt(specificGold, 10) || 0;
+      const total = current + roll;
+      setSpecificGold(String(total));
+      showToast(`🎲 Rolled +${roll}g (1d${sides})! Total Gold: ${total}g`);
+    } else {
+      const current = parseInt(specificSilver, 10) || 0;
+      const total = current + roll;
+      setSpecificSilver(String(total));
+      showToast(`🎲 Rolled +${roll}s (1d${sides})! Total Silver: ${total}s`);
+    }
+  };
+
   const handleSendSpecificToVault = (itemPayload: {
     title: string;
     categoryKey: string;
@@ -1371,139 +1388,229 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                   ))}
                 </div>
 
-                {/* Zone 2: Recipient Target Selector */}
-                <div className="flex items-center gap-2 text-xs bg-slate-950 p-2 rounded-xl border border-slate-800 shrink-0">
-                  <span className="text-slate-400 font-bold shrink-0">🎯 Recipient:</span>
-                  <select
-                    value={specificTargetPlayer}
-                    onChange={(e) => setSpecificTargetPlayer(e.target.value)}
-                    className="flex-1 bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1 outline-none font-semibold"
-                  >
-                    <option value="Party">🌐 Party (Shared Stash)</option>
-                    {characterName && <option value={characterName}>👤 {characterName}</option>}
-                  </select>
-                </div>
-
-                {/* Zone 3: Form or Catalog Picker */}
+                {/* Zone 2: Form or Catalog Picker */}
                 {specificCategory === 'coins' ? (
-                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5 shrink-0">
-                    <span className="text-xs font-bold text-amber-400 block">Custom Currency Reward</span>
-                    <div className="flex gap-1 flex-wrap">
-                      {[
-                        { s: 50, g: 0, label: '+50s' },
-                        { s: 100, g: 0, label: '+100s' },
-                        { s: 0, g: 10, label: '+10g' },
-                        { s: 0, g: 50, label: '+50g' },
-                        { s: 0, g: 100, label: '+100g' },
-                      ].map((p) => (
+                  <div className="space-y-3 shrink-0">
+                    {/* Card 1: Currency & Dice Deck (Amber / Gold Theme) */}
+                    <div className="bg-slate-950/90 p-3.5 rounded-xl border border-amber-500/30 space-y-2.5 shadow-md">
+                      {/* Header */}
+                      <div className="flex items-center justify-between pb-1 border-b border-amber-500/20">
+                        <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>🪙</span> Coins
+                        </span>
+                      </div>
+
+                      {/* Inline Quick Add */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-amber-300 shrink-0 flex items-center gap-1">
+                          <span>⚡</span> Quick Add:
+                        </span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {[
+                            { type: 'gold' as const, sides: 100, label: '+d100g' },
+                            { type: 'gold' as const, sides: 50, label: '+d50g' },
+                            { type: 'gold' as const, sides: 10, label: '+d10g' },
+                            { type: 'silver' as const, sides: 100, label: '+d100s' },
+                            { type: 'silver' as const, sides: 50, label: '+d50s' },
+                          ].map((p) => (
+                            <button
+                              key={p.label}
+                              type="button"
+                              onClick={() => handleSpecificQuickAdd(p.type, p.sides)}
+                              className="px-2 py-0.5 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/40 text-amber-300 rounded text-[10px] font-mono font-bold cursor-pointer transition"
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Gold (Left) & Silver (Right) Numeric Integer Inputs */}
+                      <div className="flex gap-2">
+                        <div className="flex-1 flex items-center bg-slate-900 border border-amber-500/40 rounded-lg px-2 py-1.5">
+                          <span className="text-amber-400 text-xs mr-1.5 font-bold font-mono">g</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="Gold (g)"
+                            value={specificGold}
+                            onChange={(e) => setSpecificGold(e.target.value.replace(/[^0-9]/g, ''))}
+                            className="w-full bg-transparent text-xs text-slate-100 outline-none font-mono"
+                          />
+                        </div>
+                        <div className="flex-1 flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5">
+                          <span className="text-slate-400 text-xs mr-1.5 font-bold font-mono">s</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="Silver (s)"
+                            value={specificSilver}
+                            onChange={(e) => setSpecificSilver(e.target.value.replace(/[^0-9]/g, ''))}
+                            className="w-full bg-transparent text-xs text-slate-100 outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Card 1 Bottom Action Shelf: Send Coins to Vault */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-amber-500/20 flex-wrap">
                         <button
-                          key={p.label}
                           type="button"
                           onClick={() => {
-                            setSpecificSilver(p.s ? String(p.s) : '');
-                            setSpecificGold(p.g ? String(p.g) : '');
+                            const s = parseInt(specificSilver, 10) || 0;
+                            const g = parseInt(specificGold, 10) || 0;
+                            if (s === 0 && g === 0) {
+                              showToast('⚠️ Please enter or roll gold/silver amounts.');
+                              return;
+                            }
+                            handleSendSpecificToVault({
+                              title: `${g > 0 ? `${g} Gold ` : ''}${s > 0 ? `${s} Silver` : ''}`.trim() || '0 Coins',
+                              categoryKey: 'coins',
+                              coinsSilver: s,
+                              coinsGold: g,
+                              description: `Coin award (${g}g, ${s}s)`,
+                            });
+                            setSpecificSilver('');
+                            setSpecificGold('');
                           }}
-                          className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-300 rounded text-[10px] font-mono font-bold"
+                          className="flex-1 py-2 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer shrink-0"
                         >
-                          {p.label}
+                          <span>🎁 Send Coins to Party Vault</span>
                         </button>
-                      ))}
-                    </div>
-
-                    <div className="flex gap-2">
-                      <div className="flex-1 flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5">
-                        <span className="text-slate-400 text-xs mr-1">🪙</span>
-                        <input
-                          type="number"
-                          placeholder="Silver (s)"
-                          value={specificSilver}
-                          onChange={(e) => setSpecificSilver(e.target.value)}
-                          className="w-full bg-transparent text-xs text-slate-100 outline-none font-mono"
-                        />
-                      </div>
-                      <div className="flex-1 flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5">
-                        <span className="text-amber-400 text-xs mr-1">💰</span>
-                        <input
-                          type="number"
-                          placeholder="Gold (g)"
-                          value={specificGold}
-                          onChange={(e) => setSpecificGold(e.target.value)}
-                          className="w-full bg-transparent text-xs text-slate-100 outline-none font-mono"
-                        />
+                        <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-xl p-1 shrink-0">
+                          <span className="text-[11px] text-slate-400 font-bold px-1">for:</span>
+                          <button
+                            type="button"
+                            onClick={() => setSpecificCoinsTargetPlayer('Party')}
+                            className={`px-2 py-0.5 text-xs font-bold rounded-lg transition cursor-pointer border ${
+                              specificCoinsTargetPlayer === 'Party' || !specificCoinsTargetPlayer.trim()
+                                ? 'bg-amber-500 text-slate-950 font-extrabold border-amber-400 shadow-sm'
+                                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            🌐 Party
+                          </button>
+                          <input
+                            type="text"
+                            placeholder='or custom tag (e.g. "Blake")...'
+                            value={specificCoinsTargetPlayer === 'Party' ? '' : specificCoinsTargetPlayer}
+                            onChange={(e) => setSpecificCoinsTargetPlayer(e.target.value.trim() ? e.target.value : 'Party')}
+                            className="w-32 bg-slate-950 border border-slate-800 rounded-lg px-2 py-0.5 text-xs text-slate-100 placeholder:text-slate-500 outline-none"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="border-t border-slate-800 pt-2 space-y-1.5">
-                      <span className="text-[11px] text-slate-400 font-bold block">Or Custom Valuable Document / Art:</span>
+                    {/* Card 2: Custom Art / Curio Document / Special Treasure (Cyan / Sapphire Theme) */}
+                    <div className="bg-slate-950/90 p-3.5 rounded-xl border border-cyan-500/30 space-y-2.5 shadow-md">
+                      {/* Header */}
+                      <div className="flex items-center justify-between pb-1 border-b border-cyan-500/20">
+                        <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>💎</span> Art, Gems, Jewelry, Curio Documents, etc.
+                        </span>
+                      </div>
+
                       <div className="flex gap-2">
                         <input
                           type="text"
                           placeholder="Title (e.g. Flawless Sapphire)"
                           value={specificTitle}
                           onChange={(e) => setSpecificTitle(e.target.value)}
-                          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none"
+                          className="flex-1 bg-slate-900 border border-slate-700 focus:border-cyan-500/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none"
                         />
-                        <input
-                          type="text"
-                          placeholder="Val (e.g. 250g)"
-                          value={specificVal}
-                          onChange={(e) => setSpecificVal(e.target.value)}
-                          className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 font-mono outline-none"
-                        />
+                        <div className="w-24 flex items-center bg-slate-900 border border-cyan-500/40 rounded-lg px-2.5 py-1.5">
+                          <span className="text-cyan-400 text-xs mr-1 font-bold font-mono">g</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="Val (g)"
+                            value={specificVal}
+                            onChange={(e) => setSpecificVal(e.target.value.replace(/[^0-9]/g, ''))}
+                            className="w-full bg-transparent text-xs text-cyan-300 font-mono outline-none"
+                          />
+                        </div>
                       </div>
-                      <input
-                        type="text"
-                        placeholder="Description / rules..."
-                        value={specificDesc}
-                        onChange={(e) => setSpecificDesc(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 outline-none"
-                      />
-                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const s = parseInt(specificSilver, 10) || 0;
-                        const g = parseInt(specificGold, 10) || 0;
-                        if (s > 0 || g > 0) {
-                          handleSendSpecificToVault({
-                            title: `${g > 0 ? `${g} Gold ` : ''}${s > 0 ? `${s} Silver` : ''}`.trim(),
-                            categoryKey: 'coins',
-                            coinsSilver: s,
-                            coinsGold: g,
-                            description: specificDesc.trim() || `Coin award (${g}g, ${s}s)`,
-                          });
-                          setSpecificSilver('');
-                          setSpecificGold('');
-                          setSpecificDesc('');
-                          return;
-                        }
-                        if (specificTitle.trim()) {
-                          handleSendSpecificToVault({
-                            title: specificTitle.trim(),
-                            categoryKey: specificVal.trim() ? 'art_gems' : 'curios',
-                            valuableVal: specificVal.trim() || undefined,
-                            description: specificDesc.trim() || undefined,
-                          });
-                          setSpecificTitle('');
-                          setSpecificVal('');
-                          setSpecificDesc('');
-                        }
-                      }}
-                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
-                    >
-                      <span>🎁 Send Custom Loot to Party Vault</span>
-                    </button>
+                      {/* Card 2 Bottom Action Shelf: Send Custom Item to Vault */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-cyan-500/20 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!specificTitle.trim()) {
+                              showToast('⚠️ Please enter an item title.');
+                              return;
+                            }
+                            handleSendSpecificToVault({
+                              title: specificTitle.trim(),
+                              categoryKey: specificVal.trim() ? 'art_gems' : 'curios',
+                              valuableVal: specificVal.trim() ? `${specificVal.trim()}g` : undefined,
+                            });
+                            setSpecificTitle('');
+                            setSpecificVal('');
+                          }}
+                          className="flex-1 py-2 px-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer shrink-0"
+                        >
+                          <span>🎁 Send Custom Item to Party Vault</span>
+                        </button>
+                        <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-xl p-1 shrink-0">
+                          <span className="text-[11px] text-slate-400 font-bold px-1">for:</span>
+                          <button
+                            type="button"
+                            onClick={() => setSpecificCustomItemTargetPlayer('Party')}
+                            className={`px-2 py-0.5 text-xs font-bold rounded-lg transition cursor-pointer border ${
+                              specificCustomItemTargetPlayer === 'Party' || !specificCustomItemTargetPlayer.trim()
+                                ? 'bg-cyan-500 text-slate-950 font-extrabold border-cyan-400 shadow-sm'
+                                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            🌐 Party
+                          </button>
+                          <input
+                            type="text"
+                            placeholder='or custom tag (e.g. "Blake")...'
+                            value={specificCustomItemTargetPlayer === 'Party' ? '' : specificCustomItemTargetPlayer}
+                            onChange={(e) => setSpecificCustomItemTargetPlayer(e.target.value.trim() ? e.target.value : 'Party')}
+                            className="w-32 bg-slate-950 border border-slate-800 rounded-lg px-2 py-0.5 text-xs text-slate-100 placeholder:text-slate-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex-1 flex flex-col min-h-0 space-y-2">
-                    <input
-                      type="text"
-                      placeholder={`Search ${specificCategory}...`}
-                      value={specificSearchQuery}
-                      onChange={(e) => setSpecificSearchQuery(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 outline-none shrink-0"
-                    />
+                    <div className="flex items-center gap-2 bg-slate-950 border border-slate-700 rounded-xl p-1.5 shrink-0">
+                      <Search className="w-4 h-4 text-slate-400 ml-1.5 shrink-0" />
+                      <input
+                        type="text"
+                        placeholder={`Search ${specificCategory}...`}
+                        value={specificSearchQuery}
+                        onChange={(e) => setSpecificSearchQuery(e.target.value)}
+                        className="flex-1 bg-transparent text-xs text-slate-100 outline-none"
+                      />
+                      <div className="flex items-center gap-1 border-l border-slate-800 pl-2 shrink-0">
+                        <span className="text-[10px] text-slate-400 font-bold">for:</span>
+                        <button
+                          type="button"
+                          onClick={() => setSpecificTargetPlayer('Party')}
+                          className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition cursor-pointer border ${
+                            specificTargetPlayer === 'Party' || !specificTargetPlayer.trim()
+                              ? 'bg-indigo-600 text-white font-extrabold border-indigo-500'
+                              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                          }`}
+                        >
+                          🌐 Party
+                        </button>
+                        <input
+                          type="text"
+                          placeholder='tag...'
+                          value={specificTargetPlayer === 'Party' ? '' : specificTargetPlayer}
+                          onChange={(e) => setSpecificTargetPlayer(e.target.value.trim() ? e.target.value : 'Party')}
+                          className="w-20 bg-slate-900 border border-slate-800 rounded-md px-1.5 py-0.5 text-[10px] text-slate-100 placeholder:text-slate-500 outline-none"
+                        />
+                      </div>
+                    </div>
 
                     {isLoadingSpecificCatalog ? (
                       <div className="py-8 text-center text-slate-400 text-xs">Loading catalog...</div>

@@ -42,13 +42,14 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
   onClearLoot,
   onSendToPartyVault,
 }) => {
-  const activeCharacter = useCharacterStore((state) => state.activeCharacter);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
 
   // Form & Drawer states
   const [activeCategoryTab, setActiveCategoryTab] = useState<LootCategoryTab>('coins');
   const [searchQuery, setSearchQuery] = useState('');
   const [targetPlayer, setTargetPlayer] = useState('Party');
+  const [coinsTargetPlayer, setCoinsTargetPlayer] = useState('Party');
+  const [customItemTargetPlayer, setCustomItemTargetPlayer] = useState('Party');
   const [isRolling, setIsRolling] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -57,7 +58,6 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
   const [customGold, setCustomGold] = useState('');
   const [customTitle, setCustomTitle] = useState('');
   const [customVal, setCustomVal] = useState('');
-  const [customDesc, setCustomDesc] = useState('');
 
   // Catalog Cache state
   const [catalogItems, setCatalogItems] = useState<any[]>([]);
@@ -173,7 +173,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
         };
       } else {
         stagedItem = {
-          title: entry.result_name,
+          title: entry.result_name || 'Adventuring Gear',
           categoryKey: 'gear',
           description: entry.notes || 'Useful adventuring item',
           targetPlayer,
@@ -181,49 +181,70 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
       }
 
       await onAddLoot(stagedItem);
-      showToast(`🎲 Added "${stagedItem.title}" to staged loot!`);
+      showToast(`🎲 Rolled: ${stagedItem.title}`);
     } catch (e) {
-      console.error('[UniversalLootModal] Error rolling loot:', e);
+      console.error(e);
       showToast('⚠️ Error rolling random loot.');
     } finally {
       setIsRolling(false);
     }
   };
 
-  // Add Custom Coin / Valuable
-  const handleAddCustomLoot = async () => {
+  // Quick Add Die Roll Accumulator
+  const handleQuickAdd = (type: 'gold' | 'silver', sides: number) => {
+    const roll = Math.floor(Math.random() * sides) + 1;
+    if (type === 'gold') {
+      const current = parseInt(customGold, 10) || 0;
+      const total = current + roll;
+      setCustomGold(String(total));
+      showToast(`🎲 Rolled +${roll}g (1d${sides})! Total Gold: ${total}g`);
+    } else {
+      const current = parseInt(customSilver, 10) || 0;
+      const total = current + roll;
+      setCustomSilver(String(total));
+      showToast(`🎲 Rolled +${roll}s (1d${sides})! Total Silver: ${total}s`);
+    }
+  };
+
+  // Add Coins Loot
+  const handleAddCoinsLoot = async () => {
     const s = parseInt(customSilver, 10) || 0;
     const g = parseInt(customGold, 10) || 0;
 
-    if (s > 0 || g > 0) {
-      await onAddLoot({
-        title: `${g > 0 ? `${g} Gold ` : ''}${s > 0 ? `${s} Silver` : ''}`.trim(),
-        categoryKey: 'coins',
-        coinsSilver: s,
-        coinsGold: g,
-        description: customDesc.trim() || `Coin reward (${g}g, ${s}s)`,
-        targetPlayer,
-      });
-      setCustomSilver('');
-      setCustomGold('');
-      setCustomDesc('');
-      showToast(`🪙 Added Coins to staged loot!`);
+    if (s === 0 && g === 0) {
+      showToast('⚠️ Please enter or roll gold/silver amounts.');
       return;
     }
 
-    if (customTitle.trim()) {
-      await onAddLoot({
-        title: customTitle.trim(),
-        categoryKey: customVal.trim() ? 'art_gems' : 'curios',
-        valuableVal: customVal.trim() || undefined,
-        description: customDesc.trim() || undefined,
-        targetPlayer,
-      });
-      setCustomTitle('');
-      setCustomVal('');
-      setCustomDesc('');
-      showToast(`📜 Added "${customTitle.trim()}" to staged loot!`);
+    await onAddLoot({
+      title: `${g > 0 ? `${g} Gold ` : ''}${s > 0 ? `${s} Silver` : ''}`.trim() || '0 Coins',
+      categoryKey: 'coins',
+      coinsSilver: s,
+      coinsGold: g,
+      description: `Coin reward (${g}g, ${s}s)`,
+      targetPlayer: coinsTargetPlayer,
+    });
+    setCustomSilver('');
+    setCustomGold('');
+    showToast(`🪙 Added Coins to staged loot!`);
+  };
+
+  // Add Custom Item Loot (Art, Curio, Special Treasure)
+  const handleAddCustomItemLoot = async () => {
+    if (!customTitle.trim()) {
+      showToast('⚠️ Please enter an item title.');
+      return;
     }
+
+    await onAddLoot({
+      title: customTitle.trim(),
+      categoryKey: customVal.trim() ? 'art_gems' : 'curios',
+      valuableVal: customVal.trim() ? `${customVal.trim()}g` : undefined,
+      targetPlayer: customItemTargetPlayer,
+    });
+    setCustomTitle('');
+    setCustomVal('');
+    showToast(`📜 Added "${customTitle.trim()}" to staged loot!`);
   };
 
   // Add Selected Catalog Item
@@ -309,7 +330,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                {subtitle || 'Master Blueprint Two-Pane Loot Staging & Delivery Engine'}
+                {subtitle || 'Loot Staging & Delivery Engine'}
               </p>
             </div>
           </div>
@@ -329,7 +350,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
           <div className="md:col-span-5 flex flex-col h-full border-b md:border-b-0 md:border-r border-slate-800/80 md:pr-6 overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 shrink-0 mb-3">
               <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
-                <span>📦</span> Staged Loot Stream ({loot.length})
+                <span>📦</span> Loot Stash ({loot.length})
               </span>
               {loot.length > 0 && onClearLoot && (
                 <button
@@ -382,9 +403,13 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
                             {item.valuableVal}
                           </span>
                         )}
-                        {item.targetPlayer && item.targetPlayer !== 'Party' && (
+                        {item.targetPlayer && item.targetPlayer !== 'Party' ? (
                           <span className="text-[10px] font-bold text-cyan-300 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
-                            For: {item.targetPlayer}
+                            🎯 Target: {item.targetPlayer}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/60">
+                            🎯 Target: Party
                           </span>
                         )}
                       </div>
@@ -421,36 +446,30 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
             )}
           </div>
 
-          {/* RIGHT PANE (md:col-span-7): Loot Creation, d100 Roller & Catalog Deck */}
-          <div className="md:col-span-7 flex flex-col h-full space-y-4 overflow-y-auto pr-2">
-            
-            {/* Action 1: 1-Click Roll Random Loot (d100 Engine) */}
-            <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-2xl p-4 space-y-2 shrink-0">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🎲</span> Instant d100 Loot Engine
-                </span>
-                <span className="text-[10px] text-indigo-400 font-mono">Rolls against Master loot_main table</span>
-              </div>
+          {/* RIGHT PANE (md:col-span-7): 1-Click Roller, Category Swapper, and Custom Generators */}
+          <div className="md:col-span-7 flex flex-col h-full overflow-y-auto space-y-4 pr-1">
+            <div className="border-b border-slate-800 pb-2.5 shrink-0">
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                <span>➕</span> Add Specific Item to Loot Stash
+              </span>
+            </div>
+
+            {/* Quick 1-Click Roll Deck */}
+            <div className="bg-slate-950/90 border border-slate-800 p-3.5 rounded-2xl shrink-0 shadow-lg space-y-2.5">
               <button
                 type="button"
-                disabled={isRolling}
                 onClick={handleQuickRoll}
-                className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold py-3 px-5 rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 border border-indigo-400/30"
+                disabled={isRolling}
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 text-slate-950 font-black text-xs rounded-xl transition shadow-lg shadow-amber-950/50 flex items-center justify-center gap-2 cursor-pointer border border-amber-400"
               >
                 <Dice5 className={`w-4 h-4 ${isRolling ? 'animate-spin' : ''}`} />
-                <span>{isRolling ? 'Rolling on Master Tables...' : '🎲 1-Click Roll Random Loot into Stash'}</span>
+                <span>{isRolling ? 'Rolling Random Loot...' : '🎲 1-Click Roll Random Loot into Stash'}</span>
               </button>
             </div>
 
-            {/* Action 2: Add Specific Item Suite */}
-            <div className="space-y-3 flex-1 flex flex-col min-h-0">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>➕</span> Add Specific Item to Stash
-                </span>
-              </div>
-
+            {/* Catalog Browser / Custom Creation Section */}
+            <div className="flex-1 flex flex-col min-h-0 space-y-3">
+              
               {/* Zone 1: Category Multi-Option Pill Switch */}
               <div className="bg-slate-950/80 border border-slate-800/80 p-1.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap shrink-0">
                 {[
@@ -481,124 +500,203 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
                 ))}
               </div>
 
-              {/* Zone 2: Recipient Target Selector */}
-              <div className="flex items-center gap-2 text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-800 shrink-0">
-                <span className="text-slate-400 font-bold shrink-0">🎯 Recipient Target:</span>
-                <select
-                  value={targetPlayer}
-                  onChange={(e) => setTargetPlayer(e.target.value)}
-                  className="flex-1 bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1 outline-none font-semibold"
-                >
-                  <option value="Party">🌐 Party (Shared Stash)</option>
-                  {activeCharacter?.name && (
-                    <option value={activeCharacter.name}>👤 {activeCharacter.name}</option>
-                  )}
-                </select>
-              </div>
-
-              {/* Zone 3: Dynamic Category Content */}
+              {/* Zone 2: Dynamic Category Content */}
               {activeCategoryTab === 'coins' ? (
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 shrink-0">
-                  <span className="text-xs font-bold text-amber-400 block">Custom Currency Reward</span>
-                  
-                  {/* Preset 1-Click Buttons */}
-                  <div className="flex gap-1.5 flex-wrap">
-                    {[
-                      { s: 50, g: 0, label: '+50s' },
-                      { s: 100, g: 0, label: '+100s' },
-                      { s: 0, g: 10, label: '+10g' },
-                      { s: 0, g: 50, label: '+50g' },
-                      { s: 0, g: 100, label: '+100g' },
-                    ].map((p) => (
+                <div className="space-y-3 shrink-0">
+                  {/* Card 1: Currency & Dice Deck (Amber / Gold Theme) */}
+                  <div className="bg-slate-950/90 p-4 rounded-xl border border-amber-500/30 space-y-3 shadow-md">
+                    {/* Header */}
+                    <div className="flex items-center justify-between pb-1 border-b border-amber-500/20">
+                      <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>🪙</span> Coins
+                      </span>
+                    </div>
+
+                    {/* Inline Quick Add Row */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-amber-300 shrink-0 flex items-center gap-1">
+                        <span>⚡</span> Quick Add:
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {[
+                          { type: 'gold' as const, sides: 100, label: '+d100g' },
+                          { type: 'gold' as const, sides: 50, label: '+d50g' },
+                          { type: 'gold' as const, sides: 10, label: '+d10g' },
+                          { type: 'silver' as const, sides: 100, label: '+d100s' },
+                          { type: 'silver' as const, sides: 50, label: '+d50s' },
+                        ].map((p) => (
+                          <button
+                            key={p.label}
+                            type="button"
+                            onClick={() => handleQuickAdd(p.type, p.sides)}
+                            className="px-2.5 py-1 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/40 text-amber-300 rounded-lg text-xs font-mono font-bold transition cursor-pointer"
+                          >
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Gold (Left) & Silver (Right) Numeric Integer Inputs */}
+                    <div className="flex gap-3">
+                      <div className="flex-1 flex items-center bg-slate-900 border border-amber-500/40 rounded-xl px-3 py-2">
+                        <span className="text-amber-400 text-sm mr-2 font-bold font-mono">g</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="Gold (g)"
+                          value={customGold}
+                          onChange={(e) => setCustomGold(e.target.value.replace(/[^0-9]/g, ''))}
+                          className="w-full bg-transparent text-xs text-slate-100 outline-none font-mono"
+                        />
+                      </div>
+                      <div className="flex-1 flex items-center bg-slate-900 border border-slate-700 rounded-xl px-3 py-2">
+                        <span className="text-slate-400 text-sm mr-2 font-bold font-mono">s</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="Silver (s)"
+                          value={customSilver}
+                          onChange={(e) => setCustomSilver(e.target.value.replace(/[^0-9]/g, ''))}
+                          className="w-full bg-transparent text-xs text-slate-100 outline-none font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Card 1 Bottom Action Shelf: Add Coins to Stash */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-amber-500/20 flex-wrap">
                       <button
-                        key={p.label}
                         type="button"
-                        onClick={() => {
-                          setCustomSilver(p.s ? String(p.s) : '');
-                          setCustomGold(p.g ? String(p.g) : '');
-                        }}
-                        className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-300 rounded-lg text-xs font-mono font-bold transition cursor-pointer"
+                        onClick={handleAddCoinsLoot}
+                        className="flex-1 py-2 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer shrink-0"
                       >
-                        {p.label}
+                        <Plus className="w-4 h-4" />
+                        <span>Add Coins to Stash</span>
                       </button>
-                    ))}
-                  </div>
-
-                  {/* Silver & Gold Numeric Inputs */}
-                  <div className="flex gap-3">
-                    <div className="flex-1 flex items-center bg-slate-900 border border-slate-700 rounded-xl px-3 py-2">
-                      <span className="text-slate-400 text-sm mr-2">🪙</span>
-                      <input
-                        type="number"
-                        placeholder="Silver (s)"
-                        value={customSilver}
-                        onChange={(e) => setCustomSilver(e.target.value)}
-                        className="w-full bg-transparent text-xs text-slate-100 outline-none font-mono"
-                      />
-                    </div>
-                    <div className="flex-1 flex items-center bg-slate-900 border border-slate-700 rounded-xl px-3 py-2">
-                      <span className="text-amber-400 text-sm mr-2">💰</span>
-                      <input
-                        type="number"
-                        placeholder="Gold (g)"
-                        value={customGold}
-                        onChange={(e) => setCustomGold(e.target.value)}
-                        className="w-full bg-transparent text-xs text-slate-100 outline-none font-mono"
-                      />
+                      <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-xl p-1 shrink-0">
+                        <span className="text-[11px] text-slate-400 font-bold px-1">for:</span>
+                        <button
+                          type="button"
+                          onClick={() => setCoinsTargetPlayer('Party')}
+                          className={`px-2 py-1 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1 border ${
+                            coinsTargetPlayer === 'Party' || !coinsTargetPlayer.trim()
+                              ? 'bg-amber-500 text-slate-950 font-extrabold border-amber-400 shadow-sm'
+                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                          }`}
+                        >
+                          🌐 Party
+                        </button>
+                        <input
+                          type="text"
+                          placeholder='or custom tag (e.g. "Blake")...'
+                          value={coinsTargetPlayer === 'Party' ? '' : coinsTargetPlayer}
+                          onChange={(e) => setCoinsTargetPlayer(e.target.value.trim() ? e.target.value : 'Party')}
+                          className="w-36 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-100 placeholder:text-slate-500 outline-none font-medium"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Custom Art / Curio Document */}
-                  <div className="border-t border-slate-800 pt-3 space-y-2">
-                    <span className="text-xs text-slate-400 font-bold block">
-                      Or Custom Art, Curio Document, or Special Treasure:
-                    </span>
+                  {/* Card 2: Custom Art / Curio Document / Special Treasure (Cyan / Sapphire Theme) */}
+                  <div className="bg-slate-950/90 p-4 rounded-xl border border-cyan-500/30 space-y-3 shadow-md">
+                    {/* Header */}
+                    <div className="flex items-center justify-between pb-1 border-b border-cyan-500/20">
+                      <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>💎</span> Art, Gems, Jewelry, Curio Documents, etc.
+                      </span>
+                    </div>
+
                     <div className="flex gap-2">
                       <input
                         type="text"
                         placeholder="Item Title (e.g. Flawless Star Sapphire, Royal Letter)"
                         value={customTitle}
                         onChange={(e) => setCustomTitle(e.target.value)}
-                        className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none"
+                        className="flex-1 bg-slate-900 border border-slate-700 focus:border-cyan-500/50 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none"
                       />
-                      <input
-                        type="text"
-                        placeholder="Value (e.g. 250g)"
-                        value={customVal}
-                        onChange={(e) => setCustomVal(e.target.value)}
-                        className="w-28 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-amber-300 font-mono outline-none"
-                      />
+                      <div className="w-28 flex items-center bg-slate-900 border border-cyan-500/40 rounded-xl px-2.5 py-2">
+                        <span className="text-cyan-400 text-xs mr-1 font-bold font-mono">g</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="Val (g)"
+                          value={customVal}
+                          onChange={(e) => setCustomVal(e.target.value.replace(/[^0-9]/g, ''))}
+                          className="w-full bg-transparent text-xs text-cyan-300 font-mono outline-none"
+                        />
+                      </div>
                     </div>
-                    <input
-                      type="text"
-                      placeholder="Optional effect, lore, or tactical description..."
-                      value={customDesc}
-                      onChange={(e) => setCustomDesc(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 outline-none"
-                    />
-                  </div>
 
-                  <button
-                    type="button"
-                    onClick={handleAddCustomLoot}
-                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Custom Loot to Stash</span>
-                  </button>
+                    {/* Card 2 Bottom Action Shelf: Add Custom Item to Stash */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-cyan-500/20 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleAddCustomItemLoot}
+                        className="flex-1 py-2 px-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer shrink-0"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Add Custom Item to Stash</span>
+                      </button>
+                      <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-xl p-1 shrink-0">
+                        <span className="text-[11px] text-slate-400 font-bold px-1">for:</span>
+                        <button
+                          type="button"
+                          onClick={() => setCustomItemTargetPlayer('Party')}
+                          className={`px-2 py-1 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1 border ${
+                            customItemTargetPlayer === 'Party' || !customItemTargetPlayer.trim()
+                              ? 'bg-cyan-500 text-slate-950 font-extrabold border-cyan-400 shadow-sm'
+                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                          }`}
+                        >
+                          🌐 Party
+                        </button>
+                        <input
+                          type="text"
+                          placeholder='or custom tag (e.g. "Blake")...'
+                          value={customItemTargetPlayer === 'Party' ? '' : customItemTargetPlayer}
+                          onChange={(e) => setCustomItemTargetPlayer(e.target.value.trim() ? e.target.value : 'Party')}
+                          className="w-36 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-100 placeholder:text-slate-500 outline-none font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                /* Searchable Catalog Browser */
+                /* Searchable Catalog Browser with Inline Target Controls */
                 <div className="flex-1 flex flex-col min-h-0 space-y-2">
-                  <div className="flex items-center bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 shrink-0">
-                    <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-700 rounded-xl p-2 shrink-0">
+                    <Search className="w-4 h-4 text-slate-400 ml-1 shrink-0" />
                     <input
                       type="text"
                       placeholder={`Search ${activeCategoryTab}...`}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-transparent text-xs text-slate-100 outline-none"
+                      className="flex-1 bg-transparent text-xs text-slate-100 outline-none"
                     />
+                    <div className="flex items-center gap-1.5 border-l border-slate-800 pl-2 shrink-0">
+                      <span className="text-[11px] text-slate-400 font-bold">for:</span>
+                      <button
+                        type="button"
+                        onClick={() => setTargetPlayer('Party')}
+                        className={`px-2 py-0.5 text-xs font-bold rounded-lg transition cursor-pointer border ${
+                          targetPlayer === 'Party' || !targetPlayer.trim()
+                            ? 'bg-amber-500 text-slate-950 font-extrabold border-amber-400'
+                            : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                        }`}
+                      >
+                        🌐 Party
+                      </button>
+                      <input
+                        type="text"
+                        placeholder='custom tag...'
+                        value={targetPlayer === 'Party' ? '' : targetPlayer}
+                        onChange={(e) => setTargetPlayer(e.target.value.trim() ? e.target.value : 'Party')}
+                        className="w-28 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-xs text-slate-100 placeholder:text-slate-500 outline-none"
+                      />
+                    </div>
                   </div>
 
                   {isLoadingCatalog ? (
