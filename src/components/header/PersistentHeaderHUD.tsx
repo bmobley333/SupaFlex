@@ -138,31 +138,32 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
               toggleDrawer('attributes');
             }
           }}
-          className={`flex items-center gap-3 bg-slate-950 px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-lg ${
+          className={`flex items-center gap-3 bg-slate-950/95 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-lg ${
             activeDrawer === 'attributes'
               ? 'border-indigo-400 shadow-indigo-500/30 bg-slate-900'
-              : 'border-indigo-500/40 hover:border-indigo-400/60 shadow-indigo-950/40'
+              : 'border-slate-800 hover:border-indigo-500/50 shadow-indigo-950/40'
           }`}
-          title="Click to open Attribute Manager"
         >
           {ATTRIBUTES.map((attr, idx) => {
             const dieVal = dieToNum(dice[attr.key]);
             return (
               <React.Fragment key={attr.key}>
-                {idx > 0 && <span className="text-slate-800 font-bold text-sm">|</span>}
-                <div className="flex items-center gap-1.5 font-outfit">
-                  <span className="font-mono font-black text-xs text-indigo-300 tracking-wider">
-                    {attr.abbr}
+                {idx > 0 && <span className="text-slate-800 font-bold text-sm select-none">|</span>}
+                <div
+                  className="flex items-center gap-1.5 py-0.5 rounded-lg group cursor-pointer"
+                  title={attr.name}
+                >
+                  <span className="text-2xl leading-none drop-shadow-md select-none group-hover:scale-110 transition-transform">
+                    {attr.emoji}
                   </span>
-                  <span className="text-base">{attr.emoji}</span>
-                  <span className="font-mono font-extrabold text-slate-100 text-sm">
+                  <span className="font-mono font-black text-xl text-cyan-300 tabular-nums select-none tracking-tight">
                     {dieVal}
                   </span>
                 </div>
               </React.Fragment>
             );
           })}
-          <ChevronDown className="w-3.5 h-3.5 text-indigo-400 shrink-0 ml-1" />
+          <ChevronDown className="w-3.5 h-3.5 text-indigo-400 shrink-0 ml-0.5" />
         </div>
 
         {/* 🔮 Attributes Die Rating Configuration Popover */}
