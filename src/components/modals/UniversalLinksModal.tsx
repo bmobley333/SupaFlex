@@ -1,5 +1,5 @@
 // src/components/modals/UniversalLinksModal.tsx
-// Two-Pane Master Links Hub for Managing, Organizing, and Real-Time Party Sharing across all Scopes
+// Master-Detail Links & Notes Hub: Left-Pane Item List & Dispatcher, Right-Pane Spacious Tabbed Editor
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
@@ -28,15 +28,25 @@ import {
   Map,
   Swords,
   Scroll,
-  Info,
+  FileText,
+  Copy,
+  RotateCcw,
 } from 'lucide-react';
-import { EncounterLink, ReceivedLinkItem } from '../../types/adventures';
+import {
+  EncounterLink,
+  ReceivedLinkItem,
+  LINK_CATEGORIES,
+  LinkCategory,
+  LINK_CATEGORY_METADATA,
+  normalizeLinkCategory,
+} from '../../types/adventures';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useAdventureStore } from '../../store/useAdventureStore';
 import { useReceivedLinksStore } from '../../store/useReceivedLinksStore';
 import { gameApi } from '../../services/api';
 
 export type LinkScope = 'gm' | 'adventure' | 'encounter' | 'player' | 'character' | 'received';
+export type EditorTab = 'link' | 'note';
 
 export interface UniversalLinksModalProps {
   isOpen: boolean;
@@ -44,8 +54,6 @@ export interface UniversalLinksModalProps {
   initialScope?: LinkScope;
   themeColor?: 'teal' | 'indigo' | 'amber' | 'cyan' | 'rose' | 'emerald';
 }
-
-const CATEGORY_TAGS = ['General', 'Handout', 'Map', 'Lore', 'Art', 'Rules', 'Tool', 'Music'];
 
 const formatUrl = (url: string): string => {
   const trimmed = url.trim();
@@ -116,6 +124,9 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   const defaultScope: LinkScope = activeRole === 'gm' ? 'gm' : 'player';
   const [currentScope, setCurrentScope] = useState<LinkScope>(initialScope || defaultScope);
 
+  // Editor Tab State (for Right Pane)
+  const [activeEditorTab, setActiveEditorTab] = useState<EditorTab>('link');
+
   // Sync initial scope on modal open or role change
   useEffect(() => {
     if (isOpen) {
@@ -127,17 +138,27 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     }
   }, [isOpen, initialScope, activeRole]);
 
-  // Form states for creating / editing
+  // Form states for creating / editing links
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isEditingNote, setIsEditingNote] = useState(false);
   const [formName, setFormName] = useState('');
   const [formUrl, setFormUrl] = useState('');
-  const [formTag, setFormTag] = useState('General');
+  const [formTag, setFormTag] = useState<LinkCategory>('External / Web');
   const [formDesc, setFormDesc] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Form states for creating / editing notes
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteContent, setNoteContent] = useState('');
+  const [noteTag, setNoteTag] = useState<LinkCategory>('Lore / Narrative');
+  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+
+  // Selected received item for inspection in Received Scope
+  const [selectedReceivedId, setSelectedReceivedId] = useState<string | null>(null);
+
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTagFilter, setSelectedTagFilter] = useState('ALL');
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string>('ALL');
 
   // Dispatch / Share states
   const [selectedLinkIds, setSelectedLinkIds] = useState<string[]>([]);
@@ -150,6 +171,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const noteTitleInputRef = useRef<HTMLInputElement>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -187,7 +209,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     switch (currentScope) {
       case 'gm':
         return {
-          title: 'GM Global Links',
+          title: 'GM Global Links & Notes',
           subtitle: 'Universal Campaign & Reference Links',
           links: gmLinks,
           icon: <Crown className="w-5 h-5 text-amber-400" />,
@@ -211,7 +233,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         };
       case 'adventure':
         return {
-          title: 'Adventure Links',
+          title: 'Adventure Links & Notes',
           subtitle: activeAdv ? activeAdv.title : 'No Active Adventure Selected',
           links: activeAdv?.links || [],
           icon: <Map className="w-5 h-5 text-indigo-400" />,
@@ -219,7 +241,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
           accentText: 'text-indigo-300',
           badgeStyle: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40',
           isDisabled: !activeAdv,
-          disabledReason: 'Select or create an adventure in GM Screen to manage Adventure Links.',
+          disabledReason: 'Select or create an adventure in GM Screen to manage Adventure Links & Notes.',
           onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
             if (!activeAdv) return;
             await addAdventureLink(activeAdv.id, name, url, tag, desc);
@@ -239,7 +261,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         };
       case 'encounter':
         return {
-          title: 'Encounter Links',
+          title: 'Encounter Links & Notes',
           subtitle: activeEnc ? `${activeAdv?.title || 'Adv'} > ${activeEnc.title}` : 'No Active Encounter Selected',
           links: activeEnc?.links || [],
           icon: <Swords className="w-5 h-5 text-amber-400" />,
@@ -247,7 +269,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
           accentText: 'text-amber-300',
           badgeStyle: 'bg-amber-950/80 text-amber-300 border-amber-500/40',
           isDisabled: !activeEnc || !activeAdv || !activeAct,
-          disabledReason: 'Select an encounter in GM Screen to manage Encounter-specific links.',
+          disabledReason: 'Select an encounter in GM Screen to manage Encounter-specific links & notes.',
           onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
             if (!activeAdv || !activeAct || !activeEnc) return;
             await addEncounterLink(activeAdv.id, activeAct.id, activeEnc.id, name, url, tag, desc);
@@ -267,8 +289,8 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         };
       case 'player':
         return {
-          title: 'Player Global Links',
-          subtitle: playerEmail ? `Account: ${playerEmail}` : 'Account-Wide Player Links',
+          title: 'Player Global Links & Notes',
+          subtitle: playerEmail ? `Account: ${playerEmail}` : 'Account-Wide Player Links & Notes',
           links: playerLinks,
           icon: <User className="w-5 h-5 text-cyan-400" />,
           activeColor: 'bg-cyan-600',
@@ -291,7 +313,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         };
       case 'character':
         return {
-          title: 'Character Links & Bio',
+          title: 'Character Links & Notes',
           subtitle: activeCharacter ? activeCharacter.name : 'No Active Hero Selected',
           links: activeCharacter?.sheet_data?.character_links || [],
           icon: <Scroll className="w-5 h-5 text-indigo-400" />,
@@ -299,7 +321,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
           accentText: 'text-indigo-300',
           badgeStyle: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40',
           isDisabled: !activeCharacter,
-          disabledReason: 'Select or load a hero character to manage character-specific links.',
+          disabledReason: 'Select or load a hero character to manage character-specific links & notes.',
           onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
             addCharacterLink(name, url, tag, desc);
           },
@@ -316,8 +338,8 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
       case 'received':
       default:
         return {
-          title: 'Received Links & Handouts',
-          subtitle: 'Real-Time In-Session Shared Links Inbox',
+          title: 'Received Links, Notes & Handouts',
+          subtitle: 'Real-Time In-Session Shared Links & Notes Inbox',
           links: receivedLinks,
           icon: <Inbox className="w-5 h-5 text-emerald-400" />,
           activeColor: 'bg-emerald-600',
@@ -364,22 +386,40 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   ]);
 
   const handleStartEdit = (link: EncounterLink) => {
+    const isNote = !link.url || !link.url.trim() || link.isNote;
     setEditingId(link.id);
-    setFormName(link.name);
-    setFormUrl(link.url);
-    setFormTag(link.categoryTag || 'General');
-    setFormDesc(link.description || '');
-    if (nameInputRef.current) {
-      nameInputRef.current.focus();
+    setIsEditingNote(!!isNote);
+
+    if (isNote) {
+      setActiveEditorTab('note');
+      setNoteTitle(link.name);
+      setNoteContent(link.description || '');
+      setNoteTag(normalizeLinkCategory(link.categoryTag));
+      if (noteTitleInputRef.current) {
+        noteTitleInputRef.current.focus();
+      }
+    } else {
+      setActiveEditorTab('link');
+      setFormName(link.name);
+      setFormUrl(link.url || '');
+      setFormTag(normalizeLinkCategory(link.categoryTag));
+      setFormDesc(link.description || '');
+      if (nameInputRef.current) {
+        nameInputRef.current.focus();
+      }
     }
   };
 
-  const handleCancelForm = () => {
+  const handleResetEditor = () => {
     setEditingId(null);
+    setIsEditingNote(false);
     setFormName('');
     setFormUrl('');
-    setFormTag('General');
+    setFormTag('External / Web');
     setFormDesc('');
+    setNoteTitle('');
+    setNoteContent('');
+    setNoteTag('Lore / Narrative');
   };
 
   const handleSaveForm = async (e?: React.FormEvent) => {
@@ -390,14 +430,14 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     const formattedUrl = formatUrl(formUrl);
 
     try {
-      if (editingId) {
+      if (editingId && !isEditingNote) {
         await scopeData.onUpdate(editingId, formName.trim(), formattedUrl, formTag, formDesc.trim());
         showToast(`Updated "${formName.trim()}"`);
       } else {
         await scopeData.onAdd(formName.trim(), formattedUrl, formTag, formDesc.trim());
-        showToast(`Added "${formName.trim()}"`);
+        showToast(`Added link "${formName.trim()}"`);
       }
-      handleCancelForm();
+      handleResetEditor();
     } catch (err) {
       console.error('[UniversalLinksModal] Error saving link:', err);
       showToast('Failed to save link.');
@@ -406,19 +446,45 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     }
   };
 
+  const handleSaveNote = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!noteTitle.trim() || !noteContent.trim() || isSubmittingNote || scopeData.isDisabled) return;
+
+    setIsSubmittingNote(true);
+
+    try {
+      if (editingId && isEditingNote) {
+        await scopeData.onUpdate(editingId, noteTitle.trim(), '', noteTag, noteContent.trim());
+        showToast(`Updated note "${noteTitle.trim()}"`);
+      } else {
+        await scopeData.onAdd(noteTitle.trim(), '', noteTag, noteContent.trim());
+        showToast(`Added note "${noteTitle.trim()}"`);
+      }
+      handleResetEditor();
+    } catch (err) {
+      console.error('[UniversalLinksModal] Error saving note:', err);
+      showToast('Failed to save note.');
+    } finally {
+      setIsSubmittingNote(false);
+    }
+  };
+
   const handleDelete = async (link: EncounterLink) => {
-    if (confirm(`Delete link "${link.name}"?`)) {
+    if (confirm(`Delete item "${link.name}"?`)) {
       try {
         await scopeData.onDelete(link.id);
         setSelectedLinkIds((prev) => prev.filter((id) => id !== link.id));
+        if (editingId === link.id) {
+          handleResetEditor();
+        }
         showToast(`Deleted "${link.name}"`);
       } catch (err) {
-        console.error('[UniversalLinksModal] Error deleting link:', err);
+        console.error('[UniversalLinksModal] Error deleting item:', err);
       }
     }
   };
 
-  const handleOpenLink = (url: string, receivedId?: string) => {
+  const handleOpenLink = (url?: string, receivedId?: string) => {
     if (!url) return;
     if (receivedId) {
       markAsRead(receivedId);
@@ -426,18 +492,25 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     window.open(formatUrl(url), '_blank', 'noopener,noreferrer');
   };
 
+  const handleCopyNoteText = (text: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    showToast('📋 Copied note to clipboard!');
+  };
+
   const handleSaveReceivedToActiveScope = async (item: ReceivedLinkItem) => {
     try {
+      const catTag = normalizeLinkCategory(item.categoryTag);
       if (activeRole === 'gm') {
-        await addGmLink(item.name, item.url, item.categoryTag || 'Handout', item.description);
-        showToast(`Saved "${item.name}" to GM Links!`);
+        await addGmLink(item.name, item.url || '', catTag, item.description);
+        showToast(`Saved "${item.name}" to GM Scope!`);
       } else {
-        addPlayerLink(item.name, item.url, item.categoryTag || 'Handout', item.description);
-        showToast(`Saved "${item.name}" to Player Links!`);
+        addPlayerLink(item.name, item.url || '', catTag, item.description);
+        showToast(`Saved "${item.name}" to Player Scope!`);
       }
     } catch (err) {
-      console.error('[UniversalLinksModal] Error saving received link:', err);
-      showToast('Failed to save link.');
+      console.error('[UniversalLinksModal] Error saving received item:', err);
+      showToast('Failed to save item.');
     }
   };
 
@@ -465,7 +538,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   // Dispatch selected links to party
   const handleDispatchSelected = async () => {
     if (selectedLinkIds.length === 0) {
-      showToast('Please select at least 1 link to share.');
+      showToast('Please select at least 1 item to share.');
       return;
     }
     if (!activePartyId) {
@@ -494,11 +567,11 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
 
     setIsDispatching(false);
     if (result.success) {
-      showToast(`🚀 Dispatched ${result.count} link(s) to ${sendToAllParty ? 'Entire Party' : `${selectedRecipientCharacterIds.length} member(s)`}!`);
+      showToast(`🚀 Dispatched ${result.count} item(s) to ${sendToAllParty ? 'Entire Party' : `${selectedRecipientCharacterIds.length} member(s)`}!`);
       setSelectedLinkIds([]);
       setShowMemberPicker(false);
     } else {
-      showToast('Failed to dispatch links.');
+      showToast('Failed to dispatch items.');
     }
   };
 
@@ -508,7 +581,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
       const matchSearch =
         !searchQuery ||
         link.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        link.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (link.url && link.url.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (link.categoryTag && link.categoryTag.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (link.description && link.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
         ((link as ReceivedLinkItem).senderName &&
@@ -517,11 +590,21 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
       const matchTag =
         currentScope === 'received' ||
         selectedTagFilter === 'ALL' ||
-        (link.categoryTag || 'General').toLowerCase() === selectedTagFilter.toLowerCase();
+        normalizeLinkCategory(link.categoryTag) === selectedTagFilter;
 
       return matchSearch && matchTag;
     });
   }, [scopeData.links, searchQuery, selectedTagFilter, currentScope]);
+
+  // Selected received item for inspection
+  const activeReceivedItem = useMemo(() => {
+    if (currentScope !== 'received') return null;
+    if (selectedReceivedId) {
+      const found = (receivedLinks as ReceivedLinkItem[]).find((r) => r.id === selectedReceivedId);
+      if (found) return found;
+    }
+    return (receivedLinks[0] as ReceivedLinkItem) || null;
+  }, [currentScope, selectedReceivedId, receivedLinks]);
 
   if (!isOpen) return null;
 
@@ -549,7 +632,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                   {scopeData.title}
                 </h2>
                 <span className={`text-[11px] font-mono font-extrabold px-2 py-0.5 rounded-md border ${scopeData.badgeStyle}`}>
-                  {scopeData.links.length} Links
+                  {scopeData.links.length} Items
                 </span>
               </div>
             </div>
@@ -564,7 +647,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                     type="button"
                     onClick={() => {
                       setCurrentScope('gm');
-                      handleCancelForm();
+                      handleResetEditor();
                     }}
                     className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                       currentScope === 'gm'
@@ -580,7 +663,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                     type="button"
                     onClick={() => {
                       setCurrentScope('adventure');
-                      handleCancelForm();
+                      handleResetEditor();
                     }}
                     className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                       currentScope === 'adventure'
@@ -596,7 +679,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                     type="button"
                     onClick={() => {
                       setCurrentScope('encounter');
-                      handleCancelForm();
+                      handleResetEditor();
                     }}
                     className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                       currentScope === 'encounter'
@@ -614,7 +697,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                     type="button"
                     onClick={() => {
                       setCurrentScope('player');
-                      handleCancelForm();
+                      handleResetEditor();
                     }}
                     className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                       currentScope === 'player'
@@ -630,7 +713,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                     type="button"
                     onClick={() => {
                       setCurrentScope('character');
-                      handleCancelForm();
+                      handleResetEditor();
                     }}
                     className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                       currentScope === 'character'
@@ -649,7 +732,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                 type="button"
                 onClick={() => {
                   setCurrentScope('received');
-                  handleCancelForm();
+                  handleResetEditor();
                 }}
                 className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer relative ${
                   currentScope === 'received'
@@ -684,216 +767,76 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Two-Pane Body */}
+        {/* Modal Two-Pane Master-Detail Body */}
         <div className="flex-1 flex overflow-hidden">
           {/* ======================================================================== */}
-          {/* LEFT PANE: Form & Scope Details (w-[360px])                             */}
+          {/* LEFT PANE: Master List & Bottom Dispatcher Shelf (w-[400px])             */}
           {/* ======================================================================== */}
-          <div className="w-[360px] border-r border-slate-800 bg-slate-950/40 p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
-            {currentScope !== 'received' ? (
-              <>
-                {/* Add / Edit Link Form */}
-                <form onSubmit={handleSaveForm} className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl flex flex-col gap-3 shadow-md">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                      {editingId ? <Edit2 className="w-3.5 h-3.5 text-amber-400" /> : <Plus className="w-3.5 h-3.5 text-emerald-400" />}
-                      {editingId ? 'Edit Link' : `Add Link to ${scopeData.title.split(' ')[0]}`}
-                    </span>
-                    {editingId && (
-                      <button
-                        type="button"
-                        onClick={handleCancelForm}
-                        className="text-[10px] text-slate-400 hover:text-slate-200 underline cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </div>
+          <div className="w-[400px] border-r border-slate-800 bg-slate-950/40 p-3.5 flex flex-col gap-2.5 overflow-hidden shrink-0">
+            {/* Search & Select All Controls */}
+            <div className="flex items-center justify-between gap-2 shrink-0">
+              <div className="relative flex-1">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder={currentScope === 'received' ? 'Search received items...' : 'Search links & notes...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-7 pr-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
 
-                  {scopeData.isDisabled ? (
-                    <div className="p-3 bg-amber-950/40 border border-amber-500/40 rounded-lg text-xs text-amber-300 flex items-start gap-2">
-                      <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                      <span>{scopeData.disabledReason}</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-bold text-slate-400">Link Name / Title</label>
-                        <input
-                          ref={nameInputRef}
-                          type="text"
-                          required
-                          placeholder="e.g. Dungeon Map, Character Lore"
-                          value={formName}
-                          onChange={(e) => setFormName(e.target.value)}
-                          className="px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-bold text-slate-400">Target URL</label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="https://..."
-                          value={formUrl}
-                          onChange={(e) => setFormUrl(e.target.value)}
-                          className="px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 flex flex-col gap-1">
-                          <label className="text-[11px] font-bold text-slate-400">Category Tag</label>
-                          <select
-                            value={formTag}
-                            onChange={(e) => setFormTag(e.target.value)}
-                            className="px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer"
-                          >
-                            {CATEGORY_TAGS.map((t) => (
-                              <option key={t} value={t}>
-                                {t}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-bold text-slate-400">Optional Notes / Context</label>
-                        <input
-                          type="text"
-                          placeholder="Brief note or description..."
-                          value={formDesc}
-                          onChange={(e) => setFormDesc(e.target.value)}
-                          className="px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer ${
-                          editingId
-                            ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                            : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                        } disabled:opacity-50`}
-                      >
-                        {editingId ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                        <span>{editingId ? 'Save Link Changes' : '+ Add Link to Scope'}</span>
-                      </button>
-                    </>
-                  )}
-                </form>
-
-                {/* Scope Guidance Info Card */}
-                <div className="bg-slate-900/60 border border-slate-800/80 p-3 rounded-xl flex flex-col gap-1.5 text-xs text-slate-400">
-                  <div className="flex items-center gap-1.5 text-slate-300 font-bold text-[11px] uppercase tracking-wider">
-                    <Info className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Quick Tip</span>
-                  </div>
-                  <p className="text-[11px] leading-relaxed">
-                    Check one or more links in the list to your right, then use the <strong>Party Dispatcher</strong> below the list to send them to the party in real time!
-                  </p>
-                </div>
-              </>
-            ) : (
-              /* Received Tab Left Info */
-              <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-xl flex flex-col gap-3 shadow-md">
-                <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-                  <Inbox className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-300">
-                    Received Inbox
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Links, online resources, and documents shared with you by the GM or other party members appear in this inbox in real-time.
-                </p>
-
-                <div className="bg-slate-950/80 border border-slate-800 rounded-lg p-3 flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400">Total Received:</span>
-                    <span className="font-mono font-bold text-white">{receivedLinks.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400">Unread Items:</span>
-                    <span className="font-mono font-bold text-rose-400">{unreadCount}</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 pt-2">
+              {currentScope === 'received' ? (
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     disabled={unreadCount === 0}
                     onClick={markAllAsRead}
-                    className="py-1.5 px-3 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+                    className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                    title="Mark all as read"
                   >
-                    <Check className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Mark All as Read</span>
+                    <Check className="w-3 h-3" />
+                    <span>Mark Read</span>
                   </button>
-
                   <button
                     type="button"
                     disabled={receivedLinks.length === 0}
                     onClick={() => {
-                      if (confirm('Clear all received links from your local inbox?')) {
+                      if (confirm('Clear all received items from inbox?')) {
                         clearReceivedLinks();
-                        showToast('Received links cleared.');
+                        showToast('Cleared inbox.');
                       }
                     }}
-                    className="py-1.5 px-3 rounded-lg text-xs font-bold bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-500/40 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+                    className="p-1.5 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-500/40 rounded-lg transition cursor-pointer disabled:opacity-40"
+                    title="Clear Inbox"
                   >
-                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                    <span>Clear Inbox</span>
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* ======================================================================== */}
-          {/* RIGHT PANE: Links Grid & High-Density Dispatcher Shelf                   */}
-          {/* ======================================================================== */}
-          <div className="flex-1 flex flex-col p-4 overflow-hidden gap-3">
-            {/* Filter / Search Controls */}
-            <div className="flex items-center justify-between gap-3 shrink-0">
-              <div className="relative flex-1">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder={currentScope === 'received' ? 'Search received links...' : `Search ${scopeData.title.toLowerCase()}...`}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-950/90 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              {currentScope !== 'received' && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSelectAllLinks}
-                    className="px-2.5 py-1.5 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0"
-                    title="Select / Unselect All for Sharing"
-                  >
-                    {selectedLinkIds.length === filteredLinks.length && filteredLinks.length > 0 ? (
-                      <CheckSquare className="w-3.5 h-3.5 text-cyan-400" />
-                    ) : (
-                      <Square className="w-3.5 h-3.5 text-slate-500" />
-                    )}
-                    <span>{selectedLinkIds.length === filteredLinks.length && filteredLinks.length > 0 ? 'Deselect All' : 'Select All'}</span>
-                  </button>
-                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSelectAllLinks}
+                  className="px-2 py-1.5 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shrink-0"
+                  title="Select / Unselect All for Sharing"
+                >
+                  {selectedLinkIds.length === filteredLinks.length && filteredLinks.length > 0 ? (
+                    <CheckSquare className="w-3.5 h-3.5 text-cyan-400" />
+                  ) : (
+                    <Square className="w-3.5 h-3.5 text-slate-500" />
+                  )}
+                  <span>{selectedLinkIds.length === filteredLinks.length && filteredLinks.length > 0 ? 'Deselect' : 'Select All'}</span>
+                </button>
               )}
             </div>
 
-            {/* Tag Filter Pills (for My Links) */}
+            {/* Tag Filter Pills */}
             {currentScope !== 'received' && (
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0">
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 shrink-0">
                 <button
                   type="button"
                   onClick={() => setSelectedTagFilter('ALL')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition cursor-pointer shrink-0 ${
                     selectedTagFilter === 'ALL'
                       ? 'bg-slate-800 text-cyan-300 border border-cyan-500/40 shadow-sm'
                       : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800/80'
@@ -901,245 +844,223 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                 >
                   ALL ({scopeData.links.length})
                 </button>
-                {CATEGORY_TAGS.map((tag) => {
-                  const count = scopeData.links.filter((l) => (l.categoryTag || 'General').toLowerCase() === tag.toLowerCase()).length;
-                  if (count === 0 && selectedTagFilter !== tag) return null;
+                {LINK_CATEGORIES.map((cat) => {
+                  const count = scopeData.links.filter((l) => normalizeLinkCategory(l.categoryTag) === cat).length;
+                  if (count === 0 && selectedTagFilter !== cat) return null;
+                  const meta = LINK_CATEGORY_METADATA[cat];
                   return (
                     <button
-                      key={tag}
+                      key={cat}
                       type="button"
-                      onClick={() => setSelectedTagFilter(tag)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1 ${
-                        selectedTagFilter === tag
+                      onClick={() => setSelectedTagFilter(cat)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0 ${
+                        selectedTagFilter === cat
                           ? 'bg-slate-800 text-cyan-300 border border-cyan-500/40 shadow-sm'
                           : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800/80'
                       }`}
+                      title={meta.description}
                     >
-                      <span>{tag}</span>
-                      <span className="text-[10px] font-mono opacity-70">({count})</span>
+                      <span>{meta.icon}</span>
+                      <span>{cat.split(' ')[0]}</span>
+                      <span className="font-mono opacity-70">({count})</span>
                     </button>
                   );
                 })}
               </div>
             )}
 
-            {/* Links Cards List */}
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
+            {/* Scrollable Master List */}
+            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 min-h-0">
               {currentScope !== 'received' ? (
                 filteredLinks.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-950/30 rounded-2xl border border-slate-800/60 text-center">
-                    <Link2 className="w-10 h-10 text-slate-600 mb-2" />
-                    <p className="text-xs font-bold text-slate-400">No links in {scopeData.title}</p>
+                  <div className="h-full flex flex-col items-center justify-center p-6 bg-slate-950/30 rounded-xl border border-slate-800/60 text-center">
+                    <Link2 className="w-8 h-8 text-slate-600 mb-2" />
+                    <p className="text-xs font-bold text-slate-400">No items in {scopeData.title.split('&')[0]}</p>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      {scopeData.isDisabled
-                        ? scopeData.disabledReason
-                        : 'Use the form on the left to add external documents, maps, tools, or art.'}
+                      {scopeData.isDisabled ? scopeData.disabledReason : 'Use the editor on the right to create links or notes.'}
                     </p>
                   </div>
                 ) : (
                   filteredLinks.map((link, idx) => {
                     const isSelected = selectedLinkIds.includes(link.id);
-                    const domain = getDomainLabel(link.url);
                     const isEditing = editingId === link.id;
+                    const isNote = !link.url || !link.url.trim() || link.isNote;
+                    const domain = link.url ? getDomainLabel(link.url) : null;
+                    const normalizedTag = normalizeLinkCategory(link.categoryTag);
+                    const meta = LINK_CATEGORY_METADATA[normalizedTag] || LINK_CATEGORY_METADATA['External / Web'];
 
                     return (
                       <div
                         key={link.id}
-                        className={`p-3 rounded-xl border transition flex items-center justify-between gap-3 shadow-sm ${
+                        onClick={() => handleStartEdit(link)}
+                        className={`p-2.5 rounded-xl border transition flex flex-col gap-1.5 shadow-sm cursor-pointer ${
                           isEditing
-                            ? 'bg-amber-950/30 border-amber-500/50'
+                            ? 'bg-amber-950/40 border-amber-500/60 ring-1 ring-amber-500/40'
                             : isSelected
                             ? 'bg-cyan-950/30 border-cyan-500/50'
                             : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
                         }`}
                       >
-                        {/* Left: Checkbox + Link Metadata */}
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleSelectLink(link.id)}
-                            className="p-1 text-slate-400 hover:text-cyan-300 transition cursor-pointer shrink-0"
-                            title={isSelected ? 'Deselect link' : 'Select link for sharing'}
-                          >
-                            {isSelected ? (
-                              <CheckSquare className="w-4 h-4 text-cyan-400" />
-                            ) : (
-                              <Square className="w-4 h-4 text-slate-600 hover:text-slate-400" />
-                            )}
-                          </button>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleSelectLink(link.id);
+                              }}
+                              className="p-0.5 text-slate-400 hover:text-cyan-300 transition cursor-pointer shrink-0"
+                              title={isSelected ? 'Deselect item' : 'Select item for sharing'}
+                            >
+                              {isSelected ? (
+                                <CheckSquare className="w-3.5 h-3.5 text-cyan-400" />
+                              ) : (
+                                <Square className="w-3.5 h-3.5 text-slate-600 hover:text-slate-400" />
+                              )}
+                            </button>
 
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-bold text-white truncate max-w-[280px]">
-                                {link.name}
-                              </span>
-                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-cyan-300 shrink-0">
-                                {link.categoryTag || 'General'}
-                              </span>
-                              <span className="text-[10px] font-mono text-slate-500 truncate max-w-[150px]">
-                                {domain}
-                              </span>
-                            </div>
-
-                            {link.description && (
-                              <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                                {link.description}
-                              </p>
-                            )}
-
-                            <span className="text-[10px] font-mono text-slate-600 truncate mt-0.5">
-                              {link.url}
+                            <span className="text-xs font-bold text-white truncate max-w-[180px]">
+                              {link.name}
                             </span>
+
+                            {isNote ? (
+                              <span className="text-[9px] font-mono px-1 py-0.2 rounded border border-emerald-500/40 bg-emerald-950/80 text-emerald-300 flex items-center gap-0.5 shrink-0">
+                                <FileText className="w-2.5 h-2.5 text-emerald-400" />
+                                <span>Note</span>
+                              </span>
+                            ) : (
+                              <span
+                                className={`text-[9px] font-mono px-1 py-0.2 rounded border flex items-center gap-0.5 shrink-0 ${meta.badgeStyle}`}
+                                title={meta.description}
+                              >
+                                <span>{meta.icon}</span>
+                                <span>{normalizedTag.split('/')[0].trim()}</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Quick Actions */}
+                          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {scopeData.onReorder && (
+                              <div className="flex items-center gap-0.5 mr-0.5 bg-slate-900 border border-slate-800 rounded p-0.5">
+                                <button
+                                  type="button"
+                                  disabled={idx === 0}
+                                  onClick={() => scopeData.onReorder && scopeData.onReorder(idx, idx - 1)}
+                                  className="p-0.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
+                                  title="Move up"
+                                >
+                                  <ArrowUp className="w-2.5 h-2.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={idx === scopeData.links.length - 1}
+                                  onClick={() => scopeData.onReorder && scopeData.onReorder(idx, idx + 1)}
+                                  className="p-0.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
+                                  title="Move down"
+                                >
+                                  <ArrowDown className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                            )}
+
+                            {link.url ? (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenLink(link.url)}
+                                className="p-1 bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/40 rounded transition cursor-pointer"
+                                title="Open link in new tab"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyNoteText(link.description || link.name)}
+                                className="p-1 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 rounded transition cursor-pointer"
+                                title="Copy note text"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(link)}
+                              className="p-1 hover:bg-rose-950 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
                           </div>
                         </div>
 
-                        {/* Right: Actions */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {/* Reorder Buttons (if supported) */}
-                          {scopeData.onReorder && (
-                            <div className="flex items-center gap-0.5 mr-1 bg-slate-900 border border-slate-800 rounded-lg p-0.5">
-                              <button
-                                type="button"
-                                disabled={idx === 0}
-                                onClick={() => scopeData.onReorder && scopeData.onReorder(idx, idx - 1)}
-                                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
-                                title="Move link up"
-                              >
-                                <ArrowUp className="w-3 h-3" />
-                              </button>
-                              <button
-                                type="button"
-                                disabled={idx === scopeData.links.length - 1}
-                                onClick={() => scopeData.onReorder && scopeData.onReorder(idx, idx + 1)}
-                                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
-                                title="Move link down"
-                              >
-                                <ArrowDown className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Open URL Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenLink(link.url)}
-                            className="px-2.5 py-1 bg-cyan-950/80 hover:bg-cyan-900/90 text-cyan-200 border border-cyan-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                            title="Open link in new tab"
-                          >
-                            <ExternalLink className="w-3 h-3 text-cyan-400" />
-                            <span>Open</span>
-                          </button>
-
-                          {/* Edit Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleStartEdit(link)}
-                            className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-amber-300 rounded-lg transition cursor-pointer"
-                            title="Edit Link"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Delete Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(link)}
-                            className="p-1.5 hover:bg-rose-950/80 text-slate-400 hover:text-rose-300 rounded-lg transition cursor-pointer"
-                            title="Delete Link"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                        {/* Snippet / Context */}
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 gap-2">
+                          <span className="truncate flex-1">
+                            {link.description ? link.description : link.url || 'No content preview'}
+                          </span>
+                          {domain && <span className="text-slate-500 font-mono shrink-0">{domain}</span>}
                         </div>
                       </div>
                     );
                   })
                 )
               ) : (
-                /* Received Links List */
+                /* Received Feed List */
                 filteredLinks.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-950/30 rounded-2xl border border-slate-800/60 text-center">
-                    <Inbox className="w-10 h-10 text-slate-600 mb-2" />
-                    <p className="text-xs font-bold text-slate-400">No received links in your inbox</p>
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      When other players or the GM share links during session play, they will appear here.
-                    </p>
+                  <div className="h-full flex flex-col items-center justify-center p-6 bg-slate-950/30 rounded-xl border border-slate-800/60 text-center">
+                    <Inbox className="w-8 h-8 text-slate-600 mb-2" />
+                    <p className="text-xs font-bold text-slate-400">No received items in your inbox</p>
                   </div>
                 ) : (
                   filteredLinks.map((item) => {
                     const receivedItem = item as ReceivedLinkItem;
-                    const domain = getDomainLabel(receivedItem.url);
+                    const isSelected = activeReceivedItem?.id === receivedItem.id;
+                    const isNote = !receivedItem.url || !receivedItem.url.trim() || receivedItem.isNote;
+                    const normalizedTag = normalizeLinkCategory(receivedItem.categoryTag);
+                    const meta = LINK_CATEGORY_METADATA[normalizedTag] || LINK_CATEGORY_METADATA['External / Web'];
+
                     return (
                       <div
                         key={receivedItem.id}
-                        className={`p-3 rounded-xl border transition flex items-center justify-between gap-3 shadow-sm ${
-                          !receivedItem.isRead
-                            ? 'bg-slate-950 border-cyan-500/60 shadow-cyan-500/10'
+                        onClick={() => {
+                          setSelectedReceivedId(receivedItem.id);
+                          markAsRead(receivedItem.id);
+                        }}
+                        className={`p-2.5 rounded-xl border transition flex flex-col gap-1.5 shadow-sm cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-950/40 border-emerald-500/60 ring-1 ring-emerald-500/40'
+                            : !receivedItem.isRead
+                            ? 'bg-slate-950 border-cyan-500/60'
                             : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
                         }`}
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          {!receivedItem.isRead && (
-                            <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 animate-pulse" title="Unread" />
-                          )}
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-bold text-white truncate max-w-[280px]">
-                                {receivedItem.name}
-                              </span>
-                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-700 text-indigo-300 shrink-0">
-                                From: {receivedItem.senderName}
-                              </span>
-                              <span className="text-[10px] font-mono text-slate-500">
-                                {domain}
-                              </span>
-                            </div>
-
-                            {receivedItem.description && (
-                              <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                                {receivedItem.description}
-                              </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            {!receivedItem.isRead && (
+                              <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 animate-pulse" />
                             )}
-
-                            <span className="text-[10px] font-mono text-slate-600 truncate mt-0.5">
-                              {receivedItem.url}
+                            <span className="text-xs font-bold text-white truncate max-w-[180px]">
+                              {receivedItem.name}
                             </span>
+                            {isNote ? (
+                              <span className="text-[9px] font-mono px-1 py-0.2 rounded border border-emerald-500/40 bg-emerald-950/80 text-emerald-300">
+                                Note
+                              </span>
+                            ) : (
+                              <span className={`text-[9px] font-mono px-1 py-0.2 rounded border ${meta.badgeStyle}`}>
+                                {meta.icon}
+                              </span>
+                            )}
                           </div>
+                          <span className="text-[9px] font-mono text-indigo-300 truncate">
+                            {receivedItem.senderName}
+                          </span>
                         </div>
-
-                        {/* Received Actions */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {/* Open URL */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenLink(receivedItem.url, receivedItem.id)}
-                            className="px-2.5 py-1 bg-cyan-950/80 hover:bg-cyan-900/90 text-cyan-200 border border-cyan-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                            title="Open link in new tab"
-                          >
-                            <ExternalLink className="w-3 h-3 text-cyan-400" />
-                            <span>Open</span>
-                          </button>
-
-                          {/* Save to My Links */}
-                          <button
-                            type="button"
-                            onClick={() => handleSaveReceivedToActiveScope(receivedItem)}
-                            className="px-2.5 py-1 bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-200 border border-emerald-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                            title={activeRole === 'gm' ? 'Save to GM Links' : 'Save to Player Links'}
-                          >
-                            <BookmarkPlus className="w-3 h-3 text-emerald-400" />
-                            <span>Save to {activeRole === 'gm' ? 'GM Links' : 'Player Links'}</span>
-                          </button>
-
-                          {/* Dismiss / Delete */}
-                          <button
-                            type="button"
-                            onClick={() => deleteReceivedLink(receivedItem.id)}
-                            className="p-1.5 hover:bg-rose-950/80 text-slate-400 hover:text-rose-300 rounded-lg transition cursor-pointer"
-                            title="Dismiss link"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {receivedItem.description || receivedItem.url || 'No content preview'}
+                        </p>
                       </div>
                     );
                   })
@@ -1147,88 +1068,79 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
               )}
             </div>
 
-            {/* High-Density Party Dispatcher Shelf (Bottom of Right Pane) */}
+            {/* Bottom Shelf: Compact Party Dispatcher (for active scopes) */}
             {currentScope !== 'received' && (
-              <div className="bg-slate-950/90 border border-slate-800 p-2.5 rounded-xl flex flex-col gap-2 shadow-inner shrink-0 mt-auto">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  {/* Left: Selection Counter & Destination Switcher */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold text-cyan-300 flex items-center gap-1">
-                      <Share2 className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>{selectedLinkIds.length} Selected</span>
-                    </span>
+              <div className="bg-slate-950/90 border border-slate-800 p-2 rounded-xl flex flex-col gap-1.5 shadow-inner shrink-0 mt-auto">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-cyan-300 flex items-center gap-1 shrink-0">
+                    <Share2 className="w-3 h-3 text-cyan-400" />
+                    <span>{selectedLinkIds.length} Selected</span>
+                  </span>
 
-                    {/* Destination Pill Switch */}
-                    <div className="bg-slate-900/90 border border-slate-800 p-0.5 rounded-lg flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSendToAllParty(true);
-                          setShowMemberPicker(false);
-                        }}
-                        className={`px-2 py-1 rounded text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
-                          sendToAllParty
-                            ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        <Users className="w-3 h-3" />
-                        <span>Entire Party</span>
-                      </button>
+                  {/* Destination Pill Switch */}
+                  <div className="bg-slate-900/90 border border-slate-800 p-0.5 rounded-lg flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSendToAllParty(true);
+                        setShowMemberPicker(false);
+                      }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition cursor-pointer ${
+                        sendToAllParty
+                          ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Users className="w-2.5 h-2.5" />
+                      <span>Party</span>
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSendToAllParty(false);
-                          setShowMemberPicker(!showMemberPicker);
-                        }}
-                        className={`px-2 py-1 rounded text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
-                          !sendToAllParty
-                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        <User className="w-3 h-3" />
-                        <span>
-                          Members ({selectedRecipientCharacterIds.length})
-                        </span>
-                      </button>
-                    </div>
-
-                    <span className="text-[10px] font-mono text-slate-500">
-                      {activePartyId ? `Room: #${activePartyId.slice(0, 6).toUpperCase()}` : 'No Room'}
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSendToAllParty(false);
+                        setShowMemberPicker(!showMemberPicker);
+                      }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition cursor-pointer ${
+                        !sendToAllParty
+                          ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <User className="w-2.5 h-2.5" />
+                      <span>Members ({selectedRecipientCharacterIds.length})</span>
+                    </button>
                   </div>
-
-                  {/* Right: Dispatch Button */}
-                  <button
-                    type="button"
-                    disabled={selectedLinkIds.length === 0 || isDispatching || !activePartyId}
-                    onClick={handleDispatchSelected}
-                    className="py-1.5 px-4 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white transition flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>
-                      {isDispatching
-                        ? 'Broadcasting...'
-                        : `🚀 Share ${selectedLinkIds.length} Link(s) to ${sendToAllParty ? 'Party' : `${selectedRecipientCharacterIds.length} Member(s)`}`}
-                    </span>
-                  </button>
                 </div>
 
-                {/* Optional Expandable Member Checkbox List */}
+                {/* Dispatch Button */}
+                <button
+                  type="button"
+                  disabled={selectedLinkIds.length === 0 || isDispatching || !activePartyId}
+                  onClick={handleDispatchSelected}
+                  className="w-full py-1 px-3 rounded-lg text-xs font-bold bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-3 h-3" />
+                  <span>
+                    {isDispatching
+                      ? 'Broadcasting...'
+                      : `🚀 Share ${selectedLinkIds.length} Item(s) to ${sendToAllParty ? 'Party' : `${selectedRecipientCharacterIds.length} Member(s)`}`}
+                  </span>
+                </button>
+
+                {/* Expandable Member Picker */}
                 {!sendToAllParty && showMemberPicker && (
-                  <div className="pt-2 border-t border-slate-800/80 flex items-center gap-1.5 flex-wrap max-h-24 overflow-y-auto">
+                  <div className="pt-1.5 border-t border-slate-800/80 flex items-center gap-1 flex-wrap max-h-20 overflow-y-auto">
                     {isLoadingMembers ? (
-                      <div className="flex items-center gap-1.5 text-xs text-slate-400 py-1">
-                        <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
-                        <span>Loading party roster...</span>
+                      <div className="flex items-center gap-1 text-[10px] text-slate-400 py-0.5">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin text-cyan-400" />
+                        <span>Loading...</span>
                       </div>
                     ) : partyMembers.length === 0 ? (
-                      <span className="text-[11px] text-slate-500 italic py-1">No active members connected.</span>
+                      <span className="text-[10px] text-slate-500 italic">No connected members.</span>
                     ) : (
                       partyMembers.map((m) => {
-                        const charName = m.character?.name || m.player_email || 'Party Hero';
+                        const charName = m.character?.name || m.player_email || 'Hero';
                         const charId = String(m.character_id || m.id);
                         const isChecked = selectedRecipientCharacterIds.includes(charId);
                         return (
@@ -1236,18 +1148,14 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                             key={charId}
                             type="button"
                             onClick={() => handleToggleRecipient(charId)}
-                            className={`px-2 py-0.5 rounded-lg text-xs font-bold flex items-center gap-1 border transition cursor-pointer ${
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border transition cursor-pointer ${
                               isChecked
                                 ? 'bg-indigo-950 border-indigo-500/60 text-indigo-200'
                                 : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
                             }`}
                           >
-                            {isChecked ? (
-                              <CheckSquare className="w-3 h-3 text-indigo-400" />
-                            ) : (
-                              <Square className="w-3 h-3 text-slate-600" />
-                            )}
-                            <span className="truncate max-w-[120px]">{charName}</span>
+                            {isChecked ? <CheckSquare className="w-2.5 h-2.5 text-indigo-400" /> : <Square className="w-2.5 h-2.5 text-slate-600" />}
+                            <span className="truncate max-w-[80px]">{charName}</span>
                           </button>
                         );
                       })
@@ -1255,6 +1163,289 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                   </div>
                 )}
               </div>
+            )}
+          </div>
+
+          {/* ======================================================================== */}
+          {/* RIGHT PANE: Spacious Tabbed Editor Workspace (Flex-1)                    */}
+          {/* ======================================================================== */}
+          <div className="flex-1 flex flex-col p-4 overflow-hidden gap-3 bg-slate-900/30">
+            {currentScope !== 'received' ? (
+              <div className="h-full flex flex-col gap-3 overflow-hidden">
+                {/* Editor Header: Tab Switcher + Reset / New Item Action */}
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 shrink-0 gap-3">
+                  {/* KISS Multi-Option Tab Switcher */}
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveEditorTab('link');
+                        if (isEditingNote) handleResetEditor();
+                      }}
+                      className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                        activeEditorTab === 'link'
+                          ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <Link2 className="w-3.5 h-3.5" />
+                      <span>🔗 Link Editor</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveEditorTab('note');
+                        if (editingId && !isEditingNote) handleResetEditor();
+                      }}
+                      className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                        activeEditorTab === 'note'
+                          ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>📝 Note Editor</span>
+                    </button>
+                  </div>
+
+                  {/* Edit State Badge & Reset Button */}
+                  <div className="flex items-center gap-2">
+                    {editingId && (
+                      <span className="text-[11px] font-bold text-amber-300 bg-amber-950/80 border border-amber-500/40 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                        <Edit2 className="w-3 h-3 text-amber-400" />
+                        <span>Editing Item</span>
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleResetEditor}
+                      className="px-2.5 py-1 text-xs font-bold text-slate-400 hover:text-slate-200 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                      title="Clear form / New item"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>New / Reset</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tab 1: Spacious Link Editor */}
+                {activeEditorTab === 'link' && (
+                  <form onSubmit={handleSaveForm} className="flex-1 flex flex-col gap-3.5 min-h-0 overflow-y-auto">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-300">Link Title</label>
+                      <input
+                        ref={nameInputRef}
+                        type="text"
+                        required
+                        disabled={scopeData.isDisabled}
+                        placeholder="e.g. Tactical Combat Map, System Reference Rules"
+                        value={formName}
+                        onChange={(e) => setFormName(e.target.value)}
+                        className="px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 disabled:opacity-40"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-300">Target URL</label>
+                      <input
+                        type="text"
+                        required
+                        disabled={scopeData.isDisabled}
+                        placeholder="https://..."
+                        value={formUrl}
+                        onChange={(e) => setFormUrl(e.target.value)}
+                        className="px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono disabled:opacity-40"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-300">Category Tag</label>
+                      <select
+                        value={formTag}
+                        disabled={scopeData.isDisabled}
+                        onChange={(e) => setFormTag(e.target.value as LinkCategory)}
+                        className="px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer disabled:opacity-40"
+                      >
+                        {LINK_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {LINK_CATEGORY_METADATA[cat].icon} {cat}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex-1 flex flex-col gap-1.5 min-h-[100px]">
+                      <label className="text-xs font-bold text-slate-300">Context / Optional Notes</label>
+                      <textarea
+                        rows={4}
+                        disabled={scopeData.isDisabled}
+                        placeholder="Brief context notes or descriptions..."
+                        value={formDesc}
+                        onChange={(e) => setFormDesc(e.target.value)}
+                        className="w-full flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 resize-none font-sans disabled:opacity-40"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-2 shrink-0">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || scopeData.isDisabled}
+                        className={`py-2 px-6 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md cursor-pointer ${
+                          editingId && !isEditingNote
+                            ? 'bg-amber-600 hover:bg-amber-500 text-white font-extrabold'
+                            : 'bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold'
+                        } disabled:opacity-40`}
+                      >
+                        {editingId && !isEditingNote ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                        <span>{editingId && !isEditingNote ? 'Save Changes' : '+ Add Link'}</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Tab 2: Spacious Note Editor with HUGE Multiline Textarea */}
+                {activeEditorTab === 'note' && (
+                  <form onSubmit={handleSaveNote} className="flex-1 flex flex-col gap-3 min-h-0">
+                    <div className="grid grid-cols-2 gap-3 shrink-0">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-slate-300">Note Title</label>
+                        <input
+                          ref={noteTitleInputRef}
+                          type="text"
+                          required
+                          disabled={scopeData.isDisabled}
+                          placeholder="e.g. Crypt Puzzle Clue, House Rules"
+                          value={noteTitle}
+                          onChange={(e) => setNoteTitle(e.target.value)}
+                          className="px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 disabled:opacity-40"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-slate-300">Category Tag</label>
+                        <select
+                          value={noteTag}
+                          disabled={scopeData.isDisabled}
+                          onChange={(e) => setNoteTag(e.target.value as LinkCategory)}
+                          className="px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer disabled:opacity-40"
+                        >
+                          {LINK_CATEGORIES.map((cat) => (
+                            <option key={cat} value={cat}>
+                              {LINK_CATEGORY_METADATA[cat].icon} {cat}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Massive comfortable textarea for long-form lore/notes */}
+                    <div className="flex-1 flex flex-col gap-1.5 min-h-0">
+                      <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                        <span>Note Content / Body</span>
+                        <span className="text-[11px] text-slate-500 font-normal">Supports long-form markdown, clues, and paste</span>
+                      </label>
+                      <textarea
+                        required
+                        disabled={scopeData.isDisabled}
+                        placeholder="Type or paste long-form note text, clues, lore, NPC dialogues, encounter briefings, or custom house rules here..."
+                        value={noteContent}
+                        onChange={(e) => setNoteContent(e.target.value)}
+                        className="w-full flex-1 p-3.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none font-sans leading-relaxed disabled:opacity-40"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-2 shrink-0">
+                      <button
+                        type="submit"
+                        disabled={isSubmittingNote || scopeData.isDisabled}
+                        className={`py-2 px-6 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md cursor-pointer ${
+                          editingId && isEditingNote
+                            ? 'bg-amber-600 hover:bg-amber-500 text-white font-extrabold'
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold'
+                        } disabled:opacity-40`}
+                      >
+                        {editingId && isEditingNote ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                        <span>{editingId && isEditingNote ? 'Save Changes' : '+ Add Note'}</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            ) : (
+              /* Received Item Detailed Inspector */
+              activeReceivedItem ? (
+                <div className="h-full flex flex-col gap-4 overflow-y-auto">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <Inbox className="w-5 h-5 text-emerald-400" />
+                      <div>
+                        <h3 className="text-base font-bold text-white">{activeReceivedItem.name}</h3>
+                        <span className="text-xs text-indigo-300 font-mono">From: {activeReceivedItem.senderName}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveReceivedToActiveScope(activeReceivedItem)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md cursor-pointer"
+                      >
+                        <BookmarkPlus className="w-3.5 h-3.5" />
+                        <span>Save to {activeRole === 'gm' ? 'GM Scope' : 'Player Scope'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteReceivedLink(activeReceivedItem.id)}
+                        className="p-1.5 text-slate-500 hover:text-rose-400 bg-slate-900 border border-slate-800 rounded-lg transition cursor-pointer"
+                        title="Dismiss from inbox"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {activeReceivedItem.url && (
+                    <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between gap-3">
+                      <span className="text-xs font-mono text-cyan-300 truncate flex-1">{activeReceivedItem.url}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenLink(activeReceivedItem.url, activeReceivedItem.id)}
+                        className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open Link</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {activeReceivedItem.description && (
+                    <div className="flex-1 flex flex-col gap-1.5 min-h-[200px]">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-400">
+                        <span>Content / Text</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyNoteText(activeReceivedItem.description || '')}
+                          className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[11px] transition flex items-center gap-1 cursor-pointer"
+                        >
+                          <Copy className="w-3 h-3 text-emerald-400" />
+                          <span>Copy Text</span>
+                        </button>
+                      </div>
+                      <div className="flex-1 p-3.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 leading-relaxed whitespace-pre-wrap font-sans overflow-y-auto">
+                        {activeReceivedItem.description}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center text-slate-500">
+                  <Inbox className="w-12 h-12 mb-2 text-slate-700" />
+                  <p className="text-sm font-bold text-slate-400">No received item selected</p>
+                  <p className="text-xs text-slate-500 mt-1">Select an item from the inbox on the left to inspect and save it.</p>
+                </div>
+              )
             )}
           </div>
         </div>
@@ -1267,7 +1458,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
             </span>
             <span>•</span>
             <span>
-              Total Scope Links: <strong className="text-cyan-300 font-bold">{scopeData.links.length}</strong>
+              Total Scope Items: <strong className="text-cyan-300 font-bold">{scopeData.links.length}</strong>
             </span>
             {activePartyId && (
               <>

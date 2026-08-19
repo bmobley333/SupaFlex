@@ -654,7 +654,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     await get().updateAdventure(adventureId, { structure: newStructure });
   },
 
-  // --- ADVENTURE LINKS ---
+  // --- ADVENTURE LINKS & NOTES ---
   addAdventureLink: async (adventureId: string, name: string, url: string, tag?: string, desc?: string) => {
     const adv = get().adventures.find((a) => a.id === adventureId);
     if (!adv) return;
@@ -662,43 +662,89 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     const newLink: EncounterLink = {
       id: `adv_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
-      url: url.trim(),
+      url: url ? url.trim() : undefined,
       categoryTag: tag || 'General',
       description: desc?.trim() || undefined,
+      isNote: !url || !url.trim(),
       created_at: new Date().toISOString(),
     };
 
-    const updatedLinks = [...(adv.links || []), newLink];
-    await get().updateAdventure(adventureId, { links: updatedLinks });
+    const currentLinks = adv.links || adv.structure?.links || [];
+    const updatedLinks = [...currentLinks, newLink];
+    const newStructure = { ...(adv.structure || { acts: [] }), links: updatedLinks };
+
+    set((state) => ({
+      adventures: state.adventures.map((a) =>
+        a.id === adventureId ? { ...a, links: updatedLinks, structure: newStructure } : a
+      ),
+    }));
+
+    await get().updateAdventure(adventureId, { structure: newStructure, links: updatedLinks });
   },
 
   updateAdventureLink: async (adventureId: string, linkId: string, name: string, url: string, tag?: string, desc?: string) => {
     const adv = get().adventures.find((a) => a.id === adventureId);
-    if (!adv || !adv.links) return;
+    if (!adv) return;
 
-    const updatedLinks = adv.links.map((l) =>
-      l.id === linkId ? { ...l, name: name.trim(), url: url.trim(), categoryTag: tag || l.categoryTag || 'General', description: desc !== undefined ? desc.trim() : l.description } : l
+    const currentLinks = adv.links || adv.structure?.links || [];
+    const updatedLinks = currentLinks.map((l) =>
+      l.id === linkId
+        ? {
+            ...l,
+            name: name.trim(),
+            url: url ? url.trim() : undefined,
+            categoryTag: tag || l.categoryTag || 'General',
+            description: desc !== undefined ? desc.trim() : l.description,
+            isNote: !url || !url.trim(),
+          }
+        : l
     );
-    await get().updateAdventure(adventureId, { links: updatedLinks });
+    const newStructure = { ...(adv.structure || { acts: [] }), links: updatedLinks };
+
+    set((state) => ({
+      adventures: state.adventures.map((a) =>
+        a.id === adventureId ? { ...a, links: updatedLinks, structure: newStructure } : a
+      ),
+    }));
+
+    await get().updateAdventure(adventureId, { structure: newStructure, links: updatedLinks });
   },
 
   deleteAdventureLink: async (adventureId: string, linkId: string) => {
     const adv = get().adventures.find((a) => a.id === adventureId);
-    if (!adv || !adv.links) return;
+    if (!adv) return;
 
-    const updatedLinks = adv.links.filter((l) => l.id !== linkId);
-    await get().updateAdventure(adventureId, { links: updatedLinks });
+    const currentLinks = adv.links || adv.structure?.links || [];
+    const updatedLinks = currentLinks.filter((l) => l.id !== linkId);
+    const newStructure = { ...(adv.structure || { acts: [] }), links: updatedLinks };
+
+    set((state) => ({
+      adventures: state.adventures.map((a) =>
+        a.id === adventureId ? { ...a, links: updatedLinks, structure: newStructure } : a
+      ),
+    }));
+
+    await get().updateAdventure(adventureId, { structure: newStructure, links: updatedLinks });
   },
 
   reorderAdventureLinkByIndex: async (adventureId: string, fromIdx: number, toIdx: number) => {
     const adv = get().adventures.find((a) => a.id === adventureId);
-    if (!adv || !adv.links) return;
+    if (!adv) return;
 
-    const links = [...adv.links];
-    if (fromIdx < 0 || fromIdx >= links.length || toIdx < 0 || toIdx >= links.length) return;
+    const currentLinks = adv.links || adv.structure?.links || [];
+    if (fromIdx < 0 || fromIdx >= currentLinks.length || toIdx < 0 || toIdx >= currentLinks.length) return;
+    const links = [...currentLinks];
     const [moved] = links.splice(fromIdx, 1);
     links.splice(toIdx, 0, moved);
-    await get().updateAdventure(adventureId, { links });
+    const newStructure = { ...(adv.structure || { acts: [] }), links };
+
+    set((state) => ({
+      adventures: state.adventures.map((a) =>
+        a.id === adventureId ? { ...a, links, structure: newStructure } : a
+      ),
+    }));
+
+    await get().updateAdventure(adventureId, { structure: newStructure, links });
   },
 
   // --- GM GLOBAL LINKS ---
@@ -711,9 +757,10 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     const newLink: EncounterLink = {
       id: `gm_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
-      url: url.trim(),
+      url: url ? url.trim() : undefined,
       categoryTag: tag || 'General',
       description: desc?.trim() || undefined,
+      isNote: !url || !url.trim(),
       created_at: new Date().toISOString(),
     };
     const updated = [...get().gmLinks, newLink];
@@ -725,7 +772,16 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
 
   updateGmLink: async (linkId: string, name: string, url: string, tag?: string, desc?: string) => {
     const updated = get().gmLinks.map((l) =>
-      l.id === linkId ? { ...l, name: name.trim(), url: url.trim(), categoryTag: tag || l.categoryTag || 'General', description: desc !== undefined ? desc.trim() : l.description } : l
+      l.id === linkId
+        ? {
+            ...l,
+            name: name.trim(),
+            url: url ? url.trim() : undefined,
+            categoryTag: tag || l.categoryTag || 'General',
+            description: desc !== undefined ? desc.trim() : l.description,
+            isNote: !url || !url.trim(),
+          }
+        : l
     );
     set({ gmLinks: updated });
     if (typeof window !== 'undefined') {
@@ -763,9 +819,10 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     const newLink: EncounterLink = {
       id: `link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
-      url: url.trim(),
+      url: url ? url.trim() : undefined,
       categoryTag: tag || 'General',
       description: desc?.trim() || undefined,
+      isNote: !url || !url.trim(),
       created_at: new Date().toISOString(),
     };
 
@@ -782,7 +839,16 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     if (!enc || !enc.links) return;
 
     const updatedLinks = enc.links.map((l) =>
-      l.id === linkId ? { ...l, name: name.trim(), url: url.trim(), categoryTag: tag || l.categoryTag || 'General', description: desc !== undefined ? desc.trim() : l.description } : l
+      l.id === linkId
+        ? {
+            ...l,
+            name: name.trim(),
+            url: url ? url.trim() : undefined,
+            categoryTag: tag || l.categoryTag || 'General',
+            description: desc !== undefined ? desc.trim() : l.description,
+            isNote: !url || !url.trim(),
+          }
+        : l
     );
     await get().updateEncounter(adventureId, actId, encounterId, { links: updatedLinks });
   },

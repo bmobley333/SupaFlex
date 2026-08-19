@@ -742,9 +742,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const newLink: EncounterLink = {
       id: `pl_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
-      url: url.trim(),
+      url: url ? url.trim() : undefined,
       categoryTag: tag || 'General',
       description: desc?.trim() || undefined,
+      isNote: !url || !url.trim(),
       created_at: new Date().toISOString(),
     };
     const updated = [...get().playerLinks, newLink];
@@ -757,7 +758,16 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   updatePlayerLink: (linkId: string, name: string, url: string, tag?: string, desc?: string) => {
     const email = get().playerEmail || 'default';
     const updated = get().playerLinks.map((l) =>
-      l.id === linkId ? { ...l, name: name.trim(), url: url.trim(), categoryTag: tag || l.categoryTag || 'General', description: desc !== undefined ? desc.trim() : l.description } : l
+      l.id === linkId
+        ? {
+            ...l,
+            name: name.trim(),
+            url: url ? url.trim() : undefined,
+            categoryTag: tag || l.categoryTag || 'General',
+            description: desc !== undefined ? desc.trim() : l.description,
+            isNote: !url || !url.trim(),
+          }
+        : l
     );
     set({ playerLinks: updated });
     try {
@@ -786,14 +796,15 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     } catch {}
   },
 
-  // --- CHARACTER LINKS (Character-Specific) ---
+  // --- CHARACTER LINKS & NOTES (Character-Specific) ---
   addCharacterLink: (name: string, url: string, tag?: string, desc?: string) => {
     const newLink: EncounterLink = {
       id: `char_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
-      url: url.trim(),
+      url: url ? url.trim() : undefined,
       categoryTag: tag || 'General',
       description: desc?.trim() || undefined,
+      isNote: !url || !url.trim(),
       created_at: new Date().toISOString(),
     };
     get().updateActiveSheetData((prev) => ({
@@ -807,7 +818,16 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     get().updateActiveSheetData((prev) => ({
       ...prev,
       character_links: (prev.character_links || []).map((l) =>
-        l.id === linkId ? { ...l, name: name.trim(), url: url.trim(), categoryTag: tag || l.categoryTag || 'General', description: desc !== undefined ? desc.trim() : l.description } : l
+        l.id === linkId
+          ? {
+              ...l,
+              name: name.trim(),
+              url: url ? url.trim() : undefined,
+              categoryTag: tag || l.categoryTag || 'General',
+              description: desc !== undefined ? desc.trim() : l.description,
+              isNote: !url || !url.trim(),
+            }
+          : l
       ),
     }));
     get().saveActiveCharacter();

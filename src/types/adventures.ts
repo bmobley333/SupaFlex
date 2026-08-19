@@ -11,12 +11,92 @@ export interface PreStagedMonster extends ParsedMonster {
   scaled_dif?: number;
 }
 
+export const LINK_CATEGORIES = [
+  'Audio / Ambience',
+  'External / Web',
+  'Interactive Tool',
+  'Lore / Narrative',
+  'Map / Spatial',
+  'Rules / Reference',
+  'Video / Media',
+  'Visual / Handout',
+] as const;
+
+export type LinkCategory = typeof LINK_CATEGORIES[number];
+
+export interface LinkCategoryMeta {
+  icon: string;
+  description: string;
+  badgeStyle: string;
+}
+
+export const LINK_CATEGORY_METADATA: Record<LinkCategory, LinkCategoryMeta> = {
+  'Audio / Ambience': {
+    icon: '🎵',
+    description: 'Music, background tracks, SFX, ambient soundscapes',
+    badgeStyle: 'text-violet-300 bg-violet-950/80 border-violet-700/60',
+  },
+  'External / Web': {
+    icon: '🌐',
+    description: 'General URLs, shared drives, community links, generic docs',
+    badgeStyle: 'text-blue-300 bg-blue-950/80 border-blue-700/60',
+  },
+  'Interactive Tool': {
+    icon: '🛠️',
+    description: 'Calculators, character builders, encounter trackers, dice rollers',
+    badgeStyle: 'text-amber-300 bg-amber-950/80 border-amber-700/60',
+  },
+  'Lore / Narrative': {
+    icon: '📜',
+    description: 'Worldbuilding, history, NPC dossiers, timelines, factions',
+    badgeStyle: 'text-emerald-300 bg-emerald-950/80 border-emerald-700/60',
+  },
+  'Map / Spatial': {
+    icon: '🗺️',
+    description: 'Battlemaps, regional maps, world atlases, dungeon schematics',
+    badgeStyle: 'text-teal-300 bg-teal-950/80 border-teal-700/60',
+  },
+  'Rules / Reference': {
+    icon: '⚖️',
+    description: 'System references, mechanics, spell/feat tables, stat blocks',
+    badgeStyle: 'text-indigo-300 bg-indigo-950/80 border-indigo-700/60',
+  },
+  'Video / Media': {
+    icon: '🎬',
+    description: 'Tutorials, animated cutscenes, session recordings, streaming links',
+    badgeStyle: 'text-rose-300 bg-rose-950/80 border-rose-700/60',
+  },
+  'Visual / Handout': {
+    icon: '🖼️',
+    description: 'Character portraits, item cards, scene concept art, player handouts',
+    badgeStyle: 'text-cyan-300 bg-cyan-950/80 border-cyan-700/60',
+  },
+};
+
+export const normalizeLinkCategory = (tag?: string): LinkCategory => {
+  if (!tag) return 'External / Web';
+  const clean = tag.trim();
+  if (LINK_CATEGORIES.includes(clean as LinkCategory)) {
+    return clean as LinkCategory;
+  }
+  const lower = clean.toLowerCase();
+  if (lower.includes('audio') || lower.includes('music') || lower.includes('sound') || lower.includes('sfx')) return 'Audio / Ambience';
+  if (lower.includes('tool') || lower.includes('calc') || lower.includes('dice')) return 'Interactive Tool';
+  if (lower.includes('lore') || lower.includes('story') || lower.includes('bio') || lower.includes('history')) return 'Lore / Narrative';
+  if (lower.includes('map') || lower.includes('spatial') || lower.includes('dungeon')) return 'Map / Spatial';
+  if (lower.includes('rule') || lower.includes('srd') || lower.includes('ref') || lower.includes('spell') || lower.includes('stat')) return 'Rules / Reference';
+  if (lower.includes('video') || lower.includes('stream') || lower.includes('media') || lower.includes('youtube')) return 'Video / Media';
+  if (lower.includes('handout') || lower.includes('art') || lower.includes('image') || lower.includes('portrait') || lower.includes('visual')) return 'Visual / Handout';
+  return 'External / Web';
+};
+
 export interface EncounterLink {
   id: string;              // UUID or nanoid
-  name: string;            // e.g. "Dungeon Map"
-  url: string;             // e.g. "https://..."
-  categoryTag?: string;    // e.g. "Handout", "Map", "Lore", "Art", "Tool", "General"
-  description?: string;    // Optional context or notes
+  name: string;            // e.g. "Dungeon Map" or "Puzzle Clue"
+  url?: string;            // e.g. "https://..." (optional for text notes)
+  categoryTag?: LinkCategory | string;
+  description?: string;    // Optional context or text note content
+  isNote?: boolean;        // true if entry is a text note
   created_at?: string;
 }
 
@@ -77,6 +157,7 @@ export interface GmAct {
 
 export interface AdventureStructure {
   acts: GmAct[];
+  links?: EncounterLink[];
 }
 
 export interface GmAdventure {
