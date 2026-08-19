@@ -1,3 +1,6 @@
+// src/components/modals/UniversalLinksModal.tsx
+// Two-Pane Master Links Hub for Managing, Organizing, and Real-Time Party Sharing across all Scopes
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -21,22 +24,23 @@ import {
   CheckSquare,
   Square,
   Loader2,
+  Crown,
+  Map,
+  Swords,
+  Scroll,
 } from 'lucide-react';
 import { EncounterLink, ReceivedLinkItem } from '../../types/adventures';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { useAdventureStore } from '../../store/useAdventureStore';
 import { useReceivedLinksStore } from '../../store/useReceivedLinksStore';
 import { gameApi } from '../../services/api';
+
+export type LinkScope = 'gm' | 'adventure' | 'encounter' | 'player' | 'character' | 'received';
 
 export interface UniversalLinksModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;              // e.g. "GM Links", "Adventure Links", "Encounter Links", "Player Links"
-  subtitle?: string;
-  links: EncounterLink[];
-  onAddLink: (name: string, url: string, tag?: string, desc?: string) => Promise<void> | void;
-  onUpdateLink: (linkId: string, name: string, url: string, tag?: string, desc?: string) => Promise<void> | void;
-  onDeleteLink: (linkId: string) => Promise<void> | void;
-  onReorderLinkByIndex?: (fromIdx: number, toIdx: number) => Promise<void> | void;
+  initialScope?: LinkScope;
   themeColor?: 'teal' | 'indigo' | 'amber' | 'cyan' | 'rose' | 'emerald';
 }
 
@@ -64,19 +68,39 @@ const getDomainLabel = (rawUrl: string): string => {
 export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   isOpen,
   onClose,
-  title,
-  subtitle,
-  links = [],
-  onAddLink,
-  onUpdateLink,
-  onDeleteLink,
-  onReorderLinkByIndex,
-  themeColor = 'teal',
+  initialScope,
 }) => {
+  // Store hooks
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeRole = useCharacterStore((state) => state.activeRole);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
   const playerEmail = useCharacterStore((state) => state.playerEmail);
+  const playerLinks = useCharacterStore((state) => state.playerLinks);
+  const addPlayerLink = useCharacterStore((state) => state.addPlayerLink);
+  const updatePlayerLink = useCharacterStore((state) => state.updatePlayerLink);
+  const deletePlayerLink = useCharacterStore((state) => state.deletePlayerLink);
+  const reorderPlayerLinkByIndex = useCharacterStore((state) => state.reorderPlayerLinkByIndex);
+  const addCharacterLink = useCharacterStore((state) => state.addCharacterLink);
+  const updateCharacterLink = useCharacterStore((state) => state.updateCharacterLink);
+  const deleteCharacterLink = useCharacterStore((state) => state.deleteCharacterLink);
+  const reorderCharacterLinkByIndex = useCharacterStore((state) => state.reorderCharacterLinkByIndex);
+
+  const gmLinks = useAdventureStore((state) => state.gmLinks);
+  const activeAdv = useAdventureStore((state) => state.getActiveAdventure());
+  const activeAct = useAdventureStore((state) => state.getActiveAct());
+  const activeEnc = useAdventureStore((state) => state.getActiveEncounter());
+  const addGmLink = useAdventureStore((state) => state.addGmLink);
+  const updateGmLink = useAdventureStore((state) => state.updateGmLink);
+  const deleteGmLink = useAdventureStore((state) => state.deleteGmLink);
+  const reorderGmLinkByIndex = useAdventureStore((state) => state.reorderGmLinkByIndex);
+  const addAdventureLink = useAdventureStore((state) => state.addAdventureLink);
+  const updateAdventureLink = useAdventureStore((state) => state.updateAdventureLink);
+  const deleteAdventureLink = useAdventureStore((state) => state.deleteAdventureLink);
+  const reorderAdventureLinkByIndex = useAdventureStore((state) => state.reorderAdventureLinkByIndex);
+  const addEncounterLink = useAdventureStore((state) => state.addEncounterLink);
+  const updateEncounterLink = useAdventureStore((state) => state.updateEncounterLink);
+  const deleteEncounterLink = useAdventureStore((state) => state.deleteEncounterLink);
+  const reorderEncounterLinkByIndex = useAdventureStore((state) => state.reorderEncounterLinkByIndex);
 
   const receivedLinks = useReceivedLinksStore((state) => state.receivedLinks);
   const unreadCount = useReceivedLinksStore((state) => state.unreadCount);
@@ -87,8 +111,20 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   const clearReceivedLinks = useReceivedLinksStore((state) => state.clearReceivedLinks);
   const dispatchLinksToParty = useReceivedLinksStore((state) => state.dispatchLinksToParty);
 
-  // Tabs: 'my_links' vs 'received'
-  const [activeTab, setActiveTab] = useState<'my_links' | 'received'>('my_links');
+  // Active Scope State
+  const defaultScope: LinkScope = activeRole === 'gm' ? 'gm' : 'player';
+  const [currentScope, setCurrentScope] = useState<LinkScope>(initialScope || defaultScope);
+
+  // Sync initial scope on modal open or role change
+  useEffect(() => {
+    if (isOpen) {
+      if (initialScope) {
+        setCurrentScope(initialScope);
+      } else {
+        setCurrentScope(activeRole === 'gm' ? 'gm' : 'player');
+      }
+    }
+  }, [isOpen, initialScope, activeRole]);
 
   // Form states for creating / editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -144,6 +180,187 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     fetchMembers();
   }, [isOpen, activePartyId]);
 
+  // Derive active links, active titles, and action handlers based on currentScope
+  const scopeData = useMemo(() => {
+    switch (currentScope) {
+      case 'gm':
+        return {
+          title: 'GM Global Links',
+          subtitle: 'Universal Campaign & Reference Links',
+          links: gmLinks,
+          icon: <Crown className="w-5 h-5 text-amber-400" />,
+          activeColor: 'bg-teal-600',
+          accentText: 'text-teal-300',
+          badgeStyle: 'bg-teal-950/80 text-teal-300 border-teal-500/40',
+          isDisabled: false,
+          disabledReason: '',
+          onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
+            await addGmLink(name, url, tag, desc);
+          },
+          onUpdate: async (id: string, name: string, url: string, tag?: string, desc?: string) => {
+            await updateGmLink(id, name, url, tag, desc);
+          },
+          onDelete: async (id: string) => {
+            await deleteGmLink(id);
+          },
+          onReorder: async (fromIdx: number, toIdx: number) => {
+            await reorderGmLinkByIndex(fromIdx, toIdx);
+          },
+        };
+      case 'adventure':
+        return {
+          title: 'Adventure Links',
+          subtitle: activeAdv ? activeAdv.title : 'No Active Adventure Selected',
+          links: activeAdv?.links || [],
+          icon: <Map className="w-5 h-5 text-indigo-400" />,
+          activeColor: 'bg-indigo-600',
+          accentText: 'text-indigo-300',
+          badgeStyle: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40',
+          isDisabled: !activeAdv,
+          disabledReason: 'Select or create an adventure in GM Screen to manage Adventure Links.',
+          onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
+            if (!activeAdv) return;
+            await addAdventureLink(activeAdv.id, name, url, tag, desc);
+          },
+          onUpdate: async (id: string, name: string, url: string, tag?: string, desc?: string) => {
+            if (!activeAdv) return;
+            await updateAdventureLink(activeAdv.id, id, name, url, tag, desc);
+          },
+          onDelete: async (id: string) => {
+            if (!activeAdv) return;
+            await deleteAdventureLink(activeAdv.id, id);
+          },
+          onReorder: async (fromIdx: number, toIdx: number) => {
+            if (!activeAdv) return;
+            await reorderAdventureLinkByIndex(activeAdv.id, fromIdx, toIdx);
+          },
+        };
+      case 'encounter':
+        return {
+          title: 'Encounter Links',
+          subtitle: activeEnc ? `${activeAdv?.title || 'Adv'} > ${activeEnc.title}` : 'No Active Encounter Selected',
+          links: activeEnc?.links || [],
+          icon: <Swords className="w-5 h-5 text-amber-400" />,
+          activeColor: 'bg-amber-600',
+          accentText: 'text-amber-300',
+          badgeStyle: 'bg-amber-950/80 text-amber-300 border-amber-500/40',
+          isDisabled: !activeEnc || !activeAdv || !activeAct,
+          disabledReason: 'Select an encounter in GM Screen to manage Encounter-specific links.',
+          onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
+            if (!activeAdv || !activeAct || !activeEnc) return;
+            await addEncounterLink(activeAdv.id, activeAct.id, activeEnc.id, name, url, tag, desc);
+          },
+          onUpdate: async (id: string, name: string, url: string, tag?: string, desc?: string) => {
+            if (!activeAdv || !activeAct || !activeEnc) return;
+            await updateEncounterLink(activeAdv.id, activeAct.id, activeEnc.id, id, name, url, tag, desc);
+          },
+          onDelete: async (id: string) => {
+            if (!activeAdv || !activeAct || !activeEnc) return;
+            await deleteEncounterLink(activeAdv.id, activeAct.id, activeEnc.id, id);
+          },
+          onReorder: async (fromIdx: number, toIdx: number) => {
+            if (!activeAdv || !activeAct || !activeEnc) return;
+            await reorderEncounterLinkByIndex(activeAdv.id, activeAct.id, activeEnc.id, fromIdx, toIdx);
+          },
+        };
+      case 'player':
+        return {
+          title: 'Player Global Links',
+          subtitle: playerEmail ? `Account: ${playerEmail}` : 'Account-Wide Player Links',
+          links: playerLinks,
+          icon: <User className="w-5 h-5 text-cyan-400" />,
+          activeColor: 'bg-cyan-600',
+          accentText: 'text-cyan-300',
+          badgeStyle: 'bg-cyan-950/80 text-cyan-300 border-cyan-500/40',
+          isDisabled: false,
+          disabledReason: '',
+          onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
+            addPlayerLink(name, url, tag, desc);
+          },
+          onUpdate: async (id: string, name: string, url: string, tag?: string, desc?: string) => {
+            updatePlayerLink(id, name, url, tag, desc);
+          },
+          onDelete: async (id: string) => {
+            deletePlayerLink(id);
+          },
+          onReorder: async (fromIdx: number, toIdx: number) => {
+            reorderPlayerLinkByIndex(fromIdx, toIdx);
+          },
+        };
+      case 'character':
+        return {
+          title: 'Character Links & Bio',
+          subtitle: activeCharacter ? activeCharacter.name : 'No Active Hero Selected',
+          links: activeCharacter?.sheet_data?.character_links || [],
+          icon: <Scroll className="w-5 h-5 text-indigo-400" />,
+          activeColor: 'bg-indigo-600',
+          accentText: 'text-indigo-300',
+          badgeStyle: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40',
+          isDisabled: !activeCharacter,
+          disabledReason: 'Select or load a hero character to manage character-specific links.',
+          onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
+            addCharacterLink(name, url, tag, desc);
+          },
+          onUpdate: async (id: string, name: string, url: string, tag?: string, desc?: string) => {
+            updateCharacterLink(id, name, url, tag, desc);
+          },
+          onDelete: async (id: string) => {
+            deleteCharacterLink(id);
+          },
+          onReorder: async (fromIdx: number, toIdx: number) => {
+            reorderCharacterLinkByIndex(fromIdx, toIdx);
+          },
+        };
+      case 'received':
+      default:
+        return {
+          title: 'Received Links & Handouts',
+          subtitle: 'Real-Time In-Session Shared Links Inbox',
+          links: receivedLinks,
+          icon: <Inbox className="w-5 h-5 text-emerald-400" />,
+          activeColor: 'bg-emerald-600',
+          accentText: 'text-emerald-300',
+          badgeStyle: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40',
+          isDisabled: false,
+          disabledReason: '',
+          onAdd: async () => {},
+          onUpdate: async () => {},
+          onDelete: async () => {},
+          onReorder: undefined,
+        };
+    }
+  }, [
+    currentScope,
+    gmLinks,
+    activeAdv,
+    activeAct,
+    activeEnc,
+    playerLinks,
+    activeCharacter,
+    playerEmail,
+    receivedLinks,
+    addGmLink,
+    updateGmLink,
+    deleteGmLink,
+    reorderGmLinkByIndex,
+    addAdventureLink,
+    updateAdventureLink,
+    deleteAdventureLink,
+    reorderAdventureLinkByIndex,
+    addEncounterLink,
+    updateEncounterLink,
+    deleteEncounterLink,
+    reorderEncounterLinkByIndex,
+    addPlayerLink,
+    updatePlayerLink,
+    deletePlayerLink,
+    reorderPlayerLinkByIndex,
+    addCharacterLink,
+    updateCharacterLink,
+    deleteCharacterLink,
+    reorderCharacterLinkByIndex,
+  ]);
+
   const handleStartEdit = (link: EncounterLink) => {
     setEditingId(link.id);
     setFormName(link.name);
@@ -165,17 +382,17 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
 
   const handleSaveForm = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!formName.trim() || !formUrl.trim() || isSubmitting) return;
+    if (!formName.trim() || !formUrl.trim() || isSubmitting || scopeData.isDisabled) return;
 
     setIsSubmitting(true);
     const formattedUrl = formatUrl(formUrl);
 
     try {
       if (editingId) {
-        await onUpdateLink(editingId, formName.trim(), formattedUrl, formTag, formDesc.trim());
+        await scopeData.onUpdate(editingId, formName.trim(), formattedUrl, formTag, formDesc.trim());
         showToast(`Updated "${formName.trim()}"`);
       } else {
-        await onAddLink(formName.trim(), formattedUrl, formTag, formDesc.trim());
+        await scopeData.onAdd(formName.trim(), formattedUrl, formTag, formDesc.trim());
         showToast(`Added "${formName.trim()}"`);
       }
       handleCancelForm();
@@ -190,7 +407,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   const handleDelete = async (link: EncounterLink) => {
     if (confirm(`Delete link "${link.name}"?`)) {
       try {
-        await onDeleteLink(link.id);
+        await scopeData.onDelete(link.id);
         setSelectedLinkIds((prev) => prev.filter((id) => id !== link.id));
         showToast(`Deleted "${link.name}"`);
       } catch (err) {
@@ -207,13 +424,18 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     window.open(formatUrl(url), '_blank', 'noopener,noreferrer');
   };
 
-  const handleSaveReceivedToMyLinks = async (item: ReceivedLinkItem) => {
+  const handleSaveReceivedToActiveScope = async (item: ReceivedLinkItem) => {
     try {
-      await onAddLink(item.name, item.url, item.categoryTag || 'Handout', item.description);
-      showToast(`Saved "${item.name}" to My Links!`);
+      if (activeRole === 'gm') {
+        await addGmLink(item.name, item.url, item.categoryTag || 'Handout', item.description);
+        showToast(`Saved "${item.name}" to GM Links!`);
+      } else {
+        addPlayerLink(item.name, item.url, item.categoryTag || 'Handout', item.description);
+        showToast(`Saved "${item.name}" to Player Links!`);
+      }
     } catch (err) {
-      console.error('[UniversalLinksModal] Error saving received link to my links:', err);
-      showToast('Failed to save link to My Links.');
+      console.error('[UniversalLinksModal] Error saving received link:', err);
+      showToast('Failed to save link.');
     }
   };
 
@@ -225,10 +447,10 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   };
 
   const handleSelectAllLinks = () => {
-    if (selectedLinkIds.length === filteredMyLinks.length) {
+    if (selectedLinkIds.length === filteredLinks.length) {
       setSelectedLinkIds([]);
     } else {
-      setSelectedLinkIds(filteredMyLinks.map((l) => l.id));
+      setSelectedLinkIds(filteredLinks.map((l) => l.id));
     }
   };
 
@@ -249,7 +471,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
       return;
     }
 
-    const linksToSend = links.filter((l) => selectedLinkIds.includes(l.id));
+    const linksToSend = scopeData.links.filter((l) => selectedLinkIds.includes(l.id));
     if (linksToSend.length === 0) return;
 
     setIsDispatching(true);
@@ -278,85 +500,27 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   };
 
   // Filtered links
-  const filteredMyLinks = useMemo(() => {
-    return links.filter((link) => {
+  const filteredLinks = useMemo(() => {
+    return scopeData.links.filter((link) => {
       const matchSearch =
         !searchQuery ||
         link.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         link.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (link.categoryTag && link.categoryTag.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (link.description && link.description.toLowerCase().includes(searchQuery.toLowerCase()));
+        (link.description && link.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        ((link as ReceivedLinkItem).senderName &&
+          (link as ReceivedLinkItem).senderName.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchTag =
+        currentScope === 'received' ||
         selectedTagFilter === 'ALL' ||
         (link.categoryTag || 'General').toLowerCase() === selectedTagFilter.toLowerCase();
 
       return matchSearch && matchTag;
     });
-  }, [links, searchQuery, selectedTagFilter]);
-
-  const filteredReceivedLinks = useMemo(() => {
-    return receivedLinks.filter((link) => {
-      return (
-        !searchQuery ||
-        link.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        link.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        link.senderName.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    });
-  }, [receivedLinks, searchQuery]);
+  }, [scopeData.links, searchQuery, selectedTagFilter, currentScope]);
 
   if (!isOpen) return null;
-
-  const getThemeClasses = () => {
-    switch (themeColor) {
-      case 'indigo':
-        return {
-          border: 'border-indigo-500/40',
-          accent: 'text-indigo-300',
-          badge: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40',
-          btnPrimary: 'bg-indigo-600 hover:bg-indigo-500 text-white',
-        };
-      case 'amber':
-        return {
-          border: 'border-amber-500/40',
-          accent: 'text-amber-300',
-          badge: 'bg-amber-950/80 text-amber-300 border-amber-500/40',
-          btnPrimary: 'bg-amber-600 hover:bg-amber-500 text-white',
-        };
-      case 'rose':
-        return {
-          border: 'border-rose-500/40',
-          accent: 'text-rose-300',
-          badge: 'bg-rose-950/80 text-rose-300 border-rose-500/40',
-          btnPrimary: 'bg-rose-600 hover:bg-rose-500 text-white',
-        };
-      case 'emerald':
-        return {
-          border: 'border-emerald-500/40',
-          accent: 'text-emerald-300',
-          badge: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40',
-          btnPrimary: 'bg-emerald-600 hover:bg-emerald-500 text-white',
-        };
-      case 'cyan':
-        return {
-          border: 'border-cyan-500/40',
-          accent: 'text-cyan-300',
-          badge: 'bg-cyan-950/80 text-cyan-300 border-cyan-500/40',
-          btnPrimary: 'bg-cyan-600 hover:bg-cyan-500 text-white',
-        };
-      case 'teal':
-      default:
-        return {
-          border: 'border-teal-500/40',
-          accent: 'text-teal-300',
-          badge: 'bg-teal-950/80 text-teal-300 border-teal-500/40',
-          btnPrimary: 'bg-teal-600 hover:bg-teal-500 text-white',
-        };
-    }
-  };
-
-  const theme = getThemeClasses();
 
   return createPortal(
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn font-outfit">
@@ -372,42 +536,120 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-950/80 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-cyan-400 shadow-inner">
-              <Link2 className="w-5 h-5" />
+            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 shadow-inner">
+              {scopeData.icon}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-extrabold text-base tracking-wide text-white uppercase font-outfit">
-                  {title}
+                  {scopeData.title}
                 </h2>
-                <span className={`text-[11px] font-mono font-extrabold px-2 py-0.5 rounded-md border ${theme.badge}`}>
-                  {links.length} Links
+                <span className={`text-[11px] font-mono font-extrabold px-2 py-0.5 rounded-md border ${scopeData.badgeStyle}`}>
+                  {scopeData.links.length} Links
                 </span>
               </div>
-              {subtitle && <p className="text-xs text-slate-400 font-mono">{subtitle}</p>}
+              <p className="text-xs text-slate-400 font-mono truncate max-w-md">{scopeData.subtitle}</p>
             </div>
           </div>
 
-          {/* KISS Multi-Option Pill Switch: My Links vs Received */}
+          {/* Role-Aware KISS Multi-Option Pill Switch */}
           <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+            {activeRole === 'gm' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentScope('gm');
+                    handleCancelForm();
+                  }}
+                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    currentScope === 'gm'
+                      ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  <Crown className="w-3.5 h-3.5" />
+                  <span>GM ({gmLinks.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentScope('adventure');
+                    handleCancelForm();
+                  }}
+                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    currentScope === 'adventure'
+                      ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  <Map className="w-3.5 h-3.5" />
+                  <span>Adventure ({activeAdv?.links?.length || 0})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentScope('encounter');
+                    handleCancelForm();
+                  }}
+                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    currentScope === 'encounter'
+                      ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  <Swords className="w-3.5 h-3.5" />
+                  <span>Encounter ({activeEnc?.links?.length || 0})</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentScope('player');
+                    handleCancelForm();
+                  }}
+                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    currentScope === 'player'
+                      ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>Player ({playerLinks.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentScope('character');
+                    handleCancelForm();
+                  }}
+                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    currentScope === 'character'
+                      ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  <Scroll className="w-3.5 h-3.5" />
+                  <span>Character ({activeCharacter?.sheet_data?.character_links?.length || 0})</span>
+                </button>
+              </>
+            )}
+
+            {/* Received Tab (Universal) */}
             <button
               type="button"
-              onClick={() => setActiveTab('my_links')}
-              className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTab === 'my_links'
+              onClick={() => {
+                setCurrentScope('received');
+                handleCancelForm();
+              }}
+              className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer relative ${
+                currentScope === 'received'
                   ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              <Link2 className="w-3.5 h-3.5" />
-              <span>My Links ({links.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('received')}
-              className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer relative ${
-                activeTab === 'received'
-                  ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
             >
@@ -438,14 +680,14 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
           {/* LEFT PANE: Form & Dispatcher                                            */}
           {/* ======================================================================== */}
           <div className="w-[380px] border-r border-slate-800 bg-slate-950/40 p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
-            {activeTab === 'my_links' ? (
+            {currentScope !== 'received' ? (
               <>
                 {/* 1. Add / Edit Link Form */}
                 <form onSubmit={handleSaveForm} className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl flex flex-col gap-3 shadow-md">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                     <span className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
                       {editingId ? <Edit2 className="w-3.5 h-3.5 text-amber-400" /> : <Plus className="w-3.5 h-3.5 text-emerald-400" />}
-                      {editingId ? 'Edit Link' : 'Add New Link'}
+                      {editingId ? 'Edit Link' : `Add Link to ${scopeData.title.split(' ')[0]}`}
                     </span>
                     {editingId && (
                       <button
@@ -458,71 +700,79 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                     )}
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-400">Link Name / Title</label>
-                    <input
-                      ref={nameInputRef}
-                      type="text"
-                      required
-                      placeholder="e.g. Dungeon Map, Character Lore"
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      className="px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-400">Target URL</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="https://..."
-                      value={formUrl}
-                      onChange={(e) => setFormUrl(e.target.value)}
-                      className="px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-400">Category Tag</label>
-                      <select
-                        value={formTag}
-                        onChange={(e) => setFormTag(e.target.value)}
-                        className="px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer"
-                      >
-                        {CATEGORY_TAGS.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </select>
+                  {scopeData.isDisabled ? (
+                    <div className="p-3 bg-amber-950/40 border border-amber-500/40 rounded-lg text-xs text-amber-300">
+                      {scopeData.disabledReason}
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-bold text-slate-400">Link Name / Title</label>
+                        <input
+                          ref={nameInputRef}
+                          type="text"
+                          required
+                          placeholder="e.g. Dungeon Map, Character Lore"
+                          value={formName}
+                          onChange={(e) => setFormName(e.target.value)}
+                          className="px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
 
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-400">Optional Notes / Context</label>
-                    <input
-                      type="text"
-                      placeholder="Brief note or description..."
-                      value={formDesc}
-                      onChange={(e) => setFormDesc(e.target.value)}
-                      className="px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-bold text-slate-400">Target URL</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="https://..."
+                          value={formUrl}
+                          onChange={(e) => setFormUrl(e.target.value)}
+                          className="px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
+                        />
+                      </div>
 
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer ${
-                      editingId
-                        ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                        : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                    } disabled:opacity-50`}
-                  >
-                    {editingId ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                    <span>{editingId ? 'Save Link Changes' : '+ Add Link to Collection'}</span>
-                  </button>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 flex flex-col gap-1">
+                          <label className="text-[11px] font-bold text-slate-400">Category Tag</label>
+                          <select
+                            value={formTag}
+                            onChange={(e) => setFormTag(e.target.value)}
+                            className="px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                          >
+                            {CATEGORY_TAGS.map((t) => (
+                              <option key={t} value={t}>
+                                {t}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-bold text-slate-400">Optional Notes / Context</label>
+                        <input
+                          type="text"
+                          placeholder="Brief note or description..."
+                          value={formDesc}
+                          onChange={(e) => setFormDesc(e.target.value)}
+                          className="px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer ${
+                          editingId
+                            ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                        } disabled:opacity-50`}
+                      >
+                        {editingId ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                        <span>{editingId ? 'Save Link Changes' : '+ Add Link to Scope'}</span>
+                      </button>
+                    </>
+                  )}
                 </form>
 
                 {/* 2. Party Dispatcher Section */}
@@ -647,13 +897,13 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
               /* Received Tab Left Info */
               <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-xl flex flex-col gap-3 shadow-md">
                 <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-                  <Inbox className="w-4 h-4 text-cyan-400" />
+                  <Inbox className="w-4 h-4 text-emerald-400" />
                   <span className="text-xs font-extrabold uppercase tracking-wider text-slate-300">
                     Received Inbox
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Links and online resources shared with you by the GM or other party members appear in this inbox in real-time.
+                  Links, online resources, and documents shared with you by the GM or other party members appear in this inbox in real-time.
                 </p>
 
                 <div className="bg-slate-950/80 border border-slate-800 rounded-lg p-3 flex flex-col gap-2">
@@ -707,14 +957,14 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   type="text"
-                  placeholder={activeTab === 'my_links' ? 'Search your links by name, URL, or tag...' : 'Search received links...'}
+                  placeholder={currentScope === 'received' ? 'Search received links...' : `Search ${scopeData.title.toLowerCase()}...`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 bg-slate-950/90 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
-              {activeTab === 'my_links' && (
+              {currentScope !== 'received' && (
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -722,19 +972,19 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                     className="px-2.5 py-1.5 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0"
                     title="Select / Unselect All for Sharing"
                   >
-                    {selectedLinkIds.length === filteredMyLinks.length && filteredMyLinks.length > 0 ? (
+                    {selectedLinkIds.length === filteredLinks.length && filteredLinks.length > 0 ? (
                       <CheckSquare className="w-3.5 h-3.5 text-cyan-400" />
                     ) : (
                       <Square className="w-3.5 h-3.5 text-slate-500" />
                     )}
-                    <span>{selectedLinkIds.length === filteredMyLinks.length && filteredMyLinks.length > 0 ? 'Deselect All' : 'Select All'}</span>
+                    <span>{selectedLinkIds.length === filteredLinks.length && filteredLinks.length > 0 ? 'Deselect All' : 'Select All'}</span>
                   </button>
                 </div>
               )}
             </div>
 
             {/* Tag Filter Pills (for My Links) */}
-            {activeTab === 'my_links' && (
+            {currentScope !== 'received' && (
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0">
                 <button
                   type="button"
@@ -745,10 +995,10 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                       : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border border-slate-800/80'
                   }`}
                 >
-                  ALL ({links.length})
+                  ALL ({scopeData.links.length})
                 </button>
                 {CATEGORY_TAGS.map((tag) => {
-                  const count = links.filter((l) => (l.categoryTag || 'General').toLowerCase() === tag.toLowerCase()).length;
+                  const count = scopeData.links.filter((l) => (l.categoryTag || 'General').toLowerCase() === tag.toLowerCase()).length;
                   if (count === 0 && selectedTagFilter !== tag) return null;
                   return (
                     <button
@@ -771,17 +1021,19 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
 
             {/* Links Cards List */}
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {activeTab === 'my_links' ? (
-                filteredMyLinks.length === 0 ? (
+              {currentScope !== 'received' ? (
+                filteredLinks.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-950/30 rounded-2xl border border-slate-800/60 text-center">
                     <Link2 className="w-10 h-10 text-slate-600 mb-2" />
-                    <p className="text-xs font-bold text-slate-400">No links in this view</p>
+                    <p className="text-xs font-bold text-slate-400">No links in {scopeData.title}</p>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      Use the form on the left to add external documents, maps, tools, or art.
+                      {scopeData.isDisabled
+                        ? scopeData.disabledReason
+                        : 'Use the form on the left to add external documents, maps, tools, or art.'}
                     </p>
                   </div>
                 ) : (
-                  filteredMyLinks.map((link, idx) => {
+                  filteredLinks.map((link, idx) => {
                     const isSelected = selectedLinkIds.includes(link.id);
                     const domain = getDomainLabel(link.url);
                     const isEditing = editingId === link.id;
@@ -840,12 +1092,12 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                         {/* Right: Actions */}
                         <div className="flex items-center gap-1.5 shrink-0">
                           {/* Reorder Buttons (if supported) */}
-                          {onReorderLinkByIndex && (
+                          {scopeData.onReorder && (
                             <div className="flex items-center gap-0.5 mr-1 bg-slate-900 border border-slate-800 rounded-lg p-0.5">
                               <button
                                 type="button"
                                 disabled={idx === 0}
-                                onClick={() => onReorderLinkByIndex(idx, idx - 1)}
+                                onClick={() => scopeData.onReorder && scopeData.onReorder(idx, idx - 1)}
                                 className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
                                 title="Move link up"
                               >
@@ -853,8 +1105,8 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                               </button>
                               <button
                                 type="button"
-                                disabled={idx === links.length - 1}
-                                onClick={() => onReorderLinkByIndex(idx, idx + 1)}
+                                disabled={idx === scopeData.links.length - 1}
+                                onClick={() => scopeData.onReorder && scopeData.onReorder(idx, idx + 1)}
                                 className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
                                 title="Move link down"
                               >
@@ -900,7 +1152,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                 )
               ) : (
                 /* Received Links List */
-                filteredReceivedLinks.length === 0 ? (
+                filteredLinks.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-950/30 rounded-2xl border border-slate-800/60 text-center">
                     <Inbox className="w-10 h-10 text-slate-600 mb-2" />
                     <p className="text-xs font-bold text-slate-400">No received links in your inbox</p>
@@ -909,42 +1161,43 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                     </p>
                   </div>
                 ) : (
-                  filteredReceivedLinks.map((item) => {
-                    const domain = getDomainLabel(item.url);
+                  filteredLinks.map((item) => {
+                    const receivedItem = item as ReceivedLinkItem;
+                    const domain = getDomainLabel(receivedItem.url);
                     return (
                       <div
-                        key={item.id}
+                        key={receivedItem.id}
                         className={`p-3 rounded-xl border transition flex items-center justify-between gap-3 shadow-sm ${
-                          !item.isRead
+                          !receivedItem.isRead
                             ? 'bg-slate-950 border-cyan-500/60 shadow-cyan-500/10'
                             : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                          {!item.isRead && (
+                          {!receivedItem.isRead && (
                             <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 animate-pulse" title="Unread" />
                           )}
                           <div className="flex flex-col min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs font-bold text-white truncate max-w-[280px]">
-                                {item.name}
+                                {receivedItem.name}
                               </span>
                               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-700 text-indigo-300 shrink-0">
-                                From: {item.senderName}
+                                From: {receivedItem.senderName}
                               </span>
                               <span className="text-[10px] font-mono text-slate-500">
                                 {domain}
                               </span>
                             </div>
 
-                            {item.description && (
+                            {receivedItem.description && (
                               <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                                {item.description}
+                                {receivedItem.description}
                               </p>
                             )}
 
                             <span className="text-[10px] font-mono text-slate-600 truncate mt-0.5">
-                              {item.url}
+                              {receivedItem.url}
                             </span>
                           </div>
                         </div>
@@ -954,7 +1207,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                           {/* Open URL */}
                           <button
                             type="button"
-                            onClick={() => handleOpenLink(item.url, item.id)}
+                            onClick={() => handleOpenLink(receivedItem.url, receivedItem.id)}
                             className="px-2.5 py-1 bg-cyan-950/80 hover:bg-cyan-900/90 text-cyan-200 border border-cyan-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                             title="Open link in new tab"
                           >
@@ -965,18 +1218,18 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                           {/* Save to My Links */}
                           <button
                             type="button"
-                            onClick={() => handleSaveReceivedToMyLinks(item)}
+                            onClick={() => handleSaveReceivedToActiveScope(receivedItem)}
                             className="px-2.5 py-1 bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-200 border border-emerald-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                            title="Import and save to My Links"
+                            title={activeRole === 'gm' ? 'Save to GM Links' : 'Save to Player Links'}
                           >
                             <BookmarkPlus className="w-3 h-3 text-emerald-400" />
-                            <span>Save to My Links</span>
+                            <span>Save to {activeRole === 'gm' ? 'GM Links' : 'Player Links'}</span>
                           </button>
 
                           {/* Dismiss / Delete */}
                           <button
                             type="button"
-                            onClick={() => deleteReceivedLink(item.id)}
+                            onClick={() => deleteReceivedLink(receivedItem.id)}
                             className="p-1.5 hover:bg-rose-950/80 text-slate-400 hover:text-rose-300 rounded-lg transition cursor-pointer"
                             title="Dismiss link"
                           >

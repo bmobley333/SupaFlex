@@ -1,18 +1,19 @@
 // src/components/hud/UniversalLinksDropdown.tsx
-// High-Density Parameterized Links Trigger Button that opens UniversalLinksModal
+// High-Density Parameterized Links Trigger Button that opens the Unified UniversalLinksModal
 
 import React, { useState } from 'react';
 import { Link2, ChevronDown } from 'lucide-react';
 import { EncounterLink } from '../../types/adventures';
-import { UniversalLinksModal } from '../modals/UniversalLinksModal';
+import { UniversalLinksModal, LinkScope } from '../modals/UniversalLinksModal';
 import { useReceivedLinksStore } from '../../store/useReceivedLinksStore';
 
 export interface UniversalLinksDropdownProps {
   label: string; // e.g. "GM Links", "Adventure Links", "Encounter Links", "Player Links", "Character Links"
-  links: EncounterLink[];
-  onAddLink: (name: string, url: string, tag?: string, desc?: string) => Promise<void> | void;
-  onUpdateLink: (linkId: string, name: string, url: string, tag?: string, desc?: string) => Promise<void> | void;
-  onDeleteLink: (linkId: string) => Promise<void> | void;
+  links?: EncounterLink[];
+  scope?: LinkScope;
+  onAddLink?: (name: string, url: string, tag?: string, desc?: string) => Promise<void> | void;
+  onUpdateLink?: (linkId: string, name: string, url: string, tag?: string, desc?: string) => Promise<void> | void;
+  onDeleteLink?: (linkId: string) => Promise<void> | void;
   onReorderLinkByIndex?: (fromIdx: number, toIdx: number) => Promise<void> | void;
   disabled?: boolean;
   disabledTooltip?: string;
@@ -24,10 +25,7 @@ export interface UniversalLinksDropdownProps {
 export const UniversalLinksDropdown: React.FC<UniversalLinksDropdownProps> = ({
   label,
   links = [],
-  onAddLink,
-  onUpdateLink,
-  onDeleteLink,
-  onReorderLinkByIndex,
+  scope,
   disabled = false,
   disabledTooltip,
   topLabel,
@@ -36,6 +34,19 @@ export const UniversalLinksDropdown: React.FC<UniversalLinksDropdownProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const unreadCount = useReceivedLinksStore((state) => state.unreadCount);
+
+  // Auto-resolve scope if not explicitly passed
+  const resolvedScope: LinkScope =
+    scope ||
+    (label.toLowerCase().includes('adventure')
+      ? 'adventure'
+      : label.toLowerCase().includes('encounter')
+      ? 'encounter'
+      : label.toLowerCase().includes('character')
+      ? 'character'
+      : label.toLowerCase().includes('player')
+      ? 'player'
+      : 'gm');
 
   const getThemeClasses = () => {
     switch (themeColor) {
@@ -126,16 +137,11 @@ export const UniversalLinksDropdown: React.FC<UniversalLinksDropdownProps> = ({
         </button>
       </div>
 
-      {/* Universal Two-Pane Links Modal */}
+      {/* Unified Master Links Modal */}
       <UniversalLinksModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={label}
-        links={links}
-        onAddLink={onAddLink}
-        onUpdateLink={onUpdateLink}
-        onDeleteLink={onDeleteLink}
-        onReorderLinkByIndex={onReorderLinkByIndex}
+        initialScope={resolvedScope}
         themeColor={themeColor}
       />
     </>
