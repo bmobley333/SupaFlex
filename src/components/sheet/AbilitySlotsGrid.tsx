@@ -2072,62 +2072,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         {/* 1. SMART HERO QUICK DECK (Powers Mode) */}
                         {type === 'powers' && (
                           <div className="flex flex-col gap-2 shrink-0">
-                            {/* Pinned Quick Deck Box & Separated Global Navigation Row */}
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {/* Dedicated Pinned Quick Deck Box */}
-                              <div className="bg-slate-950/90 border border-slate-800 p-1.5 rounded-xl flex items-center gap-1.5 flex-wrap shadow-inner backdrop-blur-md">
-                                <span className="text-[10px] font-bold text-amber-400/90 uppercase tracking-wider px-1 font-outfit select-none shrink-0">
-                                  📌 Deck ({pinnedTableNames.length}/8):
-                                </span>
-
-                                {pinnedTableNames.map((tblName) => {
-                                  const isActive = effectiveActiveTable === tblName;
-                                  const powerCount = groupedTables[tblName]?.length || 0;
-                                  const nameLower = tblName.toLowerCase();
-                                  const icon = nameLower.includes('luck')
-                                    ? '🍀'
-                                    : nameLower.includes('human') || nameLower.includes('elf') || nameLower.includes('dwarf')
-                                    ? '🧬'
-                                    : nameLower.includes('dual') || nameLower.includes('two-handed') || nameLower.includes('combat')
-                                    ? '⚔️'
-                                    : '👤';
-
-                                  return (
-                                    <div
-                                      key={tblName}
-                                      onClick={() => setActiveTableName(tblName)}
-                                      className={`group py-1 pl-2.5 pr-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
-                                        isActive
-                                          ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
-                                          : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80'
-                                      }`}
-                                    >
-                                      <span>{icon}</span>
-                                      <span>{formatTableNameDisplay(tblName)}</span>
-                                      <span
-                                        className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
-                                          isActive
-                                            ? 'bg-amber-800/80 text-amber-100'
-                                            : 'bg-slate-950 text-slate-400 border border-slate-800'
-                                        }`}
-                                      >
-                                        {powerCount}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => handleUnpinTable(e, tblName)}
-                                        className="p-0.5 rounded text-slate-400 hover:text-rose-300 hover:bg-slate-800/80 transition-colors ml-0.5 cursor-pointer"
-                                        title={`Remove ${tblName} from Quick Deck`}
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-
-                                {/* Inline Add Table Dropdown inside Quick Deck Box */}
+                            {/* Pinned Quick Deck Box */}
+                            <div className="bg-slate-950/90 border border-slate-800 p-2.5 rounded-xl flex flex-col gap-2 shadow-inner backdrop-blur-md">
+                              {/* Row 1: Centered + Pin Table Dropdown Action Shelf */}
+                              <div className="flex items-center justify-center w-full pb-2 border-b border-slate-800/80">
                                 {pinnedTableNames.length < 8 ? (
-                                  <div className="relative shrink-0">
+                                  <div className="relative">
                                     <select
                                       value=""
                                       onChange={(e) => {
@@ -2135,11 +2085,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           handlePinTable(e.target.value);
                                         }
                                       }}
-                                      className="py-1 px-2 rounded-lg text-xs font-bold bg-amber-950/50 hover:bg-amber-900/70 text-amber-300 border border-amber-500/40 outline-none cursor-pointer transition-all shadow-sm"
+                                      className="w-64 py-1.5 px-4 rounded-xl text-xs font-bold font-outfit bg-amber-950/30 hover:bg-amber-900/50 text-amber-300 border-2 border-dashed border-amber-500/50 hover:border-amber-400 outline-none cursor-pointer transition-all shadow-inner text-center"
                                       title="Pin another table to your Quick Deck (Max 8)"
                                     >
                                       <option value="" disabled>
-                                        ➕ Pin Table...
+                                        ➕ Pin Table Below
                                       </option>
                                       {Object.entries(categorizedTableGroups).map(([groupLabel, tableNames]) => {
                                         const unpinned = tableNames.filter((t) => !pinnedTableNames.includes(t));
@@ -2157,61 +2107,50 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     </select>
                                   </div>
                                 ) : (
-                                  <span className="text-[10px] font-mono font-bold text-slate-500 px-1.5 py-0.5 shrink-0">
-                                    [Deck Full (8/8)]
+                                  <span className="text-[11px] font-mono font-bold text-amber-400/80 px-3 py-1 rounded-xl bg-amber-950/30 border-2 border-dashed border-amber-500/30">
+                                    [Quick Deck Full (8/8)]
                                   </span>
                                 )}
                               </div>
 
-                              {/* Separated Global Navigation Pills (Outside Box) */}
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                {/* ALL TABLES PILL */}
-                                <button
-                                  type="button"
-                                  onClick={() => setActiveTableName('ALL')}
-                                  className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
-                                    effectiveActiveTable === 'ALL'
-                                      ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
-                                      : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80'
-                                  }`}
-                                >
-                                  <span>🌐</span>
-                                  <span>All Tables</span>
-                                  <span
-                                    className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
-                                      effectiveActiveTable === 'ALL'
-                                        ? 'bg-amber-800/80 text-amber-100'
-                                        : 'bg-slate-950 text-slate-400 border border-slate-800'
-                                    }`}
-                                  >
-                                    {categoryFilteredCatalog.length}
-                                  </span>
-                                </button>
+                              {/* Row 2: Pinned Table Pills (Deck Tray) */}
+                              <div className="flex items-center justify-center gap-1.5 flex-wrap w-full pt-1">
+                                {[...pinnedTableNames]
+                                  .sort((a, b) => formatTableNameDisplay(a).localeCompare(formatTableNameDisplay(b)))
+                                  .map((tblName) => {
+                                    const isActive = effectiveActiveTable === tblName;
+                                    const nameLower = tblName.toLowerCase();
+                                    const icon = nameLower.includes('luck')
+                                      ? '🍀'
+                                      : nameLower.includes('human') || nameLower.includes('elf') || nameLower.includes('dwarf')
+                                      ? '🧬'
+                                      : nameLower.includes('dual') || nameLower.includes('two-handed') || nameLower.includes('combat')
+                                      ? '⚔️'
+                                      : '👤';
 
-                                {/* STARRED FAVORITES PILL */}
-                                {starredCatalogItems.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setActiveTableName('STARRED')}
-                                    className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
-                                      effectiveActiveTable === 'STARRED'
-                                        ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
-                                        : 'bg-slate-900/90 text-amber-300 hover:text-amber-200 hover:bg-slate-800 border border-amber-500/30'
-                                    }`}
-                                  >
-                                    <span>⭐</span>
-                                    <span>Starred Powers</span>
-                                    <span
-                                      className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
-                                        effectiveActiveTable === 'STARRED'
-                                          ? 'bg-amber-800/80 text-amber-100'
-                                          : 'bg-slate-950 text-amber-400 border border-slate-800'
-                                      }`}
-                                    >
-                                      {starredCatalogItems.length}
-                                    </span>
-                                  </button>
-                                )}
+                                    return (
+                                      <div
+                                        key={tblName}
+                                        onClick={() => setActiveTableName(tblName)}
+                                        className={`group py-1 pl-2.5 pr-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
+                                          isActive
+                                            ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
+                                            : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80'
+                                        }`}
+                                      >
+                                        <span>{icon}</span>
+                                        <span>{formatTableNameDisplay(tblName)}</span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleUnpinTable(e, tblName)}
+                                          className="p-0.5 rounded text-slate-400 hover:text-rose-300 hover:bg-slate-800/80 transition-colors ml-0.5 cursor-pointer"
+                                          title={`Remove ${tblName} from Quick Deck`}
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
                               </div>
                             </div>
 
