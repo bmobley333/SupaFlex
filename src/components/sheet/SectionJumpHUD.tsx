@@ -12,10 +12,10 @@ interface HUDItem {
 const HUD_ITEMS: HUDItem[] = [
   {
     id: 'section-top-cards',
-    label: 'Traits, Money & Gear',
-    icons: '👤 💰 🧰',
-    activeColorClass: 'bg-purple-900/60 text-purple-200 border-purple-400 shadow-purple-500/30',
-    borderColorClass: 'hover:border-purple-500/50 hover:bg-purple-950/40 text-slate-300',
+    label: 'Money & Gear',
+    icons: '💰 🧰',
+    activeColorClass: 'bg-amber-900/60 text-amber-200 border-amber-400 shadow-amber-500/30',
+    borderColorClass: 'hover:border-amber-500/50 hover:bg-amber-950/40 text-slate-300',
   },
   {
     id: 'section-skillsets',

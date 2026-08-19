@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowDown, Zap, ChevronDown, ChevronUp, Sparkles, X, Plus, Minus } from 'lucide-react';
+import { ArrowDown, Zap, ChevronDown, ChevronUp, Sparkles, X, Plus, Minus, User } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, DieRating } from '../../types/game';
 import { stepDownDie } from '../../lib/dice';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
+import { UniversalLinksModal } from '../modals/UniversalLinksModal';
 
 interface AttributeConfig {
   key: AttributeKey;
@@ -49,6 +50,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
     reorderCharacterLinkByIndex,
   } = useCharacterStore();
   const [activeDrawer, setActiveDrawer] = useState<'none' | 'attributes' | 'focus' | 'spark' | 'luck'>('none');
+  const [showTraitsModal, setShowTraitsModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -487,8 +489,18 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
         </div>
       </div>
 
-      {/* Right Zone: Character Links & Notes Dropdown (Far Right) */}
+      {/* Right Zone: Traits Quick Launch + Character Links & Notes Dropdown (Far Right) */}
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setShowTraitsModal(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm cursor-pointer bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/35 text-purple-300 shadow-purple-950/40"
+          title="Open Character Traits & Demographics Editor in Links & Notes Hub"
+        >
+          <User className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+          <span className="font-outfit font-extrabold tracking-wide">Traits</span>
+        </button>
+
         <UniversalLinksDropdown
           label="Character Links"
           links={sheet?.character_links || []}
@@ -499,6 +511,16 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
           onReorderLinkByIndex={reorderCharacterLinkByIndex}
         />
       </div>
+
+      {showTraitsModal && (
+        <UniversalLinksModal
+          isOpen={showTraitsModal}
+          onClose={() => setShowTraitsModal(false)}
+          initialScope="character"
+          initialTab="trait"
+          themeColor="indigo"
+        />
+      )}
     </div>
   );
 };

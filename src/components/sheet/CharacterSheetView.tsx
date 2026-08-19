@@ -1,7 +1,6 @@
 // src/components/sheet/CharacterSheetView.tsx
 import React from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { TraitsCard } from './TraitsCard';
 import { MoneyCard } from './MoneyCard';
 import { GearCard } from './GearCard';
 import { SkillsetsPanel } from './SkillsetsPanel';
@@ -31,17 +30,10 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
 
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-16 relative">
-      {/* Collision-Free Responsive Top Section: Traits (Left), Money (Center), Gear (Right) */}
-      <div id="section-top-cards" className="flex flex-wrap items-center gap-4 scroll-mt-32">
-        <div className="flex-1 min-w-[200px]">
-          <TraitsCard />
-        </div>
-        <div className="flex-[2] min-w-[380px]">
-          <MoneyCard />
-        </div>
-        <div className="flex-1 min-w-[200px]">
-          <GearCard />
-        </div>
+      {/* Collision-Free Responsive Top Section: Money (Left), Gear (Right) */}
+      <div id="section-top-cards" className="grid grid-cols-1 md:grid-cols-2 gap-4 scroll-mt-32">
+        <MoneyCard />
+        <GearCard />
       </div>
 
       {/* Screen-Wide Section: Skillsets & Derived Skills Registry */}
