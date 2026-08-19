@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Database, Shield, Activity, BookOpen, Loader2, ChevronDown, ChevronUp, Star, Crown } from 'lucide-react';
+import { Database, BookOpen, Loader2, ChevronDown, ChevronUp, Star, Crown } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { gameApi } from './services/api';
 import { Character, TreasureItem, SimpleGearItem, MagicItem } from './types/game';
@@ -7,7 +7,6 @@ import { getItemSlotWeight } from './utils/magicSlotSchedule';
 import { useCharacterStore } from './store/useCharacterStore';
 import { useAdventureStore } from './store/useAdventureStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
-import { AdventureLogs } from './components/logs/AdventureLogs';
 import { GmWorkspaceView } from './components/directory/GmWorkspaceView';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { AccountPillButton } from './components/header/AccountPillButton';
@@ -34,7 +33,6 @@ import { resolveCharFirstName } from './components/common/PartyCharacterCard';
 import { useScrollRestoration } from './hooks/useScrollRestoration';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'sheet' | 'logs'>('sheet');
   const [newCharName, setNewCharName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSelectorBar, setShowSelectorBar] = useState(false);
@@ -84,10 +82,10 @@ export default function App() {
   const resourcesRef = useRef<HTMLDivElement>(null);
   const gmToolsRef = useRef<HTMLDivElement>(null);
 
-  // Seamless Scroll Restoration Keyed to Active Hero / Mode / Tab
+  // Seamless Scroll Restoration Keyed to Active Hero / Mode
   const activeRoleState = useCharacterStore((state) => state.activeRole);
   const activeCharState = useCharacterStore((state) => state.activeCharacter);
-  const scrollKey = activeRoleState === 'gm' ? 'gm' : activeTab === 'logs' ? 'logs' : activeCharState?.id ? `hero_${activeCharState.id}` : 'sheet';
+  const scrollKey = activeRoleState === 'gm' ? 'gm' : activeCharState?.id ? `hero_${activeCharState.id}` : 'sheet';
   useScrollRestoration({ key: scrollKey });
 
   const {
@@ -479,38 +477,11 @@ export default function App() {
             )}
           </div>
 
-          {/* Center Zone: S-Tier Glassmorphic Pill Tab Navigation Bar (Player) OR Compact GM Screen + Party ID (GM) */}
-          {activeRole === 'gm' ? (
+          {/* Center Zone: S-Tier Glassmorphic GM Screen + Party ID (GM Mode Only) */}
+          {activeRole === 'gm' && (
             <div className="flex-1 flex justify-center min-w-[280px]">
               <GmHeaderHUD activeRoomCode={activeRoomCode} />
             </div>
-          ) : (
-            <nav className="flex-1 flex justify-center min-w-[280px]">
-              <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl shadow-inner backdrop-blur-md">
-                <button
-                  onClick={() => setActiveTab('sheet')}
-                  className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
-                    activeTab === 'sheet'
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
-                  }`}
-                >
-                  <Shield className="w-3.5 h-3.5" />
-                  Sheet
-                </button>
-                <button
-                  onClick={() => setActiveTab('logs')}
-                  className={`px-3 py-1 font-outfit font-extrabold text-xs tracking-wide rounded-lg transition-all flex items-center gap-1.5 ${
-                    activeTab === 'logs'
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
-                  }`}
-                >
-                  <Activity className="w-3.5 h-3.5" />
-                  Logs
-                </button>
-              </div>
-            </nav>
           )}
 
           {/* Right Zone: GM Tools, Resources Popover & Database Indicator */}
@@ -620,7 +591,7 @@ export default function App() {
         </div>
 
         {/* Sub-Header Row 2: Player Attribute HUD (Omitted in GM Mode) */}
-        {activeRole !== 'gm' && activeTab === 'sheet' && (
+        {activeRole !== 'gm' && (
           <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
             <PersistentHeaderHUD
               onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
@@ -639,7 +610,7 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* Main View Shell: GM Workspace vs Player Sheet & Tabs */}
+            {/* Main View Shell: GM Workspace vs Player Character Sheet */}
             <div className="flex-1">
               {activeRole === 'gm' ? (
                 <GmWorkspaceView
@@ -649,19 +620,14 @@ export default function App() {
                   onRoomCodeReady={(code) => setActiveRoomCode(code)}
                 />
               ) : (
-                <>
-                  {activeTab === 'sheet' && (
-                    <CharacterSheetView
-                      onOpenVitalityManager={() => setShowVitalityManagerModal(true)}
-                      onOpenPartySelector={() => {
-                        setLaunchHubInitialTab('party');
-                        setShowUnifiedLaunchHubModal(true);
-                      }}
-                      tabSessionId={tabSessionId}
-                    />
-                  )}
-                  {activeTab === 'logs' && <AdventureLogs />}
-                </>
+                <CharacterSheetView
+                  onOpenVitalityManager={() => setShowVitalityManagerModal(true)}
+                  onOpenPartySelector={() => {
+                    setLaunchHubInitialTab('party');
+                    setShowUnifiedLaunchHubModal(true);
+                  }}
+                  tabSessionId={tabSessionId}
+                />
               )}
             </div>
           </>

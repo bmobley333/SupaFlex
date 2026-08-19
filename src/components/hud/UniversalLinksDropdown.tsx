@@ -4,13 +4,14 @@
 import React, { useState } from 'react';
 import { Link2, ChevronDown } from 'lucide-react';
 import { EncounterLink } from '../../types/adventures';
-import { UniversalLinksModal, LinkScope } from '../modals/UniversalLinksModal';
+import { UniversalLinksModal, LinkScope, EditorTab } from '../modals/UniversalLinksModal';
 import { useReceivedLinksStore } from '../../store/useReceivedLinksStore';
 
 export interface UniversalLinksDropdownProps {
   label: string; // e.g. "GM Links", "Adventure Links", "Encounter Links", "Player Links", "Character Links"
   links?: EncounterLink[];
   scope?: LinkScope;
+  initialTab?: EditorTab;
   onAddLink?: (name: string, url: string, tag?: string, desc?: string) => Promise<void> | void;
   onUpdateLink?: (linkId: string, name: string, url: string, tag?: string, desc?: string) => Promise<void> | void;
   onDeleteLink?: (linkId: string) => Promise<void> | void;
@@ -26,6 +27,7 @@ export const UniversalLinksDropdown: React.FC<UniversalLinksDropdownProps> = ({
   label,
   links = [],
   scope,
+  initialTab,
   disabled = false,
   disabledTooltip,
   topLabel,
@@ -142,6 +144,7 @@ export const UniversalLinksDropdown: React.FC<UniversalLinksDropdownProps> = ({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         initialScope={resolvedScope}
+        initialTab={initialTab}
         themeColor={themeColor}
       />
     </>

@@ -41,18 +41,21 @@ import {
   LINK_CATEGORY_METADATA,
   normalizeLinkCategory,
 } from '../../types/adventures';
+import { CharacterBio } from '../../types/game';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useAdventureStore } from '../../store/useAdventureStore';
 import { useReceivedLinksStore } from '../../store/useReceivedLinksStore';
 import { gameApi } from '../../services/api';
+import { InfoTooltip } from '../common/InfoTooltip';
 
 export type LinkScope = 'gm' | 'adventure' | 'encounter' | 'player' | 'character' | 'received';
-export type EditorTab = 'link' | 'note';
+export type EditorTab = 'link' | 'note' | 'trait';
 
 export interface UniversalLinksModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialScope?: LinkScope;
+  initialTab?: EditorTab;
   themeColor?: 'teal' | 'indigo' | 'amber' | 'cyan' | 'rose' | 'emerald';
 }
 
@@ -79,6 +82,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   isOpen,
   onClose,
   initialScope,
+  initialTab,
 }) => {
   // Store hooks
   const activePartyId = useCharacterStore((state) => state.activePartyId);
@@ -94,6 +98,8 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   const updateCharacterLink = useCharacterStore((state) => state.updateCharacterLink);
   const deleteCharacterLink = useCharacterStore((state) => state.deleteCharacterLink);
   const reorderCharacterLinkByIndex = useCharacterStore((state) => state.reorderCharacterLinkByIndex);
+  const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
+  const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
 
   const gmLinks = useAdventureStore((state) => state.gmLinks);
   const activeAdv = useAdventureStore((state) => state.getActiveAdventure());
@@ -130,9 +136,22 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   const [receivedTargetScope, setReceivedTargetScope] = useState<string>('auto');
 
   // Editor Tab State (for Right Pane)
-  const [activeEditorTab, setActiveEditorTab] = useState<EditorTab>('link');
+  const [activeEditorTab, setActiveEditorTab] = useState<EditorTab>(initialTab || 'link');
 
-  // Sync initial scope on modal open or role change
+  const bio: CharacterBio = activeCharacter?.sheet_data?.bio || {};
+
+  const handleBioChange = (field: keyof CharacterBio, value: string) => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      bio: {
+        ...(prev.bio || {}),
+        [field]: value,
+      },
+    }));
+    saveActiveCharacter();
+  };
+
+  // Sync initial scope & tab on modal open or role change
   useEffect(() => {
     if (isOpen) {
       if (initialScope) {
@@ -140,8 +159,11 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
       } else {
         setCurrentScope(activeRole === 'gm' ? 'gm' : 'player');
       }
+      if (initialTab) {
+        setActiveEditorTab(initialTab);
+      }
     }
-  }, [isOpen, initialScope, activeRole]);
+  }, [isOpen, initialScope, initialTab, activeRole]);
 
   // Form states for creating / editing links
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -550,11 +572,29 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     );
   };
 
+  const isTraitsVisibleInLeftPane =
+    currentScope === 'character' &&
+    !!activeCharacter &&
+    (!searchQuery ||
+      'character traits & demographics'.includes(searchQuery.toLowerCase()) ||
+      (bio.appearance && bio.appearance.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (bio.positive_trait && bio.positive_trait.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (bio.negative_trait && bio.negative_trait.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (bio.flair && bio.flair.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (bio.adventuring_goal && bio.adventuring_goal.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (bio.notes && bio.notes.toLowerCase().includes(searchQuery.toLowerCase()))) &&
+    (selectedTagFilter === 'ALL' || selectedTagFilter === 'Lore / Narrative');
+
   const handleSelectAllLinks = () => {
-    if (selectedLinkIds.length === filteredLinks.length) {
+    const totalVisibleCount = filteredLinks.length + (isTraitsVisibleInLeftPane ? 1 : 0);
+    if (selectedLinkIds.length === totalVisibleCount && totalVisibleCount > 0) {
       setSelectedLinkIds([]);
     } else {
-      setSelectedLinkIds(filteredLinks.map((l) => l.id));
+      const allIds = filteredLinks.map((l) => l.id);
+      if (isTraitsVisibleInLeftPane) {
+        allIds.push('__char_traits__');
+      }
+      setSelectedLinkIds(allIds);
     }
   };
 
@@ -575,7 +615,37 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
       return;
     }
 
-    const linksToSend = scopeData.links.filter((l) => selectedLinkIds.includes(l.id));
+    const isTraitsSelected = selectedLinkIds.includes('__char_traits__');
+    const standardLinksToSend = scopeData.links.filter((l) => selectedLinkIds.includes(l.id));
+
+    let linksToSend = [...standardLinksToSend];
+
+    if (isTraitsSelected && activeCharacter) {
+      const charBio = activeCharacter.sheet_data?.bio || {};
+      const traitMarkdownLines = [
+        `### 👤 ${activeCharacter.name || 'Hero'} — Traits & Demographics`,
+        '',
+        `- **Height:** ${charBio.height || '—'} | **Weight:** ${charBio.weight || '—'} | **Age:** ${charBio.age || '—'}`,
+        `- **Appearance:** ${charBio.appearance || '—'}`,
+        `- **Positive Trait:** ${charBio.positive_trait || '—'}`,
+        `- **Negative Trait:** ${charBio.negative_trait || '—'}`,
+        `- **Flair:** ${charBio.flair || '—'}`,
+        `- **Adventuring Goal:** ${charBio.adventuring_goal || '—'}`,
+        `- **Notes:** ${charBio.notes || '—'}`,
+      ].join('\n');
+
+      const traitsLinkItem: EncounterLink = {
+        id: `traits_${activeCharacter.id}_${Date.now()}`,
+        name: `${activeCharacter.name || 'Hero'} - Traits & Demographics`,
+        description: traitMarkdownLines,
+        categoryTag: 'Lore / Narrative',
+        isNote: true,
+        created_at: new Date().toISOString(),
+      };
+
+      linksToSend = [traitsLinkItem, ...linksToSend];
+    }
+
     if (linksToSend.length === 0) return;
 
     setIsDispatching(true);
@@ -901,7 +971,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
             {/* Scrollable Master List */}
             <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 min-h-0">
               {currentScope !== 'received' ? (
-                filteredLinks.length === 0 ? (
+                filteredLinks.length === 0 && !isTraitsVisibleInLeftPane ? (
                   <div className="h-full flex flex-col items-center justify-center p-6 bg-slate-950/30 rounded-xl border border-slate-800/60 text-center">
                     <Link2 className="w-8 h-8 text-slate-600 mb-2" />
                     <p className="text-xs font-bold text-slate-400">No items in {scopeData.title.split('&')[0]}</p>
@@ -910,7 +980,59 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                     </p>
                   </div>
                 ) : (
-                  filteredLinks.map((link, idx) => {
+                  <>
+                    {/* Pinned Character Traits Card (Character Scope Only) */}
+                    {isTraitsVisibleInLeftPane && (
+                      <div
+                        onClick={() => {
+                          setActiveEditorTab('trait');
+                          setEditingId(null);
+                          setIsEditingNote(false);
+                        }}
+                        className={`p-2.5 rounded-xl border transition flex flex-col gap-1.5 shadow-sm cursor-pointer ${
+                          activeEditorTab === 'trait'
+                            ? 'bg-purple-950/40 border-purple-500/60 ring-1 ring-purple-500/40'
+                            : selectedLinkIds.includes('__char_traits__')
+                            ? 'bg-purple-950/30 border-purple-500/50'
+                            : 'bg-slate-950/80 border-purple-900/40 hover:border-purple-700/60'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleSelectLink('__char_traits__');
+                              }}
+                              className="p-0.5 text-slate-400 hover:text-purple-300 transition cursor-pointer shrink-0"
+                              title={selectedLinkIds.includes('__char_traits__') ? 'Deselect traits' : 'Select traits for sharing'}
+                            >
+                              {selectedLinkIds.includes('__char_traits__') ? (
+                                <CheckSquare className="w-3.5 h-3.5 text-purple-400" />
+                              ) : (
+                                <Square className="w-3.5 h-3.5 text-slate-600 hover:text-slate-400" />
+                              )}
+                            </button>
+
+                            <span className="text-sm">👤</span>
+                            <span className="font-bold text-xs text-white truncate font-outfit">
+                              Character Traits & Demographics
+                            </span>
+                          </div>
+
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 shrink-0">
+                            Traits
+                          </span>
+                        </div>
+
+                        <p className="text-[11px] text-slate-400 truncate pl-6 font-sans">
+                          {bio.appearance || bio.positive_trait || bio.adventuring_goal || 'Height, Weight, Age, Appearance, Traits & Quirks'}
+                        </p>
+                      </div>
+                    )}
+
+                    {filteredLinks.map((link, idx) => {
                     const isSelected = selectedLinkIds.includes(link.id);
                     const isEditing = editingId === link.id;
                     const isNote = !link.url || !link.url.trim() || link.isNote;
@@ -1033,7 +1155,8 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                         </div>
                       </div>
                     );
-                  })
+                  })}
+                  </>
                 )
               ) : (
                 /* Received Feed List */
@@ -1295,7 +1418,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                           handleResetEditor();
                         }
                       }}
-                      className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                         activeEditorTab === 'link'
                           ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
                           : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -1313,7 +1436,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                           handleResetEditor();
                         }
                       }}
-                      className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                         activeEditorTab === 'note'
                           ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                           : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -1322,6 +1445,25 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                       <Plus className="w-3.5 h-3.5" />
                       <span>Note Editor</span>
                     </button>
+
+                    {currentScope === 'character' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveEditorTab('trait');
+                          setEditingId(null);
+                          setIsEditingNote(false);
+                        }}
+                        className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                          activeEditorTab === 'trait'
+                            ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <User className="w-3.5 h-3.5" />
+                        <span>Trait Editor</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Edit State Badge & Reset Button */}
@@ -1490,6 +1632,152 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                       </button>
                     </div>
                   </form>
+                )}
+
+                {/* Tab 3: Trait Editor (Character Scope Only) */}
+                {activeEditorTab === 'trait' && (
+                  <div className="flex-1 flex flex-col gap-3.5 min-h-0 overflow-y-auto pr-1">
+                    <div className="flex items-center justify-between border-b border-purple-500/20 pb-2 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-purple-400" />
+                        <h4 className="font-outfit font-bold text-xs text-purple-300 uppercase tracking-wider">
+                          Character Traits & Demographics ({activeCharacter?.name || 'Active Hero'})
+                        </h4>
+                      </div>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        Auto-saved to Character Sheet
+                      </span>
+                    </div>
+
+                    {/* 3 Physical Metric Cells (Hgt, Wgt, Age) */}
+                    <div className="grid grid-cols-3 gap-3 shrink-0">
+                      <div className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800 flex flex-col gap-1">
+                        <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">Hgt (Height)</span>
+                        <input
+                          type="text"
+                          value={bio.height || ''}
+                          placeholder="e.g. 5'11&quot;"
+                          onChange={(e) => handleBioChange('height', e.target.value)}
+                          className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
+                        />
+                      </div>
+
+                      <div className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800 flex flex-col gap-1">
+                        <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">Wgt (Weight)</span>
+                        <input
+                          type="text"
+                          value={bio.weight || ''}
+                          placeholder="e.g. 175 lbs"
+                          onChange={(e) => handleBioChange('weight', e.target.value)}
+                          className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
+                        />
+                      </div>
+
+                      <div className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800 flex flex-col gap-1">
+                        <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">Age</span>
+                        <input
+                          type="text"
+                          value={bio.age || ''}
+                          placeholder="e.g. 28"
+                          onChange={(e) => handleBioChange('age', e.target.value)}
+                          className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Full Horizontal Fields */}
+                    <div className="flex flex-col gap-3">
+                      {/* Appearance */}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Appearance</label>
+                          <InfoTooltip text="Physical description (e.g. Rugged scar on left cheek, dark cloak, keen eyes...)" />
+                        </div>
+                        <input
+                          type="text"
+                          value={bio.appearance || ''}
+                          placeholder="Physical description..."
+                          onChange={(e) => handleBioChange('appearance', e.target.value)}
+                          className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full"
+                        />
+                      </div>
+
+                      {/* Positive Trait */}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Positive Trait</label>
+                          <InfoTooltip text="Key strength or virtue (e.g. Fiercely loyal to comrades, calm under pressure...)" />
+                        </div>
+                        <input
+                          type="text"
+                          value={bio.positive_trait || ''}
+                          placeholder="Key strength or virtue..."
+                          onChange={(e) => handleBioChange('positive_trait', e.target.value)}
+                          className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 w-full"
+                        />
+                      </div>
+
+                      {/* Negative Trait */}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-xs font-bold text-rose-300 uppercase tracking-wider">Negative Trait</label>
+                          <InfoTooltip text="Character flaw or weakness (e.g. Overly stubborn, mistrustful of noble bloodlines...)" />
+                        </div>
+                        <input
+                          type="text"
+                          value={bio.negative_trait || ''}
+                          placeholder="Character flaw or weakness..."
+                          onChange={(e) => handleBioChange('negative_trait', e.target.value)}
+                          className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-rose-500 w-full"
+                        />
+                      </div>
+
+                      {/* Flair */}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-xs font-bold text-purple-300 uppercase tracking-wider">Flair</label>
+                          <InfoTooltip text="Unique signature quirk or habit (e.g. Flips a worn brass coin before making crucial decisions...)" />
+                        </div>
+                        <input
+                          type="text"
+                          value={bio.flair || ''}
+                          placeholder="Unique signature quirk or habit..."
+                          onChange={(e) => handleBioChange('flair', e.target.value)}
+                          className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full"
+                        />
+                      </div>
+
+                      {/* Adventuring Goal */}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-xs font-bold text-amber-300 uppercase tracking-wider">Adventuring Goal</label>
+                          <InfoTooltip text="Long-term quest or narrative drive (e.g. Reclaim the ancestral crown of Shanask...)" />
+                        </div>
+                        <textarea
+                          rows={2}
+                          value={bio.adventuring_goal || ''}
+                          placeholder="Long-term quest or narrative drive..."
+                          onChange={(e) => handleBioChange('adventuring_goal', e.target.value)}
+                          className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-amber-500 w-full resize-none"
+                        />
+                      </div>
+
+                      {/* Notes */}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-xs font-bold text-cyan-300 uppercase tracking-wider">Notes</label>
+                          <InfoTooltip text="General campaign notes, secrets, contacts, and personal logs..." />
+                        </div>
+                        <textarea
+                          rows={3}
+                          value={bio.notes || ''}
+                          placeholder="General campaign notes, secrets, contacts, and personal logs..."
+                          onChange={(e) => handleBioChange('notes', e.target.value)}
+                          className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-cyan-500 w-full resize-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             ) : (
