@@ -28,6 +28,7 @@ import {
   Map,
   Swords,
   Scroll,
+  Info,
 } from 'lucide-react';
 import { EncounterLink, ReceivedLinkItem } from '../../types/adventures';
 import { useCharacterStore } from '../../store/useCharacterStore';
@@ -142,6 +143,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   const [selectedLinkIds, setSelectedLinkIds] = useState<string[]>([]);
   const [sendToAllParty, setSendToAllParty] = useState(true);
   const [selectedRecipientCharacterIds, setSelectedRecipientCharacterIds] = useState<string[]>([]);
+  const [showMemberPicker, setShowMemberPicker] = useState(false);
   const [partyMembers, setPartyMembers] = useState<any[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
@@ -494,6 +496,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     if (result.success) {
       showToast(`🚀 Dispatched ${result.count} link(s) to ${sendToAllParty ? 'Entire Party' : `${selectedRecipientCharacterIds.length} member(s)`}!`);
       setSelectedLinkIds([]);
+      setShowMemberPicker(false);
     } else {
       showToast('Failed to dispatch links.');
     }
@@ -534,8 +537,9 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         )}
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-950/80 shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-950/90 shrink-0 gap-4">
+          {/* Left Zone: Icon + Title + Count Badge */}
+          <div className="flex items-center gap-3 shrink-0">
             <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 shadow-inner">
               {scopeData.icon}
             </div>
@@ -548,126 +552,132 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                   {scopeData.links.length} Links
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono truncate max-w-md">{scopeData.subtitle}</p>
             </div>
           </div>
 
-          {/* Role-Aware KISS Multi-Option Pill Switch */}
-          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-            {activeRole === 'gm' ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentScope('gm');
-                    handleCancelForm();
-                  }}
-                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    currentScope === 'gm'
-                      ? 'bg-teal-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                  }`}
-                >
-                  <Crown className="w-3.5 h-3.5" />
-                  <span>GM ({gmLinks.length})</span>
-                </button>
+          {/* Center Zone: Role-Aware KISS Multi-Option Pill Switch + Sub-text directly below pill */}
+          <div className="flex flex-col items-center gap-1 flex-1 max-w-xl">
+            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+              {activeRole === 'gm' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentScope('gm');
+                      handleCancelForm();
+                    }}
+                    className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      currentScope === 'gm'
+                        ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <Crown className="w-3.5 h-3.5" />
+                    <span>GM ({gmLinks.length})</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentScope('adventure');
-                    handleCancelForm();
-                  }}
-                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    currentScope === 'adventure'
-                      ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                  }`}
-                >
-                  <Map className="w-3.5 h-3.5" />
-                  <span>Adventure ({activeAdv?.links?.length || 0})</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentScope('adventure');
+                      handleCancelForm();
+                    }}
+                    className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      currentScope === 'adventure'
+                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <Map className="w-3.5 h-3.5" />
+                    <span>Adventure ({activeAdv?.links?.length || 0})</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentScope('encounter');
-                    handleCancelForm();
-                  }}
-                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    currentScope === 'encounter'
-                      ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                  }`}
-                >
-                  <Swords className="w-3.5 h-3.5" />
-                  <span>Encounter ({activeEnc?.links?.length || 0})</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentScope('player');
-                    handleCancelForm();
-                  }}
-                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    currentScope === 'player'
-                      ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                  }`}
-                >
-                  <User className="w-3.5 h-3.5" />
-                  <span>Player ({playerLinks.length})</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentScope('encounter');
+                      handleCancelForm();
+                    }}
+                    className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      currentScope === 'encounter'
+                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <Swords className="w-3.5 h-3.5" />
+                    <span>Encounter ({activeEnc?.links?.length || 0})</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentScope('player');
+                      handleCancelForm();
+                    }}
+                    className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      currentScope === 'player'
+                        ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>Player ({playerLinks.length})</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentScope('character');
-                    handleCancelForm();
-                  }}
-                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    currentScope === 'character'
-                      ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                  }`}
-                >
-                  <Scroll className="w-3.5 h-3.5" />
-                  <span>Character ({activeCharacter?.sheet_data?.character_links?.length || 0})</span>
-                </button>
-              </>
-            )}
-
-            {/* Received Tab (Universal) */}
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentScope('received');
-                handleCancelForm();
-              }}
-              className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer relative ${
-                currentScope === 'received'
-                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              <Inbox className="w-3.5 h-3.5" />
-              <span>Received ({receivedLinks.length})</span>
-              {unreadCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 bg-rose-500 text-white text-[9px] font-black rounded-full animate-pulse">
-                  {unreadCount}
-                </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentScope('character');
+                      handleCancelForm();
+                    }}
+                    className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      currentScope === 'character'
+                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <Scroll className="w-3.5 h-3.5" />
+                    <span>Character ({activeCharacter?.sheet_data?.character_links?.length || 0})</span>
+                  </button>
+                </>
               )}
-            </button>
+
+              {/* Received Tab (Universal) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentScope('received');
+                  handleCancelForm();
+                }}
+                className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer relative ${
+                  currentScope === 'received'
+                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                <Inbox className="w-3.5 h-3.5" />
+                <span>Received ({receivedLinks.length})</span>
+                {unreadCount > 0 && (
+                  <span className="ml-1 px-1.5 py-0.2 bg-rose-500 text-white text-[9px] font-black rounded-full animate-pulse">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Sub-text positioned directly below pill toggle area */}
+            <p className="text-[11px] text-slate-400 font-mono tracking-wide truncate max-w-md text-center">
+              {scopeData.subtitle}
+            </p>
           </div>
 
-          {/* Close Button */}
+          {/* Right Zone: Close Button */}
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer shrink-0"
             title="Close"
           >
             <X className="w-5 h-5" />
@@ -677,12 +687,12 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         {/* Modal Two-Pane Body */}
         <div className="flex-1 flex overflow-hidden">
           {/* ======================================================================== */}
-          {/* LEFT PANE: Form & Dispatcher                                            */}
+          {/* LEFT PANE: Form & Scope Details (w-[360px])                             */}
           {/* ======================================================================== */}
-          <div className="w-[380px] border-r border-slate-800 bg-slate-950/40 p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
+          <div className="w-[360px] border-r border-slate-800 bg-slate-950/40 p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
             {currentScope !== 'received' ? (
               <>
-                {/* 1. Add / Edit Link Form */}
+                {/* Add / Edit Link Form */}
                 <form onSubmit={handleSaveForm} className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl flex flex-col gap-3 shadow-md">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                     <span className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
@@ -701,8 +711,9 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                   </div>
 
                   {scopeData.isDisabled ? (
-                    <div className="p-3 bg-amber-950/40 border border-amber-500/40 rounded-lg text-xs text-amber-300">
-                      {scopeData.disabledReason}
+                    <div className="p-3 bg-amber-950/40 border border-amber-500/40 rounded-lg text-xs text-amber-300 flex items-start gap-2">
+                      <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span>{scopeData.disabledReason}</span>
                     </div>
                   ) : (
                     <>
@@ -775,122 +786,15 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                   )}
                 </form>
 
-                {/* 2. Party Dispatcher Section */}
-                <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl flex flex-col gap-3 shadow-md">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
-                      <Share2 className="w-3.5 h-3.5 text-cyan-400" />
-                      Party Dispatcher
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      {selectedLinkIds.length} link(s) selected
-                    </span>
+                {/* Scope Guidance Info Card */}
+                <div className="bg-slate-900/60 border border-slate-800/80 p-3 rounded-xl flex flex-col gap-1.5 text-xs text-slate-400">
+                  <div className="flex items-center gap-1.5 text-slate-300 font-bold text-[11px] uppercase tracking-wider">
+                    <Info className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Quick Tip</span>
                   </div>
-
-                  {/* Destination Option: Entire Party vs Specific */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
-                      <span>Destination</span>
-                      <span className="text-[10px] font-mono text-cyan-400">
-                        {activePartyId ? `Party: ${activePartyId.slice(0, 6).toUpperCase()}` : 'No Party Room'}
-                      </span>
-                    </label>
-
-                    <div className="bg-slate-950/90 border border-slate-800 rounded-lg p-2 flex flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSendToAllParty(true)}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between transition cursor-pointer ${
-                          sendToAllParty
-                            ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/50'
-                            : 'hover:bg-slate-900 text-slate-400 border border-transparent'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Users className="w-3.5 h-3.5 text-cyan-400" />
-                          <span>Entire Party (Everyone)</span>
-                        </div>
-                        {sendToAllParty && <Check className="w-3.5 h-3.5 text-cyan-400" />}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setSendToAllParty(false)}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between transition cursor-pointer ${
-                          !sendToAllParty
-                            ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/50'
-                            : 'hover:bg-slate-900 text-slate-400 border border-transparent'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <User className="w-3.5 h-3.5 text-indigo-400" />
-                          <span>Select Individual Members</span>
-                        </div>
-                        {!sendToAllParty && <Check className="w-3.5 h-3.5 text-cyan-400" />}
-                      </button>
-
-                      {/* Member Checkbox List */}
-                      {!sendToAllParty && (
-                        <div className="mt-1 pt-2 border-t border-slate-800/80 flex flex-col gap-1 max-h-36 overflow-y-auto">
-                          {isLoadingMembers ? (
-                            <div className="flex items-center justify-center gap-2 py-3 text-xs text-slate-400">
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
-                              <span>Loading party members...</span>
-                            </div>
-                          ) : partyMembers.length === 0 ? (
-                            <p className="text-[11px] text-slate-500 italic text-center py-2">
-                              No active party members connected.
-                            </p>
-                          ) : (
-                            partyMembers.map((m) => {
-                              const charName = m.character?.name || m.player_email || 'Party Hero';
-                              const charId = String(m.character_id || m.id);
-                              const isChecked = selectedRecipientCharacterIds.includes(charId);
-                              return (
-                                <button
-                                  key={charId}
-                                  type="button"
-                                  onClick={() => handleToggleRecipient(charId)}
-                                  className={`w-full px-2 py-1 rounded text-left text-xs flex items-center justify-between transition cursor-pointer ${
-                                    isChecked
-                                      ? 'bg-indigo-950/60 text-indigo-200 font-bold border border-indigo-500/40'
-                                      : 'hover:bg-slate-900 text-slate-300'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-1.5 truncate">
-                                    {isChecked ? (
-                                      <CheckSquare className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                                    ) : (
-                                      <Square className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                                    )}
-                                    <span className="truncate">{charName}</span>
-                                  </div>
-                                  <span className="text-[10px] font-mono text-slate-500">
-                                    {m.player_email ? m.player_email.split('@')[0] : ''}
-                                  </span>
-                                </button>
-                              );
-                            })
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Dispatch Action Button */}
-                  <button
-                    type="button"
-                    disabled={selectedLinkIds.length === 0 || isDispatching || !activePartyId}
-                    onClick={handleDispatchSelected}
-                    className="py-2 px-3 rounded-lg text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>
-                      {isDispatching
-                        ? 'Broadcasting...'
-                        : `🚀 Share ${selectedLinkIds.length} Link(s) to ${sendToAllParty ? 'Party' : 'Selected'}`}
-                    </span>
-                  </button>
+                  <p className="text-[11px] leading-relaxed">
+                    Check one or more links in the list to your right, then use the <strong>Party Dispatcher</strong> below the list to send them to the party in real time!
+                  </p>
                 </div>
               </>
             ) : (
@@ -948,7 +852,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
           </div>
 
           {/* ======================================================================== */}
-          {/* RIGHT PANE: Links Grid & Filter Bar                                     */}
+          {/* RIGHT PANE: Links Grid & High-Density Dispatcher Shelf                   */}
           {/* ======================================================================== */}
           <div className="flex-1 flex flex-col p-4 overflow-hidden gap-3">
             {/* Filter / Search Controls */}
@@ -1020,7 +924,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
             )}
 
             {/* Links Cards List */}
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
               {currentScope !== 'received' ? (
                 filteredLinks.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-950/30 rounded-2xl border border-slate-800/60 text-center">
@@ -1242,7 +1146,146 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                 )
               )}
             </div>
+
+            {/* High-Density Party Dispatcher Shelf (Bottom of Right Pane) */}
+            {currentScope !== 'received' && (
+              <div className="bg-slate-950/90 border border-slate-800 p-2.5 rounded-xl flex flex-col gap-2 shadow-inner shrink-0 mt-auto">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  {/* Left: Selection Counter & Destination Switcher */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-cyan-300 flex items-center gap-1">
+                      <Share2 className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>{selectedLinkIds.length} Selected</span>
+                    </span>
+
+                    {/* Destination Pill Switch */}
+                    <div className="bg-slate-900/90 border border-slate-800 p-0.5 rounded-lg flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSendToAllParty(true);
+                          setShowMemberPicker(false);
+                        }}
+                        className={`px-2 py-1 rounded text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
+                          sendToAllParty
+                            ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <Users className="w-3 h-3" />
+                        <span>Entire Party</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSendToAllParty(false);
+                          setShowMemberPicker(!showMemberPicker);
+                        }}
+                        className={`px-2 py-1 rounded text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
+                          !sendToAllParty
+                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <User className="w-3 h-3" />
+                        <span>
+                          Members ({selectedRecipientCharacterIds.length})
+                        </span>
+                      </button>
+                    </div>
+
+                    <span className="text-[10px] font-mono text-slate-500">
+                      {activePartyId ? `Room: #${activePartyId.slice(0, 6).toUpperCase()}` : 'No Room'}
+                    </span>
+                  </div>
+
+                  {/* Right: Dispatch Button */}
+                  <button
+                    type="button"
+                    disabled={selectedLinkIds.length === 0 || isDispatching || !activePartyId}
+                    onClick={handleDispatchSelected}
+                    className="py-1.5 px-4 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white transition flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>
+                      {isDispatching
+                        ? 'Broadcasting...'
+                        : `🚀 Share ${selectedLinkIds.length} Link(s) to ${sendToAllParty ? 'Party' : `${selectedRecipientCharacterIds.length} Member(s)`}`}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Optional Expandable Member Checkbox List */}
+                {!sendToAllParty && showMemberPicker && (
+                  <div className="pt-2 border-t border-slate-800/80 flex items-center gap-1.5 flex-wrap max-h-24 overflow-y-auto">
+                    {isLoadingMembers ? (
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400 py-1">
+                        <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
+                        <span>Loading party roster...</span>
+                      </div>
+                    ) : partyMembers.length === 0 ? (
+                      <span className="text-[11px] text-slate-500 italic py-1">No active members connected.</span>
+                    ) : (
+                      partyMembers.map((m) => {
+                        const charName = m.character?.name || m.player_email || 'Party Hero';
+                        const charId = String(m.character_id || m.id);
+                        const isChecked = selectedRecipientCharacterIds.includes(charId);
+                        return (
+                          <button
+                            key={charId}
+                            type="button"
+                            onClick={() => handleToggleRecipient(charId)}
+                            className={`px-2 py-0.5 rounded-lg text-xs font-bold flex items-center gap-1 border transition cursor-pointer ${
+                              isChecked
+                                ? 'bg-indigo-950 border-indigo-500/60 text-indigo-200'
+                                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            {isChecked ? (
+                              <CheckSquare className="w-3 h-3 text-indigo-400" />
+                            ) : (
+                              <Square className="w-3 h-3 text-slate-600" />
+                            )}
+                            <span className="truncate max-w-[120px]">{charName}</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Modal Footer Status Bar with Standardized "Done" Button */}
+        <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
+          <div className="flex items-center gap-3">
+            <span>
+              Active Scope: <strong className="text-slate-200 font-bold">{scopeData.title}</strong>
+            </span>
+            <span>•</span>
+            <span>
+              Total Scope Links: <strong className="text-cyan-300 font-bold">{scopeData.links.length}</strong>
+            </span>
+            {activePartyId && (
+              <>
+                <span>•</span>
+                <span>
+                  Party Room: <strong className="text-indigo-300 font-bold">#{activePartyId.slice(0, 6).toUpperCase()}</strong>
+                </span>
+              </>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-6 py-1.5 rounded-xl border border-slate-700/80 transition shadow-sm cursor-pointer"
+          >
+            Done
+          </button>
         </div>
       </div>
     </div>,
