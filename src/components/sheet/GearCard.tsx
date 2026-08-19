@@ -3,50 +3,21 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import {
   ChevronDown,
   ChevronUp,
-  Plus,
   Trash2,
   X,
   Search,
   Loader2,
   Package,
   Star,
+  AlertCircle,
+  Check,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { gameApi } from '../../services/api';
 import { SimpleGearItem, SupabaseGear } from '../../types/game';
-
-/**
- * Parses cost string into silver value.
- * Gold (g/gp) = 100 silver. Silver (s/sp) = 1 silver.
- * Examples: "5s" -> 5, "10g" -> 1000, "1g 50s" -> 150, "100s" -> 100.
- */
-export const parseCostToSilver = (costStr?: string): number => {
-  if (!costStr || !costStr.trim()) return 0;
-  const str = costStr.toLowerCase().trim();
-
-  let totalSilver = 0;
-
-  const goldMatch = str.match(/(\d+)\s*(g|gp|gold)/);
-  if (goldMatch) {
-    totalSilver += parseInt(goldMatch[1], 10) * 100;
-  }
-
-  const silverMatch = str.match(/(\d+)\s*(s|sp|silver)/);
-  if (silverMatch) {
-    totalSilver += parseInt(silverMatch[1], 10);
-  }
-
-  if (!goldMatch && !silverMatch) {
-    const rawNum = str.match(/\d+/);
-    if (rawNum) {
-      totalSilver += parseInt(rawNum[0], 10);
-    }
-  }
-
-  return totalSilver;
-};
+import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 
 /**
  * Calculates total gold and silver inventory value for equipped gear items.
@@ -82,6 +53,7 @@ export const GearCard: React.FC = () => {
   const [inventorySearchQuery, setInventorySearchQuery] = useState<string>('');
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ALL');
+  const [catalogFeedback, setCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
   // Calculate total inventory value (gold & silver, 100s = 1g)
   const inventoryValue = useMemo(() => calculateInventoryValue(gearList), [gearList]);
@@ -226,21 +198,46 @@ export const GearCard: React.FC = () => {
     });
   }, [gearCatalog, catalogSearchQuery, selectedCategoryFilter, isItemStarred, activeGenre]);
 
-  // Add stock item from Supabase catalog to character sheet inventory
+  // Add stock item from Supabase catalog to character sheet inventory with funds check & change-making
   const handleAddStockGear = (stockItem: SupabaseGear) => {
-    const existingIndex = gearList.findIndex(
-      (g) => g.name.toLowerCase() === stockItem.name.toLowerCase()
-    );
+    const itemCostSilver = parseCostToSilver(stockItem.cost);
+    const costAbbrev = formatCostAbbreviated(stockItem.cost);
+
+    const curGold = activeCharacter?.sheet_data?.gold ?? 0;
+    const curSilver = activeCharacter?.sheet_data?.silver ?? 0;
+    const deductRes = deductFundsWithChange(curGold, curSilver, itemCostSilver);
+
+    if (!deductRes.success) {
+      setCatalogFeedback({
+        type: 'error',
+        message: `Insufficient funds! "${stockItem.name}" costs ${costAbbrev} (${itemCostSilver}s), but you have ${formatCostAbbreviated(deductRes.totalAvailableSilver)} (${deductRes.totalAvailableSilver}s). Need ${deductRes.shortfallSilver}s more.`,
+      });
+      return;
+    }
+
+    let addedSuccessfully = false;
 
     updateActiveSheetData((prev) => {
+      const prevGold = prev.gold ?? 0;
+      const prevSilver = prev.silver ?? 0;
+      const reDeduct = deductFundsWithChange(prevGold, prevSilver, itemCostSilver);
+      if (!reDeduct.success) {
+        return prev;
+      }
+
+      addedSuccessfully = true;
       const currentList = prev.simple_gear || [];
+      const existingIndex = currentList.findIndex(
+        (g) => g.name.toLowerCase() === stockItem.name.toLowerCase()
+      );
+
+      let updatedList: SimpleGearItem[];
       if (existingIndex >= 0) {
-        const updated = [...currentList];
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          qty: updated[existingIndex].qty + 1,
+        updatedList = [...currentList];
+        updatedList[existingIndex] = {
+          ...updatedList[existingIndex],
+          qty: updatedList[existingIndex].qty + 1,
         };
-        return { ...prev, simple_gear: updated };
       } else {
         const newItem: SimpleGearItem = {
           id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -250,10 +247,25 @@ export const GearCard: React.FC = () => {
           cost: stockItem.cost,
           notes: stockItem.notes,
         };
-        return { ...prev, simple_gear: [...currentList, newItem] };
+        updatedList = [...currentList, newItem];
       }
+
+      return {
+        ...prev,
+        gold: reDeduct.newGold,
+        silver: reDeduct.newSilver,
+        simple_gear: updatedList,
+      };
     });
     saveActiveCharacter();
+
+    if (addedSuccessfully) {
+      setCatalogFeedback({
+        type: 'success',
+        message: `Purchased "${stockItem.name}" for ${costAbbrev} and added to gear! (Remaining: ${deductRes.newGold}g ${deductRes.newSilver}s)`,
+      });
+      setTimeout(() => setCatalogFeedback(null), 4000);
+    }
   };
 
   // Update item quantity or attributes in active character sheet inventory
@@ -494,6 +506,34 @@ export const GearCard: React.FC = () => {
                         </select>
                       </div>
 
+                      {/* Catalog Action Feedback Banner */}
+                      {catalogFeedback && (
+                        <div
+                          className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 shrink-0 transition-all ${
+                            catalogFeedback.type === 'error'
+                              ? 'bg-rose-950/90 border-rose-500/60 text-rose-200 shadow-md shadow-rose-950/50'
+                              : 'bg-emerald-950/90 border-emerald-500/60 text-emerald-200 shadow-md shadow-emerald-950/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {catalogFeedback.type === 'error' ? (
+                              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                            ) : (
+                              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                            )}
+                            <span className="font-medium">{catalogFeedback.message}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setCatalogFeedback(null)}
+                            className="p-1 text-slate-400 hover:text-slate-100 rounded hover:bg-slate-800 transition-colors"
+                            title="Dismiss"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+
                       {/* Catalog Items Scrollable Grid */}
                       <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1.5 min-h-0">
                         {isLoadingCatalog ? (
@@ -510,6 +550,13 @@ export const GearCard: React.FC = () => {
                             const inInventory = gearList.find(
                               (g) => g.name.toLowerCase() === item.name.toLowerCase()
                             );
+                            const itemCostSilver = parseCostToSilver(item.cost);
+                            const costAbbrev = formatCostAbbreviated(item.cost);
+                            const curGold = activeCharacter?.sheet_data?.gold ?? 0;
+                            const curSilver = activeCharacter?.sheet_data?.silver ?? 0;
+                            const totalCharSilver = curGold * 100 + curSilver;
+                            const hasFunds = totalCharSilver >= itemCostSilver;
+
                             return (
                               <div
                                 key={item.id || item.name}
@@ -532,7 +579,7 @@ export const GearCard: React.FC = () => {
                                       {item.category || 'Adventuring'}
                                     </span>
                                     <span className="text-amber-400 font-mono font-bold">
-                                      {item.cost}
+                                      {costAbbrev}
                                     </span>
                                   </div>
                                 </div>
@@ -551,12 +598,20 @@ export const GearCard: React.FC = () => {
                                     <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
                                   </button>
                                   <button
+                                    type="button"
                                     onClick={() => handleAddStockGear(item)}
-                                    className="px-2.5 py-1 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0"
-                                    title="Add 1x to character sheet"
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer ${
+                                      hasFunds
+                                        ? 'bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/50'
+                                        : 'bg-rose-600/30 hover:bg-rose-600/50 text-rose-200 border border-rose-500/50'
+                                    }`}
+                                    title={
+                                      hasFunds
+                                        ? `Purchase 1x for ${costAbbrev} and add to gear`
+                                        : `Insufficient funds! Requires ${costAbbrev} (${itemCostSilver}s). You have ${formatCostAbbreviated(totalCharSilver)} (${totalCharSilver}s).`
+                                    }
                                   >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    Add
+                                    + Add [{costAbbrev}]
                                   </button>
                                 </div>
                               </div>

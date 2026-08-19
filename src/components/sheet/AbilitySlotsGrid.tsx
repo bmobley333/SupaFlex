@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, ArrowDownToLine, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, ArrowDownToLine, Trash2, AlertCircle, Check } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -8,6 +8,7 @@ import { TacticalPivotModal } from '../modals/TacticalPivotModal';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
 import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed, getApCostForNextSlot, getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
 import { getPowerReadyCategory, getReadySlotConfig, validateReadyMatrix } from '../../utils/readyMatrixSchedule';
+import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 
 interface AbilitySlotsGridProps {
   title: string;
@@ -203,6 +204,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [showManageModal, setShowManageModal] = useState(false);
   const [showTacticalPivotModal, setShowTacticalPivotModal] = useState(false);
   const [readyFeedback, setReadyFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+  const [catalogFeedback, setCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [catalogReadyFilter, setCatalogReadyFilter] = useState<'all' | 'primary_arsenal' | 'mobility_defense' | 'support_passive'>('all');
   const [activeTableName, setActiveTableName] = useState<string | null>(null);
@@ -477,100 +479,158 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   // Learn an ability from catalog into active sheet slots or Vault
   const handleLearnAbility = (item: Power | MagicItem) => {
     const { baseName, version } = parseAbilityVersion(item.name);
-    updateActiveSheetData((prev) => {
-      if (type === 'powers') {
-        const currentSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
-        const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
-        const combinedOld = [...currentSlots, ...currentVault];
-        const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
-        const oldApSpent = Math.max(0, oldTotalUnits - 3);
 
-        const newPower: AbilitySlot = {
-          select: true,
+    // 1. Spells / Loadout Mode (Hardware Catalog Purchase)
+    if (type === 'spells') {
+      const rawCost = (item as any).cost;
+      const itemCostSilver = parseCostToSilver(rawCost);
+      const costAbbrev = formatCostAbbreviated(rawCost);
+
+      const curGold = activeCharacter?.sheet_data?.gold ?? 0;
+      const curSilver = activeCharacter?.sheet_data?.silver ?? 0;
+      const deductRes = deductFundsWithChange(curGold, curSilver, itemCostSilver);
+
+      if (!deductRes.success) {
+        setCatalogFeedback({
+          type: 'error',
+          message: `Insufficient funds! "${cleanName(item.name)}" costs ${costAbbrev} (${itemCostSilver}s), but you have ${formatCostAbbreviated(deductRes.totalAvailableSilver)} (${deductRes.totalAvailableSilver}s). Need ${deductRes.shortfallSilver}s more.`,
+        });
+        return;
+      }
+
+      let alreadyOwned = false;
+      let addedSuccessfully = false;
+
+      updateActiveSheetData((prev) => {
+        const currentVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];
+        const exists = currentVault.some((v) => cleanName(v.name).toLowerCase() === cleanName(item.name).toLowerCase());
+        if (exists) {
+          alreadyOwned = true;
+          return prev;
+        }
+
+        const prevGold = prev.gold ?? 0;
+        const prevSilver = prev.silver ?? 0;
+        const reDeduct = deductFundsWithChange(prevGold, prevSilver, itemCostSilver);
+        if (!reDeduct.success) {
+          return prev;
+        }
+
+        addedSuccessfully = true;
+
+        const vaultItem: MagicItem = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
           name: cleanName(item.name),
           base_name: baseName,
           version: version,
-          action: (item.action?.toUpperCase() as any) || 'A',
+          action: item.action || 'P',
           usage: item.usage || '1-Enc',
           effect: item.effect || '',
-          checked: [false, false, false],
-          is_readied: false,
-          ready: getPowerReadyCategory(item),
+          notes: (item as any).notes,
+          source: (item as any).source || 'Hardware Purchase',
+          created_at: new Date().toISOString(),
+          category: (item as any).category || null,
+          cost: (item as any).cost,
+          is_hardware: true,
+          slot_weight: (getItemSlotWeight(item, fullCatalog) as 1 | 2 | 3 | 4),
         };
-
-        const readiedIndex = currentSlots.findIndex(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-        );
-        const vaultIndex = currentVault.findIndex(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-        );
-
-        let updatedSlots = [...currentSlots];
-        let updatedVault = [...currentVault];
-        let isUpgrade = false;
-
-        if (readiedIndex >= 0) {
-          const oldVersion = parseAbilityVersion(currentSlots[readiedIndex].name).version;
-          if (version > oldVersion) {
-            updatedSlots[readiedIndex] = { ...newPower, is_readied: true };
-            isUpgrade = true;
-          } else {
-            return prev;
-          }
-        } else if (vaultIndex >= 0) {
-          const oldVersion = parseAbilityVersion(currentVault[vaultIndex].name).version;
-          if (version > oldVersion) {
-            updatedVault[vaultIndex] = newPower;
-            isUpgrade = true;
-          } else {
-            return prev;
-          }
-        } else {
-          // Brand new learned power -> add to Vault (un-readied)
-          updatedVault.push(newPower);
-        }
-
-        const combinedNew = [...updatedSlots, ...updatedVault];
-        const prunedCombined = pruneLesserPowerVersions(combinedNew);
-        const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
-        const newApSpent = Math.max(0, newTotalUnits - 3);
-        const apDiff = newApSpent - oldApSpent;
-
-        const logAction = isUpgrade ? 'Upgraded Power' : 'Learned Power';
-
-        if (apDiff > 0) {
-          recordApExpenditure(apDiff, 'Powers', `${logAction}: ${cleanName(item.name)} (+${apDiff} AP)`, 1, 'Manage Powers');
-        } else {
-          recordApExpenditure(0, 'Powers', `${logAction}: ${cleanName(item.name)} (0 AP - Covered by Free AP)`, 1, 'Manage Powers');
-        }
 
         return {
           ...prev,
-          power_slots: updatedSlots,
-          character_power_codex: updatedVault,
+          gold: reDeduct.newGold,
+          silver: reDeduct.newSilver,
+          character_vault: [...currentVault, vaultItem],
         };
-      } else {
-        const currentVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];
-        const exists = currentVault.some((v) => cleanName(v.name).toLowerCase() === cleanName(item.name).toLowerCase());
-        if (!exists) {
-          const vaultItem: MagicItem = {
-            id: Date.now() + Math.floor(Math.random() * 1000),
-            name: cleanName(item.name),
-            base_name: baseName,
-            version: version,
-            action: item.action || 'P',
-            usage: item.usage || '1-Enc',
-            effect: item.effect || '',
-            notes: (item as any).notes,
-            source: 'Stock Catalog',
-            created_at: new Date().toISOString(),
-            category: (item as any).category || null,
-            slot_weight: (getItemSlotWeight(item, fullCatalog) as 1 | 2 | 3 | 4),
-          };
-          return { ...prev, character_vault: [...currentVault, vaultItem] };
-        }
-        return prev;
+      });
+      saveActiveCharacter();
+
+      if (alreadyOwned) {
+        setCatalogFeedback({
+          type: 'error',
+          message: `"${cleanName(item.name)}" is already in your Vault!`,
+        });
+      } else if (addedSuccessfully) {
+        setCatalogFeedback({
+          type: 'success',
+          message: `Purchased "${cleanName(item.name)}" for ${costAbbrev} and added to Vault! (Remaining: ${deductRes.newGold}g ${deductRes.newSilver}s)`,
+        });
+        setTimeout(() => setCatalogFeedback(null), 4000);
       }
+      return;
+    }
+
+    // 2. Powers Mode (Learn/Upgrade with AP)
+    updateActiveSheetData((prev) => {
+      const currentSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
+      const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
+      const combinedOld = [...currentSlots, ...currentVault];
+      const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
+      const oldApSpent = Math.max(0, oldTotalUnits - 3);
+
+      const newPower: AbilitySlot = {
+        select: true,
+        name: cleanName(item.name),
+        base_name: baseName,
+        version: version,
+        action: (item.action?.toUpperCase() as any) || 'A',
+        usage: item.usage || '1-Enc',
+        effect: item.effect || '',
+        checked: [false, false, false],
+        is_readied: false,
+        ready: getPowerReadyCategory(item),
+      };
+
+      const readiedIndex = currentSlots.findIndex(
+        (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+      );
+      const vaultIndex = currentVault.findIndex(
+        (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+      );
+
+      let updatedSlots = [...currentSlots];
+      let updatedVault = [...currentVault];
+      let isUpgrade = false;
+
+      if (readiedIndex >= 0) {
+        const oldVersion = parseAbilityVersion(currentSlots[readiedIndex].name).version;
+        if (version > oldVersion) {
+          updatedSlots[readiedIndex] = { ...newPower, is_readied: true };
+          isUpgrade = true;
+        } else {
+          return prev;
+        }
+      } else if (vaultIndex >= 0) {
+        const oldVersion = parseAbilityVersion(currentVault[vaultIndex].name).version;
+        if (version > oldVersion) {
+          updatedVault[vaultIndex] = newPower;
+          isUpgrade = true;
+        } else {
+          return prev;
+        }
+      } else {
+        // Brand new learned power -> add to Vault (un-readied)
+        updatedVault.push(newPower);
+      }
+
+      const combinedNew = [...updatedSlots, ...updatedVault];
+      const prunedCombined = pruneLesserPowerVersions(combinedNew);
+      const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
+      const newApSpent = Math.max(0, newTotalUnits - 3);
+      const apDiff = newApSpent - oldApSpent;
+
+      const logAction = isUpgrade ? 'Upgraded Power' : 'Learned Power';
+
+      if (apDiff > 0) {
+        recordApExpenditure(apDiff, 'Powers', `${logAction}: ${cleanName(item.name)} (+${apDiff} AP)`, 1, 'Manage Powers');
+      } else {
+        recordApExpenditure(0, 'Powers', `${logAction}: ${cleanName(item.name)} (0 AP - Covered by Free AP)`, 1, 'Manage Powers');
+      }
+
+      return {
+        ...prev,
+        power_slots: updatedSlots,
+        character_power_codex: updatedVault,
+      };
     });
     saveActiveCharacter();
   };
@@ -2057,12 +2117,49 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           </div>
                         )}
 
+                        {/* Catalog Action Feedback Banner */}
+                        {catalogFeedback && (
+                          <div
+                            className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 shrink-0 transition-all ${
+                              catalogFeedback.type === 'error'
+                                ? 'bg-rose-950/90 border-rose-500/60 text-rose-200 shadow-md shadow-rose-950/50'
+                                : 'bg-emerald-950/90 border-emerald-500/60 text-emerald-200 shadow-md shadow-emerald-950/50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {catalogFeedback.type === 'error' ? (
+                                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                              ) : (
+                                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                              )}
+                              <span className="font-medium">{catalogFeedback.message}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setCatalogFeedback(null)}
+                              className="p-1 text-slate-400 hover:text-slate-100 rounded hover:bg-slate-800 transition-colors"
+                              title="Dismiss"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+
                         {/* Scrollable Catalog Abilities List */}
                         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
                           {filteredCatalogAbilities.length > 0 ? (
                             filteredCatalogAbilities.map((item, idx) => {
                               const { baseName, version } = parseAbilityVersion(item.name);
                               const actionUpper = (item.action || '').toUpperCase();
+                              const isSpells = type === 'spells';
+                              const rawCost = (item as any).cost;
+                              const itemCostSilver = isSpells ? parseCostToSilver(rawCost) : 0;
+                              const costAbbrev = isSpells ? formatCostAbbreviated(rawCost) : '';
+
+                              const curGold = sheetData.gold ?? 0;
+                              const curSilver = sheetData.silver ?? 0;
+                              const totalCharSilver = curGold * 100 + curSilver;
+                              const hasFunds = isSpells ? totalCharSilver >= itemCostSilver : true;
 
                               return (
                                 <div
@@ -2095,7 +2192,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             {isHardware ? (
                                               <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
                                                 <span>⚙️ Hardware</span>
-                                                {(item as any).cost && <span className="text-amber-300 font-extrabold">• {(item as any).cost}</span>}
+                                                {(item as any).cost && <span className="text-amber-300 font-extrabold">• {costAbbrev}</span>}
                                               </span>
                                             ) : (
                                               <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-500/40 flex items-center gap-1">
@@ -2143,10 +2240,24 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                         <Edit2 className="w-3.5 h-3.5" />
                                       </button>
                                       <button
+                                        type="button"
                                         onClick={() => handleLearnAbility(item)}
-                                        className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 flex items-center gap-1 transition-all shrink-0 cursor-pointer"
+                                        className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
+                                          isSpells
+                                            ? hasFunds
+                                              ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
+                                              : 'bg-rose-600/30 text-rose-200 border-rose-500/50 hover:bg-rose-600/50'
+                                            : 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
+                                        }`}
+                                        title={
+                                          isSpells
+                                            ? hasFunds
+                                              ? `Purchase for ${costAbbrev} and add to Vault`
+                                              : `Insufficient funds! Requires ${costAbbrev} (${itemCostSilver}s). You have ${formatCostAbbreviated(totalCharSilver)} (${totalCharSilver}s).`
+                                            : 'Learn Power to Vault'
+                                        }
                                       >
-                                        {type === 'spells' ? '+ Add to Vault (0 AP)' : '+ Learn to Vault'}
+                                        {isSpells ? `+ Add to Vault [${costAbbrev}]` : '+ Learn to Vault'}
                                       </button>
                                     </div>
                                   </div>
