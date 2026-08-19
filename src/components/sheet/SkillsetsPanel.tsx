@@ -643,15 +643,25 @@ export const SkillsetsPanel: React.FC = () => {
   }, [sortedAllCatalogSkills, skillsetDerivedSkillsSet, knownIndividualSkills, skillFilterCategory, isSkillStarred, allCatalogSkillsMap, rightSearchQuery]);
 
   return (
-    <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">
+    <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3">
       {/* Main Sheet Card Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <h3 className="font-outfit font-bold text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
             <span className="text-base">🎓</span>
-            Skillsets
+            Skillsets & Derived Skills
           </h3>
           <CardHelpButton ruleKey="skills.basics" />
+
+          {/* Inline Count Badges */}
+          <div className="flex items-center gap-1.5 text-xs font-mono font-bold">
+            <span className="px-2 py-0.5 bg-purple-950/80 text-purple-300 border border-purple-500/30 rounded-lg">
+              🎓 {uniqueKnownSkillsetNames.length} Skillset{uniqueKnownSkillsetNames.length === 1 ? '' : 's'}
+            </span>
+            <span className="px-2 py-0.5 bg-indigo-950/80 text-indigo-300 border border-indigo-500/30 rounded-lg">
+              ✨ {sortedActiveSkills.length} Derived
+            </span>
+          </div>
         </div>
 
         {/* Manage Skills Trigger Button */}
@@ -1374,10 +1384,13 @@ export const SkillsetsPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Currently Known Skillsets Pills (Main Canvas View) */}
-      <div className="flex flex-col gap-2">
-        {uniqueKnownSkillsetNames.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
+      {/* Active Known Skillsets Top Strip (when learned) */}
+      {uniqueKnownSkillsetNames.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap pb-2 border-b border-slate-800/80">
+          <span className="text-[11px] font-outfit font-bold uppercase tracking-wider text-purple-300/80 shrink-0">
+            Active SkillSets:
+          </span>
+          <div className="flex flex-wrap gap-1.5">
             {uniqueKnownSkillsetNames.map((ksName) => {
               const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
               const isCustom = ksObj?.source === 'Custom' || (activeCharacter?.sheet_data?.custom_skillsets || []).some((cs) => cs.name.toLowerCase() === ksName.toLowerCase());
@@ -1385,9 +1398,9 @@ export const SkillsetsPanel: React.FC = () => {
               return (
                 <span
                   key={ksName}
-                  className="px-3 py-1.5 bg-purple-950/40 text-purple-200 border border-purple-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                  className="px-2.5 py-1 bg-purple-950/50 text-purple-200 border border-purple-500/40 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
                 >
-                  <span>🎓</span>
+                  <span className="text-xs">🎓</span>
                   <span>{ksName}</span>
                   {isCustom && (
                     <span className="text-[9px] font-mono font-bold bg-purple-900/80 text-purple-200 px-1 py-0.2 rounded border border-purple-500/40">
@@ -1398,22 +1411,11 @@ export const SkillsetsPanel: React.FC = () => {
               );
             })}
           </div>
-        ) : (
-          <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
-            No skillsets learned yet. Click "Manage Skills" above to select skillsets or create custom skills.
-          </div>
-        )}
-      </div>
-
-      {/* De-Duplicated Alphabetical Derived Skills Registry */}
-      <div className="flex flex-col gap-2.5 pt-2 border-t border-slate-800">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            Derived Skills ({sortedActiveSkills.length})
-          </span>
         </div>
+      )}
 
+      {/* De-Duplicated Alphabetical Derived Skills Grid (Zero Redundant Header Row!) */}
+      <div className="flex flex-col gap-2">
         {sortedActiveSkills.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {sortedActiveSkills.map((skill) => (
@@ -1437,8 +1439,8 @@ export const SkillsetsPanel: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="p-3 bg-slate-950/40 rounded-lg border border-slate-850 text-xs text-slate-500 italic">
-            No derived skills available. Select a skillset or learn an individual skill above to unlock skills.
+          <div className="p-3 bg-slate-950/40 rounded-lg border border-slate-800 text-xs text-slate-500 italic text-center">
+            No derived skills available. Click "Manage Skills" above to learn skillsets or individual skills.
           </div>
         )}
       </div>

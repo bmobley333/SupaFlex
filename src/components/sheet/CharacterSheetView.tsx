@@ -1,8 +1,8 @@
 // src/components/sheet/CharacterSheetView.tsx
 import React from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { MoneyCard } from './MoneyCard';
-import { GearCard } from './GearCard';
+import { HeroHubCard } from './HeroHubCard';
+import { WealthGearCard } from './WealthGearCard';
 import { SkillsetsPanel } from './SkillsetsPanel';
 import { WeaponsCard } from './WeaponsCard';
 import { ArmorCard } from './ArmorCard';
@@ -30,10 +30,10 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
 
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-16 relative">
-      {/* Collision-Free Responsive Top Section: Money (Left), Gear (Right) */}
+      {/* High-Density Top Section: Hero Hub (Left), Wealth & Gear (Right) */}
       <div id="section-top-cards" className="grid grid-cols-1 md:grid-cols-2 gap-4 scroll-mt-32">
-        <MoneyCard />
-        <GearCard />
+        <HeroHubCard />
+        <WealthGearCard />
       </div>
 
       {/* Screen-Wide Section: Skillsets & Derived Skills Registry */}

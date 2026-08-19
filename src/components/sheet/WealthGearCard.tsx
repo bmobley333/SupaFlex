@@ -1,0 +1,961 @@
+// src/components/sheet/WealthGearCard.tsx
+// Consolidated Top-Right Card for Wealth (Coins & Treasure) and Gear Inventory
+
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import {
+  ChevronDown,
+  Trash2,
+  X,
+  Search,
+  Sparkles,
+  Gem,
+  Package,
+  Star,
+  Loader2,
+} from 'lucide-react';
+import { useCharacterStore } from '../../store/useCharacterStore';
+import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
+import { TreasureItem, SimpleGearItem, SupabaseGear } from '../../types/game';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { gameApi } from '../../services/api';
+import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
+
+/**
+ * Parses treasure item value into total silver.
+ * Gold (gp/g) = 100 silver. Silver (sp/s) = 1 silver.
+ */
+export const parseTreasureToSilver = (item: TreasureItem): number => {
+  const qty = Math.max(1, item.qty || 1);
+  const val = Math.max(0, item.value || 0);
+  const isGold = item.currency === 'gp' || item.currency === 'g';
+  const itemSilver = isGold ? val * 100 : val;
+  return qty * itemSilver;
+};
+
+/**
+ * Calculates total gold and silver value across all treasure items.
+ * Enforces 100s = 1g rule so silver never exceeds 99s.
+ */
+export const calculateTotalTreasureValue = (treasureList: TreasureItem[]) => {
+  let totalSilver = 0;
+  for (const item of treasureList) {
+    totalSilver += parseTreasureToSilver(item);
+  }
+  const gold = Math.floor(totalSilver / 100);
+  const silver = totalSilver % 100;
+  return { gold, silver, totalSilver };
+};
+
+/**
+ * Calculates total gold and silver inventory value for equipped gear items.
+ * Enforces 100s = 1g rule so silver never exceeds 99s.
+ */
+export const calculateInventoryValue = (gearList: SimpleGearItem[]) => {
+  let totalSilver = 0;
+  for (const item of gearList) {
+    const qty = Math.max(1, item.qty || 1);
+    totalSilver += qty * parseCostToSilver(item.cost);
+  }
+  const gold = Math.floor(totalSilver / 100);
+  const silver = totalSilver % 100;
+  return { gold, silver, totalSilver };
+};
+
+export const WealthGearCard: React.FC = () => {
+  const activeGenre = useGenreStore((state) => state.activeGenre);
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+  const sheet = activeCharacter?.sheet_data;
+
+  // Wealth State
+  const gold = sheet?.gold ?? 0;
+  const silver = sheet?.silver ?? 0;
+  const treasure: TreasureItem[] = sheet?.other_treasure || [];
+
+  // Gear State
+  const rawGearList: SimpleGearItem[] = sheet?.simple_gear || [];
+  const gearList: SimpleGearItem[] = useMemo(() => {
+    return rawGearList.filter((g) => g && g.name && g.name.trim() !== '');
+  }, [rawGearList]);
+
+  // Modal Triggers
+  const [showMoneyModal, setShowMoneyModal] = useState<boolean>(false);
+  const [showGearModal, setShowGearModal] = useState<boolean>(false);
+
+  const moneyModalRef = useRef<HTMLDivElement>(null);
+  const gearModalRef = useRef<HTMLDivElement>(null);
+
+  // Treasure Form State
+  const [treasureSearchQuery, setTreasureSearchQuery] = useState<string>('');
+  const [customTreasureName, setCustomTreasureName] = useState<string>('');
+  const [customTreasureValue, setCustomTreasureValue] = useState<number>(10);
+  const [customTreasureCurrency, setCustomTreasureCurrency] = useState<'gp' | 'sp'>('gp');
+  const [customTreasureQty, setCustomTreasureQty] = useState<number>(1);
+  const [treasureFormError, setTreasureFormError] = useState<string | null>(null);
+
+  // Gear Catalog State
+  const [gearCatalog, setGearCatalog] = useState<SupabaseGear[]>([]);
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
+  const [gearInventorySearchQuery, setGearInventorySearchQuery] = useState<string>('');
+  const [gearCatalogSearchQuery, setGearCatalogSearchQuery] = useState<string>('');
+  const [selectedGearCategoryFilter, setSelectedGearCategoryFilter] = useState<string>('ALL');
+  const [gearCatalogFeedback, setGearCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+
+  // Computed Values
+  const treasureTotalValue = useMemo(() => calculateTotalTreasureValue(treasure), [treasure]);
+  const inventoryValue = useMemo(() => calculateInventoryValue(gearList), [gearList]);
+
+  // Fetch Supabase Gear Catalog on modal open
+  useEffect(() => {
+    if (showGearModal) {
+      setIsLoadingCatalog(true);
+      gameApi
+        .getGear()
+        .then((data) => setGearCatalog(data))
+        .catch((err) => console.error('Failed to load gear catalog:', err))
+        .finally(() => setIsLoadingCatalog(false));
+    }
+  }, [showGearModal]);
+
+  // Click outside to close modals
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moneyModalRef.current && !moneyModalRef.current.contains(event.target as Node)) {
+        setShowMoneyModal(false);
+      }
+      if (gearModalRef.current && !gearModalRef.current.contains(event.target as Node)) {
+        setShowGearModal(false);
+      }
+    };
+    if (showMoneyModal || showGearModal) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMoneyModal, showGearModal]);
+
+  // -------------------------------------------------------------
+  // Wealth Handlers
+  // -------------------------------------------------------------
+  const filteredTreasure = useMemo(() => {
+    if (!treasureSearchQuery.trim()) return treasure;
+    const query = treasureSearchQuery.toLowerCase();
+    return treasure.filter((item) => item.name.toLowerCase().includes(query));
+  }, [treasure, treasureSearchQuery]);
+
+  const handleCreateTreasure = (e: React.FormEvent) => {
+    e.preventDefault();
+    setTreasureFormError(null);
+
+    const trimmedName = customTreasureName.trim();
+    if (!trimmedName) {
+      setTreasureFormError('Treasure name is required.');
+      return;
+    }
+
+    const valInt = Math.max(1, customTreasureValue);
+    const qtyInt = Math.max(1, customTreasureQty);
+
+    const newItem: TreasureItem = {
+      id: `tr_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      name: trimmedName,
+      value: valInt,
+      currency: customTreasureCurrency,
+      qty: qtyInt,
+    };
+
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      other_treasure: [...(prev.other_treasure || []), newItem],
+    }));
+    saveActiveCharacter();
+
+    setCustomTreasureName('');
+    setCustomTreasureValue(10);
+    setCustomTreasureCurrency('gp');
+    setCustomTreasureQty(1);
+    setTreasureFormError(null);
+  };
+
+  const handleDeleteTreasure = (id: string) => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      other_treasure: (prev.other_treasure || []).filter((t) => t.id !== id),
+    }));
+    saveActiveCharacter();
+  };
+
+  const handleUpdateTreasureQty = (id: string, delta: number) => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      other_treasure: (prev.other_treasure || []).map((t) => {
+        if (t.id === id) {
+          const newQty = Math.max(1, (t.qty || 1) + delta);
+          return { ...t, qty: newQty };
+        }
+        return t;
+      }),
+    }));
+    saveActiveCharacter();
+  };
+
+  // -------------------------------------------------------------
+  // Gear Handlers
+  // -------------------------------------------------------------
+  const availableGearCategories = useMemo(() => {
+    const set = new Set<string>();
+    gearCatalog.forEach((item) => {
+      if (item.category && item.category.trim()) {
+        set.add(item.category.trim());
+      }
+    });
+    return Array.from(set).sort();
+  }, [gearCatalog]);
+
+  const filteredGearInventory = useMemo(() => {
+    if (!gearInventorySearchQuery.trim()) return gearList;
+    const query = gearInventorySearchQuery.toLowerCase();
+    return gearList.filter(
+      (item) =>
+        item.name.toLowerCase().includes(query) ||
+        (item.category && item.category.toLowerCase().includes(query))
+    );
+  }, [gearList, gearInventorySearchQuery]);
+
+  const isItemStarred = useCallback(
+    (targetItem: SupabaseGear | SimpleGearItem | { name: string; id?: number | string }) => {
+      const starredList = activeCharacter?.sheet_data?.starred_armor || [];
+      if (!starredList.length) return false;
+
+      const rawName = targetItem.name || '';
+      const targetId = (targetItem as any).id;
+
+      const catalogMatch = gearCatalog.find(
+        (g) => g.name.toLowerCase() === rawName.toLowerCase()
+      );
+
+      return starredList.some((k) => {
+        const kStr = String(k);
+        if (targetId && kStr === String(targetId)) return true;
+        if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return true;
+        if (kStr === String(rawName)) return true;
+        return false;
+      });
+    },
+    [activeCharacter?.sheet_data?.starred_armor, gearCatalog]
+  );
+
+  const handleToggleStarItem = (targetItem: SupabaseGear | SimpleGearItem | { name: string; id?: number | string }) => {
+    const rawName = targetItem.name || '';
+    const catalogMatch = gearCatalog.find(
+      (g) => g.name.toLowerCase() === rawName.toLowerCase()
+    );
+    const itemKey = (targetItem as any).id || (catalogMatch ? catalogMatch.id : null) || rawName;
+
+    updateActiveSheetData((prev) => {
+      const currentStarred = prev.starred_armor || [];
+      const currentlyStarred = isItemStarred(targetItem);
+      let updated: (string | number)[];
+
+      if (currentlyStarred) {
+        updated = currentStarred.filter((k) => {
+          const kStr = String(k);
+          if ((targetItem as any).id && kStr === String((targetItem as any).id)) return false;
+          if (catalogMatch && catalogMatch.id && kStr === String(catalogMatch.id)) return false;
+          if (kStr === String(rawName)) return false;
+          return true;
+        });
+      } else {
+        updated = currentStarred.some((k) => String(k) === String(itemKey))
+          ? currentStarred
+          : [...currentStarred, itemKey];
+      }
+
+      return {
+        ...prev,
+        starred_armor: updated,
+      };
+    });
+    saveActiveCharacter();
+  };
+
+  const starredArmorCount = useMemo(() => {
+    return gearCatalog.filter((g) => isItemStarred(g)).length;
+  }, [gearCatalog, isItemStarred]);
+
+  const filteredGearCatalog = useMemo(() => {
+    const equippedNames = new Set(gearList.map((g) => g.name.toLowerCase()));
+    const unequipped = gearCatalog.filter((g) => !equippedNames.has(g.name.toLowerCase()));
+
+    let base = unequipped.filter((g) => matchesGenre(g.genres, activeGenre));
+
+    if (selectedGearCategoryFilter === 'STARRED') {
+      base = base.filter((g) => isItemStarred(g));
+    } else if (selectedGearCategoryFilter !== 'ALL') {
+      base = base.filter((g) => (g.category || 'General').toLowerCase() === selectedGearCategoryFilter.toLowerCase());
+    }
+
+    if (!gearCatalogSearchQuery.trim()) return base;
+    const query = gearCatalogSearchQuery.toLowerCase().trim();
+    return base.filter(
+      (item) =>
+        item.name.toLowerCase().includes(query) ||
+        (item.category && item.category.toLowerCase().includes(query)) ||
+        (item.notes && item.notes.toLowerCase().includes(query))
+    );
+  }, [gearCatalog, gearList, selectedGearCategoryFilter, isItemStarred, gearCatalogSearchQuery, activeGenre]);
+
+  const handleEquipGear = (catalogItem: SupabaseGear) => {
+    setGearCatalogFeedback(null);
+    const existingIndex = gearList.findIndex(
+      (g) => g.name.toLowerCase() === catalogItem.name.toLowerCase()
+    );
+
+    if (existingIndex >= 0) {
+      updateActiveSheetData((prev) => {
+        const currentGear = [...(prev.simple_gear || [])];
+        currentGear[existingIndex] = {
+          ...currentGear[existingIndex],
+          qty: (currentGear[existingIndex].qty || 1) + 1,
+        };
+        return { ...prev, simple_gear: currentGear };
+      });
+      saveActiveCharacter();
+      return;
+    }
+
+    const currentGold = sheet?.gold ?? 0;
+    const currentSilver = sheet?.silver ?? 0;
+    const deduction = deductFundsWithChange(currentGold, currentSilver, parseCostToSilver(catalogItem.cost || '0s'));
+
+    const newGearItem: SimpleGearItem = {
+      id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      name: catalogItem.name,
+      category: catalogItem.category || 'General',
+      cost: catalogItem.cost || '0s',
+      qty: 1,
+      notes: catalogItem.notes || '',
+    };
+
+    updateActiveSheetData((prev) => {
+      const updatePayload: any = {
+        ...prev,
+        simple_gear: [...(prev.simple_gear || []), newGearItem],
+      };
+      if (deduction.success) {
+        updatePayload.gold = deduction.newGold;
+        updatePayload.silver = deduction.newSilver;
+      }
+      return updatePayload;
+    });
+    saveActiveCharacter();
+
+    if (deduction.success) {
+      setGearCatalogFeedback({
+        type: 'success',
+        message: `Purchased "${catalogItem.name}" for ${catalogItem.cost}!`,
+      });
+    }
+  };
+
+  const handleDropGear = (itemId: string) => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      simple_gear: (prev.simple_gear || []).filter((g) => g.id !== itemId),
+    }));
+    saveActiveCharacter();
+  };
+
+  const handleUpdateGearQty = (itemId: string, delta: number) => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      simple_gear: (prev.simple_gear || []).map((g) => {
+        if (g.id === itemId) {
+          const newQty = Math.max(1, (g.qty || 1) + delta);
+          return { ...g, qty: newQty };
+        }
+        return g;
+      }),
+    }));
+    saveActiveCharacter();
+  };
+
+  return (
+    <>
+      {/* Consolidated Top-Right Wealth & Gear Card */}
+      <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap">
+        {/* Left Half: Wealth (Coins & Treasure Trigger) */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-base">💰</span>
+            <span className="font-outfit font-bold text-xs tracking-wider text-amber-300 uppercase">
+              Money
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs font-mono font-bold">
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-950/80 border border-slate-800 rounded-lg text-amber-300">
+              <span>Gold 🪙</span>
+              <span className="text-white font-extrabold">{gold}</span>
+            </div>
+
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-300">
+              <span>Silver 🥈</span>
+              <span className="text-white font-extrabold">{silver}</span>
+            </div>
+          </div>
+
+          {/* Treasure / Valuables Trigger Button */}
+          <button
+            type="button"
+            onClick={() => setShowMoneyModal(true)}
+            className="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1 shadow-sm bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/35 text-amber-300 cursor-pointer shrink-0"
+            title="Manage Money & Valuables"
+          >
+            <span className="font-outfit font-bold">Treasure</span>
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-amber-900/80 rounded text-amber-200">
+              {treasure.length}
+            </span>
+            <ChevronDown className="w-3 h-3 text-amber-400" />
+          </button>
+        </div>
+
+        {/* Subtle Vertical Divider */}
+        <div className="hidden xl:block h-6 w-[1px] bg-slate-800 shrink-0" />
+
+        {/* Right Half: Gear (Value & Inventory Trigger) */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-base">🧰</span>
+            <span className="font-outfit font-bold text-xs tracking-wider text-teal-300 uppercase">
+              Gear
+            </span>
+          </div>
+
+          {/* Inventory Total Value Badge */}
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-slate-800 bg-slate-950/80 font-mono shadow-sm shrink-0">
+            <span className="text-amber-300">🪙 {inventoryValue.gold}g</span>
+            <span className="text-slate-400">🥈 {inventoryValue.silver}s</span>
+          </div>
+
+          {/* Manage Gear Trigger Button */}
+          <button
+            type="button"
+            onClick={() => setShowGearModal(true)}
+            className="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1 shadow-sm bg-teal-950/40 hover:bg-teal-900/50 border-teal-500/35 text-teal-300 cursor-pointer shrink-0"
+            title="Open Gear Inventory & Catalog Modal"
+          >
+            <span className="font-outfit font-bold">Manage Gear</span>
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-teal-900/80 rounded text-teal-200">
+              {gearList.length}
+            </span>
+            <ChevronDown className="w-3 h-3 text-teal-400" />
+          </button>
+        </div>
+      </div>
+
+      {/* ======================================================================== */}
+      {/* 💰 MONEY & TREASURE VALUABLES MODAL                                     */}
+      {/* ======================================================================== */}
+      {showMoneyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div
+            ref={moneyModalRef}
+            className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-left"
+          >
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
+              <div className="flex items-center gap-2.5 shrink-0">
+                <div className="p-2 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-300 flex items-center justify-center">
+                  <span className="text-lg leading-none">💰</span>
+                </div>
+                <div>
+                  <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                    Money & Valuables
+                  </h3>
+                  <p className="text-xs text-slate-400 hidden sm:block">
+                    Manage currency, trade goods, precious gems, and treasure valuables.
+                  </p>
+                </div>
+              </div>
+
+              {/* Coin Totals Pill in Header */}
+              <div className="flex items-center gap-3 px-3 py-1 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs font-bold">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-amber-300">Gold 🪙:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={gold}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value) || 0);
+                      updateActiveSheetData((prev) => ({ ...prev, gold: val }));
+                      saveActiveCharacter();
+                    }}
+                    className="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-center text-white font-bold outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-300">Silver 🥈:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={silver}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value) || 0);
+                      updateActiveSheetData((prev) => ({ ...prev, silver: val }));
+                      saveActiveCharacter();
+                    }}
+                    className="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-center text-white font-bold outline-none focus:border-slate-400"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowMoneyModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* 2-Column Split-Pane Body */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
+              {/* Left Pane: Treasure Inventory */}
+              <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <Gem className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-outfit font-bold uppercase tracking-wider text-amber-300">
+                      Valuables ({treasure.length})
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      value={treasureSearchQuery}
+                      onChange={(e) => setTreasureSearchQuery(e.target.value)}
+                      className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-amber-500 w-24 sm:w-28"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto pr-1 mt-2.5 flex flex-col gap-2 min-h-0">
+                  {filteredTreasure.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
+                      <Gem className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
+                      <span>No treasure valuables found. Add items on the right.</span>
+                    </div>
+                  ) : (
+                    filteredTreasure.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between gap-2 shadow-sm"
+                      >
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="font-outfit font-bold text-xs text-slate-100 truncate">
+                            {item.name}
+                          </span>
+                          <span className="text-[11px] font-mono text-amber-300/90 font-semibold">
+                            {item.value} {item.currency === 'gp' ? '🪙 gp' : '🥈 sp'} each
+                          </span>
+                        </div>
+
+                        {/* Qty & Delete */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center bg-slate-950 border border-slate-700 rounded-lg px-1 py-0.5 text-xs font-mono font-bold">
+                            <button
+                              onClick={() => handleUpdateTreasureQty(item.id, -1)}
+                              className="px-1 hover:text-amber-400 text-slate-400"
+                            >
+                              -
+                            </button>
+                            <span className="px-1 text-white">{item.qty || 1}</span>
+                            <button
+                              onClick={() => handleUpdateTreasureQty(item.id, 1)}
+                              className="px-1 hover:text-amber-400 text-slate-400"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <button
+                            onClick={() => handleDeleteTreasure(item.id)}
+                            className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                            title="Delete treasure item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Right Pane: Custom Treasure Creator Form */}
+              <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-4 flex flex-col h-full min-h-0 overflow-y-auto shadow-inner">
+                <h4 className="font-outfit font-bold text-xs uppercase tracking-wider text-amber-300 pb-2 border-b border-slate-800 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  Add Custom Valuables / Gems
+                </h4>
+
+                <form onSubmit={handleCreateTreasure} className="flex flex-col gap-3 mt-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-bold text-slate-300">Valuable Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Flawless Ruby, Silver Chalice..."
+                      value={customTreasureName}
+                      onChange={(e) => setCustomTreasureName(e.target.value)}
+                      className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-bold text-slate-300">Value</label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={customTreasureValue}
+                        onChange={(e) => setCustomTreasureValue(parseInt(e.target.value) || 1)}
+                        className="px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white text-center focus:outline-none focus:border-amber-500 font-mono font-bold"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-bold text-slate-300">Currency</label>
+                      <select
+                        value={customTreasureCurrency}
+                        onChange={(e) => setCustomTreasureCurrency(e.target.value as 'gp' | 'sp')}
+                        className="px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+                      >
+                        <option value="gp">🪙 Gold (gp)</option>
+                        <option value="sp">🥈 Silver (sp)</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-bold text-slate-300">Qty</label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={customTreasureQty}
+                        onChange={(e) => setCustomTreasureQty(parseInt(e.target.value) || 1)}
+                        className="px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white text-center focus:outline-none focus:border-amber-500 font-mono font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  {treasureFormError && (
+                    <span className="text-xs text-rose-400 font-semibold">{treasureFormError}</span>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="mt-2 py-2 px-4 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-xs transition shadow-md cursor-pointer font-outfit"
+                  >
+                    + Add Treasure Valuables
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 text-xs font-mono font-bold text-amber-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                <span className="text-slate-400 font-sans font-semibold text-[11px]">Treasure Total Value:</span>
+                <span>🪙 {treasureTotalValue.gold}g</span>
+                <span>•</span>
+                <span>🥈 {treasureTotalValue.silver}s</span>
+              </div>
+
+              <button
+                onClick={() => setShowMoneyModal(false)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700 transition shadow-sm cursor-pointer text-xs"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================================== */}
+      {/* 🧰 GEAR INVENTORY & CATALOG MODAL                                        */}
+      {/* ======================================================================== */}
+      {showGearModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div
+            ref={gearModalRef}
+            className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-left"
+          >
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
+              <div className="flex items-center gap-2.5 shrink-0">
+                <div className="p-2 rounded-xl bg-teal-950/80 border border-teal-500/30 text-teal-300 flex items-center justify-center">
+                  <span className="text-lg leading-none">🧰</span>
+                </div>
+                <div>
+                  <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                    Gear Inventory & Catalog
+                  </h3>
+                  <p className="text-xs text-slate-400 hidden sm:block">
+                    Equip adventuring gear, supplies, and tools from the Supabase stock catalog.
+                  </p>
+                </div>
+              </div>
+
+              {/* Inventory Total Value Pill in Header */}
+              <div className="flex items-center gap-2 px-3 py-1 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs font-bold text-teal-300">
+                <span>Value: 🪙 {inventoryValue.gold}g 🥈 {inventoryValue.silver}s</span>
+              </div>
+
+              <button
+                onClick={() => setShowGearModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* 2-Column Split-Pane Body */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
+              {/* Left Column: Equipped Gear Inventory */}
+              <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <Package className="w-4 h-4 text-teal-400" />
+                    <span className="text-xs font-outfit font-bold uppercase tracking-wider text-teal-300">
+                      Equipped Gear ({gearList.length})
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      value={gearInventorySearchQuery}
+                      onChange={(e) => setGearInventorySearchQuery(e.target.value)}
+                      className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-teal-500 w-24 sm:w-28"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto pr-1 mt-2.5 flex flex-col gap-2 min-h-0">
+                  {filteredGearInventory.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
+                      <Package className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
+                      <span>No gear items in inventory. Select items from the catalog on the right.</span>
+                    </div>
+                  ) : (
+                    filteredGearInventory.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between gap-2 shadow-sm"
+                      >
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-outfit font-bold text-xs text-slate-100 truncate">
+                              {item.name}
+                            </span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.2 bg-teal-950 text-teal-300 border border-teal-800 rounded">
+                              {item.category || 'General'}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-mono text-teal-300/80 font-semibold">
+                            Cost: {formatCostAbbreviated(item.cost)}
+                          </span>
+                        </div>
+
+                        {/* Qty & Actions */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center bg-slate-950 border border-slate-700 rounded-lg px-1 py-0.5 text-xs font-mono font-bold">
+                            <button
+                              onClick={() => handleUpdateGearQty(item.id, -1)}
+                              className="px-1 hover:text-teal-400 text-slate-400"
+                            >
+                              -
+                            </button>
+                            <span className="px-1 text-white">{item.qty || 1}</span>
+                            <button
+                              onClick={() => handleUpdateGearQty(item.id, 1)}
+                              className="px-1 hover:text-teal-400 text-slate-400"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <ItemNotesPopover
+                            notes={item.notes || ''}
+                            itemName={item.name}
+                          />
+
+                          <button
+                            onClick={() => handleDropGear(item.id)}
+                            className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                            title="Drop gear item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Supabase Stock Gear Catalog */}
+              <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                {/* Search & Category Filter */}
+                <div className="flex flex-col gap-2 pb-2.5 border-b border-slate-800/80 shrink-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="relative flex-1">
+                      <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search catalog..."
+                        value={gearCatalogSearchQuery}
+                        onChange={(e) => setGearCatalogSearchQuery(e.target.value)}
+                        className="w-full bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-teal-500"
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedGearCategoryFilter(selectedGearCategoryFilter === 'STARRED' ? 'ALL' : 'STARRED')}
+                      className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 border ${
+                        selectedGearCategoryFilter === 'STARRED'
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
+                          : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                      }`}
+                      title="Filter Starred Gear"
+                    >
+                      <Star className="w-3 h-3 fill-current" />
+                      <span>{starredArmorCount}</span>
+                    </button>
+                  </div>
+
+                  {/* Category Pills */}
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                    <button
+                      onClick={() => setSelectedGearCategoryFilter('ALL')}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition shrink-0 ${
+                        selectedGearCategoryFilter === 'ALL'
+                          ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                          : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                      }`}
+                    >
+                      ALL
+                    </button>
+                    {availableGearCategories.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedGearCategoryFilter(cat)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition shrink-0 ${
+                          selectedGearCategoryFilter === cat
+                            ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                            : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {gearCatalogFeedback && (
+                  <div className="p-2 bg-emerald-950/80 border border-emerald-500/40 rounded-lg text-xs text-emerald-300 font-semibold my-1.5 flex items-center justify-between shrink-0">
+                    <span>{gearCatalogFeedback.message}</span>
+                    <button onClick={() => setGearCatalogFeedback(null)} className="text-emerald-400">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Catalog List */}
+                <div className="flex-1 overflow-y-auto pr-1 mt-2 flex flex-col gap-2 min-h-0">
+                  {isLoadingCatalog ? (
+                    <div className="h-full flex flex-col items-center justify-center gap-2 text-slate-400 text-xs">
+                      <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+                      <span>Loading stock catalog...</span>
+                    </div>
+                  ) : filteredGearCatalog.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic">
+                      <span>No matching gear in catalog.</span>
+                    </div>
+                  ) : (
+                    filteredGearCatalog.map((catalogItem) => {
+                      const starred = isItemStarred(catalogItem);
+                      return (
+                        <div
+                          key={catalogItem.id}
+                          className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 hover:border-teal-500/40 transition flex items-center justify-between gap-2 shadow-sm"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <button
+                              onClick={() => handleToggleStarItem(catalogItem)}
+                              className={`p-1 rounded hover:bg-slate-800 transition ${
+                                starred ? 'text-amber-400' : 'text-slate-600 hover:text-slate-400'
+                              }`}
+                              title={starred ? 'Unstar gear' : 'Star gear'}
+                            >
+                              <Star className="w-3.5 h-3.5 fill-current" />
+                            </button>
+
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <span className="font-outfit font-bold text-xs text-slate-100 truncate">
+                                {catalogItem.name}
+                              </span>
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                <span className="font-mono text-teal-300 font-bold">
+                                  {formatCostAbbreviated(catalogItem.cost)}
+                                </span>
+                                <span>•</span>
+                                <span>{catalogItem.category || 'General'}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => handleEquipGear(catalogItem)}
+                            className="px-2.5 py-1 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 text-xs font-bold rounded-lg transition shrink-0"
+                          >
+                            + Equip
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 text-xs font-mono font-bold text-teal-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                <span className="text-slate-400 font-sans font-semibold text-[11px]">Total Gear Value:</span>
+                <span>🪙 {inventoryValue.gold}g 🥈 {inventoryValue.silver}s</span>
+              </div>
+
+              <button
+                onClick={() => setShowGearModal(false)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700 transition shadow-sm cursor-pointer text-xs"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
