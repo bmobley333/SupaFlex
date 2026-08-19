@@ -9,7 +9,6 @@ import { useAdventureStore } from './store/useAdventureStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
 import { GmWorkspaceView } from './components/directory/GmWorkspaceView';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
-import { AttributesRibbon } from './components/header/AttributesRibbon';
 import { AccountPillButton } from './components/header/AccountPillButton';
 import { GmHeaderHUD } from './components/header/GmHeaderHUD';
 import { UniversalLinksDropdown } from './components/hud/UniversalLinksDropdown';
@@ -456,11 +455,10 @@ export default function App() {
             </div>
           ) : (
             activeCharacter && (
-              <div className="flex-1 flex items-center justify-center gap-3.5 min-w-0 px-2 py-0.5 animate-fadeIn">
-                <h2 className="font-outfit text-lg md:text-xl font-black tracking-widest bg-gradient-to-r from-slate-100 via-amber-200 to-amber-400 bg-clip-text text-transparent uppercase drop-shadow-[0_2px_12px_rgba(251,191,36,0.3)] truncate shrink-0">
+              <div className="flex-1 flex items-center justify-center min-w-0 px-2 py-0.5 animate-fadeIn">
+                <h2 className="font-outfit text-lg md:text-xl font-black tracking-widest bg-gradient-to-r from-slate-100 via-amber-200 to-amber-400 bg-clip-text text-transparent uppercase drop-shadow-[0_2px_12px_rgba(251,191,36,0.3)] truncate max-w-[420px]">
                   {activeCharacter?.name || 'Hero'}
                 </h2>
-                <AttributesRibbon onOpenAttributeManager={() => setShowAttributeManagerModal(true)} />
               </div>
             )
           )}
@@ -571,10 +569,11 @@ export default function App() {
           </div>
         </div>
 
-        {/* Sub-Header Row 2: Player Resource Control Deck (Omitted in GM Mode) */}
+        {/* Sub-Header Row 2: Player Attribute HUD (Omitted in GM Mode) */}
         {activeRole !== 'gm' && (
-          <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-center flex-wrap gap-2 animate-fadeIn">
+          <div className="w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
             <PersistentHeaderHUD
+              onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
               onOpenFocusManager={() => setShowFocusManagerModal(true)}
             />
           </div>
