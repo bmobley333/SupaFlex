@@ -369,7 +369,9 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
                 : 'bg-amber-950/40 border-amber-500/30 text-amber-200'
             }`}
           >
-            <span className="text-amber-400 font-bold uppercase text-[11px]">⚡ Charge:</span>
+            <span className="text-amber-400 font-bold flex items-center gap-1">
+              <span>⚡</span> Spark Charges:
+            </span>
 
             {/* Inline Direct Manipulation Clickable Lightning Bolt Icons */}
             <div className="flex items-center gap-1">

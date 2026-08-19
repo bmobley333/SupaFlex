@@ -1107,7 +1107,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     });
   }, [type, activeDisplaySlots, slots, leftSearchQuery, catalogReadyFilter]);
 
-  const sectionIcon = type === 'powers' ? '🔥' : '⚡';
+  const sectionIcon = type === 'powers' ? '🔥' : '💍';
   const displayTitle = title || (type === 'powers' ? 'POWERS' : 'LOADOUT (Relics & Hardware)');
 
   // Default Action Economy Sorting for Active Sheet
@@ -1284,7 +1284,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <Flame className={`w-4 h-4 ${type === 'powers' ? 'text-amber-400' : 'text-pink-400'}`} />
                         <span className={`text-xs font-outfit font-bold uppercase tracking-wider ${type === 'powers' ? 'text-amber-300' : 'text-pink-300'}`}>
-                          {type === 'powers' ? 'Ready Powers' : '⚡ Active Loadout'}
+                          {type === 'powers' ? 'Ready Powers' : '💍 Active Loadout'}
                         </span>
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
                           {type === 'powers' ? activeDisplaySlots.length : slots.length}
@@ -1312,7 +1312,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       const remainingSlots = Math.max(0, maxSlots - usedSlots);
                       return (
                         <div className="mt-2.5 px-3 py-1.5 bg-slate-900/90 border border-cyan-500/40 rounded-xl text-xs font-mono flex items-center justify-between gap-2 shadow-inner shrink-0">
-                          <span className="text-cyan-300 font-bold flex items-center gap-1">⚡ Loadout Slots:</span>
+                          <span className="text-cyan-300 font-bold flex items-center gap-1">💍 Loadout Slots:</span>
                           <div className="flex items-center gap-2 text-[11px] font-bold">
                             <span className="text-slate-300">Max <strong className="text-slate-100">{maxSlots}</strong></span>
                             <span className="text-slate-600">|</span>
@@ -2521,7 +2521,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
                   <div className="flex items-center gap-3">
                     <span className="font-outfit font-bold text-slate-300">
-                      {type === 'powers' ? '🔥 Powers Manager' : '⚡ Loadout Manager'}
+                      {type === 'powers' ? '🔥 Powers Manager' : '💍 Loadout Manager'}
                     </span>
                   </div>
                   

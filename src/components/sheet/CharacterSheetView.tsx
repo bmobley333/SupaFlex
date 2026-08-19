@@ -34,15 +34,15 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-16 relative">
       {/* High-Density Top Section: Hero Hub (Left), Money (Center), Gear (Right) */}
-      <div id="section-top-cards" className="flex flex-wrap items-center gap-4 scroll-mt-32">
-        <div className="flex-[2] min-w-[340px]">
-          <HeroHubCard onOpenApManager={onOpenApManager} />
+      <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch scroll-mt-32">
+        <div className="lg:col-span-12 xl:col-span-5 2xl:col-span-6 flex">
+          <HeroHubCard onOpenApManager={onOpenApManager} className="w-full h-full" />
         </div>
-        <div className="flex-1 min-w-[260px]">
-          <MoneyCard />
+        <div className="lg:col-span-7 xl:col-span-4 2xl:col-span-4 flex">
+          <MoneyCard className="w-full h-full" />
         </div>
-        <div className="flex-initial min-w-[180px]">
-          <GearCard />
+        <div className="lg:col-span-5 xl:col-span-3 2xl:col-span-2 flex">
+          <GearCard className="w-full h-full" />
         </div>
       </div>
 
@@ -78,8 +78,8 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* 2-Column Responsive Section: 🔥 POWERS & ⚡ LOADOUT (Relics & Hardware) */}
-      <div id="section-powers-magic" className="grid grid-cols-1 lg:grid-cols-2 gap-4 scroll-mt-32">
+      {/* 2-Column Responsive Section: 🔥 POWERS & 💍 LOADOUT (Relics & Hardware) */}
+      <div id="section-powers-magic" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
         <AbilitySlotsGrid title="POWERS" type="powers" />
         <AbilitySlotsGrid title="LOADOUT (Relics & Hardware)" type="spells" />
       </div>

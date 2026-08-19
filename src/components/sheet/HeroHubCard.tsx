@@ -1,16 +1,16 @@
 // src/components/sheet/HeroHubCard.tsx
 import React, { useState } from 'react';
-import { User, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { CardHelpButton } from '../common/CardHelpButton';
 import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
 import { UniversalLinksModal } from '../modals/UniversalLinksModal';
 
 interface HeroHubCardProps {
   onOpenApManager?: () => void;
+  className?: string;
 }
 
-export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager }) => {
+export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, className = '' }) => {
   const {
     activeCharacter,
     addCharacterLink,
@@ -39,11 +39,11 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager }) => 
 
   return (
     <>
-      <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap">
+      <div className={`bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap ${className}`}>
         {/* Left Zone: Hero Identity, Level/AP Trigger & Race/Class Pills */}
         <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
-          <div className="p-1.5 rounded-lg bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 flex items-center justify-center shrink-0">
-            <User className="w-4 h-4 text-indigo-400" />
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-base">👤</span>
           </div>
 
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
@@ -51,20 +51,16 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager }) => 
               {heroName}
             </h3>
 
-            {/* ⭐ Level & AP Integrated Pill with Help & Chevron Trigger */}
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-950/40 border border-amber-500/40 rounded-lg text-amber-300 shadow-sm shrink-0">
-              <button
-                type="button"
-                onClick={handleOpenApManager}
-                className="font-mono font-extrabold text-[11px] hover:text-amber-100 transition-colors flex items-center gap-1 cursor-pointer"
-                title="Open Manage Level & AP Modal"
-              >
-                <span>Lvl {level}</span>
-                <ChevronDown className="w-3 h-3 text-amber-400" />
-              </button>
-              <div className="h-3 w-[1px] bg-amber-500/30 mx-0.5 shrink-0" />
-              <CardHelpButton ruleKey="leveling.advancement_steps" />
-            </div>
+            {/* ⭐ Level & AP Integrated Pill with Chevron Trigger */}
+            <button
+              type="button"
+              onClick={handleOpenApManager}
+              className="flex items-center gap-1 px-2 py-0.5 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/40 rounded-lg text-amber-300 hover:text-amber-100 shadow-sm shrink-0 font-mono font-extrabold text-[11px] transition-all cursor-pointer"
+              title="Open Manage Level & AP Modal"
+            >
+              <span>Lvl {level}</span>
+              <ChevronDown className="w-3 h-3 text-amber-400" />
+            </button>
 
             {/* 🧬 Race & Class Pills */}
             <div className="flex items-center gap-1 shrink-0">

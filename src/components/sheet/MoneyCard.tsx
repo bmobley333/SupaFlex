@@ -39,7 +39,11 @@ export const calculateTotalTreasureValue = (treasureList: TreasureItem[]) => {
   return { gold, silver, totalSilver };
 };
 
-export const MoneyCard: React.FC = () => {
+interface MoneyCardProps {
+  className?: string;
+}
+
+export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
   const sheet = activeCharacter?.sheet_data;
 
@@ -145,26 +149,25 @@ export const MoneyCard: React.FC = () => {
 
   return (
     <>
-      <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex items-center justify-between transition-all gap-3">
-        {/* Left: Title & Quick Coin Displays */}
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-base">💰</span>
-            <span className="font-outfit font-bold text-xs tracking-wider text-amber-300 uppercase">
-              Money
-            </span>
+      <div className={`bg-slate-900/80 rounded-xl border border-slate-800 p-3 flex items-center justify-between transition-all gap-2.5 flex-wrap ${className}`}>
+        {/* Left: Title */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-base">💰</span>
+          <span className="font-outfit font-bold text-xs tracking-wider text-amber-300 uppercase">
+            Money
+          </span>
+        </div>
+
+        {/* Center: Quick Coin Displays */}
+        <div className="flex items-center justify-center gap-1.5 text-xs font-mono font-bold flex-1 min-w-0 flex-wrap">
+          <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-950/80 border border-slate-800 rounded-lg text-amber-300 shrink-0">
+            <span>Gold 🪙</span>
+            <span className="text-white font-extrabold">{gold}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs font-mono font-bold">
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-950/80 border border-slate-800 rounded-lg text-amber-300">
-              <span>Gold 🪙</span>
-              <span className="text-white font-extrabold">{gold}</span>
-            </div>
-
-            <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-300">
-              <span>Silver 🥈</span>
-              <span className="text-white font-extrabold">{silver}</span>
-            </div>
+          <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-300 shrink-0">
+            <span>Silver 🥈</span>
+            <span className="text-white font-extrabold">{silver}</span>
           </div>
         </div>
 

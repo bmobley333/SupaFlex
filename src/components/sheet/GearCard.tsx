@@ -33,7 +33,11 @@ export const calculateInventoryValue = (gearList: SimpleGearItem[]) => {
   return { gold, silver, totalSilver };
 };
 
-export const GearCard: React.FC = () => {
+interface GearCardProps {
+  className?: string;
+}
+
+export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
   const sheet = activeCharacter?.sheet_data;
@@ -269,7 +273,7 @@ export const GearCard: React.FC = () => {
 
   return (
     <>
-      <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex items-center justify-between transition-all gap-3">
+      <div className={`bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap ${className}`}>
         {/* Left: Title */}
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="text-base">🧰</span>
