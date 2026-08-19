@@ -266,20 +266,57 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setActiveRightTab('EDITOR');
   };
 
-  const handleToggleFavoriteTable = (tableName: string) => {
-    if (!tableName) return;
-    updateActiveSheetData((prev) => {
-      const currentFavs: string[] = prev.favorite_power_tables || [];
-      const isFav = currentFavs.includes(tableName);
-      const updatedFavs = isFav
-        ? currentFavs.filter((t) => t !== tableName)
-        : [...currentFavs, tableName];
-      return {
-        ...prev,
-        favorite_power_tables: updatedFavs,
-      };
-    });
+  const handlePinTable = (tableName: string) => {
+    if (!tableName || tableName === 'ALL' || tableName === 'STARRED') return;
+    const currentFavs: string[] = sheetData.favorite_power_tables || (pinnedTableNames.length > 0 ? pinnedTableNames : []);
+    if (currentFavs.includes(tableName)) {
+      setActiveTableName(tableName);
+      return;
+    }
+    if (currentFavs.length >= 8) {
+      setCatalogFeedback({ type: 'error', message: 'Quick Deck is full! Maximum 8 pinned tables allowed.' });
+      return;
+    }
+    const updated = [...currentFavs, tableName];
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      favorite_power_tables: updated,
+    }));
     saveActiveCharacter();
+    setActiveTableName(tableName);
+  };
+
+  const handleUnpinTable = (e: React.MouseEvent, tableName: string) => {
+    e.stopPropagation();
+    const currentFavs: string[] = sheetData.favorite_power_tables || (pinnedTableNames.length > 0 ? pinnedTableNames : []);
+    const updated = currentFavs.filter((t) => t !== tableName);
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      favorite_power_tables: updated,
+    }));
+    saveActiveCharacter();
+    if (effectiveActiveTable === tableName) {
+      setActiveTableName(updated.length > 0 ? updated[0] : 'ALL');
+    }
+  };
+
+  const handleToggleFavoriteTable = (tableName: string) => {
+    if (!tableName || tableName === 'ALL' || tableName === 'STARRED') return;
+    const isPinned = pinnedTableNames.includes(tableName);
+    if (isPinned) {
+      const currentFavs: string[] = sheetData.favorite_power_tables || (pinnedTableNames.length > 0 ? pinnedTableNames : []);
+      const updated = currentFavs.filter((t) => t !== tableName);
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        favorite_power_tables: updated,
+      }));
+      saveActiveCharacter();
+      if (effectiveActiveTable === tableName) {
+        setActiveTableName(updated.length > 0 ? updated[0] : 'ALL');
+      }
+    } else {
+      handlePinTable(tableName);
+    }
   };
 
   const handleCloseManageModal = () => {
@@ -907,101 +944,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return keys.sort((a, b) => a.localeCompare(b));
   }, [groupedTables, type]);
 
-  const heroTablesList = useMemo(() => {
+  const pinnedTableNames: string[] = useMemo(() => {
     if (type !== 'powers') return [];
-
-    const charClass = (activeCharacter?.class || (activeCharacter as any)?.character_class || '').trim();
-    const charRace = (activeCharacter?.race || '').trim();
-    const favTables: string[] = sheetData.favorite_power_tables || [];
-
-    const heroTables: {
-      id: string;
-      name: string;
-      label: string;
-      icon: string;
-      badgeCount: number;
-      type: 'class' | 'race' | 'luck' | 'favorite';
-    }[] = [];
-
-    const addedNames = new Set<string>();
-
-    // 1. Class Table(s)
-    if (charClass) {
-      const classLower = charClass.toLowerCase();
-      availableTableNames.forEach((tbl) => {
-        const tblLower = tbl.toLowerCase();
-        if (tblLower.includes(classLower) || classLower.includes(tblLower)) {
-          if (!addedNames.has(tbl)) {
-            addedNames.add(tbl);
-            heroTables.push({
-              id: `class-${tbl}`,
-              name: tbl,
-              label: formatTableNameDisplay(tbl),
-              icon: '👤',
-              badgeCount: groupedTables[tbl]?.length || 0,
-              type: 'class',
-            });
-          }
-        }
-      });
+    const favs: string[] = sheetData.favorite_power_tables || [];
+    if (favs.length === 0) {
+      const luckTbl = availableTableNames.find((t) => t.toLowerCase().includes('luck'));
+      return luckTbl ? [luckTbl] : [];
     }
-
-    // 2. Race Table(s)
-    if (charRace) {
-      const raceLower = charRace.toLowerCase();
-      availableTableNames.forEach((tbl) => {
-        const tblLower = tbl.toLowerCase();
-        if (tblLower.includes(raceLower) || raceLower.includes(tblLower)) {
-          if (!addedNames.has(tbl)) {
-            addedNames.add(tbl);
-            heroTables.push({
-              id: `race-${tbl}`,
-              name: tbl,
-              label: formatTableNameDisplay(tbl),
-              icon: '🧬',
-              badgeCount: groupedTables[tbl]?.length || 0,
-              type: 'race',
-            });
-          }
-        }
-      });
-    }
-
-    // 3. Luck Table (always present for all heroes)
-    availableTableNames.forEach((tbl) => {
-      const tblLower = tbl.toLowerCase();
-      if (tblLower.includes('luck')) {
-        if (!addedNames.has(tbl)) {
-          addedNames.add(tbl);
-          heroTables.push({
-            id: `luck-${tbl}`,
-            name: tbl,
-            label: formatTableNameDisplay(tbl),
-            icon: '🍀',
-            badgeCount: groupedTables[tbl]?.length || 0,
-            type: 'luck',
-          });
-        }
-      }
-    });
-
-    // 4. Favorite / Starred Tables
-    favTables.forEach((tbl) => {
-      if (availableTableNames.includes(tbl) && !addedNames.has(tbl)) {
-        addedNames.add(tbl);
-        heroTables.push({
-          id: `fav-${tbl}`,
-          name: tbl,
-          label: formatTableNameDisplay(tbl),
-          icon: '⭐',
-          badgeCount: groupedTables[tbl]?.length || 0,
-          type: 'favorite',
-        });
-      }
-    });
-
-    return heroTables;
-  }, [type, activeCharacter, sheetData.favorite_power_tables, availableTableNames, groupedTables]);
+    return favs.filter((t) => availableTableNames.includes(t)).slice(0, 8);
+  }, [type, sheetData.favorite_power_tables, availableTableNames]);
 
   const categorizedTableGroups = useMemo(() => {
     const groups: Record<string, string[]> = {
@@ -1072,11 +1023,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     if (activeTableName && availableTableNames.includes(activeTableName)) {
       return activeTableName;
     }
-    if (type === 'powers' && heroTablesList.length > 0) {
-      return heroTablesList[0].name;
+    if (type === 'powers' && pinnedTableNames.length > 0) {
+      return pinnedTableNames[0];
     }
     return 'ALL';
-  }, [activeTableName, availableTableNames, type, heroTablesList]);
+  }, [activeTableName, availableTableNames, type, pinnedTableNames]);
 
   const activeTableAbilities = useMemo(() => {
     if (effectiveActiveTable === 'ALL') {
@@ -2118,86 +2069,150 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           </div>
                         )}
 
-                        {/* 1. SMART HERO TABLE DECK & CONTROLS (Powers Mode) */}
+                        {/* 1. SMART HERO QUICK DECK (Powers Mode) */}
                         {type === 'powers' && (
                           <div className="flex flex-col gap-2 shrink-0">
-                            {/* Smart Hero Table Deck: Quick Pills Ribbon */}
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {heroTablesList.map((hTbl) => {
-                                const isActive = effectiveActiveTable === hTbl.name;
-                                return (
-                                  <button
-                                    key={hTbl.id}
-                                    type="button"
-                                    onClick={() => setActiveTableName(hTbl.name)}
-                                    className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
-                                      isActive
-                                        ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
-                                        : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80'
-                                    }`}
-                                  >
-                                    <span>{hTbl.icon}</span>
-                                    <span>{hTbl.label}</span>
-                                    <span
-                                      className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                            {/* Pinned Quick Deck Box & Separated Global Navigation Row */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* Dedicated Pinned Quick Deck Box */}
+                              <div className="bg-slate-950/90 border border-slate-800 p-1.5 rounded-xl flex items-center gap-1.5 flex-wrap shadow-inner backdrop-blur-md">
+                                <span className="text-[10px] font-bold text-amber-400/90 uppercase tracking-wider px-1 font-outfit select-none shrink-0">
+                                  📌 Deck ({pinnedTableNames.length}/8):
+                                </span>
+
+                                {pinnedTableNames.map((tblName) => {
+                                  const isActive = effectiveActiveTable === tblName;
+                                  const powerCount = groupedTables[tblName]?.length || 0;
+                                  const nameLower = tblName.toLowerCase();
+                                  const icon = nameLower.includes('luck')
+                                    ? '🍀'
+                                    : nameLower.includes('human') || nameLower.includes('elf') || nameLower.includes('dwarf')
+                                    ? '🧬'
+                                    : nameLower.includes('dual') || nameLower.includes('two-handed') || nameLower.includes('combat')
+                                    ? '⚔️'
+                                    : '👤';
+
+                                  return (
+                                    <div
+                                      key={tblName}
+                                      onClick={() => setActiveTableName(tblName)}
+                                      className={`group py-1 pl-2.5 pr-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
                                         isActive
-                                          ? 'bg-amber-800/80 text-amber-100'
-                                          : 'bg-slate-950 text-slate-400 border border-slate-800'
+                                          ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
+                                          : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80'
                                       }`}
                                     >
-                                      {hTbl.badgeCount}
-                                    </span>
-                                  </button>
-                                );
-                              })}
+                                      <span>{icon}</span>
+                                      <span>{formatTableNameDisplay(tblName)}</span>
+                                      <span
+                                        className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                                          isActive
+                                            ? 'bg-amber-800/80 text-amber-100'
+                                            : 'bg-slate-950 text-slate-400 border border-slate-800'
+                                        }`}
+                                      >
+                                        {powerCount}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => handleUnpinTable(e, tblName)}
+                                        className="p-0.5 rounded text-slate-400 hover:text-rose-300 hover:bg-slate-800/80 transition-colors ml-0.5 cursor-pointer"
+                                        title={`Remove ${tblName} from Quick Deck`}
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
 
-                              {/* ALL TABLES PILL */}
-                              <button
-                                type="button"
-                                onClick={() => setActiveTableName('ALL')}
-                                className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
-                                  effectiveActiveTable === 'ALL'
-                                    ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
-                                    : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80'
-                                }`}
-                              >
-                                <span>🌐</span>
-                                <span>All Tables</span>
-                                <span
-                                  className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
-                                    effectiveActiveTable === 'ALL'
-                                      ? 'bg-amber-800/80 text-amber-100'
-                                      : 'bg-slate-950 text-slate-400 border border-slate-800'
-                                  }`}
-                                >
-                                  {categoryFilteredCatalog.length}
-                                </span>
-                              </button>
+                                {/* Inline Add Table Dropdown inside Quick Deck Box */}
+                                {pinnedTableNames.length < 8 ? (
+                                  <div className="relative shrink-0">
+                                    <select
+                                      value=""
+                                      onChange={(e) => {
+                                        if (e.target.value) {
+                                          handlePinTable(e.target.value);
+                                        }
+                                      }}
+                                      className="py-1 px-2 rounded-lg text-xs font-bold bg-amber-950/50 hover:bg-amber-900/70 text-amber-300 border border-amber-500/40 outline-none cursor-pointer transition-all shadow-sm"
+                                      title="Pin another table to your Quick Deck (Max 8)"
+                                    >
+                                      <option value="" disabled>
+                                        ➕ Pin Table...
+                                      </option>
+                                      {Object.entries(categorizedTableGroups).map(([groupLabel, tableNames]) => {
+                                        const unpinned = tableNames.filter((t) => !pinnedTableNames.includes(t));
+                                        if (unpinned.length === 0) return null;
+                                        return (
+                                          <optgroup key={groupLabel} label={groupLabel} className="bg-slate-950 text-slate-400 font-bold">
+                                            {unpinned.map((tblName) => (
+                                              <option key={tblName} value={tblName} className="bg-slate-900 text-amber-300 font-normal">
+                                                {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
+                                              </option>
+                                            ))}
+                                          </optgroup>
+                                        );
+                                      })}
+                                    </select>
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] font-mono font-bold text-slate-500 px-1.5 py-0.5 shrink-0">
+                                    [Deck Full (8/8)]
+                                  </span>
+                                )}
+                              </div>
 
-                              {/* STARRED FAVORITES PILL */}
-                              {starredCatalogItems.length > 0 && (
+                              {/* Separated Global Navigation Pills (Outside Box) */}
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {/* ALL TABLES PILL */}
                                 <button
                                   type="button"
-                                  onClick={() => setActiveTableName('STARRED')}
+                                  onClick={() => setActiveTableName('ALL')}
                                   className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
-                                    effectiveActiveTable === 'STARRED'
+                                    effectiveActiveTable === 'ALL'
                                       ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
-                                      : 'bg-slate-900/90 text-amber-300 hover:text-amber-200 hover:bg-slate-800 border border-amber-500/30'
+                                      : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80'
                                   }`}
                                 >
-                                  <span>⭐</span>
-                                  <span>Starred Powers</span>
+                                  <span>🌐</span>
+                                  <span>All Tables</span>
                                   <span
                                     className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
-                                      effectiveActiveTable === 'STARRED'
+                                      effectiveActiveTable === 'ALL'
                                         ? 'bg-amber-800/80 text-amber-100'
-                                        : 'bg-slate-950 text-amber-400 border border-slate-800'
+                                        : 'bg-slate-950 text-slate-400 border border-slate-800'
                                     }`}
                                   >
-                                    {starredCatalogItems.length}
+                                    {categoryFilteredCatalog.length}
                                   </span>
                                 </button>
-                              )}
+
+                                {/* STARRED FAVORITES PILL */}
+                                {starredCatalogItems.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveTableName('STARRED')}
+                                    className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
+                                      effectiveActiveTable === 'STARRED'
+                                        ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
+                                        : 'bg-slate-900/90 text-amber-300 hover:text-amber-200 hover:bg-slate-800 border border-amber-500/30'
+                                    }`}
+                                  >
+                                    <span>⭐</span>
+                                    <span>Starred Powers</span>
+                                    <span
+                                      className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                                        effectiveActiveTable === 'STARRED'
+                                          ? 'bg-amber-800/80 text-amber-100'
+                                          : 'bg-slate-950 text-amber-400 border border-slate-800'
+                                      }`}
+                                    >
+                                      {starredCatalogItems.length}
+                                    </span>
+                                  </button>
+                                )}
+                              </div>
                             </div>
 
                             {/* Paired Search & Browse Other Tables Selector Row */}
@@ -2323,20 +2338,20 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       <button
                                         type="button"
                                         onClick={() => handleToggleFavoriteTable(tableName)}
-                                        className={`p-1 rounded-lg border transition-colors flex items-center justify-center shrink-0 ${
-                                          favoriteTables.includes(tableName)
+                                        className={`p-1 rounded-lg border transition-colors flex items-center justify-center shrink-0 cursor-pointer ${
+                                          pinnedTableNames.includes(tableName)
                                             ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
                                             : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-400'
                                         }`}
                                         title={
-                                          favoriteTables.includes(tableName)
-                                            ? 'Remove table from Favorites'
-                                            : 'Save table to Favorites'
+                                          pinnedTableNames.includes(tableName)
+                                            ? 'Remove table from Quick Deck'
+                                            : 'Pin table to Quick Deck'
                                         }
                                       >
                                         <Star
                                           className={`w-3.5 h-3.5 ${
-                                            favoriteTables.includes(tableName) ? 'fill-amber-400 text-amber-400' : ''
+                                            pinnedTableNames.includes(tableName) ? 'fill-amber-400 text-amber-400' : ''
                                           }`}
                                         />
                                       </button>
