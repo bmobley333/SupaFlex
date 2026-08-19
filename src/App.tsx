@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Database, BookOpen, Loader2, ChevronDown, ChevronUp, Star, Crown } from 'lucide-react';
+import { Database, BookOpen, Loader2, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { gameApi } from './services/api';
 import { Character, TreasureItem, SimpleGearItem, MagicItem } from './types/game';
@@ -27,7 +27,6 @@ import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
 import { FocusManagerModal } from './components/modals/FocusManagerModal';
 import { UnifiedLaunchHubModal } from './components/modals/UnifiedLaunchHubModal';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
-import { CardHelpButton } from './components/common/CardHelpButton';
 import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
 import { resolveCharFirstName } from './components/common/PartyCharacterCard';
 import { useScrollRestoration } from './hooks/useScrollRestoration';
@@ -50,7 +49,13 @@ export default function App() {
   const [openedFromApManager, setOpenedFromApManager] = useState(false);
 
   useEffect(() => {
-    const handleOpen = () => setOpenedFromApManager(true);
+    const handleOpen = (e: any) => {
+      if (e?.detail === 'ap') {
+        setShowApManagerModal(true);
+      } else {
+        setOpenedFromApManager(true);
+      }
+    };
     const handleClose = () => {
       setOpenedFromApManager((prev) => {
         if (prev) {
@@ -421,8 +426,6 @@ export default function App() {
     setShowCreateModal(false);
   };
 
-  const currentLevel = activeCharacter?.sheet_data?.level || 1;
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Persistent Header */}
@@ -440,48 +443,24 @@ export default function App() {
             {/* Account Pill Button (Simplified in GM Mode) */}
             <AccountPillButton
               email={playerEmail}
-              activeCharacter={activeCharacter}
               isGmMode={activeRole === 'gm'}
               onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
             />
-
-            {/* ⭐ Stylized Level & AP Trigger (Header Row 1 - Player Mode Only) */}
-            {activeRole !== 'gm' && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/35 text-amber-300 shadow-amber-950/40">
-                <button
-                  onClick={() => setShowApManagerModal(true)}
-                  className="text-amber-400 font-bold flex items-center gap-1.5 hover:text-amber-200 transition-colors cursor-pointer"
-                  title="Open Manage Level & AP Modal"
-                >
-                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30 shrink-0" />
-                  <span className="font-outfit tracking-wide">Level & AP</span>
-                </button>
-
-                <span className="px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/40 font-mono font-extrabold text-amber-100 text-[11px] shrink-0">
-                  Lvl {currentLevel}
-                </span>
-
-                <div className="h-3.5 w-[1px] bg-amber-500/30 mx-0.5 shrink-0" />
-
-                <div className="flex items-center gap-0.5">
-                  <CardHelpButton ruleKey="leveling.advancement_steps" />
-                  <button
-                    onClick={() => setShowApManagerModal(true)}
-                    className="p-1 text-amber-400 hover:text-amber-200 hover:bg-amber-500/20 rounded-md transition-colors cursor-pointer"
-                    title="Open Manage Level & AP Modal"
-                  >
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Center Zone: S-Tier Glassmorphic GM Screen + Party ID (GM Mode Only) */}
-          {activeRole === 'gm' && (
+          {/* Center Zone: S-Tier Glassmorphic GM Screen (GM Mode) vs Prominent Hero Title (Player Mode) */}
+          {activeRole === 'gm' ? (
             <div className="flex-1 flex justify-center min-w-[280px]">
               <GmHeaderHUD activeRoomCode={activeRoomCode} />
             </div>
+          ) : (
+            activeCharacter && (
+              <div className="flex-1 flex items-center justify-center min-w-0 px-2 py-0.5 animate-fadeIn">
+                <h2 className="font-outfit text-lg md:text-xl font-black tracking-widest bg-gradient-to-r from-slate-100 via-amber-200 to-amber-400 bg-clip-text text-transparent uppercase drop-shadow-[0_2px_12px_rgba(251,191,36,0.3)] truncate max-w-[420px]">
+                  {activeCharacter?.name || 'Hero'}
+                </h2>
+              </div>
+            )
           )}
 
           {/* Right Zone: GM Tools, Resources Popover & Database Indicator */}
@@ -622,6 +601,7 @@ export default function App() {
               ) : (
                 <CharacterSheetView
                   onOpenVitalityManager={() => setShowVitalityManagerModal(true)}
+                  onOpenApManager={() => setShowApManagerModal(true)}
                   onOpenPartySelector={() => {
                     setLaunchHubInitialTab('party');
                     setShowUnifiedLaunchHubModal(true);

@@ -2,7 +2,8 @@
 import React from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { HeroHubCard } from './HeroHubCard';
-import { WealthGearCard } from './WealthGearCard';
+import { MoneyCard } from './MoneyCard';
+import { GearCard } from './GearCard';
 import { SkillsetsPanel } from './SkillsetsPanel';
 import { WeaponsCard } from './WeaponsCard';
 import { ArmorCard } from './ArmorCard';
@@ -17,12 +18,14 @@ import { PartyRosterHud } from '../hud/PartyRosterHud';
 interface CharacterSheetViewProps {
   onOpenVitalityManager?: () => void;
   onOpenPartySelector?: () => void;
+  onOpenApManager?: () => void;
   tabSessionId?: string;
 }
 
 export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
   onOpenVitalityManager,
   onOpenPartySelector,
+  onOpenApManager,
   tabSessionId,
 }) => {
   const { activeCharacter, playerEmail } = useCharacterStore();
@@ -30,10 +33,17 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
 
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-16 relative">
-      {/* High-Density Top Section: Hero Hub (Left), Wealth & Gear (Right) */}
-      <div id="section-top-cards" className="grid grid-cols-1 md:grid-cols-2 gap-4 scroll-mt-32">
-        <HeroHubCard />
-        <WealthGearCard />
+      {/* High-Density Top Section: Hero Hub (Left), Money (Center), Gear (Right) */}
+      <div id="section-top-cards" className="flex flex-wrap items-center gap-4 scroll-mt-32">
+        <div className="flex-[2] min-w-[340px]">
+          <HeroHubCard onOpenApManager={onOpenApManager} />
+        </div>
+        <div className="flex-1 min-w-[260px]">
+          <MoneyCard />
+        </div>
+        <div className="flex-initial min-w-[180px]">
+          <GearCard />
+        </div>
       </div>
 
       {/* Screen-Wide Section: Skillsets & Derived Skills Registry */}
