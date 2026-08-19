@@ -95,10 +95,10 @@ export const CATEGORY_OPTIONS = [
   { key: 'coins', label: '🪙 Coins (s/g)' },
   { key: 'chaos_gems', label: '💎 Chaos Gem (Volatile)' },
   { key: 'hardware', label: '⚙️ Hardware Device' },
-  { key: 'magic_Minor', label: '🍺 Minor Magic Item' },
-  { key: 'magic_Lesser', label: '🪄 Lesser Magic Item' },
-  { key: 'magic_Greater', label: '✨ Greater Magic Item' },
-  { key: 'magic_Epic', label: '💫 Epic Magic Item' },
+  { key: 'magic_Minor', label: '🍺 Minor Relic' },
+  { key: 'magic_Lesser', label: '🪄 Lesser Relic' },
+  { key: 'magic_Greater', label: '✨ Greater Relic' },
+  { key: 'magic_Epic', label: '💫 Epic Relic' },
   { key: 'gear_quality', label: '🧰 Gear Quality + Item' },
   { key: 'art_gems', label: '🎨 Art & Gems' },
   { key: 'curios', label: '📜 Curios & Documents' },
@@ -222,19 +222,19 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           const picked = catalogPool[Math.floor(Math.random() * catalogPool.length)];
           return {
             ...picked,
-            description: picked.effect || (picked as any).notes || (picked as any).description || `Enchanted ${cleanRarity} magic item.`
+            description: picked.effect || (picked as any).notes || (picked as any).description || `Enchanted ${cleanRarity} relic.`
           };
         }
-        return { name: `${cleanRarity} Magic Item`, category: cleanRarity, description: `Mystical ${cleanRarity.toLowerCase()} item of power.` };
+        return { name: `${cleanRarity} Relic`, category: cleanRarity, description: `Mystical ${cleanRarity.toLowerCase()} relic of power.` };
       }
 
       const picked = data[Math.floor(Math.random() * data.length)];
       return {
         ...picked,
-        description: picked.effect || (picked as any).notes || (picked as any).description || `Enchanted ${cleanRarity} magic item.`
+        description: picked.effect || (picked as any).notes || (picked as any).description || `Enchanted ${cleanRarity} relic.`
       };
     } catch {
-      return { name: `${cleanRarity} Magic Focus`, sub: cleanRarity, description: `Enchanted ${cleanRarity.toLowerCase()} magic focus.` };
+      return { name: `${cleanRarity} Relic Focus`, sub: cleanRarity, description: `Enchanted ${cleanRarity.toLowerCase()} relic focus.` };
     }
   };
 
@@ -361,7 +361,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           resList.push({
             id: `res-${Date.now()}`,
             tableKey: 'loot_main',
-            tableName: `${iconStr} ${rarity} Magic Item`,
+            tableName: `${iconStr} ${rarity} Relic`,
             rollVal: d100,
             title: `${item.name}`,
             description: item.description || item.notes || `Mystical ${item.category} item.`,
@@ -408,10 +408,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             resList.push({
               id: `res-${Date.now()}-2`,
               tableKey: 'loot_main',
-              tableName: '🪄 Double Roll Magic',
+              tableName: '🪄 Double Roll Relic',
               rollVal: d100,
               title: `${r2.name}`,
-              description: r2.description || `Enchanted magic item.`,
+              description: r2.description || `Enchanted relic.`,
               type: 'magic_item',
               magicItem: r2
             });
@@ -421,7 +421,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             resList.push({
               id: `res-${Date.now()}-epic1`,
               tableKey: 'loot_main',
-              tableName: '💫 Epic Magic Item',
+              tableName: '💫 Epic Relic',
               rollVal: 100,
               title: `${artItem.name}`,
               description: artItem.description || 'Legendary epic item of massive power.',
@@ -489,14 +489,14 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         const rawRarity = tableKey.replace('magic_', '');
         const rarity = (rawRarity.toLowerCase() === 'artifact' || rawRarity.toLowerCase() === 'epic') ? 'Epic' : rawRarity;
         const item = await fetchRandomMagicItem(rarity);
-        const badgeLabel = rarity === 'Minor' ? '🍺 Minor Magic' : rarity === 'Lesser' ? '🪄 Lesser Magic' : rarity === 'Greater' ? '✨ Greater Magic' : '💫 Epic';
+        const badgeLabel = rarity === 'Minor' ? '🍺 Minor Relic' : rarity === 'Lesser' ? '🪄 Lesser Relic' : rarity === 'Greater' ? '✨ Greater Relic' : '💫 Epic Relic';
         const resObj: RollResult = {
           id: `res-${Date.now()}`,
           tableKey,
           tableName: badgeLabel,
           rollVal: 1,
           title: `${item.name}`,
-          description: item.description || `Mystical ${rarity.toLowerCase()} magic item.`,
+          description: item.description || `Mystical ${rarity.toLowerCase()} relic.`,
           type: 'magic_item',
           magicItem: item
         };
@@ -1082,7 +1082,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                               ? 'border-amber-400 shadow-amber-500/50 animate-pulse cursor-pointer'
                               : 'border-slate-700'
                           }`}
-                          title={qualifiedTier ? `Click to draft a ${qualifiedTier.name} magic item!` : 'Disenchant loot drops to fill Essence Flask'}
+                          title={qualifiedTier ? `Click to draft a ${qualifiedTier.name} relic!` : 'Disenchant loot drops to fill Essence Flask'}
                         >
                           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3.5 h-1.5 bg-slate-800 border-b border-slate-700 z-10"></div>
                           <div

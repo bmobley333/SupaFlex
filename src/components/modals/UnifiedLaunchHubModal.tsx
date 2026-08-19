@@ -1009,7 +1009,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       <label className="text-xs font-bold text-slate-200 block uppercase tracking-wider font-outfit">
                         🌐 Campaign & Catalog Filter
                       </label>
-                      <InfoTooltip text="Filters all stock item catalogs (Weapons, Armor, Shields, Gear, Powers, Magic Items, Skillsets, Bestiary) across the gaming suite." />
+                      <InfoTooltip text="Filters all stock item catalogs (Weapons, Armor, Shields, Gear, Powers, Relics & Hardware, Skillsets, Bestiary) across the gaming suite." />
                     </div>
 
                     <div className="pt-1">

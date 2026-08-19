@@ -309,13 +309,13 @@ export default function App() {
         const isHw = !!(m.is_hardware || category === 'hardware');
         const magicItemObj: MagicItem = {
           id: Date.now() + Math.floor(Math.random() * 1000),
-          name: m.name || itemPayload.title || (isHw ? 'Hardware Device' : 'Magic Item'),
+          name: m.name || itemPayload.title || (isHw ? 'Hardware Device' : 'Relic'),
           usage: m.usage || '1-Enc',
           action: m.action || 'P',
           effect: m.effect || m.description || itemPayload.description || '',
           source: m.source || (isHw ? 'Hardware Loot' : 'Loot Claim'),
           created_at: new Date().toISOString(),
-          category: m.category || (isHw ? '⚙️ Hardware' : category) || 'Magic Item',
+          category: m.category || (isHw ? '⚙️ Hardware' : category) || 'Relic',
           slot_weight: (getItemSlotWeight({ ...m, name: itemPayload.title, category }) as 1 | 2 | 3 | 4),
           is_hardware: isHw,
           cost: m.cost,

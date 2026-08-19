@@ -91,7 +91,7 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
-                Roll gold, magic items, weapons, & armor tables.
+                Roll gold, relics, weapons, & armor tables.
               </p>
             </div>
           </button>

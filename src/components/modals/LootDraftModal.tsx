@@ -211,7 +211,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
         },
         {
           slotType: 'pool',
-          slotTitle: '🎲 Magic Item Pool',
+          slotTitle: '🎲 Relic Pool',
           slotBadge: `${draftTier} Rarity`,
           item: slot2Item,
         },

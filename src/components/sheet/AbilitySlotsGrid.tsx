@@ -714,7 +714,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     const unlockedSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
 
     if (activeSlotsUsed + weight > unlockedSlots) {
-      alert(`❌ Insufficient Magic Item Slots! Active loadout is ${activeSlotsUsed}/${unlockedSlots} slots. Item requires ${weight} slots. Unlock more slots in AP Manager.`);
+      alert(`❌ Insufficient Relic & Hardware Slots! Active loadout is ${activeSlotsUsed}/${unlockedSlots} slots. Item requires ${weight} slots. Unlock more slots in AP Manager.`);
       return;
     }
 
@@ -1007,7 +1007,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   }, [type, activeDisplaySlots, slots, leftSearchQuery, catalogReadyFilter]);
 
   const sectionIcon = type === 'powers' ? '🔥' : '⚡';
-  const displayTitle = title || (type === 'powers' ? 'POWERS' : 'LOADOUT');
+  const displayTitle = title || (type === 'powers' ? 'POWERS' : 'LOADOUT (Relics & Hardware)');
 
   // Default Action Economy Sorting for Active Sheet
   const sortedSlots = useMemo(() => {
@@ -1954,9 +1954,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             <span className="text-xs font-bold text-cyan-300 flex items-center gap-1.5 font-outfit">
                               ⚙️ Purchasable Hardware Catalog
                             </span>
-                            <span className="text-[11px] text-slate-400 font-medium">
-                              Relics are discovered exclusively via Loot Rolls
-                            </span>
                           </div>
                         )}
 
@@ -2166,42 +2163,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   key={item.id || idx}
                                   className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-amber-500/40 transition-all shrink-0"
                                 >
-                                  {/* Header Row: Name, Version, Tier Badge, Action & Usage (Adjacent), Buttons */}
-                                  <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
-                                    <div className="flex flex-col gap-1">
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="font-bold text-sm text-slate-100">{baseName}</span>
-                                        {type !== 'powers' && <ItemNotesPopover notes={(item as any).notes} itemName={baseName} />}
-                                        {version > 1 && (
-                                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
-                                            v{version}
-                                          </span>
-                                        )}
-                                      </div>
-                                      {type === 'spells' && (() => {
-                                        const badge = getMagicItemTierBadge(item, fullCatalog);
-                                        const isHardware = (item as any).is_hardware || (item as any).cost;
-                                        return (
-                                          <div className="flex items-center gap-1.5 flex-wrap">
-                                            {badge && (
-                                              <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                                                <span>{badge.icon}</span>
-                                                <span>{badge.label}</span>
-                                              </span>
-                                            )}
-                                            {isHardware ? (
-                                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
-                                                <span>⚙️ Hardware</span>
-                                                {(item as any).cost && <span className="text-amber-300 font-extrabold">• {costAbbrev}</span>}
-                                              </span>
-                                            ) : (
-                                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-500/40 flex items-center gap-1">
-                                                <span>🏺 Relic (Loot)</span>
-                                              </span>
-                                            )}
-                                          </div>
-                                        );
-                                      })()}
+                                  {/* Header Row: Name, Version, Action & Usage (Adjacent), Buttons */}
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-bold text-sm text-slate-100">{baseName}</span>
+                                      {type !== 'powers' && <ItemNotesPopover notes={(item as any).notes} itemName={baseName} />}
+                                      {version > 1 && (
+                                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
+                                          v{version}
+                                        </span>
+                                      )}
                                     </div>
 
                                     <div className="flex items-center gap-2 shrink-0">
