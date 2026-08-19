@@ -519,9 +519,9 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
 
         {/* Right Section: Adventure Loot Dropdown + Adventure Links Dropdown */}
         <div className="flex items-center gap-2">
-          {/* GM Loot: Adventure Dropdown (Amber Theme) */}
+          {/* Adventure Loot Dropdown (Amber Theme) */}
           <UniversalLootDropdown
-            label="GM Loot: Adventure"
+            label="Adventure Loot"
             loot={activeAdv?.loot || []}
             disabled={!activeAdv}
             disabledTooltip="Select an adventure first"

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useCharacterStore } from '../../store/useCharacterStore';
@@ -410,7 +411,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           });
         } else if (rType === 'art_gem' || rType === 'subtable' || rType === 'curio' || rType === 'junk' || rType === 'item') {
           const subKey = entry.subtable_key || (rType === 'art_gem' ? 'art_gems' : rType === 'curio' ? 'curios' : rType === 'junk' ? 'junk' : 'art_gems');
-          const subRoll = rollDice(8);
+          const diceMax = (subKey === 'curios' || subKey === 'junk') ? 6 : 8;
+          const subRoll = rollDice(diceMax);
           const { data: subEntries } = await supabase
             .from('treasure_entries')
             .select('*')
@@ -418,9 +420,18 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             .lte('range_min', subRoll)
             .gte('range_max', subRoll);
 
-          const subEntry = subEntries && subEntries.length > 0 ? subEntries[0] : null;
+          let subEntry = subEntries && subEntries.length > 0 ? subEntries[0] : null;
+          if (!subEntry) {
+            const { data: fallbackEntries } = await supabase
+              .from('treasure_entries')
+              .select('*')
+              .eq('table_key', subKey);
+            if (fallbackEntries && fallbackEntries.length > 0) {
+              subEntry = fallbackEntries[Math.floor(Math.random() * fallbackEntries.length)];
+            }
+          }
           const badgeLabel = subKey === 'art_gems' ? '🎨 Art & Gems' : subKey === 'curios' ? '📜 Curio' : subKey === 'junk' ? '🗑️ Junk' : '🏺 Collectible';
-          const cleanDesc = subEntry ? (subEntry.notes || subEntry.result_name) : (entry.notes || 'A rare collectible item.');
+          const cleanDesc = subEntry ? (subEntry.notes || subEntry.result_name) : 'A rare collectible item.';
           
           const rawFormula = subEntry ? (subEntry.val_formula || entry.val_formula) : entry.val_formula;
           const isArtGemItem = rType === 'art_gem' || subKey === 'art_gems';
@@ -954,8 +965,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     showToast(`🎁 Awarded "${itemPayload.title}" to Party Vault!`);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">
       <div className="bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden text-slate-100">
         
         {/* Toast Alert */}
@@ -1793,6 +1806,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         onClose={handleSocketCancel}
         onSocketSuccess={handleSocketSuccess}
       />
-    </div>
+    </div>,
+    document.body
   );
 };

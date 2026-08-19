@@ -2,6 +2,7 @@
 // Two-Pane Master Blueprint Modal for Adventure & Encounter Loot Staging, d100 Rolling & Party Vault Delivery
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Coins,
   Dice5,
@@ -29,7 +30,7 @@ export interface UniversalLootModalProps {
   themeColor?: 'amber' | 'cyan' | 'rose' | 'indigo' | 'emerald';
 }
 
-type LootCategoryTab = 'coins' | 'weapons' | 'armor' | 'shields' | 'gear' | 'relics' | 'hardware' | 'chaos_gems';
+type LootCategoryTab = 'random' | 'armor' | 'chaos_gems' | 'coins' | 'gear' | 'hardware' | 'relics' | 'shields' | 'weapons';
 
 export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
   isOpen,
@@ -45,11 +46,13 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
   const activePartyId = useCharacterStore((state) => state.activePartyId);
 
   // Form & Drawer states
-  const [activeCategoryTab, setActiveCategoryTab] = useState<LootCategoryTab>('coins');
+  const [activeCategoryTab, setActiveCategoryTab] = useState<LootCategoryTab>('random');
   const [searchQuery, setSearchQuery] = useState('');
   const [targetPlayer, setTargetPlayer] = useState('Party');
+  const [quickRollTargetPlayer, setQuickRollTargetPlayer] = useState('Party');
   const [coinsTargetPlayer, setCoinsTargetPlayer] = useState('Party');
   const [customItemTargetPlayer, setCustomItemTargetPlayer] = useState('Party');
+  const [rollCount, setRollCount] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -70,7 +73,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
 
   // Load catalog items on tab switch
   useEffect(() => {
-    if (!isOpen || activeCategoryTab === 'coins') return;
+    if (!isOpen || activeCategoryTab === 'random' || activeCategoryTab === 'coins') return;
 
     const loadCatalog = async () => {
       setIsLoadingCatalog(true);
@@ -101,87 +104,334 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Quick Roll d100 Random Loot into Staged List
-  const handleQuickRoll = async () => {
-    setIsRolling(true);
-    const d100 = Math.floor(Math.random() * 100) + 1;
-    try {
-      const { data: entries } = await supabase
+  const rollDice = (sides: number) => Math.floor(Math.random() * sides) + 1;
+
+  // Evaluate coin formula string into concrete silver and gold numbers
+  const evaluateCoinFormula = (formula: string): { silver: number; gold: number } => {
+    let s = 0;
+    let g = 0;
+
+    if (formula === '1d6s') {
+      s = rollDice(6);
+    } else if (formula === '1d20s') {
+      s = rollDice(20);
+    } else if (formula === '1d100s') {
+      s = rollDice(100);
+    } else if (formula === '1d4g') {
+      g = rollDice(4);
+    } else if (formula === '2d6x10s+1d4g') {
+      s = (rollDice(6) + rollDice(6)) * 10;
+      g = rollDice(4);
+    } else if (formula === '1d100g') {
+      g = rollDice(100);
+    } else {
+      const matchS = formula.match(/(\d+)d(\d+)s/i);
+      const matchG = formula.match(/(\d+)d(\d+)g/i);
+      if (matchS) {
+        const count = parseInt(matchS[1], 10) || 1;
+        const sides = parseInt(matchS[2], 10) || 6;
+        for (let i = 0; i < count; i++) s += rollDice(sides);
+      }
+      if (matchG) {
+        const count = parseInt(matchG[1], 10) || 1;
+        const sides = parseInt(matchG[2], 10) || 4;
+        for (let i = 0; i < count; i++) g += rollDice(sides);
+      }
+      if (!matchS && !matchG) {
+        s = rollDice(10);
+      }
+    }
+
+    return { silver: s, gold: g };
+  };
+
+  // Helper to autonomously resolve a loot_main row into one or more concrete subtable items
+  const resolveLootRow = async (
+    entry: any,
+    target: string,
+    depth: number = 0
+  ): Promise<Omit<StagedLootItem, 'id' | 'created_at'>[]> => {
+    const items: Omit<StagedLootItem, 'id' | 'created_at'>[] = [];
+    if (!entry) return items;
+
+    const rType = entry.result_type;
+    const subKey = entry.subtable_key;
+
+    // 1. Currency
+    if (rType === 'currency' || subKey === 'loot_coins') {
+      const coins = evaluateCoinFormula(entry.val_formula || '1d20s');
+      const labelParts = [
+        coins.gold > 0 ? `${coins.gold}g` : '',
+        coins.silver > 0 ? `${coins.silver}s` : '',
+      ].filter(Boolean);
+      items.push({
+        title: `Coins 💰 (${labelParts.join(', ') || '1s'})`,
+        categoryKey: 'coins',
+        coinsSilver: coins.silver,
+        coinsGold: coins.gold,
+        description: `Pouch of minted currency (${entry.val_formula || 'mixed'}).`,
+        targetPlayer: target,
+      });
+      return items;
+    }
+
+    // 2. Junk / Funny One-Off
+    if (rType === 'junk' || subKey === 'junk') {
+      const roll = rollDice(6);
+      const { data: subEntries } = await supabase
+        .from('treasure_entries')
+        .select('*')
+        .eq('table_key', 'junk')
+        .lte('range_min', roll)
+        .gte('range_max', roll);
+
+      const sub = subEntries && subEntries.length > 0 ? subEntries[0] : null;
+      items.push({
+        title: sub ? sub.result_name : 'Flavorful Junk Trinket',
+        categoryKey: 'gear',
+        description: sub ? (sub.notes || 'Odd novelty or funny one-off trinket.') : 'Unusual trinket found in the dungeon.',
+        valuableVal: sub?.val_formula || '0g',
+        targetPlayer: target,
+      });
+      return items;
+    }
+
+    // 3. Curios, Maps & Documents
+    if (rType === 'curio' || subKey === 'curios') {
+      const roll = rollDice(6);
+      const { data: subEntries } = await supabase
+        .from('treasure_entries')
+        .select('*')
+        .eq('table_key', 'curios')
+        .lte('range_min', roll)
+        .gte('range_max', roll);
+
+      const sub = subEntries && subEntries.length > 0 ? subEntries[0] : null;
+      items.push({
+        title: sub ? sub.result_name : 'Cryptic Document / Map',
+        categoryKey: 'gear',
+        description: sub ? (sub.notes || 'Intriguing document or plot hook.') : 'Ancient parchment with faded markings.',
+        targetPlayer: target,
+      });
+      return items;
+    }
+
+    // 4. Art Objects & Gems
+    if (rType === 'art_gem' || subKey === 'art_gems') {
+      const roll = rollDice(8);
+      const { data: subEntries } = await supabase
+        .from('treasure_entries')
+        .select('*')
+        .eq('table_key', 'art_gems')
+        .lte('range_min', roll)
+        .gte('range_max', roll);
+
+      const sub = subEntries && subEntries.length > 0 ? subEntries[0] : null;
+      const rawFormula = sub?.val_formula || entry.val_formula || '2d6g';
+      const evaluated = parseAndEvaluateFormula(rawFormula);
+
+      items.push({
+        title: sub ? sub.result_name : 'Artistic Valuables',
+        categoryKey: 'art_gems',
+        valuableVal: evaluated.text,
+        description: sub ? (sub.notes || `Valuable art piece worth ${evaluated.text}.`) : `Precious artwork worth ${evaluated.text}.`,
+        targetPlayer: target,
+      });
+      return items;
+    }
+
+    // 5. Collectible / Antique
+    if (rType === 'item' && (entry.result_name.toLowerCase().includes('collectible') || entry.result_name.toLowerCase().includes('antique'))) {
+      const goldVal = rollDice(20);
+      items.push({
+        title: 'Antique Collectible',
+        categoryKey: 'art_gems',
+        valuableVal: `${goldVal}g`,
+        description: `Rare collectible artifact or antique valued at ${goldVal} gold.`,
+        targetPlayer: target,
+      });
+      return items;
+    }
+
+    // 6. Hardware Device
+    if (rType === 'hardware' || subKey === 'hardware') {
+      const { data: hwItems } = await supabase.from('hardware').select('*');
+      const picked = hwItems && hwItems.length > 0 ? hwItems[Math.floor(Math.random() * hwItems.length)] : null;
+
+      items.push({
+        title: picked?.name || 'Technological Hardware Device',
+        categoryKey: 'hardware',
+        description: picked?.description || picked?.effect || 'Advanced technological device with mechanical utility.',
+        targetPlayer: target,
+      });
+      return items;
+    }
+
+    // 7. Magic Item / Relic (Minor, Lesser, Greater, Epic)
+    if (rType === 'magic_item' || entry.result_name.toLowerCase().includes('magic') || entry.result_name.toLowerCase().includes('relic')) {
+      let rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' = 'Lesser';
+      const rawName = (entry.result_name + ' ' + (subKey || '')).toLowerCase();
+      if (rawName.includes('minor')) rarity = 'Minor';
+      else if (rawName.includes('greater')) rarity = 'Greater';
+      else if (rawName.includes('epic') || rawName.includes('artifact')) rarity = 'Epic';
+
+      let query = supabase.from('relics').select('*');
+      if (rarity === 'Epic') {
+        query = query.or('category.ilike.%Epic%,category.ilike.%Artifact%');
+      } else {
+        query = query.ilike('category', `%${rarity}%`);
+      }
+
+      const { data: relics } = await query;
+      const picked = relics && relics.length > 0 ? relics[Math.floor(Math.random() * relics.length)] : null;
+
+      items.push({
+        title: picked?.name || `${rarity} Relic`,
+        categoryKey: `magic_${rarity}`,
+        rarity,
+        description: picked?.effect || picked?.description || `Enchanted ${rarity} relic.`,
+        magicItem: picked,
+        targetPlayer: target,
+      });
+      return items;
+    }
+
+    // 8. Chaos Gem (Volatile)
+    if (rType === 'chaos_gem' || subKey === 'chaos_gems') {
+      const { data: gems } = await supabase.from('chaos_gems').select('*');
+      const picked = gems && gems.length > 0 ? gems[Math.floor(Math.random() * gems.length)] : null;
+
+      items.push({
+        title: picked ? `Chaos Gem: ${picked.name}` : 'Volatile Chaos Gem',
+        categoryKey: 'chaos_gems',
+        description: picked ? `Action: ${picked.action || 'F'}. ${picked.effect}` : 'Volatile primordial gem conduit.',
+        chaosGem: picked,
+        targetPlayer: target,
+      });
+      return items;
+    }
+
+    // 9. Special: Double Roll (96-99)
+    if (rType === 'special' && entry.range_min >= 96 && entry.range_min <= 99) {
+      if (depth < 2) {
+        for (let j = 0; j < 2; j++) {
+          const subD100 = Math.floor(Math.random() * 95) + 1;
+          const { data: subEntries } = await supabase
+            .from('loot_main')
+            .select('*')
+            .lte('range_min', subD100)
+            .gte('range_max', subD100);
+          if (subEntries && subEntries.length > 0) {
+            const subResolved = await resolveLootRow(subEntries[0], target, depth + 1);
+            items.push(...subResolved);
+          }
+        }
+      }
+      return items;
+    }
+
+    // 10. Special: Epic Hoard (100)
+    if (rType === 'special' && entry.range_min === 100) {
+      // 1 Epic Magic Item
+      const { data: epics } = await supabase
+        .from('relics')
+        .select('*')
+        .or('category.ilike.%Epic%,category.ilike.%Artifact%');
+      const epicPicked = epics && epics.length > 0 ? epics[Math.floor(Math.random() * epics.length)] : null;
+
+      items.push({
+        title: epicPicked?.name || 'Epic Artifact',
+        categoryKey: 'magic_Epic',
+        rarity: 'Epic',
+        description: epicPicked?.effect || epicPicked?.description || 'Legendary artifact of immense power.',
+        magicItem: epicPicked,
+        targetPlayer: target,
+      });
+
+      // 1d100 Gold Coins
+      const goldRoll = rollDice(100);
+      items.push({
+        title: `Gold Hoard 👑 (${goldRoll}g)`,
+        categoryKey: 'coins',
+        coinsSilver: 0,
+        coinsGold: goldRoll,
+        description: 'An overflowing chest of sparkling gold coins.',
+        targetPlayer: target,
+      });
+
+      // 1 Additional Roll on loot_main (1..95)
+      const bonusD100 = Math.floor(Math.random() * 95) + 1;
+      const { data: bonusEntries } = await supabase
         .from('loot_main')
         .select('*')
-        .lte('range_min', d100)
-        .gte('range_max', d100);
-
-      const entry = entries && entries.length > 0 ? entries[0] : null;
-
-      if (!entry) {
-        showToast(`🎲 Rolled ${d100}: Nothing found`);
-        return;
+        .lte('range_min', bonusD100)
+        .gte('range_max', bonusD100);
+      if (bonusEntries && bonusEntries.length > 0) {
+        const bonusResolved = await resolveLootRow(bonusEntries[0], target, depth + 1);
+        items.push(...bonusResolved);
       }
 
-      let stagedItem: Omit<StagedLootItem, 'id' | 'created_at'>;
+      return items;
+    }
 
-      if (entry.result_type === 'currency' || entry.subtable_key === 'loot_coins') {
-        const formula = entry.val_formula || '1d20s';
-        const s = formula.includes('s') ? Math.floor(Math.random() * 20) + 1 : 0;
-        const g = formula.includes('g') ? Math.floor(Math.random() * 4) + 1 : 0;
-        stagedItem = {
-          title: `${s > 0 ? `${s}s ` : ''}${g > 0 ? `${g}g` : ''}`.trim() || '5s',
-          categoryKey: 'coins',
-          coinsSilver: s,
-          coinsGold: g,
-          description: `Random coin pouch (${formula})`,
-          targetPlayer,
-        };
-      } else if (entry.result_type === 'magic_item' || entry.result_name.toLowerCase().includes('relic')) {
-        let rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' = 'Lesser';
-        if (entry.result_name.toLowerCase().includes('minor')) rarity = 'Minor';
-        else if (entry.result_name.toLowerCase().includes('greater')) rarity = 'Greater';
-        else if (entry.result_name.toLowerCase().includes('epic') || entry.result_name.toLowerCase().includes('artifact')) rarity = 'Epic';
+    // 11. Nothing Found (01-08)
+    if (rType === 'nothing') {
+      items.push({
+        title: 'Empty Pouch (Dust & Cobwebs)',
+        categoryKey: 'gear',
+        description: 'An old weathered pouch containing only dust and lint.',
+        valuableVal: '0g',
+        targetPlayer: target,
+      });
+      return items;
+    }
 
-        const { data: relics } = await supabase.from('relics').select('*').ilike('category', `%${rarity}%`);
-        const picked = relics && relics.length > 0 ? relics[Math.floor(Math.random() * relics.length)] : null;
+    // 12. Fallback
+    items.push({
+      title: entry.result_name || 'Adventuring Item',
+      categoryKey: 'gear',
+      description: entry.notes || 'Useful adventuring item.',
+      targetPlayer: target,
+    });
+    return items;
+  };
 
-        stagedItem = {
-          title: picked?.name || `${rarity} Relic`,
-          categoryKey: `magic_${rarity}`,
-          rarity,
-          description: picked?.effect || picked?.description || `Enchanted ${rarity} relic.`,
-          magicItem: picked,
-          targetPlayer,
-        };
-      } else if (entry.result_type === 'chaos_gem') {
-        const { data: gems } = await supabase.from('chaos_gems').select('*');
-        const picked = gems && gems.length > 0 ? gems[Math.floor(Math.random() * gems.length)] : null;
+  // Quick Roll d100 Random Loot into Staged List (strictly fulfills exact requested count)
+  const handleQuickRoll = async (count: number = 1) => {
+    setIsRolling(true);
+    const addedItems: Omit<StagedLootItem, 'id' | 'created_at'>[] = [];
+    const target = quickRollTargetPlayer.trim() || 'Party';
+    let safetyAttempts = 0;
 
-        stagedItem = {
-          title: picked ? `Chaos Gem: ${picked.name}` : 'Volatile Chaos Gem',
-          categoryKey: 'chaos_gems',
-          description: picked ? `Action: ${picked.action || 'F'}. ${picked.effect}` : 'Volatile gem conduit.',
-          chaosGem: picked,
-          targetPlayer,
-        };
-      } else if (entry.result_type === 'art_gem' || entry.subtable_key === 'loot_art_gems') {
-        const formula = entry.val_formula || '2d6g';
-        const evaluated = parseAndEvaluateFormula(formula);
-        stagedItem = {
-          title: entry.result_name || 'Jeweled Bauble',
-          categoryKey: 'art_gems',
-          valuableVal: evaluated.text,
-          description: `Art object worth ${evaluated.text}`,
-          targetPlayer,
-        };
+    try {
+      while (addedItems.length < count && safetyAttempts < 30) {
+        safetyAttempts++;
+        const d100 = Math.floor(Math.random() * 100) + 1;
+        const { data: entries } = await supabase
+          .from('loot_main')
+          .select('*')
+          .lte('range_min', d100)
+          .gte('range_max', d100);
+
+        const entry = entries && entries.length > 0 ? entries[0] : null;
+        if (!entry) continue;
+
+        const resolved = await resolveLootRow(entry, target, 0);
+        for (const item of resolved) {
+          if (addedItems.length < count) {
+            await onAddLoot(item);
+            addedItems.push(item);
+          }
+        }
+      }
+
+      if (addedItems.length === 1) {
+        showToast(`🎲 Rolled: ${addedItems[0].title}`);
+      } else if (addedItems.length > 1) {
+        showToast(`🎲 Rolled exactly ${addedItems.length} items into Stash!`);
       } else {
-        stagedItem = {
-          title: entry.result_name || 'Adventuring Gear',
-          categoryKey: 'gear',
-          description: entry.notes || 'Useful adventuring item',
-          targetPlayer,
-        };
+        showToast('⚠️ No items found on roll.');
       }
-
-      await onAddLoot(stagedItem);
-      showToast(`🎲 Rolled: ${stagedItem.title}`);
     } catch (e) {
       console.error(e);
       showToast('⚠️ Error rolling random loot.');
@@ -305,8 +555,10 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     );
   });
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">
       <div className="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden text-slate-100 font-sans">
         
         {/* Toast Alert */}
@@ -447,40 +699,22 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
           </div>
 
           {/* RIGHT PANE (md:col-span-7): 1-Click Roller, Category Swapper, and Custom Generators */}
-          <div className="md:col-span-7 flex flex-col h-full overflow-y-auto space-y-4 pr-1">
-            <div className="border-b border-slate-800 pb-2.5 shrink-0">
-              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
-                <span>➕</span> Add Specific Item to Loot Stash
-              </span>
-            </div>
-
-            {/* Quick 1-Click Roll Deck */}
-            <div className="bg-slate-950/90 border border-slate-800 p-3.5 rounded-2xl shrink-0 shadow-lg space-y-2.5">
-              <button
-                type="button"
-                onClick={handleQuickRoll}
-                disabled={isRolling}
-                className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 text-slate-950 font-black text-xs rounded-xl transition shadow-lg shadow-amber-950/50 flex items-center justify-center gap-2 cursor-pointer border border-amber-400"
-              >
-                <Dice5 className={`w-4 h-4 ${isRolling ? 'animate-spin' : ''}`} />
-                <span>{isRolling ? 'Rolling Random Loot...' : '🎲 1-Click Roll Random Loot into Stash'}</span>
-              </button>
-            </div>
-
+          <div className="md:col-span-7 flex flex-col h-full overflow-hidden space-y-3 pr-1 min-h-0">
             {/* Catalog Browser / Custom Creation Section */}
             <div className="flex-1 flex flex-col min-h-0 space-y-3">
               
               {/* Zone 1: Category Multi-Option Pill Switch */}
               <div className="bg-slate-950/80 border border-slate-800/80 p-1.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap shrink-0">
                 {[
-                  { key: 'coins', label: '🪙 Coins/Val' },
-                  { key: 'relics', label: '🪄 Relic' },
-                  { key: 'weapons', label: '⚔️ Weapon' },
+                  { key: 'random', label: '🎲 Random' },
                   { key: 'armor', label: '🧥 Armor' },
-                  { key: 'shields', label: '🛡️ Shield' },
+                  { key: 'chaos_gems', label: '💎 Chaos Gem' },
+                  { key: 'coins', label: '🪙 Coins/Val' },
                   { key: 'gear', label: '🎒 Gear' },
-                  { key: 'hardware', label: '⚙️ Hardw' },
-                  { key: 'chaos_gems', label: '💎 Gem' },
+                  { key: 'hardware', label: '⚙️ Hardware' },
+                  { key: 'relics', label: '🪄 Relic' },
+                  { key: 'shields', label: '🛡️ Shield' },
+                  { key: 'weapons', label: '⚔️ Weapon' },
                 ].map((cat) => (
                   <button
                     key={cat.key}
@@ -501,8 +735,74 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
               </div>
 
               {/* Zone 2: Dynamic Category Content */}
-              {activeCategoryTab === 'coins' ? (
-                <div className="space-y-3 shrink-0">
+              {activeCategoryTab === 'random' ? (
+                <div className="flex-1 flex flex-col min-h-0 overflow-y-auto space-y-3 pr-1">
+                  {/* Card: 1-Click Master Roll Deck */}
+                  <div className="bg-slate-950/90 p-4 rounded-xl border border-amber-500/30 space-y-4 shadow-md">
+                    <div className="flex items-center justify-between pb-1 border-b border-amber-500/20">
+                      <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>🎲</span> 1-Click Random Loot Matrix
+                      </span>
+                    </div>
+
+                    {/* Same-Row Roll Action, Qty, and Target Controls */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => handleQuickRoll(rollCount)}
+                        disabled={isRolling}
+                        className="flex-1 py-2.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 text-slate-950 font-black text-xs rounded-xl transition shadow-lg shadow-amber-950/50 flex items-center justify-center gap-2 cursor-pointer border border-amber-400 min-w-[170px]"
+                      >
+                        <Dice5 className={`w-4 h-4 ${isRolling ? 'animate-spin' : ''}`} />
+                        <span>
+                          {isRolling
+                            ? `Rolling ${rollCount} Items...`
+                            : `🎲 ${rollCount > 1 ? `Roll (${rollCount}x)` : 'Roll'} Random to Stash`}
+                        </span>
+                      </button>
+
+                      <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 shrink-0 shadow-inner">
+                        <span className="text-[11px] text-amber-400 font-bold font-mono">Qty:</span>
+                        <select
+                          value={rollCount}
+                          onChange={(e) => setRollCount(Math.min(10, Math.max(1, parseInt(e.target.value, 10) || 1)))}
+                          className="bg-slate-900 text-amber-300 font-extrabold font-mono text-xs outline-none cursor-pointer border-none"
+                        >
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                            <option key={n} value={n} className="bg-slate-950 text-slate-100 font-bold">
+                              {n}x
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Target Selector */}
+                      <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-xl p-1 shrink-0">
+                        <span className="text-[11px] text-slate-400 font-bold px-1">for:</span>
+                        <button
+                          type="button"
+                          onClick={() => setQuickRollTargetPlayer('Party')}
+                          className={`px-2 py-1 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1 border ${
+                            quickRollTargetPlayer === 'Party' || !quickRollTargetPlayer.trim()
+                              ? 'bg-amber-500 text-slate-950 font-extrabold border-amber-400 shadow-sm'
+                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                          }`}
+                        >
+                          🌐 Party
+                        </button>
+                        <input
+                          type="text"
+                          placeholder='or custom tag (e.g. "Blake")...'
+                          value={quickRollTargetPlayer === 'Party' ? '' : quickRollTargetPlayer}
+                          onChange={(e) => setQuickRollTargetPlayer(e.target.value.trim() ? e.target.value : 'Party')}
+                          className="w-36 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-100 placeholder:text-slate-500 outline-none font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : activeCategoryTab === 'coins' ? (
+                <div className="flex-1 flex flex-col min-h-0 overflow-y-auto space-y-3 pr-1">
                   {/* Card 1: Currency & Dice Deck (Amber / Gold Theme) */}
                   <div className="bg-slate-950/90 p-4 rounded-xl border border-amber-500/30 space-y-3 shadow-md">
                     {/* Header */}
@@ -704,7 +1004,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
                   ) : filteredCatalog.length === 0 ? (
                     <div className="py-12 text-center text-slate-500 text-xs">No matching items found.</div>
                   ) : (
-                    <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-64">
+                    <div className="flex-1 overflow-y-auto min-h-0 space-y-1.5 pr-1">
                       {filteredCatalog.slice(0, 50).map((item) => (
                         <div
                           key={item.id || item.name}
@@ -764,6 +1064,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

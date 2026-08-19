@@ -26,7 +26,7 @@ export const EncounterLootDropdown: React.FC<EncounterLootDropdownProps> = ({ pa
 
   return (
     <UniversalLootDropdown
-      label="GM Loot: Encounter"
+      label="Encounter Loot"
       loot={loot}
       disabled={!activeEnc}
       disabledTooltip="Select an encounter first"
