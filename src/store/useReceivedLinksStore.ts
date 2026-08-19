@@ -12,10 +12,11 @@ interface ReceivedLinksState {
   // Actions
   loadReceivedLinks: (partyId?: string, characterId?: string) => void;
   addReceivedLink: (link: ReceivedLinkItem, partyId?: string, characterId?: string) => void;
-  markAsRead: (linkId: string) => void;
-  markAllAsRead: () => void;
-  deleteReceivedLink: (linkId: string) => void;
-  clearReceivedLinks: () => void;
+  toggleReadStatus: (linkId: string, partyId?: string, characterId?: string) => void;
+  markAsRead: (linkId: string, partyId?: string, characterId?: string) => void;
+  markAllAsRead: (partyId?: string, characterId?: string) => void;
+  deleteReceivedLink: (linkId: string, partyId?: string, characterId?: string) => void;
+  clearReceivedLinks: (partyId?: string, characterId?: string) => void;
 
   // Realtime Dispatch
   dispatchLinksToParty: (
@@ -79,32 +80,72 @@ export const useReceivedLinksStore = create<ReceivedLinksState>((set) => ({
     });
   },
 
-  markAsRead: (linkId: string) => {
+  toggleReadStatus: (linkId: string, partyId?: string, characterId?: string) => {
+    set((state) => {
+      const updated = state.receivedLinks.map((l) =>
+        l.id === linkId ? { ...l, isRead: !l.isRead } : l
+      );
+      const unread = updated.filter((l) => !l.isRead).length;
+      if (typeof window !== 'undefined') {
+        try {
+          const key = getStorageKey(partyId, characterId);
+          localStorage.setItem(key, JSON.stringify(updated));
+        } catch {}
+      }
+      return { receivedLinks: updated, unreadCount: unread };
+    });
+  },
+
+  markAsRead: (linkId: string, partyId?: string, characterId?: string) => {
     set((state) => {
       const updated = state.receivedLinks.map((l) =>
         l.id === linkId ? { ...l, isRead: true } : l
       );
       const unread = updated.filter((l) => !l.isRead).length;
+      if (typeof window !== 'undefined') {
+        try {
+          const key = getStorageKey(partyId, characterId);
+          localStorage.setItem(key, JSON.stringify(updated));
+        } catch {}
+      }
       return { receivedLinks: updated, unreadCount: unread };
     });
   },
 
-  markAllAsRead: () => {
+  markAllAsRead: (partyId?: string, characterId?: string) => {
     set((state) => {
       const updated = state.receivedLinks.map((l) => ({ ...l, isRead: true }));
+      if (typeof window !== 'undefined') {
+        try {
+          const key = getStorageKey(partyId, characterId);
+          localStorage.setItem(key, JSON.stringify(updated));
+        } catch {}
+      }
       return { receivedLinks: updated, unreadCount: 0 };
     });
   },
 
-  deleteReceivedLink: (linkId: string) => {
+  deleteReceivedLink: (linkId: string, partyId?: string, characterId?: string) => {
     set((state) => {
       const updated = state.receivedLinks.filter((l) => l.id !== linkId);
       const unread = updated.filter((l) => !l.isRead).length;
+      if (typeof window !== 'undefined') {
+        try {
+          const key = getStorageKey(partyId, characterId);
+          localStorage.setItem(key, JSON.stringify(updated));
+        } catch {}
+      }
       return { receivedLinks: updated, unreadCount: unread };
     });
   },
 
-  clearReceivedLinks: () => {
+  clearReceivedLinks: (partyId?: string, characterId?: string) => {
+    if (typeof window !== 'undefined') {
+      try {
+        const key = getStorageKey(partyId, characterId);
+        localStorage.removeItem(key);
+      } catch {}
+    }
     set({ receivedLinks: [], unreadCount: 0 });
   },
 
