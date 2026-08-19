@@ -138,7 +138,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
               toggleDrawer('attributes');
             }
           }}
-          className={`flex items-center gap-3 bg-slate-950/95 px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-lg ${
+          className={`flex items-center gap-2.5 bg-slate-950/95 px-3 py-1 rounded-xl border transition-all cursor-pointer shadow-lg ${
             activeDrawer === 'attributes'
               ? 'border-indigo-400 shadow-indigo-500/30 bg-slate-900'
               : 'border-slate-800 hover:border-indigo-500/50 shadow-indigo-950/40'
@@ -149,15 +149,17 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
             return (
               <React.Fragment key={attr.key}>
                 {idx > 0 && <span className="text-slate-800 font-bold text-sm select-none">|</span>}
-                <div
-                  className="flex items-center gap-1.5 py-0.5 rounded-lg group cursor-pointer"
-                  title={attr.name}
-                >
-                  <span className="text-2xl leading-none drop-shadow-md select-none group-hover:scale-110 transition-transform">
-                    {attr.emoji}
-                  </span>
-                  <span className="font-mono font-black text-xl text-cyan-300 tabular-nums select-none tracking-tight">
-                    {dieVal}
+                <div className="flex flex-col items-center justify-center py-0.5 px-0.5 group cursor-pointer">
+                  <div className="flex items-center gap-1.5 leading-none">
+                    <span className="text-xl leading-none drop-shadow-md select-none group-hover:scale-110 transition-transform">
+                      {attr.emoji}
+                    </span>
+                    <span className="font-mono font-black text-lg text-cyan-300 tabular-nums select-none tracking-tight leading-none">
+                      {dieVal}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-indigo-300/80 tracking-wider uppercase mt-1 leading-none select-none">
+                    {attr.name}
                   </span>
                 </div>
               </React.Fragment>
