@@ -73,14 +73,14 @@ interface CharacterStore {
   // Player Links (Account-Wide)
   playerLinks: EncounterLink[];
   fetchPlayerLinks: () => void;
-  addPlayerLink: (name: string, url: string) => void;
-  updatePlayerLink: (linkId: string, name: string, url: string) => void;
+  addPlayerLink: (name: string, url: string, tag?: string, desc?: string) => void;
+  updatePlayerLink: (linkId: string, name: string, url: string, tag?: string, desc?: string) => void;
   deletePlayerLink: (linkId: string) => void;
   reorderPlayerLinkByIndex: (fromIdx: number, toIdx: number) => void;
 
   // Character Links (Character-Specific)
-  addCharacterLink: (name: string, url: string) => void;
-  updateCharacterLink: (linkId: string, name: string, url: string) => void;
+  addCharacterLink: (name: string, url: string, tag?: string, desc?: string) => void;
+  updateCharacterLink: (linkId: string, name: string, url: string, tag?: string, desc?: string) => void;
   deleteCharacterLink: (linkId: string) => void;
   reorderCharacterLinkByIndex: (fromIdx: number, toIdx: number) => void;
 }
@@ -725,22 +725,26 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   // --- PLAYER LINKS (Account-Wide) ---
   fetchPlayerLinks: () => {
     const email = get().playerEmail || 'default';
-    try {
-      const saved = localStorage.getItem(`supaflex_player_links_${email}`);
-      if (saved) {
-        set({ playerLinks: JSON.parse(saved) });
-        return;
-      }
-    } catch {}
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`supaflex_player_links_${email}`);
+        if (saved) {
+          set({ playerLinks: JSON.parse(saved) });
+          return;
+        }
+      } catch {}
+    }
     set({ playerLinks: [] });
   },
 
-  addPlayerLink: (name: string, url: string) => {
+  addPlayerLink: (name: string, url: string, tag?: string, desc?: string) => {
     const email = get().playerEmail || 'default';
     const newLink: EncounterLink = {
       id: `pl_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
       url: url.trim(),
+      categoryTag: tag || 'General',
+      description: desc?.trim() || undefined,
       created_at: new Date().toISOString(),
     };
     const updated = [...get().playerLinks, newLink];
@@ -750,10 +754,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     } catch {}
   },
 
-  updatePlayerLink: (linkId: string, name: string, url: string) => {
+  updatePlayerLink: (linkId: string, name: string, url: string, tag?: string, desc?: string) => {
     const email = get().playerEmail || 'default';
     const updated = get().playerLinks.map((l) =>
-      l.id === linkId ? { ...l, name: name.trim(), url: url.trim() } : l
+      l.id === linkId ? { ...l, name: name.trim(), url: url.trim(), categoryTag: tag || l.categoryTag || 'General', description: desc !== undefined ? desc.trim() : l.description } : l
     );
     set({ playerLinks: updated });
     try {
@@ -783,11 +787,13 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   // --- CHARACTER LINKS (Character-Specific) ---
-  addCharacterLink: (name: string, url: string) => {
+  addCharacterLink: (name: string, url: string, tag?: string, desc?: string) => {
     const newLink: EncounterLink = {
       id: `char_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
       url: url.trim(),
+      categoryTag: tag || 'General',
+      description: desc?.trim() || undefined,
       created_at: new Date().toISOString(),
     };
     get().updateActiveSheetData((prev) => ({
@@ -797,11 +803,11 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     get().saveActiveCharacter();
   },
 
-  updateCharacterLink: (linkId: string, name: string, url: string) => {
+  updateCharacterLink: (linkId: string, name: string, url: string, tag?: string, desc?: string) => {
     get().updateActiveSheetData((prev) => ({
       ...prev,
       character_links: (prev.character_links || []).map((l) =>
-        l.id === linkId ? { ...l, name: name.trim(), url: url.trim() } : l
+        l.id === linkId ? { ...l, name: name.trim(), url: url.trim(), categoryTag: tag || l.categoryTag || 'General', description: desc !== undefined ? desc.trim() : l.description } : l
       ),
     }));
     get().saveActiveCharacter();

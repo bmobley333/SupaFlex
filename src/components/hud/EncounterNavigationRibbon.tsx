@@ -15,6 +15,8 @@ import {
   ArrowUp,
   ArrowDown,
   Globe,
+  Sparkles,
+  RotateCcw,
 } from 'lucide-react';
 import { useAdventureStore } from '../../store/useAdventureStore';
 import { useCharacterStore } from '../../store/useCharacterStore';
@@ -43,6 +45,8 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
   const selectEncounter = useAdventureStore((state) => state.selectEncounter);
   const nextEncounter = useAdventureStore((state) => state.nextEncounter);
   const prevEncounter = useAdventureStore((state) => state.prevEncounter);
+  const resetEncounterAll = useAdventureStore((state) => state.resetEncounterAll);
+  const ensureAdLibEncounter = useAdventureStore((state) => state.ensureAdLibEncounter);
 
   const createAdventure = useAdventureStore((state) => state.createAdventure);
   const deleteAdventure = useAdventureStore((state) => state.deleteAdventure);
@@ -401,6 +405,26 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
                     <span>+ Create New Encounter</span>
                   </button>
 
+                  {/* Pinned Permanent: Ad-Lib Encounter */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (activeAdv && activeAct) {
+                        await ensureAdLibEncounter(activeAdv.id, activeAct.id);
+                        setIsEncMenuOpen(false);
+                      }
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-rose-950/60 text-amber-300 font-bold border-b border-slate-800/80 flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>🎲 Ad-Lib Encounter</span>
+                    </div>
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 bg-amber-500/20 text-amber-300 rounded border border-amber-500/30">
+                      Permanent
+                    </span>
+                  </button>
+
                   {/* Encounters List with Reorder Up/Down, Edit, Delete */}
                   <div className="max-h-56 overflow-y-auto py-1 space-y-0.5">
                     {encounters.length === 0 ? (
@@ -516,6 +540,29 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
             </div>
           </div>
         </div>
+
+        {/* Center Section: Ad-Lib Encounter Reset Button (Visible when Ad-Lib Encounter is active) */}
+        {(activeEnc?.is_adlib || activeEnc?.title === 'Ad-Lib Encounter') && (
+          <div className="flex items-center justify-center">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!activeAdv || !activeAct || !activeEnc) return;
+                if (confirm('Reset all Encounter Monsters, Loot, and Links to empty for this Ad-Lib Encounter?')) {
+                  await resetEncounterAll(activeAdv.id, activeAct.id, activeEnc.id);
+                }
+              }}
+              className="px-3 py-1 bg-rose-950/90 hover:bg-rose-900 border border-rose-500/60 hover:border-rose-400 text-rose-200 rounded-lg text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 shadow-lg cursor-pointer h-[42px] min-w-[170px]"
+              title="Reset all Encounter Monsters, Encounter Loot, and Encounter Links to empty"
+            >
+              <div className="flex items-center gap-1 text-rose-300 font-extrabold text-[11px] uppercase tracking-wider">
+                <RotateCcw className="w-3 h-3 text-rose-400" />
+                <span>Ad-Lib Encounter</span>
+              </div>
+              <span className="text-[10px] font-bold text-rose-400/90 font-mono">Reset All 🧹</span>
+            </button>
+          </div>
+        )}
 
         {/* Right Section: Adventure Loot Dropdown + Adventure Links Dropdown */}
         <div className="flex items-center gap-2">

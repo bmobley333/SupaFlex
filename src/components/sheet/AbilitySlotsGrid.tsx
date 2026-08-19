@@ -4,7 +4,6 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
-import { TacticalPivotModal } from '../modals/TacticalPivotModal';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
 import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed, getApCostForNextSlot, getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
 import { getPowerReadyCategory, getReadySlotConfig, validateReadyMatrix } from '../../utils/readyMatrixSchedule';
@@ -193,7 +192,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   );
 
   const [showManageModal, setShowManageModal] = useState(false);
-  const [showTacticalPivotModal, setShowTacticalPivotModal] = useState(false);
   const [readyFeedback, setReadyFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [catalogFeedback, setCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [catalogReadyFilter, setCatalogReadyFilter] = useState<'all' | 'primary_arsenal' | 'mobility_defense' | 'support_passive'>('all');
@@ -1136,7 +1134,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           <CardHelpButton ruleKey={type === 'powers' ? 'powers.basics' : 'magic_items.basics'} />
         </div>
 
-        {/* Center Actions: Clear Uses & Tactical Pivot */}
+        {/* Center Actions: Clear Uses */}
         <div className="flex items-center justify-center gap-2 flex-1 flex-wrap">
           <button
             type="button"
@@ -1147,18 +1145,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
             <span className="font-outfit text-[11px] font-bold">Clear Uses</span>
           </button>
-
-          {type === 'powers' && (
-            <button
-              type="button"
-              onClick={() => setShowTacticalPivotModal(true)}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-950/70 hover:bg-amber-900/90 border border-amber-500/40 text-amber-300 hover:text-amber-100 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-              title="Spend 1 Free Action (F) + 1 Spark to swap a Codex power in combat"
-            >
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span className="font-outfit text-[11px] font-bold">Tactical Pivot (1⚡)</span>
-            </button>
-          )}
         </div>
 
         <div className="flex items-center justify-end gap-2 flex-1">
@@ -2849,12 +2835,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           )
         )}
       </div>
-
-      {/* In-Combat Tactical Pivot Modal */}
-      <TacticalPivotModal
-        isOpen={showTacticalPivotModal}
-        onClose={() => setShowTacticalPivotModal(false)}
-      />
     </div>
   );
 };

@@ -13,6 +13,8 @@ import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { AccountPillButton } from './components/header/AccountPillButton';
 import { GmHeaderHUD } from './components/header/GmHeaderHUD';
 import { UniversalLinksDropdown } from './components/hud/UniversalLinksDropdown';
+import { SharedLinkDispatchPayload, ReceivedLinkItem } from './types/adventures';
+import { useReceivedLinksStore } from './store/useReceivedLinksStore';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { GmToolsPopover } from './components/header/GmToolsPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
@@ -225,10 +227,52 @@ export default function App() {
     };
   }, [activePartyId, tabSessionId]);
 
-  // NOTE: GM Room Code Checkout & Heartbeat have been moved entirely to GmWorkspaceView
-  // to eliminate the double-checkout race condition that caused the stale Party ID bug.
-  // GmWorkspaceView is the single authority: it checks out the room code on mount and
-  // reports it back via the onRoomCodeReady callback prop.
+  // Realtime Party Link Broadcast Listener
+  useEffect(() => {
+    if (!activePartyId) return;
+
+    // Initial load for active party & character
+    useReceivedLinksStore.getState().loadReceivedLinks(
+      activePartyId,
+      activeCharacter?.id ? String(activeCharacter.id) : undefined
+    );
+
+    const channel = supabase.channel(`party_links_broadcast_${activePartyId}`);
+    channel
+      .on('broadcast', { event: 'party_link_shared' }, ({ payload }: { payload: SharedLinkDispatchPayload }) => {
+        if (!payload || !payload.link) return;
+
+        const { activeCharacter: charState, playerEmail: emailState } = useCharacterStore.getState();
+        const currentCharId = charState?.id ? String(charState.id) : null;
+
+        const isTargeted =
+          payload.targetType === 'all' ||
+          (currentCharId && payload.targetCharacterIds?.includes(currentCharId));
+
+        if (isTargeted) {
+          const receivedItem: ReceivedLinkItem = {
+            ...payload.link,
+            id: `rec_${payload.id}_${payload.link.id}`,
+            senderName: payload.senderName,
+            senderRole: payload.senderRole,
+            targetType: payload.targetType,
+            receivedAt: payload.dispatchedAt || new Date().toISOString(),
+            isRead: false,
+          };
+
+          useReceivedLinksStore.getState().addReceivedLink(
+            receivedItem,
+            activePartyId,
+            currentCharId || emailState || undefined
+          );
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activePartyId, activeCharacter?.id]);
 
   // Click-outside listener for popovers
   useEffect(() => {

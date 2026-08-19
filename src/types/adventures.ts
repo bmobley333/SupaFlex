@@ -15,7 +15,27 @@ export interface EncounterLink {
   id: string;              // UUID or nanoid
   name: string;            // e.g. "Dungeon Map"
   url: string;             // e.g. "https://..."
+  categoryTag?: string;    // e.g. "Handout", "Map", "Lore", "Art", "Tool", "General"
+  description?: string;    // Optional context or notes
   created_at?: string;
+}
+
+export interface ReceivedLinkItem extends EncounterLink {
+  senderName: string;
+  senderRole: 'gm' | 'player';
+  targetType: 'all' | 'specific';
+  isRead?: boolean;
+  receivedAt: string;
+}
+
+export interface SharedLinkDispatchPayload {
+  id: string;
+  link: EncounterLink;
+  senderName: string;
+  senderRole: 'gm' | 'player';
+  targetType: 'all' | 'specific';
+  targetCharacterIds?: string[]; // Empty if targetType === 'all'
+  dispatchedAt: string;
 }
 
 export interface StagedLootItem {
@@ -43,6 +63,7 @@ export interface GmEncounter {
   links?: EncounterLink[]; // Encounter-specific URL links
   monsters: PreStagedMonster[];
   loot?: StagedLootItem[]; // Encounter-specific pre-staged loot
+  is_adlib?: boolean;      // Permanent Ad-Lib encounter flag
   created_at?: string;
 }
 

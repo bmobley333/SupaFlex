@@ -61,22 +61,22 @@ interface AdventureStoreState {
   reorderEncounters: (adventureId: string, actId: string, encounters: GmEncounter[]) => Promise<void>;
 
   // Adventure Links CRUD & Reordering
-  addAdventureLink: (adventureId: string, name: string, url: string) => Promise<void>;
-  updateAdventureLink: (adventureId: string, linkId: string, name: string, url: string) => Promise<void>;
+  addAdventureLink: (adventureId: string, name: string, url: string, tag?: string, desc?: string) => Promise<void>;
+  updateAdventureLink: (adventureId: string, linkId: string, name: string, url: string, tag?: string, desc?: string) => Promise<void>;
   deleteAdventureLink: (adventureId: string, linkId: string) => Promise<void>;
   reorderAdventureLinkByIndex: (adventureId: string, fromIdx: number, toIdx: number) => Promise<void>;
 
   // GM Global Links CRUD & Reordering
   gmLinks: EncounterLink[];
   fetchGmLinks: () => void;
-  addGmLink: (name: string, url: string) => Promise<void>;
-  updateGmLink: (linkId: string, name: string, url: string) => Promise<void>;
+  addGmLink: (name: string, url: string, tag?: string, desc?: string) => Promise<void>;
+  updateGmLink: (linkId: string, name: string, url: string, tag?: string, desc?: string) => Promise<void>;
   deleteGmLink: (linkId: string) => Promise<void>;
   reorderGmLinkByIndex: (fromIdx: number, toIdx: number) => Promise<void>;
 
   // Encounter Links CRUD & Reordering
-  addEncounterLink: (adventureId: string, actId: string, encounterId: string, name: string, url: string) => Promise<void>;
-  updateEncounterLink: (adventureId: string, actId: string, encounterId: string, linkId: string, name: string, url: string) => Promise<void>;
+  addEncounterLink: (adventureId: string, actId: string, encounterId: string, name: string, url: string, tag?: string, desc?: string) => Promise<void>;
+  updateEncounterLink: (adventureId: string, actId: string, encounterId: string, linkId: string, name: string, url: string, tag?: string, desc?: string) => Promise<void>;
   deleteEncounterLink: (adventureId: string, actId: string, encounterId: string, linkId: string) => Promise<void>;
   reorderEncounterLinkByIndex: (adventureId: string, actId: string, encounterId: string, fromIdx: number, toIdx: number) => Promise<void>;
 
@@ -94,6 +94,8 @@ interface AdventureStoreState {
   setEncounterMonsters: (monsters: PreStagedMonster[]) => void;
   scaleEncounterDifficulty: (targetDif: number) => void;
   resetGameDayEncounter: () => void;
+  resetEncounterAll: (adventureId: string, actId: string, encounterId: string) => Promise<void>;
+  ensureAdLibEncounter: (adventureId: string, actId: string) => Promise<string | null>;
   deployToLiveParty: (partyId: string) => Promise<void>;
 }
 
@@ -653,7 +655,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
   },
 
   // --- ADVENTURE LINKS ---
-  addAdventureLink: async (adventureId: string, name: string, url: string) => {
+  addAdventureLink: async (adventureId: string, name: string, url: string, tag?: string, desc?: string) => {
     const adv = get().adventures.find((a) => a.id === adventureId);
     if (!adv) return;
 
@@ -661,6 +663,8 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
       id: `adv_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
       url: url.trim(),
+      categoryTag: tag || 'General',
+      description: desc?.trim() || undefined,
       created_at: new Date().toISOString(),
     };
 
@@ -668,12 +672,12 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     await get().updateAdventure(adventureId, { links: updatedLinks });
   },
 
-  updateAdventureLink: async (adventureId: string, linkId: string, name: string, url: string) => {
+  updateAdventureLink: async (adventureId: string, linkId: string, name: string, url: string, tag?: string, desc?: string) => {
     const adv = get().adventures.find((a) => a.id === adventureId);
     if (!adv || !adv.links) return;
 
     const updatedLinks = adv.links.map((l) =>
-      l.id === linkId ? { ...l, name: name.trim(), url: url.trim() } : l
+      l.id === linkId ? { ...l, name: name.trim(), url: url.trim(), categoryTag: tag || l.categoryTag || 'General', description: desc !== undefined ? desc.trim() : l.description } : l
     );
     await get().updateAdventure(adventureId, { links: updatedLinks });
   },
@@ -703,11 +707,13 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     set({ gmLinks: links });
   },
 
-  addGmLink: async (name: string, url: string) => {
+  addGmLink: async (name: string, url: string, tag?: string, desc?: string) => {
     const newLink: EncounterLink = {
       id: `gm_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
       url: url.trim(),
+      categoryTag: tag || 'General',
+      description: desc?.trim() || undefined,
       created_at: new Date().toISOString(),
     };
     const updated = [...get().gmLinks, newLink];
@@ -717,9 +723,9 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     }
   },
 
-  updateGmLink: async (linkId: string, name: string, url: string) => {
+  updateGmLink: async (linkId: string, name: string, url: string, tag?: string, desc?: string) => {
     const updated = get().gmLinks.map((l) =>
-      l.id === linkId ? { ...l, name: name.trim(), url: url.trim() } : l
+      l.id === linkId ? { ...l, name: name.trim(), url: url.trim(), categoryTag: tag || l.categoryTag || 'General', description: desc !== undefined ? desc.trim() : l.description } : l
     );
     set({ gmLinks: updated });
     if (typeof window !== 'undefined') {
@@ -746,7 +752,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     }
   },
 
-  addEncounterLink: async (adventureId: string, actId: string, encounterId: string, name: string, url: string) => {
+  addEncounterLink: async (adventureId: string, actId: string, encounterId: string, name: string, url: string, tag?: string, desc?: string) => {
     const adv = get().adventures.find((a) => a.id === adventureId);
     if (!adv) return;
     const act = (adv.structure?.acts || []).find((a) => a.id === actId);
@@ -758,6 +764,8 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
       id: `link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
       url: url.trim(),
+      categoryTag: tag || 'General',
+      description: desc?.trim() || undefined,
       created_at: new Date().toISOString(),
     };
 
@@ -765,7 +773,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     await get().updateEncounter(adventureId, actId, encounterId, { links: updatedLinks });
   },
 
-  updateEncounterLink: async (adventureId: string, actId: string, encounterId: string, linkId: string, name: string, url: string) => {
+  updateEncounterLink: async (adventureId: string, actId: string, encounterId: string, linkId: string, name: string, url: string, tag?: string, desc?: string) => {
     const adv = get().adventures.find((a) => a.id === adventureId);
     if (!adv) return;
     const act = (adv.structure?.acts || []).find((a) => a.id === actId);
@@ -774,7 +782,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     if (!enc || !enc.links) return;
 
     const updatedLinks = enc.links.map((l) =>
-      l.id === linkId ? { ...l, name: name.trim(), url: url.trim() } : l
+      l.id === linkId ? { ...l, name: name.trim(), url: url.trim(), categoryTag: tag || l.categoryTag || 'General', description: desc !== undefined ? desc.trim() : l.description } : l
     );
     await get().updateEncounter(adventureId, actId, encounterId, { links: updatedLinks });
   },
@@ -1031,6 +1039,72 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
         gameDayDifficulty: updatedDifficulty,
       };
     });
+  },
+
+  resetEncounterAll: async (adventureId: string, actId: string, encounterId: string) => {
+    set((state) => {
+      const updatedSandbox = { ...state.gameDaySandbox };
+      delete updatedSandbox[encounterId];
+      const updatedDifficulty = { ...state.gameDayDifficulty };
+      delete updatedDifficulty[encounterId];
+      return {
+        gameDaySandbox: updatedSandbox,
+        gameDayDifficulty: updatedDifficulty,
+      };
+    });
+
+    await get().updateEncounter(adventureId, actId, encounterId, {
+      monsters: [],
+      loot: [],
+      links: [],
+      notes: '',
+      tactical_notes: '',
+    });
+  },
+
+  ensureAdLibEncounter: async (adventureId: string, actId: string) => {
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv) return null;
+
+    const act = (adv.structure?.acts || []).find((a) => a.id === actId);
+    if (!act) return null;
+
+    const existing = (act.encounters || []).find((e) => e.is_adlib || e.title === 'Ad-Lib Encounter');
+    if (existing) {
+      set({ activeEncounterId: existing.id });
+      return existing.id;
+    }
+
+    const nowIso = new Date().toISOString();
+    const newEnc: GmEncounter = {
+      id: `enc_adlib_${Date.now()}`,
+      title: 'Ad-Lib Encounter',
+      notes: '',
+      master_dif: 10,
+      monsters: [],
+      loot: [],
+      links: [],
+      is_adlib: true,
+      created_at: nowIso,
+    };
+
+    const updatedActs = (adv.structure?.acts || []).map((a) => {
+      if (a.id !== actId) return a;
+      return {
+        ...a,
+        encounters: [...(a.encounters || []), newEnc],
+      };
+    });
+
+    const newStructure = { ...adv.structure, acts: updatedActs };
+
+    set((state) => ({
+      adventures: state.adventures.map((a) => (a.id === adventureId ? { ...a, structure: newStructure } : a)),
+      activeEncounterId: newEnc.id,
+    }));
+
+    await get().updateAdventure(adventureId, { structure: newStructure });
+    return newEnc.id;
   },
 
   deployToLiveParty: async (partyId: string) => {
