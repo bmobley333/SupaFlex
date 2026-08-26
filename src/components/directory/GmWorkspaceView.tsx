@@ -340,11 +340,14 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         {/* Left Column: Party Roster + LINKS (4 cols) */}
         <div className="lg:col-span-4 space-y-6 flex flex-col">
           {/* Card 1: Party Roster */}
-          <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-4 shadow-lg flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-              <div className="flex items-center gap-2">
-                <h3 className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider flex items-center gap-2 font-outfit">
-                  <span>👥</span> PARTY ROSTER ({orderedSessionMembers.length})
+          <div className="bg-gradient-to-b from-sky-950/30 via-slate-900/90 to-slate-950/95 p-4 rounded-2xl border border-slate-800 border-t-2 border-t-sky-500/90 space-y-4 shadow-lg shadow-sky-950/20 flex flex-col">
+            <div className="flex items-center justify-between border-b border-sky-500/20 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-xl bg-sky-950/90 border border-sky-500/50 text-sky-300 flex items-center justify-center shadow-[0_0_12px_rgba(14,165,233,0.25)]">
+                  <span className="text-base leading-none">👥</span>
+                </div>
+                <h3 className="text-xs font-extrabold text-sky-200 uppercase tracking-wider font-outfit">
+                  PARTY ROSTER ({orderedSessionMembers.length})
                 </h3>
                 {orderedSessionMembers.length > 1 && (
                   <div className="relative">
@@ -449,11 +452,13 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         </div>
 
         {/* Right Column: Adventure Encounters Suite (8 cols) */}
-        <div className="lg:col-span-8 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-4 shadow-lg flex flex-col font-outfit">
+        <div className="lg:col-span-8 bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 p-4 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 space-y-4 shadow-lg shadow-amber-950/20 flex flex-col font-outfit">
           {/* Section Header: Adventure Encounters */}
-          <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2.5">
-            <span className="text-lg">🗺️</span>
-            <h2 className="text-sm font-extrabold text-slate-100 uppercase tracking-wider font-outfit">
+          <div className="flex items-center gap-2.5 border-b border-amber-500/20 pb-2.5">
+            <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+              <span className="text-base leading-none">🗺️</span>
+            </div>
+            <h2 className="text-sm font-extrabold text-amber-200 uppercase tracking-wider font-outfit">
               Adventure Encounters
             </h2>
           </div>
@@ -468,11 +473,14 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           <GmCompactDifficultyBar />
 
           {/* Encounter Monsters Header Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3 pt-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 pb-3 pt-1">
             {/* Left: Title & Quick Sort */}
             <div className="flex items-center gap-2">
-              <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-2 font-outfit">
-                <span>🐉</span> ENCOUNTER MONSTERS ({effectiveMonsters.length})
+              <div className="p-1 rounded-lg bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.25)]">
+                <span className="text-xs leading-none">🐉</span>
+              </div>
+              <h3 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider font-outfit">
+                ENCOUNTER MONSTERS ({effectiveMonsters.length})
               </h3>
               {effectiveMonsters.length > 1 && (
                 <div className="relative">
@@ -608,10 +616,12 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           )}
 
           {/* Permanent Always-Open Encounter Notes Card */}
-          <div className="bg-slate-950/90 border border-slate-800 p-3 rounded-xl shadow-inner flex flex-col gap-2 font-outfit mt-2">
+          <div className="bg-slate-950/90 border border-slate-800 border-t-2 border-t-amber-500/50 p-3.5 rounded-xl shadow-inner flex flex-col gap-2.5 font-outfit mt-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h4 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                <StickyNote className="w-3.5 h-3.5 text-amber-400" />
+              <h4 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider flex items-center gap-2 font-mono">
+                <div className="p-1 rounded-lg bg-amber-950/90 border border-amber-500/40 text-amber-300 flex items-center justify-center shadow-sm">
+                  <StickyNote className="w-3.5 h-3.5" />
+                </div>
                 <span>Encounter Notes</span>
                 {activeEncounter && (
                   <span className="text-slate-400 font-normal">({activeEncounter.title})</span>
