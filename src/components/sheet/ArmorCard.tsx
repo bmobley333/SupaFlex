@@ -69,7 +69,7 @@ export const ArmorCard: React.FC = () => {
   }, [wardrobe, attributeDice]);
 
   const skilledArmorCount = skilledArmorList.length;
-  const armorApSpent = Math.max(0, skilledArmorCount - 1);
+  const armorApSpent = skilledArmorCount * 1;
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
@@ -96,8 +96,8 @@ export const ArmorCard: React.FC = () => {
       setIsLoadingCatalog(true);
       gameApi
         .getArmor()
-        .then((data) => setArmorCatalog(data))
-        .catch((err) => console.error('Failed to load armor catalog:', err))
+        .then(setArmorCatalog)
+        .catch(console.error)
         .finally(() => setIsLoadingCatalog(false));
     }
   }, [showManageModal]);
@@ -155,8 +155,7 @@ export const ArmorCard: React.FC = () => {
   };
 
   const handleAddToWardrobe = (item: SupabaseArmor) => {
-    const arMatch = item.ar ? item.ar.match(/\d+/) : null;
-    const numericAr = arMatch ? parseInt(arMatch[0], 10) : 4;
+    const numericAr = typeof item.ar === 'number' ? item.ar : parseInt(String(item.ar || 0).replace(/[^0-9]/g, ''), 10) || 0;
     const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
     const newArmorItem: ArmorData = {
       id: `arm_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -175,12 +174,7 @@ export const ArmorCard: React.FC = () => {
       );
       if (!isAlreadyInWardrobe) {
         if (isLearnable) {
-          const currentSkilledCount = skilledArmorCount;
-          if (currentSkilledCount === 0) {
-            recordApExpenditure(0, 'Armor', `Learned Skilled Armor: ${item.name} (1st Free Armor)`, 1, 'Manage Armor');
-          } else {
-            recordApExpenditure(1, 'Armor', `Learned Skilled Armor: ${item.name} (1 AP)`, 1, 'Manage Armor');
-          }
+          recordApExpenditure(1, 'Armor', `Learned Skilled Armor: ${item.name} (1 AP)`, 1, 'Manage Armor');
         } else {
           recordApExpenditure(0, 'Armor', `Added Unskilled Armor: ${item.name} (0 AP - Unskilled)`, 1, 'Manage Armor');
         }
@@ -220,11 +214,7 @@ export const ArmorCard: React.FC = () => {
       }
 
       if (wasSkilled) {
-        if (skilledArmorCount > 1) {
-          recordApExpenditure(-1, 'Armor', `Unlearned Skilled Armor: ${armorName} (-1 AP Refunded)`, 1, 'Manage Armor');
-        } else {
-          recordApExpenditure(0, 'Armor', `Unlearned Skilled Armor: ${armorName} (0 AP - Free Slot Freed)`, 1, 'Manage Armor');
-        }
+        recordApExpenditure(-1, 'Armor', `Unlearned Skilled Armor: ${armorName} (-1 AP Refunded)`, 1, 'Manage Armor');
       } else {
         recordApExpenditure(0, 'Armor', `Dropped Unskilled Armor: ${armorName} (0 AP)`, 1, 'Manage Armor');
       }
@@ -380,11 +370,8 @@ export const ArmorCard: React.FC = () => {
                   <div className="px-3.5 py-1 bg-amber-950/70 border border-amber-500/40 rounded-full font-mono font-bold text-xs text-amber-200 flex items-center gap-2 shadow-md">
                     <span>
                       Skilled <strong className="text-amber-300">{skilledArmorCount}</strong>; Used{' '}
-                      <strong className="text-rose-300">
-                        {armorApSpent}
-                        {skilledArmorCount >= 1 ? '+1Free' : ''} AP
-                      </strong>
-                      ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
+                      <strong className="text-rose-300">{armorApSpent} AP</strong>; Available{' '}
+                      <strong className="text-emerald-400">{availableAp} AP</strong>
                     </span>
                   </div>
 

@@ -157,25 +157,25 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
   const categoryBreakdownList = useMemo(() => {
     const knownSkillsets = Array.isArray(sheetData.known_skillsets) ? sheetData.known_skillsets : [];
     const knownIndivSkills = Array.isArray(sheetData.known_individual_skills) ? sheetData.known_individual_skills : [];
-    const skillsetCost = Math.max(0, (knownSkillsets.length - 1) * 2);
+    const skillsetCost = knownSkillsets.length * 2;
     const indivCost = knownIndivSkills.length * 1;
     const skillsNet = skillsetCost + indivCost;
 
     const weapons = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
     const skilledWeapons = weapons.filter((w: any) => w && w.sk);
-    const weaponsNet = Math.max(0, (skilledWeapons.length - 1) * 1);
+    const weaponsNet = skilledWeapons.length * 1;
 
     const wardrobe = Array.isArray(sheetData.wardrobe) ? sheetData.wardrobe : [];
     const skilledArmor = wardrobe.filter((a: any) => a && a.sk);
-    const armorNet = Math.max(0, (skilledArmor.length - 1) * 1);
+    const armorNet = skilledArmor.length * 1;
 
     const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
     const skilledShields = armory.filter((s: any) => s && s.sk);
-    const shieldsNet = Math.max(0, (skilledShields.length - 1) * 1);
+    const shieldsNet = skilledShields.length * 1;
 
     const powerSlots = (sheetData.power_slots || []).filter(Boolean);
     const totalPowerUnits = powerSlots.reduce((sum: number, slot: any) => sum + (slot?.version || 1), 0);
-    const powersNet = Math.max(0, totalPowerUnits - 3);
+    const powersNet = totalPowerUnits * 1;
 
     const magicItemsNet = calculateSpentApOnMagicSlots(unlockedMagicSlots);
 
@@ -195,7 +195,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: armorNet,
         badgeColor: 'text-amber-300 bg-amber-950/60 border-amber-500/30',
         details: [
-          { label: `Skilled Armor in Wardrobe (${skilledArmor.length})`, value: `${armorNet} AP (1st Free)` },
+          { label: `Skilled Armor in Wardrobe (${skilledArmor.length})`, value: `${armorNet} AP` },
         ],
       },
       {
@@ -245,7 +245,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: magicItemsNet,
         badgeColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-500/30',
         details: [
-          { label: `Base Free Loadout Slots`, value: `3 Free Slots (0 AP)` },
+          { label: `Base Loadout Slots`, value: `3 Slots (0 AP Standard)` },
           { label: `Unlocked Active Slot Capacity`, value: `${unlockedMagicSlots} / ${maxSlotsCap} Max Slots (Level ${level})` },
           { label: `Total AP Spent on Loadout Slots`, value: `${magicItemsNet} AP` },
         ],
@@ -257,8 +257,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: powersNet,
         badgeColor: 'text-amber-400 bg-amber-950/60 border-amber-500/30',
         details: [
-          { label: `Learned Powers (${powerSlots.length})`, value: `${totalPowerUnits} Total Power Units` },
-          { label: `Free Power Allowance`, value: `-3 AP Free` },
+          { label: `Learned Powers (${powerSlots.length})`, value: `${totalPowerUnits} Total Power Units (${powersNet} AP)` },
         ],
       },
       {
@@ -268,7 +267,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: shieldsNet,
         badgeColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-500/30',
         details: [
-          { label: `Skilled Shields in Armory (${skilledShields.length})`, value: `${shieldsNet} AP (1st Free)` },
+          { label: `Skilled Shields in Armory (${skilledShields.length})`, value: `${shieldsNet} AP` },
         ],
       },
       {
@@ -278,7 +277,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: skillsNet,
         badgeColor: 'text-indigo-300 bg-indigo-950/60 border-indigo-500/30',
         details: [
-          { label: `SkillSets (${knownSkillsets.length} learned)`, value: `${skillsetCost} AP (1st Free)` },
+          { label: `SkillSets (${knownSkillsets.length} learned)`, value: `${skillsetCost} AP (2 AP each)` },
           { label: `Individual Skills (${knownIndivSkills.length} learned)`, value: `${indivCost} AP (1 AP each)` },
         ],
       },
@@ -299,7 +298,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: weaponsNet,
         badgeColor: 'text-purple-300 bg-purple-950/60 border-purple-500/30',
         details: [
-          { label: `Skilled Weapons Equipped (${skilledWeapons.length})`, value: `${weaponsNet} AP (1st Free)` },
+          { label: `Skilled Weapons Equipped (${skilledWeapons.length})`, value: `${weaponsNet} AP` },
         ],
       },
     ];
@@ -433,6 +432,18 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Level 1 Starting AP Guidance Callout */}
+            {level === 1 && (
+              <div className="mb-3 p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 text-xs text-purple-200 shadow-inner shrink-0">
+                <div className="flex items-center gap-1.5 font-bold text-amber-300 mb-1">
+                  <span>💡</span> Level 1 Starting AP Guide (8 AP Budget)
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Recommended starting build: <strong>🎓 1 Skillset (2 AP)</strong>, <strong>⚔️ 1 Weapon (1 AP)</strong>, <strong>🧥 1 Armor (1 AP)</strong>, <strong>🔥 3 Powers (3 AP)</strong>, plus <strong>1 Flexible AP</strong> for 🛡️ Shield, 2nd Weapon, or +2 Vit.
+                </p>
+              </div>
+            )}
 
             {/* Category AP Breakdown Title & Subtitle */}
             <div className="flex items-center justify-between mb-2 shrink-0">

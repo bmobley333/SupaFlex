@@ -184,7 +184,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return calculateTotalPowerUnits(pruneLesserPowerVersions(allOwnedPowers));
   }, [allOwnedPowers]);
 
-  const apSpent = Math.max(0, totalPowerUnits - 3);
+  const apSpent = totalPowerUnits;
 
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
@@ -568,7 +568,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
       const combinedOld = [...currentSlots, ...currentVault];
       const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
-      const oldApSpent = Math.max(0, oldTotalUnits - 3);
+      const oldApSpent = oldTotalUnits;
 
       const newPower: AbilitySlot = {
         select: true,
@@ -618,15 +618,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const combinedNew = [...updatedSlots, ...updatedVault];
       const prunedCombined = pruneLesserPowerVersions(combinedNew);
       const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
-      const newApSpent = Math.max(0, newTotalUnits - 3);
+      const newApSpent = newTotalUnits;
       const apDiff = newApSpent - oldApSpent;
 
       const logAction = isUpgrade ? 'Upgraded Power' : 'Learned Power';
 
       if (apDiff > 0) {
         recordApExpenditure(apDiff, 'Powers', `${logAction}: ${cleanName(item.name)} (+${apDiff} AP)`, 1, 'Manage Powers');
-      } else {
-        recordApExpenditure(0, 'Powers', `${logAction}: ${cleanName(item.name)} (0 AP - Covered by Free AP)`, 1, 'Manage Powers');
       }
 
       return {
@@ -649,7 +647,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
         const combinedOld = [...currentSlots, ...currentVault];
         const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
-        const oldApSpent = Math.max(0, oldTotalUnits - 3);
+        const oldApSpent = oldTotalUnits;
 
         const updatedSlots = currentSlots.filter(
           (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
@@ -661,13 +659,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         const combinedNew = [...updatedSlots, ...updatedVault];
         const prunedCombined = pruneLesserPowerVersions(combinedNew);
         const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
-        const newApSpent = Math.max(0, newTotalUnits - 3);
+        const newApSpent = newTotalUnits;
         const apRefund = oldApSpent - newApSpent;
 
         if (apRefund > 0) {
           recordApExpenditure(-apRefund, 'Powers', `Unlearned Power: ${cleanName(abilityName)} (-${apRefund} AP Refunded)`, 1, 'Manage Powers');
-        } else {
-          recordApExpenditure(0, 'Powers', `Unlearned Power: ${cleanName(abilityName)} (0 AP - Free Slot Freed)`, 1, 'Manage Powers');
         }
 
         return {
@@ -777,7 +773,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
       const combinedOld = [...currentSlots, ...currentVault];
       const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
-      const oldApSpent = Math.max(0, oldTotalUnits - 3);
+      const oldApSpent = oldTotalUnits;
 
       const newPower: AbilitySlot = {
         select: true,
@@ -816,15 +812,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const combinedNew = [...updatedSlots, ...updatedVault];
       const prunedCombined = pruneLesserPowerVersions(combinedNew);
       const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
-      const newApSpent = Math.max(0, newTotalUnits - 3);
+      const newApSpent = newTotalUnits;
       const apDiff = newApSpent - oldApSpent;
 
       const logAction = isUpgrade ? 'Upgraded Power' : 'Created & Learned Power';
 
       if (apDiff > 0) {
         recordApExpenditure(apDiff, 'Powers', `${logAction}: ${versionedName} (+${apDiff} AP)`, 1, 'Manage Powers');
-      } else {
-        recordApExpenditure(0, 'Powers', `${logAction}: ${versionedName} (0 AP - Covered by Free AP)`, 1, 'Manage Powers');
       }
 
       return {
@@ -1204,11 +1198,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       <div className="px-3.5 py-1 bg-amber-950/70 border border-amber-500/40 rounded-full font-mono font-bold text-xs text-amber-200 flex items-center gap-2 shadow-md">
                         <span>
                           Learned <strong className="text-amber-300">{totalPowerUnits}</strong>; Used{' '}
-                          <strong className="text-rose-300">
-                            {apSpent}
-                            {totalPowerUnits > 0 ? `+${Math.min(3, totalPowerUnits)}Free` : ''} AP
-                          </strong>
-                          ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
+                          <strong className="text-rose-300">{apSpent} AP</strong>; Available{' '}
+                          <strong className="text-emerald-400">{availableAp} AP</strong>
                         </span>
                       </div>
                     )}

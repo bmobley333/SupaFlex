@@ -544,7 +544,7 @@ export interface Power {
 
 export const calculateLifetimeAp = (level: number): number => {
   const numLevel = typeof level === 'number' && !isNaN(level) && level > 0 ? level : 1;
-  return Math.max(2, numLevel * 2);
+  return 8 + (numLevel - 1) * 2;
 };
 
 export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number; gmBonus: number; categories: Record<string, number> } => {
@@ -554,7 +554,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number;
 
   const wardrobe = Array.isArray(sheetData.wardrobe) ? sheetData.wardrobe : [];
   const skilledArmor = wardrobe.filter((a: any) => a && a.sk);
-  const armorNet = Math.max(0, (skilledArmor.length - 1) * 1);
+  const armorNet = skilledArmor.length * 1;
 
   const sumLogCategory = (cat: string) =>
     apLog.reduce((sum, e) => (e && e.category === cat ? sum + (e.cost || 0) : sum), 0);
@@ -566,7 +566,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number;
 
   const powerSlots = (sheetData.power_slots || []).filter(Boolean);
   const totalPowerUnits = powerSlots.reduce((sum: number, slot: any) => sum + (slot?.version || 1), 0);
-  const powersNet = Math.max(0, totalPowerUnits - 3);
+  const powersNet = totalPowerUnits * 1;
 
   const unlockedMagicSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
   let magicSlotsApSpent = 0;
@@ -580,11 +580,11 @@ export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number;
 
   const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
   const skilledShields = armory.filter((s: any) => s && s.sk);
-  const shieldsNet = Math.max(0, (skilledShields.length - 1) * 1);
+  const shieldsNet = skilledShields.length * 1;
 
   const knownSkillsets = Array.isArray(sheetData.known_skillsets) ? sheetData.known_skillsets : [];
   const knownIndivSkills = Array.isArray(sheetData.known_individual_skills) ? sheetData.known_individual_skills : [];
-  const skillsetCost = Math.max(0, (knownSkillsets.length - 1) * 2);
+  const skillsetCost = knownSkillsets.length * 2;
   const indivCost = knownIndivSkills.length * 1;
   const skillsNet = skillsetCost + indivCost;
 
@@ -592,7 +592,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number;
 
   const weapons = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
   const skilledWeapons = weapons.filter((w: any) => w && w.sk);
-  const weaponsNet = Math.max(0, (skilledWeapons.length - 1) * 1);
+  const weaponsNet = skilledWeapons.length * 1;
 
   const categories = {
     Armor: armorNet,

@@ -119,10 +119,10 @@ export const SkillsetsPanel: React.FC = () => {
     moxie: 'd8',
   };
 
-  // Skillsets & Skills AP Metrics (1 Free SkillSet; 2 AP per additional SkillSet; 1 AP per Individual Skill)
+  // Skillsets & Skills AP Metrics (2 AP per SkillSet; 1 AP per Individual Skill)
   const skillsetCount = useMemo(() => Array.from(new Set(knownSkillsetNames)).length, [knownSkillsetNames]);
   const individualSkillCount = knownIndividualSkills.length;
-  const skillsetsApSpent = Math.max(0, (skillsetCount - 1) * 2);
+  const skillsetsApSpent = skillsetCount * 2;
   const individualSkillsApSpent = individualSkillCount * 1;
   const totalApSpent = skillsetsApSpent + individualSkillsApSpent;
   const availableAp = calculateAvailableAp(
@@ -297,12 +297,7 @@ export const SkillsetsPanel: React.FC = () => {
     }
 
     if (!isEditing) {
-      const uniqueCurrent = Array.from(new Set(knownSkillsetNames));
-      if (uniqueCurrent.length === 0) {
-        recordApExpenditure(0, 'Skills', `Created Custom Skillset: ${cleanName} (1st Free SkillSet)`, 1, 'Manage Skills');
-      } else {
-        recordApExpenditure(2, 'Skills', `Created Custom Skillset: ${cleanName} (2 AP)`, 1, 'Manage Skills');
-      }
+      recordApExpenditure(2, 'Skills', `Created Custom Skillset: ${cleanName} (2 AP)`, 1, 'Manage Skills');
     }
 
     saveActiveCharacter();
@@ -339,19 +334,9 @@ export const SkillsetsPanel: React.FC = () => {
     });
 
     if (isLearning) {
-      const currentCount = uniqueCurrent.length;
-      if (currentCount === 0) {
-        recordApExpenditure(0, 'Skills', `Learned Skill Set: ${name} (1st Free SkillSet)`, 1, 'Manage Skills');
-      } else {
-        recordApExpenditure(2, 'Skills', `Learned Skill Set: ${name} (2 AP)`, 1, 'Manage Skills');
-      }
+      recordApExpenditure(2, 'Skills', `Learned Skill Set: ${name} (2 AP)`, 1, 'Manage Skills');
     } else {
-      const previousCount = uniqueCurrent.length;
-      if (previousCount > 1) {
-        recordApExpenditure(-2, 'Skills', `Unlearned Skill Set: ${name} (-2 AP Refunded)`, 1, 'Manage Skills');
-      } else {
-        recordApExpenditure(0, 'Skills', `Unlearned Skill Set: ${name} (0 AP - Free Slot Freed)`, 1, 'Manage Skills');
-      }
+      recordApExpenditure(-2, 'Skills', `Unlearned Skill Set: ${name} (-2 AP Refunded)`, 1, 'Manage Skills');
     }
     saveActiveCharacter();
   };
@@ -715,8 +700,7 @@ export const SkillsetsPanel: React.FC = () => {
                       SkillSets <strong className="text-purple-300">{skillsetCount}</strong>
                       {individualSkillCount > 0 && <>; Skills <strong className="text-purple-300">{individualSkillCount}</strong></>}; Used{' '}
                       <strong className="text-rose-300">
-                        {totalApSpent}
-                        {skillsetCount >= 1 ? '+2Free' : ''} AP
+                        {totalApSpent} AP
                       </strong>
                       ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
                     </span>

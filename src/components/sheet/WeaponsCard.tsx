@@ -189,7 +189,7 @@ export const WeaponsCard: React.FC = () => {
   }, [groupedEquippedWeapons]);
 
   const skilledWeaponsCount = skilledWeaponGroups.length;
-  const weaponApSpent = Math.max(0, skilledWeaponsCount - 1);
+  const weaponApSpent = skilledWeaponsCount * 1;
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
@@ -224,12 +224,7 @@ export const WeaponsCard: React.FC = () => {
       const filteredNewSlots = newSlots.filter((s) => !existingNames.has(s.name.toLowerCase()));
       if (filteredNewSlots.length > 0) {
         if (isEquippedAsSkilled) {
-          const currentSkilledCount = skilledWeaponsCount;
-          if (currentSkilledCount === 0) {
-            recordApExpenditure(0, 'Weapons', `Learned Skilled Weapon: ${weapon.name} (1st Free Weapon)`, 1, 'Manage Weapons');
-          } else {
-            recordApExpenditure(1, 'Weapons', `Learned Skilled Weapon: ${weapon.name} (1 AP)`, 1, 'Manage Weapons');
-          }
+          recordApExpenditure(1, 'Weapons', `Learned Skilled Weapon: ${weapon.name} (1 AP)`, 1, 'Manage Weapons');
         } else {
           recordApExpenditure(0, 'Weapons', `Equipped Unskilled Weapon: ${weapon.name} (0 AP - Unskilled)`, 1, 'Manage Weapons');
         }
@@ -257,11 +252,7 @@ export const WeaponsCard: React.FC = () => {
     }));
 
     if (wasSkilled) {
-      if (skilledWeaponsCount > 1) {
-        recordApExpenditure(-1, 'Weapons', `Unlearned Skilled Weapon: ${baseWeaponName} (-1 AP Refunded)`, 1, 'Manage Weapons');
-      } else {
-        recordApExpenditure(0, 'Weapons', `Unlearned Skilled Weapon: ${baseWeaponName} (0 AP - Free Slot Freed)`, 1, 'Manage Weapons');
-      }
+      recordApExpenditure(-1, 'Weapons', `Unlearned Skilled Weapon: ${baseWeaponName} (-1 AP Refunded)`, 1, 'Manage Weapons');
     } else {
       recordApExpenditure(0, 'Weapons', `Dropped Unskilled Weapon: ${baseWeaponName} (0 AP)`, 1, 'Manage Weapons');
     }
@@ -438,12 +429,14 @@ export const WeaponsCard: React.FC = () => {
   }, [supabaseWeapons, equippedBaseNamesSet, skillFilterMode, weaponFilterCategory, rightSearchQuery, attributeDice, isItemStarred, activeGenre]);
 
   return (
-    <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3 h-fit">
+    <div className="bg-gradient-to-b from-rose-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-rose-500/90 p-4 flex flex-col gap-3 h-fit shadow-lg shadow-rose-950/20">
       {/* Card Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-        <div className="flex items-center gap-2">
-          <h3 className="font-outfit font-bold text-sm tracking-widest text-rose-300 uppercase flex items-center gap-2">
-            <span className="text-base">⚔️</span>
+      <div className="flex items-center justify-between border-b border-rose-500/20 pb-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-xl bg-rose-950/90 border border-rose-500/50 text-rose-300 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.25)]">
+            <span className="text-base leading-none">⚔️</span>
+          </div>
+          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-rose-200 uppercase flex items-center gap-2">
             Weapons
           </h3>
           <CardHelpButton ruleKey="weapons.basics" />
@@ -494,11 +487,8 @@ export const WeaponsCard: React.FC = () => {
                   <div className="px-3.5 py-1 bg-purple-950/70 border border-purple-500/40 rounded-full font-mono font-bold text-xs text-purple-200 flex items-center gap-2 shadow-md">
                     <span>
                       Skilled <strong className="text-purple-300">{skilledWeaponsCount}</strong>; Used{' '}
-                      <strong className="text-rose-300">
-                        {weaponApSpent}
-                        {skilledWeaponsCount >= 1 ? '+1Free' : ''} AP
-                      </strong>
-                      ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
+                      <strong className="text-rose-300">{weaponApSpent} AP</strong>; Available{' '}
+                      <strong className="text-emerald-400">{availableAp} AP</strong>
                     </span>
                   </div>
 
