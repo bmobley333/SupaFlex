@@ -70,6 +70,7 @@ export interface SupabaseArmor {
   id?: number;
   name: string;
   genres?: string[];
+  is_guildspace_locked?: boolean;
   requirement: string;
   ar: string;
   mr: string;
@@ -83,6 +84,7 @@ export interface SupabaseGear {
   id?: number;
   category: string;
   genres?: string[];
+  is_guildspace_locked?: boolean;
   name: string;
   cost: string;
   action?: string;
@@ -96,6 +98,7 @@ export interface SupabaseMonster {
   id?: number;
   name: string;
   genres?: string[];
+  is_guildspace_locked?: boolean;
   nish: string;
   mr: string;
   atk_dmg_ftg: string;
@@ -114,6 +117,7 @@ export interface SupabaseChaosGem {
   id?: number;
   name: string;
   genres?: string[];
+  is_guildspace_locked?: boolean;
   action?: string;
   usage?: string;
   effect: string;
@@ -202,6 +206,7 @@ export interface SupabaseShield {
   id?: number;
   name: string;
   genres?: string[];
+  is_guildspace_locked?: boolean;
   requirement: string;
   max_block: string;
   mr: string;
@@ -256,6 +261,7 @@ export interface SupabaseWeapon {
   id?: number;
   name: string;
   genres?: string[];
+  is_guildspace_locked?: boolean;
   type: string;
   requirement: string;
   atk: string;
@@ -528,6 +534,7 @@ export interface Power {
   id: number;
   name: string;
   genres?: string[];
+  is_guildspace_locked?: boolean;
   usage: string | null;
   action: string | null;
   effect: string | null;
@@ -759,6 +766,7 @@ export interface MagicItem {
   id: number;
   name: string;
   genres?: string[];
+  is_guildspace_locked?: boolean;
   usage: string | null;
   action: string | null;
   effect: string | null;
@@ -791,6 +799,7 @@ export interface Skillset {
   id: number;
   name: string;
   genres?: string[];
+  is_guildspace_locked?: boolean;
   skills: string[];
   source: string | null;
   notes?: string;

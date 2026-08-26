@@ -8,6 +8,7 @@ import { RoleToggleSwitch } from '../common/RoleToggleSwitch';
 import { GenrePillSwitch } from '../common/GenrePillSwitch';
 import { InfoTooltip } from '../common/InfoTooltip';
 import { sanitizeRoomCodeInput, isValidRoomCodeFormat } from '../../utils/roomId';
+import { isGuildSpaceUnlocked, unlockGuildSpace, lockGuildSpace } from '../../utils/guildspaceAuth';
 
 interface UnifiedLaunchHubModalProps {
   isOpen: boolean;
@@ -73,6 +74,37 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const [isSavingName, setIsSavingName] = useState(false);
   const [createHeroError, setCreateHeroError] = useState<string | null>(null);
   const [isSubmittingHero, setIsSubmittingHero] = useState(false);
+
+  // GuildSpace Setting Gate State
+  const [isGsUnlocked, setIsGsUnlocked] = useState(isGuildSpaceUnlocked());
+  const [guildSpacePasskey, setGuildSpacePasskey] = useState('');
+  const [passkeyFeedback, setPasskeyFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  useEffect(() => {
+    const handleUnlock = () => setIsGsUnlocked(true);
+    const handleLock = () => setIsGsUnlocked(false);
+
+    window.addEventListener('supaflex:guildspace-unlocked', handleUnlock);
+    window.addEventListener('supaflex:guildspace-locked', handleLock);
+
+    return () => {
+      window.removeEventListener('supaflex:guildspace-unlocked', handleUnlock);
+      window.removeEventListener('supaflex:guildspace-locked', handleLock);
+    };
+  }, []);
+
+  const handleUnlockGuildSpace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guildSpacePasskey.trim()) return;
+
+    const success = await unlockGuildSpace(guildSpacePasskey);
+    if (success) {
+      setPasskeyFeedback({ type: 'success', message: '✨ GuildSpace Setting Unlocked! Authentic catalogs and filters are now active.' });
+      setGuildSpacePasskey('');
+    } else {
+      setPasskeyFeedback({ type: 'error', message: '❌ Invalid Setting Passkey. Access remained locked.' });
+    }
+  };
 
   useEffect(() => {
     const storeName = useCharacterStore.getState().playerName;
@@ -1003,7 +1035,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
               {/* SUB-TAB: GENRE FILTERING */}
               {rightSubTab === 'genre' && (
-                <div className="space-y-4">
+                <div className="space-y-4 font-outfit">
                   <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3 shadow-md">
                     <div className="flex items-center gap-1.5">
                       <label className="text-xs font-bold text-slate-200 block uppercase tracking-wider font-outfit">
@@ -1016,6 +1048,75 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       <GenrePillSwitch size="md" />
                     </div>
                   </div>
+
+                  {/* 🔒 Secret Setting Passkey & Authorization Fence */}
+                  {isGsUnlocked ? (
+                    <div className="bg-gradient-to-r from-purple-950/60 to-indigo-950/60 p-4 rounded-xl border border-purple-500/40 flex items-center justify-between gap-3 shadow-md animate-fadeIn">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-purple-950 border border-purple-500/50 text-purple-300 text-lg shadow-sm">
+                          🌌
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-extrabold text-purple-200 font-outfit uppercase tracking-wider">
+                            GuildSpace Setting: Unlocked
+                          </h4>
+                          <p className="text-[11px] text-purple-300/80 font-sans">
+                            Full authentic GuildSpace catalogs and genre filters are active for this session.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          lockGuildSpace();
+                          setGuildSpacePasskey('');
+                          setPasskeyFeedback(null);
+                        }}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-red-950 text-slate-300 hover:text-red-200 border border-slate-700 hover:border-red-500/50 rounded-lg text-xs font-bold transition cursor-pointer shrink-0"
+                      >
+                        🔒 Relock Setting
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3 shadow-md">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 font-outfit uppercase tracking-wider">
+                          <span>🔒</span> Private Setting Passkey
+                        </label>
+                        <span className="text-[10px] text-slate-500 font-mono">Protected IP Gate</span>
+                      </div>
+                      <form onSubmit={handleUnlockGuildSpace} className="flex gap-2">
+                        <input
+                          type="password"
+                          value={guildSpacePasskey}
+                          onChange={(e) => {
+                            setGuildSpacePasskey(e.target.value);
+                            setPasskeyFeedback(null);
+                          }}
+                          placeholder="Enter Setting Passkey (e.g. The Old Gang)..."
+                          className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-purple-500"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!guildSpacePasskey.trim()}
+                          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white font-bold text-xs rounded-lg transition shadow-md cursor-pointer shrink-0 flex items-center gap-1"
+                        >
+                          <span>🔓</span> Unlock
+                        </button>
+                      </form>
+                      {passkeyFeedback && (
+                        <div
+                          className={`text-[11px] font-bold p-2.5 rounded-lg border ${
+                            passkeyFeedback.type === 'error'
+                              ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+                              : 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                          }`}
+                        >
+                          {passkeyFeedback.message}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

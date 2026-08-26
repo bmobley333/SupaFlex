@@ -23,6 +23,7 @@ import {
 } from '../types/game';
 import { GmAdventure } from '../types/adventures';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
+import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 
 const DEFAULT_UNARMORED_SLOT = {
   id: 'arm_none',
@@ -304,10 +305,11 @@ export const gameApi = {
   },
 
   async getPowers(): Promise<Power[]> {
-    const { data, error } = await supabase
-      .from('powers')
-      .select('*')
-      .order('name', { ascending: true });
+    let query = supabase.from('powers').select('*');
+    if (!isGuildSpaceUnlocked()) {
+      query = query.eq('is_guildspace_locked', false);
+    }
+    const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
       console.error('[gameApi] Error fetching powers:', error);
@@ -318,10 +320,11 @@ export const gameApi = {
 
   // --- RELICS, HARDWARE & LOADOUT CATALOG ---
   async getRelics(): Promise<MagicItem[]> {
-    const { data, error } = await supabase
-      .from('relics')
-      .select('*')
-      .order('name', { ascending: true });
+    let query = supabase.from('relics').select('*');
+    if (!isGuildSpaceUnlocked()) {
+      query = query.eq('is_guildspace_locked', false);
+    }
+    const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
       console.error('[gameApi] Error fetching relics:', error);
@@ -331,10 +334,11 @@ export const gameApi = {
   },
 
   async getHardware(): Promise<MagicItem[]> {
-    const { data, error } = await supabase
-      .from('hardware')
-      .select('*')
-      .order('name', { ascending: true });
+    let query = supabase.from('hardware').select('*');
+    if (!isGuildSpaceUnlocked()) {
+      query = query.eq('is_guildspace_locked', false);
+    }
+    const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
       console.error('[gameApi] Error fetching hardware catalog:', error);
@@ -359,10 +363,11 @@ export const gameApi = {
 
   // --- SKILLSETS ---
   async getSkillsets(): Promise<Skillset[]> {
-    const { data, error } = await supabase
-      .from('skillsets')
-      .select('*')
-      .order('name', { ascending: true });
+    let query = supabase.from('skillsets').select('*');
+    if (!isGuildSpaceUnlocked()) {
+      query = query.eq('is_guildspace_locked', false);
+    }
+    const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
       console.error('[gameApi] Error fetching skillsets:', error);
@@ -373,10 +378,11 @@ export const gameApi = {
 
   // --- ARMOR CATALOG ---
   async getArmor(): Promise<SupabaseArmor[]> {
-    const { data, error } = await supabase
-      .from('armor')
-      .select('*')
-      .order('name', { ascending: true });
+    let query = supabase.from('armor').select('*');
+    if (!isGuildSpaceUnlocked()) {
+      query = query.eq('is_guildspace_locked', false);
+    }
+    const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
       console.error('[gameApi] Error fetching armor catalog:', error);
@@ -409,10 +415,11 @@ export const gameApi = {
 
   // --- WEAPONS CATALOG ---
   async getWeapons(): Promise<SupabaseWeapon[]> {
-    const { data, error } = await supabase
-      .from('weapons')
-      .select('*')
-      .order('name', { ascending: true });
+    let query = supabase.from('weapons').select('*');
+    if (!isGuildSpaceUnlocked()) {
+      query = query.eq('is_guildspace_locked', false);
+    }
+    const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
       console.error('[gameApi] Error fetching weapons catalog:', error);
@@ -445,10 +452,11 @@ export const gameApi = {
 
   // --- SHIELDS CATALOG ---
   async getShields(): Promise<SupabaseShield[]> {
-    const { data, error } = await supabase
-      .from('shields')
-      .select('*')
-      .order('name', { ascending: true });
+    let query = supabase.from('shields').select('*');
+    if (!isGuildSpaceUnlocked()) {
+      query = query.eq('is_guildspace_locked', false);
+    }
+    const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
       console.error('[gameApi] Error fetching shields catalog:', error);
@@ -481,9 +489,11 @@ export const gameApi = {
 
   // --- GEAR CATALOG ---
   async getGear(): Promise<SupabaseGear[]> {
-    const { data, error } = await supabase
-      .from('gear')
-      .select('*')
+    let query = supabase.from('gear').select('*');
+    if (!isGuildSpaceUnlocked()) {
+      query = query.eq('is_guildspace_locked', false);
+    }
+    const { data, error } = await query
       .order('category', { ascending: true })
       .order('name', { ascending: true });
 
