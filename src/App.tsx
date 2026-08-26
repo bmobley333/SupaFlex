@@ -28,12 +28,14 @@ import { FocusManagerModal } from './components/modals/FocusManagerModal';
 import { UnifiedLaunchHubModal } from './components/modals/UnifiedLaunchHubModal';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
+import { FireworksModal } from './components/common/FireworksModal';
 import { resolveCharFirstName } from './components/common/PartyCharacterCard';
 import { useScrollRestoration } from './hooks/useScrollRestoration';
 
 export default function App() {
   const [newCharName, setNewCharName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showFireworksModal, setShowFireworksModal] = useState(false);
   const [showSelectorBar, setShowSelectorBar] = useState(false);
   const [showResourcesPopover, setShowResourcesPopover] = useState(false);
   const [showGmToolsPopover, setShowGmToolsPopover] = useState(false);
@@ -432,13 +434,18 @@ export default function App() {
       <header className="sticky top-0 z-30 w-full bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-4 py-2.5">
         <div className="max-w-[2500px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="flex items-center justify-between w-full md:w-auto gap-3">
-            {/* 🌌 Stylized SupaFlex Brand Logo & Title */}
-            <div className="flex items-center gap-2 pr-1">
-              <span className="text-xl">🌌</span>
-              <h1 className="font-outfit text-lg font-extrabold tracking-wider bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            {/* 🌌 Stylized SupaFlex Brand Logo & Title (Click to launch 2D Fireworks) */}
+            <button
+              type="button"
+              onClick={() => setShowFireworksModal(true)}
+              className="flex items-center gap-2 pr-1 group cursor-pointer select-none transition-transform hover:scale-105 active:scale-95 text-left focus:outline-none"
+              title="Click to launch 2D Fireworks celebration!"
+            >
+              <span className="text-xl group-hover:rotate-12 transition-transform">🌌</span>
+              <h1 className="font-outfit text-lg font-extrabold tracking-wider bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent group-hover:from-indigo-300 group-hover:via-pink-300 group-hover:to-amber-300">
                 SUPAFLEX
               </h1>
-            </div>
+            </button>
 
             {/* Account Pill Button (Simplified in GM Mode) */}
             <AccountPillButton
@@ -805,6 +812,12 @@ export default function App() {
       <UpdatePasswordModal
         isOpen={showUpdatePasswordModal}
         onClose={() => setShowUpdatePasswordModal(false)}
+      />
+
+      {/* 🎆 2D Fireworks Celebration Simulation Modal */}
+      <FireworksModal
+        isOpen={showFireworksModal}
+        onClose={() => setShowFireworksModal(false)}
       />
 
       {/* Footer */}
