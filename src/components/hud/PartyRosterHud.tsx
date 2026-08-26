@@ -146,12 +146,15 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
   };
 
   return (
-    <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/90 shadow-sm space-y-3">
+    <div className="bg-gradient-to-b from-sky-950/30 via-slate-900/90 to-slate-950/95 p-3.5 rounded-2xl border border-slate-800/90 border-t-2 border-t-sky-500/90 shadow-lg shadow-sky-950/20 space-y-3">
       {/* Section Header */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-sky-500/20">
         <div className="flex items-center gap-2">
-          <h3 className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
-            <span>👥</span> PARTY ROSTER ({orderedOtherMembers.length})
+          <div className="p-1 rounded-lg bg-sky-950/90 border border-sky-500/50 text-sky-300 flex items-center justify-center shadow-[0_0_10px_rgba(14,165,233,0.25)]">
+            <span className="text-xs leading-none">👥</span>
+          </div>
+          <h3 className="text-xs font-extrabold text-sky-200 uppercase tracking-wider font-outfit">
+            PARTY ROSTER ({orderedOtherMembers.length})
           </h3>
 
           {/* Quick-Sort Presets Trigger */}

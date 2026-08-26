@@ -1115,14 +1115,26 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   }, [activeDisplaySlots]);
 
   return (
-    <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">
+    <div className={`rounded-2xl border border-slate-800 border-t-2 p-4 flex flex-col gap-4 shadow-lg ${
+      type === 'powers'
+        ? 'bg-gradient-to-b from-orange-950/30 via-slate-900/90 to-slate-950/95 border-t-orange-500/90 shadow-orange-950/20'
+        : 'bg-gradient-to-b from-pink-950/30 via-slate-900/90 to-slate-950/95 border-t-pink-500/90 shadow-pink-950/20'
+    }`}>
       {/* Header: Title, Icon, & Master Manager Trigger Button */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-        <div className="flex items-center gap-2 flex-1 justify-start">
-          <h3 className={`font-outfit font-bold text-sm tracking-widest uppercase flex items-center gap-2 ${
-            type === 'powers' ? 'text-amber-300' : 'text-cyan-300'
+      <div className={`flex items-center justify-between border-b pb-2.5 ${
+        type === 'powers' ? 'border-orange-500/20' : 'border-pink-500/20'
+      }`}>
+        <div className="flex items-center gap-2.5 flex-1 justify-start">
+          <div className={`p-1.5 rounded-xl border flex items-center justify-center ${
+            type === 'powers'
+              ? 'bg-orange-950/90 border-orange-500/50 text-orange-300 shadow-[0_0_12px_rgba(249,115,22,0.25)]'
+              : 'bg-pink-950/90 border-pink-500/50 text-pink-300 shadow-[0_0_12px_rgba(236,72,153,0.25)]'
           }`}>
-            <span className="text-base">{sectionIcon}</span>
+            <span className="text-base leading-none">{sectionIcon}</span>
+          </div>
+          <h3 className={`font-outfit font-extrabold text-sm tracking-widest uppercase flex items-center gap-2 ${
+            type === 'powers' ? 'text-orange-200' : 'text-pink-200'
+          }`}>
             {displayTitle}
           </h3>
           <CardHelpButton ruleKey={type === 'powers' ? 'powers.basics' : 'magic_items.basics'} />

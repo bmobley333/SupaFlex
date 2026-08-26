@@ -172,12 +172,14 @@ export const ChaosGauntletCard: React.FC = () => {
   const pendingRemovalSlot = gauntletSlots.find((s) => s.slot_id === confirmRemovalSlotId);
 
   return (
-    <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex flex-col gap-2.5 transition-all shadow-sm">
+    <div className="bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-3.5 flex flex-col gap-2.5 transition-all shadow-lg shadow-purple-950/20">
       {/* Header Bar */}
-      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-base leading-none">💎</span>
-          <h3 className="font-outfit font-bold text-sm tracking-widest text-violet-300 uppercase">
+      <div className="flex items-center justify-between border-b border-purple-500/20 pb-2">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-xl bg-purple-950/90 border border-purple-500/50 text-purple-300 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.25)]">
+            <span className="text-base leading-none">💎</span>
+          </div>
+          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-purple-200 uppercase">
             Chaos Gauntlet
           </h3>
         </div>

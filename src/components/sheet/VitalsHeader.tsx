@@ -87,12 +87,14 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
   };
 
   return (
-    <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3">
+    <div className="bg-gradient-to-b from-emerald-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-emerald-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-emerald-950/20">
       {/* Header: Title & Manage Vitality Button */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-        <div className="flex items-center gap-2">
-          <h3 className="font-outfit font-bold text-sm tracking-widest text-emerald-300 uppercase flex items-center gap-2">
-            <span className="text-base">❤️</span>
+      <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+            <span className="text-base leading-none">❤️</span>
+          </div>
+          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-emerald-200 uppercase">
             Vitality
           </h3>
           <CardHelpButton ruleKey="vitality.death_checks" />

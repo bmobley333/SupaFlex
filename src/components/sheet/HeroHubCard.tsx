@@ -39,11 +39,11 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
 
   return (
     <>
-      <div className={`bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap ${className}`}>
+      <div className={`bg-gradient-to-b from-slate-800/40 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-slate-400/90 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap shadow-lg shadow-slate-950/20 ${className}`}>
         {/* Left Zone: Hero Identity, Level/AP Trigger & Race/Class Pills */}
         <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-base">👤</span>
+          <div className="p-1.5 rounded-xl bg-slate-850 border border-slate-600/50 text-slate-200 flex items-center justify-center shadow-[0_0_12px_rgba(148,163,184,0.2)] shrink-0">
+            <span className="text-base leading-none">👤</span>
           </div>
 
           <div className="flex items-center gap-2 min-w-0 flex-wrap">

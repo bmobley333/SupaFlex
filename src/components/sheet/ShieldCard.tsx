@@ -308,12 +308,15 @@ export const ShieldCard: React.FC = () => {
   );
 
   return (
-    <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3">
+    <div className="bg-gradient-to-b from-cyan-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-cyan-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-cyan-950/20">
       {/* Card Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-        <div className="flex items-center gap-2">
-          <h3 className="font-outfit font-bold text-sm tracking-widest text-cyan-300 uppercase flex items-center gap-2">
-            <span className="text-base">🛡️</span> Shield
+      <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-xl bg-cyan-950/90 border border-cyan-500/50 text-cyan-300 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.25)]">
+            <span className="text-base leading-none">🛡️</span>
+          </div>
+          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-cyan-200 uppercase">
+            Shield
           </h3>
           <CardHelpButton ruleKey="col.shields.block" />
           {!shield.equipped && (

@@ -628,12 +628,14 @@ export const SkillsetsPanel: React.FC = () => {
   }, [sortedAllCatalogSkills, skillsetDerivedSkillsSet, knownIndividualSkills, skillFilterCategory, isSkillStarred, allCatalogSkillsMap, rightSearchQuery]);
 
   return (
-    <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-3">
+    <div className="bg-gradient-to-b from-indigo-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-indigo-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-indigo-950/20">
       {/* Main Sheet Card Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 gap-2 flex-wrap">
+      <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2.5 gap-2 flex-wrap">
         <div className="flex items-center gap-2.5 flex-wrap">
-          <h3 className="font-outfit font-bold text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
-            <span className="text-base">🎓</span>
+          <div className="p-1.5 rounded-xl bg-indigo-950/90 border border-indigo-500/50 text-indigo-300 flex items-center justify-center shadow-[0_0_12px_rgba(99,102,241,0.25)]">
+            <span className="text-base leading-none">🎓</span>
+          </div>
+          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-indigo-200 uppercase">
             Skillsets & Derived Skills
           </h3>
           <CardHelpButton ruleKey="skills.basics" />

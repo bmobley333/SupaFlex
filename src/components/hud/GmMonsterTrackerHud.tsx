@@ -162,12 +162,17 @@ export const GmMonsterTrackerHud: React.FC = () => {
   };
 
   return (
-    <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/90 shadow-sm space-y-3 font-outfit">
+    <div className="bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 p-3.5 rounded-2xl border border-slate-800/90 border-t-2 border-t-amber-500/90 shadow-lg shadow-amber-950/20 space-y-3 font-outfit">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
-          <span>🐉</span> MONSTER TRACKER ({monsters.length})
-        </h3>
+      <div className="flex items-center justify-between pb-2 border-b border-amber-500/20">
+        <div className="flex items-center gap-2">
+          <div className="p-1 rounded-lg bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.25)]">
+            <span className="text-xs leading-none">🐉</span>
+          </div>
+          <h3 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider font-outfit">
+            MONSTER TRACKER ({monsters.length})
+          </h3>
+        </div>
       </div>
 
       {/* Monster Cards List / Empty State */}

@@ -273,11 +273,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
   return (
     <>
-      <div className={`bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap ${className}`}>
+      <div className={`bg-gradient-to-b from-teal-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-teal-500/90 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap shadow-lg shadow-teal-950/20 ${className}`}>
         {/* Left: Title */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-base">🧰</span>
-          <span className="font-outfit font-bold text-xs tracking-wider text-teal-300 uppercase">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="p-1.5 rounded-xl bg-teal-950/90 border border-teal-500/50 text-teal-300 flex items-center justify-center shadow-[0_0_12px_rgba(20,184,166,0.25)]">
+            <span className="text-base leading-none">🧰</span>
+          </div>
+          <span className="font-outfit font-extrabold text-xs tracking-wider text-teal-200 uppercase">
             Gear
           </span>
         </div>

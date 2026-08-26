@@ -149,11 +149,13 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
 
   return (
     <>
-      <div className={`bg-slate-900/80 rounded-xl border border-slate-800 p-3 flex items-center justify-between transition-all gap-2.5 flex-wrap ${className}`}>
+      <div className={`bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-amber-400/90 p-3 flex items-center justify-between transition-all gap-2.5 flex-wrap shadow-lg shadow-amber-950/20 ${className}`}>
         {/* Left: Title */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-base">💰</span>
-          <span className="font-outfit font-bold text-xs tracking-wider text-amber-300 uppercase">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+            <span className="text-base leading-none">💰</span>
+          </div>
+          <span className="font-outfit font-extrabold text-xs tracking-wider text-amber-200 uppercase">
             Money
           </span>
         </div>
