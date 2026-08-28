@@ -1,0 +1,97 @@
+[
+  {
+    "id": 1,
+    "name": "Heater Shield",
+    "requirement": "💪 6",
+    "max_block": "🛡️16",
+    "mr": "👣-1",
+    "notes": "The heater shield is a large, roughly triangular shield most commonly associated with knights and other archaic heavy troop types. It provides a moderate amount of protection across a broad front, covering the torso and upper leg when held in line, and is often used in formation or for mounted combat. Its flat or gently curved face can bear heraldry or unit markings.\nConstruction is typically a wooden or composite core with leather or metal facing, and a central arm-strap and grip. The shape balances coverage and weight, allowing the bearer to present a solid barrier while still moving and fighting. It is heavier and more cumbersome than a buckler but far more protective.\nThe heater shield is a classic choice for those who want substantial coverage without the bulk of a tower shield.\nEffects\n-- Often used in formation or with heavy armor.\n-- May bear heraldry or markings.",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.809384+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 2,
+    "name": "Kite Shield",
+    "requirement": "💪 8",
+    "max_block": "🛡️20",
+    "mr": "👣-2",
+    "notes": "Long tapered shield, excellent for infantry formations.",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.809384+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 3,
+    "name": "Power Shield",
+    "requirement": "💪 6",
+    "max_block": "🛡️16",
+    "mr": "👣-1",
+    "notes": "The Power Shield is a physical shield enhanced with an ultralock assembly so it can be securely attached to the user's arm, leaving the hand free when needed. A charged ionic field around the shield disperses or attenuates energy-weapon hits, while a micro-repulsor field diverts or reduces the energy of kinetic attacks. The result is a hybrid defense that combines the reliability of a physical barrier with active countermeasures.\nThe shield can be carried in the hand or locked to the forearm, and its systems are powered by a compact cell. The surface is typically rigid and can be used for bashing or blocking in melee. It is favored by front-line troops who want both a physical shield and protection against directed energy.\nThe Power Shield bridges traditional shield use and modern defensive technology.\nEffects\n-- Ultralock assembly allows secure attachment to the arm.\n-- Ionic field disperses or attenuates energy-weapon charges; micro-repulsor field reduces kinetic impact.\n-- Can be used as a physical shield in melee.",
+    "cost": "12g",
+    "created_at": "2026-08-13T21:26:27.809384+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 4,
+    "name": "Round Shield",
+    "requirement": "💪 4",
+    "max_block": "🛡️12",
+    "mr": "👣0",
+    "notes": "Mid-sized wooden shield, classic adventurer gear.",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.809384+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 5,
+    "name": "Siege Wall Shield",
+    "requirement": "💪 12",
+    "max_block": "🛡️28",
+    "mr": "👣-4",
+    "notes": "Oversized heavy wood-and-iron shield, used in sieges.",
+    "cost": "10g",
+    "created_at": "2026-08-13T21:26:27.809384+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 6,
+    "name": "Tower Shield",
+    "requirement": "💪 10",
+    "max_block": "🛡️24",
+    "mr": "👣-3",
+    "notes": "Tower shields are large, bulky, and relatively clumsy, rarely carried by modern mobile forces. On low-tech worlds and in historical warfare, they character used to form shield walls and to protect against massed archery and thrown weapons. A single bearer can shelter behind one while advancing or holding a position, trading mobility for maximum frontal coverage.\nThe shield is typically rectangular or oval, tall enough to cover most of the body, and heavy enough to resist sustained impacts. It is held with both hands or braced, and is best suited to static or slow advances rather than skirmishing. In the right context, it remains a formidable defensive tool.\nThe tower shield is the heaviest archaic shield option, favoring formation combat and siege roles.\nEffects\n-- Suited to shield walls and protection against ranged barrages.\n-- Typically used in static or slow-advance tactics.",
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.809384+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  }
+]

@@ -1,0 +1,453 @@
+[
+  {
+    "id": 1,
+    "name": "Communicator",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "1-Rnd",
+    "effect": "Text, audio, and audiovisual comms; ~200 miles including low-orbit. Open or Selective transceiver.",
+    "cost": "1g",
+    "notes": "Text, audio, and audiovisual comms; ~200 miles including low-orbit. Open or Selective transceiver.",
+    "pic": "https://drive.google.com/file/d/1v7Af8Kty4maebSyMsuoveKViSXMOMLH8/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 2,
+    "name": "EnviroTent",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "1-Enc",
+    "effect": "2x2 by 6 ft tall shelter; 3 occupants; 7-day air/water/nutrients; -300°F to 400°F; long range emergency transponder.",
+    "cost": "6g",
+    "notes": "2x2 by 6 ft tall shelter; 3 occupants; 7-day air/water/nutrients; -300°F to 400°F; long range emergency transponder.",
+    "pic": "https://drive.google.com/file/d/1AXF7vuwTYUQx1_BJnhS40Hk8S5zcwM3z/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 3,
+    "name": "QuantumChef",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "1-⚡",
+    "effect": "One-inch cube expands to tech-plates, utensils, thermal cups; atomic heating/cooling; stores up to week's food and water",
+    "cost": "18g",
+    "notes": "One-inch cube expands to tech-plates, utensils, thermal cups; atomic heating/cooling; stores up to week's food and water",
+    "pic": "https://drive.google.com/file/d/1U6UzTHn59is2WYf_Z5NJyCeYni6EtZT6/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 4,
+    "name": "ImageWrap",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "2-Enc",
+    "effect": "Holographic disguise around user; ^👁️. Stores 2 images.",
+    "cost": "10g",
+    "notes": "Holographic disguise around user; ^👁️. Stores 2 images.",
+    "pic": "https://drive.google.com/file/d/1Flx1qzrUgZ-S1Eu7kJYiEzjko3H1ijEs/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 5,
+    "name": "First Aid Pack",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "2-Enc",
+    "effect": "1st Deg Wnds if new; stops bleeding.",
+    "cost": "2g",
+    "notes": "1st Deg Wnds if new; stops bleeding.",
+    "pic": "https://drive.google.com/file/d/1uj5U9Wcxok8hl9_vdgkt5ivj6jI1I-M-/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 6,
+    "name": "HealGel",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "1-Enc",
+    "effect": "Heals 1st Deg; immediate tissue regeneration.",
+    "cost": "1g",
+    "notes": "Heals 1st Deg; immediate tissue regeneration.",
+    "pic": "https://drive.google.com/file/d/11fyEKf6Mjvpk_v6mvK3OVDSmr2DwfNBs/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 7,
+    "name": "DeCipher",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "2-Enc",
+    "effect": "Security bypass: hack locks, find codes, override safeguards.",
+    "cost": "6g",
+    "notes": "Security bypass: hack locks, find codes, override safeguards.",
+    "pic": "https://drive.google.com/file/d/1pU_9LA9F3Zsw1Ar5_ohA4Zo-TC5JWbY3/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 8,
+    "name": "EnviroCube",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "1-Enc",
+    "effect": "Generates 2x2 sq area airtight cube; vs air/gas motion. -200°F to 300°F; with AirVault 24 hr air.",
+    "cost": "8g",
+    "notes": "Generates 2x2 sq area airtight cube; vs air/gas motion. -200°F to 300°F; with AirVault 24 hr air.",
+    "pic": "https://drive.google.com/file/d/1N6qp1-4_EEtvH1OdjnU5mds9wCYZjLe1/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 9,
+    "name": "FusionSplicer",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "2-Enc",
+    "effect": "nearly any substance; strips, splices, coats wires; repairs cloth/armor with stronger-than-original bonds.",
+    "cost": "5g",
+    "notes": "nearly any substance; strips, splices, coats wires; repairs cloth/armor with stronger-than-original bonds.",
+    "pic": "https://drive.google.com/file/d/1CpRO0HedaSQ97Sra0y7KWd21f-U0f7ok/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 10,
+    "name": "GlowTorch",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "1-Rnd",
+    "effect": "90° cone of light up to 20 squares; infrared, visible, or both. Mounts via Q-Bond pad.",
+    "cost": "1g",
+    "notes": "90° cone of light up to 20 squares; infrared, visible, or both. Mounts via Q-Bond pad.",
+    "pic": "https://drive.google.com/file/d/19mzigPILooLEqARCbMdnwUozP3UmuknB/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 11,
+    "name": "Grappling Gun",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "M",
+    "usage": "2-Enc",
+    "effect": "Fires grappling hook; 100 ft Q-Bond cable supports 1000 lbs.",
+    "cost": "3g",
+    "notes": "Fires grappling hook; 100 ft Q-Bond cable supports 1000 lbs.",
+    "pic": "https://drive.google.com/file/d/1oppDgMBm0rEn4xLt9JKFNgbmg5SzheI0/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 12,
+    "name": "HoistMaster",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "M",
+    "usage": "2-Enc",
+    "effect": "Winch for Grappling Gun; hoist/lower at 20 ft/Rnd.",
+    "cost": "2g",
+    "notes": "Winch for Grappling Gun; hoist/lower at 20 ft/Rnd.",
+    "pic": "https://drive.google.com/file/d/1hhvMJoJTiz-xh0SQdm3dsToi_g4WYqvr/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 13,
+    "name": "HoloCaster",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "2-Enc",
+    "effect": "Projects duplicate image up to medium range; mimics wearer; attacks pass through image thus attacker realizes fake",
+    "cost": "8g",
+    "notes": "Projects duplicate image up to medium range; mimics wearer; attacks pass through image thus attacker realizes fake",
+    "pic": "https://drive.google.com/file/d/1zaMJUwAEjD-WB2ij-8Um3Q4SOwln-o8e/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 14,
+    "name": "Hover Drone Remote",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "1-Rnd",
+    "effect": "Controls drone remotely up to 200 Sqs; live audio-visual feed.",
+    "cost": "3g",
+    "notes": "Controls drone remotely up to 200 Sqs; live audio-visual feed.",
+    "pic": "https://drive.google.com/file/d/1QNUClW8DLybvhd1cG04QH5bg4L813ND5/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 15,
+    "name": "ImageScanner",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "2-Enc",
+    "effect": "Records holographic image for ImageWrap; In close range, front/back/side; stores 10 images.",
+    "cost": "4g",
+    "notes": "Records holographic image for ImageWrap; In close range, front/back/side; stores 10 images.",
+    "pic": "https://drive.google.com/file/d/1Z6XHsnfUk7XYv5cfqJdAGBUzkOkRFrCl/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 16,
+    "name": "Micro Hover Bug",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "1-⚡",
+    "effect": "Hovers or follows target (MR 12); programmable via DataSleeve.",
+    "cost": "8g",
+    "notes": "Hovers or follows target (MR 12); programmable via DataSleeve.",
+    "pic": "https://drive.google.com/file/d/1dQ2JS8wwTuCNW51ixDqXyZi6La0RZbYJ/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 17,
+    "name": "Miniflare Gun",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "3-Enc",
+    "effect": "Fires signal flare (1000 ft); set to illuminate, tracer, and/or whistle.",
+    "cost": "1g",
+    "notes": "Fires signal flare (1000 ft); set to illuminate, tracer, and/or whistle.",
+    "pic": "https://drive.google.com/file/d/1J1-zT_SCGajD_oUWVeWzvp7iFM_QkoUC/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 18,
+    "name": "Miniflare Gun Flares",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "F",
+    "usage": "1-Enc",
+    "effect": "Ammo for Miniflare Gun or similar.",
+    "cost": "5s",
+    "notes": "Ammo for Miniflare Gun or similar.",
+    "pic": "https://drive.google.com/file/d/12uw0de370ZD-Nhv6mjA1wy5JPAyfAslh/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 19,
+    "name": "MiniScub Cartridge",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "F",
+    "usage": "1-Enc",
+    "effect": "1 hour compressed air for MiniScuba or similar.",
+    "cost": "5s",
+    "notes": "1 hour compressed air for MiniScuba or similar.",
+    "pic": "https://drive.google.com/file/d/1jrr5ysaune2AUlEnPTXxboM8HJ35QF7O/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 20,
+    "name": "MiniScuba",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "M",
+    "usage": "1-Rnd",
+    "effect": "Mouthpiece + cartridge; 1 hr air; cartridge auto-fills when not in use.",
+    "cost": "2g",
+    "notes": "Mouthpiece + cartridge; 1 hr air; cartridge auto-fills when not in use.",
+    "pic": "https://drive.google.com/file/d/16cox1H4dsolWjYMxAzFVzV5Mdwk_lqSk/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 21,
+    "name": "NanoShear",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "2-Enc",
+    "effect": "Precision cut or engrave up to 6 in; rating 40. Auto-cut or programmed patterns.",
+    "cost": "4g",
+    "notes": "Precision cut or engrave up to 6 in; rating 40. Auto-cut or programmed patterns.",
+    "pic": "https://drive.google.com/file/d/1u_-22dCiod0rYOCVehOcx-mV04qwZAkm/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 22,
+    "name": "Hover Drone",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "1-Rnd",
+    "effect": "Verbal command: hover, follow, or pattern; max medium range. Carries; MR(10), MR(*.5) if carrying. [Dod/AR(✨)/(✨)] Vit[=(✨-1)].",
+    "cost": "10g",
+    "notes": "Verbal command: hover, follow, or pattern; max medium range. Carries; MR(10), MR(*.5) if carrying. [Dod/AR(✨)/(✨)] Vit[=(✨-1)].",
+    "pic": "https://drive.google.com/file/d/1Ce6ahR1P61wnNoqKGqK968xGw2DZ-qhX/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 23,
+    "name": "Personal Scanner",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "M",
+    "usage": "2-Enc",
+    "effect": "Handheld scanner medium range. Pose question to GM; answer limited to 1 word.",
+    "cost": "5g",
+    "notes": "Handheld scanner medium range. Pose question to GM; answer limited to 1 word.",
+    "pic": "https://drive.google.com/file/d/1bMn7n4unEBRfGe5J7jm5v5zyHUZf6V-d/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 24,
+    "name": "PlasmaTorch",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "2-Enc",
+    "effect": "Plasma cutter/welder; up to12 in depth; cuts steel and bulkheads.",
+    "cost": "5g",
+    "notes": "Plasma cutter/welder; up to12 in depth; cuts steel and bulkheads.",
+    "pic": "https://drive.google.com/file/d/1ji0SMygiW82sB_YBsq8NX8B2hZmCgFOo/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 25,
+    "name": "PowerTap",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "2-Enc",
+    "effect": "Monitor/siphon energy. Holds 100 srg",
+    "cost": "5g",
+    "notes": "Monitor/siphon energy. Holds 100 srg",
+    "pic": "https://drive.google.com/file/d/1_bkmvMEGMJOw5iZDNJ4S_1l3iIblJCQD/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 26,
+    "name": "Q-Bond Cable",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "M",
+    "usage": "2-Enc",
+    "effect": "100 ft cable; Q-Bond ends affix to surfaces; controlled from spool.",
+    "cost": "1g",
+    "notes": "100 ft cable; Q-Bond ends affix to surfaces; controlled from spool.",
+    "pic": "https://drive.google.com/file/d/16ozkCvOaGB5jDzv9aLRkPPejtPqy4Vou/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 27,
+    "name": "Disguise Pack",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "1-Enc",
+    "effect": "Alters appearance (cosmetics, morphskin, biodyes). Stability 12 hr.",
+    "cost": "5g",
+    "notes": "Alters appearance (cosmetics, morphskin, biodyes). Stability 12 hr.",
+    "pic": "https://drive.google.com/file/d/1Je5QjIhDofwSpbF_CaARgWq0CCDmqtj8/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 28,
+    "name": "D-Crawler",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "1-Rnd",
+    "effect": "MR 8 transport; capacity. 1x1x1 sq interior; sealed compartment break (20).",
+    "cost": "15g",
+    "notes": "MR 8 transport; capacity. 1x1x1 sq interior; sealed compartment break (20).",
+    "pic": "https://drive.google.com/file/d/188HXcbUwVgQLV3jOjwvmALDEyjsZaa5J/view?usp=drive_link",
+    "created_at": "2026-08-13T21:26:28.020141+00:00"
+  },
+  {
+    "id": 29,
+    "name": "Omni-Fab",
+    "genres": [
+      "SciFi"
+    ],
+    "category": "🍺 Minor",
+    "action": "P",
+    "usage": "3-Enc",
+    "effect": "Materializes any mundane utility tool or standard field supply on the fly. Item dissolves at end of encounter.",
+    "cost": "150s",
+    "notes": "A compact quantum molecular assembler capable of printing simple tools and non-weapon supplies instantly.",
+    "pic": null,
+    "created_at": "2026-08-15T20:39:32.620736+00:00"
+  }
+]

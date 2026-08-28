@@ -1,8 +1,8 @@
 # 📦 SupaFlex Supabase Database Backups
 
 **Location:** `C:\Repos\Projects\SupaFlex\backups\`  
-**Last Generated:** `2026-08-05 12:03:25`  
-**Source Project:** `https://ddibmiifxwqlnlpaekui.supabase.co` (`ddibmiifxwqlnlpaekui`)
+**Last Generated:** `2026-08-27 16:45:59`  
+**Source Project:** `https://zipebnjazayhfjstykwl.supabase.co` (`zipebnjazayhfjstykwl`)
 
 ---
 
@@ -13,32 +13,30 @@
 
 ---
 
-## 📑 Backup Inventory (2026-08-05)
+## 📑 Backup Inventory (2026-08-27)
 
 | Table Name | Backup Row Count | SQL File Location |
 | :--- | :--- | :--- |
-| `monsters` | 58 rows | `supabase_full_backup_2026-08-05.sql` |
-| `weapons` | 43 rows | `supabase_full_backup_2026-08-05.sql` |
-| `armor` | 32 rows | `supabase_full_backup_2026-08-05.sql` |
-| `shields` | 5 rows | `supabase_full_backup_2026-08-05.sql` |
-| `gear` | 92 rows | `supabase_full_backup_2026-08-05.sql` |
-| `powers` | 519 rows | `supabase_full_backup_2026-08-05.sql` |
-| `magic_items` | 211 rows | `supabase_full_backup_2026-08-05.sql` |
-| `skillsets` | 41 rows | `supabase_full_backup_2026-08-05.sql` |
-| `treasure_tables` | 5 rows | `supabase_full_backup_2026-08-05.sql` |
-| `treasure_entries` | 44 rows | `supabase_full_backup_2026-08-05.sql` |
-| `nish_tc` | 100 rows | `supabase_full_backup_2026-08-05.sql` |
-| `parties` | 4 rows | `supabase_full_backup_2026-08-05.sql` |
-| `party_session_members` | 2 rows | `supabase_full_backup_2026-08-05.sql` |
-| `characters` | 12 rows | `supabase_full_backup_2026-08-05.sql` |
+| `characters` | 3 rows | `supabase_full_backup_2026-08-27.sql` |
+| `powers` | 698 rows | `supabase_full_backup_2026-08-27.sql` |
+| `skillsets` | 59 rows | `supabase_full_backup_2026-08-27.sql` |
+| `relics` | 269 rows | `supabase_full_backup_2026-08-27.sql` |
+| `hardware` | 29 rows | `supabase_full_backup_2026-08-27.sql` |
+| `weapons` | 137 rows | `supabase_full_backup_2026-08-27.sql` |
+| `armor` | 64 rows | `supabase_full_backup_2026-08-27.sql` |
+| `shields` | 6 rows | `supabase_full_backup_2026-08-27.sql` |
+| `gear` | 106 rows | `supabase_full_backup_2026-08-27.sql` |
+| `monsters` | 149 rows | `supabase_full_backup_2026-08-27.sql` |
+| `parties` | 0 rows | `supabase_full_backup_2026-08-27.sql` |
+| `party_session_members` | 0 rows | `supabase_full_backup_2026-08-27.sql` |
 
 ---
 
 ## 🛠️ How to Restore or Execute Backup
 
 ### Option A: Restore via Supabase Dashboard SQL Editor
-1. Open [Supabase Dashboard SQL Editor](https://supabase.com/dashboard/project/ddibmiifxwqlnlpaekui/sql/new).
-2. Open [`supabase_full_backup_2026-08-05.sql`](file:///c:/Repos/Projects/SupaFlex/backups/supabase_full_backup_2026-08-05.sql).
+1. Open [Supabase Dashboard SQL Editor](https://supabase.com/dashboard/project/zipebnjazayhfjstykwl/sql/new).
+2. Open [`supabase_full_backup_2026-08-27.sql`](file:///C:/Repos/Projects/SupaFlex/backups/supabase_full_backup_2026-08-27.sql).
 3. Copy and paste the SQL statements into the editor and click **Run**.
 
 ### Option B: Automated Refresh Script

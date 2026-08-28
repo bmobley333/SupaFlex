@@ -1,0 +1,499 @@
+[
+  {
+    "id": 1,
+    "name": "Duke Nukem",
+    "class": "Vanguard",
+    "race": "Human",
+    "hp": 10,
+    "inventory": [],
+    "log": [],
+    "updated_at": "2026-08-26T19:56:34.916+00:00",
+    "might": "d6",
+    "motion": "d6",
+    "mind": "d4",
+    "magic": "d4",
+    "moxie": "d8",
+    "skills": [],
+    "owner_email": "metascapegame@gmail.com",
+    "sheet_data": {
+      "ap": 0,
+      "bio": {
+        "notes": "",
+        "backstory": "",
+        "image_url": "",
+        "personality": ""
+      },
+      "gold": 793,
+      "armor": 8,
+      "level": 1,
+      "ap_log": [
+        {
+          "id": "ap_1786830007046_rhlw5",
+          "cost": 0,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-08-15T21:40:07.046Z",
+          "description": "Dropped Unskilled Weapon: Blaster Cannon (0 AP)"
+        },
+        {
+          "id": "ap_1786830006065_fm06a",
+          "cost": 0,
+          "tier": 1,
+          "source": "Manage Weapons",
+          "category": "Weapons",
+          "timestamp": "2026-08-15T21:40:06.065Z",
+          "description": "Dropped Unskilled Weapon: Assault Slugger (0 AP)"
+        }
+      ],
+      "armory": [
+        {
+          "id": "shd_1786732903751_2s6k",
+          "sk": true,
+          "cost": "3g",
+          "name": "Heater Shield",
+          "notes": "The heater shield is a large, roughly triangular shield most commonly associated with knights and other archaic heavy troop types. It provides a moderate amount of protection across a broad front, covering the torso and upper leg when held in line, and is often used in formation or for mounted combat. Its flat or gently curved face can bear heraldry or unit markings.\nConstruction is typically a wooden or composite core with leather or metal facing, and a central arm-strap and grip. The shape balances coverage and weight, allowing the bearer to present a solid barrier while still moving and fighting. It is heavier and more cumbersome than a buckler but far more protective.\nThe heater shield is a classic choice for those who want substantial coverage without the bulk of a tower shield.\nEffects\n-- Often used in formation or with heavy armor.\n-- May bear heraldry or markings.",
+          "equipped": true,
+          "max_block": 16,
+          "requirement": "💪 6",
+          "mr_adjustment": "👣-1"
+        }
+      ],
+      "silver": 98,
+      "sparks": 4,
+      "wounds": 0,
+      "charges": 4,
+      "defense": 10,
+      "weapons": [
+        {
+          "id": "wep_1786830014795_bjml",
+          "sk": false,
+          "atk": "4",
+          "dmg": "4",
+          "mhs": "S",
+          "name": "Assault Slugger",
+          "notes": "The Assault Slugger is a heavy automatic weapon that fires metal slugs designed to detonate on impact within the target rather than in an area. It is bulky and functions like a large machine gun. When set to full auto, damage increases significantly, but the operator suffers an attack penalty and consumes four rounds per attack.\nWith the Assault Slugger, the wielder can tear apart positions and heavy targets.\nEffects\n— Full auto: increased damage, attack penalty, four shots per attack; slugs detonate on impact (no area rules).",
+          "effect": "Shot Weapon (Req 👁️ 8, Cost 5g)",
+          "max_blk": "n/a"
+        }
+      ],
+      "identity": {
+        "name": "Duke Nukem",
+        "race": "Human",
+        "class": "Vanguard"
+      },
+      "wardrobe": [
+        {
+          "ar": 8,
+          "id": "arm_1786732893733_8rj5",
+          "mr": "👣10",
+          "sk": false,
+          "cost": "2g",
+          "name": "Archaic Partial A",
+          "notes": "Archaic Partial A combines two pieces for moderate coverage—for example breastplate and helmet, or vambraces and greaves. The wearer gains protection to vital areas (torso and head, or arms and legs) while staying mobile. Metal, leather, and padding are used in traditional construction; each piece can be styled to match the other for a cohesive look.\nThis combo balances defense and agility. A breastplate-and-helmet loadout protects the core and head; vambraces-and-greaves protect the limbs.\nArchaic Partial A suits warriors who want meaningful protection without the weight of a full partial set.\nEffects\n-- Covers two body regions (e.g. chest + head, or arms + legs); composition defines exact coverage.\n-- No integrated systems; purely mechanical protection.",
+          "requirement": "💪 8"
+        }
+      ],
+      "armor_slot": {
+        "ar": 8,
+        "id": "arm_1786732893733_8rj5",
+        "mr": "👣10",
+        "sk": false,
+        "cost": "2g",
+        "name": "Archaic Partial A",
+        "notes": "Archaic Partial A combines two pieces for moderate coverage—for example breastplate and helmet, or vambraces and greaves. The wearer gains protection to vital areas (torso and head, or arms and legs) while staying mobile. Metal, leather, and padding are used in traditional construction; each piece can be styled to match the other for a cohesive look.\nThis combo balances defense and agility. A breastplate-and-helmet loadout protects the core and head; vambraces-and-greaves protect the limbs.\nArchaic Partial A suits warriors who want meaningful protection without the weight of a full partial set.\nEffects\n-- Covers two body regions (e.g. chest + head, or arms + legs); composition defines exact coverage.\n-- No integrated systems; purely mechanical protection.",
+        "requirement": "💪 8"
+      },
+      "gear_slots": [],
+      "is_charged": false,
+      "is_sparked": false,
+      "max_powers": 5,
+      "max_spells": 5,
+      "max_wounds": 3,
+      "power_slots": [
+        {
+          "name": "Adaptive Camouflage",
+          "ready": "support_passive",
+          "usage": "2-Enc",
+          "action": "F",
+          "effect": "If perfectly still: undetectable vs full-spectrum vision. If moving: [Camo Stealth(🏃)] at MR1-3, [Camo Stealth(🏃-1)] at MR5-6, [Camo Stealth(🏃-1)] at MR7-9; fails at MR 10+.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "version": 1,
+          "base_name": "Adaptive Camouflage",
+          "is_readied": true
+        },
+        {
+          "name": "Aethelgard Composure",
+          "notes": "Aethelgard Composure is crafted from durable materials, designed for reliable use in the field.",
+          "ready": "support_passive",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Nish🚩+1 when combat begins.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "version": 1,
+          "base_name": "Aethelgard Composure",
+          "is_readied": true
+        },
+        {
+          "name": "Blood Debt Strike",
+          "notes": "Blood Debt Strike is crafted from durable materials, designed for reliable use in the field.",
+          "ready": "primary_arsenal",
+          "usage": "1-Enc",
+          "action": "A",
+          "effect": "On hit; ignore target’s Armor; Dmg💥+2",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "version": 1,
+          "base_name": "Blood Debt Strike",
+          "is_readied": true
+        },
+        {
+          "name": "Acrobatics Roll",
+          "ready": "support_passive",
+          "usage": "2-Enc",
+          "action": "P",
+          "effect": "Avoid fall Dmg💥 or escape grapple; Motion🏃 acrobatics roll",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "version": 1,
+          "base_name": "Acrobatics Roll",
+          "is_readied": true
+        },
+        {
+          "name": "Accelerated Healing",
+          "notes": "Accelerated Healing is an advanced ability that empowers the Horax Bio Engineer to significantly enhance the regenerative capabilities of an ally. By accelerating the body's natural healing processes, this ability ensures that the ally can recover from injuries much faster, maintaining their combat effectiveness even in prolonged battles. The Bio Engineer's intervention allows the hive’s warriors to endure and thrive, even under intense pressure.\nWhen Accelerated Healing is activated, the target's wounds begin to heal at an accelerated rate, visibly knitting together before the eyes of onlookers. A soft, greenish glow suffuses the injured areas, with tiny, sparkling motes of bio-energy swirling around the wounds, mending tissue and restoring vitality with every passing second. The sensation is warm and soothing, as if a gentle wave of energy is washing over the target, steadily erasing the pain and fatigue that once threatened to overwhelm them. The aura of rapid regeneration not only provides physical restoration but also a psychological boost, as the target feels their strength returning with each heartbeat.\nWith Accelerated Healing, the Horax Bio Engineer ensures that the hive’s warriors remain resilient and capable, able to recover quickly from the rigors of battle and continue fighting with renewed strength.",
+          "ready": "mobility_defense",
+          "usage": "1-⚡",
+          "action": "M",
+          "effect": "Any healing or regeneration received is doubled; also regenerates 1 1st Deg wound per round.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "version": 1,
+          "base_name": "Accelerated Healing",
+          "is_readied": true
+        }
+      ],
+      "shield_slot": {
+        "id": "shd_1786732903751_2s6k",
+        "sk": true,
+        "cost": "3g",
+        "name": "Heater Shield",
+        "notes": "The heater shield is a large, roughly triangular shield most commonly associated with knights and other archaic heavy troop types. It provides a moderate amount of protection across a broad front, covering the torso and upper leg when held in line, and is often used in formation or for mounted combat. Its flat or gently curved face can bear heraldry or unit markings.\nConstruction is typically a wooden or composite core with leather or metal facing, and a central arm-strap and grip. The shape balances coverage and weight, allowing the bearer to present a solid barrier while still moving and fighting. It is heavier and more cumbersome than a buckler but far more protective.\nThe heater shield is a classic choice for those who want substantial coverage without the bulk of a tower shield.\nEffects\n-- Often used in formation or with heavy armor.\n-- May bear heraldry or markings.",
+        "equipped": true,
+        "max_block": 16,
+        "requirement": "💪 6",
+        "mr_adjustment": "👣-1"
+      },
+      "simple_gear": [
+        {
+          "id": "gear_1787098255877_m8us",
+          "qty": 1,
+          "cost": "2s",
+          "name": "Bandages (roll)",
+          "notes": "Bandages (roll) is engineered with high-durability composite materials for reliable field operations.",
+          "category": "⚕️ Medical & Healing Supplies"
+        }
+      ],
+      "spell_slots": [
+        {
+          "name": "AeroJet Thruster",
+          "usage": "2-Enc",
+          "action": "M",
+          "effect": "Atmospheric flight: 100 ft/Rnd vertical, MR(24) horizontal; 1 hr on Nova-Cores, recharges 1 min flight per 10 min.",
+          "select": true,
+          "checked": [
+            false,
+            false,
+            false
+          ],
+          "version": 1,
+          "category": "✨ Greater",
+          "base_name": "AeroJet Thruster",
+          "slot_weight": 3
+        }
+      ],
+      "essence_core": 0,
+      "vitality_max": 10,
+      "focus_die_max": "d4",
+      "movement_rate": {
+        "shield": 9,
+        "armored": 10
+      },
+      "attribute_dice": {
+        "mind": "d4",
+        "magic": "d4",
+        "might": "d6",
+        "moxie": "d8",
+        "motion": "d6"
+      },
+      "character_vault": [
+        {
+          "id": 1786731566200,
+          "name": "[Armor] of Serenity",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "Mind👁️ Persuasion+2",
+          "source": "Unequipped from Loadout",
+          "category": "✨ Greater",
+          "created_at": "2026-08-14T18:19:26.116Z",
+          "slot_weight": 3
+        },
+        {
+          "id": 1786732524163,
+          "name": "Banner of Eternity",
+          "usage": "1-⚡",
+          "action": "P",
+          "effect": "Allies Nish🚩+2 while carried for encounter",
+          "source": "Unequipped from Loadout",
+          "category": "✨ Greater",
+          "created_at": "2026-08-14T18:35:23.721Z",
+          "slot_weight": 3
+        },
+        {
+          "id": 1787002380857,
+          "name": "D-Crawler",
+          "notes": "MR 8 transport; capacity. 1x1x1 sq interior; sealed compartment break (20).",
+          "usage": "1-Rnd",
+          "action": "P",
+          "effect": "MR 8 transport; capacity. 1x1x1 sq interior; sealed compartment break (20).",
+          "source": "Stock Catalog",
+          "version": 1,
+          "category": "🍺 Minor",
+          "base_name": "D-Crawler",
+          "created_at": "2026-08-17T21:33:00.769Z",
+          "slot_weight": 1
+        },
+        {
+          "id": 1787098143701,
+          "cost": "6g",
+          "name": "EnviroTent",
+          "notes": "2x2 by 6 ft tall shelter; 3 occupants; 7-day air/water/nutrients; -300°F to 400°F; long range emergency transponder.",
+          "usage": "1-Enc",
+          "action": "P",
+          "effect": "2x2 by 6 ft tall shelter; 3 occupants; 7-day air/water/nutrients; -300°F to 400°F; long range emergency transponder.",
+          "source": "Hardware Purchase",
+          "version": 1,
+          "category": "🍺 Minor",
+          "base_name": "EnviroTent",
+          "created_at": "2026-08-19T00:09:02.939Z",
+          "is_hardware": true,
+          "slot_weight": 1
+        }
+      ],
+      "known_skillsets": [],
+      "current_vitality": 10,
+      "focus_die_current": "d4",
+      "chaos_gauntlet_slots": [
+        {
+          "gem": null,
+          "slot_id": "finger_1",
+          "slot_type": "finger",
+          "slot_label": "Thumb (Slot 1)",
+          "slot_number": 1
+        },
+        {
+          "gem": null,
+          "slot_id": "finger_2",
+          "slot_type": "finger",
+          "slot_label": "Index (Slot 2)",
+          "slot_number": 2
+        },
+        {
+          "gem": null,
+          "slot_id": "finger_3",
+          "slot_type": "finger",
+          "slot_label": "Middle (Slot 3)",
+          "slot_number": 3
+        },
+        {
+          "gem": null,
+          "slot_id": "finger_4",
+          "slot_type": "finger",
+          "slot_label": "Ring (Slot 4)",
+          "slot_number": 4
+        },
+        {
+          "gem": null,
+          "slot_id": "finger_5",
+          "slot_type": "finger",
+          "slot_label": "Pinky (Slot 5)",
+          "slot_number": 5
+        },
+        {
+          "gem": {
+            "id": 83,
+            "name": "Shield of Nim",
+            "usage": 3,
+            "action": "F",
+            "effect": "Blocks ANY 1 attack (even Shot or Hurled)",
+            "genres": [
+              "Medieval",
+              "Modern",
+              "SciFi"
+            ],
+            "checked": [
+              false,
+              false,
+              false
+            ],
+            "max_usage": 3
+          },
+          "slot_id": "wrist",
+          "slot_type": "wrist",
+          "slot_label": "Mega Slot (Wrist)",
+          "slot_number": 6
+        }
+      ],
+      "character_power_codex": [],
+      "favorite_power_tables": [
+        "Luck",
+        "Starborn Ranger",
+        "Human",
+        "Single Weapon",
+        "Human - Bloodmarked"
+      ],
+      "known_individual_skills": [],
+      "tactical_pivot_used_in_encounter": false
+    }
+  },
+  {
+    "id": 2,
+    "name": "Hero of MetaScape",
+    "class": "Vanguard",
+    "race": "Human",
+    "hp": 10,
+    "inventory": [],
+    "log": [],
+    "updated_at": "2026-08-11T18:26:39.785644+00:00",
+    "might": "d4",
+    "motion": "d4",
+    "mind": "d4",
+    "magic": "d6",
+    "moxie": "d8",
+    "skills": [],
+    "owner_email": "metascapegame@gmail.com",
+    "sheet_data": {
+      "ap": 0,
+      "bio": {
+        "notes": "",
+        "backstory": "",
+        "image_url": "",
+        "personality": ""
+      },
+      "armor": 0,
+      "level": 1,
+      "sparks": 0,
+      "wounds": 0,
+      "defense": 10,
+      "armor_slot": {
+        "ar": 0,
+        "id": "arm_none",
+        "mr": "👣8",
+        "sk": true,
+        "name": "Unarmored",
+        "requirement": "💪 4"
+      },
+      "gear_slots": [],
+      "is_charged": false,
+      "max_powers": 5,
+      "max_spells": 5,
+      "max_wounds": 3,
+      "power_slots": [],
+      "spell_slots": [],
+      "essence_core": 0,
+      "vitality_max": 10,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d4",
+        "magic": "d4",
+        "might": "d6",
+        "moxie": "d8",
+        "motion": "d6"
+      },
+      "known_skillsets": [],
+      "current_vitality": 10,
+      "focus_die_current": "d4"
+    }
+  },
+  {
+    "id": 3,
+    "name": "Dumbdumb",
+    "class": "rouge",
+    "race": "Orc",
+    "hp": 10,
+    "inventory": [],
+    "log": [],
+    "updated_at": "2026-08-11T20:58:18.189327+00:00",
+    "might": "d4",
+    "motion": "d4",
+    "mind": "d4",
+    "magic": "d6",
+    "moxie": "d8",
+    "skills": [],
+    "owner_email": "thebmobley@gmail.com",
+    "sheet_data": {
+      "ap": 0,
+      "bio": {
+        "notes": "",
+        "backstory": "",
+        "image_url": "",
+        "personality": ""
+      },
+      "armor": 0,
+      "level": 1,
+      "sparks": 0,
+      "wounds": 0,
+      "defense": 10,
+      "armor_slot": {
+        "ar": 0,
+        "id": "arm_none",
+        "mr": "👣8",
+        "sk": true,
+        "name": "Unarmored",
+        "requirement": "💪 4"
+      },
+      "gear_slots": [],
+      "is_charged": false,
+      "max_powers": 5,
+      "max_spells": 5,
+      "max_wounds": 3,
+      "power_slots": [],
+      "spell_slots": [],
+      "essence_core": 0,
+      "vitality_max": 10,
+      "focus_die_max": "d4",
+      "attribute_dice": {
+        "mind": "d4",
+        "magic": "d4",
+        "might": "d6",
+        "moxie": "d8",
+        "motion": "d6"
+      },
+      "known_skillsets": [],
+      "current_vitality": 10,
+      "focus_die_current": "d4"
+    }
+  }
+]

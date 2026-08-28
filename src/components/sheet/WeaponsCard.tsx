@@ -15,6 +15,7 @@ import {
 
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { QuickDeckBar } from '../common/QuickDeckBar';
 
 const DIE_SCALE = [4, 6, 8, 10, 12];
 
@@ -345,9 +346,23 @@ export const WeaponsCard: React.FC = () => {
   };
 
   const [skillFilterMode, setSkillFilterMode] = useState<'all' | 'skilled' | 'unskilled'>('skilled');
-  const [weaponFilterCategory, setWeaponFilterCategory] = useState<
-    'all' | 'starred' | 'melee' | 'hurled' | 'shot' | 'unarmed'
-  >('all');
+  const [activeWeaponTable, setActiveWeaponTable] = useState<string>('ALL');
+
+  const favoriteWeaponTables: string[] = useMemo(() => {
+    const favs = activeCharacter?.sheet_data?.favorite_weapon_tables;
+    if (Array.isArray(favs) && favs.length > 0) {
+      return favs;
+    }
+    return [];
+  }, [activeCharacter?.sheet_data?.favorite_weapon_tables]);
+
+  const handleUpdatePinnedWeaponTables = (tables: string[]) => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      favorite_weapon_tables: tables,
+    }));
+    saveActiveCharacter();
+  };
 
   const starredWeaponsCount = useMemo(() => {
     return supabaseWeapons.filter((w) => isItemStarred(w)).length;
@@ -388,32 +403,16 @@ export const WeaponsCard: React.FC = () => {
         return false;
       }
 
-      // 2. Category / Filter mode
-      if (weaponFilterCategory === 'starred' && !isItemStarred(weapon)) {
+      // 2. Table Quick Deck Filter
+      if (activeWeaponTable === 'STARRED' && !isItemStarred(weapon)) {
         return false;
       }
-      if (weaponFilterCategory === 'melee') {
-        const t = (weapon.type || '').toLowerCase();
-        const n = (weapon.name || '').toLowerCase();
-        if (!t.includes('melee') && !n.includes('melee')) return false;
-      }
-      if (weaponFilterCategory === 'hurled') {
-        const t = (weapon.type || '').toLowerCase();
-        const n = (weapon.name || '').toLowerCase();
-        if (!t.includes('hurled') && !n.includes('hurled')) return false;
-      }
-      if (weaponFilterCategory === 'shot') {
-        const t = (weapon.type || '').toLowerCase();
-        const n = (weapon.name || '').toLowerCase();
-        if (!t.includes('shot') && !n.includes('shot')) return false;
-      }
-      if (weaponFilterCategory === 'unarmed') {
-        const t = (weapon.type || '').toLowerCase();
-        const n = (weapon.name || '').toLowerCase();
-        const isUnarmedMatch = ['brawl', 'improvised', 'throw object', 'unarmed'].some(
-          (k) => t.includes(k) || n.includes(k)
-        );
-        if (!isUnarmedMatch) return false;
+      if (activeWeaponTable !== 'ALL' && activeWeaponTable !== 'STARRED') {
+        const tbl = (weapon.table_group || (weapon as any).table || (weapon as any).category || weapon.type || '').toLowerCase();
+        const activeLower = activeWeaponTable.toLowerCase();
+        if (tbl !== activeLower && !tbl.includes(activeLower)) {
+          return false;
+        }
       }
 
       // 3. Search filter
@@ -421,12 +420,13 @@ export const WeaponsCard: React.FC = () => {
         const q = rightSearchQuery.toLowerCase().trim();
         const matchesName = weapon.name.toLowerCase().includes(q);
         const matchesType = (weapon.type || '').toLowerCase().includes(q);
-        return matchesName || matchesType;
+        const matchesNotes = (weapon.notes || '').toLowerCase().includes(q);
+        return matchesName || matchesType || matchesNotes;
       }
 
       return true;
     });
-  }, [supabaseWeapons, equippedBaseNamesSet, skillFilterMode, weaponFilterCategory, rightSearchQuery, attributeDice, isItemStarred, activeGenre]);
+  }, [supabaseWeapons, equippedBaseNamesSet, skillFilterMode, activeWeaponTable, rightSearchQuery, attributeDice, isItemStarred, activeGenre]);
 
   return (
     <div className="bg-gradient-to-b from-rose-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-rose-500/90 p-4 flex flex-col gap-3 h-fit shadow-lg shadow-rose-950/20">
@@ -651,7 +651,21 @@ export const WeaponsCard: React.FC = () => {
 
                     {/* Stock Catalog Content */}
                     <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
-                      {/* 1. KISS Multi-Option Pill Switch: All / Skilled / Unskilled */}
+                      {/* 1. Universal Quick Deck Bar */}
+                      <QuickDeckBar
+                        domain="weapons"
+                        activeTable={activeWeaponTable}
+                        onSelectTable={setActiveWeaponTable}
+                        pinnedTables={favoriteWeaponTables}
+                        onUpdatePinnedTables={handleUpdatePinnedWeaponTables}
+                        catalogItems={supabaseWeapons}
+                        starredCount={starredWeaponsCount}
+                        colorTheme="rose"
+                        totalCatalogCount={supabaseWeapons.length}
+                        placeholderText="➕ Pin Weapon Table"
+                      />
+
+                      {/* 2. KISS Multi-Option Pill Switch: All / Skilled / Unskilled */}
                       <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
                         <button
                           type="button"
@@ -662,7 +676,7 @@ export const WeaponsCard: React.FC = () => {
                               : 'text-slate-400 hover:text-slate-200 border border-transparent'
                           }`}
                         >
-                          🌐 All
+                          🌐 All Qualifications
                         </button>
                         <button
                           type="button"
@@ -673,7 +687,7 @@ export const WeaponsCard: React.FC = () => {
                               : 'text-slate-400 hover:text-slate-200 border border-transparent'
                           }`}
                         >
-                          🎓 Skilled
+                          🎓 Skilled Only
                         </button>
                         <button
                           type="button"
@@ -684,35 +698,20 @@ export const WeaponsCard: React.FC = () => {
                               : 'text-slate-400 hover:text-slate-200 border border-transparent'
                           }`}
                         >
-                          ⚪ Unskilled
+                          ⚪ Unskilled Only
                         </button>
                       </div>
 
-                      {/* 2. Search & Category Filter Bar (Directly above card list) */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="relative flex-1">
-                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            value={rightSearchQuery}
-                            onChange={(e) => setRightSearchQuery(e.target.value)}
-                            placeholder="Search weapons or type..."
-                            className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-rose-500 w-full"
-                          />
-                        </div>
-
-                        <select
-                          value={weaponFilterCategory}
-                          onChange={(e) => setWeaponFilterCategory(e.target.value as any)}
-                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-rose-500 max-w-[180px] truncate cursor-pointer"
-                        >
-                          <option value="all">🌐 All Weapons</option>
-                          <option value="starred">⭐ Starred Favorites ({starredWeaponsCount})</option>
-                          <option value="melee">🗡️ Melee</option>
-                          <option value="hurled">🪓 Hurled</option>
-                          <option value="shot">🏹 Shot</option>
-                          <option value="unarmed">🥊 Unarmed</option>
-                        </select>
+                      {/* 3. Search Bar */}
+                      <div className="relative shrink-0">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={rightSearchQuery}
+                          onChange={(e) => setRightSearchQuery(e.target.value)}
+                          placeholder="Search weapons, types, notes..."
+                          className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 w-full"
+                        />
                       </div>
 
                       {/* Scrollable Catalog List */}

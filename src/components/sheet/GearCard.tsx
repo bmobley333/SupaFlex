@@ -15,6 +15,7 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { SimpleGearItem, SupabaseGear } from '../../types/game';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { QuickDeckBar } from '../common/QuickDeckBar';
 import { gameApi } from '../../services/api';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 
@@ -57,7 +58,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   // Search & Filter State
   const [gearInventorySearchQuery, setGearInventorySearchQuery] = useState<string>('');
   const [gearCatalogSearchQuery, setGearCatalogSearchQuery] = useState<string>('');
-  const [selectedGearCategoryFilter, setSelectedGearCategoryFilter] = useState<string>('ALL');
   const [gearCatalogFeedback, setGearCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
   // Calculate total inventory value (gold & silver, 100s = 1g)
@@ -89,17 +89,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showManageModal]);
-
-  // Available Categories
-  const availableGearCategories = useMemo(() => {
-    const set = new Set<string>();
-    gearCatalog.forEach((item) => {
-      if (item.category && item.category.trim()) {
-        set.add(item.category.trim());
-      }
-    });
-    return Array.from(set).sort();
-  }, [gearCatalog]);
 
   // Filtered Inventory
   const filteredGearInventory = useMemo(() => {
@@ -170,7 +159,25 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     saveActiveCharacter();
   };
 
-  const starredArmorCount = useMemo(() => {
+  const [activeGearTable, setActiveGearTable] = useState<string>('ALL');
+
+  const favoriteGearTables: string[] = useMemo(() => {
+    const favs = activeCharacter?.sheet_data?.favorite_gear_tables;
+    if (Array.isArray(favs) && favs.length > 0) {
+      return favs;
+    }
+    return [];
+  }, [activeCharacter?.sheet_data?.favorite_gear_tables]);
+
+  const handleUpdatePinnedGearTables = (tables: string[]) => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      favorite_gear_tables: tables,
+    }));
+    saveActiveCharacter();
+  };
+
+  const starredGearCount = useMemo(() => {
     return gearCatalog.filter((g) => isItemStarred(g)).length;
   }, [gearCatalog, isItemStarred]);
 
@@ -180,10 +187,14 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
     let base = unequipped.filter((g) => matchesGenre(g.genres, activeGenre));
 
-    if (selectedGearCategoryFilter === 'STARRED') {
+    if (activeGearTable === 'STARRED') {
       base = base.filter((g) => isItemStarred(g));
-    } else if (selectedGearCategoryFilter !== 'ALL') {
-      base = base.filter((g) => (g.category || 'General').toLowerCase() === selectedGearCategoryFilter.toLowerCase());
+    } else if (activeGearTable !== 'ALL' && activeGearTable !== 'STARRED') {
+      const activeLower = activeGearTable.toLowerCase();
+      base = base.filter((g) => {
+        const tbl = (g.table_group || g.category || 'General').toLowerCase();
+        return tbl === activeLower || tbl.includes(activeLower);
+      });
     }
 
     if (!gearCatalogSearchQuery.trim()) return base;
@@ -191,10 +202,11 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     return base.filter(
       (item) =>
         item.name.toLowerCase().includes(query) ||
+        (item.table_group && item.table_group.toLowerCase().includes(query)) ||
         (item.category && item.category.toLowerCase().includes(query)) ||
         (item.notes && item.notes.toLowerCase().includes(query))
     );
-  }, [gearCatalog, gearList, selectedGearCategoryFilter, isItemStarred, gearCatalogSearchQuery, activeGenre]);
+  }, [gearCatalog, gearList, activeGearTable, isItemStarred, gearCatalogSearchQuery, activeGenre]);
 
   const handleEquipGear = (catalogItem: SupabaseGear) => {
     setGearCatalogFeedback(null);
@@ -424,59 +436,30 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
               {/* Right Column: Supabase Stock Gear Catalog */}
               <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                {/* Search & Category Filter */}
-                <div className="flex flex-col gap-2 pb-2.5 border-b border-slate-800/80 shrink-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="relative flex-1">
-                      <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Search catalog..."
-                        value={gearCatalogSearchQuery}
-                        onChange={(e) => setGearCatalogSearchQuery(e.target.value)}
-                        className="w-full bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-teal-500"
-                      />
-                    </div>
+                {/* QuickDeckBar & Search Filter */}
+                <div className="flex flex-col gap-2 pb-2 border-b border-slate-800/80 shrink-0">
+                  <QuickDeckBar
+                    domain="gear"
+                    activeTable={activeGearTable}
+                    onSelectTable={setActiveGearTable}
+                    pinnedTables={favoriteGearTables}
+                    onUpdatePinnedTables={handleUpdatePinnedGearTables}
+                    catalogItems={gearCatalog}
+                    starredCount={starredGearCount}
+                    colorTheme="emerald"
+                    totalCatalogCount={gearCatalog.length}
+                    placeholderText="➕ Pin Gear Table"
+                  />
 
-                    <button
-                      onClick={() => setSelectedGearCategoryFilter(selectedGearCategoryFilter === 'STARRED' ? 'ALL' : 'STARRED')}
-                      className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 border ${
-                        selectedGearCategoryFilter === 'STARRED'
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
-                          : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-                      }`}
-                      title="Filter Starred Gear"
-                    >
-                      <Star className="w-3 h-3 fill-current" />
-                      <span>{starredArmorCount}</span>
-                    </button>
-                  </div>
-
-                  {/* Category Pills */}
-                  <div className="flex items-center gap-1 overflow-x-auto pb-1">
-                    <button
-                      onClick={() => setSelectedGearCategoryFilter('ALL')}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition shrink-0 ${
-                        selectedGearCategoryFilter === 'ALL'
-                          ? 'bg-teal-600 text-white shadow-sm font-extrabold'
-                          : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                      }`}
-                    >
-                      ALL
-                    </button>
-                    {availableGearCategories.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedGearCategoryFilter(cat)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition shrink-0 ${
-                          selectedGearCategoryFilter === cat
-                            ? 'bg-teal-600 text-white shadow-sm font-extrabold'
-                            : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
+                  <div className="relative shrink-0">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search gear, categories, notes..."
+                      value={gearCatalogSearchQuery}
+                      onChange={(e) => setGearCatalogSearchQuery(e.target.value)}
+                      className="w-full bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-teal-500"
+                    />
                   </div>
                 </div>
 

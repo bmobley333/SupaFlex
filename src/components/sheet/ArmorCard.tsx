@@ -6,6 +6,7 @@ import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { QuickDeckBar } from '../common/QuickDeckBar';
 import {
   ArmorData,
   MovementRateData,
@@ -295,7 +296,24 @@ export const ArmorCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const [armorFilterCategory, setArmorFilterCategory] = useState<'all' | 'starred' | 'learnable'>('all');
+  const [skillFilterMode, setSkillFilterMode] = useState<'all' | 'skilled' | 'unskilled'>('all');
+  const [activeArmorTable, setActiveArmorTable] = useState<string>('ALL');
+
+  const favoriteArmorTables: string[] = useMemo(() => {
+    const favs = activeCharacter?.sheet_data?.favorite_armor_tables;
+    if (Array.isArray(favs) && favs.length > 0) {
+      return favs;
+    }
+    return [];
+  }, [activeCharacter?.sheet_data?.favorite_armor_tables]);
+
+  const handleUpdatePinnedArmorTables = (tables: string[]) => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      favorite_armor_tables: tables,
+    }));
+    saveActiveCharacter();
+  };
 
   const starredArmorCount = useMemo(() => {
     return armorCatalog.filter((a) => isItemStarred(a)).length;
@@ -307,19 +325,37 @@ export const ArmorCard: React.FC = () => {
     const q = leftSearchQuery.toLowerCase().trim();
     return wardrobe.filter((w) => w.name.toLowerCase().includes(q));
   }, [wardrobe, leftSearchQuery]);
+
   const filteredCatalogArmor = useMemo(() => {
     return armorCatalog.filter((item) => {
       if (!matchesGenre(item.genres, activeGenre)) return false;
       if (wardrobeNamesSet.has(item.name.toLowerCase())) return false;
-      if (armorFilterCategory === 'starred' && !isItemStarred(item)) return false;
-      if (armorFilterCategory === 'learnable' && !isRequirementLearnable(item.requirement, attributeDice)) return false;
+
+      const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
+      if (skillFilterMode === 'skilled' && !isLearnable) return false;
+      if (skillFilterMode === 'unskilled' && isLearnable) return false;
+
+      // Table Quick Deck Filter
+      if (activeArmorTable === 'STARRED' && !isItemStarred(item)) return false;
+      if (activeArmorTable !== 'ALL' && activeArmorTable !== 'STARRED') {
+        const tbl = (item.table_group || (item as any).category || '').toLowerCase();
+        const activeLower = activeArmorTable.toLowerCase();
+        if (tbl !== activeLower && !tbl.includes(activeLower)) {
+          return false;
+        }
+      }
+
       if (rightSearchQuery.trim()) {
         const q = rightSearchQuery.toLowerCase().trim();
-        return item.name.toLowerCase().includes(q) || (item.requirement || '').toLowerCase().includes(q);
+        return (
+          item.name.toLowerCase().includes(q) ||
+          (item.requirement || '').toLowerCase().includes(q) ||
+          (item.notes || '').toLowerCase().includes(q)
+        );
       }
       return true;
     });
-  }, [armorCatalog, wardrobeNamesSet, armorFilterCategory, rightSearchQuery, attributeDice, isItemStarred, activeGenre]);
+  }, [armorCatalog, wardrobeNamesSet, skillFilterMode, activeArmorTable, rightSearchQuery, attributeDice, isItemStarred, activeGenre]);
 
   const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
   const isShieldEquipped = shieldSlot?.equipped ?? false;
@@ -430,28 +466,67 @@ export const ArmorCard: React.FC = () => {
 
                     {/* Stock Catalog Content */}
                     <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
-                      {/* Search & Category Filter Bar */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="relative flex-1">
-                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            value={rightSearchQuery}
-                            onChange={(e) => setRightSearchQuery(e.target.value)}
-                            placeholder="Search armor..."
-                            className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
-                          />
-                        </div>
+                      {/* 1. Universal Quick Deck Bar */}
+                      <QuickDeckBar
+                        domain="armor"
+                        activeTable={activeArmorTable}
+                        onSelectTable={setActiveArmorTable}
+                        pinnedTables={favoriteArmorTables}
+                        onUpdatePinnedTables={handleUpdatePinnedArmorTables}
+                        catalogItems={armorCatalog}
+                        starredCount={starredArmorCount}
+                        colorTheme="amber"
+                        totalCatalogCount={armorCatalog.length}
+                        placeholderText="➕ Pin Armor Table"
+                      />
 
-                        <select
-                          value={armorFilterCategory}
-                          onChange={(e) => setArmorFilterCategory(e.target.value as any)}
-                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 max-w-[180px] truncate cursor-pointer"
+                      {/* 2. KISS Multi-Option Pill Switch: All / Skilled / Unskilled */}
+                      <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setSkillFilterMode('all')}
+                          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            skillFilterMode === 'all'
+                              ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
                         >
-                          <option value="all">🌐 All Armor</option>
-                          <option value="starred">⭐ Starred Favorites ({starredArmorCount})</option>
-                          <option value="learnable">⚡ Learnable Only</option>
-                        </select>
+                          🌐 All Armor
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSkillFilterMode('skilled')}
+                          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            skillFilterMode === 'skilled'
+                              ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          🎓 Skilled Only
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSkillFilterMode('unskilled')}
+                          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            skillFilterMode === 'unskilled'
+                              ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          ⚪ Unskilled Only
+                        </button>
+                      </div>
+
+                      {/* 3. Search Bar */}
+                      <div className="relative shrink-0">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={rightSearchQuery}
+                          onChange={(e) => setRightSearchQuery(e.target.value)}
+                          placeholder="Search armor, requirements, notes..."
+                          className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
+                        />
                       </div>
 
                       <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">

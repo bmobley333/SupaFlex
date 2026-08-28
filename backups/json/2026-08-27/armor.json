@@ -1,0 +1,1066 @@
+[
+  {
+    "id": 1,
+    "name": "Arcane Wardsuit",
+    "requirement": "💪 S",
+    "ar": "🧥S",
+    "mr": "👣7",
+    "cost": "20g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Arcane Wardsuit merges medieval craftsmanship with cutting-edge technology, featuring a latticework of alloyed steel plates reinforced with translucent synthetic alloys that glow with a faint, pulsating cerulean light. The suit’s contours are streamlined, with articulated joints sheathed in adaptive polymers that shift texture and opacity in response to environmental threats. A low hum resonates from embedded arcane circuitry, generating a shimmering barrier of refracted energy that flickers like liquid starlight around the wearer’s form.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 2,
+    "name": "Archaic Partial A",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Archaic Partial A combines two pieces for moderate coverage—for example breastplate and helmet, or vambraces and greaves. The wearer gains protection to vital areas (torso and head, or arms and legs) while staying mobile. Metal, leather, and padding are used in traditional construction; each piece can be styled to match the other for a cohesive look.\nThis combo balances defense and agility. A breastplate-and-helmet loadout protects the core and head; vambraces-and-greaves protect the limbs.\nArchaic Partial A suits warriors who want meaningful protection without the weight of a full partial set.\nEffects\n-- Covers two body regions (e.g. chest + head, or arms + legs); composition defines exact coverage.\n-- No integrated systems; purely mechanical protection.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 3,
+    "name": "Archaic Partial G",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Archaic Partial G combines three pieces for substantial coverage—typically breastplate, helmet, and vambraces. The torso, head, and forearms are protected, leaving the legs relatively free for movement. This loadout is common among front-line fighters who want strong upper-body and head protection while retaining leg mobility for advancing or retreating.\nThe armor presents a cohesive martial appearance: chest plate, helm, and arm guards in matching or complementary style. Articulated joints and padding keep the wearer effective in prolonged combat.\nArchaic Partial G offers strong protection to the most exposed areas without full leg coverage.\nEffects\n-- Covers three body regions (e.g. chest, head, forearms); composition defines exact coverage.\n-- No integrated systems; purely mechanical protection.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 4,
+    "name": "Archaic Partial H",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣9",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Archaic Partial H is full partial coverage: breastplate, greaves, helmet, and vambraces together. Every major body region is protected—torso, head, arms, and legs—while the armor remains partial rather than a full suit. This is the heaviest and most protective option in the archaic partial category, favored by heavy infantry and those who expect sustained melee.\nThe full set is imposing and complete. Metal plates, leather backing, and padding are used throughout; the wearer can still move and fight effectively but carries noticeable weight.\nArchaic Partial H represents the maximum coverage available within archaic partial armor.\nEffects\n-- Covers all four regions: chest (breastplate), head (helmet), forearms (vambraces), shins and knees (greaves).\n-- No integrated systems; purely mechanical protection.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 5,
+    "name": "Archaic Partial L",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Archaic Partial L is the lightest coverage in this category, consisting of a single light piece such as vambraces or greaves. It offers minimal and maximum mobility while protecting one body region—either the forearms or the shins and knees. Crafted from metal strips or plates on leather or cloth backing, with padding for comfort, it is the choice for those who want a touch of traditional protection without committing to a full partial loadout.\nThe look is simple and functional: one set of vambraces or one set of greaves, often unadorned or lightly decorated. The wearer retains full mobility everywhere else and can add more pieces over time.\nArchaic Partial L is ideal for scouts, duelists, or anyone who prioritizes speed and flexibility over coverage.\nEffects\n-- Covers one body region only: either forearms (vambraces) or shins and knees (greaves).\n-- No integrated systems; purely mechanical protection.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 6,
+    "name": "Artisan Plate",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Artisan Plate is a heavy, full-coverage suit of plate armor reserved for ceremonial use or when maximum protection is required. Like Artisan Ring-Mail, each suit is a unique work of art, with a long and detailed history. Because plate severely limits movement and sensation, suits often incorporate small patches of ring-mail at key points to preserve some hearing and awareness—yet even then, the wearer's senses are heavily restricted.\nThe armor's design is imposing and iconic: overlapping metal plates, articulated at the joints, with a helm that fully encloses the head. The metal can be polished, blued, or engraved according to tradition. Donning Artisan Plate signals serious commitment to combat; the wearer trades agility and sensory acuity for exceptional protection against blows and missiles.\nArtisan Plate remains the heaviest form of archaic full armor, offering unmatched protection at the cost of mobility and awareness.\nEffects\n-- Severe restriction to hearing and sensory awareness; apply a penalty to Awareness rolls related to hearing when fully enclosed.\n-- May include small ring-mail patches to partially aid hearing; full plate coverage otherwise.\n-- Best suited to ceremonial combat or situations where maximum protection outweighs mobility needs.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 7,
+    "name": "Artisan Ring-Mail",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Artisan Ring-Mail is a masterwork suit of full-body armor, crafted using traditional methods with no high technology, yet offering remarkable protection and aesthetic detail. Weighing in at a moderate burden for its coverage, this armor consists of large, interlocked metal rings—often called ring-mail—that deflect most physical attacks while leaving enough gaps for the wearer to retain keen environmental awareness and tactile sensitivity. Each ring is hand-forged and inscribed with minute images and abstract patterns, making every suit a unique work of art with its own history.\nThe appearance of Artisan Ring-Mail is both martial and ornate, with a metallic sheen that varies by alloy and finish. The large rings allow airflow and minimal restriction, so the wearer can move and sense their surroundings far better than in solid plate. Collectors and warriors alike prize these suits; those made by the finest smiths command premium value and are rarely sold by their original owners.\nArtisan Ring-Mail represents the pinnacle of traditional full-body mail, blending protection, mobility, and craftsmanship for those who favor archaic martial tradition.\nEffects\n-- Protects against most physical attacks while allowing retained tactile and environmental sensitivity.\n-- Each suit is unique; hand-crafted rings may bear inscriptions or decorative motifs.\n-- No technological systems; purely mechanical protection.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 10,
+    "name": "Assault Armor",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣9",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Assault Armor is a heavier variant of marine-grade armor, built for hazardous duties such as direct assault, ship boarding, and high-intensity combat. It combines robust plating with integrated systems that enhance survivability and effectiveness in confined or hostile environments. The suit is sealed against contaminants and includes lighting, medical support, and strength augmentation to help the wearer push through resistance and complete objectives.\nThe armor's profile is bulkier than standard infantry suits, with reinforced joints and additional hardpoints for tools and weapons. The exterior is often finished in matte or tactical colors to reduce glare and signature. When fully powered, the wearer can operate in adverse conditions while maintaining communication, targeting, and mobility.\nAssault Armor is the choice for troops who expect to breach, clear, and hold under heavy opposition.\nEffects\n-- Compensators, one external and one internal hard point, sealed, flood lights, genjector, strength enhancers, targeting computer, communicator kit, ultralock boot kit (included).",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 11,
+    "name": "Banded Armor",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣9",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A fusion of medieval craftsmanship and futuristic engineering, this armor combines overlapping steel bands with sleek, titanium-infused alloys, forming a layered lattice that hugs the wearer’s contours like a second skin. The chestplate features a central embossment of interlocking gears, their edges etched with faintly luminescent circuitry that pulses in sync with the wearer’s movements, while the limbs are sheathed in segmented plates reinforced with carbon-fiber weave, allowing for fluid motion without sacrificing durability. A faint, iridescent haze clings to the surface, as if the metal itself hums with latent energy, and the hauberk beneath is woven from a synthetic filament that repels corrosion and dissipates heat, leaving the wearer cool even in the throes of combat.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 12,
+    "name": "Bio-Tech",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bio-Tech Armor Kit\nBio-Tech Armor is an extraordinary fusion of bioengineering and advanced technology, designed specifically for the character to enhance adaptability and resilience on the battlefield. Weighing only 18 pounds, this suit offers unparalleled flexibility and protection. The armor integrates an Adaptive Exoskeleton, which reinforces the natural exoskeleton with a bioengineered layer that hardens under impact yet remains flexible during movement. This adaptability allows the character to perform precise, rapid actions while maintaining high levels of protection.\nThe design of Bio-Tech Armor is both alien and intricate, featuring a sleek, organic appearance with a bioluminescent sheen that shifts colors depending on the environment and the wearer’s physiological state. The armor's surface is covered with hexagonal plates that pulsate with a soft greenish glow, indicating the activity of bio-nanites within. These nanites constantly repair and enhance the armor, while various tentacle-like appendages equipped with ultralock mechanisms extend and retract fluidly, securing tools and weapons with seamless precision. The armor's bioluminescence gives off a faint, ambient light, casting eerie, shifting shadows in the dark, while its smooth, organic texture feels cool to the touch.\nBio-Tech Armor is a pinnacle of biotechnology, providing the character with unparalleled adaptability, protection, and support, allowing them to excel in their role of enhancing the hive’s capabilities and maintaining technological superiority.\nEffects\n-- Provides adaptable and resilient protection with an Adaptive Exoskeleton that hardens under impact and remains flexible during movement.\n-- Equipped with Energy Conduits to power enhancements and weaponry.\n-- Effective in extreme temperatures, ranging from -60°F to 140°F.",
+    "pic": "https://drive.google.com/file/d/1dr9ZKaHbQJewgghlrn4Idy4plYYEh6sJ/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 13,
+    "name": "Blaze",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Blaze Armor Kit\nBlaze Armor is an exceptional combination of natural dragon scales and advanced cybernetic plating, crafted specifically for the character to dominate in frontline combat. This 35-pound armor not only provides unparalleled protection but also enhances the wearer's offensive capabilities. The dragon scales offer inherent thermal resistance and remarkable durability, while the cybernetic plating boosts physical strength and absorbs impacts from both physical and energy-based attacks, making it a formidable defense against a wide range of threats.\nVisually, Blaze Armor is a striking blend of sleek black metal with deep red and orange accents, its surface etched with intricate dragon scale patterns that convey both its power and otherworldly origins. The armor includes integrated Thermal Resistance, ensuring immunity to high temperatures and fire-based assaults. Additionally, Energy Shields bolster defense against all forms of attacks, while the Reinforced Structure amplifies the wearer’s strength, allowing them to break through enemy lines with ease. Adaptive Camouflage further enhances its versatility by enabling temporary invisibility, perfect for executing surprise attacks or evasive maneuvers.\nAs the ultimate fusion of ancient dragon resilience and cutting-edge technology, Blaze Armor equips the character with unmatched strength and fiery power, making them an unstoppable force on the battlefield.",
+    "pic": "https://drive.google.com/file/d/1Z7DR09OfrZICazNE6GWRLW8hhauIrHEj/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 14,
+    "name": "Bloodweave",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bloodweave Armor Kit\nBloodweave Armor is a masterpiece of bioengineering and dark magic, crafted specifically to enhance the character's vampiric abilities and provide exceptional protection in battle. This armor, weighing 20 pounds, is not only a formidable defense against physical and magical attacks but also a living extension of the character, amplifying their natural healing abilities while maintaining peak combat performance. The Bio-Regenerative Fabric woven into the armor allows it to self-repair minor damage and enhances the character’s own regenerative powers, ensuring they remain at their best even in the heat of battle.\nThe Bloodweave Armor is a striking sight to behold, with a dark, blood-red hue accented by black, giving it a menacing yet elegant appearance. Intricate, vein-like patterns run across the armor, pulsing with dark energy, reflecting its life-draining capabilities. Quantum Reinforced Plates are strategically placed to protect vital areas, made from energy-absorbing materials that reduce the impact of incoming attacks. The armor is also highly versatile, with attachment points and hidden compartments for weapons and gear, while the Cloak of Shadows upgrade grants the wearer temporary invisibility, perfect for executing stealth attacks or escaping dangerous situations.\nWhen donned, the armor melds seamlessly with the character, its dark patterns glowing faintly with a sinister energy that seems to pulse with every heartbeat. The character moves with a fluid grace, the armor's flexibility allowing for rapid, precise movements essential for close-quarters combat. The fabric absorbs sound, rendering the character nearly silent as they move, adding an element of dread for their enemies. The blood-red veins that course through the armor hint at its dark power, drawing strength from the life force of enemies and feeding it back to the character, ensuring they remain strong and unyielding in battle.\nBloodweave Armor is the epitome of the character's dark power, providing unparalleled protection, healing, and combat prowess, allowing them to dominate the battlefield and sustain themselves through the life force of their enemies.\nEffects\n-- Always in Effect\n-- -- Armor self-repairs minor damage due to its Bio-Regenerative Fabric.\n-- -- Armor operates effectively in extreme temperatures ranging from -50°F to 140°F.",
+    "pic": "https://drive.google.com/file/d/1DC2gujy9dbXJr3aB9J0a0L2NSrI3YMtH/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 15,
+    "name": "Brigandine",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A hybrid of medieval craftsmanship and futuristic engineering, the Brigandine merges interlocking steel plates with a lattice of carbon-fiber reinforced polymer, its surface etched with faintly glowing circuitry that pulses in sync with the wearer's movements. The cuirass conforms to the body with a second-skin precision, its overlapping scales layered over a flexible exoskeleton of nano-armor that shifts hue in response to environmental threats, while articulated joints allow for fluid motion without sacrificing defense. A faint, prismatic aura hovers just above the armor's surface, as if the metal itself is alive, and the shoulder guards taper into sleek, aerodynamic curves reminiscent of both heraldic crests and modern aerospace design.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 16,
+    "name": "Carapace Armor",
+    "requirement": "💪 S",
+    "ar": "🧥S",
+    "mr": "👣7",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Carapace Armor is among the most effective bio-armors: a living shell with tendons and mantles along its length that open like a clam shell and then close snugly around the wearer. It is heavy, but its protection rivals that of top-tier marine armor. The shell seals itself airtight and filters outside air to maintain a breathable environment; the front is left clear so vision is unimpeded. Bio-engineers can produce carapaces tailored to different species by special arrangement and exchange of valuable materials.\nThe armor's appearance is organic and imposing—a curved, naturalistic shell with a smooth or textured surface that can vary in color and thickness. Donning it requires the shell to open and then contract around the user, after which it feels like a second skin. The combination of living structure and sealed environment makes it a premium choice for those who can obtain and maintain it.\nCarapace Armor is the pinnacle of living armor, offering marine-grade protection and full environmental sealing.\nEffects\n-- Living shell provides protection comparable to heavy marine armor; seals airtight and filters air for breathing.\n-- Front left clear for unimpaired vision.\n-- Can be tailored to different species by special order.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 17,
+    "name": "Chain Shirt",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Chain Shirt is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 18,
+    "name": "Cyber A",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "7g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Cyber A adds torso and both forearms to the facial plating. The wearer has chest or back coverage (or one major torso surface), full facial armor, and both forearms plated. This moderate coverage protects the core and arms while leaving the upper arms and legs unarmored. The plating is integrated across regions for a cohesive cyber look.\nThe result is a clear step up from Cyber L: face, torso (one side), and both forearms in metallic armor.\nEffects\n-- Covers face, one torso surface (chest or back), and both forearms.\n-- Component regions integrate for a single Cyber A loadout.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 19,
+    "name": "Cyber G",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Cyber G extends coverage to full torso (chest and back), full facial armor, and both arms in full—forearm and upper arm on each side. The wearer's core, head, and arms are fully protected by cyber plating; only the legs remain unarmored. This substantial loadout is for those who expect heavy contact in the upper body and want maximum arm and torso protection.\nThe silhouette is imposing: torso, face, and both arms in seamless or articulated cyber armor, often with tribal or symbolic detailing.\nCyber G offers near-complete upper-body cyber protection.\nEffects\n-- Covers full torso (chest and back), face, and both arms (forearm + upper arm each).\n-- Legs are not covered.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 20,
+    "name": "Cyber H",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣9",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Cyber H is full-body partial cyber armor: torso (chest and back), facial plating, both arms (forearm and upper arm each), and both legs (thigh, knee, and shin each). Every major region is covered with integrated cyber plating, creating a complete partial suit. The armor is still classified as partial rather than full suit armor but represents the maximum coverage available in the cyber armor line.\nThe wearer is fully plated from head to foot in gleaming metallic armor, with articulated joints at knees, elbows, and waist.\nCyber H is the pinnacle of cyber partial armor.\nEffects\n-- Covers full torso, face, both arms (forearm + upper arm each), and both legs (thigh + knee + shin each).\n-- Full-body partial cyber; all regions integrated.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 21,
+    "name": "Cyber L",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Cyber L is minimal cyber armor coverage: facial plating plus one forearm. The face is protected by gleaming metallic half-face armor, often used alongside cyber-eyes and inscribed with runes or symbolic images. One forearm is fully plated and integrated with the user's cybernetic framework. Together they offer light partial protection for those who want a visible cyber look without heavy coverage.\nThe appearance is distinctive but limited—half face and one arm in metal, the rest of the body unarmored.\nCyber L provides the lightest cyber armor option while still signaling the wearer's augmentation.\nEffects\n-- Covers roughly half the face and one forearm only.\n-- Often paired with cyber-eyes or other facial modifications.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 22,
+    "name": "Denim Battle Vest",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Denim Battle Vest is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 23,
+    "name": "Dragon Scale Armor",
+    "requirement": "💪 S",
+    "ar": "🧥S",
+    "mr": "👣7",
+    "cost": "12g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Dragon Scale Armor is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 24,
+    "name": "Ethereal",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Ethereal Armor Kit\nEthereal Armor is a masterful fusion of agility and protection, crafted specifically for the character to enhance their melee prowess and channel Aether energy into their combat techniques. Weighing just 12 pounds, this sleek armor is made from Aether Weave Fabric, a cutting-edge textile infused with Aether energy that enhances the wearer’s speed, agility, and precision while providing lightweight protection.\nWhen the character dons the Ethereal Armor, they feel an immediate connection to the Aether energy flowing through the intricate patterns and glowing runes that adorn its surface. The armor fits like a second skin, allowing for unrestricted movement, while the Aether Resonance Plates provide critical reinforcement in key areas. The Phantom Cloak upgrade can be activated, causing the armor to shimmer and fade from view, rendering the character nearly invisible as they prepare to strike from the shadows. The compact Aether core hums quietly, powering the armor’s enhancements and ensuring that the character remains a formidable force in any combat scenario.\nWith Ethereal Armor, the character becomes a swift and silent warrior, capable of executing devastating techniques with unmatched precision and grace.\nEffects\n-- Lightweight armor designed for agility and enhanced melee capabilities through Aether energy.\n-- Powered by an Aether core that requires periodic recharging.",
+    "pic": "https://drive.google.com/file/d/1inwx3QKRTOieYtfc5Dg5cuqL_lJ0uUVG/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 25,
+    "name": "Expedition Armor",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Expedition Armor is heavier than standard trooper armor and is typically issued to infantry who expect heavy firepower or prolonged resistance. Door gunners, vehicle crews, and dismounted troops in contested zones often wear this style for the extra protection and the ability to operate for extended periods with integrated nutrition and medical support. It offers a balance between mobility and durability for sustained operations.\nThe suit features plated coverage over a durable undersuit, with one external hard point for mission-specific gear. Integrated systems include targeting, communications, and illumination, plus nutrijector and slap-o-matic for field care. The overall look is utilitarian and robust, suited to long patrols and harsh environments.\nExpedition Armor supports troops who need to hold the line and stay effective when resupply is delayed.\nEffects\n-- One external hard point, nutrijector, slap-o-matic, targeting computer, communicator kit, illuminator kit (included).",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 26,
+    "name": "Field Plate",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "7g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Field Plate is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 27,
+    "name": "Flak",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Flak is a generic term for infantry body armor consisting of metal, ceramic, or plastic plates sewn or bonded into a vest and pants. Lightweight and affordable, it is widely used by infantry, irregulars, and anyone who needs basic protection without the cost or weight of full tactical armor. The plates distribute impact and stop or reduce penetration from small arms and fragmentation.\nThe look is utilitarian: webbing or fabric carriers hold rigid panels over the torso and sometimes the limbs. Colors and cuts vary by force and supplier. Flak offers no sealed environment, no powered systems, and minimal coverage compared to full suit armor—but it is easy to don, maintain, and replace.\nFlak provides practical, budget-friendly protection for frontline roles where full armor is not available or not desired.\nEffects\n-- Plates provide protection against small arms and fragmentation; coverage is typically torso-focused.\n-- No sealed environment or integrated systems; worn over normal clothing or undersuit.\n-- Commonly used by infantry, raiders, and forces with limited logistics.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 28,
+    "name": "Full Plate",
+    "requirement": "💪 S",
+    "ar": "🧥S",
+    "mr": "👣7",
+    "cost": "10g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Full Plate is a masterwork of interlocking steel plates, meticulously forged by ancient blacksmiths to form a seamless second skin. Every joint is reinforced with riveted girders, and the polished surface reflects the wearer's resolve, turning the armor into a mobile fortress of unyielding defiance.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 29,
+    "name": "Fury",
+    "requirement": "💪 S",
+    "ar": "🧥S",
+    "mr": "👣7",
+    "cost": "16g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Fury Armor Kit\nFury Armor is an intimidating blend of traditional craftsmanship and advanced materials, meticulously designed to enhance the character's strength, durability, and combat prowess. Weighing 30 pounds, this robust armor offers unparalleled protection and power, perfect for breaking enemy lines and absorbing significant damage in the heat of battle. The armor is constructed from Rage Plates, a rare alloy that hardens during the character’s berserk states, and Adaptive Mesh, a flexible material that conforms to the character's movements and transformations, ensuring that their ferocity is never hindered.\nThe armor’s design is both fearsome and functional, with dark metallic tones, crimson highlights, and battle-worn insignias that strike terror into the hearts of enemies. The surface is covered with intricate engravings and runes that glow faintly when the character enters a rage, channeling their ferocity into raw combat power. The Adaptive Mesh allows for rapid, powerful movements, while the Rage Plates provide exceptional protection, making the character a terrifying force on the battlefield.\nWhen the character dons Fury Armor, they become a walking fortress of raw strength and advanced technology. The armor's Combat Enhancers tap into the character’s adrenaline, boosting their physical power and accelerating healing during battle. Despite its heavy construction, the armor operates silently, thanks to noise-dampening materials, allowing the character to approach their enemies unnoticed before unleashing devastating attacks. Fury Armor is more than just protection; it is a manifestation of the character’s unstoppable rage and indomitable spirit.",
+    "pic": "https://drive.google.com/file/d/1GHfLLWEmYlCgKNn7SfrhlEpAthuJxV2m/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 30,
+    "name": "Gaia",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Gaia Armor Kit\nGaia Armor is an extraordinary blend of organic and synthetic materials, designed specifically for the character to master battlefield control and defense. This biotechnological marvel offers exceptional protection and adaptability, ensuring that the character remains a formidable force in any environment. Composed of plant-based nanotechnology interwoven with high-strength synthetic fibers, Gaia Armor provides both flexibility and durability, allowing the character to move with ease while being shielded from harm.\nVisually, Gaia Armor is a stunning representation of the harmony between nature and technology. The armor features a palette of deep greens and earthy browns, reminiscent of a forest, with bioluminescent accents that glow softly, adjusting to the surrounding environment to enhance camouflage. The surface of the armor has a textured, natural appearance, with intricate patterns of leaves and vines etched into the material. As the character moves, the armor adapts seamlessly, its organic components shifting and growing to meet the challenges of the terrain, all while maintaining an air of silent, deadly grace.\nGaia Armor embodies the perfect fusion of nature and technology, providing the character with unmatched protection and versatility on the battlefield.",
+    "pic": "https://drive.google.com/file/d/1A1zjwigMg8H_3bGRfByF-rOOrOoGlMNN/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 31,
+    "name": "Gambeson",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Gambeson is a quilted textile masterpiece, woven from dense layers of linen and wool to absorb the force of blows. Its padded construction offers a surprising balance of flexibility and protection, resembling a second layer of flesh that moves in harmony with the wearer's every motion.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 32,
+    "name": "Geomantic",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Geomantic Armor Kit\nGeomantic Armor is a unique fusion of natural materials and advanced technology, crafted specifically for the character to excel in tactical support and spellcasting. This armor offers exceptional defense and mobility through its Earth-Infused Plating, reinforced with minerals and crystals for superior protection, and Adaptive Layering, which adjusts to environmental conditions. Powered by a Magitech Core, the armor enhances the character's spellcasting abilities, making their elemental magic more potent and efficient.\nWhen worn, Geomantic Armor presents an awe-inspiring sight. The armor’s surface is an intricate blend of earthy browns and greens, with shimmering crystal highlights that catch the light and reflect the character’s connection to the earth. The runes and symbols etched across the armor pulse rhythmically with elemental energy, casting a soft glow that intensifies during spellcasting. The suit hums with a low, resonant frequency, a constant reminder of the powerful Magitech Core within. As the character moves, the armor adapts seamlessly to their environment, the layers shifting and adjusting with a subtle, organic sound, providing both protection and freedom of movement.\nGeomantic Armor is the ultimate combination of natural fortitude and advanced technology, offering the character unmatched protection, mobility, and spellcasting prowess, ensuring their dominance on the battlefield.\nEffects\n-- Armor operates effectively in a wide temperature range (-40°F to 130°F).\n-- See below for specific enhancements.",
+    "pic": "https://drive.google.com/file/d/1gdYzJFbXl2pBV7iat-sCIGrYFs3aaLQD/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 33,
+    "name": "Glowweave Robe",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Glowweave Robe is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 34,
+    "name": "Half-Plate",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Half-Plate combines the resilience of plate armor with the agility of chainmail, featuring reinforced plates on the torso and limbs while leaving the arms and legs clad in supple leather. The design strikes a balance between defense and mobility, its angular contours suggesting both strength and calculated restraint.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 35,
+    "name": "Hardened Riot Exo-Suit",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Hardened Riot Exo-Suit is a fusion of cybernetic engineering and tactical armor, featuring a skeletal framework of carbon fiber and titanium alloy. Its surface is covered in a reactive polymer that shifts color in response to environmental threats, while integrated plating offers protection against both ballistic and energy-based attacks.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 36,
+    "name": "Heavy Laminar",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Heavy Laminar is constructed from overlapping layers of tempered steel and reinforced leather, bound together with braided steel cords. The armor's layered design distributes impact across its surface, creating a visual effect of rippling metal that seems to absorb blows rather than resist them.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 37,
+    "name": "Hide Armor",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Hide Armor is crafted from the thick, supple hides of large beasts, expertly tanned and layered to form a flexible yet durable defense. Its natural texture and muted sheen give it a rugged, primal appearance, blending seamlessly with the wilderness.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 38,
+    "name": "Husk Armor",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Husk Armor is made from the dried husks of genetically engineered seed vessels. After the seeds are released, the remaining brownish husk is roughly the size of an adult humanoid and can be tailored to fit different species. Like pod armor, it is a form of bio-armor that relies on grown rather than forged materials. The husk is lightweight for its coverage and provides good protection against impacts and abrasion, though it lacks the self-sealing and regeneration of living carapace or vine armor.\nThe appearance is organic and slightly rough—a brown, pod-like shell that wraps around the wearer and is secured with straps or natural fastenings. It is often used by forces that have access to bio-engineering and prefer sustainable, grown equipment over metal and plastic. Husk armor is typically less expensive than carapace and does not require the same level of care as living vine or spider armor.\nHusk Armor offers solid bio-armor protection in a durable, non-living form.\nEffects\n-- Made from dried seed-vessel husks; can be tailored to wearer size and species.\n-- Good protection against impacts; no sealing or regeneration.\n-- Lightweight for its coverage compared to metal equivalents.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 39,
+    "name": "Juggernaut Armor",
+    "requirement": "💪 S",
+    "ar": "🧥S",
+    "mr": "👣7",
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Juggernaut Armor is heavily armored, power-assisted, and built to dominate the battlefield. The wearer becomes a walking engine of destruction, capable of absorbing and shrugging off attacks that would disable lighter suits. Multiple hardpoints, joint locks, and strength enhancers allow the operator to carry heavy weapons and close with the enemy under fire, while sealed systems and integrated lighting support operations in any environment.\nThe suit's silhouette is imposing: thick plating, reinforced limbs, and a helm that integrates targeting and macrovisor systems. Every component is geared toward maximum durability and firepower. Juggernaut Armor is reserved for elite assault units and special operations where overwhelming force and resilience are required.\nJuggernaut Armor defines the heavy-assault role, trading agility for near-unmatched protection and firepower.\nEffects\n-- Compensators, two external and one internal hard point, sealed, two flood lights, genjector, joint locks, strength enhancers, targeting computer, communicator kit, ultralock boot kit, macrovisor kit (included).",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 40,
+    "name": "Lamellar Armor",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Lamellar Armor consists of overlapping rectangular plates sewn onto a sturdy backing, offering a balance of mobility and protection. The intricate arrangement of the scales mimics the armor of reptiles, exuding a sense of ancient craftsmanship and tactical precision.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 41,
+    "name": "Leaf Armor",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Leaf Armor is a symbiotic vine that grows on the host's body and must be watered occasionally. The vine produces layers of tough, shingle-like leaves that absorb damage and slough off when struck, then regrow within days. A single plant produces enough leaves to last through an extended adventure, making it a renewable form of protection favored by those who can maintain a symbiotic relationship with the organism.\nThe armor looks distinctly organic: green or brown foliage overlapping across the wearer's torso and limbs, with a texture that is both plant-like and resilient. It does not seal the wearer from the environment but does provide meaningful protection against cuts and impacts. The vine must be cared for (water, light, and minimal damage to the root structure) to keep it healthy and productive.\nLeaf Armor combines renewable protection with a distinctive, living aesthetic.\nEffects\n-- Symbiotic vine produces damage-absorbing leaves that fall away when hit and regrow in a matter of days.\n-- Requires occasional watering and basic care.\n-- Does not provide sealed environment; protection is against physical damage.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 42,
+    "name": "Leather Jacket",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A Leather Jacket is a lightweight, form-fitting armor made from cured animal hide, reinforced with stitching and metal tips for added durability. Its supple surface conforms to the wearer's body, providing a practical and versatile layer of defense.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 43,
+    "name": "Marine Armor",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Marine Armor is heavy, well-defended suit armor and is widely recognized as the standard protection for elite marine forces. It combines full coverage with an internal environment, strength enhancers, and a full suite of tactical systems so that marines can fight in vacuum, in atmosphere, or in contaminated zones without compromise. The suit is sealed, climate-controlled, and built to withstand the rigors of ship-to-ship and planetary operations.\nThe armor's design is iconic: solid plating, full helmet with macrovisor, and a balanced array of hardpoints and internal slots. Integrated lighting, communicator, and targeting systems are standard, along with slap-o-matic and nutrijector for sustained operations. Marines trained in this armor are expected to operate in any environment and prevail.\nMarine Armor represents the gold standard for general-purpose heavy suit protection.\nEffects\n-- Compensators, one external and one internal hard point, internal environment, sealed, strength enhancers, slap-o-matic, nutrijector, targeting computer, communicator kit, macrovisor kit, illuminator kit (included).",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 44,
+    "name": "Mithril Mail",
+    "requirement": "💪 S",
+    "ar": "🧥S",
+    "mr": "👣7",
+    "cost": "15g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Mithril Mail is a rare and lustrous armor forged from the ethereal silver-gray metal known as mithril. Its lightweight yet impossibly strong threads shimmer faintly, as if woven from starlight itself, making it a coveted treasure among warriors.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 45,
+    "name": "Obsidian Carapace",
+    "requirement": "💪 S",
+    "ar": "🧥S",
+    "mr": "👣7",
+    "cost": "15g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Obsidian Carapace is a seamless, matte-black exosuit forged from hyper-dense volcanic glass and reinforced with a lattice of nano-fibers, its surface etched with faint, iridescent circuitry that pulses with a low, ambient glow. The armor’s contours mimic the jagged, organic geometry of a predator’s skeleton, with overlapping plates that shift subtly under movement, as if alive, while its joints are lined with a slick, non-reflective polymer that repels both physical impact and energy discharges. In dim light, faint fractal patterns shimmer across its surface, resembling trapped lightning, and the air around it hums with a static charge, as though the suit itself is a conduit for latent power.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 46,
+    "name": "Padded Cloth",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A dense, quilted matrix of interwoven synthetic fibers and reinforced polymer weaves, the Padded Cloth armor forms a second skin over the wearer’s body, its surface etched with micro-channel patterns that dissipate heat and moisture. In medieval contexts, it mimics layered wool and linen, stitched with geometric precision to balance flexibility and impact absorption; in sci-fi iterations, it adopts a sleek, matte-black polymer with embedded neural接口 nodes that adapt to the user’s biomechanics. Its seams are reinforced with a translucent, honeycomb-like resin, giving it a faintly iridescent sheen under bright light, while discreet utility pockets along the torso and limbs suggest a focus on practicality over ornamentation.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 47,
+    "name": "Plate Harness",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣9",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A fusion of medieval craftsmanship and futuristic engineering, the Plate Harness is a sleek, angular exoskeleton forged from blackened titanium-infused steel, its surface etched with intricate, glowing circuitry that pulses faintly with an inner light. The armor’s overlapping plates mimic traditional chainmail in texture but are reinforced with lightweight nanocomposite plating, while a reinforced, helmet-like visor curves over the wearer’s face, its polished surface reflecting ambient light like a mirror. Articulated joints allow fluid movement, and along the spine runs a serpentine conduit of faintly bioluminescent alloy, suggesting both protection and an unseen, adaptive technological interface.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 48,
+    "name": "Pod Armor",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Pod Armor is grown from enormous seed-pods produced by a dedicated plant. The pods are cultivated to the size of the intended wearer (humanoid or other species) and the cost typically covers the plant itself, which continuously produces pods. Once a pod is picked and used, it withers and becomes useless as armor after roughly one adventure (about two to four weeks). A healthy plant always has at least one pod ready for harvest, so users can rotate pods as needed.\nThe armor appears as a large, pod-like shell that the wearer steps into or wraps around themselves. It is organic, relatively lightweight, and provides good protection for its weight, but it is not sealed and does not repair itself like carapace or leaf armor. Pod armor is popular among forces that use bio-engineered equipment and can maintain the growing plants.\nPod Armor offers renewable, grown protection with the constraint of limited pod lifespan once harvested.\nEffects\n-- Grown pods; cost is for the plant, which produces pods continuously.\n-- Harvested pod lasts one adventure (about 2–4 weeks) then withers.\n-- Plant keeps at least one pod available for harvest; can be grown to fit different species.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 49,
+    "name": "Power Frame",
+    "requirement": "💪 10",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "10g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A Power Frame is a military version of the industrial power lifters used to move cargo and heavy objects. It resembles an oversized humanoid framework with large mechanical claws and a partially armored roll cage to protect the operator. In addition to lifting and carrying, it is fitted with compensators, strength enhancers, joint locks, and multiple hardpoints, making it suitable for combat engineering, breaching, and heavy-weapons deployment.\nThe frame towers over a normal humanoid; the operator sits or stands inside, controlling the limbs and systems. Armor coverage is sufficient to protect against small arms and fragments, but the frame is not a substitute for full assault armor in open combat. It excels in logistics, demolition, and roles where raw strength and tool capacity matter most.\nThe Power Frame is the military heavy-lifter and combat-engineering platform of choice.\nEffects",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 50,
+    "name": "Riot Gear",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣9",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A hybrid of modular plating and reinforced synthetic fabric, Riot Gear merges angular, overlapping plates of darkened alloy with sleek, ergonomic contours that hug the wearer’s form. Embedded within the armor’s surface are faintly glowing etchings of circuitry, their patterns shifting subtly in response to movement, while reinforced polymer panels flex like second skin under impact. The helmet’s visor integrates a translucent, holographic display that projects tactical data and environmental hazards, its edges lined with a faint, pulsating aura of adaptive camouflage that blurs the wearer’s outline against chaotic backdrops.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 51,
+    "name": "Samurai Armor",
+    "requirement": "💪 12",
+    "ar": "🧥12",
+    "mr": "👣8",
+    "cost": "7g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A fusion of traditional craftsmanship and cutting-edge materials, this armor combines layered steel plates with reinforced polymer composites, molded into a sleek, ergonomic silhouette. The helmet features a narrow, angular visor reminiscent of samurai kabuto, framed by glowing circuitry that pulses with a faint, neon-blue aura, while articulated joints are sheathed in seamless cerametal alloys that shimmer under light. A pair of curved, blade-like pauldrons extend from the shoulders, etched with intricate wave patterns that seem to ripple subtly, as if caught between solid matter and liquid energy.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 52,
+    "name": "Scale Mail",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Overlapping plates of reinforced polymer and interwoven carbon fiber form a second-skin exosuit, each scale etched with micro-grooves that channel kinetic energy away from the wearer. The armor’s surface shimmers with a faint iridescence, as if coated in liquid metal that shifts hue with movement, while embedded filaments of adaptive nanofiber tighten or loosen dynamically to balance flexibility and impact resistance. A faint, pulsating glow emanates from the joints, suggesting latent reactive properties that might deflect projectiles or dissipate heat, though its full potential remains enigmatic.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 53,
+    "name": "Scout Armor",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Scout Armor is a lightweight suit of advanced plate affixed to a durable body suit, designed for reconnaissance, flanking, and operations where stealth and mobility matter. It is constructed with a personal stealth net that significantly increases the wearer's ability to avoid detection—granting a substantial bonus to Dexterity-based rolls opposed by Awareness when moving unseen. Compensators, internal hard point, and full communications and macrovisor support are included, along with jump-pack and oxygenator options for extended and vertical operations.\nThe armor is sleek and low-profile, with a matte or adaptive finish that breaks up the wearer's outline. It favors speed and agility over raw protection, making it the choice for scouts, infiltrators, and light strike teams who need to get in, observe or strike, and get out.\nScout Armor excels in roles where seeing without being seen is the priority.\nEffects\n-- Personal stealth net: substantial bonus to Dexterity rolls vs. Awareness when attempting to avoid detection.\n-- Compensators, one internal hard point, targeting computer, communicator kit, jump-pack kit, macrovisor kit, oxygenator kit (included).",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 54,
+    "name": "Space Suit",
+    "requirement": "💪 4",
+    "ar": "🧥4",
+    "mr": "👣12",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Space Suits are compact and efficient, fully spaceworthy and capable of sustaining the wearer in vacuum and hostile atmospheres. They are of minimal use in direct combat due to limited armor and mobility, but they are essential for extravehicular activity, emergency egress, and operations in airless or toxic environments. Integrated systems include sealing, internal environment, illuminator, macrovisor with star-light and star-lamp enhancement, and ultralock boot kit for secure footing.\nThe suit is form-fitting and functional, with a helmet that provides a full seal and often enhanced vision for low-light and vacuum. It is the baseline survival gear for anyone operating in space or in similarly hostile conditions where breathable air and pressure are not guaranteed.\nSpace Suits are the minimum standard for surviving and working in vacuum.\nEffects\n-- Sealed, internal environment, illuminator kit, macrovisor kit with star-light and star-lamp enhancement, ultralock boot kit (included).\n-- Optimized for EVA and hostile atmosphere; not intended for frontline combat.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 55,
+    "name": "Spectre",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Spectre Armor Kit\nSpectre Armor is the pinnacle of stealth technology, crafted specifically for the character to excel in reconnaissance, long-range elimination, and survival in hostile environments. Weighing only 15 pounds, this advanced suit is constructed from Nano-Weave Fabric, offering exceptional resistance to both energy and ballistic attacks while maintaining unparalleled flexibility. This flexibility ensures that the wearer can perform the rapid, agile movements essential for stealth operations.\nWhen donned, the Spectre Armor envelops the character in a sleek, matte black shell that seems to absorb light, rendering them nearly invisible in shadowed environments. The armor’s adaptive panels subtly shift in hue, blending seamlessly with the character's surroundings, creating a chameleon-like effect that enhances stealth. The sensation of wearing the armor is akin to becoming one with the environment—silent and fluid, with every movement cushioned by noise-dampening materials that prevent any sound from escaping. The pouches and fasteners are strategically placed for easy access to gear, yet they blend into the armor's minimalist design, ensuring nothing disrupts the smooth, ghostly appearance.\nSpectre Armor combines advanced protection with stealth and agility, making it an indispensable asset for the character on critical missions. Its ability to adapt and remain undetected in various environments ensures the character can carry out their objectives with unparalleled precision.\nEffects\n-- Power is supplied by an integrated battery pack, supporting extended missions.\n-- Operates in extreme temperatures (-50°F to 130°F); vulnerable to prolonged exposure to corrosives.",
+    "pic": "https://drive.google.com/file/d/1a0s3y2wD-qoIzmC59lmbN9CdtlNvcxX_/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 56,
+    "name": "Spider Armor",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Spider Armor is one of the most unusual forms of bio-armor: thousands of tiny arachnids swarm over the wearer's body, interlocking their thorny legs to form a living layer that covers every exposed surface. When some spiders are destroyed by impacts or projectiles, the semi-sentient swarm quickly redistributes to close gaps, restoring full coverage. The spiders also act as a living cargo net, holding the wearer's gear in place, and they bite unauthorized individuals who attempt to touch the wearer or their belongings—inflicting moderate damage and an irritating itch. The armor can be disconcerting for those unaccustomed to it, but it provides resilient, self-repairing protection and built-in security for carried items.\nThe appearance is unmistakable: a shifting, crawling layer of small arachnids that constantly adjust to movement and damage. The sensation of wearing spider armor is unique; the wearer may feel slight movement and the spiders' grip on equipment. Despite its unsettling nature, the armor is highly effective and can be maintained with minimal logistics compared to metal or powered suits.\nSpider Armor is the choice for those who want living, self-repairing protection and are willing to accept its distinctive nature and defensive bite.\nEffects\n-- Living arachnid layer that redistributes to cover gaps when some spiders are lost; provides resilient protection.\n-- Acts as a cargo net, securing the wearer's items.\n-- Spiders bite unauthorized persons who touch the wearer or their gear; bite causes moderate damage and an irritating itch.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 57,
+    "name": "Spider Enhanced",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣9",
+    "cost": "7g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "For an additional cost, larger warrior spiders can be purchased to upgrade Spider Armor. The enhanced swarm provides higher armor rating (20 AR). The bite of the larger spiders is more potent, causing greater damage to anyone who attempts to pilfer the wearer's belongings. These larger spiders can recognize the host's close associates and will not attack them if they judge the associate's intentions to be honorable.\nEffects\n-- Higher armor rating (20 AR) than standard Spider Armor.\n-- More potent bite against unauthorized persons touching the wearer or their gear.\n-- Enhanced spiders can remember and spare the host's trusted associates.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 58,
+    "name": "Spiked Armor",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣9",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Spiked Armor is a fearsome defensive gear adorned with jagged, protruding spikes along its surface. Designed to deter close combat attacks, its intimidating appearance radiates menace, making the wearer a formidable opponent on the battlefield.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 59,
+    "name": "Splint Mail",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣9",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Splint Mail is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 60,
+    "name": "Stoneform Armor",
+    "requirement": "💪 10",
+    "ar": "🧥10",
+    "mr": "👣9",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Stoneform Armor is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 61,
+    "name": "Tactical Vest",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Tactical Vest is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 62,
+    "name": "Tower Shield Harness",
+    "requirement": "💪 S",
+    "ar": "🧥S",
+    "mr": "👣7",
+    "cost": "9g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Tower Shield Harness is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 63,
+    "name": "Traveler’s Cloak",
+    "requirement": "💪 6",
+    "ar": "🧥6",
+    "mr": "👣11",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Traveler’s Cloak is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 64,
+    "name": "Trooper Armor",
+    "requirement": "💪 8",
+    "ar": "🧥8",
+    "mr": "👣10",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Trooper Armor is the standard personal armor for infantry across many forces. It consists of rigid plates over a micro-mesh body suit and includes a full-head helmet. It offers solid protection against small arms and fragments while remaining relatively light and mobile. One external hard point allows for mission-specific gear; integrated targeting computer, communicator kit, and oxygenator support sustained operations in atmosphere or in thin-air environments.\nThe suit's appearance is utilitarian and recognizable: plated torso and limbs, sealed helmet, and a balance of coverage and weight that allows the average trooper to march, fight, and operate for extended periods. It is the workhorse of conventional infantry.\nTrooper Armor is the baseline infantry suit for general-purpose combat and patrol.\nEffects\n-- One external hard point, targeting computer, communicator kit, oxygenator kit (included).",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 65,
+    "name": "Unarmored",
+    "requirement": "💪 4",
+    "ar": "🧥4",
+    "mr": "👣12",
+    "cost": "0s",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "No Armor, Clothing, or other non-armor gear",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 66,
+    "name": "Void Shroud",
+    "requirement": "💪 4",
+    "ar": "🧥4",
+    "mr": "👣12",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.615956+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Void Shroud Kit\nVoid Shroud is a set of enchanted robes that enhances the character's connection to the void, providing formidable protection against both physical and magical attacks. These robes, weighing only 10 pounds, are crafted from Void Weave Fabric, a mysterious blend of void-infused silk and arcane threads, creating a fabric that shimmers with a dark, otherworldly glow. This armor allows the character to move with exceptional mobility and cast spells with heightened efficiency.\nWhen the character dons the Void Shroud, the robes seem to meld with the surrounding shadows, their colors shifting and swirling like the night sky—deep purples, blues, and star-speckled blacks. Intricate runes and sigils pulse with void energy, creating an ethereal aura that both mesmerizes and intimidates. The robes flutter silently with each movement, the fabric appearing to absorb light, rendering the character a ghostly, almost intangible figure on the battlefield. To enemies, the character is a spectral presence, seemingly at one with the void, their form constantly flickering at the edge of perception.\nVoid Shroud merges void magic with arcane craftsmanship, granting the character unparalleled protection and spellcasting power, enabling them to dominate any battlefield with their dark, otherworldly presence.\nEffects\n-- Enchanted robes that enhances the character’s connection to the void, providing protection against physical and magical attacks.",
+    "pic": "https://drive.google.com/file/d/18H1hFlHWgjGRpSLkz-A7do0f_uwS0tW2/view?usp=drive_link",
+    "is_guildspace_locked": false
+  }
+]

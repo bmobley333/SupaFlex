@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Check, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationType, CustomCreationItem, PowerTable } from '../../types/game';
+import { CustomCreationType, CustomCreationItem } from '../../types/game';
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
 import { InfoTooltip } from '../common/InfoTooltip';
 
@@ -154,9 +154,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeRole = useCharacterStore((state) => state.activeRole);
   const skillsets = useCharacterStore((state) => state.skillsets);
-  const powerTables = useCharacterStore((state) => state.powerTables);
-  const addPowerTable = useCharacterStore((state) => state.addPowerTable);
+  const powers = useCharacterStore((state) => state.powers);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
+  const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
+  const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
 
   const isGm = activeRole === 'gm';
 
@@ -382,14 +383,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
   // Group all available power tables by Category for clean <optgroup> dropdown selection
   const groupedPowerTables = useMemo(() => {
-    const groups: Record<string, PowerTable[]> = {};
-    (powerTables || []).forEach((tbl) => {
-      const cat = tbl.category || 'Class';
+    const groups: Record<string, { name: string }[]> = {};
+    const tableNames = Array.from(new Set(powers.map((p) => p.table_group || p.table_name || 'General').filter(Boolean)));
+    tableNames.sort((a, b) => a.localeCompare(b)).forEach((tblName) => {
+      const sample = powers.find((p) => (p.table_group || p.table_name) === tblName);
+      const cat = sample?.category || sample?.source || 'General';
       if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(tbl);
+      groups[cat].push({ name: tblName });
     });
     return groups;
-  }, [powerTables]);
+  }, [powers]);
 
   if (!isOpen) return null;
 
@@ -483,23 +486,23 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
       setIsSubmitting(true);
       setFeedback(null);
-      const authorDisplayName = playerName?.trim() || playerEmail?.split('@')[0] || 'Hero';
 
       try {
-        const newTable: Partial<PowerTable> = {
+        const newTable = {
           name: name.trim(),
           category: finalCategory,
           genres: selectedGenres,
-          author_name: isGm ? `${authorDisplayName} (GM)` : authorDisplayName,
-          author_email: playerEmail || 'guest@metascape.com',
-          party_id: activePartyId || null,
-          gm_approved: isGm ? true : false,
-          created_at: new Date().toISOString(),
         };
 
-        const saved = await gameApi.savePowerTable(newTable);
-        if (saved) {
-          addPowerTable(saved);
+        if (activeCharacter) {
+          const currentCustom = activeCharacter.sheet_data?.custom_power_tables || [];
+          if (!currentCustom.some((t: any) => t.name.toLowerCase() === name.trim().toLowerCase())) {
+            updateActiveSheetData((prev) => ({
+              ...prev,
+              custom_power_tables: [...(prev.custom_power_tables || []), newTable],
+            }));
+            await saveActiveCharacter();
+          }
         }
 
         setFeedback({
@@ -576,8 +579,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
     const authorDisplayName = playerName?.trim() || playerEmail?.split('@')[0] || 'Hero';
     const tierIcon = tier === 'Minor' ? '🍺' : tier === 'Lesser' ? '🪄' : tier === 'Greater' ? '✨' : '💫';
-    const targetTableObj = powerTables.find((t) => t.name === selectedPowerTable);
-    const assignedCategory = targetTableObj?.category || 'Class';
+    const samplePower = powers.find((p) => (p.table_group || p.table_name) === selectedPowerTable);
+    const assignedCategory = samplePower?.category || samplePower?.source || 'Class';
 
     const categoryStr =
       creationType === 'relic'
@@ -627,6 +630,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       itemDataPayload.effect = effect.trim();
       itemDataPayload.ready = powerReady;
       itemDataPayload.ready_category = powerReady;
+      itemDataPayload.table_group = selectedPowerTable;
       itemDataPayload.table = selectedPowerTable;
       itemDataPayload.category = assignedCategory;
     } else if (creationType === 'relic') {

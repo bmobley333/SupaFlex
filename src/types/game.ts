@@ -8,6 +8,12 @@ export type AttributeKey = 'might' | 'motion' | 'mind' | 'magic' | 'moxie';
 export type DieRating = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'Exhausted';
 export type PowerReadyType = 'primary_arsenal' | 'mobility_defense' | 'support_passive' | 'contextual_passive';
 
+export type PowerDiscipline = 'Sorce' | 'Psionics' | 'Psychosomatics' | 'Martial' | 'Universal';
+export type TechDiscipline = 'Archaic' | 'Tech' | 'BioTech' | 'CyberTech';
+export type UsageType = 'Active' | 'Passive' | 'Quirk';
+export type HardwareTier = 'Minor' | 'Lesser' | 'Greater' | 'Epic';
+export type PowerTableCategory = 'Race' | 'Class' | 'Discipline' | 'Combat Style' | 'Handicap' | 'Luck' | 'Custom';
+
 export interface ReadySlotConfig {
   tier: number;
   totalSlots: number;
@@ -28,6 +34,13 @@ export interface AbilitySlot {
   ready?: PowerReadyType;
   is_readied?: boolean;
   notes?: string;
+  table_group?: string;
+  usage_type?: UsageType;
+  source?: string;
+  discipline?: string;
+  is_handicap?: boolean;
+  flaw_points?: number;
+  stat_hook?: any;
 }
 
 export interface EquipmentSlot {
@@ -75,6 +88,9 @@ export interface SupabaseArmor {
   ar: string;
   mr: string;
   cost: string;
+  discipline?: string;
+  table_group?: string;
+  compatible_with?: string;
   notes?: string;
   pic?: string;
   created_at?: string;
@@ -87,6 +103,9 @@ export interface SupabaseGear {
   is_guildspace_locked?: boolean;
   name: string;
   cost: string;
+  discipline?: string;
+  table_group?: string;
+  compatible_with?: string;
   action?: string;
   usage?: string;
   notes?: string;
@@ -210,6 +229,9 @@ export interface SupabaseShield {
   requirement: string;
   max_block: string;
   mr: string;
+  discipline?: string;
+  table_group?: string;
+  compatible_with?: string;
   notes?: string;
   cost: string;
   created_at?: string;
@@ -268,6 +290,9 @@ export interface SupabaseWeapon {
   dmg: string;
   max_block: string;
   cost: string;
+  discipline?: string;
+  table_group?: string;
+  compatible_with?: string;
   notes?: string;
   pic?: string;
   created_at?: string;
@@ -475,7 +500,14 @@ export interface CharacterSheetData {
   known_individual_skills?: string[]; // Individually learned skills outside a skillset
   custom_skillsets?: CustomSkillsetDefinition[]; // Custom user-created skillsets
   favorite_power_tables?: string[]; // Favorited power tables (table_name strings)
-  custom_power_tables?: { name: string; sub: string }[]; // Custom user-created power tables
+  favorite_weapon_tables?: string[]; // Favorited weapon tables
+  favorite_armor_tables?: string[]; // Favorited armor tables
+  favorite_shield_tables?: string[]; // Favorited shield tables
+  favorite_gear_tables?: string[]; // Favorited gear tables
+  favorite_hardware_tables?: string[]; // Favorited hardware tables
+  favorite_relic_tables?: string[]; // Favorited relic tables
+  favorite_skillset_tables?: string[]; // Favorited skillset tables
+  custom_power_tables?: { name: string; sub?: string; category?: string; genres?: string[] }[]; // Custom user-created power tables
   custom_powers?: Power[]; // Custom user-created powers
   custom_magic_items?: MagicItem[]; // Custom user-created magic items
   ability_overrides?: Record<string, { action?: string; usage?: string; effect?: string }>; // Player edits for existing stock abilities
@@ -542,9 +574,14 @@ export interface Power {
   category?: string;
   ready?: PowerReadyType;
   sub?: string;
-  table?: string;
+  table_group?: string;
   table_name?: string;
   source?: string;
+  usage_type?: UsageType;
+  discipline?: string;
+  is_handicap?: boolean;
+  flaw_points?: number;
+  stat_hook?: any;
   version?: number;
   base_name?: string;
 }
@@ -776,6 +813,10 @@ export interface MagicItem {
   category?: string;
   sub?: string;
   table_name?: string;
+  table_group?: string;
+  discipline?: string;
+  compatible_with?: string;
+  tier?: HardwareTier;
   source?: string;
   version?: number;
   base_name?: string;
@@ -802,6 +843,9 @@ export interface Skillset {
   is_guildspace_locked?: boolean;
   skills: string[];
   source: string | null;
+  discipline?: string;
+  category?: string;
+  table_group?: string;
   notes?: string;
   created_at: string;
 }
@@ -857,8 +901,9 @@ export type CustomCreationType =
 export interface PowerTable {
   id?: number;
   name: string;
-  category: string;
+  category: PowerTableCategory | string;
   genres?: string[];
+  is_guildspace_locked?: boolean;
   created_at?: string;
   author_name?: string;
   author_email?: string;
@@ -875,6 +920,7 @@ export interface CustomCreationData {
   slot_weight?: 1 | 2 | 3 | 4;
   ready_category?: string;
   skills?: string[];
+  table_group?: string;
   table?: string;
   [key: string]: any;
 }

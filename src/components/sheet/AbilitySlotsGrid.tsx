@@ -4,6 +4,7 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { QuickDeckBar } from '../common/QuickDeckBar';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
 import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed, getApCostForNextSlot, getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
 import { getPowerReadyCategory, getReadySlotConfig, validateReadyMatrix } from '../../utils/readyMatrixSchedule';
@@ -152,7 +153,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const {
     activeCharacter,
     powers,
-    powerTables,
     magicItems,
     updateActiveSheetData,
     saveActiveCharacter,
@@ -264,56 +264,37 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setActiveRightTab('EDITOR');
   };
 
-  const handlePinTable = (tableName: string) => {
-    if (!tableName || tableName === 'ALL' || tableName === 'STARRED') return;
-    const currentFavs: string[] = sheetData.favorite_power_tables || (pinnedTableNames.length > 0 ? pinnedTableNames : []);
-    if (currentFavs.includes(tableName)) {
-      setActiveTableName(tableName);
-      return;
+  const handleUpdatePinnedTables = (tables: string[]) => {
+    if (type === 'powers') {
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        favorite_power_tables: tables,
+      }));
+    } else {
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        favorite_hardware_tables: tables,
+      }));
     }
-    if (currentFavs.length >= 8) {
-      setCatalogFeedback({ type: 'error', message: 'Quick Deck is full! Maximum 8 pinned tables allowed.' });
-      return;
-    }
-    const updated = [...currentFavs, tableName];
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      favorite_power_tables: updated,
-    }));
     saveActiveCharacter();
-    setActiveTableName(tableName);
-  };
-
-  const handleUnpinTable = (e: React.MouseEvent, tableName: string) => {
-    e.stopPropagation();
-    const currentFavs: string[] = sheetData.favorite_power_tables || (pinnedTableNames.length > 0 ? pinnedTableNames : []);
-    const updated = currentFavs.filter((t) => t !== tableName);
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      favorite_power_tables: updated,
-    }));
-    saveActiveCharacter();
-    if (effectiveActiveTable === tableName) {
-      setActiveTableName(updated.length > 0 ? updated[0] : 'ALL');
-    }
   };
 
   const handleToggleFavoriteTable = (tableName: string) => {
     if (!tableName || tableName === 'ALL' || tableName === 'STARRED') return;
     const isPinned = pinnedTableNames.includes(tableName);
     if (isPinned) {
-      const currentFavs: string[] = sheetData.favorite_power_tables || (pinnedTableNames.length > 0 ? pinnedTableNames : []);
-      const updated = currentFavs.filter((t) => t !== tableName);
-      updateActiveSheetData((prev) => ({
-        ...prev,
-        favorite_power_tables: updated,
-      }));
-      saveActiveCharacter();
+      const updated = pinnedTableNames.filter((t) => t !== tableName);
+      handleUpdatePinnedTables(updated);
       if (effectiveActiveTable === tableName) {
         setActiveTableName(updated.length > 0 ? updated[0] : 'ALL');
       }
     } else {
-      handlePinTable(tableName);
+      if (pinnedTableNames.length >= 8) {
+        setCatalogFeedback({ type: 'error', message: 'Quick Deck is full! Maximum 8 pinned tables allowed.' });
+        return;
+      }
+      const updated = [...pinnedTableNames, tableName];
+      handleUpdatePinnedTables(updated);
     }
   };
 
@@ -838,30 +819,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setActiveRightTab('CATALOG');
   };
 
-  // Filter catalog items by Category & Deduplication & Genre Scope (Most Restrictive: Table Genres ∩ Power Genres)
+  // Filter catalog items by Category & Deduplication & Genre Scope
   const categoryFilteredCatalog = useMemo(() => {
     return fullCatalog.filter((item) => {
       // 0. Global Genre Scope Filtering
-      if (type === 'powers') {
-        const powerItem = item as Power;
-        const tblName = powerItem.table || powerItem.table_name;
-        const matchingTable = powerTables?.find(
-          (t) => t.name.trim().toLowerCase() === tblName?.trim().toLowerCase()
-        );
-
-        // Power must match activeGenre
-        if (!matchesGenre(powerItem.genres, activeGenre)) {
-          return false;
-        }
-
-        // Parent table (if found) must ALSO match activeGenre (Most Restrictive intersection)
-        if (matchingTable && !matchesGenre(matchingTable.genres, activeGenre)) {
-          return false;
-        }
-      } else {
-        if (!matchesGenre(item.genres, activeGenre)) {
-          return false;
-        }
+      if (!matchesGenre(item.genres, activeGenre)) {
+        return false;
       }
 
       // 1. Deduplication: Filter out items already in the character's learned roster
@@ -878,11 +841,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       }
       return true;
     });
-  }, [fullCatalog, knownAbilityNamesSet, type, favoriteTables, isItemStarred, activeGenre, powerTables]);
+  }, [fullCatalog, knownAbilityNamesSet, type, favoriteTables, isItemStarred, activeGenre]);
 
   const groupedTables = useMemo(() => {
     const acc = categoryFilteredCatalog.reduce((map, item) => {
-      let tableName = (item as any).table || (item as any).table_name;
+      let tableName = (item as any).table_group || (item as any).table || (item as any).table_name;
       if (!tableName) {
         if (type === 'powers') {
           tableName = 'General Powers';
@@ -937,77 +900,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   }, [groupedTables, type]);
 
   const pinnedTableNames: string[] = useMemo(() => {
-    if (type !== 'powers') return [];
-    const favs: string[] = sheetData.favorite_power_tables || [];
-    if (favs.length === 0) {
-      const luckTbl = availableTableNames.find((t) => t.toLowerCase().includes('luck'));
-      return luckTbl ? [luckTbl] : [];
-    }
-    return favs.filter((t) => availableTableNames.includes(t)).slice(0, 8);
-  }, [type, sheetData.favorite_power_tables, availableTableNames]);
-
-  const categorizedTableGroups = useMemo(() => {
-    const groups: Record<string, string[]> = {
-      '👤 Class Tables': [],
-      '🧬 Racial Tables': [],
-      '⚔️ Combat Style Tables': [],
-      '🍀 Luck & General Tables': [],
-      '📁 Custom & Other Tables': [],
-    };
-
-    availableTableNames.forEach((tblName) => {
-      const sampleItem = groupedTables[tblName]?.[0];
-      const sub = ((sampleItem as any)?.category || (sampleItem as any)?.sub || '').toLowerCase();
-      const nameLower = tblName.toLowerCase();
-
-      if (
-        sub.includes('class') ||
-        nameLower.includes('thief') ||
-        nameLower.includes('mage') ||
-        nameLower.includes('warrior') ||
-        nameLower.includes('cleric') ||
-        nameLower.includes('paladin') ||
-        nameLower.includes('bard') ||
-        nameLower.includes('ranger') ||
-        nameLower.includes('druid') ||
-        nameLower.includes('monk') ||
-        nameLower.includes('sorcerer') ||
-        nameLower.includes('warlock') ||
-        nameLower.includes('artificer')
-      ) {
-        groups['👤 Class Tables'].push(tblName);
-      } else if (
-        sub.includes('race') ||
-        sub.includes('racial') ||
-        nameLower.includes('human') ||
-        nameLower.includes('elf') ||
-        nameLower.includes('dwarf') ||
-        nameLower.includes('halfling') ||
-        nameLower.includes('gnome') ||
-        nameLower.includes('orc') ||
-        nameLower.includes('dragonborn') ||
-        nameLower.includes('tiefling')
-      ) {
-        groups['🧬 Racial Tables'].push(tblName);
-      } else if (
-        sub.includes('combat') ||
-        sub.includes('style') ||
-        nameLower.includes('dual wield') ||
-        nameLower.includes('two-handed') ||
-        nameLower.includes('archery') ||
-        nameLower.includes('brawler') ||
-        nameLower.includes('shield')
-      ) {
-        groups['⚔️ Combat Style Tables'].push(tblName);
-      } else if (sub.includes('luck') || nameLower.includes('luck') || nameLower.includes('general')) {
-        groups['🍀 Luck & General Tables'].push(tblName);
-      } else {
-        groups['📁 Custom & Other Tables'].push(tblName);
+    if (type === 'powers') {
+      const favs: string[] = sheetData.favorite_power_tables || [];
+      if (favs.length === 0) {
+        const luckTbl = availableTableNames.find((t) => t.toLowerCase().includes('luck'));
+        return luckTbl ? [luckTbl] : [];
       }
-    });
-
-    return groups;
-  }, [availableTableNames, groupedTables]);
+      return favs.filter((t) => availableTableNames.includes(t)).slice(0, 8);
+    } else {
+      const favs: string[] = sheetData.favorite_hardware_tables || [];
+      if (favs.length === 0) {
+        return ['Minor', 'Lesser', 'Greater', 'Epic'].filter((t) => availableTableNames.includes(t));
+      }
+      return favs.filter((t) => availableTableNames.includes(t)).slice(0, 8);
+    }
+  }, [type, sheetData.favorite_power_tables, sheetData.favorite_hardware_tables, availableTableNames]);
 
   const effectiveActiveTable = useMemo(() => {
     if (activeTableName === 'ALL') return 'ALL';
@@ -2058,161 +1965,41 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           </div>
                         )}
 
-                        {/* 1. SMART HERO QUICK DECK (Powers Mode) */}
-                        {type === 'powers' && (
-                          <div className="flex flex-col gap-2 shrink-0">
-                            {/* Pinned Quick Deck Box */}
-                            <div className="bg-slate-950/90 border border-slate-800 p-2.5 rounded-xl flex flex-col gap-2 shadow-inner backdrop-blur-md">
-                              {/* Row 1: Centered + Pin Table Dropdown Action Shelf */}
-                              <div className="flex items-center justify-center w-full pb-2 border-b border-slate-800/80">
-                                {pinnedTableNames.length < 8 ? (
-                                  <div className="relative">
-                                    <select
-                                      value=""
-                                      onChange={(e) => {
-                                        if (e.target.value) {
-                                          handlePinTable(e.target.value);
-                                        }
-                                      }}
-                                      className="w-64 py-1.5 px-4 rounded-xl text-xs font-bold font-outfit bg-amber-950/30 hover:bg-amber-900/50 text-amber-300 border-2 border-dashed border-amber-500/50 hover:border-amber-400 outline-none cursor-pointer transition-all shadow-inner text-center"
-                                      title="Pin another table to your Quick Deck (Max 8)"
-                                    >
-                                      <option value="" disabled>
-                                        ➕ Pin Table Below
-                                      </option>
-                                      {Object.entries(categorizedTableGroups).map(([groupLabel, tableNames]) => {
-                                        const unpinned = tableNames.filter((t) => !pinnedTableNames.includes(t));
-                                        if (unpinned.length === 0) return null;
-                                        return (
-                                          <optgroup key={groupLabel} label={groupLabel} className="bg-slate-950 text-slate-400 font-bold">
-                                            {unpinned.map((tblName) => (
-                                              <option key={tblName} value={tblName} className="bg-slate-900 text-amber-300 font-normal">
-                                                {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
-                                              </option>
-                                            ))}
-                                          </optgroup>
-                                        );
-                                      })}
-                                    </select>
-                                  </div>
-                                ) : (
-                                  <span className="text-[11px] font-mono font-bold text-amber-400/80 px-3 py-1 rounded-xl bg-amber-950/30 border-2 border-dashed border-amber-500/30">
-                                    [Quick Deck Full (8/8)]
-                                  </span>
-                                )}
-                              </div>
+                        {/* Universal Quick Deck Bar & Search */}
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <QuickDeckBar
+                            domain={type === 'powers' ? 'powers' : 'hardware'}
+                            activeTable={effectiveActiveTable || 'ALL'}
+                            onSelectTable={setActiveTableName}
+                            pinnedTables={pinnedTableNames}
+                            onUpdatePinnedTables={handleUpdatePinnedTables}
+                            catalogItems={categoryFilteredCatalog}
+                            customTables={type === 'powers' ? customPowerTables : []}
+                            starredCount={starredCatalogItems.length}
+                            colorTheme={type === 'powers' ? 'amber' : 'cyan'}
+                            totalCatalogCount={categoryFilteredCatalog.length}
+                            placeholderText={type === 'powers' ? '➕ Pin Power Table' : '➕ Pin Hardware Table'}
+                          />
 
-                              {/* Row 2: Pinned Table Pills (Deck Tray) */}
-                              <div className="flex items-center justify-center gap-1.5 flex-wrap w-full pt-1">
-                                {[...pinnedTableNames]
-                                  .sort((a, b) => formatTableNameDisplay(a).localeCompare(formatTableNameDisplay(b)))
-                                  .map((tblName) => {
-                                    const isActive = effectiveActiveTable === tblName;
-                                    const nameLower = tblName.toLowerCase();
-                                    const icon = nameLower.includes('luck')
-                                      ? '🍀'
-                                      : nameLower.includes('human') || nameLower.includes('elf') || nameLower.includes('dwarf')
-                                      ? '🧬'
-                                      : nameLower.includes('dual') || nameLower.includes('two-handed') || nameLower.includes('combat')
-                                      ? '⚔️'
-                                      : '👤';
-
-                                    return (
-                                      <div
-                                        key={tblName}
-                                        onClick={() => setActiveTableName(tblName)}
-                                        className={`group py-1 pl-2.5 pr-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
-                                          isActive
-                                            ? 'bg-amber-600 text-white border border-amber-400 font-extrabold shadow-amber-900/50'
-                                            : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80'
-                                        }`}
-                                      >
-                                        <span>{icon}</span>
-                                        <span>{formatTableNameDisplay(tblName)}</span>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => handleUnpinTable(e, tblName)}
-                                          className="p-0.5 rounded text-slate-400 hover:text-rose-300 hover:bg-slate-800/80 transition-colors ml-0.5 cursor-pointer"
-                                          title={`Remove ${tblName} from Quick Deck`}
-                                        >
-                                          <X className="w-3 h-3" />
-                                        </button>
-                                      </div>
-                                    );
-                                  })}
-                              </div>
-                            </div>
-
-                            {/* Paired Search & Browse Other Tables Selector Row */}
-                            <div className="flex items-center gap-2">
-                              <div className="relative flex-1">
-                                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                                <input
-                                  type="text"
-                                  value={rightSearchQuery}
-                                  onChange={(e) => setRightSearchQuery(e.target.value)}
-                                  placeholder={`Search ${
-                                    effectiveActiveTable && effectiveActiveTable !== 'ALL' && effectiveActiveTable !== 'STARRED'
-                                      ? formatTableNameDisplay(effectiveActiveTable)
-                                      : 'all catalog powers'
-                                  }...`}
-                                  className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
-                                />
-                              </div>
-
-                              <select
-                                value={effectiveActiveTable || 'ALL'}
-                                onChange={(e) => setActiveTableName(e.target.value)}
-                                className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 max-w-[210px] truncate cursor-pointer"
-                              >
-                                <option value="ALL">🌐 All Tables ({categoryFilteredCatalog.length})</option>
-                                <option value="STARRED">⭐ Starred Powers ({starredCatalogItems.length})</option>
-                                {Object.entries(categorizedTableGroups).map(([groupLabel, tableNames]) => {
-                                  if (tableNames.length === 0) return null;
-                                  return (
-                                    <optgroup key={groupLabel} label={groupLabel} className="bg-slate-950 text-slate-400 font-bold">
-                                      {tableNames.map((tblName) => (
-                                        <option key={tblName} value={tblName} className="bg-slate-900 text-amber-300 font-normal">
-                                          {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
-                                        </option>
-                                      ))}
-                                    </optgroup>
-                                  );
-                                })}
-                              </select>
-                            </div>
+                          <div className="relative shrink-0">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              value={rightSearchQuery}
+                              onChange={(e) => setRightSearchQuery(e.target.value)}
+                              placeholder={`Search ${
+                                effectiveActiveTable && effectiveActiveTable !== 'ALL' && effectiveActiveTable !== 'STARRED'
+                                  ? formatTableNameDisplay(effectiveActiveTable)
+                                  : type === 'powers'
+                                  ? 'all catalog powers'
+                                  : 'hardware catalog'
+                              }...`}
+                              className={`bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none w-full ${
+                                type === 'powers' ? 'focus:border-amber-500' : 'focus:border-cyan-500'
+                              }`}
+                            />
                           </div>
-                        )}
-
-                        {/* 2. Controls for Loadout / Spells Mode (Paired Search & Table Filter) */}
-                        {type === 'spells' && (
-                          <div className="flex items-center gap-2 shrink-0">
-                            <div className="relative flex-1">
-                              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                              <input
-                                type="text"
-                                value={rightSearchQuery}
-                                onChange={(e) => setRightSearchQuery(e.target.value)}
-                                placeholder="Search hardware catalog..."
-                                className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 w-full"
-                              />
-                            </div>
-
-                            <select
-                              value={effectiveActiveTable || 'ALL'}
-                              onChange={(e) => setActiveTableName(e.target.value)}
-                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 outline-none focus:border-amber-500 max-w-[190px] truncate cursor-pointer"
-                            >
-                              <option value="ALL">🌐 All Tables / Tiers ({categoryFilteredCatalog.length})</option>
-                              <option value="STARRED">⭐ Starred Favorites ({starredCatalogItems.length})</option>
-                              {availableTableNames.map((tblName) => (
-                                <option key={tblName} value={tblName}>
-                                  {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
+                        </div>
 
                         {/* Catalog Action Feedback Banner */}
                         {catalogFeedback && (

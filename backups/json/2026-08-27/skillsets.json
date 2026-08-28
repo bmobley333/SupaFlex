@@ -1,0 +1,1147 @@
+[
+  {
+    "id": 1,
+    "name": "Acrobatics",
+    "skills": [
+      "Balance🏃",
+      "Jump🏃",
+      "Parkour🏃",
+      "Flips🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 2,
+    "name": "Agility",
+    "skills": [
+      "Acrobatics🏃",
+      "Balance🏃",
+      "Escape Bonds🏃",
+      "Falling🏃",
+      "Climb🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 3,
+    "name": "Alchemy",
+    "skills": [
+      "Identify👁️",
+      "Mix👁️",
+      "Apply Potions And Substances✨",
+      "Id/Forage Plants👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 4,
+    "name": "Arcana",
+    "skills": [
+      "ID Magic Item✨",
+      "ID Spells✨",
+      "ID Runes✨",
+      "ID Magical Beasts✨",
+      "Detect Enchantments✨"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 5,
+    "name": "Assassin",
+    "skills": [
+      "Silent Kills💪",
+      "Target Analysis👁️",
+      "Backstab💪",
+      "Poison Use✨"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 6,
+    "name": "Assassination",
+    "skills": [
+      "Target Analysis👁️",
+      "Poison Use👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 7,
+    "name": "Assassination🎓",
+    "skills": [
+      "Target Analysis👁️",
+      "Poison Use👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 8,
+    "name": "Athletics",
+    "skills": [
+      "Climb🏃",
+      "Swim🏃",
+      "Jump🏃",
+      "Lift💪",
+      "Feats Of Strength💪"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 9,
+    "name": "Awareness",
+    "skills": [
+      "Awareness👁️",
+      "Perception👁️",
+      "Read Intent👁️",
+      "Lie Detection👁️",
+      "Situational Analysis👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 10,
+    "name": "Bardic",
+    "skills": [
+      "Performance👁️",
+      "Music👁️",
+      "Persuasion👁️",
+      "Inspiration👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 11,
+    "name": "Crafting",
+    "skills": [
+      "Craft/Repair Weapons💪",
+      "Craft/Repair Armor💪",
+      "Craft/Repair Carpentry💪",
+      "Craft/Repair Leatherwork💪"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 12,
+    "name": "Diplomacy",
+    "skills": [
+      "Negotiate👁️",
+      "Persuade👁️",
+      "Charm👁️",
+      "Intimidate🫀",
+      "Fast Talk👁️",
+      "Languages👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 13,
+    "name": "Drudic",
+    "skills": [
+      "ID Plants👁️",
+      "Talk To Plants✨",
+      "Befriend Animal👁️",
+      "Talk To Animal✨",
+      "Endure Weather🫀"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 14,
+    "name": "Dungeoneering",
+    "skills": [
+      "Direction Sense👁️",
+      "Detect Trap/Hazard👁️",
+      "Assess Stonework👁️",
+      "Climb🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 15,
+    "name": "Dwarven Skills",
+    "skills": [
+      "Stonecraft💪",
+      "Mining💪",
+      "Brewing👁️",
+      "Underground Lore👁️",
+      "Repair Gear💪",
+      "Poison Save🫀"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 16,
+    "name": "Elven Skills",
+    "skills": [
+      "Flettcher💪",
+      "Forest Lore👁️",
+      "Stealth🏃",
+      "Artistry👁️",
+      "Tracking🏃",
+      "Charm Save✨"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 17,
+    "name": "Engineering & Siegecraft",
+    "skills": [
+      "Siege Engine Use/Atk/Dmg👁️",
+      "Repairs👁️",
+      "Rune-Engraving✨",
+      "Stone/Metal Weakness 👁️",
+      "Thunder Barge Piloting🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 18,
+    "name": "Gnomish Skills",
+    "skills": [
+      "Inventer👁️",
+      "Small Illusions✨",
+      "Solve Puzzles👁️",
+      "Repairs💪",
+      "Illusion Save✨"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 19,
+    "name": "Goblin Skills",
+    "skills": [
+      "Scavenging👁️",
+      "Set Traps🏃",
+      "Stealth🏃",
+      "Ambush Setup👁️",
+      "Disease Save🫀"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 20,
+    "name": "Guard Skills",
+    "skills": [
+      "Intimidation🫀",
+      "Interrogate🫀",
+      "Repair Weapons/Armor💪",
+      "Danger Sense👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 21,
+    "name": "Halfling Skills",
+    "skills": [
+      "Stealth🏃",
+      "Throw Rocks🏃",
+      "Cooking👁️",
+      "Community Lore👁️",
+      "Fear Save✨"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 22,
+    "name": "Healing Arts",
+    "skills": [
+      "Herbalism👁️",
+      "Basic Healing👁️",
+      "Treat Disease👁️",
+      "Treat Poison👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 23,
+    "name": "Husbandry",
+    "skills": [
+      "Ridding🏃",
+      "Animal Training👁️",
+      "Befriend Animal👁️",
+      "Talk To Animal✨"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 24,
+    "name": "Intimidation & Presence",
+    "skills": [
+      "Threaten Convincingly🫀",
+      "Taunt Foes👁️",
+      "Inspire Allies👁️",
+      "Lead Rebellious Groups👁️",
+      "Recognize Manipulation👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 25,
+    "name": "Iron Lotus Discipline",
+    "skills": [
+      "Awareness👁️",
+      "Mountaineering🏃",
+      "Healing Arts👁️",
+      "Endure Pain/Fear🫀"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 26,
+    "name": "Magnetism",
+    "skills": [
+      "Metal Manipulation💪",
+      "Falling✨",
+      "Detect Metal👁️",
+      "Streetwise👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 27,
+    "name": "Martial Prowess",
+    "skills": [
+      "Tactics👁️",
+      "Guard Drills🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 28,
+    "name": "Medicine",
+    "skills": [
+      "Bind Wounds👁️",
+      "Set Bones👁️",
+      "Treat Disease👁️",
+      "Treat Poison👁️",
+      "Basic Healing👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 29,
+    "name": "Mental Discipline",
+    "skills": [
+      "Empathy👁️",
+      "Read Surface Thoughts✨",
+      "Send 3 Words✨",
+      "Mental Resistance✨"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 30,
+    "name": "Mercantile",
+    "skills": [
+      "Appraise👁️",
+      "Haggle👁️",
+      "Gambel👁️",
+      "Fast Talk👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 31,
+    "name": "Mountaineering",
+    "skills": [
+      "Climb🏃",
+      "Falling🏃",
+      "Find Route🏃",
+      "Danger Sense👁️",
+      "Endure Weather🫀"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 32,
+    "name": "Orc Skills",
+    "skills": [
+      "Hunt🏃",
+      "Ambush🏃",
+      "Intimidation🫀",
+      "Crafting💪",
+      "Endure Weather🫀",
+      "Weather Save🫀"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 33,
+    "name": "Rogue",
+    "skills": [
+      "Pickpockets🏃",
+      "Disguise👁️",
+      "Stealth🏃",
+      "Gambeling👁️",
+      "Languages👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 34,
+    "name": "Sailing",
+    "skills": [
+      "Ships👁️",
+      "Navigation👁️",
+      "Weather👁️",
+      "Swim🏃",
+      "Fishing🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 35,
+    "name": "Scholar",
+    "skills": [
+      "Lore👁️",
+      "History👁️",
+      "ID Magic Item✨",
+      "Religion👁️",
+      "Politics👁️",
+      "Monster Knowledge👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 36,
+    "name": "Scout",
+    "skills": [
+      "Track🏃",
+      "Forage🏃",
+      "Stealth🏃",
+      "Climb🏃",
+      "Fishing🏃",
+      "Set Traps🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 37,
+    "name": "Ship Office Astrogation",
+    "skills": [
+      "Astrogation👁️",
+      "Navigate👁️",
+      "Sensors👁️",
+      "Scanners👁️",
+      "Pilot Starship🏃",
+      "Repair Astrogation💪",
+      "Computer👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 38,
+    "name": "Ship Office Captain",
+    "skills": [
+      "Orders👁️",
+      "Repair System💪",
+      "Comtech👁️",
+      "Dominate🫀",
+      "Ship Power✨",
+      "Social Status👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 39,
+    "name": "Ship Office Communications",
+    "skills": [
+      "Comtech👁️",
+      "Computer👁️",
+      "Repair Communications💪",
+      "Scanners👁️",
+      "Detect Lie👁️",
+      "Empathy👁️",
+      "Fast talk👁️",
+      "Languages👁️",
+      "Enhanced Hearing👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 40,
+    "name": "Ship Office Engineering",
+    "skills": [
+      "Repair Hull💪",
+      "Damage Control💪",
+      "Ship Power✨",
+      "Repair Wpn/Arm/Eqp/System💪",
+      "Transporter👁️",
+      "Trac/Rep Beam💪",
+      "Vehicle Power✨",
+      "Repair ATM/Cyber💪",
+      "Balance🏃",
+      "Catch Object🏃",
+      "Enhanced Touch👁️",
+      "Structural Damage💪",
+      "Tight Grip💪",
+      "Zero-Gravity🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 41,
+    "name": "Ship Office Fighter Pilot",
+    "skills": [
+      "Pilot Small Craft🏃",
+      "Ship Gunner👁️",
+      "Raise Shields💪",
+      "Sensors👁️",
+      "Repair Helm💪",
+      "Ship Power✨",
+      "Fearless🫀"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 42,
+    "name": "Ship Office Helm",
+    "skills": [
+      "Pilot Starship🏃",
+      "Raise Shields💪",
+      "Repair Helm💪",
+      "Ship Gunner👁️",
+      "Astrogation👁️",
+      "Drive Vehicle🏃",
+      "Sensors👁️",
+      "Ship Power✨"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 43,
+    "name": "Ship Office Medic",
+    "skills": [
+      "Medtech👁️",
+      "First Aid👁️",
+      "Repair Medical💪",
+      "Computer👁️",
+      "Scanners👁️",
+      "Empathy👁️",
+      "General Knowledge👁️",
+      "Common Sense👁️",
+      "Enhanced Touch👁️",
+      "Social Status👁️",
+      "Resist Disease🫀"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 44,
+    "name": "Ship Office Programmer",
+    "skills": [
+      "Computer👁️",
+      "Repair Computer💪",
+      "Comtech👁️",
+      "Sensors👁️",
+      "Scanners👁️",
+      "Counter Security👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 45,
+    "name": "Ship Office Scientist",
+    "skills": [
+      "Scanners👁️",
+      "Computer👁️",
+      "Repair Scanners/Sensors💪",
+      "Sensors👁️",
+      "General Knowledge👁️",
+      "First Aid👁️",
+      "Transporter👁️",
+      "Common Sense👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 46,
+    "name": "Ship Office Tactical",
+    "skills": [
+      "Ship Gunner👁️",
+      "Cloak👁️",
+      "Raise Shields💪",
+      "Repair Weapons💪",
+      "Scanners👁️",
+      "Sensors👁️",
+      "Damage Control💪",
+      "Interrogate🫀",
+      "Vehicle Gunner👁️",
+      "Danger Sense👁️",
+      "Fearless🫀",
+      "Orders👁️",
+      "Tactical Analysis👁️",
+      "Zero-Gravity🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 47,
+    "name": "Ship Office Tech",
+    "skills": [
+      "Tech Item👁️",
+      "Cloak👁️",
+      "Computer👁️",
+      "Comtech👁️",
+      "Counter Security👁️",
+      "Raise Shields💪",
+      "Repair Tech System💪",
+      "Scanners👁️",
+      "Sensors👁️",
+      "Trac/Rep Beam💪",
+      "Transporter👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 48,
+    "name": "Siegecraft",
+    "skills": [
+      "Siege Engine Use/Atk/Dmg💪",
+      "Repairs💪",
+      "Rune-Engraving✨",
+      "Stone/Metal Weakness👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 49,
+    "name": "Spec Spy",
+    "skills": [
+      "Disguise👁️",
+      "Climbing🏃",
+      "Computer👁️",
+      "Stealth🏃",
+      "Counter Security👁️",
+      "Detect Lie👁️",
+      "Fast talk👁️",
+      "Interrogate🫀",
+      "Theft🏃",
+      "Danger Sense👁️",
+      "Expert Runner🏃",
+      "Languages👁️",
+      "Enhanced Hearing👁️",
+      "Light Sleeper👁️",
+      "Resist Poison🫀"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 50,
+    "name": "Spec Survivalist",
+    "skills": [
+      "Survival🫀",
+      "Climbing🏃",
+      "Falling🏃",
+      "First Aid👁️",
+      "Swimming🏃",
+      "Tracking🏃",
+      "danger sense👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 51,
+    "name": "Spec Thief",
+    "skills": [
+      "Theft🏃",
+      "Detect Lie👁️",
+      "Disguise👁️",
+      "Fast talk👁️",
+      "Gambling👁️",
+      "Climbing🏃",
+      "Stealth🏃",
+      "Counter Security👁️",
+      "Ambidexterity🏃",
+      "Danger Sense👁️",
+      "Enhanced Hearing👁️",
+      "Expert Runner🏃",
+      "Light Sleeper👁️",
+      "Resist Poison🫀"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 52,
+    "name": "Streetwise",
+    "skills": [
+      "Spot Unusual Activity👁️",
+      "Blend Into Crowds🏃",
+      "Create Distractions👁️",
+      "Identify Urban Threats👁️",
+      "Escape Pursuit🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 53,
+    "name": "Streetwise Survival",
+    "skills": [
+      "Spot unusual activity👁️",
+      "Blend into crowds🏃",
+      "Create distractions👁️",
+      "Identify urban threats👁️",
+      "Escape pursuit🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 54,
+    "name": "Survival",
+    "skills": [
+      "Build Shelter💪",
+      "Hunt🏃",
+      "Find Water👁️",
+      "Identify Plants👁️",
+      "Endure Weather🫀"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 55,
+    "name": "Thievery",
+    "skills": [
+      "Stealth🏃",
+      "Climb🏃",
+      "Open Locks🏃",
+      "Detect/Remove Traps🏃",
+      "Pick Pockets🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 56,
+    "name": "Thievery🎓",
+    "skills": [
+      "Stealth🏃",
+      "Climb🏃",
+      "Open Locks👁️",
+      "Detect/Remove Traps👁️",
+      "Pick Pockets🏃"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 57,
+    "name": "Urban Survival",
+    "skills": [
+      "Navigate Cityscapes🏃",
+      "Hidden Routes👁️",
+      "Blend into Crowds🏃",
+      "Streetwise👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 58,
+    "name": "Urban Survival🎓",
+    "skills": [
+      "Navigate Cityscapes🏃",
+      "Hidden Routes👁️",
+      "Blend into Crowds🏃",
+      "Streetwise👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 59,
+    "name": "Vehicle Driver",
+    "skills": [
+      "drive vehicle🏃",
+      "repair hull💪",
+      "damage control💪",
+      "vehicle gunner👁️",
+      "navigation👁️"
+    ],
+    "source": "DB",
+    "created_at": "2026-08-13T21:26:30.190833+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "is_guildspace_locked": false
+  }
+]

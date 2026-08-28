@@ -6,6 +6,7 @@ import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { QuickDeckBar } from '../common/QuickDeckBar';
 import { supabase } from '../../lib/supabase';
 
 interface DerivedSkill {
@@ -576,8 +577,24 @@ export const SkillsetsPanel: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const [skillsetFilterCategory, setSkillsetFilterCategory] = useState<'all' | 'starred'>('all');
+  const [activeSkillsetTable, setActiveSkillsetTable] = useState<string>('ALL');
   const [skillFilterCategory, setSkillFilterCategory] = useState<'all' | 'starred'>('all');
+
+  const favoriteSkillsetTables: string[] = useMemo(() => {
+    const favs = activeCharacter?.sheet_data?.favorite_skillset_tables;
+    if (Array.isArray(favs) && favs.length > 0) {
+      return favs;
+    }
+    return [];
+  }, [activeCharacter?.sheet_data?.favorite_skillset_tables]);
+
+  const handleUpdatePinnedSkillsetTables = (tables: string[]) => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      favorite_skillset_tables: tables,
+    }));
+    saveActiveCharacter();
+  };
 
   const starredSkillsetsCount = useMemo(() => {
     return effectiveSkillsets.filter((ks) => isSkillsetStarred(ks.name)).length;
@@ -591,8 +608,14 @@ export const SkillsetsPanel: React.FC = () => {
     const unlearned = effectiveSkillsets.filter((ks) => !uniqueKnownSkillsetNames.some((k) => k.toLowerCase() === ks.name.toLowerCase()));
     
     let base = unlearned.filter((ks) => matchesGenre(ks.genres, activeGenre));
-    if (skillsetFilterCategory === 'starred') {
+    if (activeSkillsetTable === 'STARRED') {
       base = base.filter((ks) => isSkillsetStarred(ks.name));
+    } else if (activeSkillsetTable !== 'ALL' && activeSkillsetTable !== 'STARRED') {
+      const activeLower = activeSkillsetTable.toLowerCase();
+      base = base.filter((ks) => {
+        const tbl = (ks.table_group || ks.category || ks.source || '').toLowerCase();
+        return tbl === activeLower || tbl.includes(activeLower);
+      });
     }
 
     if (!rightSearchQuery.trim()) return base;
@@ -600,9 +623,10 @@ export const SkillsetsPanel: React.FC = () => {
     return base.filter((ks) => {
       const nameMatch = ks.name.toLowerCase().includes(query);
       const skillMatch = Array.isArray(ks.skills) && ks.skills.some((s) => s.toLowerCase().includes(query));
-      return nameMatch || skillMatch;
+      const noteMatch = (ks.notes || '').toLowerCase().includes(query);
+      return nameMatch || skillMatch || noteMatch;
     });
-  }, [effectiveSkillsets, uniqueKnownSkillsetNames, skillsetFilterCategory, isSkillsetStarred, rightSearchQuery, activeGenre]);
+  }, [effectiveSkillsets, uniqueKnownSkillsetNames, activeSkillsetTable, isSkillsetStarred, rightSearchQuery, activeGenre]);
 
   const filteredCatalogIndividualSkills = useMemo(() => {
     const unlearned = sortedAllCatalogSkills.filter((sk) => {
@@ -884,26 +908,32 @@ export const SkillsetsPanel: React.FC = () => {
 
                     {/* TAB 1: SKILLSETS CATALOG VIEW */}
                     {activeRightTab === 'skillsets' && (
-                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-hidden">
-                        <div className="flex items-center gap-2 mb-2 shrink-0">
-                          <div className="relative flex-1">
+                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 gap-2 overflow-hidden">
+                        {/* Universal Quick Deck Bar & Search */}
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <QuickDeckBar
+                            domain="skillsets"
+                            activeTable={activeSkillsetTable}
+                            onSelectTable={setActiveSkillsetTable}
+                            pinnedTables={favoriteSkillsetTables}
+                            onUpdatePinnedTables={handleUpdatePinnedSkillsetTables}
+                            catalogItems={effectiveSkillsets}
+                            starredCount={starredSkillsetsCount}
+                            colorTheme="purple"
+                            totalCatalogCount={effectiveSkillsets.length}
+                            placeholderText="➕ Pin Skillset Table"
+                          />
+
+                          <div className="relative shrink-0">
                             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                             <input
                               type="text"
                               value={rightSearchQuery}
                               onChange={(e) => setRightSearchQuery(e.target.value)}
-                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-purple-500 w-full"
+                              placeholder="Search skillsets, skills, notes..."
+                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 w-full"
                             />
                           </div>
-
-                          <select
-                            value={skillsetFilterCategory}
-                            onChange={(e) => setSkillsetFilterCategory(e.target.value as any)}
-                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-purple-500 truncate cursor-pointer max-w-[170px]"
-                          >
-                            <option value="all">🌐 All Skillsets</option>
-                            <option value="starred">⭐ Starred Favorites ({starredSkillsetsCount})</option>
-                          </select>
                         </div>
 
                         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 min-h-0">

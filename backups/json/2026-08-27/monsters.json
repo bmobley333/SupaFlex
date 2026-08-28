@@ -1,0 +1,2932 @@
+[
+  {
+    "id": 1,
+    "name": "Acid Spitter",
+    "nish": "🚩7",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️10 / 20",
+    "dod_ar": "🧥9 / 3",
+    "vit": "❤️20",
+    "attributes": "✨9 / 💪16 / 👁️7 / 🏃9 / 🫀11",
+    "abilities": "Acid (Bleeding)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Acid Spit",
+    "armor": "Natural Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 2,
+    "name": "Aviathar",
+    "nish": "🚩10",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️7 / 5",
+    "dod_ar": "🧥11 / 0",
+    "vit": "❤️9",
+    "attributes": "✨12 / 💪9 / 👁️6 / 🏃13 / 🫀5",
+    "abilities": "All Languages",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Beak, Blow Weapons, Blasters, Fang Rifle",
+    "armor": "Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 3,
+    "name": "Bandit Archer",
+    "nish": "🚩13",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️16 / 5",
+    "dod_ar": "🧥14 / 1",
+    "vit": "❤️8",
+    "attributes": "✨10 / 💪12 / 👁️14 / 🏃16 / 🫀8",
+    "abilities": "Volley fire",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bow, Dagger",
+    "armor": "Light Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 4,
+    "name": "Bandit Leader",
+    "nish": "🚩16",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️20 / 8",
+    "dod_ar": "🧥18 / 2",
+    "vit": "❤️16",
+    "attributes": "✨11 / 💪18 / 👁️12 / 🏃12 / 🫀16",
+    "abilities": "Inspires bandits",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Sword, Dagger",
+    "armor": "Leather Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 5,
+    "name": "Bandit Thug",
+    "nish": "🚩13",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️16 / 8",
+    "dod_ar": "🧥14 / 1",
+    "vit": "❤️10",
+    "attributes": "✨10 / 💪16 / 👁️10 / 🏃12 / 🫀10",
+    "abilities": "Dirty tricks",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Club, Dagger",
+    "armor": "Leather Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 6,
+    "name": "Bats, Swarm of",
+    "nish": "🚩18",
+    "mr": "👣14",
+    "atk_dmg_ftg": "⚔️14 / 5",
+    "dod_ar": "🧥14 / 0",
+    "vit": "❤️6",
+    "attributes": "✨12 / 💪10 / 👁️16 / 🏃22 / 🫀6",
+    "abilities": "Distracts enemies",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Gossamer Wings",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 7,
+    "name": "Beakbound Termite Warden",
+    "nish": "🚩17",
+    "mr": "👣9",
+    "atk_dmg_ftg": "⚔️18 / 24",
+    "dod_ar": "🧥17 / 4",
+    "vit": "❤️90",
+    "attributes": "✨9 / 💪24 / 👁️13 / 🏃19 / 🫀24",
+    "abilities": "Armor-Piercing Beak, Echo Sight",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Beak",
+    "armor": "Natural Armor Plates",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 8,
+    "name": "Bear, Brown",
+    "nish": "🚩15",
+    "mr": "👣11",
+    "atk_dmg_ftg": "⚔️18 / 12",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️16",
+    "attributes": "✨10 / 💪20 / 👁️10 / 🏃14 / 🫀16",
+    "abilities": "Mauling attacks",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 9,
+    "name": "Bearkin",
+    "nish": "🚩7",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️10 / 17",
+    "dod_ar": "🧥7 / 2",
+    "vit": "❤️30",
+    "attributes": "✨9 / 💪16 / 👁️5 / 🏃7 / 🫀24",
+    "abilities": "-- Skills:",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Punch, Grab-Crush, Bite, Swords, Blasters",
+    "armor": "Archaic Armor, Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 10,
+    "name": "Boner",
+    "nish": "🚩17",
+    "mr": "👣18",
+    "atk_dmg_ftg": "⚔️13 / 16",
+    "dod_ar": "🧥16 / 3",
+    "vit": "❤️19",
+    "attributes": "✨9 / 💪19 / 👁️11 / 🏃19 / 🫀9",
+    "abilities": "Echolocation, Paralyzing Bite (Histamine Poison: Causes swelling; Paralysis over 4 Rnds)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite (Paralyzing)",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 11,
+    "name": "Bubblegum Golem",
+    "nish": "🚩13",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️18 / 12",
+    "dod_ar": "🧥18 / 3",
+    "vit": "❤️14",
+    "attributes": "✨16 / 💪20 / 👁️14 / 🏃12 / 🫀14",
+    "abilities": "Traps foes in gum",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Slam, Sticky Touch",
+    "armor": "Sticky Body",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 12,
+    "name": "Chimera",
+    "nish": "🚩18",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️22 / 12",
+    "dod_ar": "🧥20 / 3",
+    "vit": "❤️30",
+    "attributes": "✨16 / 💪22 / 👁️14 / 🏃16 / 🫀30",
+    "abilities": "3 attacks (lion, goat, dragon)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Breath",
+    "armor": "Scaled Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 13,
+    "name": "Chiropteran Tinkerer",
+    "nish": "🚩13",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️13 / 5",
+    "dod_ar": "🧥15 / 0",
+    "vit": "❤️8",
+    "attributes": "✨9 / 💪7 / 👁️11 / 🏃15 / 🫀5",
+    "abilities": "Flight, Echolocation",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Bows, Small Ranged Weapons",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 14,
+    "name": "Claw Enforcer",
+    "nish": "🚩7",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️11 / 17",
+    "dod_ar": "🧥10 / 3",
+    "vit": "❤️24",
+    "attributes": "✨9 / 💪15 / 👁️9 / 🏃9 / 🫀24",
+    "abilities": "Mult Atk, Claws (Bleeding), Charge (MR * 2 + Atk), Thorns",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Retractable Claws",
+    "armor": "Thick Natural Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 15,
+    "name": "Clawshatter",
+    "nish": "🚩10",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️20 / 13",
+    "dod_ar": "🧥6 / 3",
+    "vit": "❤️20",
+    "attributes": "✨12 / 💪11 / 👁️13 / 🏃9 / 🫀17",
+    "abilities": "Water Magic, Electrical Biocharge, Multiple Atk, Biocharge (AoE)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Battleclaw, Biocharge",
+    "armor": "Natural Exoskeleton",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 16,
+    "name": "Cyberdrake",
+    "nish": "🚩7",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️7 / 6",
+    "dod_ar": "🧥7 / 0",
+    "vit": "❤️12",
+    "attributes": "✨12 / 💪10 / 👁️5 / 🏃10 / 🫀5",
+    "abilities": "Flight, Cybernetics, Inferno Magic (Plasma Blast, Fire Breath), Vision(IR/UV)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Claws, Bite, Plasma Blast, Fire Breath, Tail Weapons",
+    "armor": "Natural Scales, Cybernetic Plating, Personal Shields",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 17,
+    "name": "Defense Turret",
+    "nish": "🚩18",
+    "mr": "👣0",
+    "atk_dmg_ftg": "⚔️19 / 10",
+    "dod_ar": "🧥5 / 1",
+    "vit": "❤️20",
+    "attributes": "✨5 / 💪7 / 👁️12 / 🏃11 / 🫀13",
+    "abilities": "None",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Standard",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 18,
+    "name": "Demon Brute",
+    "nish": "🚩16",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️20 / 12",
+    "dod_ar": "🧥18 / 3",
+    "vit": "❤️24",
+    "attributes": "✨18 / 💪24 / 👁️12 / 🏃12 / 🫀24",
+    "abilities": "Rage aura",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Slam",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 19,
+    "name": "Demon Imp",
+    "nish": "🚩16",
+    "mr": "👣14",
+    "atk_dmg_ftg": "⚔️14 / 5",
+    "dod_ar": "🧥16 / 0",
+    "vit": "❤️8",
+    "attributes": "✨20 / 💪10 / 👁️16 / 🏃18 / 🫀8",
+    "abilities": "Mischief magic",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Small Ranged Weapons",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 20,
+    "name": "Dire Wolf",
+    "nish": "🚩18",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️18 / 8",
+    "dod_ar": "🧥16 / 1",
+    "vit": "❤️12",
+    "attributes": "✨10 / 💪18 / 👁️12 / 🏃18 / 🫀12",
+    "abilities": "Pack hunter",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Claw",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 21,
+    "name": "Dragon, Adult",
+    "nish": "🚩20",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️24 / 25",
+    "dod_ar": "🧥22 / 4",
+    "vit": "❤️40",
+    "attributes": "✨22 / 💪24 / 👁️18 / 🏃20 / 🫀40",
+    "abilities": "Large breath, fearaura",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Breath",
+    "armor": "Scaled Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 22,
+    "name": "Dragon, Whelp",
+    "nish": "🚩15",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️18 / 8",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️16",
+    "attributes": "✨16 / 💪18 / 👁️14 / 🏃16 / 🫀16",
+    "abilities": "Small breath attack",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Breath",
+    "armor": "Scaled Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 23,
+    "name": "Dragon, Young",
+    "nish": "🚩18",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️20 / 12",
+    "dod_ar": "🧥20 / 3",
+    "vit": "❤️28",
+    "attributes": "✨20 / 💪22 / 👁️16 / 🏃18 / 🫀28",
+    "abilities": "Breath weapon 1-Enc",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Breath",
+    "armor": "Scaled Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 24,
+    "name": "Drakkor",
+    "nish": "🚩15",
+    "mr": "👣14",
+    "atk_dmg_ftg": "⚔️17 / 19",
+    "dod_ar": "🧥16 / 3",
+    "vit": "❤️25",
+    "attributes": "✨9 / 💪22 / 👁️13 / 🏃18 / 🫀24",
+    "abilities": "Claw (Bleeding), Kick (Knockback), Tail (Trip + Knockback), Bite (Wnds + 8), Pack Atk",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Claw, GTH, Kick, Tail",
+    "armor": "Natural Scales",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 25,
+    "name": "Dreadspike",
+    "nish": "🚩15",
+    "mr": "👣14",
+    "atk_dmg_ftg": "⚔️15 / 5",
+    "dod_ar": "🧥16 / 0",
+    "vit": "❤️12",
+    "attributes": "✨12 / 💪13 / 👁️11 / 🏃18 / 🫀5",
+    "abilities": "Poisonous Spikes (Paralytic), Cannon-ball Dive (Wnds * 2 + Knockdown), Fear",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Cannon-ball Dive, Clubs",
+    "armor": "Spiked Back",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 26,
+    "name": "Dunelurker",
+    "nish": "🚩10",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️17 / 24",
+    "dod_ar": "🧥11 / 4",
+    "vit": "❤️173",
+    "attributes": "✨9 / 💪23 / 👁️11 / 🏃11 / 🫀24",
+    "abilities": "Ambush, Multi Atk, GTH (pull underground),",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Tentacle Crush, Beak",
+    "armor": "Thick Skin",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 27,
+    "name": "Elemental of Air",
+    "nish": "🚩18",
+    "mr": "👣16",
+    "atk_dmg_ftg": "⚔️18 / 8",
+    "dod_ar": "🧥16 / 1",
+    "vit": "❤️14",
+    "attributes": "✨20 / 💪14 / 👁️18 / 🏃22 / 🫀14",
+    "abilities": "Push / knockback",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Slam, Wind Blast",
+    "armor": "Elemental Form",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 28,
+    "name": "Elemental of Earth",
+    "nish": "🚩14",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️18 / 12",
+    "dod_ar": "🧥20 / 4",
+    "vit": "❤️22",
+    "attributes": "✨20 / 💪24 / 👁️12 / 🏃12 / 🫀22",
+    "abilities": "Knockdown slam",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Slam, Rock Throw",
+    "armor": "Elemental Form",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 29,
+    "name": "Elemental of Fire",
+    "nish": "🚩18",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️18 / 8",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️14",
+    "attributes": "✨22 / 💪16 / 👁️14 / 🏃18 / 🫀14",
+    "abilities": "Burns attackers",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Flame Touch, Fire Blast",
+    "armor": "Elemental Form",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 30,
+    "name": "Elemental of Water",
+    "nish": "🚩15",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️18 / 8",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️16",
+    "attributes": "✨22 / 💪18 / 👁️14 / 🏃14 / 🫀16",
+    "abilities": "Engulf + drown",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Slam, Engulf",
+    "armor": "Elemental Form",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 31,
+    "name": "Furkin",
+    "nish": "🚩10",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️11 / 5",
+    "dod_ar": "🧥10 / 0",
+    "vit": "❤️8",
+    "attributes": "✨9 / 💪7 / 👁️6 / 🏃10 / 🫀5",
+    "abilities": "-- Skills: Grasping Tail",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Knives, Pistols",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 32,
+    "name": "Gallantor",
+    "nish": "🚩10",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️10 / 11",
+    "dod_ar": "🧥9 / 1",
+    "vit": "❤️18",
+    "attributes": "✨9 / 💪11 / 👁️5 / 🏃10 / 🫀7",
+    "abilities": "Chest Mind (Can survive decapitation)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Stomp, Spears, Blasters",
+    "armor": "Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 33,
+    "name": "Ghoul",
+    "nish": "🚩13",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️16 / 8",
+    "dod_ar": "🧥14 / 1",
+    "vit": "❤️10",
+    "attributes": "✨12 / 💪14 / 👁️12 / 🏃12 / 🫀10",
+    "abilities": "Paralysis on hit",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 34,
+    "name": "Giant Rat",
+    "nish": "🚩14",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️14 / 5",
+    "dod_ar": "🧥12 / 0",
+    "vit": "❤️6",
+    "attributes": "✨10 / 💪10 / 👁️12 / 🏃18 / 🫀6",
+    "abilities": "Swarm tactics",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 35,
+    "name": "Giant, Fire",
+    "nish": "🚩16",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️22 / 19",
+    "dod_ar": "🧥18 / 3",
+    "vit": "❤️30",
+    "attributes": "✨14 / 💪24 / 👁️12 / 🏃12 / 🫀30",
+    "abilities": "Fire aura",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Greatclub, Fire Aura",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 36,
+    "name": "Giant, Frost",
+    "nish": "🚩15",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️20 / 19",
+    "dod_ar": "🧥18 / 3",
+    "vit": "❤️30",
+    "attributes": "✨14 / 💪24 / 👁️12 / 🏃12 / 🫀30",
+    "abilities": "Cold aura",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Greatclub, Cold Aura",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 37,
+    "name": "Giant, Hill",
+    "nish": "🚩13",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️18 / 12",
+    "dod_ar": "🧥16 / 3",
+    "vit": "❤️26",
+    "attributes": "✨10 / 💪22 / 👁️10 / 🏃12 / 🫀26",
+    "abilities": "Rock throws",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Greatclub, Rock Throw",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 38,
+    "name": "Giant, Stone",
+    "nish": "🚩15",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️20 / 12",
+    "dod_ar": "🧥18 / 3",
+    "vit": "❤️28",
+    "attributes": "✨12 / 💪24 / 👁️12 / 🏃12 / 🫀28",
+    "abilities": "Rock skin",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Greatclub, Rock Slam",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 39,
+    "name": "Glitter Ghoul",
+    "nish": "🚩13",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️16 / 8",
+    "dod_ar": "🧥14 / 1",
+    "vit": "❤️8",
+    "attributes": "✨14 / 💪12 / 👁️14 / 🏃12 / 🫀8",
+    "abilities": "Blinds with sparkle cloud",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 40,
+    "name": "Gloomwyrm",
+    "nish": "🚩5",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️5 / 5",
+    "dod_ar": "🧥5 / 0",
+    "vit": "❤️9",
+    "attributes": "✨9 / 💪7 / 👁️5 / 🏃7 / 🫀5",
+    "abilities": "Poison Bite (Lethal)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 41,
+    "name": "Goblin Raider",
+    "nish": "🚩13",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️16 / 8",
+    "dod_ar": "🧥14 / 1",
+    "vit": "❤️6",
+    "attributes": "✨10 / 💪12 / 👁️12 / 🏃16 / 🫀6",
+    "abilities": "Likes ambushes",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Short Sword, Spear",
+    "armor": "Leather Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 42,
+    "name": "Goblin Scout",
+    "nish": "🚩15",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️14 / 5",
+    "dod_ar": "🧥13 / 0",
+    "vit": "❤️6",
+    "attributes": "✨10 / 💪10 / 👁️12 / 🏃18 / 🫀6",
+    "abilities": "Nimble, fights in packs",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Dagger, Short Bow",
+    "armor": "Leather Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 43,
+    "name": "Goblin Shaman",
+    "nish": "🚩13",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️16 / 8",
+    "dod_ar": "🧥14 / 1",
+    "vit": "❤️6",
+    "attributes": "✨18 / 💪10 / 👁️14 / 🏃10 / 🫀6",
+    "abilities": "1 quirky spell",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Staff, Small Ranged Weapons",
+    "armor": "Leather Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 44,
+    "name": "Golem, Iron",
+    "nish": "🚩16",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️20 / 12",
+    "dod_ar": "🧥22 / 4",
+    "vit": "❤️28",
+    "attributes": "✨18 / 💪24 / 👁️12 / 🏃12 / 🫀28",
+    "abilities": "Gas cloud breath",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Slam, Gas Breath",
+    "armor": "Construct Body",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 45,
+    "name": "Golem, Stone",
+    "nish": "🚩15",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️18 / 12",
+    "dod_ar": "🧥20 / 4",
+    "vit": "❤️24",
+    "attributes": "✨16 / 💪22 / 👁️12 / 🏃12 / 🫀24",
+    "abilities": "Magic Resistant",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Slam",
+    "armor": "Construct Body",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 46,
+    "name": "Golemari",
+    "nish": "🚩10",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️9 / 12",
+    "dod_ar": "🧥11 / 1",
+    "vit": "❤️20",
+    "attributes": "✨12 / 💪12 / 👁️7 / 🏃11 / 🫀11",
+    "abilities": "Earth Magic, Somatics, Shape Shift, Vibration Sense",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Stone Weapons",
+    "armor": "Natural Clay Body, Earth Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 47,
+    "name": "Granitar",
+    "nish": "🚩5",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️5 / 22",
+    "dod_ar": "🧥5 / 3",
+    "vit": "❤️23",
+    "attributes": "✨12 / 💪17 / 👁️5 / 🏃5 / 🫀24",
+    "abilities": "Stone Magic",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Grab-Crush, Punch",
+    "armor": "Rock-like Skin",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 48,
+    "name": "Grapplestar Termite",
+    "nish": "🚩13",
+    "mr": "👣15",
+    "atk_dmg_ftg": "⚔️12 / 24",
+    "dod_ar": "🧥15 / 4",
+    "vit": "❤️100",
+    "attributes": "✨9 / 💪24 / 👁️10 / 🏃15 / 🫀24",
+    "abilities": "Grappling Hooks",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Grappling Hooks, Spiked Body, GTH, Crush",
+    "armor": "Scales",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 49,
+    "name": "Grotto Cannoneer",
+    "nish": "🚩7",
+    "mr": "👣9",
+    "atk_dmg_ftg": "⚔️10 / 24",
+    "dod_ar": "🧥9 / 3",
+    "vit": "❤️74",
+    "attributes": "✨9 / 💪23 / 👁️7 / 🏃9 / 🫀24",
+    "abilities": "Tusk Ballistae",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Tusk Stab, Tusk Ballistae, Trompel",
+    "armor": "Thick Natural Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 50,
+    "name": "Handguard",
+    "nish": "🚩22",
+    "mr": "👣14",
+    "atk_dmg_ftg": "⚔️18 / 12",
+    "dod_ar": "🧥22 / 0",
+    "vit": "❤️20",
+    "attributes": "✨9 / 💪20 / 👁️11 / 🏃24 / 🫀12",
+    "abilities": "Somatics, Poison Blades, Remarkable Leaps",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Punch, Spear, Knife, Force Gauntlet, Disc Weapons",
+    "armor": "Flak Armor, Trooper Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 51,
+    "name": "Harpy",
+    "nish": "🚩15",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️16 / 8",
+    "dod_ar": "🧥16 / 1",
+    "vit": "❤️10",
+    "attributes": "✨16 / 💪12 / 👁️14 / 🏃18 / 🫀10",
+    "abilities": "Alluring song",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Talons",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 52,
+    "name": "Hashtag Harpy",
+    "nish": "🚩18",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️14 / 5",
+    "dod_ar": "🧥14 / 1",
+    "vit": "❤️8",
+    "attributes": "✨18 / 💪12 / 👁️16 / 🏃18 / 🫀8",
+    "abilities": "Song = trending curse",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Talons",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 53,
+    "name": "Hive Brute Monk",
+    "nish": "🚩24",
+    "mr": "👣18",
+    "atk_dmg_ftg": "⚔️24 / 13",
+    "dod_ar": "🧥24 / 2",
+    "vit": "❤️20",
+    "attributes": "✨9 / 💪20 / 👁️18 / 🏃24 / 🫀13",
+    "abilities": "Sonic Scream (Disorients), Entangling Grasp (Mult Atk), Vision (Echolocation),",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Brute Hug, Claws, Sonic Scream",
+    "armor": "Thick Chitinous Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 54,
+    "name": "Hive Hunter Assassin",
+    "nish": "🚩24",
+    "mr": "👣18",
+    "atk_dmg_ftg": "⚔️24 / 16",
+    "dod_ar": "🧥24 / 2",
+    "vit": "❤️20",
+    "attributes": "✨9 / 💪24 / 👁️23 / 🏃24 / 🫀20",
+    "abilities": "Invisible Camouflage, Neural Scramble,",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bio-Blades, Bio-Cannon",
+    "armor": "Bio-Tech Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 55,
+    "name": "Hive Mindweaver",
+    "nish": "🚩15",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️13 / 12",
+    "dod_ar": "🧥15 / 1",
+    "vit": "❤️20",
+    "attributes": "✨12 / 💪15 / 👁️11 / 🏃15 / 🫀20",
+    "abilities": "Psionics, Time Magic, Reality Rip (Summons Projectiles),",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Psionics",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 56,
+    "name": "Hive Ram",
+    "nish": "🚩10",
+    "mr": "👣18",
+    "atk_dmg_ftg": "⚔️10 / 19",
+    "dod_ar": "🧥9 / 4",
+    "vit": "❤️20",
+    "attributes": "✨12 / 💪16 / 👁️7 / 🏃10 / 🫀15",
+    "abilities": "Resist Psionics, Sonic Stun (Pre Headbut)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Headbutt Charge, Spiked Protrusions",
+    "armor": "Head Armor Plate",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 57,
+    "name": "Hive Skirmisher",
+    "nish": "🚩19",
+    "mr": "👣20",
+    "atk_dmg_ftg": "⚔️17 / 7",
+    "dod_ar": "🧥19 / 0",
+    "vit": "❤️19",
+    "attributes": "✨9 / 💪15 / 👁️11 / 🏃22 / 🫀9",
+    "abilities": "Dive Atk, Move-Atk-Move,",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claws, Tentacle Lash",
+    "armor": "Lightweight Exoskeleton",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 58,
+    "name": "Hoodie Wraith",
+    "nish": "🚩16",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️18 / 8",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️10",
+    "attributes": "✨20 / 💪12 / 👁️14 / 🏃12 / 🫀10",
+    "abilities": "Vanishes in shadows",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Touch",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 59,
+    "name": "Horax",
+    "nish": "🚩5",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️5 / 7",
+    "dod_ar": "🧥5 / 0",
+    "vit": "❤️13",
+    "attributes": "✨12 / 💪7 / 👁️5 / 🏃7 / 🫀5",
+    "abilities": "BioTech Magic, Hive Telepathy, Bioelectric Shock,",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bioengineered Weapons, Bioelectric Charge",
+    "armor": "Adaptive Organic Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 60,
+    "name": "Howlclaw",
+    "nish": "🚩12",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️13 / 6",
+    "dod_ar": "🧥12 / 0",
+    "vit": "❤️12",
+    "attributes": "✨9 / 💪12 / 👁️9 / 🏃15 / 🫀5",
+    "abilities": "Pack Atk",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Melee Weapons, Pulse Weapons",
+    "armor": "Archaic Armor, Flak Armor, Lesser Powered Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 61,
+    "name": "Human",
+    "nish": "🚩15",
+    "mr": "👣14",
+    "atk_dmg_ftg": "⚔️13 / 5",
+    "dod_ar": "🧥13 / 0",
+    "vit": "❤️10",
+    "attributes": "✨12 / 💪10 / 👁️11 / 🏃15 / 🫀5",
+    "abilities": "Varies",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Punch, Tech Weapons",
+    "armor": "Flak Armor, Tech Armor, Force Fields",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 62,
+    "name": "Khrakthun",
+    "nish": "🚩13",
+    "mr": "👣13",
+    "atk_dmg_ftg": "⚔️12 / 12",
+    "dod_ar": "🧥13 / 1",
+    "vit": "❤️19",
+    "attributes": "✨9 / 💪16 / 👁️10 / 🏃16 / 🫀9",
+    "abilities": "Multi Atk, Immune (Poison, Acid, Mind Control, Vacuum), Structural Dmg, Hive Telepathy",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 63,
+    "name": "Kraken Spawn",
+    "nish": "🚩16",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️22 / 19",
+    "dod_ar": "🧥18 / 3",
+    "vit": "❤️30",
+    "attributes": "✨16 / 💪24 / 👁️14 / 🏃16 / 🫀30",
+    "abilities": "Tentacle grapple",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Tentacle, Bite",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 64,
+    "name": "Lich",
+    "nish": "🚩18",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️22 / 12",
+    "dod_ar": "🧥20 / 3",
+    "vit": "❤️26",
+    "attributes": "✨24 / 💪14 / 👁️20 / 🏃12 / 🫀26",
+    "abilities": "Casts spells",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Staff, Small Ranged Weapons",
+    "armor": "Robes",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 65,
+    "name": "Luminara",
+    "nish": "🚩5",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️5 / 5",
+    "dod_ar": "🧥5 / 0",
+    "vit": "❤️8",
+    "attributes": "✨12 / 💪5 / 👁️5 / 🏃5 / 🫀5",
+    "abilities": "Psionics",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Small Ranged Weapons (rarely used)",
+    "armor": "Archaic Armor, Flak Armor, Lesser Powered Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 66,
+    "name": "Lupinin",
+    "nish": "🚩10",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️10 / 5",
+    "dod_ar": "🧥9 / 0",
+    "vit": "❤️9",
+    "attributes": "✨9 / 💪9 / 👁️7 / 🏃12 / 🫀5",
+    "abilities": "Pack Atk",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Melee Weapons, Small Ranged Weapons (rarely)",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 67,
+    "name": "Mech, Defense",
+    "nish": "🚩6",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️13 / 18",
+    "dod_ar": "🧥5 / 3",
+    "vit": "❤️20",
+    "attributes": "✨5 / 💪12 / 👁️9 / 🏃6 / 🫀20",
+    "abilities": "None",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Standard",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 68,
+    "name": "Meme Imp",
+    "nish": "🚩18",
+    "mr": "👣13",
+    "atk_dmg_ftg": "⚔️14 / 5",
+    "dod_ar": "🧥14 / 0",
+    "vit": "❤️6",
+    "attributes": "✨20 / 💪10 / 👁️16 / 🏃16 / 🫀6",
+    "abilities": "Random meme magic",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Small Ranged Weapons",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 69,
+    "name": "Mercurial",
+    "nish": "🚩13",
+    "mr": "👣13",
+    "atk_dmg_ftg": "⚔️15 / 9",
+    "dod_ar": "🧥13 / 1",
+    "vit": "❤️15",
+    "attributes": "✨12 / 💪15 / 👁️11 / 🏃13 / 🫀6",
+    "abilities": "Shape Shift, Fluid Form, Immune (heat)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Punch, Melee Weapons, Small Ranged Weapons (rarely)",
+    "armor": "Metallic Fluid Body",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 70,
+    "name": "Mindbender Assassin",
+    "nish": "🚩24",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️24 / 5",
+    "dod_ar": "🧥24 / 0",
+    "vit": "❤️10",
+    "attributes": "✨12 / 💪13 / 👁️22 / 🏃24 / 🫀5",
+    "abilities": "Mind Control, Assassin",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Pheromone Emitters, Claws",
+    "armor": "Iridescent Carapace",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 71,
+    "name": "Minotaur",
+    "nish": "🚩16",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️20 / 12",
+    "dod_ar": "🧥18 / 2",
+    "vit": "❤️18",
+    "attributes": "✨12 / 💪22 / 👁️12 / 🏃12 / 🫀18",
+    "abilities": "Charge attack",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Greataxe, Gore",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 72,
+    "name": "Morphid",
+    "nish": "🚩13",
+    "mr": "👣13",
+    "atk_dmg_ftg": "⚔️13 / 9",
+    "dod_ar": "🧥13 / 0",
+    "vit": "❤️18",
+    "attributes": "✨12 / 💪15 / 👁️11 / 🏃16 / 🫀7",
+    "abilities": "Shapechange (entity/object), Immune (Cutting,Piercing)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Punch, Any Melee Weapons (can form weapons)",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 73,
+    "name": "Nautilyx",
+    "nish": "🚩10",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️9 / 6",
+    "dod_ar": "🧥9 / 0",
+    "vit": "❤️12",
+    "attributes": "✨9 / 💪7 / 👁️5 / 🏃12 / 🫀5",
+    "abilities": "Echolocation",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Blunt Attack, Modified Spear Gun, Pulse Laser Weapons",
+    "armor": "Airsuit",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 74,
+    "name": "Nebulon",
+    "nish": "🚩17",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️17 / 26",
+    "dod_ar": "🧥17 / 4",
+    "vit": "❤️300",
+    "attributes": "✨17 / 💪24 / 👁️17 / 🏃17 / 🫀24",
+    "abilities": "Energy Blast (Ship Class), Telepathy (vast distance), Stellar Energy Storage (unleash devastating Atks)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Tentacles, Ram, Energy Blast",
+    "armor": "Natural Force Field",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 75,
+    "name": "Neurowraith",
+    "nish": "🚩13",
+    "mr": "👣13",
+    "atk_dmg_ftg": "⚔️13 / 5",
+    "dod_ar": "🧥13 / 0",
+    "vit": "❤️8",
+    "attributes": "✨12 / 💪9 / 👁️9 / 🏃16 / 🫀5",
+    "abilities": "Mind Control (if attached), Immune (Poison, Acid, Vacuum)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Grab (Special)",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 76,
+    "name": "Nightclaws",
+    "nish": "🚩15",
+    "mr": "👣14",
+    "atk_dmg_ftg": "⚔️13 / 5",
+    "dod_ar": "🧥15 / 0",
+    "vit": "❤️12",
+    "attributes": "✨9 / 💪12 / 👁️9 / 🏃17 / 🫀5",
+    "abilities": "Vision (Starlight)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Claw, Any Weapons",
+    "armor": "Archaic Armor, Flak Armor, Powered Suit",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 77,
+    "name": "Nyaskat",
+    "nish": "🚩19",
+    "mr": "👣18",
+    "atk_dmg_ftg": "⚔️23 / 5",
+    "dod_ar": "🧥20 / 0",
+    "vit": "❤️9",
+    "attributes": "✨12 / 💪15 / 👁️17 / 🏃20 / 🫀5",
+    "abilities": "Eyebeams (Dmg + Blindness), Solar Burst (AoE)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Eyebeam",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 78,
+    "name": "Nyax",
+    "nish": "🚩19",
+    "mr": "👣18",
+    "atk_dmg_ftg": "⚔️17 / 5",
+    "dod_ar": "🧥23 / 0",
+    "vit": "❤️9",
+    "attributes": "✨12 / 💪15 / 👁️11 / 🏃24 / 🫀5",
+    "abilities": "Aether Magic, Psionics",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Swords, Bows, Energy Blades, Blasters",
+    "armor": "Sleek Armor, Energy Shields",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 79,
+    "name": "Ogre Brute",
+    "nish": "🚩14",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️20 / 12",
+    "dod_ar": "🧥16 / 3",
+    "vit": "❤️24",
+    "attributes": "✨10 / 💪22 / 👁️10 / 🏃12 / 🫀24",
+    "abilities": "Smashes obstacles",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Greatclub, Slam",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 80,
+    "name": "Ogrind",
+    "nish": "🚩10",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️15 / 19",
+    "dod_ar": "🧥9 / 2",
+    "vit": "❤️23",
+    "attributes": "✨12 / 💪18 / 👁️9 / 🏃10 / 🫀24",
+    "abilities": "-- Skills: Immense Str",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Punch, Bite, Melee Weapons, Disk Weapons",
+    "armor": "Archaic Armor, Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 81,
+    "name": "Orc Archer",
+    "nish": "🚩13",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️16 / 8",
+    "dod_ar": "🧥14 / 1",
+    "vit": "❤️10",
+    "attributes": "✨10 / 💪12 / 👁️12 / 🏃16 / 🫀10",
+    "abilities": "Ranged focus",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bow, Dagger",
+    "armor": "Light Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 82,
+    "name": "Orc Bruiser",
+    "nish": "🚩14",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️18 / 12",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️12",
+    "attributes": "✨10 / 💪18 / 👁️10 / 🏃12 / 🫀12",
+    "abilities": "Brutal melee strikes",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Greataxe, Fist",
+    "armor": "Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 83,
+    "name": "Orc WarChief",
+    "nish": "🚩16",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️20 / 12",
+    "dod_ar": "🧥18 / 3",
+    "vit": "❤️16",
+    "attributes": "✨12 / 💪22 / 👁️12 / 🏃12 / 🫀16",
+    "abilities": "Inspires allies",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Sword, Dagger",
+    "armor": "Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 84,
+    "name": "Owlbear",
+    "nish": "🚩15",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️20 / 12",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️18",
+    "attributes": "✨10 / 💪22 / 👁️10 / 🏃14 / 🫀18",
+    "abilities": "Ferocious charge",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 85,
+    "name": "Paleserpent Psion",
+    "nish": "🚩10",
+    "mr": "👣11",
+    "atk_dmg_ftg": "⚔️22 / 7",
+    "dod_ar": "🧥10 / 1",
+    "vit": "❤️23",
+    "attributes": "✨12 / 💪10 / 👁️16 / 🏃12 / 🫀24",
+    "abilities": "Psionics",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claws",
+    "armor": "Scaled Back, Segmented Underbelly",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 86,
+    "name": "Paralith",
+    "nish": "🚩5",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️5 / 5",
+    "dod_ar": "🧥5 / 0",
+    "vit": "❤️8",
+    "attributes": "✨9 / 💪5 / 👁️5 / 🏃5 / 🫀5",
+    "abilities": "Contact Poison (Paralysis)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Slap (Poisonous), Pistols",
+    "armor": "Light Suit Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 87,
+    "name": "Plainsstrider",
+    "nish": "🚩17",
+    "mr": "👣13",
+    "atk_dmg_ftg": "⚔️24 / 9",
+    "dod_ar": "🧥24 / 0",
+    "vit": "❤️20",
+    "attributes": "✨9 / 💪18 / 👁️19 / 🏃24 / 🫀18",
+    "abilities": "-- Skills: Powerful Beak (Wnd * 2),",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Beak, Kick",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 88,
+    "name": "Rattlesanke Brute Termite",
+    "nish": "🚩13",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️13 / 24",
+    "dod_ar": "🧥13 / 4",
+    "vit": "❤️50",
+    "attributes": "✨9 / 💪24 / 👁️11 / 🏃16 / 🫀24",
+    "abilities": "Tentacle Tongue (GTH), Circular Mouth Bite (Bleeding), Mental Confusion, Echolocation, Immune (illusions)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Tentacle Tongue",
+    "armor": "Brown Segmented Scales",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 89,
+    "name": "Ravager",
+    "nish": "🚩7",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️9 / 6",
+    "dod_ar": "🧥6 / 0",
+    "vit": "❤️18",
+    "attributes": "✨12 / 💪9 / 👁️7 / 🏃7 / 🫀7",
+    "abilities": "Resist (Cold)",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Punch, Swords, Heavy Ranged Weapons",
+    "armor": "Flak Armor, Trooper Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 90,
+    "name": "Rexar",
+    "nish": "🚩19",
+    "mr": "👣18",
+    "atk_dmg_ftg": "⚔️20 / 5",
+    "dod_ar": "🧥23 / 0",
+    "vit": "❤️8",
+    "attributes": "✨9 / 💪15 / 👁️16 / 🏃24 / 🫀5",
+    "abilities": "Orders",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Knives, Disc Weapons",
+    "armor": "Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 91,
+    "name": "Ripplestream",
+    "nish": "🚩12",
+    "mr": "👣14",
+    "atk_dmg_ftg": "⚔️15 / 5",
+    "dod_ar": "🧥11 / 0",
+    "vit": "❤️9",
+    "attributes": "✨9 / 💪10 / 👁️9 / 🏃15 / 🫀5",
+    "abilities": "Amphibious",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Knife, Crossbow",
+    "armor": "Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 92,
+    "name": "RonRon",
+    "nish": "🚩19",
+    "mr": "👣20",
+    "atk_dmg_ftg": "⚔️19 / 5",
+    "dod_ar": "🧥18 / 0",
+    "vit": "❤️9",
+    "attributes": "✨9 / 💪15 / 👁️12 / 🏃22 / 🫀5",
+    "abilities": "Rapid Atk (Wnds *2 or *3), Multi Atk, Leap Atk",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Rapid Bite, Multi-Bite, Leap and Latch",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 93,
+    "name": "Sandwyrm Monarch",
+    "nish": "🚩7",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️10 / 24",
+    "dod_ar": "🧥7 / 4",
+    "vit": "❤️135",
+    "attributes": "✨9 / 💪24 / 👁️7 / 🏃10 / 🫀24",
+    "abilities": "Adv Tunneling, Regeneration, Burrow Atk",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Bite, Slam, Tail Swipe",
+    "armor": "Hardened Scales",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 94,
+    "name": "Sanguivor",
+    "nish": "🚩15",
+    "mr": "👣14",
+    "atk_dmg_ftg": "⚔️11 / 7",
+    "dod_ar": "🧥15 / 0",
+    "vit": "❤️15",
+    "attributes": "✨9 / 💪15 / 👁️6 / 🏃17 / 🫀6",
+    "abilities": "Vamp Bite (Dmg + Heal), Shapechange (Mimicry), Back Stab, Regeneration",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Grab, Bite, Claw, Racially Appropriate Weapons",
+    "armor": "Racially Appropriate Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 95,
+    "name": "Scaled Medusahound",
+    "nish": "🚩18",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️23 / 19",
+    "dod_ar": "🧥17 / 3",
+    "vit": "❤️36",
+    "attributes": "✨12 / 💪22 / 👁️17 / 🏃20 / 🫀24",
+    "abilities": "Multi Atk (Bites), Poison Bite (Confusion), Back Stab, Echolocation",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Claw, Bites",
+    "armor": "Brown Segmented Scales",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 96,
+    "name": "Scooter Gargoyle",
+    "nish": "🚩18",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️18 / 8",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️10",
+    "attributes": "✨12 / 💪16 / 👁️12 / 🏃18 / 🫀10",
+    "abilities": "Rides neon scooter",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Tail",
+    "armor": "Stone Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 97,
+    "name": "Screecher Elite",
+    "nish": "🚩13",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️11 / 9",
+    "dod_ar": "🧥13 / 0",
+    "vit": "❤️15",
+    "attributes": "✨12 / 💪12 / 👁️9 / 🏃16 / 🫀6",
+    "abilities": "Sonic Screech (Confusion AoE), Mult Atk",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Claws",
+    "armor": "Reinforced Exoskeleton",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 98,
+    "name": "Shadavox",
+    "nish": "🚩19",
+    "mr": "👣18",
+    "atk_dmg_ftg": "⚔️20 / 5",
+    "dod_ar": "🧥17 / 0",
+    "vit": "❤️8",
+    "attributes": "✨9 / 💪11 / 👁️13 / 🏃20 / 🫀5",
+    "abilities": "Orders",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Pulse Weapons, Blasters",
+    "armor": "Flak Armor, Trooper Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 99,
+    "name": "Shadowmancer",
+    "nish": "🚩10",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️11 / 5",
+    "dod_ar": "🧥10 / 0",
+    "vit": "❤️15",
+    "attributes": "✨12 / 💪6 / 👁️6 / 🏃10 / 🫀6",
+    "abilities": "Shadow Magic, Portal Magic, Non-corporeal",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Shadow Manipulation, Dark Energy Spells",
+    "armor": "Ethereal Robes, Enchanted Light Medieval Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 100,
+    "name": "Shieldbearer",
+    "nish": "🚩5",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️5 / 5",
+    "dod_ar": "🧥7 / 0",
+    "vit": "❤️20",
+    "attributes": "✨9 / 💪5 / 👁️5 / 🏃9 / 🫀20",
+    "abilities": "Somatics, Regeneration, Auto-Armor Repair, Shield Bash (Stun), Shield Block, Fear",
+    "created_at": "2026-08-13T21:26:30.539493+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Shield Bash, Defensive Strike",
+    "armor": "Regenerative Scale Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 101,
+    "name": "Skarr Civilian",
+    "nish": "🚩12",
+    "mr": "👣11",
+    "atk_dmg_ftg": "⚔️12 / 5",
+    "dod_ar": "🧥10 / 0",
+    "vit": "❤️8",
+    "attributes": "✨12 / 💪7 / 👁️7 / 🏃13 / 🫀5",
+    "abilities": "Bite Poison (Mild Stun), Tailwhip (Trip), Backstab",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Tail, Laser Pistol, Stun Pistol",
+    "armor": "Archaic Armor, Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 102,
+    "name": "Skarr Goliath",
+    "nish": "🚩24",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️24 / 17",
+    "dod_ar": "🧥24 / 2",
+    "vit": "❤️20",
+    "attributes": "✨12 / 💪24 / 👁️17 / 🏃24 / 🫀16",
+    "abilities": "Psionics, Somatics, Plasma Sword Burst (Wnds * 2)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Plasma Blade Sword, MA, Bite",
+    "armor": "Metallic Partial Armor (Vambrace, Greaves, Chest, Steel Kilt)",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 103,
+    "name": "Skarr Heavy Trooper",
+    "nish": "🚩10",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️11 / 24",
+    "dod_ar": "🧥9 / 4",
+    "vit": "❤️24",
+    "attributes": "✨9 / 💪23 / 👁️6 / 🏃10 / 🫀24",
+    "abilities": "Bearhug (Wnds * 2 while held), Taunt (Wnds/2)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Punch, Bite, Bearhug, Dual-Wielded Stun Sticks",
+    "armor": "Tight-Fitting Tech-Steel Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 104,
+    "name": "Skarr Mechanic",
+    "nish": "🚩10",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️11 / 17",
+    "dod_ar": "🧥13 / 3",
+    "vit": "❤️20",
+    "attributes": "✨12 / 💪18 / 👁️9 / 🏃15 / 🫀19",
+    "abilities": "Tailwhip (Trip)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Tail, Double Barrel Slug Pistol",
+    "armor": "Archaic Armor, Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 105,
+    "name": "Skarr Security",
+    "nish": "🚩24",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️19 / 6",
+    "dod_ar": "🧥19 / 0",
+    "vit": "❤️20",
+    "attributes": "✨12 / 💪16 / 👁️12 / 🏃24 / 🫀12",
+    "abilities": "Tailwhip (Trip), Dbl Atk",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, tail, Two Vibra-Knives or Two Blaster Pistols",
+    "armor": "Archaic Armor, Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 106,
+    "name": "Skater Punk Knight",
+    "nish": "🚩16",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️18 / 8",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️10",
+    "attributes": "✨14 / 💪16 / 👁️14 / 🏃18 / 🫀10",
+    "abilities": "Rally cry with guitar",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Sword, Guitar",
+    "armor": "Light Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 107,
+    "name": "Skeleton Archer",
+    "nish": "🚩12",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️14 / 5",
+    "dod_ar": "🧥12 / 0",
+    "vit": "❤️8",
+    "attributes": "✨10 / 💪12 / 👁️12 / 🏃12 / 🫀8",
+    "abilities": "Bone arrows",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bow, Dagger",
+    "armor": "Light Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 108,
+    "name": "Skeleton Knight",
+    "nish": "🚩14",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️18 / 12",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️10",
+    "attributes": "✨12 / 💪18 / 👁️12 / 🏃12 / 🫀10",
+    "abilities": "Relentless",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Sword, Shield",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 109,
+    "name": "Skeleton Warrior",
+    "nish": "🚩13",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️16 / 8",
+    "dod_ar": "🧥14 / 2",
+    "vit": "❤️8",
+    "attributes": "✨10 / 💪16 / 👁️10 / 🏃10 / 🫀8",
+    "abilities": "Immune to poison",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Sword, Shield",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 110,
+    "name": "Sky Piercer",
+    "nish": "🚩17",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️15 / 22",
+    "dod_ar": "🧥16 / 4",
+    "vit": "❤️19",
+    "attributes": "✨9 / 💪20 / 👁️11 / 🏃19 / 🫀9",
+    "abilities": "Claws (Armor Pen), Tough (Wnds - 2)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Heavy Forearm Artillary (Wnd * 2), Enhanced Claws",
+    "armor": "Reinforced Exoskeleton",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 111,
+    "name": "Skyreaver",
+    "nish": "🚩13",
+    "mr": "👣13",
+    "atk_dmg_ftg": "⚔️15 / 12",
+    "dod_ar": "🧥13 / 2",
+    "vit": "❤️113",
+    "attributes": "✨9 / 💪16 / 👁️9 / 🏃16 / 🫀24",
+    "abilities": "Swallow",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Tailwhip",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 112,
+    "name": "Skywhales",
+    "nish": "🚩7",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️7 / 24",
+    "dod_ar": "🧥7 / 4",
+    "vit": "❤️225",
+    "attributes": "✨12 / 💪24 / 👁️7 / 🏃7 / 🫀24",
+    "abilities": "Ram (Wnds * 2), Telepathy (long range), Stellar Energy Burst (Wnd * 2)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Ram, Energy Blast",
+    "armor": "Natural Force Field",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 113,
+    "name": "Slime",
+    "nish": "🚩13",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️14 / 8",
+    "dod_ar": "🧥12 / 2",
+    "vit": "❤️8",
+    "attributes": "✨20 / 💪12 / 👁️12 / 🏃10 / 🫀8",
+    "abilities": "Splits if hit by slashing",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Slam, Engulf",
+    "armor": "Gel Body",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 114,
+    "name": "Soda Slime",
+    "nish": "🚩14",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️16 / 8",
+    "dod_ar": "🧥14 / 2",
+    "vit": "❤️8",
+    "attributes": "✨20 / 💪12 / 👁️12 / 🏃12 / 🫀8",
+    "abilities": "Sticky soda burst",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Slam, Engulf",
+    "armor": "Gel Body",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 115,
+    "name": "Spider, Giant",
+    "nish": "🚩15",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️18 / 8",
+    "dod_ar": "🧥16 / 1",
+    "vit": "❤️12",
+    "attributes": "✨14 / 💪16 / 👁️14 / 🏃18 / 🫀12",
+    "abilities": "Web entrapment",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Web",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 116,
+    "name": "Spiker Warrior",
+    "nish": "🚩19",
+    "mr": "👣7",
+    "atk_dmg_ftg": "⚔️23 / 12",
+    "dod_ar": "🧥19 / 2",
+    "vit": "❤️12",
+    "attributes": "✨9 / 💪19 / 👁️17 / 🏃22 / 🫀5",
+    "abilities": "Multi Atk (Spikes), Pack Atk",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Forearm-Mounted Spike Launchers, Claws, Bite, Bio-Blade",
+    "armor": "Reinforced Exoskeleton",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 117,
+    "name": "Spiketraxx",
+    "nish": "🚩5",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️15 / 22",
+    "dod_ar": "🧥12 / 3",
+    "vit": "❤️29",
+    "attributes": "✨12 / 💪20 / 👁️11 / 🏃9 / 🫀24",
+    "abilities": "Regen, Mult Atk, Knee/Elbow Poison (Paralisis), Immune (Poison, Acid, Mind Control, Vacuum), Tailwhip (trip)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Knee Spike, Elbow Spike, Tail, Bio Weapons",
+    "armor": "Rugged Armored Plates",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 118,
+    "name": "Starwhisk",
+    "nish": "🚩10",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️11 / 5",
+    "dod_ar": "🧥11 / 0",
+    "vit": "❤️8",
+    "attributes": "✨12 / 💪9 / 👁️9 / 🏃13 / 🫀5",
+    "abilities": "Bite Poison (Mild Stun), Slugs (entangle, Stun, Shock, etc.), Tail (trip)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Knives, Pistols, Slug Throwers, Tail",
+    "armor": "Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 119,
+    "name": "Steelstalker",
+    "nish": "🚩17",
+    "mr": "👣16",
+    "atk_dmg_ftg": "⚔️24 / 24",
+    "dod_ar": "🧥17 / 4",
+    "vit": "❤️32",
+    "attributes": "✨12 / 💪24 / 👁️18 / 🏃19 / 🫀24",
+    "abilities": "Cybernetics, Camouflage, Bite (Stun Toxin), Armor Regen",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Cyber Weapons",
+    "armor": "Cyber-Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 120,
+    "name": "Stinger",
+    "nish": "🚩19",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️19 / 6",
+    "dod_ar": "🧥20 / 0",
+    "vit": "❤️8",
+    "attributes": "✨9 / 💪16 / 👁️12 / 🏃23 / 🫀5",
+    "abilities": "Stinger Poison (Bleeding), Hit & Run, Pack Atk",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Stingers, Claws, Bite",
+    "armor": "Light Exoskeleton",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 121,
+    "name": "Swarm of Insects",
+    "nish": "🚩15",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️14 / 5",
+    "dod_ar": "🧥12 / 0",
+    "vit": "❤️6",
+    "attributes": "✨10 / 💪10 / 👁️12 / 🏃18 / 🫀6",
+    "abilities": "Obscures vision",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 122,
+    "name": "Swarmer Skirmisher",
+    "nish": "🚩19",
+    "mr": "👣16",
+    "atk_dmg_ftg": "⚔️17 / 5",
+    "dod_ar": "🧥20 / 0",
+    "vit": "❤️8",
+    "attributes": "✨9 / 💪11 / 👁️13 / 🏃23 / 🫀5",
+    "abilities": "Mult Atk, Hit & Run, Pack Atk",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Quick Strikes, Gossamer Wings",
+    "armor": "Light Exoskeleton",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 123,
+    "name": "Talonstrider - (Male)",
+    "nish": "🚩24",
+    "mr": "👣18",
+    "atk_dmg_ftg": "⚔️24 / 24",
+    "dod_ar": "🧥24 / 4",
+    "vit": "❤️26",
+    "attributes": "✨9 / 💪24 / 👁️22 / 🏃24 / 🫀24",
+    "abilities": "Charge (MR*2 + Atk), Pack Atk, Mult Atk (Spikes), Thorns",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Tentacle Spike Shooters, Claw, GTH",
+    "armor": "Reinforced Chitinous Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 124,
+    "name": "Talonstrider - (Queen)",
+    "nish": "🚩24",
+    "mr": "👣16",
+    "atk_dmg_ftg": "⚔️24 / 24",
+    "dod_ar": "🧥24 / 4",
+    "vit": "❤️38",
+    "attributes": "✨12 / 💪24 / 👁️24 / 🏃24 / 🫀24",
+    "abilities": "Orders, Bite (Mutagen), Mult Atk, Spikes (Armor Pen), Tail (trip & Knockdown), Spore (Heal or Enhance Allies), Screech (Fear)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Mutagenic Bite, Spike Launchers, Tail",
+    "armor": "Heavy Plated Exoskeleton",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 125,
+    "name": "Tentacora",
+    "nish": "🚩10",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️15 / 17",
+    "dod_ar": "🧥10 / 4",
+    "vit": "❤️58",
+    "attributes": "✨12 / 💪17 / 👁️9 / 🏃12 / 🫀24",
+    "abilities": "Regen, Shadow Magic, Mult Atk, Bite (Wnds + 8 & Wnds * 2)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "weapons": "Tentacle GTH, Bite, Spear Guns, Disk Weapons",
+    "armor": "Water Suit Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 126,
+    "name": "Termite behemoth",
+    "nish": "🚩9",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️6 / 24",
+    "dod_ar": "🧥10 / 4",
+    "vit": "❤️92",
+    "attributes": "✨9 / 💪22 / 👁️5 / 🏃12 / 🫀24",
+    "abilities": "Structural Dmg, Burrow, Regen, Huge (Intimidation), Durable (Wnds - 3)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Tusks, Claw Attacks, Trample",
+    "armor": "Lumpy Brown Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 127,
+    "name": "Termite Serpentis",
+    "nish": "🚩10",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️18 / 16",
+    "dod_ar": "🧥13 / 2",
+    "vit": "❤️23",
+    "attributes": "✨9 / 💪18 / 👁️13 / 🏃15 / 🫀24",
+    "abilities": "Bite (Wnds*2 + Bleeding),",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Fanged Bite, GTH",
+    "armor": "Medium-Grade Armor with Spikes",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 128,
+    "name": "Termite Tunneler",
+    "nish": "🚩6",
+    "mr": "👣9",
+    "atk_dmg_ftg": "⚔️10 / 17",
+    "dod_ar": "🧥7 / 2",
+    "vit": "❤️23",
+    "attributes": "✨12 / 💪16 / 👁️7 / 🏃10 / 🫀24",
+    "abilities": "Minor Regen, Def Spikes (Thorns +Bleeding), Pack Atk, Tunneling, Earth Magic, Immune (Mental)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite",
+    "armor": "Soft Underbelly, Protective Scales",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 129,
+    "name": "Terrak'thul",
+    "nish": "🚩5",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️17 / 24",
+    "dod_ar": "🧥9 / 3",
+    "vit": "❤️105",
+    "attributes": "✨12 / 💪19 / 👁️13 / 🏃7 / 🫀24",
+    "abilities": "Beak (Bleeding), Charge (MR*2 + Atk), Mult Atk (Trampel), Heavy Armor (Wnds -3)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Beak, Trample",
+    "armor": "Natural Bony Head Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 130,
+    "name": "Thoughtshard",
+    "nish": "🚩10",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️9 / 5",
+    "dod_ar": "🧥9 / 0",
+    "vit": "❤️8",
+    "attributes": "✨12 / 💪5 / 👁️7 / 🏃12 / 🫀5",
+    "abilities": "Host Enhancement (1 or more: Men & Physical, regen, resist poison, Stealth Sk), Telepathy with Host",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "None",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 131,
+    "name": "Thunderwing",
+    "nish": "🚩17",
+    "mr": "👣18",
+    "atk_dmg_ftg": "⚔️17 / 24",
+    "dod_ar": "🧥17 / 2",
+    "vit": "❤️36",
+    "attributes": "✨12 / 💪24 / 👁️13 / 🏃19 / 🫀24",
+    "abilities": "Regen, Cyber, Beak (Wnds + 8), Tail (Trip + Knockback), Fear",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Beak, Tail, Cyber Mounted Weapons",
+    "armor": "Cyber Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 132,
+    "name": "TikTok Dragon",
+    "nish": "🚩18",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️20 / 12",
+    "dod_ar": "🧥18 / 3",
+    "vit": "❤️16",
+    "attributes": "✨20 / 💪18 / 👁️14 / 🏃18 / 🫀16",
+    "abilities": "Dance = spell component",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Breath",
+    "armor": "Scaled Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 133,
+    "name": "Tremorclaw",
+    "nish": "🚩5",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️5 / 9",
+    "dod_ar": "🧥5 / 0",
+    "vit": "❤️15",
+    "attributes": "✨12 / 💪10 / 👁️5 / 🏃7 / 🫀6",
+    "abilities": "Claw (Bleeding), Bite (Wnds +5 & Bleeding), Tunneling, Resist (Electrical), Tough (Wnds - 2)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Melee Weapons, Blasters",
+    "armor": "Natural Shielding, Minimal Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 134,
+    "name": "Troll",
+    "nish": "🚩13",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️18 / 12",
+    "dod_ar": "🧥16 / 3",
+    "vit": "❤️22",
+    "attributes": "✨10 / 💪22 / 👁️10 / 🏃12 / 🫀22",
+    "abilities": "Regenerates unless burned",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite, Slam",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 135,
+    "name": "Tummokian",
+    "nish": "🚩13",
+    "mr": "👣13",
+    "atk_dmg_ftg": "⚔️13 / 5",
+    "dod_ar": "🧥13 / 0",
+    "vit": "❤️12",
+    "attributes": "✨9 / 💪12 / 👁️11 / 🏃13 / 🫀5",
+    "abilities": "Pack Atk, Punch (Knockback), Club (Stun),  Tough (Wnds - 3)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Punch, Club, Knife",
+    "armor": "Archaic Armor, Flak Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 136,
+    "name": "Vamp",
+    "nish": "🚩18",
+    "mr": "👣9",
+    "atk_dmg_ftg": "⚔️20 / 10",
+    "dod_ar": "🧥18 / 0",
+    "vit": "❤️20",
+    "attributes": "✨12 / 💪15 / 👁️16 / 🏃20 / 🫀11",
+    "abilities": "Blood Magic, Shadow Magic, Regen, Gaze (Mesmerize)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "None",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 137,
+    "name": "Vampire Lord",
+    "nish": "🚩20",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️22 / 12",
+    "dod_ar": "🧥20 / 3",
+    "vit": "❤️24",
+    "attributes": "✨24 / 💪22 / 👁️18 / 🏃18 / 🫀24",
+    "abilities": "Commands bats / wolves",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Bite, Gossamer Wings",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 138,
+    "name": "Vampire Spawn",
+    "nish": "🚩16",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️18 / 8",
+    "dod_ar": "🧥16 / 2",
+    "vit": "❤️14",
+    "attributes": "✨16 / 💪18 / 👁️16 / 🏃16 / 🫀14",
+    "abilities": "Heals 2 Vit❤️ when feeding",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 139,
+    "name": "Verdantmind",
+    "nish": "🚩5",
+    "mr": "👣6",
+    "atk_dmg_ftg": "⚔️5 / 7",
+    "dod_ar": "🧥5 / 1",
+    "vit": "❤️18",
+    "attributes": "✨12 / 💪6 / 👁️5 / 🏃5 / 🫀7",
+    "abilities": "Plant Magic, Mult Atk, Club Bash (Wnds *2), Immune (Mind Control)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Tendril Whips, GTH, Clubs",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 140,
+    "name": "Voidstalker",
+    "nish": "🚩19",
+    "mr": "👣18",
+    "atk_dmg_ftg": "⚔️22 / 7",
+    "dod_ar": "🧥19 / 0",
+    "vit": "❤️38",
+    "attributes": "✨12 / 💪15 / 👁️16 / 🏃22 / 🫀24",
+    "abilities": "Crush (Wnds * 2), Pocket Dimension, Startle (Stun), Dimensional Grab (Str^Str)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "GTH, Crush",
+    "armor": "Special Pocket Dimension",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 141,
+    "name": "Warshade",
+    "nish": "🚩17",
+    "mr": "👣12",
+    "atk_dmg_ftg": "⚔️17 / 17",
+    "dod_ar": "🧥15 / 3",
+    "vit": "❤️20",
+    "attributes": "✨12 / 💪19 / 👁️13 / 🏃18 / 🫀22",
+    "abilities": "Orders, Necromancy, Punch (Knockback), Tough (Wnds-3)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Punch, Bite, Swords, Disc Guns",
+    "armor": "Any Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 142,
+    "name": "Webweaver Strategist",
+    "nish": "🚩24",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️24 / 6",
+    "dod_ar": "🧥24 / 0",
+    "vit": "❤️9",
+    "attributes": "✨12 / 💪20 / 👁️24 / 🏃24 / 🫀6",
+    "abilities": "Orders, Web Magic",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Web Constructs, Claws",
+    "armor": "Light Exoskeleton",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 143,
+    "name": "Were",
+    "nish": "🚩15",
+    "mr": "👣7",
+    "atk_dmg_ftg": "⚔️15 / 17",
+    "dod_ar": "🧥15 / 3",
+    "vit": "❤️20",
+    "attributes": "✨12 / 💪19 / 👁️11 / 🏃17 / 🫀19",
+    "abilities": "Immense Regen, Dark Magic, Claws (Bleeding), Bite (Wnds + 5), Transform (Dire Wolf, Werewolf), Howl or Gaze (Fear)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claws, Teeth, Melee Weapons, MA",
+    "armor": "Light Combat Armor",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 144,
+    "name": "Werewolf",
+    "nish": "🚩18",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️20 / 12",
+    "dod_ar": "🧥18 / 2",
+    "vit": "❤️18",
+    "attributes": "✨12 / 💪20 / 👁️14 / 🏃18 / 🫀18",
+    "abilities": "Regeneration",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Claw, Bite",
+    "armor": "Thick Hide",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 145,
+    "name": "Whisperfur",
+    "nish": "🚩17",
+    "mr": "👣16",
+    "atk_dmg_ftg": "⚔️16 / 5",
+    "dod_ar": "🧥16 / 0",
+    "vit": "❤️8",
+    "attributes": "✨9 / 💪7 / 👁️12 / 🏃19 / 🫀5",
+    "abilities": "Camouflage",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "None",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 146,
+    "name": "Winged Marauder",
+    "nish": "🚩16",
+    "mr": "👣10",
+    "atk_dmg_ftg": "⚔️16 / 9",
+    "dod_ar": "🧥17 / 0",
+    "vit": "❤️18",
+    "attributes": "✨9 / 💪16 / 👁️12 / 🏃19 / 🫀7",
+    "abilities": "Mult Atk, Hit & Run, Razor Wings (Bleeding), Claws (Wnds + 1), Bite (Mild Stun)",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Razor-Sharp Wings, Claws, Bite",
+    "armor": "Reinforced Exoskeleton",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 147,
+    "name": "Wraith",
+    "nish": "🚩18",
+    "mr": "👣14",
+    "atk_dmg_ftg": "⚔️20 / 8",
+    "dod_ar": "🧥18 / 2",
+    "vit": "❤️16",
+    "attributes": "✨22 / 💪12 / 👁️16 / 🏃18 / 🫀16",
+    "abilities": "Intangible",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Touch",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 148,
+    "name": "Zombie",
+    "nish": "🚩12",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️14 / 8",
+    "dod_ar": "🧥12 / 2",
+    "vit": "❤️10",
+    "attributes": "✨10 / 💪18 / 👁️10 / 🏃10 / 🫀10",
+    "abilities": "Slow, keeps coming",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Slam, Bite",
+    "armor": "None",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 149,
+    "name": "Zombie Brute",
+    "nish": "🚩12",
+    "mr": "👣8",
+    "atk_dmg_ftg": "⚔️18 / 12",
+    "dod_ar": "🧥14 / 3",
+    "vit": "❤️12",
+    "attributes": "✨10 / 💪20 / 👁️10 / 🏃10 / 🫀12",
+    "abilities": "Hits hard, slow",
+    "created_at": "2026-08-13T21:26:30.621404+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "weapons": "Slam, Bite",
+    "armor": "None",
+    "is_guildspace_locked": false
+  }
+]

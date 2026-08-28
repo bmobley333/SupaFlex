@@ -1,0 +1,2532 @@
+[
+  {
+    "id": 1,
+    "name": "Aether Shuriken",
+    "type": "Hurled",
+    "requirement": "🏃 6",
+    "max_block": null,
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Aether Shuriken\nThe Aether Shuriken is a deadly and elegant weapon designed for the character, perfectly embodying their speed, precision, and mastery of single-target elimination. These throwing stars are infused with Aether energy, allowing them to return to the wielder after being thrown, ensuring that the character is never without their lethal tools.\nWhen an Aether Shuriken is thrown, it spins through the air with uncanny accuracy, slicing through armor and flesh with ease. The dark, light-absorbing metal of the shuriken contrasts sharply with the glowing runes etched into its surface, which pulse with Aetheric energy as it homes in on its target. Upon impact, the shuriken releases a burst of Aether energy, destabilizing the enemy's defenses before returning to the character's hand, ready for another throw. The Aether Shuriken’s ability to teleport the character directly to the target through Aether Step further amplifies its effectiveness, allowing for swift and deadly follow-up attacks.\nWith the Aether Shuriken, the character can strike from afar and close the distance in an instant, delivering precise, deadly attacks with relentless efficiency.\nEffects\n-- Aether-infused throwing stars that return to the wielder after being thrown.",
+    "pic": "https://drive.google.com/file/d/1oh2Mdcl5Z-foDBq05xk7kQ0UCA7VAxwf/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 2,
+    "name": "Aether Sword",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Aether Sword\nThe Aether Sword is a weapon of unparalleled craftsmanship, designed for the character to channel Aether energy into devastating strikes. This finely crafted blade is a seamless fusion of advanced materials, intricate design, and potent Aetheric enchantments, making it the ultimate tool for precision and power in combat.\nWhen the character wields the Aether Sword, the blade glows with a radiant blue light, its sharp edge cutting through the air with a hum of Aetheric energy. The runes etched into the blade pulse with power, reflecting the connection between the weapon and its wielder. Each strike with the Aether Sword is enhanced by the Aether Burst ability, which unleashes a concentrated surge of energy upon impact. The resulting explosion of power not only doubles the inflicted wounds but also leaves a glowing trail of devastation in its wake, making each blow potentially fatal.\nWith the Aether Sword in hand, the character becomes a whirlwind of lethal energy, capable of cutting down enemies with strikes that are as precise as they are powerful.\nEffects\n-- See below.",
+    "pic": "https://drive.google.com/file/d/1F1pXEWYGZti05RXZ7BIe9qdi1m3hyQGn/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 3,
+    "name": "Assault Slugger",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": null,
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Assault Slugger is a heavy automatic weapon that fires metal slugs designed to detonate on impact within the target rather than in an area. It is bulky and functions like a large machine gun. When set to full auto, damage increases significantly, but the operator suffers an attack penalty and consumes four rounds per attack.\nWith the Assault Slugger, the wielder can tear apart positions and heavy targets.\nEffects\n— Full auto: increased damage, attack penalty, four shots per attack; slugs detonate on impact (no area rules).",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 4,
+    "name": "Axe",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Axe is a classic two-handed melee weapon built for raw impact and intimidation. Battle-axes feature a large double head mounted on a stout shaft, delivering devastating chops and cleaving strikes. They remain a staple among frontline fighters and warrior traditions across many worlds.\nA typical battle-axe stands three to four feet from grip to blade, with a heavy double-headed design that balances reach and power. The shaft is often reinforced to withstand repeated impacts, while the broad heads are engineered for maximum penetration against armor and flesh alike. In trained hands, the axe can hook shields, break formations, and deliver fight-ending blows.\nWith the Axe, a warrior can dominate the close fight through sheer force and reach.\nEffects\n— Large double-headed weapon on a three- to four-foot shaft; may be used two-handed.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 5,
+    "name": "Bastard Sword",
+    "type": "Melee",
+    "requirement": "💪 10",
+    "max_block": "20",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bastard Sword is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 6,
+    "name": "Battleaxe",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Battleaxe is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 7,
+    "name": "Beak-Mace",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Beak-Mace is a distinctive melee weapon consisting of a knobby striking ball and a long, beak-like metal spike. The beak can be loaded with up to ten doses of poison, and when the user chooses to inject, a successful hit delivers the dose; the victim suffers poison effects if the attack causes wounding damage. Delivering a poison injection requires a declared attack and incurs a penalty to the attack roll.\nThe weapon can be used without poison for straightforward blunt and piercing damage, and many warriors reserve poisoned strikes for foes they consider unworthy of honorable combat. The beak’s design allows deep penetration, making it effective for both direct damage and toxin delivery. In the right hands, the Beak-Mace is as much a statement of intent as a tool of war.\nThe Beak-Mace lets the wielder choose between honorable force and lethal toxin.\nEffects\n— Beak may hold up to ten poison doses; injection attack at -1d; poison applies if wounding damage results.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 8,
+    "name": "Bio-Forge Gauntlet",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bio-Forge Gauntlet\nThe Bio-Forge Gauntlet is an extraordinarily versatile tool designed for the character, who specializes in biotechnology and technological innovation. This unique gauntlet can shape bioengineered materials into various weapons or tools on the fly, making it an indispensable asset in both combat and the daily functioning of the hive. The gauntlet’s adaptability allows the character to quickly respond to any situation, crafting the necessary tools or weapons in moments.\nThe Bio-Forge Gauntlet is a sleek, bio-mechanical device that covers the character’s forearm and hand. It is crafted from a lightweight yet durable bio-alloy, with organic elements interwoven throughout its structure. Bioluminescent veins pulse with a soft green glow, indicating the gauntlet’s power levels and readiness. The surface is covered in a network of flexible, tendril-like structures that extend and reshape with a smooth, fluid motion, allowing the gauntlet to morph into various forms. When activated, the gauntlet emits a faint hum, and the tendrils move with a precise, almost organic grace, forming weapons or tools as needed.\nThe Bio-Forge Gauntlet transforms the character into a formidable and adaptable force, capable of shaping the battlefield and enhancing the hive’s capabilities with unparalleled efficiency.\nEffects\n-- Can shape bioengineered materials into various weapons or tools on the fly.",
+    "pic": "https://drive.google.com/file/d/1OjZbTbOPefI-xjA3mLIZ0jtuWRdgmWIF/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 9,
+    "name": "Bio-Spitter",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": null,
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Bio-Spitter filters impurities and waste from its host’s body, and as a weapon, for it can launch the resulting biochemical compounds at an enemy. Compounds are stored in soft egg sacs—one egg per hour—and the spitter holds up to ten. A hit is caustic and potentially deadly.\nIt can hold up to 10 and can also fire Bormaul Eggs if loaded; each uses two slots. With the Bio-Spitter, the host can turn waste into a weapon.\nEffects\n— Up to 10 eggs; one per hour; Bormaul Eggs use two slots each. “eggs,”",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 10,
+    "name": "Bio-Vine Whip",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": null,
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bio-Vine Whip\nBio-Vine Whip is an extraordinary weapon designed for the character, enabling them to entangle and immobilize enemies with ease. This retractable whip, crafted from bioengineered vines, synergizes perfectly with the character's plant manipulation abilities, providing both offensive and defensive capabilities that enhance their control over the battlefield and their team's safety.\nVisually, the Bio-Vine Whip is a marvel of biotechnological innovation and natural beauty. When retracted, it resembles a tightly coiled vine, the length of a forearm, with a handle made from dark, smooth wood-like material that pulses with a soft green bioluminescence. Upon activation, the whip unfurls with a life of its own, extending up to 15 feet as it twists and moves fluidly, almost as if it character alive. The vine’s surface is textured with tiny barbs that can latch onto targets, ensuring they remain ensnared by the whip’s powerful grasp.\nThe Bio-Vine Whip turns the character into a master of battlefield control, using the living force of nature to bind and immobilize foes.",
+    "pic": "https://drive.google.com/file/d/1yuchvvyHpnSxBIO9_dWdxNFzo-OrHeJ-/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 11,
+    "name": "Blaster Cannon",
+    "type": "Shot",
+    "requirement": "👁️12",
+    "max_block": null,
+    "cost": "12g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Blaster Cannon is a heavy, auto-firing energy weapon built for sustained suppression and area denial. It is typically slung from a shoulder strap and fired from the hip, allowing the operator to lay down a continuous stream of fire while maintaining mobility.\nThe weapon’s bulk and recoil make aimed single shots impractical; instead, it excels at saturation fire. The power cell and emitter array are oversized compared to smaller blasters, producing a heavier bolt and a higher rate of fire. Hip mounting and bracing are standard, as the cannon is too unwieldy for precise shoulder fire.\nWith the Blaster Cannon, a single operator can dominate a corridor or hold a position against advancing forces.\nEffects\n— Heavy auto-firing blaster; normally shoulder-slung and hip-fired.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 12,
+    "name": "Blaster Carbine",
+    "type": "Shot",
+    "requirement": "👁️ 10",
+    "max_block": null,
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Blaster Carbine bridges the gap between sidearm and rifle, offering greater damage and range than a pistol at the cost of size and ease of concealment. It is widely used by irregulars, raiders, and special operations units who need compact firepower without the bulk of a full rifle.\nThe carbine is somewhat heavier and less forgiving than a pistol, requiring two hands for best accuracy. In return, it delivers a more powerful energy charge and improved effective range. Its compact profile makes it suitable for vehicle crews, boarding actions, and environments where a full-length rifle would be a liability.\nThe Blaster Carbine remains a go-to choice for anyone who needs serious firepower in a portable package.\nEffects\n— None",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 13,
+    "name": "Blaster Pistol",
+    "type": "Shot",
+    "requirement": "👁️ 6",
+    "max_block": null,
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Blaster Pistol is the standard sidearm for military officers, law enforcement, and starship personnel. Compact and relatively easy to conceal, it provides a reliable backup when heavier weapons are impractical or unavailable.\nThe pistol’s small frame houses a compact power cell and emitter, producing a modest but effective energy discharge. Its size allows it to be worn at the hip or in a shoulder holster without hindering movement. While it lacks the punch of a carbine or rifle, it is sufficient for close-quarters defense and routine duty.\nWith the Blaster Pistol, the wielder is never unarmed in a crisis.\nEffects\n— None",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 14,
+    "name": "Blaster Rifle",
+    "type": "Shot",
+    "requirement": "👁️ 10",
+    "max_block": null,
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Blaster Rifle is the standard infantry long arm in most military and paramilitary forces. It requires two hands to fire effectively, though the trigger grip can be rotated for underhand or overhand firing in tight spaces. The rifle’s larger emitter produces a bigger, more ovoid energy charge than pistols or carbines, increasing both damage and effective range.\nIn the field, the rifle is the backbone of squad-level firepower. Its ergonomics and balance support sustained fire and accurate shots at medium range. The weapon’s profile is familiar across countless worlds, where it serves as the default armament for line troops.\nThe Blaster Rifle defines the standard of military ranged combat.\nEffects\n— Two-handed; grip may be rotated for underhand or overhand fire.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 15,
+    "name": "Bloodblade",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bloodblade\nThe Bloodblade is a weapon of dark elegance and immense power, designed specifically for the character, a warrior who thrives on draining the life force of their enemies to heal and empower themselves. This sword is more than just a tool of destruction; it is a conduit for the character's vampiric energy, allowing them to siphon vitality from their foes with every strike, enhancing their own strength and resilience as the battle progresses.\nThe Bloodblade is forged from a rare, dark metal that glows with a sinister red luminescence, as though it is infused with the essence of blood itself. Intricate runes and vein-like patterns run along the length of the blade, pulsating with an eerie, life-draining energy. When the character wields the Bloodblade, the weapon feels alive in their hands, responding to their every move with a deadly precision. As the blade cuts through flesh and armor, it not only inflicts wounds but also draws life force from the target, feeding it back to the character and healing their own wounds. The more the character strikes, the stronger and more focused they become, each hit fueling their insatiable thirst for vitality.\nThe Bloodblade is the ultimate expression of the character's predatory nature, a weapon that not only cuts down enemies but also empowers its wielder, allowing them to sustain themselves through the life force of those they defeat.",
+    "pic": "https://drive.google.com/file/d/1a2qmEAwv14MJbfOXpH6efAbMUX0iX2Qb/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 16,
+    "name": "Blowgun",
+    "type": "Shot",
+    "requirement": "👁️ 4",
+    "max_block": null,
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Blowgun is one of the simplest missile weapons in use: a long hollow tube that propels a small dart by breath alone. It is common on low-tech and frontier worlds, where its silence and portability make it a favored tool for hunters and covert operatives. Unenhanced darts rarely cause serious injury, but poison-tipped darts turn the blowgun into a deadly stealth weapon.\nThe tube is lightweight and easy to carry; darts are small and can be carried in quantity. Firing requires no mechanical parts and produces no flash or report, making the weapon ideal for ambush and assassination. In the right environment, a skilled user can deliver a single, nearly undetectable strike.\nWith the Blowgun, the wielder can strike from concealment without betraying their position.\nEffects\n— Poison-tipped darts are effective for stealth and assassination.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 17,
+    "name": "Bormaul Eggs",
+    "type": "Hurled",
+    "requirement": "🏃 8",
+    "max_block": null,
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bormaul Eggs can be launched from bio-spitters or thrown by hand. Each egg contains a small crustacean (a bormaul). Normally tough and leathery, death eggs grow fragile when thrown, and break upon impact. When they hit, no damage results (often lulling opponent’s into a false sense of security).\nAfter impact, the bormaul seeks the nearest compatible life form. Once on a victim, the bormaul will squeeze or chew beneath armor and begin feasting on the next round. Bormaul ratings are 8/10/2 and they are small and tough enough to negate most forms of armor. These creatures are completely mindless and will continue to attack until killed.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 18,
+    "name": "Botanic Grenades",
+    "type": "Hurled",
+    "requirement": "🏃 12",
+    "max_block": null,
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Botanic Grenades\nBotanic Grenades are innovative explosive devices crafted specifically for the character, offering a versatile means of battlefield control. These grenades can release either healing spores to aid allies or toxic spores to debilitate enemies, making them an essential tool for maintaining the balance between life and death on the battlefield.\nEach Botanic Grenade is a small, spherical device about the size of a grapefruit, made from bioengineered materials that resemble natural seeds. The outer shell is textured like bark, with bioluminescent veins that pulse softly, indicating the type of spores contained within. When thrown, the grenade bursts open, releasing a cloud of spores that spread quickly through the air. The healing spores emit a gentle, greenish glow as they drift towards allies, mending wounds and restoring vitality. Conversely, the toxic spores darken the air with a sickly yellow hue, spreading their venomous influence to any enemy caught within the cloud.\nBotanic Grenades perfectly complement the character's ability to manipulate plant life and maintain the balance between life and death on the battlefield.\nEffects\n-- Attack is made via Throw or grenade launcher, and the effect is determined by the type of spore released.\n-- If no Feat is used, the either 1r of Dmg() as Healing or Dmg(*2) as Dmg as chosen by player\n-- If Feat then defer to Feat for effects",
+    "pic": "https://drive.google.com/file/d/1G3t_mXo77ya7E2qrkvTj3bZVUQAfpFXI/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 19,
+    "name": "Bow",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": null,
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Bow is a timeless missile weapon still widely used on primitive worlds and by scouts, hunters, and covert operatives. This model stands about four feet unstrung with a draw weight of roughly forty pounds, balancing portability with enough power to pierce armor at short to medium range. Poison-tipped or specially treated arrows make it a potent stealth and assassination tool.\nThe bow’s simplicity—a flexible stave and a string—belies its effectiveness in the right hands. Arrows can be customized with explosive, incendiary, or other special tips where technology permits. No power cell or mechanism is required, making the weapon reliable in harsh or low-tech environments.\nWith the Bow, a skilled archer can deliver silent, accurate strikes at a distance.\nEffects\n— Poison-tipped and other special arrow tips may be used.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 20,
+    "name": "Bow (Long)",
+    "type": "Shot",
+    "requirement": "👁️ 6",
+    "max_block": "n/a",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bow (Long) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 21,
+    "name": "Brawl",
+    "type": "Melee",
+    "requirement": "💪 4",
+    "max_block": "n/a",
+    "cost": "X",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Kick, Punch, Bite, GTH, Tail, Tacklet, etc.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 22,
+    "name": "Caustic Spitter",
+    "type": "Shot",
+    "requirement": "💪 12",
+    "max_block": "24",
+    "cost": "7g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Caustic Spitter is a living weapon harvested from a knotted plant structure. It is formed when certain beetles infest trees and attract nesting spiders. The spider builds a cocoon and uses secretions to lure beetles in, then stores them and its waste.\nWhen threatened, it can expel a glob of caustic waste and beetle parts that sears flesh and scars metal. The liquid nature of the discharge grants +1d damage against partial armor. With the Caustic Spitter, the wielder can deliver a nasty surprise at close range.\nEffects\n— +1d Dmg against partial armor; single discharge per use.\n### **Bioblades**\nBioblades are living melee weapons grown to bond with a specific user and gain combat capability as they mature. If broken or damaged in combat, a bioblade regrows at about one inch per day. They need not be sharpened but must be fed once per week by being placed in rich, damp soil for at least two hours. With Bioblades, the wielder carries a weapon that grows with them and can recover from damage.\nEffects\n— Regrowth one inch per day; feed weekly in damp soil; no sharpening.\n*",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 23,
+    "name": "Chain Whip",
+    "type": "Melee",
+    "requirement": "💪 4",
+    "max_block": "8",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Chain Whip is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 24,
+    "name": "Channel Crystals",
+    "type": "Hurled",
+    "requirement": "🏃 8",
+    "max_block": null,
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Channel Crystals are clear, multi-faceted gems with a hollow center, roughly the size of a small grenade.\nA channeler may activate these crystals by expending two power points. Once activated the crystal’s center pulsates with the user’s signature color (see powers).\nChannel Crystals remain energized for up to one round, and may be thrown during this time.\nCrystals inflicting explosive damage equal to the user’s channeler skill rating.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 25,
+    "name": "Clawed Gauntlets",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Clawed Gauntlets\nThe Clawed Gauntlets are a set of intricately designed and lethal weapons crafted specifically for the character, enhancing their natural claws to deadly new levels. These gauntlets are not just tools of destruction but extensions of the character's very being, turning their hands into instruments of relentless slaughter. Forged from an ultra-durable, dark metal and engraved with glowing runes, the gauntlets pulse with a fierce red light, reflecting the raw, unbridled fury of the character.\nEach gauntlet is fitted with razor-sharp claws capable of slicing through armor and flesh with terrifying ease. The character's natural strength is magnified by the gauntlets, allowing them to deliver powerful, precise strikes that can tear through enemy lines and overwhelm their foes in close combat. The Clawed Gauntlets are more than just weapons; they are a symbol of the character's ferocity and dominance on the battlefield.\nWhen the character engages their foes, the Clawed Gauntlets become a whirlwind of slashing fury, each swipe a deadly arc of destruction. The character moves with brutal efficiency, tearing through enemies as if they character mere obstacles in their path. The Clawed Gauntlets are a perfect embodiment of the character’s savage nature, turning their rage into a weapon of unparalleled lethality.",
+    "pic": "https://drive.google.com/file/d/1rJ6fC-9uHWZj57WQAu_WeginoO_Oj-m1/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 26,
+    "name": "Claymore",
+    "type": "Melee",
+    "requirement": "💪 10",
+    "max_block": "20",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Claymore is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 27,
+    "name": "Club/Mace",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Club and Mace are among the oldest melee weapons in use: a weighted head on a shaft, designed to crush and break rather than slice. The mace evolved from the primitive club and remains standard issue in many military and religious orders. Modern versions use a reinforced shaft and a heavy head for maximum impact.\nThe weapon can be wielded one-handed for speed or two-handed for extra power. The head concentrates force on a small area, making it effective against armor and hardened targets. No edge need be maintained, and the design is simple enough to produce and repair almost anywhere.\nWith the Club or Mace, the wielder can deliver bone-breaking force with minimal training.\nEffects\n— Shaft with weighted head; may be used one- or two-handed.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 28,
+    "name": "Combat Knife",
+    "type": "Melee, Hurled",
+    "requirement": "💪 6, 🏃 6",
+    "max_block": "12",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪, 🏃",
+    "dmg": "💪, 🏃",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Combat Knife is a purpose-built survival and close-combat tool, often regarded as the ultimate field sidearm. It features an eight-inch blade—one edge straight, the other serrated—and a six-inch grip that houses a compact digital compass, self-adjusting for local gravity and capable of displaying positional coordinates. The grip also contains a spool of high-tensile line, emergency rations, a distress beacon, and a small compartment for toxins or other supplies.\nWhen the beacon is activated, it broadcasts to any compatible receiver in range, making the knife a last-resort lifeline for downed personnel. In combat, the blade is fast and versatile, suitable for slashing, stabbing, and utility tasks. The combination of weapon and survival gear has made it a standard issue for elite and long-range units.\nThe Combat Knife ensures its bearer is never truly unarmed or without a way to call for help.\nEffects\n— Integrated compass, line, beacon, and storage; blade one-edged and one serrated.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 29,
+    "name": "Crossbow",
+    "type": "Shot",
+    "requirement": "👁️ 6",
+    "max_block": "n/a",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Crossbow has evolved into a high-performance weapon built from advanced materials, with a prod and mechanism that deliver far greater force than historical designs. Modern versions typically include an integrated bolt magazine and auto-draw system, allowing a bolt to be fired every round without manual spanning. The magazine holds up to twenty bolts and can be loaded with a variety of bolt types.\nBolts may be wood, metal, or composite, and can be fitted with explosive, poison, or other payloads. The weapon is ideal for users who need rifle-like punch without the training curve of a bow, and it performs well in confined spaces. Its ability to hold a drawn state makes it suitable for ambush and overwatch.\nWith the Crossbow, the wielder can deliver heavy, accurate shots with minimal exposure.\nEffects\n— 20-bolt capacity; auto-draw allows one bolt per round; various bolt types and payloads.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 30,
+    "name": "Crystal Guitar",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Crystal Guitar is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 31,
+    "name": "Crystal Thrower",
+    "type": "Shot",
+    "requirement": "👁️ 10",
+    "max_block": null,
+    "cost": "10g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Crystal Thrower\nThe Crystal Thrower is an advanced ranged weapon designed for the character, combining ancient earth-based magic with cutting-edge technology to launch explosive crystal shards. This sleek weapon, resembling a cross between a high-tech rifle and a mystical staff, is crafted from a lightweight alloy with glowing runes etched into its surface. Crystalline structures integrated into the design shimmer and refract light, giving the weapon a mystical, otherworldly appearance that reflects the character's mastery of elemental forces.\nWhen the Crystal Thrower is fired, it emits a sharp, crystalline hum as it charges, followed by the sharp crack of the crystal shards being propelled at high speed. The shards gleam with an inner light, leaving streaks of radiant energy in their wake. Upon impact, the shards embed deeply into the target, followed by a brief moment of silence before they violently detonate, sending a shower of smaller, jagged crystals in all directions. The explosion is accompanied by a sharp, resonant crack, followed by the hissing sound of shards piercing the air, leaving the battlefield littered with glimmering fragments.\nWith the Crystal Thrower in hand, the character turns precision ranged attacks into deadly, explosive assaults, amplifying their destructive power on the battlefield.",
+    "pic": "https://drive.google.com/file/d/1tJH7IDbPV9xuY5I0SiGWHUBXzQ_pyDta/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 32,
+    "name": "Cyber Talons",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": "12",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Cyber Talons are cybernetic implants that extend from the fingers rather than from the back of the hand, offering claw damage and grip enhancement.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 33,
+    "name": "Dagger",
+    "type": "Melee, Hurled",
+    "requirement": "💪 4, 🏃 4",
+    "max_block": "8",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪, 🏃",
+    "dmg": "💪, 💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Dagger is a short, double-edged blade prized for concealability and lethality at close range. It has long been the weapon of choice for assassins, thieves, and anyone who needs a blade that can be hidden until the last moment. When coated or envenomed, the dagger becomes a one-strike tool of quiet elimination.\nThe blade is short enough to be worn at the belt, in a boot, or in a sleeve, and can be drawn and used in a single motion. In combat it favors quick thrusts and close grappling. Its reputation as a killer’s weapon is well earned, but it also serves as a universal backup blade for soldiers, scouts, and travelers.\nWith the Dagger, the wielder is never without a final option when other weapons fail or cannot be used.\nEffects\n— None",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 34,
+    "name": "Disk Cannon",
+    "type": "Shot",
+    "requirement": "👁️12",
+    "max_block": null,
+    "cost": "10g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Disk Cannon is a heavy weapon that fires spinning metal disks at high velocity, capable of inflicting severe damage in trained hands. Its massive recoil makes it difficult to control without support; it is typically used with a hip-mounted firing arm that braces the weapon. Without the arm (or an equivalent hard-point mount), the operator suffers a significant attack penalty.\nVisually, the cannon is a substantial piece of hardware, with a wide bore and a mechanism designed to impart spin and velocity to each disk. The disks themselves are durable and can cut through light armor and flesh with ease. The weapon is a favorite of heavy infantry and vehicle crews who can afford the weight and the mount.\nWith the Disk Cannon, a single well-placed shot can decide an engagement.\nEffects\n— Use of hip firing arm or hard-point mount required to avoid attack penalty.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 35,
+    "name": "Disk Pistol",
+    "type": "Shot",
+    "requirement": "👁️ 6",
+    "max_block": null,
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Disk Pistol is a compact sidearm that fires small spinning disks, commonly issued to military and security personnel who need a concealable sidearm. It is small enough to be hidden under a coat or in a holster and delivers solid damage at close range. The main drawback is its distinctive report—a harsh metallic scrape that is difficult to silence and easy to recognize.\nThe mechanism that spins and launches the disk is simple and reliable, with fewer moving parts than some energy weapons. The disks are cheap to produce and can be stored in a magazine or speed-loader. For operators who prefer kinetic sidearms and can accept the noise, the Disk Pistol is a dependable choice.\nWith the Disk Pistol, the wielder has a reliable backup that packs a punch.\nEffects\n— Noisy when fired; small and easily concealed.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 36,
+    "name": "Disk Rifle",
+    "type": "Shot",
+    "requirement": "👁️ 10",
+    "max_block": null,
+    "cost": "7g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Disk Rifle is the standard-issue long arm for many military forces, firing heavier spinning disks than the disk pistol and at greater range. It is approximately three feet long and incorporates a folding shoulder stock; deploying the stock is important for accuracy, and firing without it (or without a hard-point mount) incurs an attack penalty.\nThe rifle’s larger mechanism allows for bigger, faster disks that hit harder and penetrate better. Troops trained on the weapon use it for everything from patrol to full-scale engagements. The folding stock makes it easier to carry in vehicles and tight spaces while still providing stability when extended.\nThe Disk Rifle is the backbone of infantry firepower for forces that favor kinetic disk weapons.\nEffects\n— Shoulder stock or hard-point mount should be used to avoid attack penalty.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 37,
+    "name": "Dragon Slayer Spear",
+    "type": "Melee, Hurled",
+    "requirement": "💪 12, 🏃 12",
+    "max_block": "24",
+    "cost": "9g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪, 🏃",
+    "dmg": "💪, 🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Dragon Slayer Spear is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 38,
+    "name": "Energy Dagger",
+    "type": "Melee, Hurled",
+    "requirement": "💪 6, 🏃 6",
+    "max_block": "12",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪, 🏃",
+    "dmg": "💪, 🏃",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Energy Dagger\nThe Energy Dagger is a sleek and deadly secondary weapon crafted for the character, designed to deliver precision strikes with lethal efficiency. This dagger is more than just a blade; it is a conduit for Aether energy, capable of releasing powerful bursts of energy at close range, making it an indispensable tool for versatile combat scenarios.\nWhen the character wields the Energy Dagger, the blade shimmers with a faint blue light, its edge razor-sharp and ready to cut through the toughest defenses. The hilt pulses gently with the wielder’s heartbeat, providing a secure grip that feels almost alive. When combined with the Phasing Thrust ability, the Energy Dagger becomes partially intangible, allowing it to bypass armor and other barriers with ease. The blade phases through the target’s defenses, delivering a precise and unavoidable strike that inflicts guaranteed wounds based on the character’s skill.\nWith the Energy Dagger, the character can execute precise and deadly strikes, cutting through even the most impenetrable defenses with unmatched precision.",
+    "pic": "https://drive.google.com/file/d/1BIaGyYSQCNoUttFa_DRn5AWt56icm4zl/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 39,
+    "name": "Executioner’s Axe",
+    "type": "Melee",
+    "requirement": "💪 12",
+    "max_block": "24",
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Executioner’s Axe is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 40,
+    "name": "Eye-Laser",
+    "type": "Shot",
+    "requirement": "👁️ 6",
+    "max_block": null,
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "This laser is implanted in the patient’s head next to an eye. The laser follows all of the user’s eye movements (using targeting computer technology), and is highly accurate. It inflicts only 8L dual damage (see *EM, systems, weapons)* vs normal targets. When used against close stationary items (i.e., to cut) the two barrels slide together forming one beam with a 10M cutting ability. In this form, the beam length is limited to two feet and may not function as a weapon.\n### **Quick Attach Weapons**\nAll of the following are used with (and require) the quick attach couplink. It takes one movement action to attach or detach an item, and a full round to complete switch items.\n*",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 41,
+    "name": "Flail",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": "12",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Flail is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 42,
+    "name": "Flame Lance",
+    "type": "Melee",
+    "requirement": "💪 10",
+    "max_block": "20",
+    "cost": "12g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Flame Lance\nFlame Lance is a powerful weapon crafted for the character, specializing in medium-range combat and large-scale enemy mitigation. This plasma-infused lance is engineered to pierce through enemy lines, delivering devastating fiery assaults that amplify the character's natural combat prowess. The Flame Lance not only enhances the character's ability to absorb damage but also transforms them into a relentless force of fiery destruction on the battlefield.\nVisually, the Flame Lance is a marvel of advanced technology and lethal design. When not in use, it appears as a compact, cylindrical device made from a heat-resistant alloy with a dark metallic finish. Glowing orange-red lines pulse along its surface, indicating the immense power within. Upon activation, the lance extends to its full length, revealing an 8-foot-long, plasma-infused blade that crackles with fiery energy, ready to unleash its destructive force.\nIn the heat of battle, the Flame Lance turns the character into a blazing spearhead, capable of tearing through enemy ranks with unmatched ferocity.",
+    "pic": "https://drive.google.com/file/d/1hE2PCW9EFkgXaC3NH2KowGB2NS4P1SOY/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 43,
+    "name": "Focus Blade",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Focus Blade is a foot-long black cylinder with a deep red gem set in one end. The cylinder is semi-opaque, containing a solid core of pure black. The red stone seems to be the focus point, from which a blade of up to five feet may be extended, coruscating in the user’s signature color.\nA channeler who obtains a Focus Blade must power up and imprint the weapon by investing power points. This individual’s power points are reduced by five for one week while the weapon is being imprinted — the weapon cannot be used until this time has passed. After one week, the channeler's power points return to normal.\nNo one, not even another channeler, may use the same Focus Blade after it has been imprinted by its owner. Focus Blades may be activated by making a skill check vs 5 (failure and success are governed by the exact same rules as channeler enhancements).\nThe weapon’s Dmg is \\+2d above the channeler's relevant skill rating.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 44,
+    "name": "Force Gauntlet",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": "12",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Force Gauntlet is a flexible metal glove fitted with a built-in repulsor field that amplifies the force of each strike. When the gauntlet contacts a target, the field triggers, adding significant impact to what would otherwise be a normal punch. The result is a substantial boost to unarmed damage, making the gauntlet a popular choice for brawlers and close-quarters specialists.\nThe gauntlet is worn like a glove and does not restrict manual dexterity when not striking. Force gauntlet kits are also available as armor enhancements, allowing the same technology to be integrated into existing gauntlets or vambraces. The field is tuned to activate on impact, so it does not interfere with gripping or manipulation.\nWith the Force Gauntlet, the wielder’s fist hits like a hammer.\nEffects\n— +1c to normal punch damage; may be taken as an armor enhancement.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 45,
+    "name": "Gas-Beetle",
+    "type": "Hurled",
+    "requirement": "🏃 8",
+    "max_block": null,
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Gas-Beetles are biotech organisms that resemble beetles with large gas-filled sacs beneath their wing cases. When directed, they scurry into an area and release their sacs in a burst of noxious gas; the effect is similar to a gas grenade. Victims who fail the relevant check are incapacitated, choking and retching for a number of rounds equal to their failure.\nAfter use, the beetles return to their host and the gas sac regenerates over a full day. They can follow moderately complex pheromonal orders such as: “Wait at this door. When it opens, enter and bomb the occupants, then run down this hallway.”",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 46,
+    "name": "Geomantic Staff",
+    "type": "Melee",
+    "requirement": "💪 10",
+    "max_block": "20",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Geomantic Staff\nThe Geomantic Staff is a powerful and mystical weapon designed for the character, blending ancient earth-based magic with cutting-edge technology to channel potent spells and create formidable barriers. This staff, with its shaft crafted from rare wood intertwined with glowing crystalline minerals, pulses with deep, earthy light. The top of the staff is adorned with a large, multifaceted crystal that radiates elemental energy, surrounded by intricate metalwork that enhances its magical properties, symbolizing the character’s deep connection to the earth.\nWhen the Geomantic Staff is wielded, it feels warm and alive in the character’s hands, as if it pulses with the rhythm of the earth itself. As the staff channels earth energy, the crystal atop it glows brightly, casting a warm, amber light across the battlefield. The air around the staff vibrates with a low hum, and the ground beneath the character seems to respond, shifting subtly in resonance with their will. When the staff is used to cast spells or create barriers, the crystal pulses with radiant energy, and the earth itself rises up to obey the character’s commands, forming walls of stone or unleashing blasts of raw elemental power.\nThe Geomantic Staff is a weapon of unparalleled versatility, empowering the character to dominate the battlefield with both offensive and defensive earth magic, making them an indomitable force.\nEffects\n-- See below for specific Feats associated with this ability.",
+    "pic": "https://drive.google.com/file/d/1autqgwOa0QxCL8hRbto0B2urND57e2aE/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 47,
+    "name": "Giant Maul",
+    "type": "Melee",
+    "requirement": "💪 12",
+    "max_block": "24",
+    "cost": "10g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Giant Maul is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 48,
+    "name": "Glaive",
+    "type": "Melee",
+    "requirement": "💪 10",
+    "max_block": "20",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Glaive is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 50,
+    "name": "Grasp-Glove",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "This squid-like animal slips over the user’s hand (or hand-like appendage), and constricts its wet inner muscles around the user’s forearm.\nWhen used the creature’s tentacles flail out up to two squares away and wrap around any object which the user wishes. Opponents and unwilling targets require a successful attack roll.\nIf the glove hits, it will pull the target in (Str vs Str) and (upon command) stab it with a spike located in the center of its body for 6L Dmg (no Def allowed).\nEach round which the victim is held, the tentacle glove will stab again. The victim must roll their Str vs the tentacle glove’s Str in order to break free. In the meantime, the user can attack the held victim with a \\+1c attack bonus.\nA tentacle glove will adapt its own Strength to match that of its user so that it will not harm its user. This takes about a week. The tentacle glove can not increase its Str above 10H.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 51,
+    "name": "Great Axe",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Great Axe is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 52,
+    "name": "Grenade Launcher, Underbarrel",
+    "type": "Shot",
+    "requirement": "👁️ 12",
+    "max_block": null,
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Underbarrel Grenade Launcher, sometimes called a “thumper”, is a compact tube that mounts beneath the barrel of a carbine or larger weapon. A second trigger allows the operator to fire grenades without switching weapons, and the launcher holds up to five rounds. Reloading the magazine is a complete action, so operators must choose when to top off with care.\nThe launcher extends the primary weapon's versatility, adding area effect and anti-structure capability to a single package. It is widely used by infantry and special operations units who need to deliver grenades quickly without carrying a dedicated launcher. The mounting is sturdy enough to withstand recoil without affecting the host weapon's accuracy.\nWith the Underbarrel Grenade Launcher, the wielder can answer any threat from personnel to light fortifications.\nEffects\n— Holds five grenades; reload is a complete action.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 53,
+    "name": "Guard Beetles",
+    "type": "Hurled",
+    "requirement": "🏃 8",
+    "max_block": null,
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "These small squat beetles are a little over an inch in diameter. The listed price will purchase ten beetles, and a small sac of black puffball seeds. Spike beetles enjoy a symbiotic relationship with puffball plants in which the beetles eat the plant's leaves. In return, spike beetles valiantly guard the plant's fragile fallen seeds.\nTo use, the sac of seeds is tossed over an area no larger than nine individual squares. The beetles will immediately shuffle off the host and set up watch over the area. Anyone entering will have to deal with the beetles. In place of wings, spike beetles have two long thorn-like spikes tipped with a mild paralytic poison. When any being enters the area, the beetles race out placing their bodies beneath the victim’s feet (rating 8/6/2). Those wounded must make a Fortitude check vs the 10L poison or be slowed to MR 1 for the next hour.\nMost beings will take one step per square. Fortunately for the beetles, their shells are tough enough to support 500 lbs, keeping them from being crushed.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 54,
+    "name": "Halberd",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Halberd is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 55,
+    "name": "Hand Axe",
+    "type": "Melee, Hurled",
+    "requirement": "💪 4, 🏃 4",
+    "max_block": "8",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪, 🏃",
+    "dmg": "💪, 🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Hand Axe is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 56,
+    "name": "Hand X-Bow",
+    "type": "Shot",
+    "requirement": "👁️ 6",
+    "max_block": null,
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Hand X-Bow is a compact crossbow with a pistol grip, designed to fire small metal darts with considerable force from a one-handed frame. It is equipped with an auto-draw mechanism so that the string is spanned automatically after each shot, allowing rapid follow-up fire. Darts can be poison-treated or fitted with special tips in the same way as arrows.\nThe weapon is small enough to be carried as a sidearm or backup, and its darts are easy to carry in quantity. Optional magazine modules are available, including a 25-dart store similar to that used with magazine bows, for users who want to avoid manual reloading in the field.\nWith the Hand X-Bow, the wielder has a silent, accurate option that needs no power cell.\nEffects\n— Auto-draw string; darts may be poisoned or use special tips; optional 25-dart store available.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 57,
+    "name": "Heavy Crossbow",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": "n/a",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Heavy Crossbow is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 58,
+    "name": "Heavy Flail",
+    "type": "Melee",
+    "requirement": "💪 10",
+    "max_block": "20",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Heavy Flail is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 59,
+    "name": "Homing Disc",
+    "type": "Hurled",
+    "requirement": "🏃 8",
+    "max_block": null,
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Homing Disc is an advanced throwing weapon that combines the principle of a boomerang with homing and anti-grav technology. The disc is gripped through finger holes in the center and thrown like a discus. A built-in homing device and anti-grav unit automatically returns the disc to the wielder’s holster once it comes to a complete stop (i.e., hits its target or stops sliding after a miss).\nThe disc is typically carried at the hip in a quick-draw pouch; the wielder can ready, throw, and retrieve it in a single round. With the Homing Disc, the wielder can strike and have the weapon back in hand almost instantly.\nEffects\n— Return to holster after coming to rest; ready, throw, and retrieve in one round.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 60,
+    "name": "Hydro Flamer",
+    "type": "Shot",
+    "requirement": "👁️ 12",
+    "max_block": null,
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Hydro Flamer projects a thin stream of liquid fuel that ignites upon release, creating a short-ranged cone of fire. The stream can reach several squares, and the fuel includes its own oxidizer, so the weapon functions even in vacuum or other oxygen-poor environments. Damage is highest against the first target in the stream and falls off for subsequent targets in the path.\nAmmunition is carried in small pressurized bottles that are swapped when empty. The weapon is a favorite of assault troops and anyone who needs to clear confined spaces or suppress areas without relying on explosives. The visual and psychological effect of a continuous flame stream is significant, and the weapon can also be used to deny passage or destroy sensitive matériel.\nWith the Hydro Flamer, the wielder commands a tongue of fire that burns anywhere.\nEffects\n— Full damage to first target, half to second, etc.; functions in space; ammo in compressed bottles.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 61,
+    "name": "Improvised",
+    "type": "Melee",
+    "requirement": "💪 4",
+    "max_block": "8",
+    "cost": "X",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪-1d",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Improvised is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 62,
+    "name": "Inferno Blade",
+    "type": "Melee",
+    "requirement": "💪 10",
+    "max_block": "20",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Inferno Blade\nThe Inferno Blade is a fearsome melee weapon forged for the character, a frontline combat specialist designed to tear through enemy lines with overwhelming force. This blade channels intense heat, enabling it to slice through armor and flesh with ease. When wielded by the character, the Inferno Blade becomes an instrument of fiery devastation, cutting down foes and absorbing damage in equal measure. The weapon's heat-infused strikes are perfect for close-quarters combat, where the character’s fiery nature and relentless assault shine.\nVisually, the Inferno Blade is a striking combination of advanced technology and raw power. The blade's dark metallic surface is interwoven with glowing red-orange lines that pulse with searing heat. Each strike of the blade causes these lines to flare brightly, sending waves of heat across the battlefield. When activated, the blade emits an aura of intense heat, making it both a symbol of the character’s might and a tool of their destructive fury.\nAs the Inferno Blade cleaves through its enemies, it leaves behind a trail of smoldering carnage, solidifying the character’s dominance on the battlefield.",
+    "pic": "https://drive.google.com/file/d/1rzVRE0VlY_tZz-nZlStN0U9M4Z2F5L03/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 63,
+    "name": "Javelin-Sword",
+    "type": "Melee, Shot",
+    "requirement": "💪 8, 👁️ 6",
+    "max_block": "16",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪, 👁️",
+    "dmg": "💪, 👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Javelin-Sword is a hybrid weapon that appears to be a standard blade but conceals a single-shot projectile launcher in the hilt. Opponents who mistake it for an ordinary sword often pay with their lives when a javelin-like bolt is driven from the tip by an integrated mass driver. The blade itself is unaffected by the bolt’s presence or absence and always functions as a sword.\nThe bolt is stored within the blade assembly and must be reloaded after each shot; reloading is a complete action. When fired, the bolt uses the same attack and damage ratings as the sword. The weapon thus offers one surprise ranged strike before the fight closes to melee, where it continues to perform as a full sword.\nThe Javelin-Sword gives the wielder a lethal option at range without sacrificing melee capability.\nEffects\n— One bolt per reload; reload is a complete action. Bolt uses sword’s Atk and Dmg.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 64,
+    "name": "Laser Blade",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Laser Blade is a sword that projects a blade of coherent light from the hilt, adjustable in length from zero to about three feet. An interference grid contains and shapes the beam, allowing it to cut through most materials with ease. The weapon is a favorite of duelists and special operations personnel who need a compact, devastating melee option.\nWhen the blade is retracted, the hilt is easy to carry and conceal. When extended, it can slice through armor, barriers, and flesh. The one limitation is that energy shields and similar defenses disperse the coherent beam, resulting in reduced damage when striking through such fields. Even so, the Laser Blade remains one of the most feared close-quarters weapons in use.\nWith the Laser Blade, the wielder carries a cutting edge that never dulls.\nEffects\n— Variable length 0–3 feet; 1c Dmg penalty when attacking through energy fields.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 65,
+    "name": "Light Crossbow",
+    "type": "Shot",
+    "requirement": "👁️ 4",
+    "max_block": "n/a",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Light Crossbow is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 66,
+    "name": "Living Bow",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": null,
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Living Bow\nLiving Bow is an extraordinary weapon designed for the character, embodying the synergy between nature and biotechnological innovation. Crafted from living wood, this bow enables the character to fire arrows imbued with various effects, such as healing or poison, enhancing their ability to control the battlefield and support their allies with precision and versatility.\nThe Living Bow is a marvel of organic craftsmanship. The bow is constructed from a unique type of living wood, which is both flexible and resilient, with a deep green hue and bioluminescent veins that pulse softly with the life force contained within. The bowstring is made from a durable, sinewy material that adapts to the character's touch, ensuring a smooth and powerful draw. When an arrow is nocked, the bow seems to hum with energy, the veins glowing brighter as it prepares to unleash its life-altering effects upon the target.\nWith the Living Bow, the character becomes a master of the battlefield, capable of delivering precise strikes that can heal allies or devastate enemies with the power of nature itself.",
+    "pic": "https://drive.google.com/file/d/10G65djzrs6vI7K-W1-ODcfcKE7C5prLU/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 67,
+    "name": "Longsword",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": "12",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Longsword is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 68,
+    "name": "Mace (Heavy)",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Mace (Heavy) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 69,
+    "name": "Magazine Bow",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": null,
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Magazine Bow is an advanced bow that integrates an arrow-storage system into the grip, similar in principle to magazine-fed sidearms. When the bow is drawn to full arch, the store feeds a pre-notched arrow into place, allowing a skilled user to loose two standard arrows per round. The magazine can hold up to fifty arrows in as many as five selected types.\nComplex rounds such as explosive-tipped arrows take longer to materialize and are typically limited to one shot per round. The result is a weapon that combines the flexibility of a bow with the sustained fire of a magazine-fed system, favored by elite scouts and special units who need high output without sacrificing arrow variety.\nThe Magazine Bow turns the ancient bow into a modern volume weapon.\nEffects\n— Up to 50 arrows, five varieties; two normal arrows per round; complex arrows once per round.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 70,
+    "name": "Microgrenade Launcher",
+    "type": "Shot",
+    "requirement": "👁️ 12",
+    "max_block": null,
+    "cost": "10g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Despite the name “micro,” the Microgrenade Launcher is a large, shoulder-mounted system that fires compact grenades in volume.\nA microgrenade is a high tech version of a standard grenade. They contain a special switch which is activated when the microgrenade exits the launcher’s barrel.; they cannot be set by hand and must be fired from the launcher. They are smaller and often cheaper than standard grenades due to mass production.\nThe launcher is a favorite of heavy infantry and assault units who need sustained area fire. With the Microgrenade Launcher, the wielder can dominate a zone with a mix of effects.\nEffects\n— Four magazines, 12 rounds each; microgrenades arm on launch only; see Ammo for types and costs.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 71,
+    "name": "Missile Launcher",
+    "type": "Shot",
+    "requirement": "👁️12",
+    "max_block": null,
+    "cost": "14g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Missile Launcher is a shoulder-fired tube that accepts a variety of missile types for long-range, high-yield strikes. When purchased, it typically comes with two standard explosive missiles; additional or specialized missiles are bought separately. The launcher's main advantage is a small protective field that shields the operator's hand and arm during launch, reducing backblast and debris injury.\nThe weapon can fire any compatible missile type, from standard high-explosive to guided or specialty rounds. It is a staple of anti-armor and fire-support teams who need to reach out and destroy hardened targets. Reloading is a deliberate process, so operators usually work in pairs or with a loader when sustained fire is expected.\nWith the Missile Launcher, the wielder can deliver decisive force at long range.\nEffects\n— Ships with two standard missiles; other types purchased separately; protective field during launch.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 72,
+    "name": "Morningstar",
+    "type": "Melee",
+    "requirement": "💪 10",
+    "max_block": "20",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Morningstar is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 73,
+    "name": "Nano-Blade",
+    "type": "Melee, Hurled",
+    "requirement": "💪 6, 🏃 6",
+    "max_block": "12",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪, 🏃",
+    "dmg": "💪, 🏃",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Nano-Blade\nThe Nano-Blade is an advanced weapon designed for the character, allowing for silent and precise eliminations during stealth operations. This retractable, mono-molecular blade is engineered for maximum lethality, enabling the character to strike with unmatched precision while remaining undetected.\nAs the character grips the handle of the Nano-Blade, the weapon hums softly before the ultra-thin blade extends with a barely audible whisper. The blade, almost invisible to the naked eye, glows faintly with a bluish hue, reflecting the high-tech energy coursing through it. With a swift and fluid motion, the character brings the blade down on their target, slicing through armor and flesh with ease, leaving no sound but the quiet hum of the weapon retracting into its hilt.\nThe Nano-Blade allows the character to blend into the shadows, executing lethal strikes with surgical precision and vanishing without a trace.\nEffects\n-- Retractable mono-molecular blade designed for silent takedowns.",
+    "pic": "https://drive.google.com/file/d/1CMXwyDV4tqFwxrQ2r5Uwo6OUqqdTZBpd/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 74,
+    "name": "Needler",
+    "type": "Shot",
+    "requirement": "👁️ 6",
+    "max_block": null,
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Needler is a small, cone-shaped creature which affixes itself to any desired spot on its user’s body. Upon command, the creature will spit out tiny, razor-sharp needlers. If a needler causes wounding damage, it will burrow beneath the flesh and head for the victim’s heart. This causes 6L additional Dmg each round unless cut out (for additional Dmg equal to all taken so far). Medtechs can remove a needler on a roll equal to the number of rounds the needler has been burrowing. An individual with first aid needs roll equal to all Dmg taken so far in order to remove the needler.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 75,
+    "name": "Neon Skateboard",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": "12",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Neon Skateboard is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 76,
+    "name": "Nuke",
+    "type": "Melee",
+    "requirement": "💪 12",
+    "max_block": "24",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Nuke is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 77,
+    "name": "Phase Rifle",
+    "type": "Shot",
+    "requirement": "👁️ 10",
+    "max_block": null,
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Phase Rifle\nThe Phase Rifle is a state-of-the-art energy weapon designed for the character, excelling in long-range reconnaissance and precision elimination. This rifle offers unparalleled accuracy and versatility, making it an essential tool for stealth and tactical operations, whether striking from afar or delivering wide-area energy bursts to maximize battlefield impact.\nWhen the Phase Rifle is activated, the character feels the weapon hum with power, the barrel glowing faintly as energy accumulates within. The rifle's sleek, matte-black surface absorbs the light, making it nearly invisible in the shadows, while iridescent accents shimmer when exposed to direct light. As the character peers through the digital scope, the holographic display provides real-time data, adjusting for wind speed, distance, and target movement. With a steady hand, the character squeezes the trigger, sending a focused beam of energy streaking through the air, leaving a brief, luminescent trail before striking its mark with pinpoint accuracy.\nThe Phase Rifle transforms the character into a long-range assassin, delivering death from the shadows with silent, unerring precision.\nEffects\n-- Long-range energy rifle\n-- Provides real-time feedback on ammunition, energy levels, and targeting.",
+    "pic": "https://drive.google.com/file/d/1_9PwNiknUc3pcIG2cdD-4M1wxD4fPQcS/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 78,
+    "name": "Pike",
+    "type": "Melee",
+    "requirement": "💪 10",
+    "max_block": "20",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Pike is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 79,
+    "name": "Pipe Wrench",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Pipe Wrench is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 80,
+    "name": "Plasma Gauntlets",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Plasma Gauntlets\nThe Plasma Gauntlets are formidable weapons engineered for the character, a warrior known for their relentless assault and battlefield dominance. These gauntlets deliver superheated plasma punches, making them ideal for breaking through enemy lines and delivering devastating, fiery attacks. The Plasma Gauntlets are more than just weapons—they are an extension of the character’s strength, turning every punch into an explosion of heat and power that incinerates anything in its path.\nThe design of the Plasma Gauntlets is both functional and intimidating. Each gauntlet is crafted from a dark, heat-resistant alloy, adorned with glowing red-orange circuitry that pulses with plasma energy. When activated, the gauntlets emit a bright, fiery glow, with superheated plasma crackling around the fists. Each strike is accompanied by a burst of flame and energy, making the Plasma Gauntlets a fearsome tool of destruction on the battlefield.\nIn the hands of the character, the Plasma Gauntlets become unstoppable instruments of fiery annihilation.",
+    "pic": "https://drive.google.com/file/d/1lfwHAEYb27sZ8HowHEaTQlddx8jJ3xk3/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 81,
+    "name": "Plasma Sword",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "7g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Plasma Sword projects a three-foot blade of superheated plasma contained by a magnetized field. Anything that contacts the blade is seared instantly, making it one of the most destructive melee weapons in use.\nWhen deactivated, the weapon collapses to a compact grip roughly eight inches long. Power is supplied by either a waist-mounted precipitator pack or disposable plasma capsules. With the Plasma Sword, the wielder carries a blade that never dulls and cuts through almost anything.\nEffects\n— Powered by precipitator pack or plasma capsules; blade length 3 feet; see equipment for power options.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 82,
+    "name": "Polearm",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Polearm is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 83,
+    "name": "Pulse Laser Cannon",
+    "type": "Shot",
+    "requirement": "👁️12",
+    "max_block": null,
+    "cost": "14g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Pulse Laser Cannon is the heaviest application of pulse-laser technology, firing a thick, sustained beam that can inflict massive damage. The weapon is typically hip-fired due to its size and recoil, and the report is near-deafening—stealth is not an option. It is used by heavy weapons teams and vehicle gunners who need to destroy hardened targets or suppress large areas.\nThe beam is broader and more powerful than that of pulse rifles or pistols, with a correspondingly larger power draw and heat signature. In the field, the cannon defines the high end of man-portable energy weapons, often deployed in static or semi-static positions where its weight and power requirements can be supported.\nWith the Pulse Laser Cannon, the wielder brings the maximum available pulse-laser firepower to the fight.\nEffects\n— None",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 84,
+    "name": "Pulse Laser Carbine",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": null,
+    "cost": "7g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Pulse Laser Carbine is a heavier, more powerful version of the pulse pistol, offering better range and damage in a package that remains compact enough for scouts and mobile troops. It is a favorite of units that need to move fast while still delivering serious energy-weapon firepower. The carbine balances portability with output, making it a common choice for forward observers, scouts, and special operations.\nThe weapon fires the same type of pulsed beam as the pistol and rifle but at an intermediate intensity. Its size allows it to be carried in vehicles and used in confined spaces where a full rifle would be cumbersome. Reload and maintenance are straightforward, and the carbine is widely available across military and paramilitary markets.\nWith the Pulse Laser Carbine, the wielder has a strong blend of mobility and punch.\nEffects\n— None",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 85,
+    "name": "Pulse Laser Pistol",
+    "type": "Shot",
+    "requirement": "👁️ 6",
+    "max_block": null,
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Small, compact and deadly, pulse pistols are relatively quiet (although the excitation of air molecules from the beam’s passage makes a soft “pop” sound), pulse pistols are excellent weapons for covert operatives and assassins. Legitimate uses include officers’ side-arms and weapons for security guards.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 86,
+    "name": "Pulse Laser Rifle",
+    "type": "Shot",
+    "requirement": "👁️ 10",
+    "max_block": null,
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Pulse Laser Rifle is issued to veteran and elite units, offering higher energy output and range than the pulse pistol or carbine. The stronger beam produces a louder report, making the rifle a poor choice for covert work but an excellent one for open engagement. It has become a standard armament for many professional and military forces.\nWith the Pulse Laser Rifle, the wielder brings serious firepower to the front line.\nEffects\n— None",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 87,
+    "name": "Quad Launcher",
+    "type": "Shot",
+    "requirement": "👁️12",
+    "max_block": null,
+    "cost": "15g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Quad Launcher is a shoulder-mounted weapon that holds four missiles and requires a hard point for mounting. The operator can fire missiles one at a time, in pairs, or all four in a single salvo. Missile types and effects vary; see ammunition rules for options. When multiple missiles are fired, resolve the attack as for a single shot but multiply wounding damage by the number of missiles that hit.\nThe ability to ripple-fire or dump the full load makes it flexible for both suppression and killing high-value targets. In the field, the Quad Launcher is a statement of intent.\nWith the Quad Launcher, the wielder can saturate a target or spread fire across a formation.\nEffects\n— Hard point required; four missiles; fire one, two, or all four; wounding damage multiplied by number of missiles fired.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 88,
+    "name": "Quad-Disk Cannon",
+    "type": "Shot",
+    "requirement": "👁️12",
+    "max_block": null,
+    "cost": "14g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Quad-Disk Cannon is a four-barrel variant of the disk cannon, firing all four barrels at once to deliver devastating damage in a single salvo. Like the single-barrel version, it is used with a hip-mounted firing arm or hard-point mount; without it, the operator suffers an attack penalty due to recoil and weight.\nThe weapon’s profile is bulkier and heavier than a standard disk cannon, with four aligned barrels that spin and release disks in unison. The result is a weapon of overwhelming short-range firepower, often used to breach positions or destroy high-value targets. Reload and maintenance are more demanding, but the payoff is raw destructive force.\nThe Quad-Disk Cannon turns a single trigger pull into a storm of spinning metal.\nEffects\n— Firing arm or hard-point mount required to avoid attack penalty; four barrels fire simultaneously.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 89,
+    "name": "Quarterstaff",
+    "type": "Melee",
+    "requirement": "💪 4",
+    "max_block": "8",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Quarterstaff is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 90,
+    "name": "Rage Axe",
+    "type": "Melee",
+    "requirement": "💪 12",
+    "max_block": "24",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Rage Axe\nThe Rage Axe is a fearsome weapon designed to harness the raw power of the character, amplifying their fury into devastating strikes capable of cleaving through anything in their path. This massive axe is more than just a tool of war; it is an extension of the character’s primal rage, channeled into each swing with unrelenting force. The blade, forged from a dark, gleaming metal that pulses with inner fire, is adorned with carvings of snarling beasts and ancient runes that glow with a fierce, crimson light.\nThe Rage Axe is designed for maximum destruction, with each swing delivering immense damage that can shatter armor, shields, and bones with ease. The enchanted wood handle provides both balance and grip, ensuring that the character can wield the axe with deadly precision, even in the thick of battle. The Rage Axe is not just a weapon; it is a symbol of the character's indomitable will and their capacity for destruction.\nAs the character swings the Rage Axe, the air around them seems to crackle with energy, the sheer force of their attacks sending shockwaves through the battlefield. The Rage Axe is a tool of absolute devastation, capable of turning the tide of battle with a single, well-placed strike. It is a weapon that embodies the character’s unyielding spirit and their relentless pursuit of victory.",
+    "pic": "https://drive.google.com/file/d/1f8olCMc_AtDOnTlm-NpSPLoynSO0Fqk1/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 91,
+    "name": "Red Whip",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": null,
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Red Whip\nThe Red Whip is an extraordinary and versatile weapon crafted for the character, a front-line combatant who excels in draining the life force of enemies to heal and empower themselves. This flexible, energy-based whip is designed to entangle and drain life from multiple enemies simultaneously, making it an ideal tool for the character’s vampiric abilities and close-combat prowess.\nThe Red Whip is a marvel of advanced technology and dark magic, with a handle made from dark, polished metal adorned with glowing runes that pulse with vibrant red and violet energy. The whip itself is a flexible strand of plasma contained within a magnetic field, giving it an ethereal, luminescent appearance. When activated, the whip crackles with latent power, extending up to 10 feet and lashing out with deadly precision. Upon striking a target, the whip inflicts necrosis, a powerful condition that causes the target’s vitality to drain away over time, steadily weakening them unless they receive advanced medical attention. Each successive strike compounds the necrosis effect, increasing the rate of vitality loss and making the Red Whip a truly terrifying weapon.\nAs the character wields the Red Whip in battle, the weapon’s energy pulses with each strike, sapping the life force of its victims and leaving them to wither away. The whip’s flexibility allows the character to strike from unexpected angles, entangling multiple foes and draining their life force simultaneously. The Red Whip’s necrotic effect ensures that even the most resilient enemies will eventually succumb to its relentless drain, making it a powerful tool for any character who seeks to dominate their foes through a slow, agonizing death.",
+    "pic": "https://drive.google.com/file/d/1b0WL0L1SeLpgsdFkBHD9FVC_KxDx_x4u/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 92,
+    "name": "Reinforced Bite",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": null,
+    "cost": "0s",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "During this operation two hydraulic units are set into the jaw on each side. This gives the jaw \\+1c Dmg when the bite attack is used.\nThe teeth are capped with plasteel to prevent fracturing as the hydraulics clamp down. The jaw is also reinforced with titanium wires to ensure that it will hold when biting into its victim.\nTwo teeth on top and bottom of each side of the mouth are replaced with pure titanium and set into the jaw as further insurance against fracture.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 93,
+    "name": "Return-Sickle",
+    "type": "Hurled",
+    "requirement": "🏃 6",
+    "max_block": null,
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Return-Sickle is a small, S-shaped throwing weapon that folds into an L-shape for storage. Once it strikes or misses a target, an integrated anti-grav field traces its flight path and returns it to the wielder, who can catch it easily. The weapon can typically be drawn, thrown, and retrieved in a single attack action.\nThe sickle is compact enough to carry in a belt or harness and is favored by operatives who want a reusable thrown option without the bulk of a full-sized weapon. The return mechanism makes it ideal for hit-and-run and multiple targets in sequence. In the right hands, the Return-Sickle is both tool and statement.\nWith the Return-Sickle, the wielder can strike at range and have the weapon back without closing.\nEffects\n— Return to wielder after strike or miss; draw, throw, and retrieve in one Atk action.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 94,
+    "name": "Rift Blade",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "7g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Rift Blade\nThe Rift Blade is a short, lethal weapon designed for the character, perfectly suited for close-quarters combat and spellcasting. Infused with void energy, the blade enhances the character's ability to channel the raw power of the void, allowing them to cast devastating spells and maintain control over the battlefield. The Rift Blade is a fusion of dark elegance and deadly power, its very presence exuding an aura of menace.\nWhen the character wields the Rift Blade, the weapon seems to drink in the light, its dark metal surface shimmering with an ethereal glow. Intricate void runes etched along the blade pulse with deep purple light, casting eerie reflections on nearby surfaces. As the character strikes, the blade leaves behind a trail of shadowy energy that crackles and snaps in the air. The weapon hums with barely contained power, resonating with the character’s intent and amplifying their control over the void. To those who face the Rift Blade, it appears as if the character is wielding a piece of the void itself, capable of severing the ties between reality and oblivion.\nThe Rift Blade is not just a weapon; it is a conduit for the character's immense power, turning each strike into an opportunity to bend the battlefield to their will.",
+    "pic": "https://drive.google.com/file/d/1HQAg-aiGuK_ZueKl__wSi5RngFY1Noxt/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 95,
+    "name": "Rotary Plasma Gun",
+    "type": "Shot",
+    "requirement": "👁️12",
+    "max_block": null,
+    "cost": "16g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Rotary Plasma Gun mounts six barrels that spin as they fire, each spitting a mass of white-hot plasma. The barrels are cooled by a liquid nitrogen jacket. The weapon is supplied by a plasma precipitator pack (see equipment); the same pack can power a plasma sword or other plasma devices.\nThe gun must be spun up for one full round before it can be fired safely; firing before the barrels reach optimal rotation risks burning them out if damage rolls are high. When activated, the gun emits a constant hum or whine that is clearly audible nearby. With the Rotary Plasma Gun, the wielder brings maximum plasma firepower to the fight.\nEffects\n— One full round to spin up before use; early fire can burn out barrels; precipitator pack powers weapon and other plasma gear.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 96,
+    "name": "Scimitar",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": "12",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Scimitar is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 97,
+    "name": "Seeker Rifle",
+    "type": "Shot",
+    "requirement": "👁️ 10",
+    "max_block": null,
+    "cost": "9g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Seeker Rifle is a slender, long-barreled weapon that fires small guided projectiles capable of curving around corners and over obstacles to strike targets that would be protected from line-of-sight fire. The projectiles are less destructive than full seeker missiles but share the same homing principle, making the rifle ideal for engaging foes in cover or behind partial concealment.\nThe rifle negates defense modifiers that would apply from partial cover, as the rounds can adjust their trajectory to find a path to the target. This makes it a favorite of urban fighters and anyone who regularly faces entrenched or sheltered opponents. The trade-off is limited payload and the need for a clear initial lock.\nWith the Seeker Rifle, the wielder can hit what others cannot even see.\nEffects\n— Homing projectiles; negates defense modifiers for partial cover.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 98,
+    "name": "Serrated Maul",
+    "type": "Melee",
+    "requirement": "💪12",
+    "max_block": "28",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Serrated Maul is a fearsome two-handed pole weapon, nearly seven feet from end to end, that combines the reach of a spear with the cutting power of multiple blades. The head is a mass of barbs, flanges, and edges designed to cut and tear rather than simply pierce. It is favored by warriors who want to dominate reach and leave lasting wounds.\nHigh-quality Serrated Mauls are often forged with labor-intensive methods—repeated folding and tempering of the steel—to produce blades that hold an edge and resist shattering. The result is a weapon that can hook, slash, and impale in a single fluid motion. Its size demands two hands and significant strength, but in return it offers unmatched presence in the melee.\nThe Serrated Maul turns every swing into a statement of intent.\nEffects\n— Two-handed; multi-bladed head for cutting and tearing.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 99,
+    "name": "Shadow Orb",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": null,
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Shadow Orb\nThe Shadow Orb is an enigmatic and powerful weapon designed for the character, serving as both a focus for their spells and a tool for controlling the battlefield. This floating orb enhances the character’s ability to harness void energy, unleashing bursts of dark power that weaken enemy formations and turn the tide of battle. The orb is a mesmerizing sphere of dark, translucent crystal that absorbs and refracts light, its surface constantly shifting with shadowy tendrils of void energy.\nWhen the character summons the Shadow Orb, it hovers effortlessly by their side, its dark surface swirling with an ever-changing pattern of darkness and light. The orb seems almost alive, pulsing with void energy that resonates with the character’s intentions. As it floats through the air, it leaves a faint trail of shadowy mist in its wake, the void energy within crackling softly like distant thunder. When the character releases a bolt of void energy from the orb, the dark projectile streaks through the air like a bolt of lightning, striking with deadly precision and devastating power. To allies and enemies alike, the Shadow Orb is a symbol of the character’s mastery over the void, a weapon of both beauty and terror.\nThe Shadow Orb is not just a weapon but an extension of the character’s will, turning the raw energy of the void into a tool of both destruction and control.",
+    "pic": "https://drive.google.com/file/d/1VQ5KVFBcWVZ0M2FNzhDIYAb3OWkuaKf-/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 100,
+    "name": "Short Sword",
+    "type": "Melee",
+    "requirement": "💪 4",
+    "max_block": "8",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.294759+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Short Sword is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 101,
+    "name": "Shoulder-Blades",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": null,
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Shoulder-Blades are semi-circular blades that are partially implanted in the patient’s shoulder or leg. The blades are made of an ultra-light alloy, and are equipped with a tracking system (much like a targeting computer \\- see *EM, tech equipment*).\nWhen the user issues a mental command, a blade will fly out to strike a designated opponent. After use, the blade may be retrieved and reattached.\nShoulder-Blades are a common cyber implant; some users mount several at once.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 102,
+    "name": "Shredder Cannon",
+    "type": "Melee, Shot",
+    "requirement": "💪 8, 👁️12",
+    "max_block": "16",
+    "cost": "15g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪, 👁️",
+    "dmg": "💪, 👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Shredder Cannon is a two-handed weapon that fires spinning crescents of metal, related in principle to disk weapons but optimized for shredding and area damage. It is durable and bulky; in a pinch it can be used as a club in melee, dealing set damage with the same attack roll as when fired. Operators favor it for the gruesome wounds and psychological impact it creates.\nThe weapon is too heavy for one-handed use and requires a committed grip. The crescents spin through the air and tear through light armor and flesh, making it effective against grouped or unarmored targets. Reload and maintenance are straightforward, and the Shredder Cannon has become a standard option for troops who want maximum close-range devastation.\nWith the Shredder Cannon, the wielder can turn a corridor or breach into a killing zone.\nEffects\n— May be used as club in melee for 10L damage (same attack roll as when shot).",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 103,
+    "name": "Sickle",
+    "type": "Melee",
+    "requirement": "💪 4",
+    "max_block": "8",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Sickle is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 104,
+    "name": "Siege Fist",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "This massive appendage is designed to do maximum punch damage. During the operation, the patient’s forearm is removed and the cyber fist is attached in its place.\nThe fist has an outer weighted sheath which can be mentally commanded to slide down and over the user’s knuckles. This sheath contains several sturdy spikes to aid in the blow.\nIt is a horrible thing when a cyber lord activates their cyber-fist, and opponents have come to dread the sound of the sheath as it slides forward.\nA cyber-fist increases punch damage by \\+2d with the sheath back and \\+1c when it is slid forward.\nThe fists’s fingers are equipped with joint locks and power joints (double any grip type Str roll).\nThis fist also adds \\+1 to a character’s vitality maximum, but has no impact upon the character’s Vitality rating.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 105,
+    "name": "Siege Hammer",
+    "type": "Melee",
+    "requirement": "💪 12",
+    "max_block": "24",
+    "cost": "10g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Siege Hammer is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 106,
+    "name": "Silenced Plasma Pistol",
+    "type": "Shot",
+    "requirement": "👁️ 6",
+    "max_block": null,
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Silenced Plasma Pistol\nThe Silenced Plasma Pistol is an advanced sidearm engineered for the character, optimized for stealth and close-quarters combat. This compact weapon is designed to fire energy rounds with lethal precision while maintaining the utmost silence, making it indispensable for covert operations and missions that require remaining undetected.\nWhen the character draws the Silenced Plasma Pistol, the weapon’s matte black surface absorbs the surrounding light, allowing it to blend seamlessly into the shadows. The pistol emits a soft hum as it charges, but when fired, the energy round exits the barrel with barely a whisper, leaving only a faint blue trail in its wake. The shot lands with pinpoint accuracy, incapacitating the target without alerting others in the vicinity. The ergonomic grip ensures the character can maintain control even in the heat of battle, allowing for swift and silent eliminations.\nThe Silenced Plasma Pistol empowers the character to strike from the shadows, executing their missions with deadly efficiency and leaving no trace behind.\nEffects\n-- Silent, energy-based sidearm designed for stealth and close-quarters combat.",
+    "pic": "https://drive.google.com/file/d/146XFZn4NaV4xdVndwAUkYMHdWJLeX4yK/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 107,
+    "name": "Sonic Disrupter",
+    "type": "Shot",
+    "requirement": "👁️12",
+    "max_block": null,
+    "cost": "9g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A sonic disrupter sets up atomic-level vibrations in solid objects, which causes molecular bonds to break down and matter to literally shake apart. The device was designed for use against fortifications (walls, doors, bulk heads, etc.) and terrain obstacles (trees, boulders, etc.) but is gaining popularity with the Guild marines for use against heavily armored opponents, and light vehicles.\nThe denser the object, the greater the damage (GM’ discretion). Boulders and solid steel walls often result in damage as high as 6LV (the maximum this weapon can cause). When used against rigid armor, damage matches the opponent's AR rating. Thus, if the opponent is wearing 16 (or 8M) armor, the disrupter causes 8M damage. If attached to a power supply, this weapon draws 20 srg per shot regardless of the target or damage rating.\nAgainst less dense or rigid armor, the weapon only causes half as much damage.\nEach time the disrupter exceeds the armor value of a target, it permanently reduces the armor value by 1d (Natural Armor is exempt from this rule) although the disrupters damage maintains at the armor's original AR.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 108,
+    "name": "Sonic Sword",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "The Sonic Sword appears as a small hand grip until activated, when three prongs at the base generate a vibrating field of air molecules that extends about three feet. The blade damages targets by disrupting their molecular structure. It can also be used against stationary obstacles—walls, doors—by holding the blade in contact; the weapon inflicts cumulative damage each round until the object is destroyed, though the object may explode when broken, dealing damage based on its AR.\nIn vacuum or underwater, the blade can detonate for 6Mx damage under certain conditions. The weapon is a favorite of breachers and duelists who want a blade that can cut through almost anything and double as a door-killer. Care must be taken when destroying objects to avoid the backlash.\nWith the Sonic Sword, the wielder carries a blade that shakes matter apart.\nEffects\n— Three-foot vibrating field; cumulative damage vs stationary objects; possible detonation in space/water; destroyed objects may explode for AR-based damage.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 109,
+    "name": "Spear",
+    "type": "Melee, Hurled",
+    "requirement": "💪 6, 🏃 6",
+    "max_block": "12",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪, 🏃",
+    "dmg": "💪, 🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Spear has changed little in principle since its earliest use: a long shaft with a pointed head, for thrusting and throwing. Modern versions use durable alloys for the shaft and head, making them nearly unbreakable under normal use. They remain a staple on low-tech and frontier worlds, used for hunting, militia duty, and combat.\nThe spear offers reach and versatility—it can be thrown or used in melee, and formations of spears can hold ground against heavier opponents. Its simplicity makes it easy to produce and repair almost anywhere. In the right hands, the spear is both tool and weapon, as effective in the field as in the line.\nWith the Spear, the wielder has reach and penetration in one package.\nEffects\n— None",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 110,
+    "name": "Spore Blaster",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": null,
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Spore Blaster\nThe Spore Blaster is an advanced ranged weapon designed for the character, a master of biotechnology focused on technological support and innovation. This unique weapon fires concentrated spores capable of entangling enemies or delivering bioelectric shocks, making it perfect for both offensive and defensive operations. The Spore Blaster leverages the character’s expertise in biotechnology, turning them into a formidable presence on the battlefield and a crucial asset to the hive.\nThe Spore Blaster is a sleek and intricate device, combining organic and mechanical components in a seamless design. The main body of the weapon is constructed from a lightweight, durable bio-polymer, with a surface that mimics the texture of living tissue. Bioluminescent veins run along the length of the weapon, pulsing with a soft green glow that indicates its readiness and the potency of the spores within. When fired, the weapon emits a low, resonant hum, followed by the sudden release of spores that swirl and coalesce into a dense cloud before striking their target with pinpoint accuracy.\nThe Spore Blaster exemplifies the character’s ability to manipulate the environment, turning the very air around their enemies into a weapon of entrapment and shock.\nEffects\n-- Fires concentrated spores with special effects.\n-- The weapon is both offensive and defensive.",
+    "pic": "https://drive.google.com/file/d/1GR1x5Jcrt_ajL8Zcpe1tEuVP0hDDrrkw/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 111,
+    "name": "Strangle Spear",
+    "type": "Hurled",
+    "requirement": "🏃 8",
+    "max_block": null,
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "To an outside observer, this weapon would resemble a poorly carved wooden spear. In reality, when this living weapon hits its target (inflicting 10L damage), it immediately transforms into a sinuous, ropy strand which will attempt to loop around and strangle its victim. This strangling attack is made at the spear’s rating (10/16/1). If it hits, it will use its Str (16 or 8M) vs the victim's FR in an attempt to strangle the victim. If successful the victim begins suffocating. Victims may attempt to break free each round (Str check vs the spear's Str of 16 (8M)).|",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 112,
+    "name": "Stun",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": null,
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Stun is a compact handheld weapon that uses focused sound waves to overwhelm the nervous system and knock targets unconscious. Attack rolls are made normally; effect is resolved against the target's WP rather than AR. If the roll exceeds the target's WP, the victim falls unconscious for a number of rounds equal to the margin of success. Beings who cannot hear or who wear protective headgear receive a bonus to their WP when resisting.\nWith the Stun, the wielder can drop a foe without drawing blood.\nEffects\n— Effect vs WP; success margin = rounds unconscious; deaf or helmeted targets get +1c to WP.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 113,
+    "name": "Sun-Blades",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": "12",
+    "cost": "7g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Sun-Blades are a paired set of exotic blades forged from a metal that naturally stores solar energy and releases it as a powerful shock when triggered. The blades are detachable and can be left in direct sunlight to recharge; after at least a half-hour in full sun, each blade can deliver one stun discharge. The wielder releases the stored energy by depressing a hidden stud, and the target must resist or be stunned for a number of rounds equal to the failure.\nIf both blades are charged and set to discharge at once, the combined effect is more severe. The weapon is unusual in appearance and requires discipline to maintain and employ, but it offers a non-lethal option that can end a fight without bloodshed. Many warrior traditions prize the Sun-Blades for their blend of martial elegance and tactical flexibility.\nThe Sun-Blades turn sunlight into a weapon that can drop an opponent in an instant.\nEffects\n— Each blade stores one stun; release via hidden stud; target resists or is stunned (rounds = failure). Simultaneous discharge from both blades increases effect. Recharge in full sunlight for at least 30 minutes.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 114,
+    "name": "Sword",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Sword is the standard melee blade in most systems: approximately three feet of blade on a one-handed grip, used for cutting and thrusting. It has been the sidearm of choice for militant orders and soldiers across countless worlds. Swords are especially valued in confined or sensitive environments—such as ship-boarding—where ranged or explosive weapons would risk collateral damage.\nThe blade is versatile enough for both slashing and stabbing and can be paired with a shield or off-hand tool. Quality varies from mass-produced issue blades to masterwork pieces. Power-enhanced variants exist at higher cost, adding reactive or electrical elements that increase damage when activated.\nWith the Sword, the wielder has a reliable, universal melee option.\nEffects\n— None\n* Power enhanced swords are also available at a greatly “enhanced” price — double the listed price. When enhanced, a sword is fitted with a reactive solenoid which will cause the sword’s blade to lung out outward several inches if the tip experiences pressure (i.e., when stabbed into a target). The blade is also fitted with an electro-net. The net and solenoid may be activated by depressing a small button mounted on the weapon’s hilt. When activated all attacks cause an extra \\+1d of damage.\nThe Guild is just now outfitting other medieval style weapons with power enhancements. These weapons will be released soon (as determined by your GM). All such weapons will cost twice their listed price and add \\+1d to Dmg when the power enhancement is activated. (GM, only light and medium damage weapons may be so enhanced).",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 115,
+    "name": "Tail Spikes",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": "12",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Some species remove the tail at birth; others retain it. Those who keep their tails can benefit from the tail spike implant.\nOther races may only take this implant if they already have tails and a tail attack.\nDuring this operation the tip of the tail is removed and the stump is plated. A power hinge connects the tip to the plated section and the entire process is equipped with spikes.\nTail spikes enhance a patient’s normal tail damage, increasing it by \\+1c.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 116,
+    "name": "Talon-Spear",
+    "type": "Melee, Hurled",
+    "requirement": "💪 8, 🏃 8",
+    "max_block": "16",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪, 🏃",
+    "dmg": "💪, 🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Talon-Spear is a five-foot pole with three spring-loaded talons at one end. A rope or cord can be attached for retrieval after throwing.\nThe weapon may be used like a common spear. However, if the shaft is twisted, the talons widen and are spring set. When a ta-oon hits after being so set, the talons spring together. The victim may then be “reeled in” like some hapless fish. If unwilling a Str contest between attacker and victim must be made. If the weaker Str exceeds the amount of damage, the ta-oon slips out inflicting half again as much damage.\nThe weapon has spread to many warrior cultures.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 117,
+    "name": "Thermite Grenades",
+    "type": "Hurled",
+    "requirement": "🏃 12",
+    "max_block": null,
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Thermite Grenades\nThermite Grenades are high-temperature incendiary devices designed for the character, a specialist in heavy assault and group combat. These grenades release a searing thermite compound upon detonation, making them perfect for breaking through enemy lines and delivering powerful fiery attacks. The Thermite Grenades are an essential tool in the character’s arsenal, turning them into a force of fiery destruction that can incinerate anything in their path.\nEach Thermite Grenade is a compact, cylindrical device encased in a dark, heat-resistant alloy. The surface is etched with glowing red-orange lines that pulse with energy, indicating the volatile thermite compound inside. When activated, the grenade emits a bright, fiery glow before detonating in an explosion of intense heat and flame. The resulting firestorm is capable of reducing armor, flesh, and fortifications to ash, making Thermite Grenades a terrifying weapon on the battlefield.\nIn the hands of the character, Thermite Grenades become instruments of merciless incineration, leaving nothing but scorched earth in their wake.\nEffects\n-- Thermite Grenades release a high-temperature incendiary compound upon detonation.\n-- Atk is made via Throw or using a grenade launcher.",
+    "pic": "https://drive.google.com/file/d/1Jsjq5NhHUcJeL4zDE-UAkTepKruqSRQb/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 118,
+    "name": "Thorn Gauntlets",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Thorn Gauntlets\nThorn Gauntlets are a pair of cybernetically enhanced gloves designed for the character, providing a versatile and deadly weapon that complements the character’s ability to manipulate plant life. These gauntlets are engineered to project hardened thorns for close combat, ensuring that the character can maintain battlefield control and defense while enhancing their close-quarters combat capabilities.\nThe Thorn Gauntlets are a seamless blend of nature and technology, crafted from a durable, lightweight alloy with an outer layer of bioengineered plant fibers. The fibers are interwoven with bioluminescent veins that pulse with a soft green light, indicating the gauntlets’ readiness. When activated, the gauntlets extend sharp, durable thorns from the knuckles, transforming the wearer’s fists into deadly weapons. Each strike from the gauntlets is accompanied by a satisfying crunch as the thorns pierce through armor and flesh, leaving the enemy reeling from the impact.\nWith Thorn Gauntlets, the character wields the power of nature itself in close combat, ensuring that no enemy can stand in their way.",
+    "pic": "https://drive.google.com/file/d/1q2UJDA4JlfQgErM7kNSP8BVWuwm2or-X/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 119,
+    "name": "Throw",
+    "type": "Hurled",
+    "requirement": "🏃 4",
+    "max_block": null,
+    "cost": "0s",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Throw\nThis is every race's ability to pick up an good sized rock or steel ball, etc. and throw it.\nImprovise: If the object is not a good natural object to throw, then the Improvised weapons should be used.\nGood Thrown Items includes grenades, good sized rocks, and similar items, but does not include hurled weapons listed on the tech weapons table hereafter.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 120,
+    "name": "Throw Object",
+    "type": "Hurled",
+    "requirement": "🏃 4",
+    "max_block": "n/a",
+    "cost": "X",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "🏃",
+    "dmg": "💪-1d",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Throw Object is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 121,
+    "name": "Throwing Axes",
+    "type": "Melee, Hurled",
+    "requirement": "💪 6, 🏃 6",
+    "max_block": "12",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪, 🏃",
+    "dmg": "💪, 🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Throwing Axes\nThe Throwing Axes are finely crafted, lightweight weapons designed specifically for the character, combining their ferocity with precision and versatility in ranged combat. These axes are perfect for breaking enemy lines from a distance, allowing the character to strike with deadly accuracy before closing in for the kill. Each axe is meticulously balanced for perfect throws and enchanted to return to the character after being thrown, making them a reliable and reusable tool in any battle.\nForged from resilient dark metal, the blades shimmer with a faint, red luminescence, hinting at the latent power within. The handles are wrapped in grip-enhancing material, ensuring a secure hold even in the most intense combat situations. The axes are adorned with intricate runes that pulse with energy, enhancing their performance and ensuring that each throw is as deadly as the last.\nIn the hands of the character, the Throwing Axes become more than just weapons; they are an extension of the character’s will, cutting down enemies with precision and power. The ability to retrieve the axes after each throw ensures that the character is never without a weapon, making them a constant threat from any range.\nEffects\n-- Lightweight, finely crafted axes designed for ranged attacks (poor at melee).\n-- Enchanted to return to the character after being thrown.\n-- Not designed for melee; if used in melee, Atk(/2) and Dmg(/2).",
+    "pic": "https://drive.google.com/file/d/1RsFEfhzAgwgUkiNaRFj4v_7_4yjvgMPf/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 122,
+    "name": "Throwing Knives (set)",
+    "type": "Hurled",
+    "requirement": "🏃 4",
+    "max_block": "n/a",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Throwing Knives (set) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 123,
+    "name": "Toothed Dagger",
+    "type": "Melee, Hurled",
+    "requirement": "💪 6, 🏃 6",
+    "max_block": "12",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪, 🏃",
+    "dmg": "💪, 🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Toothed Dagger is a long-bladed knife with one sharp edge and one deliberately jagged edge, designed to tear and saw as well as slice. It is the close-combat equivalent of a standard dagger in many warrior cultures, favored by experts who know how to maximize its unique profile. In skilled hands, the weapon can inflict severe and messy wounds.\nThe blade is long enough to offer reach and penetration while remaining compact enough to carry and draw quickly. The toothed edge can catch on armor or flesh, creating additional trauma on withdrawal. The weapon has spread beyond its culture of origin and is now used by anyone who wants a dagger with extra bite.\nWith the Toothed Dagger, the wielder carries a blade that cuts twice—going in and coming out.\nEffects\n— None",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 124,
+    "name": "Tower Crossbow",
+    "type": "Shot",
+    "requirement": "👁️ 12",
+    "max_block": "n/a",
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Tower Crossbow is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 125,
+    "name": "Trident",
+    "type": "Melee, Hurled",
+    "requirement": "💪 6, 🏃 6",
+    "max_block": "12",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪, 🏃",
+    "dmg": "💪, 🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Trident is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 126,
+    "name": "Trip-Stave",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Trip-Stave is a two-handed pole weapon designed for control and versatility rather than raw lethality. It allows the wielder to choose before each attack whether to trip, disarm, or wound an opponent, making it a favorite of duelists and tactical fighters who prefer to dictate the flow of combat.\nWhen used to trip, the defender must succeed on a Def check or be knocked prone. When used to disarm, the defender may resist with either Def or Atk, and failure costs them their weapon. A standard damaging attack is resolved normally. The user must declare the intended outcome before rolling.\nThe Trip-Stave rewards skill and foresight, turning each exchange into a calculated choice.\nEffects\n— Trip, disarm, or damage: declare before attack; trip uses Def check, disarm allows Def or Atk to resist.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 127,
+    "name": "Vampiric Claws",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": "12",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Vampiric Claws\nThe Vampiric Claws are a set of retractable, razor-sharp weapons designed for the character, a fierce combatant who thrives on draining the life force of enemies to heal and empower themselves. These claws are more than just physical weapons; they are extensions of the character's vampiric abilities, enabling quick, lethal strikes and facilitating potent life drain.\nThe Vampiric Claws are sleek, elegant, and terrifying in appearance, crafted from a dark, flexible leather that conforms perfectly to the wearer’s hands. When retracted, the claws are concealed within the gloves, appearing as seamless extensions of the character’s hands. Upon activation, the claws extend to approximately eight inches, gleaming with a faint, blood-red hue. As the character strikes with the claws, they not only inflict physical wounds but also draw upon the life force of their enemies, feeding it back into the character’s own vitality. Each successful strike with the Vampiric Claws enhances the character’s strength, making them more formidable with every attack.\nThe Vampiric Claws are the embodiment of the character’s predatory nature, allowing them to strike swiftly and drain the life force of their enemies, fueling their own power and ensuring their survival in the heat of battle.",
+    "pic": "https://drive.google.com/file/d/1Lrq-fqeBMlx_vo9WkfG45s6iejl53m9d/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 128,
+    "name": "Venom Injector Carbine",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": null,
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Venom Injector Carbine\nThe Venom Injector Carbine is a bio-tech shooting weapon designed for the character, capable of firing projectiles infused with a potent venom derived from bioengineered flora and fauna. This carbine is versatile, designed for both lethal and non-lethal combat scenarios, delivering effects ranging from paralysis to lethal toxicity. The Venom Injector Carbine has an organic, almost alien aesthetic, with sleek lines and a bioengineered texture that seems to pulse with life.\nThe carbine’s body appears to be grown rather than manufactured, with components that blend seamlessly into one another. The surface is smooth and cool to the touch, with bioluminescent patterns that shift and change as the weapon charges. When fired, the carbine emits a low, throbbing hum, followed by a sharp hiss as the venom-laced bio-darts are launched at the target. The darts themselves are sleek and needle-like, designed to penetrate armor and deliver their toxic payload deep within the target's body. Upon impact, the venom takes immediate effect, spreading rapidly through the bloodstream and causing a range of debilitating effects.\nThe Venom Injector Carbine is a potent weapon in the character’s arsenal, turning each shot into a potentially lethal strike that can incapacitate or kill with precision.\nEffects\n-- Fires bio-darts. Darts can Atk\\Mng normally or (see below) may be infused with lethal and nonlethal stim.\n-- The basic cartridge causes low Dmg().\n-- May be used to shoot targets ensnared by Entangling Burst.",
+    "pic": "https://drive.google.com/file/d/1Nkd8WGlbrcjuo2MiNzfXt0_g_VgN2eHs/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 129,
+    "name": "Venom Tail",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Venom Tail is a large muscular implant that sits on the abdomen and has three stinger-tipped tails. The tails can attack one opponent per round—in front, to the sides, or behind the host. Each stinger can hold up to ten doses of poison; natural poison sacs can be added for an extra cost to manufacture paralysis poison at a set rate. With the Venom Tail, the host can strike from multiple angles and deliver toxins in close combat.\nEffects\n— Three tails; one opponent per round; up to ten poison doses per stinger; optional natural poison sacs (see equipment).",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 130,
+    "name": "Void Sphere",
+    "type": "Hurled",
+    "requirement": "🏃 8",
+    "max_block": null,
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Void Sphere is a tiny hollow sphere, about the size of a cherry, that opens a localized rift when activated and thrown. A channeler must expend two power points to activate the sphere, then may throw it at a target. On impact, the sphere shatters and implodes, creating a brief wash of energy that seems to tear a small hole in reality itself.\nAnyone within one square of the impact point must resist with Strength against the channeler's skill roll. Those who fail are pulled into the implosion and vanish; their fate and destination are unknown. The sphere is a weapon of last resort or absolute elimination, used when the user is willing to spend significant power and accept the moral weight of permanent removal.\nThe Void Sphere offers a way to make a problem disappear—literally.\nEffects\n— Two power points to activate; throw at target; Strength check for those within one square of impact; failure means victim is drawn in and removed.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 131,
+    "name": "Void Staff",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "6g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Void Staff\nThe Void Staff is a formidable weapon designed for the character, a powerful spellcaster who specializes in large combat group mitigation and magical offense. This staff is imbued with void energy, capable of amplifying spells to devastating effect, making it an essential tool for controlling the battlefield and weakening enemy formations. The Void Staff is a striking blend of otherworldly elegance and dark power, its shaft crafted from a rare, dark crystal that pulses with void energy.\nWhen the character wields the Void Staff, the dark crystal shaft absorbs the ambient light, giving the weapon a shadowy, translucent appearance. Swirling patterns of deep purple and black run along the length of the staff, pulsing with a faint, eerie glow that seems to sync with the character’s own heartbeat. The top of the staff is crowned with a large void crystal, radiating an aura of raw, untamed energy that crackles and hums with potential power. As the character channels their spells through the staff, the void energy intensifies, creating a cascading effect of dark light that engulfs the battlefield. To onlookers, the character appears as a conduit for the void itself, their power amplified by the Void Staff, capable of casting spells with unmatched force and precision.\nThe Void Staff is not merely a weapon but a symbol of the character's dominion over the arcane, turning the raw energy of the void into a force of overwhelming power.",
+    "pic": "https://drive.google.com/file/d/1cuBGhDaLkncpmeuYc_CtQfepvfeCqdbc/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 132,
+    "name": "War-Crescent",
+    "type": "Melee",
+    "requirement": "💪12",
+    "max_block": "28",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The War-Crescent is a two-handed weapon in the shape of a broad metal crescent, studded with additional points and edges. It is a symbol of martial tradition in many cultures and is taught in dedicated schools of combat. The blades and flanges can be used to hook, slice, pin, or restrain—some styles emphasize non-lethal control, while others focus on lethal close combat.\nThe weapon demands two hands for full effect; using it one-handed incurs a significant penalty to both attack and damage. In the hands of a trained wielder, the War-Crescent is a versatile and intimidating presence, capable of controlling the flow of a duel or cutting down multiple opponents. Its distinctive shape and weight make it unmistakable on the battlefield.\nThe War-Crescent rewards discipline and practice with devastating versatility.\nEffects\n— Two-handed; one-handed use incurs -2d Atk and Dmg penalty.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 133,
+    "name": "Warhammer",
+    "type": "Melee",
+    "requirement": "💪 8",
+    "max_block": "16",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Warhammer is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 134,
+    "name": "WarPick",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": "12",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "WarPick is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 135,
+    "name": "Warrior Claws",
+    "type": "Melee",
+    "requirement": "💪 6",
+    "max_block": "12",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Warrior Claws are three metal blades mounted on a forearm harness and extending from between the fingers. The blades can be retracted into the sheath at will so the wearer can use the hand normally when not fighting. When extended, they deliver serious damage in close combat and can slash or stab in a single motion.\nThe harness is durable and does not restrict wrist or finger movement when the claws are sheathed. Many close-quarters specialists favor the claws for their speed and the ability to go from unarmed to armed in an instant. The weapon is a statement of intent as much as a tool—visible when extended, invisible when not.\nWith Warrior Claws, the wielder is never unarmed in the clinch.\nEffects\n— Retract/extend at will; three blades; considerable close combat damage.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 136,
+    "name": "WarScythe",
+    "type": "Melee",
+    "requirement": "💪 12",
+    "max_block": "24",
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "💪",
+    "dmg": "💪",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "WarScythe is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 137,
+    "name": "Web-Ball",
+    "type": "Hurled",
+    "requirement": "🏃 8",
+    "max_block": null,
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "🏃",
+    "dmg": "🏃",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "The Web-Ball looks like a six-inch diameter sponge and functions as a defensive weapon. Sponge balls may be tossed or rolled. When tossed, the sponge ball explodes if it hits something; when rolled, the sponge ball waits until it comes to a stop to explode.\nWhen a sponge ball explodes, hundreds of streamers of sticky web-like slime squirt out in all directions up to two squares away. Those streamers contacting surfaces instantly adhere and become rigid, but remain sticky (much like a spider web).\nAnyone attempting to force their way through the strands must overcome an 8M strength per square or become hopelessly stuck in the streamers. A square can also be cleared out if 16 points of damage are inflicted. Pulse lasers, projectile weapons and blasters inflict half damage to the strands as so much of the area is empty space.\nPhysical attacks (such as blows, melee weapons, etc.) causing less than 16 damage become stuck at 16 vs ST. Sponge balls and their strands are particularly susceptible to acid (+1c Dmg). If a sponge ball is destroyed before exploding, all effects are avoided. Sponge balls have a 5/2/0 (Str 16\\) rating and once used they die.",
+    "pic": "",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 138,
+    "name": "Web-Launcher",
+    "type": "Shot",
+    "requirement": "👁️ 8",
+    "max_block": null,
+    "cost": "7g",
+    "created_at": "2026-08-13T21:26:27.389133+00:00",
+    "atk": "👁️",
+    "dmg": "👁️",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "This creature is a long worm, which forms a cocoon-like home on its host’s body. Upon command, the slinger flings out a ball of sticky, web like material.\nIf the attack succeeds, the web mass has hit and will burst into a shower of long, gluey runners which spread out across the victim (affects one target only). The web mass has a strong sickening sweet smell which is known to gag many victims.\nThe entire experience is a horrible sensation like being dipped in a vat of honey covered string.\nThe web’s Str is 6H. Victims who don't break free (Str vs 6H) are immobilized and may not move, although they may attempt to break free each round thereafter.\nA victim may be cut free by allies if a total of 24 points of damage is caused to the web. Webs are not affected by blunt damage weapons, however acid causes \\+1c Dmg to the web.",
+    "pic": "",
+    "is_guildspace_locked": false
+  }
+]

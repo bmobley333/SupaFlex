@@ -1,0 +1,1567 @@
+[
+  {
+    "id": 1,
+    "category": "🛠️ Tools & Equipment",
+    "name": "AirVault",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "D-Stores air/gas; auto-refills from atmosphere holds 10x10x10 ft volume in a 1in canister",
+    "pic": "https://drive.google.com/file/d/1omZjYxykdigNXI53YbbgFJWkZmQj_86x/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 2,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Camera",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Records audio and visual in 360°. Hovers or follows user (MR 12); programmable via DataSleeve.",
+    "pic": "https://drive.google.com/file/d/1i3ACIeiNFBHTB6OoT5XKWuJUuNC9batg/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 5,
+    "category": "🧺 Containers",
+    "name": "D-Pack",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Small plasteel backpack; D-Store 4'x3'; attaches via 2 Q-Bond strips.",
+    "pic": "https://drive.google.com/file/d/1RW0fYbO4yjunvKVthKNe6BGjpax-XlSl/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 6,
+    "category": "🧺 Containers",
+    "name": "DataSleeve",
+    "cost": "12g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Compact AI computer bracer; processes .",
+    "pic": "https://drive.google.com/file/d/1vG1L9ponth1rO84ne3cAL2qiou80KVUU/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 9,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Energy Clips",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Replenishes 1 surge/min when not fully charged; does not transfer to weapon capacitors.",
+    "pic": "https://drive.google.com/file/d/1E1z1xYDoqMMDXFa0eNVxyyUMk33z0Epl/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 11,
+    "category": "👕 Clothing & Personal",
+    "name": "EnviroSleeve",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "One-person sleeping bag; stasis and heating/cooling -200°F to 300°F; 24 hr air, auto-refill; 1-day water.",
+    "pic": "https://drive.google.com/file/d/1AbSrDgNMnrP2M-qqBQ2ZDUDYvzfKvTyq/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 24,
+    "category": "👕 Clothing & Personal",
+    "name": "ImageWrap Image",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Holographic profile for ImageWrap or similar.",
+    "pic": "https://drive.google.com/file/d/1vferlGGx7Mz0qlTU7M7d-1dYqjTjj7Sx/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 31,
+    "category": "✒️ Writing & Communication",
+    "name": "OrbitLink",
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Increases communication range to planetary and orbital.",
+    "pic": "https://drive.google.com/file/d/1oMUoTKW_1EER1kbjIJTFqIy6FJRqcPTO/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 33,
+    "category": "🛠️ Tools & Equipment",
+    "name": "PlasmaCore",
+    "cost": "10g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Backpack plasma generator; supplies weapons via connector.",
+    "pic": "https://drive.google.com/file/d/1IpcXZDreuaP1qNRgisi-FlTI0rMfh7db/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 35,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Power Pack",
+    "cost": "4g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Cold fusion power source; supplies srg to weapons (srg ≥ Dmg); 1 cable per 10 surge.",
+    "pic": "https://drive.google.com/file/d/1Gbq3dxfNA8H09B47ZSSkXF7XfXA61K8f/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 38,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Q-Bond Harness",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "SciFi"
+    ],
+    "notes": "Utility harness; AI prevents accidental drop; unauthorized removal ^💪.",
+    "pic": "https://drive.google.com/file/d/11HS49ckyDcK2BRYrxzo-f3mectp-pylk/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 40,
+    "category": "👕 Clothing & Personal",
+    "name": "Visor X Starlight Enhancement",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Adds starlight vision with diod light source to VisorX.",
+    "pic": "https://drive.google.com/file/d/1ICn2X_A6bwHS95DEy89GNVtHFb_B95Mh/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 41,
+    "category": "👕 Clothing & Personal",
+    "name": "VisorX",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Enhanced [Vision(👁️+1)]; autotint, magnification; Q-Bond secured.",
+    "pic": "https://drive.google.com/file/d/1UpHdHbC8Amuo3FxlfauD0ZefbsoaYxWM/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 42,
+    "category": "👕 Clothing & Personal",
+    "name": "VisorX Infrared Enhancement",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Adds infrared vision to VisorX.",
+    "pic": "https://drive.google.com/file/d/1pNu-ZiqJKZRgf0UJ7X4WFWyPmSPIg1A0/view?usp=drive_link",
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 43,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Bandages (roll)",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bandages (roll) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 44,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Healer’s Kit (bandages, herbs)",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Healer’s Kit (bandages, herbs) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 45,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Lock (simple)",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Lock (simple) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 46,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Lockpicks (set)",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Lockpicks (set) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 47,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Manacles",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Manacles is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 48,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Needle & Thread (suturing)",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Needle & Thread (suturing) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 49,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Sewing Kit",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A compact sewing kit containing fine needles, thread in a variety of colors, and small, sharp scissors. The leather case is worn but sturdy, its interior lined with soft fabric to protect its delicate contents.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 50,
+    "category": "⚕️ Medical & Healing Supplies",
+    "name": "Splints (wooden)",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Splints (wooden) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 51,
+    "category": "✒️ Writing & Communication",
+    "name": "Chalk (10 sticks)",
+    "cost": "1s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Ten slender sticks of compressed chalk, their surfaces smooth and pale, ideal for marking surfaces with temporary symbols or messages. The chalk is bound in a woven fabric pouch, its edges frayed from frequent use.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 52,
+    "category": "✒️ Writing & Communication",
+    "name": "Charcoal (writing, 5 sticks)",
+    "cost": "1s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Charcoal (writing, 5 sticks) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 53,
+    "category": "✒️ Writing & Communication",
+    "name": "Dice/Playing Cards",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A set of finely crafted dice, their faces etched with precise numbering, and a deck of playing cards with sharp, clean edges and durable, glossy finishes. Both are stored in a compact, reinforced case.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 54,
+    "category": "✒️ Writing & Communication",
+    "name": "Horn (wooden)",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A long, hollow wooden horn, its surface carved with intricate patterns and polished to a deep, rich sheen. Designed for carrying distant signals across open fields or battlefields.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 55,
+    "category": "✒️ Writing & Communication",
+    "name": "Ink (small vial)",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Ink (small vial) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 56,
+    "category": "✒️ Writing & Communication",
+    "name": "Journal/Notebook",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Journal/Notebook is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 57,
+    "category": "✒️ Writing & Communication",
+    "name": "Mirror (polished steel)",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A small, highly reflective mirror forged from polished steel, its surface unblemished and sharp enough to cut the air. Encased in a leather-bound frame, it is both a tool and a symbol of self-awareness.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 58,
+    "category": "✒️ Writing & Communication",
+    "name": "Quill & Parchment (10 sheets)",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Quill & Parchment (10 sheets) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 59,
+    "category": "✒️ Writing & Communication",
+    "name": "Signal Whistle",
+    "cost": "3s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A compact, brass-colored whistle with a finely tuned reed, designed to produce a piercing, high-pitched tone audible over long distances. Its ergonomic grip and reinforced mouthpiece ensure durability and ease of use in any situation.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 60,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Bell (small)",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bell (small) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 61,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Comb/Brush",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Comb/Brush is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 62,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Drum (hand)",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Drum (hand) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 63,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Drum (war)",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Drum (war) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 64,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Lyre/Flute (instrument)",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Lyre/Flute (instrument) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 65,
+    "category": "🎵 Entertainment & Instruments",
+    "name": "Soapstone Idol",
+    "cost": "3s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Soapstone Idol is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 66,
+    "category": "🏕️ Camp Gear",
+    "name": "Bedroll",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bedroll is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 67,
+    "category": "🏕️ Camp Gear",
+    "name": "Blanket (wool)",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Blanket (wool) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 68,
+    "category": "🏕️ Camp Gear",
+    "name": "Candle (dozen)",
+    "cost": "1s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Candle (dozen) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 69,
+    "category": "🏕️ Camp Gear",
+    "name": "Firewood Bundle",
+    "cost": "1s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Firewood Bundle is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 70,
+    "category": "🏕️ Camp Gear",
+    "name": "Lantern (hooded)",
+    "cost": "8s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Lantern (hooded) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 71,
+    "category": "🏕️ Camp Gear",
+    "name": "Oil Flask (lamp fuel)",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Oil Flask (lamp fuel) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 72,
+    "category": "🏕️ Camp Gear",
+    "name": "Tarp (canvas)",
+    "cost": "6s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Tarp (canvas) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 73,
+    "category": "🏕️ Camp Gear",
+    "name": "Tent (2-person)",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Tent (2-person) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 74,
+    "category": "🏕️ Camp Gear",
+    "name": "Tent Stakes (6)",
+    "cost": "1s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Tent Stakes (6) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 75,
+    "category": "🏕️ Camp Gear",
+    "name": "Tinderbox",
+    "cost": "3s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Tinderbox is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 76,
+    "category": "🏕️ Camp Gear",
+    "name": "Torch (bundle of 5)",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Torch (bundle of 5) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 77,
+    "category": "🐴 Travel & Animals",
+    "name": "Bridle & Bit",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bridle & Bit is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 78,
+    "category": "🐴 Travel & Animals",
+    "name": "Cart (2-wheel)",
+    "cost": "20g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Cart (2-wheel) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 79,
+    "category": "🐴 Travel & Animals",
+    "name": "Feed Bag",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Feed Bag is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 80,
+    "category": "🐴 Travel & Animals",
+    "name": "Horse (riding)",
+    "cost": "75g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Horse (riding) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 81,
+    "category": "🐴 Travel & Animals",
+    "name": "Mule",
+    "cost": "8g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Mule is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 82,
+    "category": "🐴 Travel & Animals",
+    "name": "Saddle",
+    "cost": "5g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Saddle is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 83,
+    "category": "🐴 Travel & Animals",
+    "name": "Saddle Bags",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Saddle Bags is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 84,
+    "category": "🐴 Travel & Animals",
+    "name": "Wagon (4-wheel)",
+    "cost": "35g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Wagon (4-wheel) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 85,
+    "category": "👕 Clothing & Personal",
+    "name": "Belt",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Belt is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 86,
+    "category": "👕 Clothing & Personal",
+    "name": "Boots (sturdy)",
+    "cost": "6s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Boots (sturdy) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 87,
+    "category": "👕 Clothing & Personal",
+    "name": "Cloak (Winter, Warm)",
+    "cost": "8s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Cloak (Winter, Warm) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 88,
+    "category": "👕 Clothing & Personal",
+    "name": "Clothes (Common)",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Clothes (Common) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 89,
+    "category": "👕 Clothing & Personal",
+    "name": "Clothes (Fine)",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Clothes (Fine) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 90,
+    "category": "👕 Clothing & Personal",
+    "name": "Gloves (leather)",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Gloves (leather) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 91,
+    "category": "👕 Clothing & Personal",
+    "name": "Hood",
+    "cost": "3s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Hood is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 92,
+    "category": "👕 Clothing & Personal",
+    "name": "Perfume (small vial)",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Perfume (small vial) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 93,
+    "category": "👕 Clothing & Personal",
+    "name": "Sandals",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Sandals is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 94,
+    "category": "👕 Clothing & Personal",
+    "name": "Scarf of Warmth (non-magical wool)",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Scarf of Warmth (non-magical wool) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 95,
+    "category": "👕 Clothing & Personal",
+    "name": "Soap (bar)",
+    "cost": "1s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Soap (bar) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 96,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Chisel (iron)",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Chisel (iron) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 97,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Climbing Spikes (set)",
+    "cost": "6s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Climbing Spikes (set) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 98,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Cooking Pot (iron)",
+    "cost": "6s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Cooking Pot (iron) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 99,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Crowbar",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Crowbar is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 100,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Funnel (metal)",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.020141+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Funnel (metal) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 101,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Grappling Hook",
+    "cost": "8s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Grappling Hook is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 102,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Hammer (small)",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A compact hammer with a short, sturdy shaft and a rounded head, designed for precision work. The handle is wrapped in coarse leather for a secure grip, while the head is forged from tempered steel, gleaming with a faint metallic sheen.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 103,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Hammer (wooden, tent)",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A stout, hand-carved hammer with a broad, slightly worn wooden head and a short, sturdy handle wrapped in braided rope. Its design suggests it was meant for driving stakes into the earth rather than combat, though it could serve in a pinch.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 104,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Mallet (wood)",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A simple, hand-carved wooden mallet with a smooth, rounded head and a shaft wrapped in braided rope. Its natural grain patterns suggest it was crafted by skilled hands, ideal for gentle yet firm strikes.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 105,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Nails (25)",
+    "cost": "1s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A bundle of twenty-five slender, pointed nails, their surfaces polished to a sharp edge. Each nail is forged from durable iron, with a slight curvature at the tip to ensure a firm grip in wood or metal.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 106,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Net (10 ft)",
+    "cost": "8s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A 10-foot diameter net woven from thick, water-resistant fibers, its knots reinforced with metal rings to prevent fraying. The mesh is taut and evenly spaced, ideal for entangling prey or securing cargo during transport.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 107,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Pickaxe",
+    "cost": "7s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A robust pickaxe with a long, reinforced shaft and a heavy, chisel-like head. The head is forged from hardened steel, featuring a pointed tip and two sturdy prongs for breaking through stone and rock.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 108,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Rope (50 ft hemp)",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A 50-foot length of braided hemp rope, its fibers tightly twisted to form a strong, flexible cord. The rope bears the faint scent of aged wood and has been treated with a natural preservative to resist rot and wear.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 109,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Rope (50 ft silk)",
+    "cost": "2g",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A 50-foot length of finely woven silk rope, lightweight yet incredibly strong. Its surface is smooth and lustrous, with a faint sheen that catches the light, making it ideal for climbing, securing, or intricate tasks.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 110,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Saw (hand)",
+    "cost": "6s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A compact, hand-operated saw with a narrow blade of hardened steel, featuring a series of fine, closely spaced teeth that gleam under the light. The wooden handle is wrapped in leather, providing a secure grip even when wet or slick with sap.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 111,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Shovel (iron)",
+    "cost": "6s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A robust iron shovel with a broad, curved blade and a thick, reinforced shaft. The blade shows signs of use, with minor dents and scratches, while the handle is wrapped in leather for a secure grip during laborious tasks.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 112,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Skillet (iron)",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A heavy iron skillet with a thick, curved handle and a broad, concave surface, ideal for frying or searing over an open flame. Its darkened patina and reinforced edges suggest years of use, though it remains sturdy and well-balanced in the hand.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 113,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Spikes (iron, 10)",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Ten iron spikes, each sharpened to a fine point and forged with a slight curvature for easier penetration. The spikes are arranged in a neat bundle, their surfaces darkened by repeated exposure to fire and weather.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 114,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Waterscoop Ladle",
+    "cost": "1s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A long-handled ladle with a wide, shallow bowl and a series of small, evenly spaced holes along the rim, designed for efficiently transferring liquid without spillage. The wooden shaft is smooth and worn, while the metal bowl is dented but still functional.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 115,
+    "category": "🛠️ Tools & Equipment",
+    "name": "Whetstone",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Whetstone is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 116,
+    "category": "🥖 Food & Drink",
+    "name": "Ale (pitcher)",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A sturdy ceramic pitcher with a thick, earthenware body and a narrow neck, its surface adorned with rough, hand-painted runes that hint at a local tavern's insignia. The ale within is a deep amber color, with a frothy head that clings stubbornly to the rim.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 117,
+    "category": "🥖 Food & Drink",
+    "name": "Cheese Wheel (small)",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "A small, round wheel of cheese with a rind that is firm and slightly crumbly, encasing a creamy, pale interior that exudes a rich, earthy aroma. The cheese is wrapped in a thin layer of wax, which has begun to crack and flake away in places.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 118,
+    "category": "🥖 Food & Drink",
+    "name": "Dried Meat (1 lb)",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Dried Meat (1 lb) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 119,
+    "category": "🥖 Food & Drink",
+    "name": "Hardtack Biscuits (1 lb)",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Hardtack Biscuits (1 lb) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 120,
+    "category": "🥖 Food & Drink",
+    "name": "Honey Jar",
+    "cost": "6s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Honey Jar is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 121,
+    "category": "🥖 Food & Drink",
+    "name": "Rations (1 day)",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Rations (1 day) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 122,
+    "category": "🥖 Food & Drink",
+    "name": "Rations (1 week)",
+    "cost": "3g",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Rations (1 week) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 123,
+    "category": "🥖 Food & Drink",
+    "name": "Wine (bottle)",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Wine (bottle) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 124,
+    "category": "🧺 Containers",
+    "name": "Backpack",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Backpack is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 125,
+    "category": "🧺 Containers",
+    "name": "Barrel (small)",
+    "cost": "6s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Barrel (small) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 126,
+    "category": "🧺 Containers",
+    "name": "Basket (woven)",
+    "cost": "1s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Basket (woven) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 127,
+    "category": "🧺 Containers",
+    "name": "Bucket (wood)",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Bucket (wood) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 128,
+    "category": "🧺 Containers",
+    "name": "Case (Map Case, leather)",
+    "cost": "1g",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Case (Map Case, leather) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 129,
+    "category": "🧺 Containers",
+    "name": "Flask (metal)",
+    "cost": "5s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Flask (metal) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 130,
+    "category": "🧺 Containers",
+    "name": "Jug (clay)",
+    "cost": "1s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Jug (clay) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 131,
+    "category": "🧺 Containers",
+    "name": "Pouch (small)",
+    "cost": "2s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Pouch (small) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 132,
+    "category": "🧺 Containers",
+    "name": "Sack (large)",
+    "cost": "1s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Sack (large) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 133,
+    "category": "🧺 Containers",
+    "name": "Satchel (leather)",
+    "cost": "4s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Satchel (leather) is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  },
+  {
+    "id": 134,
+    "category": "🧺 Containers",
+    "name": "Waterskin",
+    "cost": "3s",
+    "created_at": "2026-08-13T21:26:28.086535+00:00",
+    "genres": [
+      "Medieval",
+      "Modern",
+      "SciFi"
+    ],
+    "notes": "Waterskin is engineered with high-durability composite materials for reliable field operations.",
+    "pic": null,
+    "is_guildspace_locked": false
+  }
+]

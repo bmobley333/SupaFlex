@@ -272,36 +272,11 @@ export const gameApi = {
 
   // --- POWERS & POWER TABLES ---
   async getPowerTables(): Promise<PowerTable[]> {
-    const { data, error } = await supabase
-      .from('power_tables')
-      .select('*')
-      .order('category', { ascending: true })
-      .order('name', { ascending: true });
-
-    if (error) {
-      console.error('[gameApi] Error fetching power tables:', error);
-      return [];
-    }
-    return (data || []) as PowerTable[];
+    return [];
   },
 
-  async savePowerTable(payload: Partial<PowerTable>): Promise<PowerTable | null> {
-    const { data, error } = await supabase
-      .from('power_tables')
-      .insert([
-        {
-          ...payload,
-          created_at: payload.created_at || new Date().toISOString(),
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('[gameApi] Error saving power table:', error);
-      throw error;
-    }
-    return data as PowerTable;
+  async savePowerTable(_payload: Partial<PowerTable>): Promise<PowerTable | null> {
+    return null;
   },
 
   async getPowers(): Promise<Power[]> {
@@ -1632,8 +1607,8 @@ export const gameApi = {
       };
 
       if (item.type === 'power') {
-        if (item.item_data?.table) {
-          masterPayload.table = item.item_data.table;
+        if (item.item_data?.table_group || item.item_data?.table) {
+          masterPayload.table_group = item.item_data.table_group || item.item_data.table;
         }
         if (item.item_data?.ready_category || item.item_data?.ready) {
           masterPayload.ready = item.item_data.ready_category || item.item_data.ready;
