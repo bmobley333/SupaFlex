@@ -577,8 +577,11 @@ export const SkillsetsPanel: React.FC = () => {
     saveActiveCharacter();
   };
 
+  const [localGenreFilter, setLocalGenreFilter] = useState<'DEFAULT' | 'Medieval' | 'Modern' | 'SciFi' | 'ALL'>('DEFAULT');
   const [activeSkillsetTable, setActiveSkillsetTable] = useState<string>('ALL');
   const [skillFilterCategory, setSkillFilterCategory] = useState<'all' | 'starred'>('all');
+
+  const effectiveGenre = localGenreFilter === 'DEFAULT' ? activeGenre : localGenreFilter;
 
   const favoriteSkillsetTables: string[] = useMemo(() => {
     const favs = activeCharacter?.sheet_data?.favorite_skillset_tables;
@@ -607,7 +610,7 @@ export const SkillsetsPanel: React.FC = () => {
   const filteredCatalogSkillsets = useMemo(() => {
     const unlearned = effectiveSkillsets.filter((ks) => !uniqueKnownSkillsetNames.some((k) => k.toLowerCase() === ks.name.toLowerCase()));
     
-    let base = unlearned.filter((ks) => matchesGenre(ks.genres, activeGenre));
+    let base = unlearned.filter((ks) => effectiveGenre === 'ALL' ? true : matchesGenre(ks.genres, effectiveGenre));
     if (activeSkillsetTable === 'STARRED') {
       base = base.filter((ks) => isSkillsetStarred(ks.name));
     } else if (activeSkillsetTable !== 'ALL' && activeSkillsetTable !== 'STARRED') {
@@ -626,7 +629,7 @@ export const SkillsetsPanel: React.FC = () => {
       const noteMatch = (ks.notes || '').toLowerCase().includes(query);
       return nameMatch || skillMatch || noteMatch;
     });
-  }, [effectiveSkillsets, uniqueKnownSkillsetNames, activeSkillsetTable, isSkillsetStarred, rightSearchQuery, activeGenre]);
+  }, [effectiveSkillsets, uniqueKnownSkillsetNames, activeSkillsetTable, isSkillsetStarred, rightSearchQuery, effectiveGenre]);
 
   const filteredCatalogIndividualSkills = useMemo(() => {
     const unlearned = sortedAllCatalogSkills.filter((sk) => {
@@ -924,17 +927,59 @@ export const SkillsetsPanel: React.FC = () => {
                             placeholderText="➕ Pin Skillset Table"
                           />
 
-                          <div className="relative shrink-0">
-                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                            <input
-                              type="text"
-                              value={rightSearchQuery}
-                              onChange={(e) => setRightSearchQuery(e.target.value)}
-                              placeholder="Search skillsets, skills, notes..."
-                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 w-full"
-                            />
+                          {/* Dense Facet Toolbar: Local Genre */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <select
+                              value={localGenreFilter}
+                              onChange={(e) => setLocalGenreFilter(e.target.value as any)}
+                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 cursor-pointer flex-1"
+                            >
+                              <option value="DEFAULT">🏛️ Setting: {activeGenre} (Default)</option>
+                              <option value="Medieval">🏰 Medieval</option>
+                              <option value="Modern">⚙️ Modern</option>
+                              <option value="SciFi">🚀 SciFi</option>
+                              <option value="ALL">🌐 All Genres</option>
+                            </select>
+                          </div>
+
+                          {/* Search Bar + Dynamic Result Breadcrumb */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="relative flex-1">
+                              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                              <input
+                                type="text"
+                                value={rightSearchQuery}
+                                onChange={(e) => setRightSearchQuery(e.target.value)}
+                                placeholder="Search skillsets, skills, notes..."
+                                className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 w-full"
+                              />
+                            </div>
+                            <div className="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono font-bold text-slate-300 shrink-0">
+                              {filteredCatalogSkillsets.length} {filteredCatalogSkillsets.length === 1 ? 'item' : 'items'}
+                            </div>
                           </div>
                         </div>
+
+                        {/* Zero Matches Feedback & 1-Click Reset */}
+                        {filteredCatalogSkillsets.length === 0 && (
+                          <div className="p-3.5 bg-slate-950/60 rounded-xl border border-purple-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
+                            <span className="text-purple-300 font-semibold">
+                              0 skillsets match active filters ({localGenreFilter !== 'DEFAULT' ? localGenreFilter : activeGenre}
+                              {activeSkillsetTable !== 'ALL' && activeSkillsetTable !== 'STARRED' ? ` • ${activeSkillsetTable}` : ''})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLocalGenreFilter('DEFAULT');
+                                setActiveSkillsetTable('ALL');
+                                setRightSearchQuery('');
+                              }}
+                              className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
+                            >
+                              Reset All Filters
+                            </button>
+                          </div>
+                        )}
 
                         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 min-h-0">
                           {filteredCatalogSkillsets.length > 0 ? (

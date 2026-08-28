@@ -165,7 +165,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const slots: AbilitySlot[] = useMemo(() => {
     return rawSlots.filter((s) => s && s.name && s.name.trim() !== '');
   }, [rawSlots]);
-  const favoriteTables: string[] = activeCharacter?.sheet_data?.favorite_power_tables || [];
   const stockCatalog = type === 'powers' ? powers : magicItems;
 
   // Active Highest-Version Display Slots (max version per baseName)
@@ -819,11 +818,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setActiveRightTab('CATALOG');
   };
 
+  const [localGenreFilter, setLocalGenreFilter] = useState<'DEFAULT' | 'Medieval' | 'Modern' | 'SciFi' | 'ALL'>('DEFAULT');
+  const [hardwareTierFilter, setHardwareTierFilter] = useState<'ALL' | 'Minor' | 'Lesser' | 'Greater' | 'Epic'>('ALL');
+
+  const effectiveGenre = localGenreFilter === 'DEFAULT' ? activeGenre : localGenreFilter;
+
   // Filter catalog items by Category & Deduplication & Genre Scope
   const categoryFilteredCatalog = useMemo(() => {
     return fullCatalog.filter((item) => {
-      // 0. Global Genre Scope Filtering
-      if (!matchesGenre(item.genres, activeGenre)) {
+      // 0. Local Genre Scope Filtering
+      if (effectiveGenre !== 'ALL' && !matchesGenre(item.genres, effectiveGenre)) {
         return false;
       }
 
@@ -841,22 +845,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       }
       return true;
     });
-  }, [fullCatalog, knownAbilityNamesSet, type, favoriteTables, isItemStarred, activeGenre]);
+  }, [fullCatalog, knownAbilityNamesSet, type, effectiveGenre]);
 
   const groupedTables = useMemo(() => {
     const acc = categoryFilteredCatalog.reduce((map, item) => {
       let tableName = (item as any).table_group || (item as any).table || (item as any).table_name;
       if (!tableName) {
-        if (type === 'powers') {
-          tableName = 'General Powers';
-        } else {
-          const cat = ((item as any).category || (item as any).sub || '').toLowerCase();
-          if (cat.includes('minor') || cat.includes('🍺')) tableName = 'Minor';
-          else if (cat.includes('lesser') || cat.includes('🪄') || cat.includes('🔮')) tableName = 'Lesser';
-          else if (cat.includes('greater') || cat.includes('🪬')) tableName = 'Greater';
-          else if (cat.includes('epic') || cat.includes('💫') || cat.includes('artifact')) tableName = 'Epic';
-          else tableName = 'Minor';
-        }
+        tableName = type === 'powers' ? 'General Powers' : 'Tech Hardware';
       }
       if (!map[tableName]) map[tableName] = [];
       map[tableName].push(item);
@@ -865,19 +860,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
     if (type === 'powers') {
       customPowerTables.forEach((tbl) => {
-        if (!matchesGenre((tbl as any).genres, activeGenre)) return;
+        if (effectiveGenre !== 'ALL' && !matchesGenre((tbl as any).genres, effectiveGenre)) return;
         if (!acc[tbl.name]) {
           acc[tbl.name] = [];
         }
       });
-    } else {
-      ['Minor', 'Lesser', 'Greater', 'Epic'].forEach((t) => {
-        if (!acc[t]) acc[t] = [];
-      });
     }
 
     return acc;
-  }, [categoryFilteredCatalog, type, customPowerTables, favoriteTables, activeGenre]);
+  }, [categoryFilteredCatalog, type, customPowerTables, effectiveGenre]);
 
   const starredCatalogItems = useMemo(() => {
     return fullCatalog.filter((item) => isItemStarred(item));
@@ -885,32 +876,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const availableTableNames = useMemo(() => {
     const keys = Object.keys(groupedTables);
-    if (type === 'spells') {
-      const order = ['Minor', 'Lesser', 'Greater', 'Epic'];
-      return keys.sort((a, b) => {
-        const idxA = order.indexOf(a);
-        const idxB = order.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        if (idxA !== -1) return -1;
-        if (idxB !== -1) return 1;
-        return a.localeCompare(b);
-      });
-    }
     return keys.sort((a, b) => a.localeCompare(b));
-  }, [groupedTables, type]);
+  }, [groupedTables]);
 
   const pinnedTableNames: string[] = useMemo(() => {
     if (type === 'powers') {
       const favs: string[] = sheetData.favorite_power_tables || [];
       if (favs.length === 0) {
         const luckTbl = availableTableNames.find((t) => t.toLowerCase().includes('luck'));
-        return luckTbl ? [luckTbl] : [];
+        return luckTbl ? [luckTbl] : availableTableNames.slice(0, 8);
       }
       return favs.filter((t) => availableTableNames.includes(t)).slice(0, 8);
     } else {
       const favs: string[] = sheetData.favorite_hardware_tables || [];
       if (favs.length === 0) {
-        return ['Minor', 'Lesser', 'Greater', 'Epic'].filter((t) => availableTableNames.includes(t));
+        return availableTableNames.slice(0, 8);
       }
       return favs.filter((t) => availableTableNames.includes(t)).slice(0, 8);
     }
@@ -922,11 +902,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     if (activeTableName && availableTableNames.includes(activeTableName)) {
       return activeTableName;
     }
-    if (type === 'powers' && pinnedTableNames.length > 0) {
+    if (pinnedTableNames.length > 0) {
       return pinnedTableNames[0];
     }
     return 'ALL';
-  }, [activeTableName, availableTableNames, type, pinnedTableNames]);
+  }, [activeTableName, availableTableNames, pinnedTableNames]);
 
   const activeTableAbilities = useMemo(() => {
     if (effectiveActiveTable === 'ALL') {
@@ -940,10 +920,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const filteredCatalogAbilities = useMemo(() => {
     return activeTableAbilities.filter((item) => {
-      // Ready category filter for Powers mode
+      // 1. Ready category filter for Powers mode
       if (type === 'powers' && catalogReadyFilter !== 'all') {
         const cat = getPowerReadyCategory(item);
         if (cat !== catalogReadyFilter) return false;
+      }
+
+      // 2. Hardware Tier filter for Loadout mode
+      if (type === 'spells' && hardwareTierFilter !== 'ALL') {
+        const rawCat = ((item as any).category || (item as any).tier || (item as any).sub || '').toLowerCase();
+        if (!rawCat.includes(hardwareTierFilter.toLowerCase())) {
+          return false;
+        }
       }
 
       if (!rightSearchQuery.trim()) return true;
@@ -952,25 +940,17 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const actionMatch = (item.action || '').toLowerCase().includes(q);
       const usageMatch = (item.usage || '').toLowerCase().includes(q);
       const effectMatch = (item.effect || '').toLowerCase().includes(q);
-      return nameMatch || actionMatch || usageMatch || effectMatch;
+      const notesMatch = ((item as any).notes || '').toLowerCase().includes(q);
+      return nameMatch || actionMatch || usageMatch || effectMatch || notesMatch;
     });
-  }, [activeTableAbilities, rightSearchQuery, type, catalogReadyFilter]);
+  }, [activeTableAbilities, rightSearchQuery, type, catalogReadyFilter, hardwareTierFilter]);
 
   const groupedFilteredAbilities = useMemo(() => {
     const map: Record<string, (Power | MagicItem)[]> = {};
     filteredCatalogAbilities.forEach((item) => {
-      let tbl = (item as any).table || (item as any).table_name;
+      let tbl = (item as any).table_group || (item as any).table || (item as any).table_name;
       if (!tbl) {
-        if (type === 'powers') {
-          tbl = 'General Powers';
-        } else {
-          const cat = ((item as any).category || (item as any).sub || '').toLowerCase();
-          if (cat.includes('minor') || cat.includes('🍺')) tbl = 'Minor';
-          else if (cat.includes('lesser') || cat.includes('🪄') || cat.includes('🔮')) tbl = 'Lesser';
-          else if (cat.includes('greater') || cat.includes('🪬')) tbl = 'Greater';
-          else if (cat.includes('epic') || cat.includes('💫') || cat.includes('artifact')) tbl = 'Epic';
-          else tbl = 'Minor';
-        }
+        tbl = type === 'powers' ? 'General Powers' : 'Tech Hardware';
       }
       if (!map[tbl]) map[tbl] = [];
       map[tbl].push(item);
@@ -1981,25 +1961,100 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             placeholderText={type === 'powers' ? '➕ Pin Power Table' : '➕ Pin Hardware Table'}
                           />
 
-                          <div className="relative shrink-0">
-                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                            <input
-                              type="text"
-                              value={rightSearchQuery}
-                              onChange={(e) => setRightSearchQuery(e.target.value)}
-                              placeholder={`Search ${
-                                effectiveActiveTable && effectiveActiveTable !== 'ALL' && effectiveActiveTable !== 'STARRED'
-                                  ? formatTableNameDisplay(effectiveActiveTable)
-                                  : type === 'powers'
-                                  ? 'all catalog powers'
-                                  : 'hardware catalog'
-                              }...`}
-                              className={`bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none w-full ${
-                                type === 'powers' ? 'focus:border-amber-500' : 'focus:border-cyan-500'
-                              }`}
-                            />
+                          {/* 2. DENSE DROPDOWN FACET TOOLBAR */}
+                          <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                            {/* Local Genre Selector Dropdown */}
+                            <select
+                              value={localGenreFilter}
+                              onChange={(e) => setLocalGenreFilter(e.target.value as any)}
+                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 cursor-pointer flex-1 min-w-[130px]"
+                            >
+                              <option value="DEFAULT">🏛️ Setting: {activeGenre} (Default)</option>
+                              <option value="Medieval">🏰 Medieval</option>
+                              <option value="Modern">⚙️ Modern</option>
+                              <option value="SciFi">🚀 SciFi</option>
+                              <option value="ALL">🌐 All Genres</option>
+                            </select>
+
+                            {/* Hardware Tier Facet Dropdown (Loadout / Spells mode) */}
+                            {type === 'spells' && (
+                              <select
+                                value={hardwareTierFilter}
+                                onChange={(e) => setHardwareTierFilter(e.target.value as any)}
+                                className="bg-slate-900 text-cyan-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 cursor-pointer flex-1 min-w-[120px]"
+                              >
+                                <option value="ALL">🌐 All Tiers</option>
+                                <option value="Minor">🥉 Minor (1 Slot)</option>
+                                <option value="Lesser">🥈 Lesser (2 Slots)</option>
+                                <option value="Greater">🥇 Greater (3 Slots)</option>
+                                <option value="Epic">💎 Epic (4 Slots)</option>
+                              </select>
+                            )}
+
+                            {/* Powers Ready Category Dropdown (Powers mode) */}
+                            {type === 'powers' && (
+                              <select
+                                value={catalogReadyFilter}
+                                onChange={(e) => setCatalogReadyFilter(e.target.value as any)}
+                                className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 cursor-pointer flex-1 min-w-[130px]"
+                              >
+                                <option value="all">⚡ All Power Types</option>
+                                <option value="primary_arsenal">⚔️ Primary Arsenal</option>
+                                <option value="mobility_defense">🛡️ Mobility & Defense</option>
+                                <option value="support_passive">✨ Support & Context</option>
+                              </select>
+                            )}
+                          </div>
+
+                          {/* 3. SEARCH BAR + DYNAMIC RESULT BREADCRUMB */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="relative flex-1">
+                              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                              <input
+                                type="text"
+                                value={rightSearchQuery}
+                                onChange={(e) => setRightSearchQuery(e.target.value)}
+                                placeholder={`Search ${
+                                  effectiveActiveTable && effectiveActiveTable !== 'ALL' && effectiveActiveTable !== 'STARRED'
+                                    ? formatTableNameDisplay(effectiveActiveTable)
+                                    : type === 'powers'
+                                    ? 'all powers'
+                                    : 'hardware catalog'
+                                }...`}
+                                className={`bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none w-full ${
+                                  type === 'powers' ? 'focus:border-amber-500' : 'focus:border-cyan-500'
+                                }`}
+                              />
+                            </div>
+                            <div className="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono font-bold text-slate-300 shrink-0">
+                              {filteredCatalogAbilities.length} {filteredCatalogAbilities.length === 1 ? 'item' : 'items'}
+                            </div>
                           </div>
                         </div>
+
+                        {/* Zero Matches Feedback & 1-Click Reset */}
+                        {filteredCatalogAbilities.length === 0 && (
+                          <div className="p-3.5 bg-slate-950/60 rounded-xl border border-amber-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
+                            <span className="text-amber-300 font-semibold">
+                              0 items match active filters ({localGenreFilter !== 'DEFAULT' ? localGenreFilter : activeGenre}
+                              {type === 'spells' && hardwareTierFilter !== 'ALL' ? ` • ${hardwareTierFilter}` : ''}
+                              {effectiveActiveTable !== 'ALL' && effectiveActiveTable !== 'STARRED' ? ` • ${effectiveActiveTable}` : ''})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLocalGenreFilter('DEFAULT');
+                                if (type === 'spells') setHardwareTierFilter('ALL');
+                                if (type === 'powers') setCatalogReadyFilter('all');
+                                setActiveTableName('ALL');
+                                setRightSearchQuery('');
+                              }}
+                              className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
+                            >
+                              Reset All Filters
+                            </button>
+                          </div>
+                        )}
 
                         {/* Catalog Action Feedback Banner */}
                         {catalogFeedback && (
@@ -2099,6 +2154,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                               <span className="font-bold text-sm text-slate-100">{baseName}</span>
                                               {type !== 'powers' && (
                                                 <ItemNotesPopover notes={(item as any).notes} itemName={baseName} />
+                                              )}
+                                              {isSpells && (
+                                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/40">
+                                                  {((item as any).category || (item as any).tier || 'Minor').replace(/[^\w\s\(\)]/g, '').trim()}
+                                                </span>
                                               )}
                                               {version > 1 && (
                                                 <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
@@ -2326,9 +2386,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
-    </div>
 
       {/* Main Character Sheet Card View */}
       <div className="flex flex-col gap-4">

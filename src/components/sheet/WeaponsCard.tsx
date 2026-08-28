@@ -345,8 +345,12 @@ export const WeaponsCard: React.FC = () => {
     saveActiveCharacter();
   };
 
+  const [localGenreFilter, setLocalGenreFilter] = useState<'DEFAULT' | 'Medieval' | 'Modern' | 'SciFi' | 'ALL'>('DEFAULT');
+  const [weaponTypeFilter, setWeaponTypeFilter] = useState<string>('ALL');
   const [skillFilterMode, setSkillFilterMode] = useState<'all' | 'skilled' | 'unskilled'>('skilled');
   const [activeWeaponTable, setActiveWeaponTable] = useState<string>('ALL');
+
+  const effectiveGenre = localGenreFilter === 'DEFAULT' ? activeGenre : localGenreFilter;
 
   const favoriteWeaponTables: string[] = useMemo(() => {
     const favs = activeCharacter?.sheet_data?.favorite_weapon_tables;
@@ -381,8 +385,8 @@ export const WeaponsCard: React.FC = () => {
   // Filter stock catalog weapons for Right Column pane (strict deduplication & genre filtering)
   const filteredCatalogWeapons = useMemo(() => {
     return supabaseWeapons.filter((weapon) => {
-      // 0. Global Genre Scope Filtering
-      if (!matchesGenre(weapon.genres, activeGenre)) {
+      // 0. Local Setting Scope Filtering
+      if (effectiveGenre !== 'ALL' && !matchesGenre(weapon.genres, effectiveGenre)) {
         return false;
       }
 
@@ -395,7 +399,15 @@ export const WeaponsCard: React.FC = () => {
       const qualifying = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
       const isAnyLearnable = qualifying.length > 0;
 
-      // 1.5. Skill Filter (All vs Skilled vs Unskilled)
+      // 1.2. Weapon Type Dropdown Filter
+      if (weaponTypeFilter !== 'ALL') {
+        const rawType = (weapon.type || '').toLowerCase();
+        if (!rawType.includes(weaponTypeFilter.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // 1.5. Qualification Filter (All vs Skilled vs Unskilled)
       if (skillFilterMode === 'skilled' && !isAnyLearnable) {
         return false;
       }
@@ -426,7 +438,7 @@ export const WeaponsCard: React.FC = () => {
 
       return true;
     });
-  }, [supabaseWeapons, equippedBaseNamesSet, skillFilterMode, activeWeaponTable, rightSearchQuery, attributeDice, isItemStarred, activeGenre]);
+  }, [supabaseWeapons, equippedBaseNamesSet, skillFilterMode, weaponTypeFilter, activeWeaponTable, rightSearchQuery, attributeDice, isItemStarred, effectiveGenre]);
 
   return (
     <div className="bg-gradient-to-b from-rose-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-rose-500/90 p-4 flex flex-col gap-3 h-fit shadow-lg shadow-rose-950/20">
@@ -665,54 +677,87 @@ export const WeaponsCard: React.FC = () => {
                         placeholderText="➕ Pin Weapon Table"
                       />
 
-                      {/* 2. KISS Multi-Option Pill Switch: All / Skilled / Unskilled */}
-                      <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setSkillFilterMode('all')}
-                          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                            skillFilterMode === 'all'
-                              ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-sm font-extrabold'
-                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                          }`}
+                      {/* 2. DENSE DROPDOWN FACET TOOLBAR */}
+                      <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                        {/* Local Setting Genre Selector */}
+                        <select
+                          value={localGenreFilter}
+                          onChange={(e) => setLocalGenreFilter(e.target.value as any)}
+                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[125px]"
                         >
-                          🌐 All Qualifications
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSkillFilterMode('skilled')}
-                          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                            skillFilterMode === 'skilled'
-                              ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                          }`}
+                          <option value="DEFAULT">🏛️ Setting: {activeGenre} (Default)</option>
+                          <option value="Medieval">🏰 Medieval</option>
+                          <option value="Modern">⚙️ Modern</option>
+                          <option value="SciFi">🚀 SciFi</option>
+                          <option value="ALL">🌐 All Genres</option>
+                        </select>
+
+                        {/* Weapon Type Dropdown */}
+                        <select
+                          value={weaponTypeFilter}
+                          onChange={(e) => setWeaponTypeFilter(e.target.value)}
+                          className="bg-slate-900 text-rose-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[105px]"
                         >
-                          🎓 Skilled Only
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSkillFilterMode('unskilled')}
-                          className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                            skillFilterMode === 'unskilled'
-                              ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                          }`}
+                          <option value="ALL">🌐 All Types</option>
+                          <option value="Melee">🗡️ Melee</option>
+                          <option value="Hurled">🪓 Hurled</option>
+                          <option value="Shot">🏹 Shot</option>
+                          <option value="Unarmed">🥊 Unarmed</option>
+                        </select>
+
+                        {/* Qualification Dropdown */}
+                        <select
+                          value={skillFilterMode}
+                          onChange={(e) => setSkillFilterMode(e.target.value as any)}
+                          className="bg-slate-900 text-emerald-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[125px]"
                         >
-                          ⚪ Unskilled Only
-                        </button>
+                          <option value="all">🌐 All Qualifications</option>
+                          <option value="skilled">🎓 Skilled Only</option>
+                          <option value="unskilled">⚪ Unskilled Only</option>
+                        </select>
                       </div>
 
-                      {/* 3. Search Bar */}
-                      <div className="relative shrink-0">
-                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          value={rightSearchQuery}
-                          onChange={(e) => setRightSearchQuery(e.target.value)}
-                          placeholder="Search weapons, types, notes..."
-                          className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 w-full"
-                        />
+                      {/* 3. Search Bar + Dynamic Result Breadcrumb */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="relative flex-1">
+                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            value={rightSearchQuery}
+                            onChange={(e) => setRightSearchQuery(e.target.value)}
+                            placeholder="Search weapons, types, notes..."
+                            className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 w-full"
+                          />
+                        </div>
+                        <div className="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono font-bold text-slate-300 shrink-0">
+                          {filteredCatalogWeapons.length} {filteredCatalogWeapons.length === 1 ? 'item' : 'items'}
+                        </div>
                       </div>
+
+                      {/* Zero Matches Feedback & 1-Click Reset */}
+                      {filteredCatalogWeapons.length === 0 && !isLoadingCatalog && (
+                        <div className="p-3.5 bg-slate-950/60 rounded-xl border border-rose-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
+                          <span className="text-rose-300 font-semibold">
+                            0 weapons match active filters ({localGenreFilter !== 'DEFAULT' ? localGenreFilter : activeGenre}
+                            {weaponTypeFilter !== 'ALL' ? ` • ${weaponTypeFilter}` : ''}
+                            {skillFilterMode !== 'all' ? ` • ${skillFilterMode}` : ''}
+                            {activeWeaponTable !== 'ALL' && activeWeaponTable !== 'STARRED' ? ` • ${activeWeaponTable}` : ''})
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLocalGenreFilter('DEFAULT');
+                              setWeaponTypeFilter('ALL');
+                              setSkillFilterMode('all');
+                              setActiveWeaponTable('ALL');
+                              setRightSearchQuery('');
+                            }}
+                            className="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
+                          >
+                            Reset All Filters
+                          </button>
+                        </div>
+                      )}
 
                       {/* Scrollable Catalog List */}
                       <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
