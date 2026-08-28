@@ -153,7 +153,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   const playerName = useCharacterStore((state) => state.playerName);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeRole = useCharacterStore((state) => state.activeRole);
-  const skillsets = useCharacterStore((state) => state.skillsets);
+  const skills = useCharacterStore((state) => state.skills);
   const powers = useCharacterStore((state) => state.powers);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
   const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
@@ -293,26 +293,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     }
   }, [isOpen, playerEmail, activePartyId]);
 
-  // Aggregate all unique skills across stock database skillsets, custom sheet skills, and custom creations
+  // Aggregate all unique skills across stock database skills, custom sheet skills, and custom creations
   const availableSkillsCatalog = useMemo(() => {
     const map = new Map<string, string>(); // cleanNameKey -> formattedSkillString
 
-    // 1. Stock database skillsets
-    if (Array.isArray(skillsets)) {
-      skillsets.forEach((ss) => {
-        if (Array.isArray(ss.skills)) {
-          ss.skills.forEach((rawSkill) => {
-            if (typeof rawSkill === 'string' && rawSkill.trim()) {
-              const trimmed = rawSkill.trim();
-              let cleanName = trimmed;
-              for (const icon of ['✨', '💪', '👁️', '🏃', '🫀']) {
-                cleanName = cleanName.replace(icon, '').trim();
-              }
-              if (cleanName && !map.has(cleanName.toLowerCase())) {
-                map.set(cleanName.toLowerCase(), trimmed);
-              }
-            }
-          });
+    // 1. Stock database atomic skills
+    if (Array.isArray(skills)) {
+      skills.forEach((sk) => {
+        const cleanKey = (sk.name || '').trim().toLowerCase();
+        if (cleanKey && !map.has(cleanKey)) {
+          map.set(cleanKey, `${sk.attribute} ${sk.name.trim()}`);
         }
       });
     }
@@ -321,7 +311,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     const customSkillsets = activeCharacter?.sheet_data?.custom_skillsets || [];
     customSkillsets.forEach((cs) => {
       if (Array.isArray(cs.skills)) {
-        cs.skills.forEach((rawSkill) => {
+        cs.skills.forEach((rawSkill: string) => {
           if (typeof rawSkill === 'string' && rawSkill.trim()) {
             const trimmed = rawSkill.trim();
             let cleanName = trimmed;
@@ -379,7 +369,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     return Array.from(map.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map((entry) => entry[1]);
-  }, [skillsets, activeCharacter, customSkillsList]);
+  }, [skills, activeCharacter, customSkillsList]);
 
   // Group all available power tables by Category for clean <optgroup> dropdown selection
   const groupedPowerTables = useMemo(() => {

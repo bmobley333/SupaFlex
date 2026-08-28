@@ -13,6 +13,50 @@ export type TechDiscipline = 'Archaic' | 'Tech' | 'BioTech' | 'CyberTech';
 export type UsageType = 'Active' | 'Passive' | 'Quirk';
 export type HardwareTier = 'Minor' | 'Lesser' | 'Greater' | 'Epic';
 export type PowerTableCategory = 'Race' | 'Class' | 'Discipline' | 'Combat Style' | 'Handicap' | 'Luck' | 'Custom';
+export type TraitType = 'trait' | 'quirk';
+
+export interface StatHookDefinition {
+  target: 'ar' | 'mr' | 'defense' | 'vitality' | 'luck' | 'wounds';
+  type: 'mind_die' | 'flat_bonus' | 'might_die' | 'motion_die';
+  attribute?: AttributeKey;
+  value?: number;
+  effectDescription?: string;
+}
+
+export interface SupabaseTrait {
+  id: number;
+  name: string;
+  type: TraitType;
+  action?: string;
+  usage?: string;
+  effect: string;
+  flaw_points?: number;
+  stat_hook?: StatHookDefinition | null;
+  genres: string[];
+  discipline?: string;
+  table_group?: string;
+  is_guildspace_locked?: boolean;
+  notes?: string;
+  created_at?: string;
+}
+
+export interface TraitQuirkItem {
+  id?: string | number;
+  name: string;
+  type: TraitType;
+  action?: string;
+  usage?: string;
+  effect: string;
+  source?: string;
+  table_group?: string;
+  flaw_points?: number;
+  stat_hook?: StatHookDefinition | null;
+  notes?: string;
+  genres?: string[];
+  is_guildspace_locked?: boolean;
+  checked?: boolean[];
+  created_at?: string;
+}
 
 export interface ReadySlotConfig {
   tier: number;
@@ -499,6 +543,8 @@ export interface CharacterSheetData {
   known_skillsets: string[];
   known_individual_skills?: string[]; // Individually learned skills outside a skillset
   custom_skillsets?: CustomSkillsetDefinition[]; // Custom user-created skillsets
+  traits_quirks?: TraitQuirkItem[]; // Passive traits, racial adaptations, unique quirks & flaws
+  favorite_trait_tables?: string[]; // Favorited trait tables
   favorite_power_tables?: string[]; // Favorited power tables (table_name strings)
   favorite_weapon_tables?: string[]; // Favorited weapon tables
   favorite_armor_tables?: string[]; // Favorited armor tables
@@ -530,6 +576,7 @@ export interface CharacterSheetData {
   unlocked_magic_slots?: number; // Deprecated alias for unlocked_loadout_slots
   starred_loadout_items?: (number | string)[]; // Starred Loadout Wishlist IDs
   starred_magic_items?: (number | string)[]; // Starred Magic Item Wishlist IDs (alias)
+  starred_traits?: (number | string)[]; // Starred Traits Wishlist IDs
   starred_powers?: (number | string)[]; // Starred Powers Wishlist IDs
   starred_weapons?: (number | string)[]; // Starred Weapons Wishlist IDs
   starred_armor?: (number | string)[]; // Starred Armor Wishlist IDs
@@ -591,8 +638,14 @@ export const calculateLifetimeAp = (level: number): number => {
   return 8 + (numLevel - 1) * 2;
 };
 
-export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number; gmBonus: number; categories: Record<string, number> } => {
-  if (!sheetData) return { totalSpent: 0, gmBonus: 0, categories: {} };
+export const calculateLiveSheetSpentAp = (sheetData: any): {
+  totalSpent: number;
+  gmBonus: number;
+  flawBonusAp: number;
+  rawFlawPoints: number;
+  categories: Record<string, number>;
+} => {
+  if (!sheetData) return { totalSpent: 0, gmBonus: 0, flawBonusAp: 0, rawFlawPoints: 0, categories: {} };
 
   const apLog: ApLogEntry[] = Array.isArray(sheetData.ap_log) ? sheetData.ap_log : [];
 
@@ -638,6 +691,10 @@ export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number;
   const skilledWeapons = weapons.filter((w: any) => w && w.sk);
   const weaponsNet = skilledWeapons.length * 1;
 
+  const traitsQuirks: TraitQuirkItem[] = Array.isArray(sheetData.traits_quirks) ? sheetData.traits_quirks : [];
+  const rawFlawPoints = traitsQuirks.reduce((sum: number, t: any) => sum + (t?.flaw_points || 0), 0);
+  const flawBonusAp = Math.min(5, Math.max(0, rawFlawPoints));
+
   const categories = {
     Armor: armorNet,
     Attributes: attributesNet,
@@ -664,7 +721,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): { totalSpent: number;
     vitalityNet +
     weaponsNet;
 
-  return { totalSpent, gmBonus, categories };
+  return { totalSpent, gmBonus, flawBonusAp, rawFlawPoints, categories };
 };
 
 export const parseAbilityVersion = (name: string): { baseName: string; version: number } => {
@@ -708,17 +765,19 @@ export const calculateAvailableAp = (level: number, logOrSheet?: any, _rawApFiel
   const lifetime = calculateLifetimeAp(level);
   let spent = 0;
   let gmBonus = 0;
+  let flawBonusAp = 0;
 
   if (logOrSheet && typeof logOrSheet === 'object' && !Array.isArray(logOrSheet)) {
     const liveData = calculateLiveSheetSpentAp(logOrSheet);
     spent = liveData.totalSpent;
     gmBonus = liveData.gmBonus;
+    flawBonusAp = liveData.flawBonusAp || 0;
   } else {
     spent = calculateSpentAp(logOrSheet);
     gmBonus = calculateGmBonusAp(logOrSheet);
   }
 
-  const calculated = lifetime + gmBonus - spent;
+  const calculated = lifetime + gmBonus + flawBonusAp - spent;
   return Math.max(0, calculated);
 };
 
@@ -835,6 +894,21 @@ export interface HardwareItem extends MagicItem {
 }
 
 export type LoadoutItem = MagicItem | HardwareItem;
+
+export type SkillAttributeIcon = '💪' | '🏃' | '👁️' | '✨' | '🫀';
+
+export interface SupabaseSkill {
+  id: number;
+  name: string;
+  attribute: SkillAttributeIcon;
+  skillset: string[];
+  genres: string[];
+  discipline?: string;
+  table_group?: string;
+  is_guildspace_locked?: boolean;
+  notes?: string;
+  created_at: string;
+}
 
 export interface Skillset {
   id: number;

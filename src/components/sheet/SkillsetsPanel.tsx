@@ -22,14 +22,20 @@ interface CatalogSkillOption {
   emoji: string;
   attributeKey: AttributeKey;
   parentSkillsets: string[];
+  notes?: string;
+  genres?: string[];
+  discipline?: string;
+  table_group?: string;
 }
 
 const EMOJI_MAP: Record<string, { key: AttributeKey; label: string; icon: string }> = {
   '💪': { key: 'might', label: 'Might', icon: '💪' },
   '🏃': { key: 'motion', label: 'Motion', icon: '🏃' },
   '👁️': { key: 'mind', label: 'Mind', icon: '👁️' },
+  '👁': { key: 'mind', label: 'Mind', icon: '👁️' },
   '✨': { key: 'magic', label: 'Magic', icon: '✨' },
   '🫀': { key: 'moxie', label: 'Moxie', icon: '🫀' },
+  '🎭': { key: 'moxie', label: 'Moxie', icon: '🫀' },
 };
 
 const ATTRIBUTE_OPTIONS: { key: AttributeKey; label: string; icon: string }[] = [
@@ -72,20 +78,43 @@ const parseSkill = (
 
   return {
     cleanName: cleanName || rawSkill,
-    emoji: foundEmoji || '✨',
-    attributeKey: foundKey || 'magic',
+    emoji: foundEmoji || '👁️',
+    attributeKey: foundKey || 'mind',
   };
 };
 
 export const SkillsetsPanel: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
-  const { activeCharacter, skillsets, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
+  const { activeCharacter, skills, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
 
-  // Merge stock database skillsets with character sheet custom skillsets
+  // Dynamically derive all SkillSets from atomic skills table + character custom skillsets
   const effectiveSkillsets = useMemo(() => {
     const map = new Map<string, Skillset>();
-    skillsets.forEach((s) => map.set(s.name.toLowerCase(), s));
 
+    // 1. Group atomic skills by skillset membership
+    skills.forEach((sk) => {
+      (sk.skillset || []).forEach((setName) => {
+        const key = setName.toLowerCase();
+        if (!map.has(key)) {
+          map.set(key, {
+            id: map.size + 1,
+            name: setName,
+            skills: [],
+            genres: sk.genres || ['Medieval', 'Modern', 'SciFi'],
+            discipline: sk.discipline || 'Universal',
+            table_group: sk.table_group || 'Core Skills',
+            source: 'Stock',
+            created_at: sk.created_at,
+          });
+        }
+        const setObj = map.get(key)!;
+        if (!setObj.skills.includes(sk.name)) {
+          setObj.skills.push(sk.name);
+        }
+      });
+    });
+
+    // 2. Merge custom skillsets from character sheet
     const customList: CustomSkillsetDefinition[] = activeCharacter?.sheet_data?.custom_skillsets || [];
     customList.forEach((cs) => {
       const key = cs.name.toLowerCase();
@@ -99,8 +128,9 @@ export const SkillsetsPanel: React.FC = () => {
         });
       }
     });
-    return Array.from(map.values());
-  }, [skillsets, activeCharacter?.sheet_data?.custom_skillsets]);
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [skills, activeCharacter?.sheet_data?.custom_skillsets]);
 
   const rawKnownSkillsetNames = activeCharacter?.sheet_data?.known_skillsets || [];
   const knownSkillsetNames = useMemo(() => {
@@ -360,10 +390,27 @@ export const SkillsetsPanel: React.FC = () => {
     saveActiveCharacter();
   };
 
-  // Compile full catalog of all unique skills across all effective skillsets
+  // Compile full catalog of all unique skills across all atomic skills and effective skillsets
   const allCatalogSkillsMap = useMemo(() => {
     const map = new Map<string, CatalogSkillOption>();
 
+    // 1. Populate from atomic skills table
+    skills.forEach((sk) => {
+      const key = sk.name.toLowerCase();
+      const attrKey = EMOJI_MAP[sk.attribute]?.key || 'mind';
+      map.set(key, {
+        name: sk.name,
+        emoji: sk.attribute,
+        attributeKey: attrKey,
+        parentSkillsets: sk.skillset || [],
+        notes: sk.notes,
+        genres: sk.genres || ['Medieval', 'Modern', 'SciFi'],
+        discipline: sk.discipline,
+        table_group: sk.table_group,
+      });
+    });
+
+    // 2. Also populate any legacy/custom skills from effectiveSkillsets
     effectiveSkillsets.forEach((ks) => {
       if (Array.isArray(ks.skills)) {
         ks.skills.forEach((rawSkill) => {
@@ -401,7 +448,7 @@ export const SkillsetsPanel: React.FC = () => {
     });
 
     return map;
-  }, [effectiveSkillsets]);
+  }, [skills, effectiveSkillsets]);
 
   const sortedAllCatalogSkills = useMemo(() => {
     return Array.from(allCatalogSkillsMap.values()).sort((a, b) =>
@@ -577,11 +624,29 @@ export const SkillsetsPanel: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const [localGenreFilter, setLocalGenreFilter] = useState<'DEFAULT' | 'Medieval' | 'Modern' | 'SciFi' | 'ALL'>('DEFAULT');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
+  const [localAttributeFilter, setLocalAttributeFilter] = useState<string>('ALL');
+  const [localDisciplineFilter, setLocalDisciplineFilter] = useState<string>('ALL');
   const [activeSkillsetTable, setActiveSkillsetTable] = useState<string>('ALL');
   const [skillFilterCategory, setSkillFilterCategory] = useState<'all' | 'starred'>('all');
 
-  const effectiveGenre = localGenreFilter === 'DEFAULT' ? activeGenre : localGenreFilter;
+  // Keep local genre synced to active campaign setting when modal opens
+  useEffect(() => {
+    if (showManageModal && activeGenre) {
+      setLocalGenreFilter(activeGenre);
+    }
+  }, [showManageModal, activeGenre]);
+
+  const availableDisciplines = useMemo(() => {
+    const set = new Set<string>();
+    skills.forEach((s) => {
+      if (s.discipline?.trim()) set.add(s.discipline.trim());
+    });
+    sortedAllCatalogSkills.forEach((s) => {
+      if (s.discipline?.trim()) set.add(s.discipline.trim());
+    });
+    return Array.from(set).sort();
+  }, [skills, sortedAllCatalogSkills]);
 
   const favoriteSkillsetTables: string[] = useMemo(() => {
     const favs = activeCharacter?.sheet_data?.favorite_skillset_tables;
@@ -610,7 +675,7 @@ export const SkillsetsPanel: React.FC = () => {
   const filteredCatalogSkillsets = useMemo(() => {
     const unlearned = effectiveSkillsets.filter((ks) => !uniqueKnownSkillsetNames.some((k) => k.toLowerCase() === ks.name.toLowerCase()));
     
-    let base = unlearned.filter((ks) => effectiveGenre === 'ALL' ? true : matchesGenre(ks.genres, effectiveGenre));
+    let base = unlearned.filter((ks) => localGenreFilter === 'ALL' ? true : matchesGenre(ks.genres, localGenreFilter as any));
     if (activeSkillsetTable === 'STARRED') {
       base = base.filter((ks) => isSkillsetStarred(ks.name));
     } else if (activeSkillsetTable !== 'ALL' && activeSkillsetTable !== 'STARRED') {
@@ -629,7 +694,7 @@ export const SkillsetsPanel: React.FC = () => {
       const noteMatch = (ks.notes || '').toLowerCase().includes(query);
       return nameMatch || skillMatch || noteMatch;
     });
-  }, [effectiveSkillsets, uniqueKnownSkillsetNames, activeSkillsetTable, isSkillsetStarred, rightSearchQuery, effectiveGenre]);
+  }, [effectiveSkillsets, uniqueKnownSkillsetNames, activeSkillsetTable, isSkillsetStarred, rightSearchQuery, localGenreFilter]);
 
   const filteredCatalogIndividualSkills = useMemo(() => {
     const unlearned = sortedAllCatalogSkills.filter((sk) => {
@@ -640,7 +705,19 @@ export const SkillsetsPanel: React.FC = () => {
       return !isDerived && !isLearned;
     });
 
-    let base = unlearned;
+    let base = unlearned.filter((sk) => {
+      if (localGenreFilter !== 'ALL' && sk.genres && !matchesGenre(sk.genres, localGenreFilter as any)) {
+        return false;
+      }
+      if (localAttributeFilter !== 'ALL' && sk.emoji !== localAttributeFilter) {
+        return false;
+      }
+      if (localDisciplineFilter !== 'ALL' && sk.discipline && sk.discipline.toLowerCase() !== localDisciplineFilter.toLowerCase()) {
+        return false;
+      }
+      return true;
+    });
+
     if (skillFilterCategory === 'starred') {
       base = base.filter((sk) => isSkillStarred(sk.name));
     }
@@ -650,9 +727,11 @@ export const SkillsetsPanel: React.FC = () => {
     return base.filter((sk) => {
       const nameMatch = sk.name.toLowerCase().includes(query);
       const skillsetMatch = sk.parentSkillsets.some((ps) => ps.toLowerCase().includes(query));
-      return nameMatch || skillsetMatch;
+      const noteMatch = (sk.notes || '').toLowerCase().includes(query);
+      const discMatch = (sk.discipline || '').toLowerCase().includes(query);
+      return nameMatch || skillsetMatch || noteMatch || discMatch;
     });
-  }, [sortedAllCatalogSkills, skillsetDerivedSkillsSet, knownIndividualSkills, skillFilterCategory, isSkillStarred, allCatalogSkillsMap, rightSearchQuery]);
+  }, [sortedAllCatalogSkills, skillsetDerivedSkillsSet, knownIndividualSkills, skillFilterCategory, isSkillStarred, allCatalogSkillsMap, rightSearchQuery, localGenreFilter, localAttributeFilter, localDisciplineFilter]);
 
   return (
     <div className="bg-gradient-to-b from-indigo-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-indigo-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-indigo-950/20">
@@ -914,6 +993,21 @@ export const SkillsetsPanel: React.FC = () => {
                       <div className="flex-1 flex flex-col min-h-0 mt-2.5 gap-2 overflow-hidden">
                         {/* Universal Quick Deck Bar & Search */}
                         <div className="flex flex-col gap-2 shrink-0">
+                          {/* 1. Dense Facet Toolbar: Local Genre */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <select
+                              value={localGenreFilter}
+                              onChange={(e) => setLocalGenreFilter(e.target.value)}
+                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 cursor-pointer flex-1"
+                            >
+                              <option value="ALL">🌐 All Genres</option>
+                              <option value="Medieval">🏰 Medieval</option>
+                              <option value="Modern">⚙️ Modern</option>
+                              <option value="SciFi">🚀 SciFi</option>
+                            </select>
+                          </div>
+
+                          {/* 2. Universal Quick Deck Bar */}
                           <QuickDeckBar
                             domain="skillsets"
                             activeTable={activeSkillsetTable}
@@ -927,22 +1021,7 @@ export const SkillsetsPanel: React.FC = () => {
                             placeholderText="➕ Pin Skillset Table"
                           />
 
-                          {/* Dense Facet Toolbar: Local Genre */}
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <select
-                              value={localGenreFilter}
-                              onChange={(e) => setLocalGenreFilter(e.target.value as any)}
-                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 cursor-pointer flex-1"
-                            >
-                              <option value="DEFAULT">🏛️ Setting: {activeGenre} (Default)</option>
-                              <option value="Medieval">🏰 Medieval</option>
-                              <option value="Modern">⚙️ Modern</option>
-                              <option value="SciFi">🚀 SciFi</option>
-                              <option value="ALL">🌐 All Genres</option>
-                            </select>
-                          </div>
-
-                          {/* Search Bar + Dynamic Result Breadcrumb */}
+                          {/* 3. Search Bar + Dynamic Result Breadcrumb */}
                           <div className="flex items-center gap-2 shrink-0">
                             <div className="relative flex-1">
                               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -964,13 +1043,13 @@ export const SkillsetsPanel: React.FC = () => {
                         {filteredCatalogSkillsets.length === 0 && (
                           <div className="p-3.5 bg-slate-950/60 rounded-xl border border-purple-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
                             <span className="text-purple-300 font-semibold">
-                              0 skillsets match active filters ({localGenreFilter !== 'DEFAULT' ? localGenreFilter : activeGenre}
+                              0 skillsets match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
                               {activeSkillsetTable !== 'ALL' && activeSkillsetTable !== 'STARRED' ? ` • ${activeSkillsetTable}` : ''})
                             </span>
                             <button
                               type="button"
                               onClick={() => {
-                                setLocalGenreFilter('DEFAULT');
+                                setLocalGenreFilter(activeGenre || 'SciFi');
                                 setActiveSkillsetTable('ALL');
                                 setRightSearchQuery('');
                               }}
@@ -1068,28 +1147,105 @@ export const SkillsetsPanel: React.FC = () => {
 
                     {/* TAB 2: INDIVIDUAL SKILLS VIEW */}
                     {activeRightTab === 'individual' && (
-                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-hidden">
-                        <div className="flex items-center gap-2 mb-2 shrink-0">
+                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 gap-2 overflow-hidden">
+                        {/* Dense Facet Toolbar: Genre, Attribute, Discipline, Starred */}
+                        <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                          {/* Genre Selector */}
+                          <select
+                            value={localGenreFilter}
+                            onChange={(e) => setLocalGenreFilter(e.target.value)}
+                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 cursor-pointer flex-1 min-w-[110px]"
+                          >
+                            <option value="ALL">🌐 All Genres</option>
+                            <option value="Medieval">🏰 Medieval</option>
+                            <option value="Modern">⚙️ Modern</option>
+                            <option value="SciFi">🚀 SciFi</option>
+                          </select>
+
+                          {/* Attribute Selector */}
+                          <select
+                            value={localAttributeFilter}
+                            onChange={(e) => setLocalAttributeFilter(e.target.value)}
+                            className="bg-slate-900 text-purple-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 cursor-pointer flex-1 min-w-[120px]"
+                          >
+                            <option value="ALL">🌐 All Attributes</option>
+                            <option value="✨">✨ Magic</option>
+                            <option value="👁️">👁️ Mind</option>
+                            <option value="💪">💪 Might</option>
+                            <option value="🏃">🏃 Motion</option>
+                            <option value="🫀">🫀 Moxie</option>
+                          </select>
+
+                          {/* Discipline Selector */}
+                          {availableDisciplines.length > 0 && (
+                            <select
+                              value={localDisciplineFilter}
+                              onChange={(e) => setLocalDisciplineFilter(e.target.value)}
+                              className="bg-slate-900 text-cyan-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 cursor-pointer flex-1 min-w-[120px]"
+                            >
+                              <option value="ALL">🌐 All Disciplines</option>
+                              {availableDisciplines.map((d) => (
+                                <option key={d} value={d}>
+                                  {d}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+
+                          {/* Category / Starred */}
+                          <select
+                            value={skillFilterCategory}
+                            onChange={(e) => setSkillFilterCategory(e.target.value as any)}
+                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 truncate cursor-pointer flex-1 min-w-[110px]"
+                          >
+                            <option value="all">🌐 All Skills</option>
+                            <option value="starred">⭐ Starred ({starredSkillsCount})</option>
+                          </select>
+                        </div>
+
+                        {/* Search Bar + Dynamic Result Breadcrumb */}
+                        <div className="flex items-center gap-2 shrink-0">
                           <div className="relative flex-1">
                             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                             <input
                               type="text"
                               value={rightSearchQuery}
                               onChange={(e) => setRightSearchQuery(e.target.value)}
-                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 w-full"
+                              placeholder="Search skills, skillsets, notes..."
+                              className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 w-full"
                             />
                           </div>
-
-                          <select
-                            value={skillFilterCategory}
-                            onChange={(e) => setSkillFilterCategory(e.target.value as any)}
-                            className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 truncate cursor-pointer max-w-[170px]"
-                          >
-                            <option value="all">🌐 All Skills</option>
-                            <option value="starred">⭐ Starred Favorites ({starredSkillsCount})</option>
-                          </select>
+                          <div className="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono font-bold text-slate-300 shrink-0">
+                            {filteredCatalogIndividualSkills.length} {filteredCatalogIndividualSkills.length === 1 ? 'item' : 'items'}
+                          </div>
                         </div>
 
+                        {/* Zero Matches Feedback & 1-Click Reset */}
+                        {filteredCatalogIndividualSkills.length === 0 && (
+                          <div className="p-3.5 bg-slate-950/60 rounded-xl border border-indigo-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
+                            <span className="text-indigo-300 font-semibold">
+                              0 individual skills match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
+                              {localAttributeFilter !== 'ALL' ? ` • ${localAttributeFilter}` : ''}
+                              {localDisciplineFilter !== 'ALL' ? ` • ${localDisciplineFilter}` : ''}
+                              {skillFilterCategory !== 'all' ? ` • ${skillFilterCategory}` : ''})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLocalGenreFilter(activeGenre || 'SciFi');
+                                setLocalAttributeFilter('ALL');
+                                setLocalDisciplineFilter('ALL');
+                                setSkillFilterCategory('all');
+                                setRightSearchQuery('');
+                              }}
+                              className="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
+                            >
+                              Reset All Filters
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Individual Skill Cards List */}
                         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 min-h-0">
                           {filteredCatalogIndividualSkills.length > 0 ? (
                             filteredCatalogIndividualSkills.map((sk) => {
@@ -1101,7 +1257,7 @@ export const SkillsetsPanel: React.FC = () => {
                               return (
                                 <div
                                   key={sk.name}
-                                  className={`p-2 bg-slate-900/90 rounded-lg border flex items-center justify-between gap-2 shrink-0 ${
+                                  className={`p-2.5 bg-slate-900/90 rounded-xl border flex items-center justify-between gap-2.5 shrink-0 shadow-sm transition-all ${
                                     isSkillsetDerived
                                       ? 'border-purple-500/30 text-purple-200 opacity-90'
                                       : isIndividuallyLearned
@@ -1109,15 +1265,42 @@ export const SkillsetsPanel: React.FC = () => {
                                       : 'border-slate-800 text-slate-300 hover:border-indigo-500/40'
                                   }`}
                                 >
-                                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                                    <span className="text-base">{sk.emoji}</span>
-                                    <div className="flex flex-col min-w-0">
-                                      <span className="font-outfit font-bold text-xs text-slate-100 truncate">
-                                        {sk.name}
-                                      </span>
-                                      <span className="text-[10px] text-slate-500 font-mono">
-                                        Skillset: {sk.parentSkillsets.join(', ')}
-                                      </span>
+                                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                    {/* Attribute Icon Badge */}
+                                    <span
+                                      className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center font-bold border shrink-0 ${
+                                        sk.emoji === '💪'
+                                          ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
+                                          : sk.emoji === '🏃'
+                                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                                          : sk.emoji === '👁️' || sk.emoji === '👁'
+                                          ? 'bg-cyan-950/80 text-cyan-300 border-cyan-500/40'
+                                          : sk.emoji === '✨'
+                                          ? 'bg-purple-950/80 text-purple-300 border-purple-500/40'
+                                          : 'bg-rose-950/80 text-rose-300 border-rose-500/40'
+                                      }`}
+                                      title={`Attribute: ${EMOJI_MAP[sk.emoji]?.label || sk.emoji}`}
+                                    >
+                                      {sk.emoji}
+                                    </span>
+
+                                    <div className="flex flex-col min-w-0 flex-1">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-outfit font-bold text-xs text-slate-100 truncate">
+                                          {sk.name}
+                                        </span>
+                                        <ItemNotesPopover notes={sk.notes} itemName={sk.name} />
+                                        {sk.discipline && (
+                                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-800 text-cyan-300 border border-slate-700 shrink-0">
+                                            {sk.discipline}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {sk.parentSkillsets.length > 0 && (
+                                        <span className="text-[10px] text-slate-400 font-mono truncate">
+                                          Sets: {sk.parentSkillsets.join(', ')}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
 

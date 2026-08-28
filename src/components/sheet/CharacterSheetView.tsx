@@ -4,6 +4,7 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { HeroHubCard } from './HeroHubCard';
 import { MoneyCard } from './MoneyCard';
 import { GearCard } from './GearCard';
+import { TraitsQuirksCard } from './TraitsQuirksCard';
 import { SkillsetsPanel } from './SkillsetsPanel';
 import { WeaponsCard } from './WeaponsCard';
 import { ArmorCard } from './ArmorCard';
@@ -46,8 +47,9 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* Screen-Wide Section: Skillsets & Derived Skills Registry */}
-      <div id="section-skillsets" className="scroll-mt-32">
+      {/* Symmetrical 2-Column Capabilities Grid: Traits & Quirks (Left) and Skillsets & Derived Skills (Right) */}
+      <div id="section-capabilities" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch scroll-mt-32">
+        <TraitsQuirksCard />
         <SkillsetsPanel />
       </div>
 

@@ -6,7 +6,8 @@ import {
   Character,
   Power,
   MagicItem,
-  Skillset,
+  SupabaseSkill,
+  SupabaseTrait,
   CharacterSheetData,
   DieRating,
   SupabaseArmor,
@@ -336,19 +337,56 @@ export const gameApi = {
     return this.getLoadoutCatalog();
   },
 
-  // --- SKILLSETS ---
-  async getSkillsets(): Promise<Skillset[]> {
-    let query = supabase.from('skillsets').select('*');
+  // --- SKILLS & SKILLSETS ---
+  async getSkills(): Promise<SupabaseSkill[]> {
+    let query = supabase.from('skills').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.eq('is_guildspace_locked', false);
     }
     const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
-      console.error('[gameApi] Error fetching skillsets:', error);
+      console.error('[gameApi] Error fetching skills:', error);
       return [];
     }
-    return (data || []) as Skillset[];
+    return (data || []) as SupabaseSkill[];
+  },
+
+  // --- TRAITS & QUIRKS ---
+  async getTraits(): Promise<SupabaseTrait[]> {
+    let query = supabase.from('traits').select('*');
+    if (!isGuildSpaceUnlocked()) {
+      query = query.eq('is_guildspace_locked', false);
+    }
+    const { data, error } = await query.order('name', { ascending: true });
+
+    if (error) {
+      console.error('[gameApi] Error fetching traits:', error);
+      return [];
+    }
+    return (data || []) as SupabaseTrait[];
+  },
+
+  async createTrait(newTrait: Omit<SupabaseTrait, 'id' | 'created_at'>): Promise<SupabaseTrait> {
+    const { data: maxRows } = await supabase
+      .from('traits')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1);
+
+    const nextId = maxRows && maxRows.length > 0 && maxRows[0].id ? maxRows[0].id + 1 : 1;
+
+    const { data, error } = await supabase
+      .from('traits')
+      .insert({ ...newTrait, id: nextId })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[gameApi] Error creating custom trait:', error);
+      throw error;
+    }
+    return data as SupabaseTrait;
   },
 
   // --- ARMOR CATALOG ---

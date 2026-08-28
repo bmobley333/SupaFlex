@@ -18,11 +18,11 @@ const HUD_ITEMS: HUDItem[] = [
     borderColorClass: 'hover:border-indigo-500/50 hover:bg-indigo-950/40 text-slate-300',
   },
   {
-    id: 'section-skillsets',
-    label: 'Skillsets & Derived Skills',
-    icons: '🎓',
-    activeColorClass: 'bg-indigo-900/60 text-indigo-200 border-indigo-400 shadow-indigo-500/30',
-    borderColorClass: 'hover:border-indigo-500/50 hover:bg-indigo-950/40 text-slate-300',
+    id: 'section-capabilities',
+    label: 'Traits & Skillsets',
+    icons: '🧬 🎓',
+    activeColorClass: 'bg-purple-900/60 text-purple-200 border-purple-400 shadow-purple-500/30',
+    borderColorClass: 'hover:border-purple-500/50 hover:bg-purple-950/40 text-slate-300',
   },
   {
     id: 'section-combat-vitals',

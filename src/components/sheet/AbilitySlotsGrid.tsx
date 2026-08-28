@@ -818,16 +818,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setActiveRightTab('CATALOG');
   };
 
-  const [localGenreFilter, setLocalGenreFilter] = useState<'DEFAULT' | 'Medieval' | 'Modern' | 'SciFi' | 'ALL'>('DEFAULT');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [hardwareTierFilter, setHardwareTierFilter] = useState<'ALL' | 'Minor' | 'Lesser' | 'Greater' | 'Epic'>('ALL');
 
-  const effectiveGenre = localGenreFilter === 'DEFAULT' ? activeGenre : localGenreFilter;
+  // Keep local genre synced to active campaign setting when modal opens
+  useEffect(() => {
+    if (showManageModal && activeGenre) {
+      setLocalGenreFilter(activeGenre);
+    }
+  }, [showManageModal, activeGenre]);
 
   // Filter catalog items by Category & Deduplication & Genre Scope
   const categoryFilteredCatalog = useMemo(() => {
     return fullCatalog.filter((item) => {
       // 0. Local Genre Scope Filtering
-      if (effectiveGenre !== 'ALL' && !matchesGenre(item.genres, effectiveGenre)) {
+      if (localGenreFilter !== 'ALL' && !matchesGenre(item.genres, localGenreFilter as any)) {
         return false;
       }
 
@@ -845,7 +850,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       }
       return true;
     });
-  }, [fullCatalog, knownAbilityNamesSet, type, effectiveGenre]);
+  }, [fullCatalog, knownAbilityNamesSet, type, localGenreFilter]);
 
   const groupedTables = useMemo(() => {
     const acc = categoryFilteredCatalog.reduce((map, item) => {
@@ -860,7 +865,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
     if (type === 'powers') {
       customPowerTables.forEach((tbl) => {
-        if (effectiveGenre !== 'ALL' && !matchesGenre((tbl as any).genres, effectiveGenre)) return;
+        if (localGenreFilter !== 'ALL' && !matchesGenre((tbl as any).genres, localGenreFilter as any)) return;
         if (!acc[tbl.name]) {
           acc[tbl.name] = [];
         }
@@ -868,7 +873,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     }
 
     return acc;
-  }, [categoryFilteredCatalog, type, customPowerTables, effectiveGenre]);
+  }, [categoryFilteredCatalog, type, customPowerTables, localGenreFilter]);
 
   const starredCatalogItems = useMemo(() => {
     return fullCatalog.filter((item) => isItemStarred(item));
@@ -1947,6 +1952,51 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
                         {/* Universal Quick Deck Bar & Search */}
                         <div className="flex flex-col gap-2 shrink-0">
+                          {/* 1. DENSE DROPDOWN FACET TOOLBAR */}
+                          <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                            {/* Local Genre Selector Dropdown */}
+                            <select
+                              value={localGenreFilter}
+                              onChange={(e) => setLocalGenreFilter(e.target.value)}
+                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 cursor-pointer flex-1 min-w-[110px]"
+                            >
+                              <option value="ALL">🌐 All Genres</option>
+                              <option value="Medieval">🏰 Medieval</option>
+                              <option value="Modern">⚙️ Modern</option>
+                              <option value="SciFi">🚀 SciFi</option>
+                            </select>
+
+                            {/* Hardware Tier Facet Dropdown (Loadout / Spells mode) */}
+                            {type === 'spells' && (
+                              <select
+                                value={hardwareTierFilter}
+                                onChange={(e) => setHardwareTierFilter(e.target.value as any)}
+                                className="bg-slate-900 text-cyan-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 cursor-pointer flex-1 min-w-[120px]"
+                              >
+                                <option value="ALL">🌐 All Tiers</option>
+                                <option value="Epic">💎 Epic (4 Slots)</option>
+                                <option value="Greater">🥇 Greater (3 Slots)</option>
+                                <option value="Lesser">🥈 Lesser (2 Slots)</option>
+                                <option value="Minor">🥉 Minor (1 Slot)</option>
+                              </select>
+                            )}
+
+                            {/* Powers Ready Category Dropdown (Powers mode) */}
+                            {type === 'powers' && (
+                              <select
+                                value={catalogReadyFilter}
+                                onChange={(e) => setCatalogReadyFilter(e.target.value as any)}
+                                className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 cursor-pointer flex-1 min-w-[130px]"
+                              >
+                                <option value="all">🌐 All Power Types</option>
+                                <option value="mobility_defense">🛡️ Mobility & Defense</option>
+                                <option value="primary_arsenal">⚔️ Primary Arsenal</option>
+                                <option value="support_passive">✨ Support & Context</option>
+                              </select>
+                            )}
+                          </div>
+
+                          {/* 2. Universal Quick Deck Bar */}
                           <QuickDeckBar
                             domain={type === 'powers' ? 'powers' : 'hardware'}
                             activeTable={effectiveActiveTable || 'ALL'}
@@ -1960,51 +2010,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             totalCatalogCount={categoryFilteredCatalog.length}
                             placeholderText={type === 'powers' ? '➕ Pin Power Table' : '➕ Pin Hardware Table'}
                           />
-
-                          {/* 2. DENSE DROPDOWN FACET TOOLBAR */}
-                          <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-                            {/* Local Genre Selector Dropdown */}
-                            <select
-                              value={localGenreFilter}
-                              onChange={(e) => setLocalGenreFilter(e.target.value as any)}
-                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 cursor-pointer flex-1 min-w-[130px]"
-                            >
-                              <option value="DEFAULT">🏛️ Setting: {activeGenre} (Default)</option>
-                              <option value="Medieval">🏰 Medieval</option>
-                              <option value="Modern">⚙️ Modern</option>
-                              <option value="SciFi">🚀 SciFi</option>
-                              <option value="ALL">🌐 All Genres</option>
-                            </select>
-
-                            {/* Hardware Tier Facet Dropdown (Loadout / Spells mode) */}
-                            {type === 'spells' && (
-                              <select
-                                value={hardwareTierFilter}
-                                onChange={(e) => setHardwareTierFilter(e.target.value as any)}
-                                className="bg-slate-900 text-cyan-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 cursor-pointer flex-1 min-w-[120px]"
-                              >
-                                <option value="ALL">🌐 All Tiers</option>
-                                <option value="Minor">🥉 Minor (1 Slot)</option>
-                                <option value="Lesser">🥈 Lesser (2 Slots)</option>
-                                <option value="Greater">🥇 Greater (3 Slots)</option>
-                                <option value="Epic">💎 Epic (4 Slots)</option>
-                              </select>
-                            )}
-
-                            {/* Powers Ready Category Dropdown (Powers mode) */}
-                            {type === 'powers' && (
-                              <select
-                                value={catalogReadyFilter}
-                                onChange={(e) => setCatalogReadyFilter(e.target.value as any)}
-                                className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 cursor-pointer flex-1 min-w-[130px]"
-                              >
-                                <option value="all">⚡ All Power Types</option>
-                                <option value="primary_arsenal">⚔️ Primary Arsenal</option>
-                                <option value="mobility_defense">🛡️ Mobility & Defense</option>
-                                <option value="support_passive">✨ Support & Context</option>
-                              </select>
-                            )}
-                          </div>
 
                           {/* 3. SEARCH BAR + DYNAMIC RESULT BREADCRUMB */}
                           <div className="flex items-center gap-2 shrink-0">
@@ -2036,14 +2041,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         {filteredCatalogAbilities.length === 0 && (
                           <div className="p-3.5 bg-slate-950/60 rounded-xl border border-amber-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
                             <span className="text-amber-300 font-semibold">
-                              0 items match active filters ({localGenreFilter !== 'DEFAULT' ? localGenreFilter : activeGenre}
+                              0 items match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
                               {type === 'spells' && hardwareTierFilter !== 'ALL' ? ` • ${hardwareTierFilter}` : ''}
                               {effectiveActiveTable !== 'ALL' && effectiveActiveTable !== 'STARRED' ? ` • ${effectiveActiveTable}` : ''})
                             </span>
                             <button
                               type="button"
                               onClick={() => {
-                                setLocalGenreFilter('DEFAULT');
+                                setLocalGenreFilter(activeGenre || 'SciFi');
                                 if (type === 'spells') setHardwareTierFilter('ALL');
                                 if (type === 'powers') setCatalogReadyFilter('all');
                                 setActiveTableName('ALL');

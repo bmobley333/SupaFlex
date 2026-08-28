@@ -15,6 +15,7 @@ import {
   calculateAvailableAp,
   calculateMovementRate,
 } from '../../types/game';
+import { resolveStatHooks } from '../../utils/statHooks';
 
 const getDieNum = (dieRating?: string): number => {
   if (!dieRating) return 4;
@@ -25,6 +26,7 @@ const getDieNum = (dieRating?: string): number => {
 export const ArmorCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
+  const statHooks = useMemo(() => resolveStatHooks(activeCharacter?.sheet_data), [activeCharacter?.sheet_data]);
 
   const armor: ArmorData = activeCharacter?.sheet_data?.armor_slot || {
     id: 'arm_none',
@@ -296,11 +298,16 @@ export const ArmorCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const [localGenreFilter, setLocalGenreFilter] = useState<'DEFAULT' | 'Medieval' | 'Modern' | 'SciFi' | 'ALL'>('DEFAULT');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [skillFilterMode, setSkillFilterMode] = useState<'all' | 'skilled' | 'unskilled'>('all');
   const [activeArmorTable, setActiveArmorTable] = useState<string>('ALL');
 
-  const effectiveGenre = localGenreFilter === 'DEFAULT' ? activeGenre : localGenreFilter;
+  // Keep local genre synced to active campaign setting when modal opens
+  useEffect(() => {
+    if (showManageModal && activeGenre) {
+      setLocalGenreFilter(activeGenre);
+    }
+  }, [showManageModal, activeGenre]);
 
   const favoriteArmorTables: string[] = useMemo(() => {
     const favs = activeCharacter?.sheet_data?.favorite_armor_tables;
@@ -331,7 +338,7 @@ export const ArmorCard: React.FC = () => {
 
   const filteredCatalogArmor = useMemo(() => {
     return armorCatalog.filter((item) => {
-      if (effectiveGenre !== 'ALL' && !matchesGenre(item.genres, effectiveGenre)) return false;
+      if (localGenreFilter !== 'ALL' && !matchesGenre(item.genres, localGenreFilter as any)) return false;
       if (wardrobeNamesSet.has(item.name.toLowerCase())) return false;
 
       const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
@@ -358,7 +365,7 @@ export const ArmorCard: React.FC = () => {
       }
       return true;
     });
-  }, [armorCatalog, wardrobeNamesSet, skillFilterMode, activeArmorTable, rightSearchQuery, attributeDice, isItemStarred, effectiveGenre]);
+  }, [armorCatalog, wardrobeNamesSet, skillFilterMode, activeArmorTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter]);
 
   const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
   const isShieldEquipped = shieldSlot?.equipped ?? false;
@@ -469,33 +476,18 @@ export const ArmorCard: React.FC = () => {
 
                     {/* Stock Catalog Content */}
                     <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
-                      {/* 1. Universal Quick Deck Bar */}
-                      <QuickDeckBar
-                        domain="armor"
-                        activeTable={activeArmorTable}
-                        onSelectTable={setActiveArmorTable}
-                        pinnedTables={favoriteArmorTables}
-                        onUpdatePinnedTables={handleUpdatePinnedArmorTables}
-                        catalogItems={armorCatalog}
-                        starredCount={starredArmorCount}
-                        colorTheme="amber"
-                        totalCatalogCount={armorCatalog.length}
-                        placeholderText="➕ Pin Armor Table"
-                      />
-
-                      {/* 2. DENSE DROPDOWN FACET TOOLBAR */}
+                      {/* 1. DENSE DROPDOWN FACET TOOLBAR */}
                       <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                         {/* Local Setting Genre Selector */}
                         <select
                           value={localGenreFilter}
-                          onChange={(e) => setLocalGenreFilter(e.target.value as any)}
-                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 cursor-pointer flex-1 min-w-[130px]"
+                          onChange={(e) => setLocalGenreFilter(e.target.value)}
+                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 cursor-pointer flex-1 min-w-[110px]"
                         >
-                          <option value="DEFAULT">🏛️ Setting: {activeGenre} (Default)</option>
+                          <option value="ALL">🌐 All Genres</option>
                           <option value="Medieval">🏰 Medieval</option>
                           <option value="Modern">⚙️ Modern</option>
                           <option value="SciFi">🚀 SciFi</option>
-                          <option value="ALL">🌐 All Genres</option>
                         </select>
 
                         {/* Qualification Dropdown */}
@@ -509,6 +501,20 @@ export const ArmorCard: React.FC = () => {
                           <option value="unskilled">⚪ Unskilled Only</option>
                         </select>
                       </div>
+
+                      {/* 2. Universal Quick Deck Bar */}
+                      <QuickDeckBar
+                        domain="armor"
+                        activeTable={activeArmorTable}
+                        onSelectTable={setActiveArmorTable}
+                        pinnedTables={favoriteArmorTables}
+                        onUpdatePinnedTables={handleUpdatePinnedArmorTables}
+                        catalogItems={armorCatalog}
+                        starredCount={starredArmorCount}
+                        colorTheme="amber"
+                        totalCatalogCount={armorCatalog.length}
+                        placeholderText="➕ Pin Armor Table"
+                      />
 
                       {/* 3. Search Bar + Dynamic Result Breadcrumb */}
                       <div className="flex items-center gap-2 shrink-0">
@@ -531,14 +537,14 @@ export const ArmorCard: React.FC = () => {
                       {filteredCatalogArmor.length === 0 && !isLoadingCatalog && (
                         <div className="p-3.5 bg-slate-950/60 rounded-xl border border-amber-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
                           <span className="text-amber-300 font-semibold">
-                            0 armor sets match active filters ({localGenreFilter !== 'DEFAULT' ? localGenreFilter : activeGenre}
+                            0 armor sets match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
                             {skillFilterMode !== 'all' ? ` • ${skillFilterMode}` : ''}
                             {activeArmorTable !== 'ALL' && activeArmorTable !== 'STARRED' ? ` • ${activeArmorTable}` : ''})
                           </span>
                           <button
                             type="button"
                             onClick={() => {
-                              setLocalGenreFilter('DEFAULT');
+                              setLocalGenreFilter(activeGenre || 'SciFi');
                               setSkillFilterMode('all');
                               setActiveArmorTable('ALL');
                               setRightSearchQuery('');
@@ -682,17 +688,29 @@ export const ArmorCard: React.FC = () => {
           </div>
         </div>
 
-        {/* AR Cell (Auto-Updated Read-Only Display Box) */}
-        <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-2.5 shrink-0">
+        {/* AR Cell (Auto-Updated Read-Only Display Box with Stat Hook Support) */}
+        <div className={`px-3 py-2 rounded-xl border flex items-center gap-2.5 shrink-0 ${
+          statHooks.effectiveArOverride !== undefined || statHooks.arBonus !== 0
+            ? 'bg-purple-950/40 border-purple-500/50 shadow-sm'
+            : 'bg-slate-950/70 border-slate-800'
+        }`}>
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-bold text-slate-300">AR</span>
             <span className="text-sm">🧥</span>
           </div>
           <div
-            className="w-10 bg-slate-900 border border-slate-800 rounded py-1 text-xs font-mono font-extrabold text-amber-300 text-center"
-            title="Auto-updated matching equipped armor AR rating"
+            className={`w-10 bg-slate-900 border rounded py-1 text-xs font-mono font-extrabold text-center ${
+              statHooks.effectiveArOverride !== undefined || statHooks.arBonus !== 0
+                ? 'text-cyan-300 border-purple-500/50'
+                : 'text-amber-300 border-slate-800'
+            }`}
+            title={
+              statHooks.effectiveArOverride !== undefined || statHooks.arBonus !== 0
+                ? `Derived by active trait hook (${statHooks.activeHooks.filter((h) => h.target === 'ar').map((h) => h.effectDescription).join(', ')})`
+                : 'Auto-updated matching equipped armor AR rating'
+            }
           >
-            {armor.ar ?? 0}
+            {(statHooks.effectiveArOverride !== undefined ? statHooks.effectiveArOverride : (armor.ar ?? 0)) + statHooks.arBonus}
           </div>
         </div>
       </div>
@@ -704,13 +722,19 @@ export const ArmorCard: React.FC = () => {
         </span>
         <div className="flex flex-wrap items-center gap-3">
           {/* Armored MR Box */}
-          <div className="px-3 py-1.5 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center gap-2 w-fit">
+          <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 w-fit ${
+            statHooks.mrBonus !== 0 ? 'bg-purple-950/40 border-purple-500/50' : 'bg-slate-950/80 border-slate-800'
+          }`}>
             <span className="text-[11px] font-bold text-slate-300">Armored 👣</span>
             <div
               className="w-9 bg-slate-900 border border-slate-800 rounded py-0.5 text-xs font-mono font-extrabold text-teal-300 text-center"
-              title="Auto-updated matching equipped armor Armored Movement Rate"
+              title={
+                statHooks.mrBonus !== 0
+                  ? `Modified by active trait hook (${statHooks.mrBonus >= 0 ? '+' : ''}${statHooks.mrBonus} MR)`
+                  : 'Auto-updated matching equipped armor Armored Movement Rate'
+              }
             >
-              {mrData.armored ?? 6}
+              {Math.max(0, (mrData.armored ?? 6) + statHooks.mrBonus)}
             </div>
           </div>
 

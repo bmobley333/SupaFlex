@@ -11,6 +11,7 @@ export type QuickDeckDomain =
   | 'hardware'
   | 'relics'
   | 'skillsets'
+  | 'traits'
   | 'generic';
 
 export interface QuickDeckBarProps {
@@ -253,46 +254,27 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
   showStarredOption = true,
   totalCatalogCount,
 }) => {
-  // 1. Group catalog items by table_group / table_name
+  // 1. Group catalog items strictly by real table_group
   const groupedTables = useMemo(() => {
     const acc: Record<string, any[]> = {};
 
-    catalogItems.forEach((item) => {
-      let tbl =
-        item.table_group ||
-        item.table ||
-        item.table_name ||
-        item.category ||
-        item.sub ||
-        item.type ||
-        '';
-
-      if (!tbl) {
-        if (domain === 'powers') tbl = 'General Powers';
-        else if (domain === 'weapons') tbl = 'General Weapons';
-        else if (domain === 'armor') tbl = 'General Armor';
-        else if (domain === 'shields') tbl = 'General Shields';
-        else if (domain === 'gear') tbl = 'General Gear';
-        else if (domain === 'hardware') tbl = 'General Hardware';
-        else if (domain === 'relics') tbl = 'General Relics';
-        else if (domain === 'skillsets') tbl = 'General Skillsets';
-        else tbl = 'General';
+    (catalogItems || []).forEach((item) => {
+      const tbl = item.table_group ? String(item.table_group).trim() : '';
+      if (tbl) {
+        if (!acc[tbl]) acc[tbl] = [];
+        acc[tbl].push(item);
       }
-
-      const cleanTbl = String(tbl).trim();
-      if (!acc[cleanTbl]) acc[cleanTbl] = [];
-      acc[cleanTbl].push(item);
     });
 
     // Merge custom table names if provided
-    customTables.forEach((ct) => {
+    (customTables || []).forEach((ct) => {
       if (ct.name && !acc[ct.name]) {
         acc[ct.name] = [];
       }
     });
 
     return acc;
-  }, [catalogItems, customTables, domain]);
+  }, [catalogItems, customTables]);
 
   const availableTableNames = useMemo(() => {
     return Object.keys(groupedTables).sort((a, b) => a.localeCompare(b));
@@ -591,44 +573,46 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
   return (
     <div className="flex flex-col gap-2 shrink-0">
       <div className="bg-slate-950/90 border border-slate-800 p-2.5 rounded-xl flex flex-col gap-2 shadow-inner backdrop-blur-md">
-        {/* Row 1: Centered + Pin Table Dropdown Action Shelf */}
-        <div className="flex items-center justify-center w-full pb-2 border-b border-slate-800/80">
-          {pinnedTables.length < maxPinned ? (
-            <div className="relative">
-              <select
-                value=""
-                onChange={(e) => {
-                  if (e.target.value) {
-                    handlePinTable(e.target.value);
-                  }
-                }}
-                className={`w-64 py-1.5 px-4 rounded-xl text-xs font-bold font-outfit border-2 border-dashed outline-none cursor-pointer transition-all shadow-inner text-center ${themeClasses.dropdownBorder}`}
-                title={`Pin another table to your Quick Deck (Max ${maxPinned})`}
-              >
-                <option value="" disabled>
-                  {placeholderText}
-                </option>
-                {Object.entries(categorizedTableGroups).map(([groupLabel, tableNames]) => {
-                  const unpinned = tableNames.filter((t) => !pinnedTables.includes(t));
-                  if (unpinned.length === 0) return null;
-                  return (
-                    <optgroup key={groupLabel} label={groupLabel} className="bg-slate-950 text-slate-400 font-bold">
-                      {unpinned.map((tblName) => (
-                        <option key={tblName} value={tblName} className="bg-slate-900 text-slate-200 font-normal">
-                          {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
-                        </option>
-                      ))}
-                    </optgroup>
-                  );
-                })}
-              </select>
-            </div>
-          ) : (
-            <span className="text-[11px] font-mono font-bold text-amber-400/80 px-3 py-1 rounded-xl bg-amber-950/30 border-2 border-dashed border-amber-500/30">
-              [Quick Deck Full ({pinnedTables.length}/{maxPinned})]
-            </span>
-          )}
-        </div>
+        {/* Row 1: Centered + Pin Table Dropdown Action Shelf (visible only if real table groups exist) */}
+        {availableTableNames.length > 0 && (
+          <div className="flex items-center justify-center w-full pb-2 border-b border-slate-800/80">
+            {pinnedTables.length < maxPinned ? (
+              <div className="relative">
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handlePinTable(e.target.value);
+                    }
+                  }}
+                  className={`w-64 py-1.5 px-4 rounded-xl text-xs font-bold font-outfit border-2 border-dashed outline-none cursor-pointer transition-all shadow-inner text-center ${themeClasses.dropdownBorder}`}
+                  title={`Pin another table to your Quick Deck (Max ${maxPinned})`}
+                >
+                  <option value="" disabled>
+                    {placeholderText}
+                  </option>
+                  {Object.entries(categorizedTableGroups).map(([groupLabel, tableNames]) => {
+                    const unpinned = tableNames.filter((t) => !pinnedTables.includes(t));
+                    if (unpinned.length === 0) return null;
+                    return (
+                      <optgroup key={groupLabel} label={groupLabel} className="bg-slate-950 text-slate-400 font-bold">
+                        {unpinned.map((tblName) => (
+                          <option key={tblName} value={tblName} className="bg-slate-900 text-slate-200 font-normal">
+                            {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+                </select>
+              </div>
+            ) : (
+              <span className="text-[11px] font-mono font-bold text-amber-400/80 px-3 py-1 rounded-xl bg-amber-950/30 border-2 border-dashed border-amber-500/30">
+                [Quick Deck Full ({pinnedTables.length}/{maxPinned})]
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Row 2: Pinned Table Pills (Deck Tray) */}
         <div className="flex items-center justify-center gap-1.5 flex-wrap w-full pt-1">

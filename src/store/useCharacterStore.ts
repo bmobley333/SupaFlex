@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, Skillset, EncounterLink } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, SupabaseSkill, SupabaseTrait, TraitQuirkItem, EncounterLink } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
@@ -21,7 +21,8 @@ interface CharacterStore {
   activeCharacter: Character | null;
   powers: Power[];
   magicItems: MagicItem[];
-  skillsets: Skillset[];
+  skills: SupabaseSkill[];
+  traits: SupabaseTrait[];
   isLoading: boolean;
   isSaving: boolean;
   dbConnected: boolean;
@@ -80,6 +81,12 @@ interface CharacterStore {
   updateCharacterLink: (linkId: string, name: string, url: string, tag?: string, desc?: string) => void;
   deleteCharacterLink: (linkId: string) => void;
   reorderCharacterLinkByIndex: (fromIdx: number, toIdx: number) => void;
+
+  // Traits & Quirks Actions
+  addTraitQuirk: (trait: TraitQuirkItem) => void;
+  removeTraitQuirk: (traitNameOrId: string | number) => void;
+  toggleStarTrait: (id: string | number) => void;
+  toggleFavoriteTraitTable: (tableGroup: string) => void;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
@@ -87,7 +94,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   activeCharacter: null,
   powers: [],
   magicItems: [],
-  skillsets: [],
+  skills: [],
+  traits: [],
   isLoading: false,
   isSaving: false,
   dbConnected: false,
@@ -121,26 +129,21 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     return newTabId;
   })(),
 
-  playerEmail: typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('supaflex_player_email') || '') : '',
-  playerName: typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('supaflex_player_name') || '') : '',
-  filterMode: (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('supaflex_filter_mode') as any) : null) || 'my_heroes',
-  activeRole: (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('supaflex_active_role') as 'player' | 'gm') : null) || 'player',
-  activePartyId: typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('supaflex_active_party_id') : null,
+  playerEmail: (() => {
+    if (typeof window === 'undefined') return 'default';
+    return sessionStorage.getItem('supaflex_player_email') || 'default';
+  })(),
+  playerName: (() => {
+    if (typeof window === 'undefined') return '';
+    return sessionStorage.getItem('supaflex_player_name') || '';
+  })(),
+  filterMode: 'my_heroes',
+  activeRole: 'player',
+  activePartyId: (() => {
+    if (typeof window === 'undefined') return null;
+    return sessionStorage.getItem('supaflex_active_party_id') || null;
+  })(),
   playerLinks: getInitialPlayerLinks(),
-
-  setActiveRole: (role: 'player' | 'gm') => {
-    sessionStorage.setItem('supaflex_active_role', role);
-    set({ activeRole: role });
-  },
-
-  setActivePartyId: (partyId: string | null) => {
-    if (partyId) {
-      sessionStorage.setItem('supaflex_active_party_id', partyId);
-    } else {
-      sessionStorage.removeItem('supaflex_active_party_id');
-    }
-    set({ activePartyId: partyId });
-  },
 
   fetchInitialData: async (options?: { silent?: boolean }) => {
     const isSilent = options?.silent || get().characters.length > 0;
@@ -167,11 +170,12 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return;
       }
 
-      const [chars, powers, items, skillsets] = await Promise.all([
+      const [chars, powers, items, skills, traits] = await Promise.all([
         gameApi.getCharacters(),
         gameApi.getPowers(),
         gameApi.getMagicItems(),
-        gameApi.getSkillsets(),
+        gameApi.getSkills(),
+        gameApi.getTraits(),
       ]);
 
       const currentActive = get().activeCharacter;
@@ -208,7 +212,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         activeCharacter: selectedChar,
         powers,
         magicItems: items,
-        skillsets,
+        skills,
+        traits,
         isLoading: false,
       });
     } catch (err: any) {
@@ -275,6 +280,19 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   setFilterMode: (mode: 'my_heroes' | 'all_heroes') => {
     sessionStorage.setItem('supaflex_filter_mode', mode);
     set({ filterMode: mode });
+  },
+
+  setActiveRole: (role: 'player' | 'gm') => {
+    sessionStorage.setItem('supaflex_active_role', role);
+    set({ activeRole: role });
+  },
+
+  setActivePartyId: (partyId: string | null) => {
+    if (typeof window !== 'undefined') {
+      if (partyId) sessionStorage.setItem('supaflex_active_party_id', partyId);
+      else sessionStorage.removeItem('supaflex_active_party_id');
+    }
+    set({ activePartyId: partyId });
   },
 
   updateActiveSheetData: (updater) => {
@@ -827,6 +845,60 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       ...prev,
       character_links: links,
     }));
+    get().saveActiveCharacter();
+  },
+
+  // --- TRAITS & QUIRKS ACTIONS ---
+  addTraitQuirk: (trait: TraitQuirkItem) => {
+    get().updateActiveSheetData((prev) => {
+      const existing = prev.traits_quirks || [];
+      const alreadyHas = existing.some((t) => (t.id && trait.id && t.id === trait.id) || t.name.toLowerCase() === trait.name.toLowerCase());
+      if (alreadyHas) return prev;
+      return {
+        ...prev,
+        traits_quirks: [...existing, trait],
+      };
+    });
+    get().saveActiveCharacter();
+  },
+
+  removeTraitQuirk: (traitNameOrId: string | number) => {
+    get().updateActiveSheetData((prev) => {
+      const existing = prev.traits_quirks || [];
+      return {
+        ...prev,
+        traits_quirks: existing.filter((t) => {
+          if (typeof traitNameOrId === 'number') {
+            return t.id !== traitNameOrId;
+          }
+          return t.name !== traitNameOrId && t.id !== traitNameOrId;
+        }),
+      };
+    });
+    get().saveActiveCharacter();
+  },
+
+  toggleStarTrait: (id: string | number) => {
+    get().updateActiveSheetData((prev) => {
+      const current = prev.starred_traits || [];
+      const isStarred = current.includes(id);
+      return {
+        ...prev,
+        starred_traits: isStarred ? current.filter((x) => x !== id) : [...current, id],
+      };
+    });
+    get().saveActiveCharacter();
+  },
+
+  toggleFavoriteTraitTable: (tableGroup: string) => {
+    get().updateActiveSheetData((prev) => {
+      const current = prev.favorite_trait_tables || [];
+      const isFav = current.includes(tableGroup);
+      return {
+        ...prev,
+        favorite_trait_tables: isFav ? current.filter((x) => x !== tableGroup) : [...current, tableGroup],
+      };
+    });
     get().saveActiveCharacter();
   },
 }));

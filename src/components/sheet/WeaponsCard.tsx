@@ -345,12 +345,28 @@ export const WeaponsCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const [localGenreFilter, setLocalGenreFilter] = useState<'DEFAULT' | 'Medieval' | 'Modern' | 'SciFi' | 'ALL'>('DEFAULT');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
+  const [weaponDisciplineFilter, setWeaponDisciplineFilter] = useState<string>('ALL');
   const [weaponTypeFilter, setWeaponTypeFilter] = useState<string>('ALL');
   const [skillFilterMode, setSkillFilterMode] = useState<'all' | 'skilled' | 'unskilled'>('skilled');
   const [activeWeaponTable, setActiveWeaponTable] = useState<string>('ALL');
 
-  const effectiveGenre = localGenreFilter === 'DEFAULT' ? activeGenre : localGenreFilter;
+  // Keep local genre synced to active campaign setting when modal opens
+  useEffect(() => {
+    if (showManageModal && activeGenre) {
+      setLocalGenreFilter(activeGenre);
+    }
+  }, [showManageModal, activeGenre]);
+
+  const availableDisciplines = useMemo(() => {
+    const set = new Set<string>();
+    supabaseWeapons.forEach((w) => {
+      if (w.discipline && w.discipline.trim()) {
+        set.add(w.discipline.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [supabaseWeapons]);
 
   const favoriteWeaponTables: string[] = useMemo(() => {
     const favs = activeCharacter?.sheet_data?.favorite_weapon_tables;
@@ -386,7 +402,7 @@ export const WeaponsCard: React.FC = () => {
   const filteredCatalogWeapons = useMemo(() => {
     return supabaseWeapons.filter((weapon) => {
       // 0. Local Setting Scope Filtering
-      if (effectiveGenre !== 'ALL' && !matchesGenre(weapon.genres, effectiveGenre)) {
+      if (localGenreFilter !== 'ALL' && !matchesGenre(weapon.genres, localGenreFilter as any)) {
         return false;
       }
 
@@ -399,11 +415,32 @@ export const WeaponsCard: React.FC = () => {
       const qualifying = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
       const isAnyLearnable = qualifying.length > 0;
 
-      // 1.2. Weapon Type Dropdown Filter
-      if (weaponTypeFilter !== 'ALL') {
-        const rawType = (weapon.type || '').toLowerCase();
-        if (!rawType.includes(weaponTypeFilter.toLowerCase())) {
+      // 1.2. Discipline Dropdown Filter
+      if (weaponDisciplineFilter !== 'ALL') {
+        const disc = (weapon.discipline || '').toLowerCase().trim();
+        if (disc !== weaponDisciplineFilter.toLowerCase().trim()) {
           return false;
+        }
+      }
+
+      // 1.3. Weapon Type Dropdown Filter
+      if (weaponTypeFilter !== 'ALL') {
+        const rawType = (weapon.type || '').toLowerCase().trim();
+        const nameLower = weapon.name.toLowerCase();
+        if (weaponTypeFilter === 'Melee, Hurled') {
+          if (!(rawType.includes('melee') && rawType.includes('hurled'))) return false;
+        } else if (weaponTypeFilter === 'Melee, Shot') {
+          if (!(rawType.includes('melee') && rawType.includes('shot'))) return false;
+        } else if (weaponTypeFilter === 'Melee') {
+          if (!rawType.includes('melee') || rawType.includes('hurled') || rawType.includes('shot')) return false;
+        } else if (weaponTypeFilter === 'Hurled') {
+          if (!rawType.includes('hurled') || rawType.includes('melee') || rawType.includes('shot')) return false;
+        } else if (weaponTypeFilter === 'Shot') {
+          if (!rawType.includes('shot') || rawType.includes('melee') || rawType.includes('hurled')) return false;
+        } else if (weaponTypeFilter === 'Unarmed') {
+          if (!rawType.includes('unarmed') && !nameLower.includes('brawl') && !nameLower.includes('unarmed')) return false;
+        } else {
+          if (!rawType.includes(weaponTypeFilter.toLowerCase())) return false;
         }
       }
 
@@ -438,7 +475,7 @@ export const WeaponsCard: React.FC = () => {
 
       return true;
     });
-  }, [supabaseWeapons, equippedBaseNamesSet, skillFilterMode, weaponTypeFilter, activeWeaponTable, rightSearchQuery, attributeDice, isItemStarred, effectiveGenre]);
+  }, [supabaseWeapons, equippedBaseNamesSet, skillFilterMode, weaponDisciplineFilter, weaponTypeFilter, activeWeaponTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter]);
 
   return (
     <div className="bg-gradient-to-b from-rose-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-rose-500/90 p-4 flex flex-col gap-3 h-fit shadow-lg shadow-rose-950/20">
@@ -663,44 +700,47 @@ export const WeaponsCard: React.FC = () => {
 
                     {/* Stock Catalog Content */}
                     <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
-                      {/* 1. Universal Quick Deck Bar */}
-                      <QuickDeckBar
-                        domain="weapons"
-                        activeTable={activeWeaponTable}
-                        onSelectTable={setActiveWeaponTable}
-                        pinnedTables={favoriteWeaponTables}
-                        onUpdatePinnedTables={handleUpdatePinnedWeaponTables}
-                        catalogItems={supabaseWeapons}
-                        starredCount={starredWeaponsCount}
-                        colorTheme="rose"
-                        totalCatalogCount={supabaseWeapons.length}
-                        placeholderText="➕ Pin Weapon Table"
-                      />
-
-                      {/* 2. DENSE DROPDOWN FACET TOOLBAR */}
+                      {/* 1. DENSE DROPDOWN FACET TOOLBAR (Genre, Discipline, Type, Qualification) */}
                       <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                         {/* Local Setting Genre Selector */}
                         <select
                           value={localGenreFilter}
-                          onChange={(e) => setLocalGenreFilter(e.target.value as any)}
-                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[125px]"
+                          onChange={(e) => setLocalGenreFilter(e.target.value)}
+                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[110px]"
                         >
-                          <option value="DEFAULT">🏛️ Setting: {activeGenre} (Default)</option>
+                          <option value="ALL">🌐 All Genres</option>
                           <option value="Medieval">🏰 Medieval</option>
                           <option value="Modern">⚙️ Modern</option>
                           <option value="SciFi">🚀 SciFi</option>
-                          <option value="ALL">🌐 All Genres</option>
                         </select>
+
+                        {/* Discipline Selector */}
+                        {availableDisciplines.length > 0 && (
+                          <select
+                            value={weaponDisciplineFilter}
+                            onChange={(e) => setWeaponDisciplineFilter(e.target.value)}
+                            className="bg-slate-900 text-cyan-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[110px]"
+                          >
+                            <option value="ALL">🌐 All Disciplines</option>
+                            {availableDisciplines.map((d) => (
+                              <option key={d} value={d}>
+                                {d}
+                              </option>
+                            ))}
+                          </select>
+                        )}
 
                         {/* Weapon Type Dropdown */}
                         <select
                           value={weaponTypeFilter}
                           onChange={(e) => setWeaponTypeFilter(e.target.value)}
-                          className="bg-slate-900 text-rose-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[105px]"
+                          className="bg-slate-900 text-rose-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[110px]"
                         >
                           <option value="ALL">🌐 All Types</option>
-                          <option value="Melee">🗡️ Melee</option>
                           <option value="Hurled">🪓 Hurled</option>
+                          <option value="Melee">🗡️ Melee</option>
+                          <option value="Melee, Hurled">⚔️ Melee, Hurled</option>
+                          <option value="Melee, Shot">🏹 Melee, Shot</option>
                           <option value="Shot">🏹 Shot</option>
                           <option value="Unarmed">🥊 Unarmed</option>
                         </select>
@@ -716,6 +756,20 @@ export const WeaponsCard: React.FC = () => {
                           <option value="unskilled">⚪ Unskilled Only</option>
                         </select>
                       </div>
+
+                      {/* 2. Universal Quick Deck Bar */}
+                      <QuickDeckBar
+                        domain="weapons"
+                        activeTable={activeWeaponTable}
+                        onSelectTable={setActiveWeaponTable}
+                        pinnedTables={favoriteWeaponTables}
+                        onUpdatePinnedTables={handleUpdatePinnedWeaponTables}
+                        catalogItems={supabaseWeapons}
+                        starredCount={starredWeaponsCount}
+                        colorTheme="rose"
+                        totalCatalogCount={supabaseWeapons.length}
+                        placeholderText="➕ Pin Weapon Table"
+                      />
 
                       {/* 3. Search Bar + Dynamic Result Breadcrumb */}
                       <div className="flex items-center gap-2 shrink-0">
@@ -738,7 +792,8 @@ export const WeaponsCard: React.FC = () => {
                       {filteredCatalogWeapons.length === 0 && !isLoadingCatalog && (
                         <div className="p-3.5 bg-slate-950/60 rounded-xl border border-rose-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
                           <span className="text-rose-300 font-semibold">
-                            0 weapons match active filters ({localGenreFilter !== 'DEFAULT' ? localGenreFilter : activeGenre}
+                            0 weapons match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
+                            {weaponDisciplineFilter !== 'ALL' ? ` • ${weaponDisciplineFilter}` : ''}
                             {weaponTypeFilter !== 'ALL' ? ` • ${weaponTypeFilter}` : ''}
                             {skillFilterMode !== 'all' ? ` • ${skillFilterMode}` : ''}
                             {activeWeaponTable !== 'ALL' && activeWeaponTable !== 'STARRED' ? ` • ${activeWeaponTable}` : ''})
@@ -746,7 +801,8 @@ export const WeaponsCard: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
-                              setLocalGenreFilter('DEFAULT');
+                              setLocalGenreFilter(activeGenre || 'SciFi');
+                              setWeaponDisciplineFilter('ALL');
                               setWeaponTypeFilter('ALL');
                               setSkillFilterMode('all');
                               setActiveWeaponTable('ALL');

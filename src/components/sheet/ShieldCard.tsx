@@ -284,11 +284,16 @@ export const ShieldCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const [localGenreFilter, setLocalGenreFilter] = useState<'DEFAULT' | 'Medieval' | 'Modern' | 'SciFi' | 'ALL'>('DEFAULT');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [skillFilterMode, setSkillFilterMode] = useState<'all' | 'skilled' | 'unskilled'>('all');
   const [activeShieldTable, setActiveShieldTable] = useState<string>('ALL');
 
-  const effectiveGenre = localGenreFilter === 'DEFAULT' ? activeGenre : localGenreFilter;
+  // Keep local genre synced to active campaign setting when modal opens
+  useEffect(() => {
+    if (showManageModal && activeGenre) {
+      setLocalGenreFilter(activeGenre);
+    }
+  }, [showManageModal, activeGenre]);
 
   const favoriteShieldTables: string[] = useMemo(() => {
     const favs = activeCharacter?.sheet_data?.favorite_shield_tables;
@@ -317,7 +322,7 @@ export const ShieldCard: React.FC = () => {
   );
   const filteredCatalogShields = useMemo(() => {
     return shieldCatalog.filter((item) => {
-      if (effectiveGenre !== 'ALL' && !matchesGenre(item.genres, effectiveGenre)) return false;
+      if (localGenreFilter !== 'ALL' && !matchesGenre(item.genres, localGenreFilter as any)) return false;
       if (armoryNamesSet.has(item.name.toLowerCase())) return false;
 
       const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
@@ -344,7 +349,7 @@ export const ShieldCard: React.FC = () => {
       }
       return true;
     });
-  }, [shieldCatalog, armoryNamesSet, skillFilterMode, activeShieldTable, rightSearchQuery, attributeDice, isItemStarred, effectiveGenre]);
+  }, [shieldCatalog, armoryNamesSet, skillFilterMode, activeShieldTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter]);
 
   return (
     <div className="bg-gradient-to-b from-cyan-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-cyan-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-cyan-950/20">
@@ -536,33 +541,18 @@ export const ShieldCard: React.FC = () => {
 
                   {/* Stock Catalog Content */}
                   <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
-                    {/* 1. Universal Quick Deck Bar */}
-                    <QuickDeckBar
-                      domain="shields"
-                      activeTable={activeShieldTable}
-                      onSelectTable={setActiveShieldTable}
-                      pinnedTables={favoriteShieldTables}
-                      onUpdatePinnedTables={handleUpdatePinnedShieldTables}
-                      catalogItems={shieldCatalog}
-                      starredCount={starredShieldsCount}
-                      colorTheme="cyan"
-                      totalCatalogCount={shieldCatalog.length}
-                      placeholderText="➕ Pin Shield Table"
-                    />
-
-                    {/* 2. DENSE DROPDOWN FACET TOOLBAR */}
+                    {/* 1. DENSE DROPDOWN FACET TOOLBAR */}
                     <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                       {/* Local Setting Genre Selector */}
                       <select
                         value={localGenreFilter}
-                        onChange={(e) => setLocalGenreFilter(e.target.value as any)}
-                        className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 cursor-pointer flex-1 min-w-[130px]"
+                        onChange={(e) => setLocalGenreFilter(e.target.value)}
+                        className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 cursor-pointer flex-1 min-w-[110px]"
                       >
-                        <option value="DEFAULT">🏛️ Setting: {activeGenre} (Default)</option>
+                        <option value="ALL">🌐 All Genres</option>
                         <option value="Medieval">🏰 Medieval</option>
                         <option value="Modern">⚙️ Modern</option>
                         <option value="SciFi">🚀 SciFi</option>
-                        <option value="ALL">🌐 All Genres</option>
                       </select>
 
                       {/* Qualification Dropdown */}
@@ -576,6 +566,20 @@ export const ShieldCard: React.FC = () => {
                         <option value="unskilled">⚪ Unskilled Only</option>
                       </select>
                     </div>
+
+                    {/* 2. Universal Quick Deck Bar */}
+                    <QuickDeckBar
+                      domain="shields"
+                      activeTable={activeShieldTable}
+                      onSelectTable={setActiveShieldTable}
+                      pinnedTables={favoriteShieldTables}
+                      onUpdatePinnedTables={handleUpdatePinnedShieldTables}
+                      catalogItems={shieldCatalog}
+                      starredCount={starredShieldsCount}
+                      colorTheme="cyan"
+                      totalCatalogCount={shieldCatalog.length}
+                      placeholderText="➕ Pin Shield Table"
+                    />
 
                     {/* 3. Search Bar + Dynamic Result Breadcrumb */}
                     <div className="flex items-center gap-2 shrink-0">
@@ -598,14 +602,14 @@ export const ShieldCard: React.FC = () => {
                     {filteredCatalogShields.length === 0 && !isLoadingCatalog && (
                       <div className="p-3.5 bg-slate-950/60 rounded-xl border border-cyan-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
                         <span className="text-cyan-300 font-semibold">
-                          0 shields match active filters ({localGenreFilter !== 'DEFAULT' ? localGenreFilter : activeGenre}
+                          0 shields match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
                           {skillFilterMode !== 'all' ? ` • ${skillFilterMode}` : ''}
                           {activeShieldTable !== 'ALL' && activeShieldTable !== 'STARRED' ? ` • ${activeShieldTable}` : ''})
                         </span>
                         <button
                           type="button"
                           onClick={() => {
-                            setLocalGenreFilter('DEFAULT');
+                            setLocalGenreFilter(activeGenre || 'SciFi');
                             setSkillFilterMode('all');
                             setActiveShieldTable('ALL');
                             setRightSearchQuery('');

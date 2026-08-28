@@ -159,10 +159,15 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     saveActiveCharacter();
   };
 
-  const [localGenreFilter, setLocalGenreFilter] = useState<'DEFAULT' | 'Medieval' | 'Modern' | 'SciFi' | 'ALL'>('DEFAULT');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [activeGearTable, setActiveGearTable] = useState<string>('ALL');
 
-  const effectiveGenre = localGenreFilter === 'DEFAULT' ? activeGenre : localGenreFilter;
+  // Keep local genre synced to active campaign setting when modal opens
+  useEffect(() => {
+    if (showManageModal && activeGenre) {
+      setLocalGenreFilter(activeGenre);
+    }
+  }, [showManageModal, activeGenre]);
 
   const favoriteGearTables: string[] = useMemo(() => {
     const favs = activeCharacter?.sheet_data?.favorite_gear_tables;
@@ -188,7 +193,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     const equippedNames = new Set(gearList.map((g) => g.name.toLowerCase()));
     const unequipped = gearCatalog.filter((g) => !equippedNames.has(g.name.toLowerCase()));
 
-    let base = unequipped.filter((g) => effectiveGenre === 'ALL' ? true : matchesGenre(g.genres, effectiveGenre));
+    let base = unequipped.filter((g) => localGenreFilter === 'ALL' ? true : matchesGenre(g.genres, localGenreFilter as any));
 
     if (activeGearTable === 'STARRED') {
       base = base.filter((g) => isItemStarred(g));
@@ -202,14 +207,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
     if (!gearCatalogSearchQuery.trim()) return base;
     const query = gearCatalogSearchQuery.toLowerCase().trim();
-    return base.filter(
-      (item) =>
-        item.name.toLowerCase().includes(query) ||
-        (item.table_group && item.table_group.toLowerCase().includes(query)) ||
-        (item.category && item.category.toLowerCase().includes(query)) ||
-        (item.notes && item.notes.toLowerCase().includes(query))
-    );
-  }, [gearCatalog, gearList, activeGearTable, isItemStarred, gearCatalogSearchQuery, effectiveGenre]);
+    return base.filter((g) => {
+      const nameMatch = g.name.toLowerCase().includes(query);
+      const catMatch = (g.category || '').toLowerCase().includes(query);
+      const noteMatch = (g.notes || '').toLowerCase().includes(query);
+      return nameMatch || catMatch || noteMatch;
+    });
+  }, [gearCatalog, gearList, activeGearTable, isItemStarred, gearCatalogSearchQuery, localGenreFilter]);
 
   const handleEquipGear = (catalogItem: SupabaseGear) => {
     setGearCatalogFeedback(null);
@@ -441,6 +445,21 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
               <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                 {/* QuickDeckBar & Search Filter */}
                 <div className="flex flex-col gap-2 pb-2 border-b border-slate-800/80 shrink-0">
+                  {/* 1. Dense Facet Toolbar: Local Genre */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <select
+                      value={localGenreFilter}
+                      onChange={(e) => setLocalGenreFilter(e.target.value)}
+                      className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-teal-500 cursor-pointer flex-1"
+                    >
+                      <option value="ALL">🌐 All Genres</option>
+                      <option value="Medieval">🏰 Medieval</option>
+                      <option value="Modern">⚙️ Modern</option>
+                      <option value="SciFi">🚀 SciFi</option>
+                    </select>
+                  </div>
+
+                  {/* 2. Universal Quick Deck Bar */}
                   <QuickDeckBar
                     domain="gear"
                     activeTable={activeGearTable}
@@ -454,22 +473,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                     placeholderText="➕ Pin Gear Table"
                   />
 
-                  {/* Dense Facet Toolbar: Local Genre */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <select
-                      value={localGenreFilter}
-                      onChange={(e) => setLocalGenreFilter(e.target.value as any)}
-                      className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-teal-500 cursor-pointer flex-1"
-                    >
-                      <option value="DEFAULT">🏛️ Setting: {activeGenre} (Default)</option>
-                      <option value="Medieval">🏰 Medieval</option>
-                      <option value="Modern">⚙️ Modern</option>
-                      <option value="SciFi">🚀 SciFi</option>
-                      <option value="ALL">🌐 All Genres</option>
-                    </select>
-                  </div>
-
-                  {/* Search Bar + Dynamic Result Breadcrumb */}
+                  {/* 3. Search Bar + Dynamic Result Breadcrumb */}
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="relative flex-1">
                       <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -491,13 +495,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                 {filteredGearCatalog.length === 0 && !isLoadingCatalog && (
                   <div className="p-3.5 bg-slate-950/60 rounded-xl border border-teal-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
                     <span className="text-teal-300 font-semibold">
-                      0 gear items match active filters ({localGenreFilter !== 'DEFAULT' ? localGenreFilter : activeGenre}
+                      0 gear items match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
                       {activeGearTable !== 'ALL' && activeGearTable !== 'STARRED' ? ` • ${activeGearTable}` : ''})
                     </span>
                     <button
                       type="button"
                       onClick={() => {
-                        setLocalGenreFilter('DEFAULT');
+                        setLocalGenreFilter(activeGenre || 'SciFi');
                         setActiveGearTable('ALL');
                         setGearCatalogSearchQuery('');
                       }}
