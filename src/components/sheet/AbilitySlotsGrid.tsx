@@ -9,6 +9,7 @@ import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types
 import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed, getApCostForNextSlot, getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
 import { getPowerReadyCategory, getReadySlotConfig, validateReadyMatrix } from '../../utils/readyMatrixSchedule';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
+import { cleanTableGroupName, isTraitItem } from '../../utils/tableGroupUtils';
 
 interface AbilitySlotsGridProps {
   title: string;
@@ -854,7 +855,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const groupedTables = useMemo(() => {
     const acc = categoryFilteredCatalog.reduce((map, item) => {
-      let tableName = (item as any).table_group || (item as any).table || (item as any).table_name;
+      let rawTableName = (item as any).table_group || (item as any).table || (item as any).table_name;
+      let tableName = cleanTableGroupName(rawTableName);
       if (!tableName) {
         tableName = type === 'powers' ? 'General Powers' : 'Tech Hardware';
       }
@@ -953,7 +955,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const groupedFilteredAbilities = useMemo(() => {
     const map: Record<string, (Power | MagicItem)[]> = {};
     filteredCatalogAbilities.forEach((item) => {
-      let tbl = (item as any).table_group || (item as any).table || (item as any).table_name;
+      let rawTbl = (item as any).table_group || (item as any).table || (item as any).table_name;
+      let tbl = cleanTableGroupName(rawTbl);
       if (!tbl) {
         tbl = type === 'powers' ? 'General Powers' : 'Tech Hardware';
       }
@@ -2165,6 +2168,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                   {((item as any).category || (item as any).tier || 'Minor').replace(/[^\w\s\(\)]/g, '').trim()}
                                                 </span>
                                               )}
+                                              {isTraitItem(item) && (
+                                                <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                                                  <span>🧬</span> Trait (Free)
+                                                </span>
+                                              )}
                                               {version > 1 && (
                                                 <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
                                                   v{version}
@@ -2218,6 +2226,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                     ? hasFunds
                                                       ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
                                                       : 'bg-rose-600/30 text-rose-200 border-rose-500/50 hover:bg-rose-600/50'
+                                                    : isTraitItem(item)
+                                                    ? 'bg-emerald-600/40 text-emerald-200 border-emerald-500/60 hover:bg-emerald-600/60 shadow-sm'
                                                     : 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
                                                 }`}
                                                 title={
@@ -2227,10 +2237,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                       : `Insufficient funds! Requires ${costAbbrev} (${itemCostSilver}s). You have ${formatCostAbbreviated(
                                                           totalCharSilver
                                                         )} (${totalCharSilver}s).`
+                                                    : isTraitItem(item)
+                                                    ? 'Learn Free Starting Trait to Vault'
                                                     : 'Learn Power to Vault'
                                                 }
                                               >
-                                                {isSpells ? `+ Add to Vault [${costAbbrev}]` : '+ Learn to Vault'}
+                                                {isSpells
+                                                  ? `+ Add to Vault [${costAbbrev}]`
+                                                  : isTraitItem(item)
+                                                  ? '+ Learn Trait (0 AP)'
+                                                  : '+ Learn to Vault'}
                                               </button>
                                             </div>
                                           </div>

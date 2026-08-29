@@ -1,6 +1,3 @@
-// src/components/modals/ManageTraitsModal.tsx
-// Master Modal Blueprint Specification compliant modal for Managing, Browsing, and Creating Traits, Quirks & Flaws
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -11,37 +8,91 @@ import {
   Star,
   Check,
   Info,
+  BookOpen,
+  Award,
+  Layers,
+  Trash2,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
-import { QuickDeckBar } from '../common/QuickDeckBar';
-import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import {
-  SupabaseTrait,
-  TraitQuirkItem,
+  SupabaseRule,
+  RuleItem,
   TraitType,
   StatHookDefinition,
   calculateLiveSheetSpentAp,
 } from '../../types/game';
+import { cleanTableGroupName, isTraitItem, matchesTableGroupFilter } from '../../utils/tableGroupUtils';
+import { collectTableTraitGrants, applyTableTraitGrantsToSheet } from '../../utils/bundleGrants';
 
 interface ManageTraitsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const ACTION_COLORS: Record<string, string> = {
-  P: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40',
-  F: 'bg-amber-950/80 text-amber-300 border-amber-500/40',
-  A: 'bg-rose-950/80 text-rose-300 border-rose-500/40',
-  M: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40',
-  AM: 'bg-purple-950/80 text-purple-300 border-purple-500/40',
-};
+// Canonical Lists of Hallmark Table Groups discovered across Supabase
+const HALLMARK_RACES = [
+  'Human',
+  'Human - Bloodmarked',
+  'Elf',
+  'Dwarf',
+  'Dwarf - Blackaxe Clan',
+  'Orc',
+  'Half-Orc',
+  'Fairy',
+  'Gnome',
+  'Goblin',
+  'Nelf',
+  'Nymph',
+  'Form - Giant',
+  'Form - Nymph',
+  'Form - Pixie',
+];
+
+const HALLMARK_CLASSES = [
+  'Warrior',
+  'Warrior - Ranger',
+  'Warrior - Bloodfang Berserker',
+  'Warrior - Aetherblade',
+  'Warrior - Cursed Spartan',
+  'Warrior - Inferno Vanguard',
+  'Warrior - Lifestealer',
+  'Warrior - Punk',
+  'Warrior - Shield',
+  'Mage - Elemental',
+  'Mage - Geomancer',
+  'Mage - Magnetic',
+  'Mage - Void Magic',
+  'Healer',
+  'Healer - Sun-Devoted',
+  'Healer - Verdant Sentinel',
+  'Thief - Assassin',
+  'Bard',
+  'Monk',
+  'Martial Artist - Blade Saint',
+  'Starborn Ranger',
+  'Trickster',
+  'Unique - Bio Engineer',
+];
+
+const HALLMARK_STYLES = [
+  'Single Weapon',
+  'Dual Wield',
+  'Weapon & Shield',
+  'Martial Arts',
+  'Luck',
+  'Psionics',
+  'Psionics - Sentinel',
+  'Psychosomatics',
+];
 
 export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, onClose }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const {
     activeCharacter,
-    traits: stockTraitsCatalog,
+    powers: stockPowersCatalog = [],
+    skills: stockSkillsCatalog = [],
+    traits: stockRulesCatalog = [],
     addTraitQuirk,
     removeTraitQuirk,
     toggleStarTrait,
@@ -51,14 +102,15 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Left Pane Filter & Search State
-  const [activeLeftFilter, setActiveLeftFilter] = useState<'all' | 'trait' | 'quirk' | 'flaw'>('all');
+  // Left Pane Search State
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
 
   // Right Pane Tab & Search State
-  const [rightActiveTab, setRightActiveTab] = useState<'catalog' | 'forge'>('catalog');
+  const [rightActiveTab, setRightActiveTab] = useState<'archetypes' | 'catalog' | 'forge'>('archetypes');
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
-  const [selectedTableGroup, setSelectedTableGroup] = useState<string | null>(null);
+  const [selectedArchetypeTable, setSelectedArchetypeTable] = useState<string>('Human');
+  const [extraTableSelected, setExtraTableSelected] = useState<string>('');
+  const [showGmWarning, setShowGmWarning] = useState<boolean>(false);
 
   // Custom Forge Form State
   const [customName, setCustomName] = useState<string>('');
@@ -66,35 +118,16 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   const [customTableGroup, setCustomTableGroup] = useState<string>('Custom');
   const [customFlawPoints, setCustomFlawPoints] = useState<number>(0);
   const [customStatHookPreset, setCustomStatHookPreset] = useState<string>('none');
-  const [customAction, setCustomAction] = useState<string>('P');
-  const [customUsage, setCustomUsage] = useState<string>('Passive');
-  const [customEffect, setCustomEffect] = useState<string>('');
   const [customNotes, setCustomNotes] = useState<string>('');
   const [forgeError, setForgeError] = useState<string | null>(null);
 
-  const equippedTraits: TraitQuirkItem[] = useMemo(() => {
+  const equippedRules: RuleItem[] = useMemo(() => {
     return activeCharacter?.sheet_data?.traits_quirks || [];
   }, [activeCharacter?.sheet_data?.traits_quirks]);
 
-  const { flawBonusAp, rawFlawPoints } = useMemo(() => {
+  const { flawBonusAp } = useMemo(() => {
     return calculateLiveSheetSpentAp(activeCharacter?.sheet_data);
   }, [activeCharacter?.sheet_data]);
-
-  const favoriteTraitTables: string[] = useMemo(() => {
-    return activeCharacter?.sheet_data?.favorite_trait_tables || [];
-  }, [activeCharacter?.sheet_data?.favorite_trait_tables]);
-
-  const handleUpdatePinnedTraitTables = (tables: string[]) => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      favorite_trait_tables: tables,
-    }));
-    saveActiveCharacter();
-  };
-
-  const starredTraitsCount = useMemo(() => {
-    return (activeCharacter?.sheet_data?.starred_traits || []).length;
-  }, [activeCharacter?.sheet_data?.starred_traits]);
 
   // Escape key to close
   useEffect(() => {
@@ -107,123 +140,189 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Filtered Active Traits for Left Pane
-  const filteredEquippedTraits = useMemo(() => {
-    return equippedTraits.filter((t) => {
+  // Filtered Active Rules for Left Pane
+  const filteredEquippedRules = useMemo(() => {
+    return equippedRules.filter((t) => {
       if (!t) return false;
-      const matchesSearch =
-        !leftSearchQuery.trim() ||
-        t.name.toLowerCase().includes(leftSearchQuery.toLowerCase()) ||
-        t.effect.toLowerCase().includes(leftSearchQuery.toLowerCase());
-
-      if (!matchesSearch) return false;
-
-      if (activeLeftFilter === 'all') return true;
-      if (activeLeftFilter === 'flaw') return (t.flaw_points || 0) > 0 || t.action === 'F';
-      if (activeLeftFilter === 'trait') return t.type === 'trait' && (!t.flaw_points || t.flaw_points === 0);
-      if (activeLeftFilter === 'quirk') return t.type === 'quirk' && (!t.flaw_points || t.flaw_points === 0);
-      return true;
+      if (!leftSearchQuery.trim()) return true;
+      const q = leftSearchQuery.toLowerCase();
+      return (
+        t.name.toLowerCase().includes(q) ||
+        (t.notes || '').toLowerCase().includes(q) ||
+        (t.source || '').toLowerCase().includes(q)
+      );
     });
-  }, [equippedTraits, leftSearchQuery, activeLeftFilter]);
+  }, [equippedRules, leftSearchQuery]);
 
-  // Filtered Catalog Traits for Right Pane
-  const filteredCatalogTraits = useMemo(() => {
-    return stockTraitsCatalog.filter((t) => {
-      if (!matchesGenre(t.genres, activeGenre)) return false;
-      if (selectedTableGroup && t.table_group !== selectedTableGroup) return false;
+  // All unique table groups across all loaded catalogs
+  const allDiscoveredTableGroups = useMemo(() => {
+    const set = new Set<string>();
+    stockPowersCatalog.forEach((p) => {
+      if (p.table_group) set.add(cleanTableGroupName(p.table_group));
+    });
+    stockSkillsCatalog.forEach((s) => {
+      if (s.table_group) set.add(cleanTableGroupName(s.table_group));
+    });
+    stockRulesCatalog.forEach((r) => {
+      if (r.table_group) set.add(cleanTableGroupName(r.table_group));
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
+
+  // Live Bundle Preview for Selected Archetype Table
+  const activeBundleGrants = useMemo(() => {
+    if (!selectedArchetypeTable) return null;
+    return collectTableTraitGrants(
+      selectedArchetypeTable,
+      stockPowersCatalog,
+      stockSkillsCatalog,
+      stockRulesCatalog
+    );
+  }, [selectedArchetypeTable, stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
+
+  // Check if a table's bundle is currently equipped
+  const isTableBundleEquipped = useMemo(() => {
+    if (!activeBundleGrants || !activeCharacter?.sheet_data) return false;
+    const sheet = activeCharacter.sheet_data;
+    
+    // Check if any rule or power from this table is equipped
+    const hasRule = (sheet.traits_quirks || []).some(
+      (r) => matchesTableGroupFilter(r.table_group, activeBundleGrants.tableName)
+    );
+    const hasPower = (sheet.power_slots || []).concat(sheet.character_power_codex || []).some(
+      (p) => matchesTableGroupFilter(p.table_group, activeBundleGrants.tableName)
+    );
+    const hasSkill = (sheet.known_individual_skills || []).some((sName) =>
+      activeBundleGrants.skills.some((bs) => bs.name.toLowerCase() === sName.toLowerCase())
+    );
+
+    return hasRule || hasPower || hasSkill;
+  }, [activeBundleGrants, activeCharacter?.sheet_data]);
+
+  // Handler: Apply Archetype Bundle to Sheet
+  const handleApplyArchetypeBundle = (tableName: string) => {
+    if (!activeCharacter?.sheet_data) return;
+    const grants = collectTableTraitGrants(
+      tableName,
+      stockPowersCatalog,
+      stockSkillsCatalog,
+      stockRulesCatalog
+    );
+
+    updateActiveSheetData((prev) => {
+      return applyTableTraitGrantsToSheet(prev, grants);
+    });
+    saveActiveCharacter();
+  };
+
+  // Handler: Unbundle/Remove a table's traits from sheet
+  const handleUnbundleArchetype = (tableName: string) => {
+    if (!activeCharacter?.sheet_data) return;
+    const cleanTarget = cleanTableGroupName(tableName);
+
+    updateActiveSheetData((prev) => {
+      const updated = { ...prev };
+      // Remove rules
+      updated.traits_quirks = (prev.traits_quirks || []).filter(
+        (t) => !matchesTableGroupFilter(t.table_group, cleanTarget) && !(t.source || '').includes(cleanTarget)
+      );
+      // Remove powers
+      updated.character_power_codex = (prev.character_power_codex || []).filter(
+        (p) => !matchesTableGroupFilter(p.table_group, cleanTarget) && !(p.source || '').includes(cleanTarget)
+      );
+      updated.power_slots = (prev.power_slots || []).filter(
+        (p) => !matchesTableGroupFilter(p.table_group, cleanTarget) && !(p.source || '').includes(cleanTarget)
+      );
+      // Remove skills
+      const tableSkills = stockSkillsCatalog
+        .filter((s) => isTraitItem(s) && matchesTableGroupFilter(s.table_group, cleanTarget))
+        .map((s) => s.name.toLowerCase());
+      updated.known_individual_skills = (prev.known_individual_skills || []).filter(
+        (sName) => !tableSkills.includes(sName.toLowerCase())
+      );
+      return updated;
+    });
+    saveActiveCharacter();
+  };
+
+  // Standalone Stock Rules Catalog List
+  const filteredCatalogRules = useMemo(() => {
+    return stockRulesCatalog.filter((r) => {
+      if (!matchesGenre(r.genres, activeGenre)) return false;
       if (catalogSearchQuery.trim()) {
         const q = catalogSearchQuery.toLowerCase();
         return (
-          t.name.toLowerCase().includes(q) ||
-          t.effect.toLowerCase().includes(q) ||
-          (t.table_group || '').toLowerCase().includes(q)
+          r.name.toLowerCase().includes(q) ||
+          (r.notes || '').toLowerCase().includes(q) ||
+          (r.table_group || '').toLowerCase().includes(q)
         );
       }
       return true;
     });
-  }, [stockTraitsCatalog, activeGenre, selectedTableGroup, catalogSearchQuery]);
+  }, [stockRulesCatalog, activeGenre, catalogSearchQuery]);
 
-  const isTraitEquipped = (traitName: string) => {
-    return equippedTraits.some((t) => t.name.toLowerCase() === traitName.toLowerCase());
+  const isRuleEquipped = (ruleName: string) => {
+    return equippedRules.some((r) => r.name.toLowerCase() === ruleName.toLowerCase());
   };
 
-  const isTraitStarred = (idOrName: number | string) => {
-    const starred = activeCharacter?.sheet_data?.starred_traits || [];
-    return starred.includes(idOrName);
+  const isRuleStarred = (ruleIdOrName: number | string) => {
+    const starredList = activeCharacter?.sheet_data?.starred_traits || [];
+    return starredList.some((s) => String(s) === String(ruleIdOrName));
   };
 
-  // Equip Stock Trait
-  const handleEquipStockTrait = (trait: SupabaseTrait) => {
-    if (isTraitEquipped(trait.name)) return;
-
-    let parsedHook: StatHookDefinition | undefined = undefined;
-    if (trait.stat_hook) {
-      parsedHook =
-        typeof trait.stat_hook === 'string'
-          ? JSON.parse(trait.stat_hook)
-          : trait.stat_hook;
-    }
-
-    const newItem: TraitQuirkItem = {
-      id: trait.id,
-      name: trait.name,
-      type: trait.type || 'trait',
-      action: trait.action || 'P',
-      usage: trait.usage || 'Passive',
-      effect: trait.effect,
-      source: trait.table_group || 'Catalog',
-      flaw_points: trait.flaw_points || 0,
-      stat_hook: parsedHook,
-      notes: trait.notes || undefined,
+  const handleEquipStockRule = (rule: SupabaseRule) => {
+    if (isRuleEquipped(rule.name)) return;
+    const item: RuleItem = {
+      name: rule.name,
+      type: rule.type,
+      notes: rule.notes || '',
+      flaw_points: rule.flaw_points || 0,
+      stat_hook: rule.stat_hook || null,
+      table_group: rule.table_group,
+      source: rule.table_group || 'Stock Rules',
     };
-
-    addTraitQuirk(newItem);
+    addTraitQuirk(item);
   };
 
-  // Create & Equip Custom Trait from Forge
   const handleCreateCustomForge = (e: React.FormEvent) => {
     e.preventDefault();
     setForgeError(null);
 
     if (!customName.trim()) {
-      setForgeError('Trait name is required.');
+      setForgeError('Rule name is required.');
+      return;
+    }
+    if (!customNotes.trim()) {
+      setForgeError('Rule description/notes is required.');
       return;
     }
 
-    if (!customEffect.trim()) {
-      setForgeError('Trait mechanical effect description is required.');
-      return;
-    }
-
-    let parsedHook: StatHookDefinition | undefined = undefined;
+    let parsedHook: StatHookDefinition | null = null;
     if (customStatHookPreset === 'mind_ar') {
-      parsedHook = { type: 'mind_die', target: 'ar', effectDescription: 'Base AR = Mind Die Rating' };
+      parsedHook = { target: 'ar', type: 'mind_die' };
     } else if (customStatHookPreset === 'natural_ar_1') {
-      parsedHook = { type: 'flat_bonus', target: 'ar', value: 1, effectDescription: '+1 Natural AR Bonus' };
+      parsedHook = { target: 'ar', type: 'flat_bonus', value: 1 };
     } else if (customStatHookPreset === 'mr_plus_1') {
-      parsedHook = { type: 'flat_bonus', target: 'mr', value: 1, effectDescription: '+1 Movement Rate' };
+      parsedHook = { target: 'mr', type: 'flat_bonus', value: 1 };
     } else if (customStatHookPreset === 'mr_minus_1') {
-      parsedHook = { type: 'flat_bonus', target: 'mr', value: -1, effectDescription: '-1 Movement Rate' };
+      parsedHook = { target: 'mr', type: 'flat_bonus', value: -1 };
     } else if (customStatHookPreset === 'luck_plus_1') {
-      parsedHook = { type: 'flat_bonus', target: 'luck', value: 1, effectDescription: '+1 Max Luck' };
+      parsedHook = { target: 'luck', type: 'flat_bonus', value: 1 };
     } else if (customStatHookPreset === 'vit_minus_3') {
-      parsedHook = { type: 'flat_bonus', target: 'vitality', value: -3, effectDescription: '-3 Max Vitality' };
+      parsedHook = { target: 'vitality', type: 'flat_bonus', value: -3 };
     }
 
-    const newItem: TraitQuirkItem = {
-      id: Date.now(),
+    const newRuleItem: RuleItem = {
       name: customName.trim(),
       type: customType,
-      action: customAction,
-      usage: customUsage,
-      effect: customEffect.trim(),
-      source: customTableGroup.trim() || 'Custom',
-      flaw_points: customFlawPoints,
+      table_group: `${customTableGroup.trim() || 'Custom'} (Trait)`,
+      flaw_points: customType === 'flaw' ? customFlawPoints : 0,
       stat_hook: parsedHook,
-      notes: customNotes.trim() || undefined,
+      notes: customNotes.trim(),
+      source: 'Custom Forge',
     };
 
-    addTraitQuirk(newItem);
+    addTraitQuirk(newRuleItem);
 
     // Reset Form
     setCustomName('');
@@ -231,43 +330,39 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     setCustomTableGroup('Custom');
     setCustomFlawPoints(0);
     setCustomStatHookPreset('none');
-    setCustomAction('P');
-    setCustomUsage('Passive');
-    setCustomEffect('');
     setCustomNotes('');
-    setRightActiveTab('catalog');
   };
 
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
       <div
         ref={modalRef}
-        className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] max-h-[900px] flex flex-col overflow-hidden animate-fadeIn"
+        className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[88vh] max-h-[720px] flex flex-col shadow-2xl overflow-hidden text-left"
       >
-        {/* ================= 1. HEADER STANDARD ================= */}
-        <div className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-6 py-4 flex items-center justify-between shrink-0">
+        {/* ================= 1. MODAL TOP BAR ================= */}
+        <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0 gap-3">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🧬</span>
+            <div className="p-2 rounded-xl bg-purple-950/90 border border-purple-500/40 text-purple-300 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.25)]">
+              <span className="text-xl leading-none">📜</span>
+            </div>
             <div>
-              <div className="flex items-center gap-2.5">
-                <h2 className="text-xl font-bold font-outfit text-purple-400">
-                  Manage Traits & Quirks
-                </h2>
-                <span
-                  className={`px-2.5 py-0.5 rounded-lg border text-xs font-mono font-bold ${
-                    rawFlawPoints > 0
-                      ? 'bg-amber-950/80 text-amber-300 border-amber-500/50 shadow-sm'
-                      : 'bg-slate-950 text-slate-400 border-slate-800'
-                  }`}
-                  title="Handicaps grant bonus AP up to +5 max"
-                >
-                  ⚠️ Flaw Bonus AP: +{flawBonusAp} / +5 Max
+              <div className="flex items-center gap-2">
+                <h3 className="font-outfit font-black text-base text-slate-100 uppercase tracking-wide">
+                  Manage Rules
+                </h3>
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/40">
+                  Active Rules: {equippedRules.length}
                 </span>
+                {flawBonusAp > 0 && (
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/40">
+                    ⚠️ Flaw Bonus: +{flawBonusAp} / +5 Max AP
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Select passive racial adaptations, unique traits, quirks, and handicaps for {activeCharacter?.name || 'Hero'}.
+              <p className="text-xs text-slate-400">
+                Equip rules, select hallmark archetype tables to bundle starting traits, or forge custom rules & handicaps.
               </p>
             </div>
           </div>
@@ -275,259 +370,430 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 rounded hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Close (Esc)"
+            className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* ================= 2. TWO-PANE GRID ARCHITECTURE ================= */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 p-6 bg-slate-900/40 flex-1 min-h-0 overflow-hidden">
-          {/* ================= PANE 1 (LEFT): EQUIPPED TRAITS ================= */}
-          <div className="md:col-span-5 flex flex-col border-r border-slate-800/80 pr-6 min-h-0 overflow-hidden">
-            {/* Header & Item Count */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
-              <span className="text-xs font-outfit font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <span>📜</span> Equipped ({equippedTraits.length})
-              </span>
-              <span className="text-[11px] font-mono text-purple-300 font-bold">
-                {equippedTraits.length} Active
+        {/* ================= 2. SPLIT-PANE 2-COLUMN BODY ================= */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
+          
+          {/* ================= LEFT COLUMN: EQUIPPED ACTIVE RULES PANE ================= */}
+          <div className="flex flex-col bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 min-h-0 shadow-inner">
+            <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="font-outfit font-bold text-xs text-slate-200 uppercase tracking-wider">
+                  Equipped Rules ({equippedRules.length})
+                </span>
+              </div>
+              <span className="text-[11px] font-mono text-slate-400">
+                {filteredEquippedRules.length} Visible
               </span>
             </div>
 
-            {/* Filter Switches */}
-            <div className="py-2.5 flex flex-col gap-2 shrink-0">
-              {/* Category Filter Pills */}
-              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner">
-                <button
-                  type="button"
-                  onClick={() => setActiveLeftFilter('all')}
-                  className={`flex-1 py-1 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                    activeLeftFilter === 'all'
-                      ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <span>🌐 All</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveLeftFilter('trait')}
-                  className={`flex-1 py-1 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                    activeLeftFilter === 'trait'
-                      ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <span>🧬 Traits</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveLeftFilter('quirk')}
-                  className={`flex-1 py-1 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                    activeLeftFilter === 'quirk'
-                      ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <span>✨ Quirks</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveLeftFilter('flaw')}
-                  className={`flex-1 py-1 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                    activeLeftFilter === 'flaw'
-                      ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <span>⚠️ Flaws</span>
-                </button>
-              </div>
-
-              {/* Search Filter */}
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Filter active..."
-                  value={leftSearchQuery}
-                  onChange={(e) => setLeftSearchQuery(e.target.value)}
-                  className="w-full bg-slate-950 text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
-                />
-              </div>
+            {/* Simple Quick Search Bar */}
+            <div className="relative mb-3">
+              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Filter active rules..."
+                value={leftSearchQuery}
+                onChange={(e) => setLeftSearchQuery(e.target.value)}
+                className="w-full bg-slate-900/90 text-xs pl-8 pr-2.5 py-1.5 rounded-xl border border-slate-800 text-white outline-none focus:border-purple-500 transition-all placeholder:text-slate-500"
+              />
             </div>
 
-            {/* Scrollable Equipped Traits List */}
+            {/* Active Rules List */}
             <div className="flex-1 overflow-y-auto pr-1 space-y-2 min-h-0">
-              {filteredEquippedTraits.length > 0 ? (
-                filteredEquippedTraits.map((t, idx) => {
-                  const isFlaw = (t.flaw_points || 0) > 0 || t.action === 'F';
-                  const actionUpper = (t.action || (isFlaw ? 'F' : 'P')).toUpperCase();
-                  const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+              {filteredEquippedRules.length > 0 ? (
+                filteredEquippedRules.map((rule, idx) => {
+                  const isFlaw = (rule.flaw_points || 0) > 0 || rule.type === 'flaw';
 
                   return (
                     <div
-                      key={`${t.name}_${idx}`}
+                      key={`${rule.name}_${idx}`}
                       className={`p-3 rounded-xl border flex flex-col gap-2 transition-all shadow-sm ${
                         isFlaw
-                          ? 'bg-amber-950/20 border-amber-500/30'
-                          : t.type === 'quirk'
-                          ? 'bg-indigo-950/20 border-indigo-500/30'
-                          : 'bg-slate-950/80 border-slate-800'
+                          ? 'bg-amber-950/20 border-amber-500/30 hover:border-amber-500/50'
+                          : 'bg-slate-900/80 border-slate-800/80 hover:border-slate-700'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex flex-col gap-0.5 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-outfit font-bold text-slate-100">
-                              {t.name}
-                            </span>
-                            {t.notes && <ItemNotesPopover notes={t.notes} itemName={t.name} />}
-                          </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-outfit font-bold text-slate-100 flex items-center gap-1">
+                            <span>{isFlaw ? '⚠️' : '📜'}</span>
+                            <span>{rule.name}</span>
+                          </span>
 
                           {/* Classification Pill */}
-                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                            {isFlaw ? (
-                              <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-amber-950/90 text-amber-300 border border-amber-500/40 flex items-center gap-1">
-                                <span>⚠️</span> Flaw (+{t.flaw_points || 1} AP)
-                              </span>
-                            ) : t.type === 'quirk' ? (
-                              <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 flex items-center gap-1">
-                                <span>✨</span> Quirk
-                              </span>
-                            ) : (
-                              <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                                <span>🧬</span> Trait{t.source ? ` (${t.source})` : ''}
-                              </span>
-                            )}
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase ${
+                              isFlaw
+                                ? 'bg-amber-900/60 text-amber-300 border border-amber-500/40'
+                                : 'bg-emerald-900/60 text-emerald-300 border border-emerald-500/40'
+                            }`}
+                          >
+                            {isFlaw ? `Flaw (+${rule.flaw_points || 1} AP)` : 'Rule'}
+                          </span>
 
-                            {/* Action & Usage Badges */}
-                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border uppercase ${actionClass}`}>
-                              {actionUpper}
+                          {rule.table_group && (
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              [{rule.table_group}]
                             </span>
-                            <span className="bg-slate-900 px-1.5 py-0.2 rounded border border-slate-800 text-[9px] font-mono text-slate-300">
-                              {t.usage || 'Passive'}
-                            </span>
-                          </div>
+                          )}
                         </div>
 
-                        {/* Standardized 'Forget' Drop Action Button */}
+                        {/* Forget / Remove Button */}
                         <button
                           type="button"
-                          onClick={() => removeTraitQuirk(t.id || t.name)}
-                          className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/40 hover:border-rose-400 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all shrink-0 cursor-pointer shadow-sm"
-                          title="Remove from character sheet"
+                          onClick={() => removeTraitQuirk(rule.name)}
+                          className="px-2 py-1 rounded-lg text-xs font-bold text-rose-300 bg-rose-950/40 border border-rose-500/30 hover:bg-rose-900/60 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                          title="Remove Rule"
                         >
-                          Forget
+                          <Trash2 className="w-3 h-3" />
+                          <span>Forget</span>
                         </button>
                       </div>
 
-                      {/* Stat Hook Annotation if active */}
-                      {t.stat_hook && (
-                        <div className="flex items-center gap-1 text-[10px] font-mono font-semibold text-cyan-300 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-500/30">
-                          <Sparkles className="w-3 h-3 shrink-0" />
+                      {/* Rule Description */}
+                      <p className="text-xs text-slate-300 font-sans leading-relaxed">
+                        {rule.notes}
+                      </p>
+
+                      {/* Stat Hook Badge */}
+                      {rule.stat_hook && (
+                        <div
+                          className={`flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded border w-fit shadow-inner ${
+                            isFlaw
+                              ? 'text-amber-300 bg-amber-950/60 border-amber-500/40'
+                              : 'text-cyan-300 bg-cyan-950/40 border-cyan-500/30'
+                          }`}
+                        >
+                          <span>{isFlaw ? '⚠️' : '✨'}</span>
                           <span>
-                            {t.stat_hook.type === 'mind_die' && 'Stat Hook: Base AR = Mind Die Rating'}
-                            {t.stat_hook.type === 'flat_bonus' &&
-                              `Stat Hook: ${t.stat_hook.value && t.stat_hook.value > 0 ? '+' : ''}${
-                                t.stat_hook.value
-                              } ${t.stat_hook.target.toUpperCase()}`}
+                            {rule.stat_hook.type === 'mind_die'
+                              ? 'Base AR = Mind Die Rating'
+                              : `${rule.stat_hook.value && rule.stat_hook.value > 0 ? '+' : ''}${
+                                  rule.stat_hook.value
+                                } ${rule.stat_hook.target.toUpperCase()}`}
                           </span>
                         </div>
                       )}
-
-                      <p className="text-xs text-slate-300 leading-relaxed font-sans">{t.effect}</p>
                     </div>
                   );
                 })
               ) : (
-                <div className="p-6 text-center text-xs text-slate-500 italic bg-slate-950/40 rounded-xl border border-slate-800">
-                  No traits equipped in this filter category. Browse the catalog or create a custom trait on the right.
+                <div className="p-8 text-center text-xs text-slate-500 italic bg-slate-900/30 rounded-xl border border-slate-800/60 flex flex-col items-center justify-center gap-1">
+                  <span>No active rules equipped.</span>
+                  <span className="text-slate-600 text-[11px]">
+                    Select Hallmark Archetypes on the right to bundle starting traits & rules.
+                  </span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ================= PANE 2 (RIGHT): CATALOG & CUSTOM FORGE ================= */}
-          <div className="md:col-span-7 flex flex-col min-h-0 overflow-hidden">
-            {/* Standardized Sub-Tab Bar */}
-            <div className="flex border-b border-slate-800 mb-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => setRightActiveTab('catalog')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  rightActiveTab === 'catalog'
-                    ? 'border-purple-400 text-purple-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>🌐</span>
-                <span>Stock Catalog</span>
-                <span className="text-[10px] font-mono opacity-80">({stockTraitsCatalog.length})</span>
-              </button>
+          {/* ================= RIGHT COLUMN: ARCHETYPE BUNDLER, STOCK CATALOG & CUSTOM FORGE ================= */}
+          <div className="flex flex-col bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 min-h-0 shadow-inner">
+            {/* Top Navigation Tabs */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 shrink-0 gap-2">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setRightActiveTab('archetypes')}
+                  className={`py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    rightActiveTab === 'archetypes'
+                      ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>🏛️ Archetype Tables</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRightActiveTab('catalog')}
+                  className={`py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    rightActiveTab === 'catalog'
+                      ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>📜 Stock Rules ({stockRulesCatalog.length})</span>
+                </button>
+              </div>
 
               <button
                 type="button"
                 onClick={() => setRightActiveTab('forge')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                   rightActiveTab === 'forge'
-                    ? 'border-purple-400 text-purple-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>✨</span>
-                <span>Custom Forge</span>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>✨ Custom Forge</span>
               </button>
             </div>
 
-            {/* TAB 1: STOCK CATALOG */}
-            {rightActiveTab === 'catalog' && (
-              <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-                {/* QuickDeck Table Switcher */}
-                <div className="shrink-0 mb-3">
-                  <QuickDeckBar
-                    domain="traits"
-                    activeTable={selectedTableGroup || 'ALL'}
-                    onSelectTable={(tbl) => setSelectedTableGroup(tbl === 'ALL' ? null : tbl)}
-                    pinnedTables={favoriteTraitTables}
-                    onUpdatePinnedTables={handleUpdatePinnedTraitTables}
-                    catalogItems={stockTraitsCatalog}
-                    starredCount={starredTraitsCount}
-                    colorTheme="purple"
-                    totalCatalogCount={stockTraitsCatalog.length}
-                    placeholderText="➕ Pin Trait Table"
-                  />
+            {/* TAB 1: ARCHETYPE & HALLMARK TABLE BUNDLER */}
+            {rightActiveTab === 'archetypes' && (
+              <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
+                <div className="p-2.5 bg-purple-950/30 border border-purple-500/30 rounded-xl text-xs text-purple-200 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <Award className="w-4 h-4 text-purple-400" />
+                    Hallmark Archetype Bundler
+                  </span>
+                  <span className="text-[11px] text-purple-300 font-mono">
+                    Auto-bundles 0 AP starting traits
+                  </span>
                 </div>
 
-                {/* Search Row */}
-                <div className="flex items-center gap-2 mb-3 shrink-0">
-                  <div className="relative flex-1">
-                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Search stock traits..."
-                      value={catalogSearchQuery}
-                      onChange={(e) => setCatalogSearchQuery(e.target.value)}
-                      className="w-full bg-slate-950 text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
-                    />
+                {/* 3 Hallmark Selectors: Race, Class, Style */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {/* 1. Race / Ancestry */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                      <span>🧬</span> Race / Ancestry
+                    </label>
+                    <select
+                      value={HALLMARK_RACES.includes(selectedArchetypeTable) ? selectedArchetypeTable : ''}
+                      onChange={(e) => {
+                        if (e.target.value) setSelectedArchetypeTable(e.target.value);
+                      }}
+                      className="bg-slate-900 text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
+                    >
+                      <option value="">-- Pick Race --</option>
+                      {HALLMARK_RACES.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 2. Class / Archetype */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                      <span>⚔️</span> Class Archetype
+                    </label>
+                    <select
+                      value={HALLMARK_CLASSES.includes(selectedArchetypeTable) ? selectedArchetypeTable : ''}
+                      onChange={(e) => {
+                        if (e.target.value) setSelectedArchetypeTable(e.target.value);
+                      }}
+                      className="bg-slate-900 text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
+                    >
+                      <option value="">-- Pick Class --</option>
+                      {HALLMARK_CLASSES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 3. Combat Style */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                      <span>🎯</span> Combat Style
+                    </label>
+                    <select
+                      value={HALLMARK_STYLES.includes(selectedArchetypeTable) ? selectedArchetypeTable : ''}
+                      onChange={(e) => {
+                        if (e.target.value) setSelectedArchetypeTable(e.target.value);
+                      }}
+                      className="bg-slate-900 text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
+                    >
+                      <option value="">-- Pick Style --</option>
+                      {HALLMARK_STYLES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
-                {/* Catalog Traits Grid */}
+                {/* Multiclass / Extra Tables Option (with GM Warning) */}
+                <div className="p-2.5 bg-slate-900/60 border border-slate-800 rounded-xl flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                      Multiclass / Custom Table (GM Approval)
+                    </label>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {allDiscoveredTableGroups.length} tables found
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={extraTableSelected}
+                      onChange={(e) => {
+                        setExtraTableSelected(e.target.value);
+                        if (e.target.value) {
+                          setSelectedArchetypeTable(e.target.value);
+                          setShowGmWarning(true);
+                        }
+                      }}
+                      className="bg-slate-950 text-xs px-2.5 py-1.5 rounded-lg border border-amber-500/40 text-amber-200 outline-none flex-1"
+                    >
+                      <option value="">-- Select Any Hallmark Table --</option>
+                      {allDiscoveredTableGroups.map((tbl) => (
+                        <option key={tbl} value={tbl}>
+                          {tbl}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {showGmWarning && (
+                    <div className="p-2 rounded-lg bg-amber-950/40 border border-amber-500/30 text-[11px] text-amber-200">
+                      ⚠️ <strong>GM Approval Notice:</strong> Selecting additional hallmark tables grants starting traits for multiclass or hybrid heritages.
+                    </div>
+                  )}
+                </div>
+
+                {/* Live Bundle Preview Card for Current Selected Table */}
+                {activeBundleGrants && (
+                  <div className="p-3.5 rounded-xl border border-purple-500/40 bg-purple-950/20 flex flex-col gap-2.5 shadow-md">
+                    <div className="flex items-center justify-between border-b border-purple-500/30 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-outfit font-black text-white">
+                          🏛️ {activeBundleGrants.tableName}
+                        </span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-bold">
+                          {activeBundleGrants.powers.length + activeBundleGrants.skills.length + activeBundleGrants.traits.length} Starting Grants
+                        </span>
+                      </div>
+
+                      {/* Action Button: Apply or Unbundle */}
+                      {isTableBundleEquipped ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                            <Check className="w-4 h-4" /> Active
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleUnbundleArchetype(activeBundleGrants.tableName)}
+                            className="px-2.5 py-1 text-xs font-bold text-rose-300 bg-rose-950/60 border border-rose-500/40 hover:bg-rose-900/80 rounded-lg transition-all cursor-pointer"
+                          >
+                            Unbundle
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleApplyArchetypeBundle(activeBundleGrants.tableName)}
+                          className="px-3.5 py-1.5 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-lg shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>+ Apply Archetype Traits (Free)</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Breakdown of Granted Items */}
+                    <div className="space-y-1.5 text-xs">
+                      {/* 1. Powers */}
+                      {activeBundleGrants.powers.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-mono font-bold text-cyan-300 uppercase">
+                            ⚡ Powers ({activeBundleGrants.powers.length}):
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {activeBundleGrants.powers.map((p) => (
+                              <span
+                                key={p.name}
+                                className="px-2 py-0.5 rounded bg-slate-900 text-slate-200 border border-slate-800 font-mono text-[11px] flex items-center gap-1"
+                              >
+                                <span>⚡</span> {p.name} [{p.action}]
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 2. Skills */}
+                      {activeBundleGrants.skills.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-mono font-bold text-amber-300 uppercase">
+                            👁️ Skills ({activeBundleGrants.skills.length}):
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {activeBundleGrants.skills.map((s) => (
+                              <span
+                                key={s.name}
+                                className="px-2 py-0.5 rounded bg-slate-900 text-slate-200 border border-slate-800 font-mono text-[11px] flex items-center gap-1"
+                              >
+                                <span>{s.attribute || '👁️'}</span> {s.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 3. Rules & Traits */}
+                      {activeBundleGrants.traits.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-mono font-bold text-emerald-300 uppercase">
+                            📜 Rules & Adaptations ({activeBundleGrants.traits.length}):
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {activeBundleGrants.traits.map((t) => (
+                              <span
+                                key={t.name}
+                                className="px-2 py-0.5 rounded bg-slate-900 text-slate-200 border border-slate-800 font-mono text-[11px] flex items-center gap-1"
+                              >
+                                <span>📜</span> {t.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {activeBundleGrants.powers.length === 0 &&
+                        activeBundleGrants.skills.length === 0 &&
+                        activeBundleGrants.traits.length === 0 && (
+                          <p className="text-xs text-slate-400 italic">
+                            No (Trait) items currently assigned to this table. Items can be added at any time.
+                          </p>
+                        )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: STANDALONE STOCK RULES & FLAWS CATALOG */}
+            {rightActiveTab === 'catalog' && (
+              <div className="flex flex-col flex-1 min-h-0">
+                <div className="relative mb-2.5">
+                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search stock rules & flaws..."
+                    value={catalogSearchQuery}
+                    onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                    className="w-full bg-slate-950 text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
+                  />
+                </div>
+
                 <div className="flex-1 overflow-y-auto pr-1 space-y-2 min-h-0">
-                  {filteredCatalogTraits.length > 0 ? (
-                    filteredCatalogTraits.map((trait) => {
-                      const equipped = isTraitEquipped(trait.name);
-                      const starred = isTraitStarred(trait.id || trait.name);
-                      const isFlaw = (trait.flaw_points || 0) > 0 || trait.action === 'F';
-                      const actionUpper = (trait.action || (isFlaw ? 'F' : 'P')).toUpperCase();
-                      const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+                  {filteredCatalogRules.length > 0 ? (
+                    filteredCatalogRules.map((rule) => {
+                      const equipped = isRuleEquipped(rule.name);
+                      const starred = isRuleStarred(rule.id || rule.name);
+                      const isFlaw = (rule.flaw_points || 0) > 0 || rule.type === 'flaw';
 
                       return (
                         <div
-                          key={trait.id}
+                          key={rule.id}
                           className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
                             equipped
                               ? 'bg-purple-950/20 border-purple-500/40 opacity-80'
@@ -537,46 +803,34 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                           <div className="flex flex-col gap-1 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs font-outfit font-black text-slate-100 flex items-center gap-1">
-                                {isFlaw ? '⚠️' : trait.type === 'quirk' ? '✨' : '🧬'}
-                                <span>{trait.name}</span>
+                                {isFlaw ? '⚠️' : '📜'}
+                                <span>{rule.name}</span>
                               </span>
 
-                              {/* Classification Pill */}
                               <span
                                 className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase ${
                                   isFlaw
                                     ? 'bg-amber-900/60 text-amber-300 border border-amber-500/40'
-                                    : trait.type === 'quirk'
-                                    ? 'bg-indigo-900/60 text-indigo-300 border border-indigo-500/40'
                                     : 'bg-emerald-900/60 text-emerald-300 border border-emerald-500/40'
                                 }`}
                               >
-                                {isFlaw ? `Flaw (+${trait.flaw_points || 1} AP)` : trait.type}
+                                {isFlaw ? `Flaw (+${rule.flaw_points || 1} AP)` : 'Rule'}
                               </span>
 
-                              {/* Action & Usage */}
-                              <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border uppercase ${actionClass}`}>
-                                {actionUpper}
-                              </span>
-                              <span className="bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800 text-[9px] font-mono text-slate-400">
-                                {trait.usage || 'Passive'}
-                              </span>
-
-                              {trait.table_group && (
+                              {rule.table_group && (
                                 <span className="text-[10px] text-slate-400 font-mono">
-                                  [{trait.table_group}]
+                                  [{rule.table_group}]
                                 </span>
                               )}
                             </div>
 
-                            <p className="text-xs text-slate-300 leading-relaxed font-sans">{trait.effect}</p>
+                            <p className="text-xs text-slate-300 leading-relaxed font-sans">{rule.notes}</p>
                           </div>
 
-                          {/* Action Buttons */}
                           <div className="flex items-center gap-2 shrink-0">
                             <button
                               type="button"
-                              onClick={() => toggleStarTrait(trait.id)}
+                              onClick={() => toggleStarTrait(rule.id)}
                               className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                                 starred
                                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
@@ -587,11 +841,10 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                               <Star className={`w-3.5 h-3.5 ${starred ? 'fill-amber-400 text-amber-400' : ''}`} />
                             </button>
 
-                            {/* Standardized '+ Learn' Catalog Action Button */}
                             <button
                               type="button"
                               disabled={equipped}
-                              onClick={() => handleEquipStockTrait(trait)}
+                              onClick={() => handleEquipStockRule(rule)}
                               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition-all ${
                                 equipped
                                   ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
@@ -606,7 +859,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                                   <span>Equipped</span>
                                 </>
                               ) : isFlaw ? (
-                                <span>+ Take Flaw (+{trait.flaw_points || 1} AP)</span>
+                                <span>+ Take Flaw (+{rule.flaw_points || 1} AP)</span>
                               ) : (
                                 <span>+ Learn</span>
                               )}
@@ -617,21 +870,21 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     })
                   ) : (
                     <div className="p-8 text-center text-xs text-slate-500 italic bg-slate-900/40 rounded-xl border border-slate-800">
-                      No stock traits found matching current table and genre filters.
+                      No stock rules found matching search.
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* TAB 2: CUSTOM FORGE */}
+            {/* TAB 3: CUSTOM FORGE */}
             {rightActiveTab === 'forge' && (
               <div className="flex flex-col flex-1 min-h-0 pt-2 overflow-y-auto pr-1">
                 <form onSubmit={handleCreateCustomForge} className="flex flex-col gap-3">
                   <div className="p-3 bg-purple-950/20 border border-purple-500/30 rounded-xl flex items-center justify-between">
                     <span className="text-xs font-bold text-purple-200 flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-purple-400" />
-                      Create Custom Trait, Quirk or Handicap
+                      Create Custom Rule, Biological Trait or Handicap
                     </span>
                   </div>
 
@@ -662,13 +915,13 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                         onChange={(e) => setCustomType(e.target.value as TraitType)}
                         className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-purple-200 outline-none"
                       >
-                        <option value="trait">🧬 Trait (Racial / Biological Adaptation)</option>
-                        <option value="quirk">✨ Quirk (Unique Mechanics / Rule Exception)</option>
+                        <option value="trait">📜 Rule (Physiology / Rule Exception / Background)</option>
+                        <option value="flaw">⚠️ Flaw (Handicap with AP Refund)</option>
                       </select>
                     </div>
                   </div>
 
-                  {/* Category & Flaw Points */}
+                  {/* Table Group & Flaw Points */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-slate-300 flex items-center">
@@ -694,50 +947,12 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                         onChange={(e) => setCustomFlawPoints(parseInt(e.target.value, 10))}
                         className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-amber-300 font-mono outline-none"
                       >
-                        <option value={0}>0 AP (Standard Trait / Quirk)</option>
+                        <option value={0}>0 AP (Standard Rule)</option>
                         <option value={1}>+1 AP (Minor Flaw / Handicap)</option>
                         <option value={2}>+2 AP (Major Flaw / Handicap)</option>
                         <option value={3}>+3 AP (Severe Flaw / Handicap)</option>
                         <option value={4}>+4 AP (Crippling Flaw / Handicap)</option>
                         <option value={5}>+5 AP (Maximum Flaw Cap)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Action & Usage */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-300">Action Type</label>
-                      <select
-                        value={customAction}
-                        onChange={(e) => setCustomAction(e.target.value)}
-                        className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-slate-200 outline-none"
-                      >
-                        <option value="P">P (Passive)</option>
-                        <option value="F">F (Free Action / Flaw)</option>
-                        <option value="A">A (Attack Action)</option>
-                        <option value="M">M (Move Action)</option>
-                        <option value="AM">AM (Attack + Move Action)</option>
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-300">Usage Standard</label>
-                      <select
-                        value={customUsage}
-                        onChange={(e) => setCustomUsage(e.target.value)}
-                        className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-slate-200 outline-none"
-                      >
-                        <option value="Passive">Passive</option>
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="1-🍀">1-🍀 (Luck)</option>
-                        <option value="1-⚡">1-⚡ (Spark)</option>
-                        <option value="1-Enc">1-Enc</option>
-                        <option value="2-Enc">2-Enc</option>
-                        <option value="3-Enc">3-Enc</option>
-                        <option value="1-Rnd">1-Rnd</option>
                       </select>
                     </div>
                   </div>
@@ -763,47 +978,34 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     </select>
                   </div>
 
-                  {/* Effect Description */}
+                  {/* Rule Description (Notes) */}
                   <div className="flex flex-col gap-1">
                     <label className="text-[11px] font-bold text-slate-300 flex items-center">
-                      Mechanical Effect
+                      Rule Description & Effect
                       <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer inline ml-1" />
                     </label>
                     <textarea
                       required
                       rows={3}
-                      value={customEffect}
-                      onChange={(e) => setCustomEffect(e.target.value)}
+                      placeholder="Describe the rule exception, biological trait, or flaw penalty..."
+                      value={customNotes}
+                      onChange={(e) => setCustomNotes(e.target.value)}
                       className="bg-slate-950 text-xs px-3 py-2 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500 resize-none"
                     />
                   </div>
 
-                  {/* Notes / Lore */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-300 flex items-center">
-                      Lore & Adjudication Notes (Optional)
-                      <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer inline ml-1" />
-                    </label>
-                    <input
-                      type="text"
-                      value={customNotes}
-                      onChange={(e) => setCustomNotes(e.target.value)}
-                      className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-slate-300 outline-none focus:border-purple-500"
-                    />
-                  </div>
-
                   {forgeError && (
-                    <div className="p-2 bg-rose-950/50 border border-rose-500/40 rounded-lg text-rose-300 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <div className="p-2.5 rounded-lg bg-rose-950/60 border border-rose-500/40 text-xs text-rose-300 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
                       <span>{forgeError}</span>
                     </div>
                   )}
 
                   <button
                     type="submit"
-                    className="mt-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
+                    className="w-full mt-2 py-2 px-4 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <span>Save & Learn Custom Trait</span>
+                    <span>Save & Learn Custom Rule</span>
                   </button>
                 </form>
               </div>
@@ -811,7 +1013,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
           </div>
         </div>
 
-        {/* ================= 4. FOOTER CONTEXT BAR & STANDARDIZED DONE BUTTON ================= */}
+        {/* ================= 3. FOOTER CONTEXT BAR ================= */}
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
           <div className="flex items-center gap-3">
             <span className="font-outfit font-bold text-slate-300">
@@ -822,10 +1024,9 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               Flaw Bonus: +{flawBonusAp} / +5 Max AP
             </span>
             <span>•</span>
-            <span className="font-mono">Total Equipped: {equippedTraits.length}</span>
+            <span className="font-mono">Total Equipped: {equippedRules.length}</span>
           </div>
 
-          {/* Standardized Master Blueprint Done Footer Button */}
           <button
             type="button"
             onClick={onClose}
@@ -839,3 +1040,5 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     document.body
   );
 };
+
+export const ManageRulesModal = ManageTraitsModal;

@@ -13,50 +13,47 @@ export type TechDiscipline = 'Archaic' | 'Tech' | 'BioTech' | 'CyberTech';
 export type UsageType = 'Active' | 'Passive' | 'Quirk';
 export type HardwareTier = 'Minor' | 'Lesser' | 'Greater' | 'Epic';
 export type PowerTableCategory = 'Race' | 'Class' | 'Discipline' | 'Combat Style' | 'Handicap' | 'Luck' | 'Custom';
-export type TraitType = 'trait' | 'quirk';
+export type TraitType = 'trait' | 'flaw';
 
 export interface StatHookDefinition {
   target: 'ar' | 'mr' | 'defense' | 'vitality' | 'luck' | 'wounds';
-  type: 'mind_die' | 'flat_bonus' | 'might_die' | 'motion_die';
+  type: 'mind_die' | 'flat_bonus' | 'might_die' | 'motion_die' | 'step_up' | 'step_down';
   attribute?: AttributeKey;
   value?: number;
   effectDescription?: string;
 }
 
-export interface SupabaseTrait {
+export interface SupabaseRule {
   id: number;
   name: string;
   type: TraitType;
-  action?: string;
-  usage?: string;
-  effect: string;
   flaw_points?: number;
   stat_hook?: StatHookDefinition | null;
   genres: string[];
   discipline?: string;
   table_group?: string;
   is_guildspace_locked?: boolean;
-  notes?: string;
+  notes: string;
   created_at?: string;
 }
 
-export interface TraitQuirkItem {
+export type SupabaseTrait = SupabaseRule;
+
+export interface RuleItem {
   id?: string | number;
   name: string;
   type: TraitType;
-  action?: string;
-  usage?: string;
-  effect: string;
   source?: string;
   table_group?: string;
   flaw_points?: number;
   stat_hook?: StatHookDefinition | null;
-  notes?: string;
+  notes: string;
   genres?: string[];
   is_guildspace_locked?: boolean;
-  checked?: boolean[];
   created_at?: string;
 }
+
+export type TraitQuirkItem = RuleItem;
 
 export interface ReadySlotConfig {
   tier: number;

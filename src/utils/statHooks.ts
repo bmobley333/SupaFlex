@@ -8,6 +8,7 @@ export interface ActiveStatHookAnnotation {
   target: 'ar' | 'mr' | 'defense' | 'vitality' | 'luck' | 'wounds';
   effectDescription: string;
   adjustmentValue: number | string;
+  isFlaw?: boolean;
 }
 
 export interface ResolvedStatHooks {

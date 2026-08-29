@@ -7,6 +7,7 @@ import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp 
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar } from '../common/QuickDeckBar';
+import { isTraitItem } from '../../utils/tableGroupUtils';
 import { supabase } from '../../lib/supabase';
 
 interface DerivedSkill {
@@ -1290,6 +1291,11 @@ export const SkillsetsPanel: React.FC = () => {
                                           {sk.name}
                                         </span>
                                         <ItemNotesPopover notes={sk.notes} itemName={sk.name} />
+                                        {isTraitItem(sk) && (
+                                          <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 shrink-0">
+                                            <span>🧬</span> Trait (Free)
+                                          </span>
+                                        )}
                                         {sk.discipline && (
                                           <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-800 text-cyan-300 border border-slate-700 shrink-0">
                                             {sk.discipline}
@@ -1331,9 +1337,13 @@ export const SkillsetsPanel: React.FC = () => {
                                     ) : (
                                       <button
                                         onClick={() => handleToggleIndividualSkill(sk.name)}
-                                        className="px-2.5 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/50 shrink-0 transition-all"
+                                        className={`px-2.5 py-1 text-xs font-bold rounded-lg border shrink-0 transition-all ${
+                                          isTraitItem(sk)
+                                            ? 'bg-emerald-600/40 text-emerald-200 border-emerald-500/60 hover:bg-emerald-600/60 shadow-sm'
+                                            : 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/50'
+                                        }`}
                                       >
-                                        + Learn
+                                        {isTraitItem(sk) ? '+ Learn Trait (0 AP)' : '+ Learn'}
                                       </button>
                                     )}
                                   </div>
