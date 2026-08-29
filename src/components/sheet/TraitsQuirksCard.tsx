@@ -1,6 +1,3 @@
-// src/components/sheet/TraitsQuirksCard.tsx
-// High-Density Micro-Card for Passive Physiology, Background Traits, Flaws & Derived Stat Hooks
-
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles,
@@ -10,11 +7,11 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ManageTraitsModal } from '../modals/ManageTraitsModal';
 import { TraitQuirkItem, calculateLiveSheetSpentAp } from '../../types/game';
+import { cleanTableGroupName } from '../../utils/tableGroupUtils';
 
 export const TraitsQuirksCard: React.FC = () => {
   const { activeCharacter } = useCharacterStore();
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'trait' | 'flaw'>('all');
 
   // Listen for global manager event
   useEffect(() => {
@@ -29,29 +26,13 @@ export const TraitsQuirksCard: React.FC = () => {
     return activeCharacter?.sheet_data?.traits_quirks || [];
   }, [activeCharacter?.sheet_data?.traits_quirks]);
 
+  const validTraits = useMemo(() => {
+    return (equippedTraits || []).filter((t): t is TraitQuirkItem => Boolean(t && t.name));
+  }, [equippedTraits]);
+
   const { flawBonusAp, rawFlawPoints } = useMemo(() => {
     return calculateLiveSheetSpentAp(activeCharacter?.sheet_data);
   }, [activeCharacter?.sheet_data]);
-
-  // Filtered traits for card display
-  const filteredTraits = useMemo(() => {
-    return equippedTraits.filter((t) => {
-      if (!t) return false;
-      if (activeFilter === 'all') return true;
-      if (activeFilter === 'flaw') return (t.flaw_points || 0) > 0 || t.type === 'flaw';
-      if (activeFilter === 'trait') return (t.type === 'trait' || !t.type) && (!t.flaw_points || t.flaw_points === 0);
-      return true;
-    });
-  }, [equippedTraits, activeFilter]);
-
-  const traitsCount = useMemo(
-    () => equippedTraits.filter((t) => (t.type === 'trait' || !t.type) && (!t.flaw_points || t.flaw_points === 0)).length,
-    [equippedTraits]
-  );
-  const flawsCount = useMemo(
-    () => equippedTraits.filter((t) => (t.flaw_points || 0) > 0 || t.type === 'flaw').length,
-    [equippedTraits]
-  );
 
   return (
     <div className="bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-4 flex flex-col gap-3 shadow-xl backdrop-blur-md relative overflow-hidden flex-1">
@@ -59,11 +40,11 @@ export const TraitsQuirksCard: React.FC = () => {
       <div className="flex items-center justify-between gap-2 flex-wrap border-b border-slate-800/80 pb-2.5">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-xl bg-purple-950/90 border border-purple-500/50 text-purple-300 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.25)]">
-            <span className="text-base leading-none">📜</span>
+            <span className="text-base leading-none">🧬</span>
           </div>
           <div className="flex items-center gap-1.5">
             <h3 className="font-outfit font-black text-sm tracking-wider text-slate-100 uppercase">
-              Rules
+              Archetype Rules
             </h3>
             <CardHelpButton ruleKey="traits" />
           </div>
@@ -91,58 +72,17 @@ export const TraitsQuirksCard: React.FC = () => {
             className="px-3.5 py-1.5 bg-purple-950/80 hover:bg-purple-900/90 text-purple-200 border border-purple-500/50 hover:border-purple-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Manage Rules</span>
+            <span>Manage Archetype</span>
           </button>
         </div>
       </div>
 
-      {/* KISS Multi-Option Pill Switch (2-Bucket: All, Traits, Flaws) */}
-      <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
-        <button
-          type="button"
-          onClick={() => setActiveFilter('all')}
-          className={`flex-1 py-1 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-            activeFilter === 'all'
-              ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-          }`}
-        >
-          <span>🌐 All</span>
-          <span className="text-[10px] font-mono opacity-80">({equippedTraits.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveFilter('trait')}
-          className={`flex-1 py-1 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-            activeFilter === 'trait'
-              ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-          }`}
-        >
-          <span>🧬 Traits</span>
-          <span className="text-[10px] font-mono opacity-80">({traitsCount})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveFilter('flaw')}
-          className={`flex-1 py-1 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-            activeFilter === 'flaw'
-              ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-          }`}
-        >
-          <span>⚠️ Flaws</span>
-          <span className="text-[10px] font-mono opacity-80">({flawsCount})</span>
-        </button>
-      </div>
-
-      {/* High-Density 2-Column Rules & Physiology Strip */}
+      {/* High-Density 2-Column Rules Strip */}
       <div className="flex flex-col gap-2 flex-1 min-h-[140px] max-h-[420px] overflow-y-auto pr-1">
-        {filteredTraits.length > 0 ? (
-          filteredTraits.map((t, idx) => {
+        {validTraits.length > 0 ? (
+          validTraits.map((t, idx) => {
             const isFlaw = (t.flaw_points || 0) > 0 || t.type === 'flaw';
+            const originTag = cleanTableGroupName(t.table_group || t.source || 'General');
 
             return (
               <div
@@ -159,14 +99,14 @@ export const TraitsQuirksCard: React.FC = () => {
                     {t.name}
                   </span>
 
-                  {/* Category Classification Pill */}
+                  {/* Clean Category Classification Pill */}
                   {isFlaw ? (
                     <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-amber-950/90 text-amber-300 border border-amber-500/40 w-fit flex items-center gap-1 mt-0.5">
                       <span>⚠️</span> Flaw (+{t.flaw_points || 1} AP)
                     </span>
                   ) : (
                     <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 w-fit flex items-center gap-1 mt-0.5">
-                      <span>🧬</span> Trait{t.source ? ` (${t.source})` : ''}
+                      <span>🧬</span> {originTag}
                     </span>
                   )}
                 </div>
@@ -198,13 +138,13 @@ export const TraitsQuirksCard: React.FC = () => {
           })
         ) : (
           <div className="p-6 bg-slate-950/40 rounded-xl border border-slate-800 text-xs text-slate-500 italic text-center flex flex-col items-center justify-center gap-1.5 flex-1">
-            <span>No rules or rule modifiers active.</span>
+            <span>No active archetype rules.</span>
             <button
               type="button"
               onClick={() => setShowManageModal(true)}
               className="text-purple-400 hover:text-purple-300 font-bold underline cursor-pointer text-xs"
             >
-              + Open Manage Rules to Select Archetypes & Rules
+              + Open Manage Archetype to Select Archetypes & Rules
             </button>
           </div>
         )}

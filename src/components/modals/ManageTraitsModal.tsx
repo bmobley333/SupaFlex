@@ -345,12 +345,12 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
         <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0 gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-purple-950/90 border border-purple-500/40 text-purple-300 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.25)]">
-              <span className="text-xl leading-none">📜</span>
+              <span className="text-xl leading-none">🧬</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-outfit font-black text-base text-slate-100 uppercase tracking-wide">
-                  Manage Rules
+                  Manage Archetype
                 </h3>
                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/40">
                   Active Rules: {equippedRules.length}
@@ -423,24 +423,18 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-xs font-outfit font-bold text-slate-100 flex items-center gap-1">
-                            <span>{isFlaw ? '⚠️' : '📜'}</span>
+                            <span>{isFlaw ? '⚠️' : '🧬'}</span>
                             <span>{rule.name}</span>
                           </span>
 
-                          {/* Classification Pill */}
-                          <span
-                            className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase ${
-                              isFlaw
-                                ? 'bg-amber-900/60 text-amber-300 border border-amber-500/40'
-                                : 'bg-emerald-900/60 text-emerald-300 border border-emerald-500/40'
-                            }`}
-                          >
-                            {isFlaw ? `Flaw (+${rule.flaw_points || 1} AP)` : 'Rule'}
-                          </span>
-
-                          {rule.table_group && (
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              [{rule.table_group}]
+                          {/* Clean Classification Pill */}
+                          {isFlaw ? (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-amber-900/60 text-amber-300 border border-amber-500/40">
+                              Flaw (+{rule.flaw_points || 1} AP)
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-emerald-900/60 text-emerald-300 border border-emerald-500/40">
+                              🧬 {cleanTableGroupName(rule.table_group || rule.source || 'General')}
                             </span>
                           )}
                         </div>
@@ -803,23 +797,17 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                           <div className="flex flex-col gap-1 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs font-outfit font-black text-slate-100 flex items-center gap-1">
-                                {isFlaw ? '⚠️' : '📜'}
+                                {isFlaw ? '⚠️' : '🧬'}
                                 <span>{rule.name}</span>
                               </span>
 
-                              <span
-                                className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase ${
-                                  isFlaw
-                                    ? 'bg-amber-900/60 text-amber-300 border border-amber-500/40'
-                                    : 'bg-emerald-900/60 text-emerald-300 border border-emerald-500/40'
-                                }`}
-                              >
-                                {isFlaw ? `Flaw (+${rule.flaw_points || 1} AP)` : 'Rule'}
-                              </span>
-
-                              {rule.table_group && (
-                                <span className="text-[10px] text-slate-400 font-mono">
-                                  [{rule.table_group}]
+                              {isFlaw ? (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-amber-900/60 text-amber-300 border border-amber-500/40">
+                                  Flaw (+{rule.flaw_points || 1} AP)
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-emerald-900/60 text-emerald-300 border border-emerald-500/40">
+                                  🧬 {cleanTableGroupName(rule.table_group || 'General')}
                                 </span>
                               )}
                             </div>
