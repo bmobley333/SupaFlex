@@ -26,8 +26,7 @@ GEAR_HEADERS = [
     "genres",
     "is_guildspace_locked",
     "discipline",
-    "table_group",
-    "compatible_with"
+    "table_group"
 ]
 
 HARDWARE_HEADERS = [
@@ -42,8 +41,7 @@ HARDWARE_HEADERS = [
     "genres",
     "is_guildspace_locked",
     "discipline",
-    "table_group",
-    "compatible_with"
+    "table_group"
 ]
 
 def parse_cost(cost_str):
@@ -258,20 +256,17 @@ def main():
                 genres_json,
                 is_locked,
                 discipline,
-                table_group,
-                compat
+                table_group
             ])
         else:
             # Routes to SB_Hardware
             if 'bio' in cat_lower:
                 discipline = 'BioTech'
                 table_group = 'BioTech Hardware'
-                compat = 'universal'
                 hw_cat = 'BioTech Hardware'
             elif 'cyber' in cat_lower:
                 discipline = 'CyberTech'
                 table_group = 'CyberTech Hardware'
-                compat = 'cyberware'
                 hw_cat = 'CyberTech Hardware'
             else:
                 discipline = 'Tech'
@@ -281,7 +276,6 @@ def main():
                 else:
                     table_group = 'Tech Hardware'
                     hw_cat = 'Tech Hardware'
-                compat = 'universal'
 
             tier = determine_hardware_tier(name, cat, subcat, req, cost_raw, notes)
             action, usage = determine_action_and_usage(name, subcat, tier)
@@ -302,8 +296,7 @@ def main():
                 genres_json,
                 is_locked,
                 discipline,
-                table_group,
-                compat
+                table_group
             ])
 
     print(f"✓ Converted {len(staged_gear)} Gear items and {len(staged_hardware)} Hardware items.")

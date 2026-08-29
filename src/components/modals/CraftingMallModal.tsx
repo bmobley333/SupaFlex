@@ -117,7 +117,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
           action,
           usage,
           effect,
-          source: `Crafting Mall (${author_name})`,
+          category: 'Custom',
           created_at: new Date().toISOString(),
         };
 

@@ -741,7 +741,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       action: createAction,
       usage: createUsage,
       effect: createEffect.trim(),
-      source: 'Custom Power',
+      category: 'Custom',
       created_at: new Date().toISOString(),
     };
 

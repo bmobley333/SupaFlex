@@ -10,7 +10,6 @@ export type PowerReadyType = 'primary_arsenal' | 'mobility_defense' | 'support_p
 
 export type PowerDiscipline = 'Sorce' | 'Psionics' | 'Psychosomatics' | 'Martial' | 'Universal';
 export type TechDiscipline = 'Archaic' | 'Tech' | 'BioTech' | 'CyberTech';
-export type UsageType = 'Active' | 'Passive' | 'Quirk';
 export type HardwareTier = 'Minor' | 'Lesser' | 'Greater' | 'Epic';
 export type PowerTableCategory = 'Race' | 'Class' | 'Discipline' | 'Combat Style' | 'Handicap' | 'Luck' | 'Custom';
 export type TraitType = 'trait' | 'flaw';
@@ -79,11 +78,7 @@ export interface AbilitySlot {
   notes?: string;
   kit?: string;
   table_group?: string;
-  usage_type?: UsageType;
-  source?: string;
   discipline?: string;
-  is_handicap?: boolean;
-  flaw_points?: number;
   stat_hook?: any;
 }
 
@@ -135,7 +130,6 @@ export interface SupabaseArmor {
   discipline?: string;
   kit?: string;
   table_group?: string;
-  compatible_with?: string;
   notes?: string;
   pic?: string;
   created_at?: string;
@@ -151,7 +145,6 @@ export interface SupabaseGear {
   discipline?: string;
   kit?: string;
   table_group?: string;
-  compatible_with?: string;
   action?: string;
   usage?: string;
   notes?: string;
@@ -278,7 +271,6 @@ export interface SupabaseShield {
   discipline?: string;
   kit?: string;
   table_group?: string;
-  compatible_with?: string;
   notes?: string;
   cost: string;
   created_at?: string;
@@ -340,7 +332,6 @@ export interface SupabaseWeapon {
   discipline?: string;
   kit?: string;
   table_group?: string;
-  compatible_with?: string;
   notes?: string;
   pic?: string;
   created_at?: string;
@@ -629,11 +620,7 @@ export interface Power {
   kit?: string;
   table_group?: string;
   table_name?: string;
-  source?: string;
-  usage_type?: UsageType;
   discipline?: string;
-  is_handicap?: boolean;
-  flaw_points?: number;
   stat_hook?: any;
   version?: number;
   base_name?: string;
@@ -881,7 +868,6 @@ export interface MagicItem {
   kit?: string;
   table_group?: string;
   discipline?: string;
-  compatible_with?: string;
   tier?: HardwareTier;
   source?: string;
   version?: number;

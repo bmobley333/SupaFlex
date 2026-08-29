@@ -31,8 +31,7 @@ TARGET_HEADERS = [
     "genres",
     "is_guildspace_locked",
     "discipline",
-    "table_group",
-    "compatible_with"
+    "table_group"
 ]
 
 def parse_cost(cost_str):
@@ -245,8 +244,7 @@ def main():
             genres_json,
             is_locked,
             discipline,
-            table_group,
-            compat
+            table_group
         ])
 
     print(f"✓ Successfully converted {len(staged_rows)} MSO weapons.")

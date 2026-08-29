@@ -28,11 +28,7 @@ TARGET_HEADERS = [
     "genres",
     "table_group",
     "is_guildspace_locked",
-    "usage_type",
-    "source",
-    "discipline",
-    "is_handicap",
-    "flaw_points"
+    "discipline"
 ]
 
 def map_sorpsi_power(name, cat, subcat, mso_act, mso_dur, notes):
@@ -227,11 +223,7 @@ def main():
             genres_json,
             table_group,
             is_locked,
-            usage_type,
-            source,
-            discipline,
-            is_handicap,
-            flaw_points
+            discipline
         ])
 
     print(f"\n📊 Summary of Powers Staged ({len(staged_powers)} items):")

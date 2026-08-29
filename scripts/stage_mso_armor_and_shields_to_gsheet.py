@@ -28,8 +28,7 @@ ARMOR_HEADERS = [
     "genres",
     "is_guildspace_locked",
     "discipline",
-    "table_group",
-    "compatible_with"
+    "table_group"
 ]
 
 SHIELD_HEADERS = [
@@ -42,8 +41,7 @@ SHIELD_HEADERS = [
     "genres",
     "is_guildspace_locked",
     "discipline",
-    "table_group",
-    "compatible_with"
+    "table_group"
 ]
 
 def parse_cost(cost_str):
@@ -285,8 +283,7 @@ def main():
             genres_json,
             is_locked,
             discipline,
-            table_group,
-            compat
+            table_group
         ])
 
     print(f"✓ Converted {len(staged_armor)} armor items.")
@@ -320,8 +317,6 @@ def main():
             discipline = 'Tech'
             table_group = 'Tech Shields'
 
-        compat = 'universal'
-
         tier = determine_shield_tier(s_name, cat, mso_ar)
         req_str, blk_str, mr_str = SHIELD_SCHEDULE[tier]
         cost_str = parse_cost(cost_raw)
@@ -339,8 +334,7 @@ def main():
             genres_json,
             is_locked,
             discipline,
-            table_group,
-            compat
+            table_group
         ])
 
     print(f"✓ Converted {len(staged_shields)} shield items.")

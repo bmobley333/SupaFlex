@@ -378,7 +378,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     const tableNames = Array.from(new Set(powers.map((p) => p.kit || p.table_group || p.table_name || 'General').filter(Boolean)));
     tableNames.sort((a, b) => a.localeCompare(b)).forEach((tblName) => {
       const sample = powers.find((p) => (p.kit || p.table_group || p.table_name) === tblName);
-      const cat = sample?.category || sample?.source || 'General';
+      const cat = sample?.category || sample?.discipline || 'General';
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push({ name: tblName });
     });
@@ -571,7 +571,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     const authorDisplayName = playerName?.trim() || playerEmail?.split('@')[0] || 'Hero';
     const tierIcon = tier === 'Minor' ? '🍺' : tier === 'Lesser' ? '🪄' : tier === 'Greater' ? '✨' : '💫';
     const samplePower = powers.find((p) => (p.kit || p.table_group || p.table_name) === selectedPowerTable);
-    const assignedCategory = samplePower?.category || samplePower?.source || 'Class';
+    const assignedCategory = samplePower?.category || samplePower?.discipline || 'Class';
 
     const categoryStr =
       creationType === 'relic'

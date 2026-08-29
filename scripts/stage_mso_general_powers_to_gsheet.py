@@ -28,11 +28,7 @@ TARGET_HEADERS = [
     "genres",
     "table_group",
     "is_guildspace_locked",
-    "usage_type",
-    "source",
-    "discipline",
-    "is_handicap",
-    "flaw_points"
+    "discipline"
 ]
 
 def evaluate_gen_power(name, classification, notes):
@@ -252,11 +248,7 @@ def main():
             genres_json,
             table_group,
             is_locked,
-            usage_type,
-            source,
-            discipline,
-            is_handicap,
-            flaw_points
+            discipline
         ])
 
     print(f"\n📊 Summary of General Powers Staged ({len(staged_powers)} items, {skipped_skills} skills ignored):")

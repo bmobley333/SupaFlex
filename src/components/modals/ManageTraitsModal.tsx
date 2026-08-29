@@ -234,10 +234,10 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
       );
       // Remove powers
       updated.character_power_codex = (prev.character_power_codex || []).filter(
-        (p) => !matchesKitFilter(p.kit || p.table_group, cleanTarget) && !(p.source || '').includes(cleanTarget)
+        (p) => !matchesKitFilter(p.kit || p.table_group, cleanTarget)
       );
       updated.power_slots = (prev.power_slots || []).filter(
-        (p) => !matchesKitFilter(p.kit || p.table_group, cleanTarget) && !(p.source || '').includes(cleanTarget)
+        (p) => !matchesKitFilter(p.kit || p.table_group, cleanTarget)
       );
       // Remove skills
       const kitSkills = stockSkillsCatalog
