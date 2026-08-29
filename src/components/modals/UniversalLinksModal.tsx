@@ -49,7 +49,7 @@ import { gameApi } from '../../services/api';
 import { InfoTooltip } from '../common/InfoTooltip';
 
 export type LinkScope = 'gm' | 'adventure' | 'encounter' | 'player' | 'character' | 'received';
-export type EditorTab = 'link' | 'note' | 'trait';
+export type EditorTab = 'link' | 'note' | 'dossier' | 'trait';
 
 export interface UniversalLinksModalProps {
   isOpen: boolean;
@@ -572,11 +572,12 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     );
   };
 
-  const isTraitsVisibleInLeftPane =
+  const isDossierVisibleInLeftPane =
     currentScope === 'character' &&
     !!activeCharacter &&
     (!searchQuery ||
-      'character traits & demographics'.includes(searchQuery.toLowerCase()) ||
+      'character dossier'.includes(searchQuery.toLowerCase()) ||
+      'dossier'.includes(searchQuery.toLowerCase()) ||
       (bio.appearance && bio.appearance.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (bio.positive_trait && bio.positive_trait.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (bio.negative_trait && bio.negative_trait.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -586,13 +587,13 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     (selectedTagFilter === 'ALL' || selectedTagFilter === 'Lore / Narrative');
 
   const handleSelectAllLinks = () => {
-    const totalVisibleCount = filteredLinks.length + (isTraitsVisibleInLeftPane ? 1 : 0);
+    const totalVisibleCount = filteredLinks.length + (isDossierVisibleInLeftPane ? 1 : 0);
     if (selectedLinkIds.length === totalVisibleCount && totalVisibleCount > 0) {
       setSelectedLinkIds([]);
     } else {
       const allIds = filteredLinks.map((l) => l.id);
-      if (isTraitsVisibleInLeftPane) {
-        allIds.push('__char_traits__');
+      if (isDossierVisibleInLeftPane) {
+        allIds.push('__char_dossier__');
       }
       setSelectedLinkIds(allIds);
     }
@@ -615,15 +616,15 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
       return;
     }
 
-    const isTraitsSelected = selectedLinkIds.includes('__char_traits__');
+    const isDossierSelected = selectedLinkIds.includes('__char_dossier__') || selectedLinkIds.includes('__char_traits__');
     const standardLinksToSend = scopeData.links.filter((l) => selectedLinkIds.includes(l.id));
 
     let linksToSend = [...standardLinksToSend];
 
-    if (isTraitsSelected && activeCharacter) {
+    if (isDossierSelected && activeCharacter) {
       const charBio = activeCharacter.sheet_data?.bio || {};
-      const traitMarkdownLines = [
-        `### 👤 ${activeCharacter.name || 'Hero'} — Traits & Demographics`,
+      const dossierMarkdownLines = [
+        `### 👤 ${activeCharacter.name || 'Hero'} — Dossier`,
         '',
         `- **Height:** ${charBio.height || '—'} | **Weight:** ${charBio.weight || '—'} | **Age:** ${charBio.age || '—'}`,
         `- **Appearance:** ${charBio.appearance || '—'}`,
@@ -634,16 +635,16 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         `- **Notes:** ${charBio.notes || '—'}`,
       ].join('\n');
 
-      const traitsLinkItem: EncounterLink = {
-        id: `traits_${activeCharacter.id}_${Date.now()}`,
-        name: `${activeCharacter.name || 'Hero'} - Traits & Demographics`,
-        description: traitMarkdownLines,
+      const dossierLinkItem: EncounterLink = {
+        id: `dossier_${activeCharacter.id}_${Date.now()}`,
+        name: `${activeCharacter.name || 'Hero'} - Dossier`,
+        description: dossierMarkdownLines,
         categoryTag: 'Lore / Narrative',
         isNote: true,
         created_at: new Date().toISOString(),
       };
 
-      linksToSend = [traitsLinkItem, ...linksToSend];
+      linksToSend = [dossierLinkItem, ...linksToSend];
     }
 
     if (linksToSend.length === 0) return;
@@ -971,7 +972,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
             {/* Scrollable Master List */}
             <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 min-h-0">
               {currentScope !== 'received' ? (
-                filteredLinks.length === 0 && !isTraitsVisibleInLeftPane ? (
+                filteredLinks.length === 0 && !isDossierVisibleInLeftPane ? (
                   <div className="h-full flex flex-col items-center justify-center p-6 bg-slate-950/30 rounded-xl border border-slate-800/60 text-center">
                     <Link2 className="w-8 h-8 text-slate-600 mb-2" />
                     <p className="text-xs font-bold text-slate-400">No items in {scopeData.title.split('&')[0]}</p>
@@ -981,18 +982,18 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                   </div>
                 ) : (
                   <>
-                    {/* Pinned Character Traits Card (Character Scope Only) */}
-                    {isTraitsVisibleInLeftPane && (
+                    {/* Pinned Character Dossier Card (Character Scope Only) */}
+                    {isDossierVisibleInLeftPane && (
                       <div
                         onClick={() => {
-                          setActiveEditorTab('trait');
+                          setActiveEditorTab('dossier');
                           setEditingId(null);
                           setIsEditingNote(false);
                         }}
                         className={`p-2.5 rounded-xl border transition flex flex-col gap-1.5 shadow-sm cursor-pointer ${
-                          activeEditorTab === 'trait'
+                          activeEditorTab === 'dossier' || activeEditorTab === 'trait'
                             ? 'bg-purple-950/40 border-purple-500/60 ring-1 ring-purple-500/40'
-                            : selectedLinkIds.includes('__char_traits__')
+                            : selectedLinkIds.includes('__char_dossier__') || selectedLinkIds.includes('__char_traits__')
                             ? 'bg-purple-950/30 border-purple-500/50'
                             : 'bg-slate-950/80 border-purple-900/40 hover:border-purple-700/60'
                         }`}
@@ -1003,12 +1004,12 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleToggleSelectLink('__char_traits__');
+                                handleToggleSelectLink('__char_dossier__');
                               }}
                               className="p-0.5 text-slate-400 hover:text-purple-300 transition cursor-pointer shrink-0"
-                              title={selectedLinkIds.includes('__char_traits__') ? 'Deselect traits' : 'Select traits for sharing'}
+                              title={selectedLinkIds.includes('__char_dossier__') || selectedLinkIds.includes('__char_traits__') ? 'Deselect dossier' : 'Select dossier for sharing'}
                             >
-                              {selectedLinkIds.includes('__char_traits__') ? (
+                              {selectedLinkIds.includes('__char_dossier__') || selectedLinkIds.includes('__char_traits__') ? (
                                 <CheckSquare className="w-3.5 h-3.5 text-purple-400" />
                               ) : (
                                 <Square className="w-3.5 h-3.5 text-slate-600 hover:text-slate-400" />
@@ -1017,17 +1018,17 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
 
                             <span className="text-sm">👤</span>
                             <span className="font-bold text-xs text-white truncate font-outfit">
-                              Character Traits & Demographics
+                              Character Dossier
                             </span>
                           </div>
 
                           <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 shrink-0">
-                            Traits
+                            Dossier
                           </span>
                         </div>
 
                         <p className="text-[11px] text-slate-400 truncate pl-6 font-sans">
-                          {bio.appearance || bio.positive_trait || bio.adventuring_goal || 'Height, Weight, Age, Appearance, Traits & Quirks'}
+                          {bio.appearance || bio.positive_trait || bio.adventuring_goal || 'Height, Weight, Age, Appearance, Dossier & Notes'}
                         </p>
                       </div>
                     )}
@@ -1450,18 +1451,18 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          setActiveEditorTab('trait');
+                          setActiveEditorTab('dossier');
                           setEditingId(null);
                           setIsEditingNote(false);
                         }}
                         className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                          activeEditorTab === 'trait'
+                          activeEditorTab === 'dossier' || activeEditorTab === 'trait'
                             ? 'bg-purple-600 text-white shadow-sm font-extrabold'
                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                         }`}
                       >
                         <User className="w-3.5 h-3.5" />
-                        <span>Trait Editor</span>
+                        <span>Dossier Editor</span>
                       </button>
                     )}
                   </div>
@@ -1634,14 +1635,14 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                   </form>
                 )}
 
-                {/* Tab 3: Trait Editor (Character Scope Only) */}
-                {activeEditorTab === 'trait' && (
+                {/* Tab 3: Dossier Editor (Character Scope Only) */}
+                {(activeEditorTab === 'dossier' || activeEditorTab === 'trait') && (
                   <div className="flex-1 flex flex-col gap-3.5 min-h-0 overflow-y-auto pr-1">
                     <div className="flex items-center justify-between border-b border-purple-500/20 pb-2 shrink-0">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-purple-400" />
                         <h4 className="font-outfit font-bold text-xs text-purple-300 uppercase tracking-wider">
-                          Character Traits & Demographics ({activeCharacter?.name || 'Active Hero'})
+                          Character Dossier ({activeCharacter?.name || 'Active Hero'})
                         </h4>
                       </div>
                       <span className="text-[11px] text-slate-400 font-mono">

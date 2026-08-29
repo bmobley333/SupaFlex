@@ -19,7 +19,7 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
     reorderCharacterLinkByIndex,
   } = useCharacterStore();
 
-  const [showTraitsModal, setShowTraitsModal] = useState(false);
+  const [showDossierModal, setShowDossierModal] = useState(false);
 
   if (!activeCharacter) return null;
 
@@ -42,7 +42,7 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
       <div className={`bg-gradient-to-b from-slate-800/40 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-slate-400/90 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap shadow-lg shadow-slate-950/20 ${className}`}>
         {/* Left Zone: Hero Identity, Level/AP Trigger & Race/Class Pills */}
         <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
-          <div className="p-1.5 rounded-xl bg-slate-850 border border-slate-600/50 text-slate-200 flex items-center justify-center shadow-[0_0_12px_rgba(148,163,184,0.2)] shrink-0">
+          <div className="p-1.5 rounded-xl bg-slate-855 border border-slate-600/50 text-slate-200 flex items-center justify-center shadow-[0_0_12px_rgba(148,163,184,0.2)] shrink-0">
             <span className="text-base leading-none">👤</span>
           </div>
 
@@ -74,16 +74,16 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
           </div>
         </div>
 
-        {/* Right Zone: Traits Quick Launch + Character Links & Notes Dropdown */}
+        {/* Right Zone: Dossier Quick Launch + Character Links & Notes Dropdown */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={() => setShowTraitsModal(true)}
+            onClick={() => setShowDossierModal(true)}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm cursor-pointer bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/35 text-purple-300 shadow-purple-950/40"
-            title="Open Character Traits & Demographics Editor in Links & Notes Hub"
+            title="Open Character Dossier Editor in Links & Notes Hub"
           >
             <span className="text-xs">👤</span>
-            <span className="font-outfit font-extrabold tracking-wide">Traits</span>
+            <span className="font-outfit font-extrabold tracking-wide">Dossier</span>
           </button>
 
           <UniversalLinksDropdown
@@ -98,12 +98,12 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
         </div>
       </div>
 
-      {showTraitsModal && (
+      {showDossierModal && (
         <UniversalLinksModal
-          isOpen={showTraitsModal}
-          onClose={() => setShowTraitsModal(false)}
+          isOpen={showDossierModal}
+          onClose={() => setShowDossierModal(false)}
           initialScope="character"
-          initialTab="trait"
+          initialTab="dossier"
           themeColor="indigo"
         />
       )}

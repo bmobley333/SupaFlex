@@ -22,8 +22,8 @@ import {
   StatHookDefinition,
   calculateLiveSheetSpentAp,
 } from '../../types/game';
-import { cleanTableGroupName, isTraitItem, matchesTableGroupFilter } from '../../utils/tableGroupUtils';
-import { collectTableTraitGrants, applyTableTraitGrantsToSheet } from '../../utils/bundleGrants';
+import { cleanKitName, isTraitItem, matchesKitFilter, sanitizeKitInput } from '../../utils/kitUtils';
+import { collectKitTraitGrants, applyKitTraitGrantsToSheet } from '../../utils/bundleGrants';
 
 interface ManageTraitsModalProps {
   isOpen: boolean;
@@ -108,14 +108,14 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   // Right Pane Tab & Search State
   const [rightActiveTab, setRightActiveTab] = useState<'archetypes' | 'catalog' | 'forge'>('archetypes');
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
-  const [selectedArchetypeTable, setSelectedArchetypeTable] = useState<string>('Human');
-  const [extraTableSelected, setExtraTableSelected] = useState<string>('');
+  const [selectedKit, setSelectedKit] = useState<string>('Human');
+  const [extraKitSelected, setExtraKitSelected] = useState<string>('');
   const [showGmWarning, setShowGmWarning] = useState<boolean>(false);
 
   // Custom Forge Form State
   const [customName, setCustomName] = useState<string>('');
   const [customType, setCustomType] = useState<TraitType>('trait');
-  const [customTableGroup, setCustomTableGroup] = useState<string>('Custom');
+  const [customKit, setCustomKit] = useState<string>('Custom');
   const [customFlawPoints, setCustomFlawPoints] = useState<number>(0);
   const [customStatHookPreset, setCustomStatHookPreset] = useState<string>('none');
   const [customNotes, setCustomNotes] = useState<string>('');
@@ -154,43 +154,48 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     });
   }, [equippedRules, leftSearchQuery]);
 
-  // All unique table groups across all loaded catalogs
-  const allDiscoveredTableGroups = useMemo(() => {
+  // All unique kits across all loaded catalogs
+  const allDiscoveredKits = useMemo(() => {
     const set = new Set<string>();
     stockPowersCatalog.forEach((p) => {
-      if (p.table_group) set.add(cleanTableGroupName(p.table_group));
+      const k = p.kit || p.table_group;
+      if (k) set.add(cleanKitName(k));
     });
     stockSkillsCatalog.forEach((s) => {
-      if (s.table_group) set.add(cleanTableGroupName(s.table_group));
+      const k = s.kit || s.table_group;
+      if (k) set.add(cleanKitName(k));
     });
     stockRulesCatalog.forEach((r) => {
-      if (r.table_group) set.add(cleanTableGroupName(r.table_group));
+      const k = r.kit || r.table_group;
+      if (k) set.add(cleanKitName(k));
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
 
-  // Live Bundle Preview for Selected Archetype Table
+  // Live Bundle Preview for Selected Kit
   const activeBundleGrants = useMemo(() => {
-    if (!selectedArchetypeTable) return null;
-    return collectTableTraitGrants(
-      selectedArchetypeTable,
+    if (!selectedKit) return null;
+    return collectKitTraitGrants(
+      selectedKit,
+      activeCharacter?.sheet_data?.level || 1,
       stockPowersCatalog,
       stockSkillsCatalog,
       stockRulesCatalog
     );
-  }, [selectedArchetypeTable, stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
+  }, [selectedKit, activeCharacter?.sheet_data?.level, stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
 
-  // Check if a table's bundle is currently equipped
-  const isTableBundleEquipped = useMemo(() => {
+  // Check if a kit's bundle is currently equipped
+  const isKitBundleEquipped = useMemo(() => {
     if (!activeBundleGrants || !activeCharacter?.sheet_data) return false;
     const sheet = activeCharacter.sheet_data;
+    const targetKit = activeBundleGrants.kitName || activeBundleGrants.tableName;
     
-    // Check if any rule or power from this table is equipped
+    // Check if any rule or power from this kit is equipped
     const hasRule = (sheet.traits_quirks || []).some(
-      (r) => matchesTableGroupFilter(r.table_group, activeBundleGrants.tableName)
+      (r) => matchesKitFilter(r.kit || r.table_group, targetKit)
     );
     const hasPower = (sheet.power_slots || []).concat(sheet.character_power_codex || []).some(
-      (p) => matchesTableGroupFilter(p.table_group, activeBundleGrants.tableName)
+      (p) => matchesKitFilter(p.kit || p.table_group, targetKit)
     );
     const hasSkill = (sheet.known_individual_skills || []).some((sName) =>
       activeBundleGrants.skills.some((bs) => bs.name.toLowerCase() === sName.toLowerCase())
@@ -199,46 +204,47 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     return hasRule || hasPower || hasSkill;
   }, [activeBundleGrants, activeCharacter?.sheet_data]);
 
-  // Handler: Apply Archetype Bundle to Sheet
-  const handleApplyArchetypeBundle = (tableName: string) => {
+  // Handler: Apply Kit Bundle to Sheet
+  const handleApplyKitBundle = (kitName: string) => {
     if (!activeCharacter?.sheet_data) return;
-    const grants = collectTableTraitGrants(
-      tableName,
+    const grants = collectKitTraitGrants(
+      kitName,
+      activeCharacter.sheet_data.level || 1,
       stockPowersCatalog,
       stockSkillsCatalog,
       stockRulesCatalog
     );
 
     updateActiveSheetData((prev) => {
-      return applyTableTraitGrantsToSheet(prev, grants);
+      return applyKitTraitGrantsToSheet(prev, grants);
     });
     saveActiveCharacter();
   };
 
-  // Handler: Unbundle/Remove a table's traits from sheet
-  const handleUnbundleArchetype = (tableName: string) => {
+  // Handler: Unbundle/Remove a kit's traits from sheet
+  const handleUnbundleKit = (kitName: string) => {
     if (!activeCharacter?.sheet_data) return;
-    const cleanTarget = cleanTableGroupName(tableName);
+    const cleanTarget = cleanKitName(kitName);
 
     updateActiveSheetData((prev) => {
       const updated = { ...prev };
       // Remove rules
       updated.traits_quirks = (prev.traits_quirks || []).filter(
-        (t) => !matchesTableGroupFilter(t.table_group, cleanTarget) && !(t.source || '').includes(cleanTarget)
+        (t) => !matchesKitFilter(t.kit || t.table_group, cleanTarget) && !(t.source || '').includes(cleanTarget)
       );
       // Remove powers
       updated.character_power_codex = (prev.character_power_codex || []).filter(
-        (p) => !matchesTableGroupFilter(p.table_group, cleanTarget) && !(p.source || '').includes(cleanTarget)
+        (p) => !matchesKitFilter(p.kit || p.table_group, cleanTarget) && !(p.source || '').includes(cleanTarget)
       );
       updated.power_slots = (prev.power_slots || []).filter(
-        (p) => !matchesTableGroupFilter(p.table_group, cleanTarget) && !(p.source || '').includes(cleanTarget)
+        (p) => !matchesKitFilter(p.kit || p.table_group, cleanTarget) && !(p.source || '').includes(cleanTarget)
       );
       // Remove skills
-      const tableSkills = stockSkillsCatalog
-        .filter((s) => isTraitItem(s) && matchesTableGroupFilter(s.table_group, cleanTarget))
+      const kitSkills = stockSkillsCatalog
+        .filter((s) => isTraitItem(s) && matchesKitFilter(s.kit || s.table_group, cleanTarget))
         .map((s) => s.name.toLowerCase());
       updated.known_individual_skills = (prev.known_individual_skills || []).filter(
-        (sName) => !tableSkills.includes(sName.toLowerCase())
+        (sName) => !kitSkills.includes(sName.toLowerCase())
       );
       return updated;
     });
@@ -251,10 +257,11 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
       if (!matchesGenre(r.genres, activeGenre)) return false;
       if (catalogSearchQuery.trim()) {
         const q = catalogSearchQuery.toLowerCase();
+        const ruleKit = r.kit || r.table_group || '';
         return (
           r.name.toLowerCase().includes(q) ||
           (r.notes || '').toLowerCase().includes(q) ||
-          (r.table_group || '').toLowerCase().includes(q)
+          ruleKit.toLowerCase().includes(q)
         );
       }
       return true;
@@ -272,14 +279,16 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
   const handleEquipStockRule = (rule: SupabaseRule) => {
     if (isRuleEquipped(rule.name)) return;
+    const ruleKit = rule.kit || rule.table_group;
     const item: RuleItem = {
       name: rule.name,
       type: rule.type,
       notes: rule.notes || '',
       flaw_points: rule.flaw_points || 0,
       stat_hook: rule.stat_hook || null,
-      table_group: rule.table_group,
-      source: rule.table_group || 'Stock Rules',
+      kit: ruleKit,
+      table_group: ruleKit,
+      source: ruleKit || 'Stock Rules',
     };
     addTraitQuirk(item);
   };
@@ -312,10 +321,12 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
       parsedHook = { target: 'vitality', type: 'flat_bonus', value: -3 };
     }
 
+    const kitValue = `${sanitizeKitInput(customKit.trim()) || 'Custom'} {Trait}`;
     const newRuleItem: RuleItem = {
       name: customName.trim(),
       type: customType,
-      table_group: `${customTableGroup.trim() || 'Custom'} (Trait)`,
+      kit: kitValue,
+      table_group: kitValue,
       flaw_points: customType === 'flaw' ? customFlawPoints : 0,
       stat_hook: parsedHook,
       notes: customNotes.trim(),
@@ -327,7 +338,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     // Reset Form
     setCustomName('');
     setCustomType('trait');
-    setCustomTableGroup('Custom');
+    setCustomKit('Custom');
     setCustomFlawPoints(0);
     setCustomStatHookPreset('none');
     setCustomNotes('');
@@ -350,7 +361,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-outfit font-black text-base text-slate-100 uppercase tracking-wide">
-                  Manage Archetype
+                  Manage Traits
                 </h3>
                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/40">
                   Active Rules: {equippedRules.length}
@@ -362,7 +373,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                 )}
               </div>
               <p className="text-xs text-slate-400">
-                Equip rules, select hallmark archetype tables to bundle starting traits, or forge custom rules & handicaps.
+                Equip rules, select hallmark core kits to bundle starting traits, or forge custom rules & handicaps.
               </p>
             </div>
           </div>
@@ -434,7 +445,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                             </span>
                           ) : (
                             <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-emerald-900/60 text-emerald-300 border border-emerald-500/40">
-                              🧬 {cleanTableGroupName(rule.table_group || rule.source || 'General')}
+                              🧬 {cleanKitName(rule.kit || rule.table_group || rule.source || 'General')}
                             </span>
                           )}
                         </div>
@@ -482,14 +493,14 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                 <div className="p-8 text-center text-xs text-slate-500 italic bg-slate-900/30 rounded-xl border border-slate-800/60 flex flex-col items-center justify-center gap-1">
                   <span>No active rules equipped.</span>
                   <span className="text-slate-600 text-[11px]">
-                    Select Hallmark Archetypes on the right to bundle starting traits & rules.
+                    Select Hallmark Core Kits on the right to bundle starting traits & rules.
                   </span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ================= RIGHT COLUMN: ARCHETYPE BUNDLER, STOCK CATALOG & CUSTOM FORGE ================= */}
+          {/* ================= RIGHT COLUMN: CORE KITS BUNDLER, STOCK CATALOG & CUSTOM FORGE ================= */}
           <div className="flex flex-col bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 min-h-0 shadow-inner">
             {/* Top Navigation Tabs */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 shrink-0 gap-2">
@@ -504,7 +515,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   }`}
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span>🏛️ Archetype Tables</span>
+                  <span>🏛️ Core Kits</span>
                 </button>
 
                 <button
@@ -535,13 +546,13 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               </button>
             </div>
 
-            {/* TAB 1: ARCHETYPE & HALLMARK TABLE BUNDLER */}
+            {/* TAB 1: CORE KITS BUNDLER */}
             {rightActiveTab === 'archetypes' && (
               <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
                 <div className="p-2.5 bg-purple-950/30 border border-purple-500/30 rounded-xl text-xs text-purple-200 flex items-center justify-between">
                   <span className="flex items-center gap-1.5 font-bold">
                     <Award className="w-4 h-4 text-purple-400" />
-                    Hallmark Archetype Bundler
+                    Hallmark Core Kits
                   </span>
                   <span className="text-[11px] text-purple-300 font-mono">
                     Auto-bundles 0 AP starting traits
@@ -556,9 +567,9 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                       <span>🧬</span> Race / Ancestry
                     </label>
                     <select
-                      value={HALLMARK_RACES.includes(selectedArchetypeTable) ? selectedArchetypeTable : ''}
+                      value={HALLMARK_RACES.includes(selectedKit) ? selectedKit : ''}
                       onChange={(e) => {
-                        if (e.target.value) setSelectedArchetypeTable(e.target.value);
+                        if (e.target.value) setSelectedKit(e.target.value);
                       }}
                       className="bg-slate-900 text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
                     >
@@ -571,15 +582,15 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     </select>
                   </div>
 
-                  {/* 2. Class / Archetype */}
+                  {/* 2. Class */}
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                      <span>⚔️</span> Class Archetype
+                      <span>⚔️</span> Class
                     </label>
                     <select
-                      value={HALLMARK_CLASSES.includes(selectedArchetypeTable) ? selectedArchetypeTable : ''}
+                      value={HALLMARK_CLASSES.includes(selectedKit) ? selectedKit : ''}
                       onChange={(e) => {
-                        if (e.target.value) setSelectedArchetypeTable(e.target.value);
+                        if (e.target.value) setSelectedKit(e.target.value);
                       }}
                       className="bg-slate-900 text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
                     >
@@ -598,9 +609,9 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                       <span>🎯</span> Combat Style
                     </label>
                     <select
-                      value={HALLMARK_STYLES.includes(selectedArchetypeTable) ? selectedArchetypeTable : ''}
+                      value={HALLMARK_STYLES.includes(selectedKit) ? selectedKit : ''}
                       onChange={(e) => {
-                        if (e.target.value) setSelectedArchetypeTable(e.target.value);
+                        if (e.target.value) setSelectedKit(e.target.value);
                       }}
                       className="bg-slate-900 text-xs px-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
                     >
@@ -614,33 +625,33 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   </div>
                 </div>
 
-                {/* Multiclass / Extra Tables Option (with GM Warning) */}
+                {/* Multiclass / Extra Kits Option (with GM Warning) */}
                 <div className="p-2.5 bg-slate-900/60 border border-slate-800 rounded-xl flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <label className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
                       <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-                      Multiclass / Custom Table (GM Approval)
+                      Multiclass / Custom Kit (GM Approval)
                     </label>
                     <span className="text-[10px] text-slate-500 font-mono">
-                      {allDiscoveredTableGroups.length} tables found
+                      {allDiscoveredKits.length} kits found
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <select
-                      value={extraTableSelected}
+                      value={extraKitSelected}
                       onChange={(e) => {
-                        setExtraTableSelected(e.target.value);
+                        setExtraKitSelected(e.target.value);
                         if (e.target.value) {
-                          setSelectedArchetypeTable(e.target.value);
+                          setSelectedKit(e.target.value);
                           setShowGmWarning(true);
                         }
                       }}
                       className="bg-slate-950 text-xs px-2.5 py-1.5 rounded-lg border border-amber-500/40 text-amber-200 outline-none flex-1"
                     >
-                      <option value="">-- Select Any Hallmark Table --</option>
-                      {allDiscoveredTableGroups.map((tbl) => (
-                        <option key={tbl} value={tbl}>
-                          {tbl}
+                      <option value="">-- Select Any Hallmark Kit --</option>
+                      {allDiscoveredKits.map((k) => (
+                        <option key={k} value={k}>
+                          {k}
                         </option>
                       ))}
                     </select>
@@ -648,18 +659,18 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
                   {showGmWarning && (
                     <div className="p-2 rounded-lg bg-amber-950/40 border border-amber-500/30 text-[11px] text-amber-200">
-                      ⚠️ <strong>GM Approval Notice:</strong> Selecting additional hallmark tables grants starting traits for multiclass or hybrid heritages.
+                      ⚠️ <strong>GM Approval Notice:</strong> Selecting additional hallmark kits grants starting traits for multiclass or hybrid heritages.
                     </div>
                   )}
                 </div>
 
-                {/* Live Bundle Preview Card for Current Selected Table */}
+                {/* Live Bundle Preview Card for Current Selected Kit */}
                 {activeBundleGrants && (
                   <div className="p-3.5 rounded-xl border border-purple-500/40 bg-purple-950/20 flex flex-col gap-2.5 shadow-md">
                     <div className="flex items-center justify-between border-b border-purple-500/30 pb-2">
                       <div className="flex items-center gap-2">
                         <span className="text-base font-outfit font-black text-white">
-                          🏛️ {activeBundleGrants.tableName}
+                          🏛️ {activeBundleGrants.kitName || activeBundleGrants.tableName}
                         </span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-bold">
                           {activeBundleGrants.powers.length + activeBundleGrants.skills.length + activeBundleGrants.traits.length} Starting Grants
@@ -667,14 +678,14 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                       </div>
 
                       {/* Action Button: Apply or Unbundle */}
-                      {isTableBundleEquipped ? (
+                      {isKitBundleEquipped ? (
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
                             <Check className="w-4 h-4" /> Active
                           </span>
                           <button
                             type="button"
-                            onClick={() => handleUnbundleArchetype(activeBundleGrants.tableName)}
+                            onClick={() => handleUnbundleKit(activeBundleGrants.kitName || activeBundleGrants.tableName)}
                             className="px-2.5 py-1 text-xs font-bold text-rose-300 bg-rose-950/60 border border-rose-500/40 hover:bg-rose-900/80 rounded-lg transition-all cursor-pointer"
                           >
                             Unbundle
@@ -683,11 +694,11 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                       ) : (
                         <button
                           type="button"
-                          onClick={() => handleApplyArchetypeBundle(activeBundleGrants.tableName)}
+                          onClick={() => handleApplyKitBundle(activeBundleGrants.kitName || activeBundleGrants.tableName)}
                           className="px-3.5 py-1.5 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-lg shadow transition-all flex items-center gap-1.5 cursor-pointer"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
-                          <span>+ Apply Archetype Traits (Free)</span>
+                          <span>+ Apply Core Traits (Free)</span>
                         </button>
                       )}
                     </div>
@@ -807,7 +818,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                                 </span>
                               ) : (
                                 <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-emerald-900/60 text-emerald-300 border border-emerald-500/40">
-                                  🧬 {cleanTableGroupName(rule.table_group || 'General')}
+                                  🧬 {cleanKitName(rule.kit || rule.table_group || 'General')}
                                 </span>
                               )}
                             </div>
@@ -909,18 +920,18 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     </div>
                   </div>
 
-                  {/* Table Group & Flaw Points */}
+                  {/* Kit & Flaw Points */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-slate-300 flex items-center">
-                        Table Group / Source
+                        Kit / Source
                         <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer inline ml-1" />
                       </label>
                       <input
                         type="text"
                         placeholder="e.g. Custom"
-                        value={customTableGroup}
-                        onChange={(e) => setCustomTableGroup(e.target.value)}
+                        value={customKit}
+                        onChange={(e) => setCustomKit(sanitizeKitInput(e.target.value))}
                         className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
                       />
                     </div>

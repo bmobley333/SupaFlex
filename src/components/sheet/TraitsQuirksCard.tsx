@@ -7,7 +7,7 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ManageTraitsModal } from '../modals/ManageTraitsModal';
 import { TraitQuirkItem, calculateLiveSheetSpentAp } from '../../types/game';
-import { cleanTableGroupName } from '../../utils/tableGroupUtils';
+import { cleanKitName } from '../../utils/kitUtils';
 
 export const TraitsQuirksCard: React.FC = () => {
   const { activeCharacter } = useCharacterStore();
@@ -44,7 +44,7 @@ export const TraitsQuirksCard: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5">
             <h3 className="font-outfit font-black text-sm tracking-wider text-slate-100 uppercase">
-              Archetype Rules
+              Core Traits
             </h3>
             <CardHelpButton ruleKey="traits" />
           </div>
@@ -72,7 +72,7 @@ export const TraitsQuirksCard: React.FC = () => {
             className="px-3.5 py-1.5 bg-purple-950/80 hover:bg-purple-900/90 text-purple-200 border border-purple-500/50 hover:border-purple-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Manage Archetype</span>
+            <span>Manage Traits</span>
           </button>
         </div>
       </div>
@@ -82,7 +82,7 @@ export const TraitsQuirksCard: React.FC = () => {
         {validTraits.length > 0 ? (
           validTraits.map((t, idx) => {
             const isFlaw = (t.flaw_points || 0) > 0 || t.type === 'flaw';
-            const originTag = cleanTableGroupName(t.table_group || t.source || 'General');
+            const originTag = cleanKitName(t.kit || t.table_group || t.source || 'General');
 
             return (
               <div
@@ -138,13 +138,13 @@ export const TraitsQuirksCard: React.FC = () => {
           })
         ) : (
           <div className="p-6 bg-slate-950/40 rounded-xl border border-slate-800 text-xs text-slate-500 italic text-center flex flex-col items-center justify-center gap-1.5 flex-1">
-            <span>No active archetype rules.</span>
+            <span>No active core traits.</span>
             <button
               type="button"
               onClick={() => setShowManageModal(true)}
               className="text-purple-400 hover:text-purple-300 font-bold underline cursor-pointer text-xs"
             >
-              + Open Manage Archetype to Select Archetypes & Rules
+              + Open Manage Traits to Select Core Kits & Rules
             </button>
           </div>
         )}

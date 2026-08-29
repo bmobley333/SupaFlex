@@ -457,7 +457,7 @@ export const WeaponsCard: React.FC = () => {
         return false;
       }
       if (activeWeaponTable !== 'ALL' && activeWeaponTable !== 'STARRED') {
-        const tbl = (weapon.table_group || (weapon as any).table || (weapon as any).category || weapon.type || '').toLowerCase();
+        const tbl = (weapon.kit || weapon.table_group || (weapon as any).table || (weapon as any).category || weapon.type || '').toLowerCase();
         const activeLower = activeWeaponTable.toLowerCase();
         if (tbl !== activeLower && !tbl.includes(activeLower)) {
           return false;

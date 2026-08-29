@@ -9,7 +9,7 @@ import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types
 import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed, getApCostForNextSlot, getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
 import { getPowerReadyCategory, getReadySlotConfig, validateReadyMatrix } from '../../utils/readyMatrixSchedule';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
-import { cleanTableGroupName, isTraitItem } from '../../utils/tableGroupUtils';
+import { cleanKitName, isTraitItem, getKitMinLevel } from '../../utils/kitUtils';
 
 interface AbilitySlotsGridProps {
   title: string;
@@ -855,8 +855,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const groupedTables = useMemo(() => {
     const acc = categoryFilteredCatalog.reduce((map, item) => {
-      let rawTableName = (item as any).table_group || (item as any).table || (item as any).table_name;
-      let tableName = cleanTableGroupName(rawTableName);
+      let rawTableName = (item as any).kit || (item as any).table_group || (item as any).table || (item as any).table_name;
+      let tableName = cleanKitName(rawTableName);
       if (!tableName) {
         tableName = type === 'powers' ? 'General Powers' : 'Tech Hardware';
       }
@@ -955,8 +955,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const groupedFilteredAbilities = useMemo(() => {
     const map: Record<string, (Power | MagicItem)[]> = {};
     filteredCatalogAbilities.forEach((item) => {
-      let rawTbl = (item as any).table_group || (item as any).table || (item as any).table_name;
-      let tbl = cleanTableGroupName(rawTbl);
+      let rawTbl = (item as any).kit || (item as any).table_group || (item as any).table || (item as any).table_name;
+      let tbl = cleanKitName(rawTbl);
       if (!tbl) {
         tbl = type === 'powers' ? 'General Powers' : 'Tech Hardware';
       }
@@ -2150,11 +2150,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       const curSilver = sheetData.silver ?? 0;
                                       const totalCharSilver = curGold * 100 + curSilver;
                                       const hasFunds = isSpells ? totalCharSilver >= itemCostSilver : true;
+                                      const charLevel = sheetData.level || 1;
+                                      const itemMinLevel = getKitMinLevel(item);
+                                      const isLevelLocked = itemMinLevel > charLevel;
 
                                       return (
                                         <div
                                           key={item.id || idx}
-                                          className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-amber-500/40 transition-all shrink-0"
+                                          className={`p-3 rounded-xl border flex flex-col gap-2 transition-all shrink-0 ${
+                                            isLevelLocked
+                                              ? 'bg-slate-950/40 border-slate-850 opacity-75'
+                                              : 'bg-slate-950/60 border-slate-800 hover:border-amber-500/40'
+                                          }`}
                                         >
                                           {/* Header Row: Name, Version, Action & Usage (Adjacent), Buttons */}
                                           <div className="flex items-center justify-between gap-2">
@@ -2170,7 +2177,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                               )}
                                               {isTraitItem(item) && (
                                                 <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                                                  <span>🧬</span> Trait (Free)
+                                                  <span>🧬</span> Trait {itemMinLevel > 1 ? `(Lvl ${itemMinLevel})` : '(Free)'}
+                                                </span>
+                                              )}
+                                              {isLevelLocked && !isTraitItem(item) && (
+                                                <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-amber-950/90 text-amber-300 border border-amber-500/50 flex items-center gap-1">
+                                                  <span>🔒</span> Lvl {itemMinLevel}
                                                 </span>
                                               )}
                                               {version > 1 && (
@@ -2220,18 +2232,25 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
                                               <button
                                                 type="button"
-                                                onClick={() => handleLearnAbility(item)}
-                                                className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
-                                                  isSpells
+                                                onClick={() => {
+                                                  if (!isLevelLocked) handleLearnAbility(item);
+                                                }}
+                                                disabled={isLevelLocked}
+                                                className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
+                                                  isLevelLocked
+                                                    ? 'bg-slate-900 text-slate-500 border-slate-800 cursor-not-allowed opacity-60'
+                                                    : isSpells
                                                     ? hasFunds
-                                                      ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
-                                                      : 'bg-rose-600/30 text-rose-200 border-rose-500/50 hover:bg-rose-600/50'
+                                                      ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 cursor-pointer'
+                                                      : 'bg-rose-600/30 text-rose-200 border-rose-500/50 hover:bg-rose-600/50 cursor-pointer'
                                                     : isTraitItem(item)
-                                                    ? 'bg-emerald-600/40 text-emerald-200 border-emerald-500/60 hover:bg-emerald-600/60 shadow-sm'
-                                                    : 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
+                                                    ? 'bg-emerald-600/40 text-emerald-200 border-emerald-500/60 hover:bg-emerald-600/60 shadow-sm cursor-pointer'
+                                                    : 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 cursor-pointer'
                                                 }`}
                                                 title={
-                                                  isSpells
+                                                  isLevelLocked
+                                                    ? `Requires Character Level ${itemMinLevel}`
+                                                    : isSpells
                                                     ? hasFunds
                                                       ? `Purchase for ${costAbbrev} and add to Vault`
                                                       : `Insufficient funds! Requires ${costAbbrev} (${itemCostSilver}s). You have ${formatCostAbbreviated(
@@ -2242,7 +2261,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                     : 'Learn Power to Vault'
                                                 }
                                               >
-                                                {isSpells
+                                                {isLevelLocked
+                                                  ? `🔒 Lvl ${itemMinLevel}`
+                                                  : isSpells
                                                   ? `+ Add to Vault [${costAbbrev}]`
                                                   : isTraitItem(item)
                                                   ? '+ Learn Trait (0 AP)'

@@ -249,17 +249,17 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
   starredCount,
   colorTheme = 'amber',
   maxPinned = 8,
-  placeholderText = '➕ Pin Table Below',
+  placeholderText = '➕ Pin Kit Below',
   showAllOption = true,
   showStarredOption = true,
   totalCatalogCount,
 }) => {
-  // 1. Group catalog items strictly by real table_group
+  // 1. Group catalog items strictly by real kit
   const groupedTables = useMemo(() => {
     const acc: Record<string, any[]> = {};
 
     (catalogItems || []).forEach((item) => {
-      const tbl = item.table_group ? String(item.table_group).trim() : '';
+      const tbl = (item.kit || item.table_group) ? String(item.kit || item.table_group).trim() : '';
       if (tbl) {
         if (!acc[tbl]) acc[tbl] = [];
         acc[tbl].push(item);
@@ -285,13 +285,13 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
     const groups: Record<string, string[]> = {};
 
     if (domain === 'powers') {
-      groups['🧬 Racial Tables'] = [];
-      groups['✨ Discipline Tables'] = [];
-      groups['👤 Class & Chapter Tables'] = [];
-      groups['⚔️ Combat Style Tables'] = [];
+      groups['🧬 Racial Kits'] = [];
+      groups['✨ Discipline Kits'] = [];
+      groups['👤 Class & Chapter Kits'] = [];
+      groups['⚔️ Combat Style Kits'] = [];
       groups['⚠️ Handicaps & Flaws'] = [];
-      groups['🍀 Luck & General Tables'] = [];
-      groups['📁 Custom & Other Tables'] = [];
+      groups['🍀 Luck & General Kits'] = [];
+      groups['📁 Custom & Other Kits'] = [];
 
       availableTableNames.forEach((tblName) => {
         const sampleItem = groupedTables[tblName]?.[0];
@@ -321,7 +321,7 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
           nameLower.includes('shanask') ||
           nameLower.includes('zin-shee')
         ) {
-          groups['🧬 Racial Tables'].push(tblName);
+          groups['🧬 Racial Kits'].push(tblName);
         } else if (
           sub.includes('sorce') ||
           sub.includes('psionic') ||
@@ -330,7 +330,7 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
           nameLower.includes('psionic') ||
           nameLower.includes('psychosomatic')
         ) {
-          groups['✨ Discipline Tables'].push(tblName);
+          groups['✨ Discipline Kits'].push(tblName);
         } else if (sub.includes('handicap') || sub.includes('flaw') || nameLower.includes('handicap') || nameLower.includes('flaw')) {
           groups['⚠️ Handicaps & Flaws'].push(tblName);
         } else if (
@@ -343,7 +343,7 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
           nameLower.includes('brawler') ||
           nameLower.includes('shield')
         ) {
-          groups['⚔️ Combat Style Tables'].push(tblName);
+          groups['⚔️ Combat Style Kits'].push(tblName);
         } else if (
           sub.includes('class') ||
           sub.includes('chapter') ||
@@ -368,11 +368,11 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
           nameLower.includes('berserker') ||
           nameLower.includes('vanguard')
         ) {
-          groups['👤 Class & Chapter Tables'].push(tblName);
+          groups['👤 Class & Chapter Kits'].push(tblName);
         } else if (sub.includes('luck') || nameLower.includes('luck') || nameLower.includes('general')) {
-          groups['🍀 Luck & General Tables'].push(tblName);
+          groups['🍀 Luck & General Kits'].push(tblName);
         } else {
-          groups['📁 Custom & Other Tables'].push(tblName);
+          groups['📁 Custom & Other Kits'].push(tblName);
         }
       });
     } else if (domain === 'weapons') {

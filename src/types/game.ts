@@ -31,6 +31,7 @@ export interface SupabaseRule {
   stat_hook?: StatHookDefinition | null;
   genres: string[];
   discipline?: string;
+  kit?: string;
   table_group?: string;
   is_guildspace_locked?: boolean;
   notes: string;
@@ -44,6 +45,7 @@ export interface RuleItem {
   name: string;
   type: TraitType;
   source?: string;
+  kit?: string;
   table_group?: string;
   flaw_points?: number;
   stat_hook?: StatHookDefinition | null;
@@ -75,6 +77,7 @@ export interface AbilitySlot {
   ready?: PowerReadyType;
   is_readied?: boolean;
   notes?: string;
+  kit?: string;
   table_group?: string;
   usage_type?: UsageType;
   source?: string;
@@ -130,6 +133,7 @@ export interface SupabaseArmor {
   mr: string;
   cost: string;
   discipline?: string;
+  kit?: string;
   table_group?: string;
   compatible_with?: string;
   notes?: string;
@@ -145,6 +149,7 @@ export interface SupabaseGear {
   name: string;
   cost: string;
   discipline?: string;
+  kit?: string;
   table_group?: string;
   compatible_with?: string;
   action?: string;
@@ -271,6 +276,7 @@ export interface SupabaseShield {
   max_block: string;
   mr: string;
   discipline?: string;
+  kit?: string;
   table_group?: string;
   compatible_with?: string;
   notes?: string;
@@ -332,6 +338,7 @@ export interface SupabaseWeapon {
   max_block: string;
   cost: string;
   discipline?: string;
+  kit?: string;
   table_group?: string;
   compatible_with?: string;
   notes?: string;
@@ -542,6 +549,7 @@ export interface CharacterSheetData {
   custom_skillsets?: CustomSkillsetDefinition[]; // Custom user-created skillsets
   traits_quirks?: TraitQuirkItem[]; // Passive traits, racial adaptations, unique quirks & flaws
   favorite_trait_tables?: string[]; // Favorited trait tables
+  favorite_trait_kits?: string[]; // Favorited trait kits
   favorite_power_tables?: string[]; // Favorited power tables (table_name strings)
   favorite_weapon_tables?: string[]; // Favorited weapon tables
   favorite_armor_tables?: string[]; // Favorited armor tables
@@ -618,6 +626,7 @@ export interface Power {
   category?: string;
   ready?: PowerReadyType;
   sub?: string;
+  kit?: string;
   table_group?: string;
   table_name?: string;
   source?: string;
@@ -869,6 +878,7 @@ export interface MagicItem {
   category?: string;
   sub?: string;
   table_name?: string;
+  kit?: string;
   table_group?: string;
   discipline?: string;
   compatible_with?: string;
@@ -901,6 +911,7 @@ export interface SupabaseSkill {
   skillset: string[];
   genres: string[];
   discipline?: string;
+  kit?: string;
   table_group?: string;
   is_guildspace_locked?: boolean;
   notes?: string;
@@ -916,6 +927,7 @@ export interface Skillset {
   source: string | null;
   discipline?: string;
   category?: string;
+  kit?: string;
   table_group?: string;
   notes?: string;
   created_at: string;
@@ -991,6 +1003,7 @@ export interface CustomCreationData {
   slot_weight?: 1 | 2 | 3 | 4;
   ready_category?: string;
   skills?: string[];
+  kit?: string;
   table_group?: string;
   table?: string;
   [key: string]: any;

@@ -332,7 +332,7 @@ export const ShieldCard: React.FC = () => {
       // Table Quick Deck Filter
       if (activeShieldTable === 'STARRED' && !isItemStarred(item)) return false;
       if (activeShieldTable !== 'ALL' && activeShieldTable !== 'STARRED') {
-        const tbl = (item.table_group || (item as any).category || '').toLowerCase();
+        const tbl = (item.kit || item.table_group || (item as any).category || '').toLowerCase();
         const activeLower = activeShieldTable.toLowerCase();
         if (tbl !== activeLower && !tbl.includes(activeLower)) {
           return false;

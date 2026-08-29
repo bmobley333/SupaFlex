@@ -1654,8 +1654,10 @@ export const gameApi = {
       };
 
       if (item.type === 'power') {
-        if (item.item_data?.table_group || item.item_data?.table) {
-          masterPayload.table_group = item.item_data.table_group || item.item_data.table;
+        const assignedKit = item.item_data?.kit || item.item_data?.table_group || item.item_data?.table;
+        if (assignedKit) {
+          masterPayload.kit = assignedKit;
+          masterPayload.table_group = assignedKit;
         }
         if (item.item_data?.ready_category || item.item_data?.ready) {
           masterPayload.ready = item.item_data.ready_category || item.item_data.ready;

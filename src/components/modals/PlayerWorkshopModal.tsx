@@ -8,6 +8,7 @@ import { gameApi } from '../../services/api';
 import { CustomCreationType, CustomCreationItem } from '../../types/game';
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
 import { InfoTooltip } from '../common/InfoTooltip';
+import { sanitizeKitInput } from '../../utils/kitUtils';
 
 interface PlayerWorkshopModalProps {
   isOpen: boolean;
@@ -374,9 +375,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   // Group all available power tables by Category for clean <optgroup> dropdown selection
   const groupedPowerTables = useMemo(() => {
     const groups: Record<string, { name: string }[]> = {};
-    const tableNames = Array.from(new Set(powers.map((p) => p.table_group || p.table_name || 'General').filter(Boolean)));
+    const tableNames = Array.from(new Set(powers.map((p) => p.kit || p.table_group || p.table_name || 'General').filter(Boolean)));
     tableNames.sort((a, b) => a.localeCompare(b)).forEach((tblName) => {
-      const sample = powers.find((p) => (p.table_group || p.table_name) === tblName);
+      const sample = powers.find((p) => (p.kit || p.table_group || p.table_name) === tblName);
       const cat = sample?.category || sample?.source || 'General';
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push({ name: tblName });
@@ -569,7 +570,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
     const authorDisplayName = playerName?.trim() || playerEmail?.split('@')[0] || 'Hero';
     const tierIcon = tier === 'Minor' ? '🍺' : tier === 'Lesser' ? '🪄' : tier === 'Greater' ? '✨' : '💫';
-    const samplePower = powers.find((p) => (p.table_group || p.table_name) === selectedPowerTable);
+    const samplePower = powers.find((p) => (p.kit || p.table_group || p.table_name) === selectedPowerTable);
     const assignedCategory = samplePower?.category || samplePower?.source || 'Class';
 
     const categoryStr =
@@ -620,6 +621,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       itemDataPayload.effect = effect.trim();
       itemDataPayload.ready = powerReady;
       itemDataPayload.ready_category = powerReady;
+      itemDataPayload.kit = selectedPowerTable;
       itemDataPayload.table_group = selectedPowerTable;
       itemDataPayload.table = selectedPowerTable;
       itemDataPayload.category = assignedCategory;
@@ -1078,7 +1080,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => setName(sanitizeKitInput(e.target.value))}
                   placeholder="e.g. Chronomancer, Shadowblade, Vampire"
                   className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
                   required
@@ -1110,7 +1112,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                       type="text"
                       placeholder="Enter custom category..."
                       value={customCategoryInput}
-                      onChange={(e) => setCustomCategoryInput(e.target.value)}
+                      onChange={(e) => setCustomCategoryInput(sanitizeKitInput(e.target.value))}
                       className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 flex-1"
                       required
                     />
@@ -1777,7 +1779,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                     <input
                       type="text"
                       value={gearCategoryNewText}
-                      onChange={(e) => setGearCategoryNewText(e.target.value)}
+                      onChange={(e) => setGearCategoryNewText(sanitizeKitInput(e.target.value))}
                       placeholder="Type custom category name..."
                       className="bg-slate-950 text-teal-300 text-xs px-3 py-2 rounded-xl border border-teal-500/50 outline-none focus:border-teal-400"
                       required

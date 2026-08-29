@@ -87,6 +87,7 @@ interface CharacterStore {
   removeTraitQuirk: (traitNameOrId: string | number) => void;
   toggleStarTrait: (id: string | number) => void;
   toggleFavoriteTraitTable: (tableGroup: string) => void;
+  toggleFavoriteTraitKit: (kitName: string) => void;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
@@ -891,12 +892,18 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   toggleFavoriteTraitTable: (tableGroup: string) => {
+    get().toggleFavoriteTraitKit(tableGroup);
+  },
+
+  toggleFavoriteTraitKit: (kitName: string) => {
     get().updateActiveSheetData((prev) => {
-      const current = prev.favorite_trait_tables || [];
-      const isFav = current.includes(tableGroup);
+      const currentKits: string[] = prev.favorite_trait_kits || prev.favorite_trait_tables || [];
+      const isFav = currentKits.includes(kitName);
+      const nextList = isFav ? currentKits.filter((x: string) => x !== kitName) : [...currentKits, kitName];
       return {
         ...prev,
-        favorite_trait_tables: isFav ? current.filter((x) => x !== tableGroup) : [...current, tableGroup],
+        favorite_trait_kits: nextList,
+        favorite_trait_tables: nextList,
       };
     });
     get().saveActiveCharacter();

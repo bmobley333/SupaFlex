@@ -200,7 +200,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     } else if (activeGearTable !== 'ALL' && activeGearTable !== 'STARRED') {
       const activeLower = activeGearTable.toLowerCase();
       base = base.filter((g) => {
-        const tbl = (g.table_group || g.category || 'General').toLowerCase();
+        const tbl = (g.kit || g.table_group || g.category || 'General').toLowerCase();
         return tbl === activeLower || tbl.includes(activeLower);
       });
     }

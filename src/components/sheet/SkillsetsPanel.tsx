@@ -7,7 +7,7 @@ import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp 
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar } from '../common/QuickDeckBar';
-import { isTraitItem } from '../../utils/tableGroupUtils';
+import { isTraitItem } from '../../utils/kitUtils';
 import { supabase } from '../../lib/supabase';
 
 interface DerivedSkill {
@@ -26,6 +26,7 @@ interface CatalogSkillOption {
   notes?: string;
   genres?: string[];
   discipline?: string;
+  kit?: string;
   table_group?: string;
 }
 
@@ -103,7 +104,8 @@ export const SkillsetsPanel: React.FC = () => {
             skills: [],
             genres: sk.genres || ['Medieval', 'Modern', 'SciFi'],
             discipline: sk.discipline || 'Universal',
-            table_group: sk.table_group || 'Core Skills',
+            kit: sk.kit || sk.table_group || 'Core Skills',
+            table_group: sk.kit || sk.table_group || 'Core Skills',
             source: 'Stock',
             created_at: sk.created_at,
           });
@@ -407,7 +409,8 @@ export const SkillsetsPanel: React.FC = () => {
         notes: sk.notes,
         genres: sk.genres || ['Medieval', 'Modern', 'SciFi'],
         discipline: sk.discipline,
-        table_group: sk.table_group,
+        kit: sk.kit || sk.table_group,
+        table_group: sk.kit || sk.table_group,
       });
     });
 
@@ -682,7 +685,7 @@ export const SkillsetsPanel: React.FC = () => {
     } else if (activeSkillsetTable !== 'ALL' && activeSkillsetTable !== 'STARRED') {
       const activeLower = activeSkillsetTable.toLowerCase();
       base = base.filter((ks) => {
-        const tbl = (ks.table_group || ks.category || ks.source || '').toLowerCase();
+        const tbl = (ks.kit || ks.table_group || ks.category || ks.source || '').toLowerCase();
         return tbl === activeLower || tbl.includes(activeLower);
       });
     }
@@ -739,17 +742,17 @@ export const SkillsetsPanel: React.FC = () => {
       {/* Main Sheet Card Header */}
       <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2.5 gap-2 flex-wrap">
         <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="p-1.5 rounded-xl bg-indigo-950/90 border border-indigo-500/50 text-indigo-300 flex items-center justify-center shadow-[0_0_12px_rgba(99,102,241,0.25)]">
+          <div className="p-1.5 rounded-xl bg-indigo-900/90 border border-indigo-500/60 text-indigo-200 flex items-center justify-center shadow-[0_0_14px_rgba(99,102,241,0.35)]">
             <span className="text-base leading-none">🎓</span>
           </div>
           <h3 className="font-outfit font-extrabold text-sm tracking-widest text-indigo-200 uppercase">
-            Skillsets & Derived Skills
+            Skills
           </h3>
           <CardHelpButton ruleKey="skills.basics" />
 
           {/* Inline Count Badges */}
           <div className="flex items-center gap-1.5 text-xs font-mono font-bold">
-            <span className="px-2 py-0.5 bg-purple-950/80 text-purple-300 border border-purple-500/30 rounded-lg">
+            <span className="px-2 py-0.5 bg-indigo-950/80 text-indigo-300 border border-indigo-500/30 rounded-lg">
               🎓 {uniqueKnownSkillsetNames.length} Skillset{uniqueKnownSkillsetNames.length === 1 ? '' : 's'}
             </span>
             <span className="px-2 py-0.5 bg-indigo-950/80 text-indigo-300 border border-indigo-500/30 rounded-lg">
@@ -764,19 +767,19 @@ export const SkillsetsPanel: React.FC = () => {
             onClick={() => setShowManageModal(!showManageModal)}
             className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
               showManageModal
-                ? 'bg-purple-600/30 text-purple-200 border-purple-400 shadow-purple-500/30'
-                : 'bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/30 text-purple-300'
+                ? 'bg-indigo-600/30 text-indigo-200 border-indigo-400 shadow-indigo-500/30'
+                : 'bg-indigo-950/40 hover:bg-indigo-900/50 border-indigo-500/30 text-indigo-300'
             }`}
             title="Manage character skills, skillsets, and custom skills"
           >
             <span className="font-outfit font-bold">Manage Skills</span>
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-purple-900/80 rounded text-purple-200">
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
               {uniqueKnownSkillsetNames.length}/{effectiveSkillsets.length}
             </span>
             {showManageModal ? (
-              <ChevronUp className="w-3.5 h-3.5 text-purple-300 shrink-0" />
+              <ChevronUp className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
             ) : (
-              <ChevronDown className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <ChevronDown className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
             )}
           </button>
 
@@ -790,7 +793,7 @@ export const SkillsetsPanel: React.FC = () => {
                 {/* Header */}
                 <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
                   <div className="flex items-center gap-2.5 shrink-0">
-                    <div className="p-2 rounded-xl bg-purple-950/80 border border-purple-500/30 text-purple-300 flex items-center justify-center">
+                    <div className="p-2 rounded-xl bg-indigo-900/80 border border-indigo-500/50 text-indigo-300 flex items-center justify-center shadow-[0_0_12px_rgba(99,102,241,0.25)]">
                       <span className="text-lg leading-none">🎓</span>
                     </div>
                     <div>
@@ -804,10 +807,10 @@ export const SkillsetsPanel: React.FC = () => {
                   </div>
 
                   {/* Header Status Pill */}
-                  <div className="px-3.5 py-1 bg-purple-950/70 border border-purple-500/40 rounded-full font-mono font-bold text-xs text-purple-200 flex items-center gap-2 shadow-md">
+                  <div className="px-3.5 py-1 bg-indigo-950/70 border border-indigo-500/40 rounded-full font-mono font-bold text-xs text-indigo-200 flex items-center gap-2 shadow-md">
                     <span>
-                      SkillSets <strong className="text-purple-300">{skillsetCount}</strong>
-                      {individualSkillCount > 0 && <>; Skills <strong className="text-purple-300">{individualSkillCount}</strong></>}; Used{' '}
+                      SkillSets <strong className="text-indigo-300">{skillsetCount}</strong>
+                      {individualSkillCount > 0 && <>; Skills <strong className="text-indigo-300">{individualSkillCount}</strong></>}; Used{' '}
                       <strong className="text-rose-300">
                         {totalApSpent} AP
                       </strong>
@@ -830,8 +833,8 @@ export const SkillsetsPanel: React.FC = () => {
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                     <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
                       <div className="flex items-center gap-1.5">
-                        <GraduationCap className="w-4 h-4 text-purple-400" />
-                        <span className="text-xs font-outfit font-bold uppercase tracking-wider text-purple-300">
+                        <GraduationCap className="w-4 h-4 text-indigo-400" />
+                        <span className="text-xs font-outfit font-bold uppercase tracking-wider text-indigo-300">
                           Known Skillsets
                         </span>
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
@@ -845,7 +848,7 @@ export const SkillsetsPanel: React.FC = () => {
                           type="text"
                           value={leftSearchQuery}
                           onChange={(e) => setLeftSearchQuery(e.target.value)}
-                          className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-purple-500 w-24 sm:w-28"
+                          className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-indigo-500 w-24 sm:w-28"
                         />
                       </div>
                     </div>
@@ -869,14 +872,14 @@ export const SkillsetsPanel: React.FC = () => {
                             return (
                               <div
                                 key={ksName}
-                                className="p-2.5 bg-purple-950/40 rounded-xl border border-purple-500/30 flex items-start justify-between gap-2 hover:border-purple-400/50 transition-all shrink-0"
+                                className="p-2.5 bg-indigo-950/40 rounded-xl border border-indigo-500/30 flex items-start justify-between gap-2 hover:border-indigo-400/50 transition-all shrink-0"
                               >
                                 <div className="flex flex-col gap-1 flex-1 min-w-0">
                                   <span className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1.5">
-                                    <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                                    <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                                     <span>{ksName}</span>
                                     {isCustom && (
-                                      <span className="text-[9px] font-mono font-bold bg-purple-900/80 text-purple-200 px-1.5 py-0.2 rounded border border-purple-500/40 shrink-0">
+                                      <span className="text-[9px] font-mono font-bold bg-indigo-900/80 text-indigo-200 px-1.5 py-0.2 rounded border border-indigo-500/40 shrink-0">
                                         Custom
                                       </span>
                                     )}
@@ -957,7 +960,7 @@ export const SkillsetsPanel: React.FC = () => {
                         onClick={() => setActiveRightTab('skillsets')}
                         className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
                           activeRightTab === 'skillsets'
-                            ? 'border-purple-400 text-purple-400'
+                            ? 'border-indigo-400 text-indigo-400'
                             : 'border-transparent text-slate-400 hover:text-slate-200'
                         }`}
                       >
@@ -999,7 +1002,7 @@ export const SkillsetsPanel: React.FC = () => {
                             <select
                               value={localGenreFilter}
                               onChange={(e) => setLocalGenreFilter(e.target.value)}
-                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 cursor-pointer flex-1"
+                              className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 cursor-pointer flex-1"
                             >
                               <option value="ALL">🌐 All Genres</option>
                               <option value="Medieval">🏰 Medieval</option>
@@ -1017,7 +1020,7 @@ export const SkillsetsPanel: React.FC = () => {
                             onUpdatePinnedTables={handleUpdatePinnedSkillsetTables}
                             catalogItems={effectiveSkillsets}
                             starredCount={starredSkillsetsCount}
-                            colorTheme="purple"
+                            colorTheme="blue"
                             totalCatalogCount={effectiveSkillsets.length}
                             placeholderText="➕ Pin Skillset Table"
                           />
@@ -1031,7 +1034,7 @@ export const SkillsetsPanel: React.FC = () => {
                                 value={rightSearchQuery}
                                 onChange={(e) => setRightSearchQuery(e.target.value)}
                                 placeholder="Search skillsets, skills, notes..."
-                                className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 w-full"
+                                className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 w-full"
                               />
                             </div>
                             <div className="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono font-bold text-slate-300 shrink-0">
@@ -1042,8 +1045,8 @@ export const SkillsetsPanel: React.FC = () => {
 
                         {/* Zero Matches Feedback & 1-Click Reset */}
                         {filteredCatalogSkillsets.length === 0 && (
-                          <div className="p-3.5 bg-slate-950/60 rounded-xl border border-purple-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
-                            <span className="text-purple-300 font-semibold">
+                          <div className="p-3.5 bg-slate-950/60 rounded-xl border border-indigo-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
+                            <span className="text-indigo-300 font-semibold">
                               0 skillsets match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
                               {activeSkillsetTable !== 'ALL' && activeSkillsetTable !== 'STARRED' ? ` • ${activeSkillsetTable}` : ''})
                             </span>
@@ -1054,7 +1057,7 @@ export const SkillsetsPanel: React.FC = () => {
                                 setActiveSkillsetTable('ALL');
                                 setRightSearchQuery('');
                               }}
-                              className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
+                              className="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
                             >
                               Reset All Filters
                             </button>
@@ -1072,8 +1075,8 @@ export const SkillsetsPanel: React.FC = () => {
                                   key={ks.id || ks.name}
                                   className={`p-2.5 rounded-xl border transition-all flex items-start justify-between gap-2 shrink-0 ${
                                     isKnown
-                                      ? 'bg-purple-950/40 border-purple-500/40 text-purple-100 shadow-sm'
-                                      : 'bg-slate-900/90 border-slate-800 text-slate-300 hover:border-purple-500/40'
+                                      ? 'bg-indigo-950/40 border-indigo-500/40 text-indigo-100 shadow-sm'
+                                      : 'bg-slate-900/90 border-slate-800 text-slate-300 hover:border-indigo-500/40'
                                   }`}
                                 >
                                   <div className="flex flex-col gap-1 flex-1 min-w-0">
@@ -1083,12 +1086,12 @@ export const SkillsetsPanel: React.FC = () => {
                                       </span>
                                       <ItemNotesPopover notes={ks.notes || effectiveSkillsets.find((s) => s.name.toLowerCase() === ks.name.toLowerCase())?.notes} itemName={ks.name} />
                                       {isCustom && (
-                                        <span className="text-[9px] font-mono font-bold bg-purple-900/80 text-purple-200 px-1.5 py-0.2 rounded border border-purple-500/40 shrink-0">
+                                        <span className="text-[9px] font-mono font-bold bg-indigo-900/80 text-indigo-200 px-1.5 py-0.2 rounded border border-indigo-500/40 shrink-0">
                                           Custom
                                         </span>
                                       )}
                                       {isKnown && (
-                                        <span className="text-[10px] font-mono font-bold bg-purple-900 text-purple-200 px-1.5 py-0.2 rounded border border-purple-500/40">
+                                        <span className="text-[10px] font-mono font-bold bg-indigo-900 text-indigo-200 px-1.5 py-0.2 rounded border border-indigo-500/40">
                                           Learned
                                         </span>
                                       )}
@@ -1128,7 +1131,7 @@ export const SkillsetsPanel: React.FC = () => {
                                       className={`px-2.5 py-1 text-xs font-bold rounded-lg border shrink-0 transition-all ${
                                         isKnown
                                           ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30'
-                                          : 'bg-purple-600/30 text-purple-200 border-purple-500/50 hover:bg-purple-600/50'
+                                          : 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50'
                                       }`}
                                     >
                                       {isKnown ? 'Forget' : '+ Learn'}
@@ -1167,7 +1170,7 @@ export const SkillsetsPanel: React.FC = () => {
                           <select
                             value={localAttributeFilter}
                             onChange={(e) => setLocalAttributeFilter(e.target.value)}
-                            className="bg-slate-900 text-purple-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 cursor-pointer flex-1 min-w-[120px]"
+                            className="bg-slate-900 text-indigo-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 cursor-pointer flex-1 min-w-[120px]"
                           >
                             <option value="ALL">🌐 All Attributes</option>
                             <option value="✨">✨ Magic</option>
@@ -1260,7 +1263,7 @@ export const SkillsetsPanel: React.FC = () => {
                                   key={sk.name}
                                   className={`p-2.5 bg-slate-900/90 rounded-xl border flex items-center justify-between gap-2.5 shrink-0 shadow-sm transition-all ${
                                     isSkillsetDerived
-                                      ? 'border-purple-500/30 text-purple-200 opacity-90'
+                                      ? 'border-indigo-500/30 text-indigo-200 opacity-90'
                                       : isIndividuallyLearned
                                       ? 'border-indigo-500/40 text-indigo-100'
                                       : 'border-slate-800 text-slate-300 hover:border-indigo-500/40'
@@ -1277,7 +1280,7 @@ export const SkillsetsPanel: React.FC = () => {
                                           : sk.emoji === '👁️' || sk.emoji === '👁'
                                           ? 'bg-cyan-950/80 text-cyan-300 border-cyan-500/40'
                                           : sk.emoji === '✨'
-                                          ? 'bg-purple-950/80 text-purple-300 border-purple-500/40'
+                                          ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
                                           : 'bg-rose-950/80 text-rose-300 border-rose-500/40'
                                       }`}
                                       title={`Attribute: ${EMOJI_MAP[sk.emoji]?.label || sk.emoji}`}
@@ -1324,7 +1327,7 @@ export const SkillsetsPanel: React.FC = () => {
                                       <Star className={`w-3.5 h-3.5 ${isSkillStarred(sk.name) ? 'fill-amber-400' : ''}`} />
                                     </button>
                                     {isSkillsetDerived ? (
-                                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-purple-950 text-purple-300 rounded border border-purple-500/30 shrink-0">
+                                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-indigo-950 text-indigo-300 rounded border border-indigo-500/30 shrink-0">
                                         🎓 From Skillset
                                       </span>
                                     ) : isIndividuallyLearned ? (
@@ -1369,11 +1372,11 @@ export const SkillsetsPanel: React.FC = () => {
                             onClick={() => setCreatorSubMode('skillset')}
                             className={`flex-1 py-1 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border ${
                               creatorSubMode === 'skillset'
-                                ? 'bg-purple-600/30 text-purple-200 border-purple-500/50 shadow-sm'
+                                ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 shadow-sm'
                                 : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
                             }`}
                           >
-                            <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                            <Sparkles className="w-3.5 h-3.5 text-indigo-300" />
                             <span>Custom Skillset (2 AP)</span>
                           </button>
                           <button
@@ -1393,9 +1396,9 @@ export const SkillsetsPanel: React.FC = () => {
                         {/* MODE 1: CUSTOM SKILLSET CREATOR & EDITOR */}
                         {creatorSubMode === 'skillset' && (
                           <form onSubmit={handleSaveCustomSkillset} className="flex-1 flex flex-col gap-2.5 min-h-0 overflow-y-auto pr-1">
-                            <div className="flex items-center justify-between border-b border-purple-500/20 pb-1.5 shrink-0">
-                              <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
-                                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                            <div className="flex items-center justify-between border-b border-indigo-500/20 pb-1.5 shrink-0">
+                              <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
                                 {editingCustomSkillsetOriginalName ? `Editing: ${editingCustomSkillsetOriginalName}` : 'Create Custom Skillset'}
                               </span>
                               {editingCustomSkillsetOriginalName && (
@@ -1421,7 +1424,7 @@ export const SkillsetsPanel: React.FC = () => {
                                 type="text"
                                 value={customSkillsetName}
                                 onChange={(e) => setCustomSkillsetName(e.target.value)}
-                                className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-purple-400"
+                                className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-indigo-400"
                                 required
                               />
                             </div>
@@ -1444,13 +1447,13 @@ export const SkillsetsPanel: React.FC = () => {
                                   {selectedCustomSkills.map((skName) => (
                                     <span
                                       key={skName}
-                                      className="px-2 py-0.5 bg-purple-900/60 text-purple-200 border border-purple-500/40 rounded-lg text-xs font-semibold flex items-center gap-1"
+                                      className="px-2 py-0.5 bg-indigo-900/60 text-indigo-200 border border-indigo-500/40 rounded-lg text-xs font-semibold flex items-center gap-1"
                                     >
                                       <span>{skName}</span>
                                       <button
                                         type="button"
                                         onClick={() => setSelectedCustomSkills((prev) => prev.filter((s) => s !== skName))}
-                                        className="text-purple-300 hover:text-rose-300 ml-0.5"
+                                        className="text-indigo-300 hover:text-rose-300 ml-0.5"
                                       >
                                         <X className="w-3 h-3" />
                                       </button>
@@ -1467,12 +1470,12 @@ export const SkillsetsPanel: React.FC = () => {
                             {/* Skill Picker Search & List */}
                             <div className="flex-1 flex flex-col gap-1 min-h-[130px] bg-slate-950/50 p-2 rounded-xl border border-slate-800 overflow-hidden">
                               <div className="relative shrink-0">
-                                <Search className="w-3 h-3 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                                 <input
                                   type="text"
                                   value={skillPickerSearch}
                                   onChange={(e) => setSkillPickerSearch(e.target.value)}
-                                  className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-purple-500 w-full"
+                                  className="bg-slate-900 text-slate-200 text-[11px] pl-8 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-indigo-500 w-full"
                                 />
                               </div>
 
@@ -1514,7 +1517,7 @@ export const SkillsetsPanel: React.FC = () => {
                                           className={`px-2 py-0.5 text-[10px] font-bold rounded border shrink-0 ${
                                             disabled
                                               ? 'opacity-40 bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
-                                              : 'bg-purple-600/30 text-purple-200 border-purple-500/50 hover:bg-purple-600/50 cursor-pointer'
+                                              : 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50 cursor-pointer'
                                           }`}
                                         >
                                           + Add
@@ -1545,7 +1548,7 @@ export const SkillsetsPanel: React.FC = () => {
                               disabled={selectedCustomSkills.length < 2 || selectedCustomSkills.length > 5 || !customSkillsetName.trim()}
                               className={`font-bold text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow transition-all shrink-0 ${
                                 selectedCustomSkills.length >= 2 && selectedCustomSkills.length <= 5 && customSkillsetName.trim()
-                                  ? 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
+                                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer'
                                   : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                               }`}
                             >
@@ -1618,7 +1621,7 @@ export const SkillsetsPanel: React.FC = () => {
 
                 {/* Footer */}
                 <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-purple-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-indigo-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
                     <span className="text-slate-400 font-sans font-semibold text-[11px]">Skillset Summary:</span>
                     <span>Known Skillsets: {uniqueKnownSkillsetNames.length}</span>
                     <span>•</span>
@@ -1641,7 +1644,7 @@ export const SkillsetsPanel: React.FC = () => {
       {/* Active Known Skillsets Top Strip (when learned) */}
       {uniqueKnownSkillsetNames.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap pb-2 border-b border-slate-800/80">
-          <span className="text-[11px] font-outfit font-bold uppercase tracking-wider text-purple-300/80 shrink-0">
+          <span className="text-[11px] font-outfit font-bold uppercase tracking-wider text-indigo-300/80 shrink-0">
             Active SkillSets:
           </span>
           <div className="flex flex-wrap gap-1.5">
@@ -1652,12 +1655,12 @@ export const SkillsetsPanel: React.FC = () => {
               return (
                 <span
                   key={ksName}
-                  className="px-2.5 py-1 bg-purple-950/50 text-purple-200 border border-purple-500/40 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                  className="px-2.5 py-1 bg-indigo-950/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
                 >
                   <span className="text-xs">🎓</span>
                   <span>{ksName}</span>
                   {isCustom && (
-                    <span className="text-[9px] font-mono font-bold bg-purple-900/80 text-purple-200 px-1 py-0.2 rounded border border-purple-500/40">
+                    <span className="text-[9px] font-mono font-bold bg-indigo-900/80 text-indigo-200 px-1 py-0.2 rounded border border-indigo-500/40">
                       Custom
                     </span>
                   )}
@@ -1678,7 +1681,7 @@ export const SkillsetsPanel: React.FC = () => {
                 className={`px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1 shadow-sm ${
                   skill.source === 'individual'
                     ? 'bg-indigo-950/80 border-indigo-500/40 hover:border-indigo-400/60'
-                    : 'bg-slate-950/80 border-purple-500/30 hover:border-purple-400/60'
+                    : 'bg-slate-950/80 border-indigo-500/30 hover:border-indigo-400/60'
                 }`}
                 title={`${skill.name} (${skill.attributeKey.toUpperCase()}: d${skill.dieRating}) - ${
                   skill.source === 'individual' ? 'Individually Learned' : 'Skillset Derived'

@@ -1,41 +1,51 @@
 // src/utils/bundleGrants.ts
-// Auto-Grant Table Bundling Engine for SupaFlex
-// Automatically equips starting (Trait) items across all tables (powers, skills, traits, gear, etc.)
+// Auto-Grant Kit Bundling Engine for SupaFlex
+// Automatically equips starting {Trait} and {Trait[Level]} items across all kits (powers, skills, traits, gear, etc.)
 
 import { Power, SupabaseSkill, SupabaseTrait, TraitQuirkItem, AbilitySlot, CharacterSheetData } from '../types/game';
-import { isTraitItem, matchesTableGroupFilter, cleanTableGroupName } from './tableGroupUtils';
+import { matchesKitFilter, cleanKitName, parseKit } from './kitUtils';
 
-export interface TableTraitGrants {
-  tableName: string;
+export interface KitTraitGrants {
+  kitName: string;
+  tableName: string; // Alias for backward compatibility
   powers: Power[];
   skills: SupabaseSkill[];
   traits: SupabaseTrait[];
 }
 
+export type TableTraitGrants = KitTraitGrants;
+
 /**
- * Scans all loaded catalog items across tables for items matching a target table group with (Trait) suffix.
+ * Scans all loaded catalog items across kits for items matching a target kit with {Trait} or {Trait[Level]} suffix.
+ * Filters grants by character level (only unlocks grants where minLevel <= characterLevel).
  */
-export const collectTableTraitGrants = (
-  targetTable: string,
+export const collectKitTraitGrants = (
+  targetKit: string,
+  characterLevel: number = 1,
   catalogPowers: Power[] = [],
   catalogSkills: SupabaseSkill[] = [],
   catalogTraits: SupabaseTrait[] = []
-): TableTraitGrants => {
-  const cleanTarget = cleanTableGroupName(targetTable);
+): KitTraitGrants => {
+  const cleanTarget = cleanKitName(targetKit);
+  const lvl = Math.max(1, characterLevel);
 
-  const matchedPowers = catalogPowers.filter(
-    (p) => isTraitItem(p) && matchesTableGroupFilter(p.table_group, cleanTarget)
-  );
+  const matchedPowers = catalogPowers.filter((p) => {
+    const parsed = parseKit(p.kit || p.table_group);
+    return parsed.isTrait && matchesKitFilter(parsed.baseKit, cleanTarget) && parsed.minLevel <= lvl;
+  });
 
-  const matchedSkills = catalogSkills.filter(
-    (s) => isTraitItem(s) && matchesTableGroupFilter(s.table_group, cleanTarget)
-  );
+  const matchedSkills = catalogSkills.filter((s) => {
+    const parsed = parseKit(s.kit || s.table_group);
+    return parsed.isTrait && matchesKitFilter(parsed.baseKit, cleanTarget) && parsed.minLevel <= lvl;
+  });
 
-  const matchedTraits = catalogTraits.filter(
-    (t) => matchesTableGroupFilter(t.table_group, cleanTarget)
-  );
+  const matchedTraits = catalogTraits.filter((t) => {
+    const parsed = parseKit(t.kit || t.table_group);
+    return matchesKitFilter(parsed.baseKit, cleanTarget) && parsed.minLevel <= lvl;
+  });
 
   return {
+    kitName: cleanTarget,
     tableName: cleanTarget,
     powers: matchedPowers,
     skills: matchedSkills,
@@ -43,14 +53,17 @@ export const collectTableTraitGrants = (
   };
 };
 
+export const collectTableTraitGrants = collectKitTraitGrants;
+
 /**
- * Merges table trait grants into a character sheet data object with 0 AP cost.
+ * Merges kit trait grants into a character sheet data object with 0 AP cost.
  */
-export const applyTableTraitGrantsToSheet = (
+export const applyKitTraitGrantsToSheet = (
   currentSheet: CharacterSheetData,
-  grants: TableTraitGrants
+  grants: KitTraitGrants
 ): CharacterSheetData => {
   const updated = { ...currentSheet };
+  const kitLabel = grants.kitName || grants.tableName;
 
   // 1. Add Trait Powers to Codex / Vault
   if (grants.powers.length > 0) {
@@ -64,9 +77,10 @@ export const applyTableTraitGrantsToSheet = (
         usage: gp.usage || '',
         effect: gp.effect || '',
         checked: [false, false, false, false, false],
-        table_group: gp.table_group,
+        kit: gp.kit || gp.table_group || `${kitLabel} {Trait}`,
+        table_group: gp.kit || gp.table_group || `${kitLabel} {Trait}`,
         discipline: gp.discipline,
-        source: `${grants.tableName} (Trait)`,
+        source: `${kitLabel} {Trait}`,
       }));
 
     if (newPowerSlots.length > 0) {
@@ -96,9 +110,11 @@ export const applyTableTraitGrantsToSheet = (
         notes: gt.notes || '',
         flaw_points: gt.flaw_points || 0,
         stat_hook: gt.stat_hook,
-        table_group: gt.table_group,
-        source: `${grants.tableName} (Trait)`,
+        kit: gt.kit || gt.table_group || `${kitLabel} {Trait}`,
+        table_group: gt.kit || gt.table_group || `${kitLabel} {Trait}`,
+        source: `${kitLabel} {Trait}`,
       }));
+
     if (newTraits.length > 0) {
       updated.traits_quirks = [...existingTraits, ...newTraits];
     }
@@ -106,3 +122,74 @@ export const applyTableTraitGrantsToSheet = (
 
   return updated;
 };
+
+export const applyTableTraitGrantsToSheet = applyKitTraitGrantsToSheet;
+
+/**
+ * Scans active kits on the character sheet upon leveling up, discovers newly unlocked {Trait[Level]} items,
+ * and auto-equips them with 0 AP cost.
+ */
+export const checkAndAutoEquipLevelUpTraits = (
+  currentSheet: CharacterSheetData,
+  newLevel: number,
+  catalogPowers: Power[] = [],
+  catalogSkills: SupabaseSkill[] = [],
+  catalogTraits: SupabaseTrait[] = []
+): { updatedSheet: CharacterSheetData; newlyGrantedNames: string[] } => {
+  let updated = { ...currentSheet, level: newLevel };
+  const newlyGrantedNames: string[] = [];
+
+  // 1. Identify all active base kits associated with this character
+  const activeKitsSet = new Set<string>();
+
+  (currentSheet.traits_quirks || []).forEach((t) => {
+    const k = cleanKitName(t.kit || t.table_group || t.source);
+    if (k && k !== 'General') activeKitsSet.add(k);
+  });
+
+  (currentSheet.favorite_trait_kits || currentSheet.favorite_trait_tables || []).forEach((k) => {
+    const clean = cleanKitName(k);
+    if (clean && clean !== 'General') activeKitsSet.add(clean);
+  });
+
+  (currentSheet.power_slots || []).concat(currentSheet.character_power_codex || []).forEach((p) => {
+    const k = cleanKitName(p.kit || p.table_group);
+    if (k && k !== 'General') activeKitsSet.add(k);
+  });
+
+  // 2. For each active kit, collect trait grants unlocked at or below newLevel
+  activeKitsSet.forEach((kitName) => {
+    const grants = collectKitTraitGrants(
+      kitName,
+      newLevel,
+      catalogPowers,
+      catalogSkills,
+      catalogTraits
+    );
+
+    // Filter out already equipped
+    const existingCodexNames = new Set((updated.character_power_codex || []).map((p) => p.name.toLowerCase()));
+    const existingSkillNames = new Set((updated.known_individual_skills || []).map((s) => s.toLowerCase()));
+    const existingTraitNames = new Set((updated.traits_quirks || []).map((t) => t.name.toLowerCase()));
+
+    const freshPowers = grants.powers.filter((p) => !existingCodexNames.has(p.name.toLowerCase()));
+    const freshSkills = grants.skills.filter((s) => !existingSkillNames.has(s.name.toLowerCase()));
+    const freshTraits = grants.traits.filter((t) => !existingTraitNames.has(t.name.toLowerCase()));
+
+    if (freshPowers.length > 0 || freshSkills.length > 0 || freshTraits.length > 0) {
+      freshPowers.forEach((p) => newlyGrantedNames.push(p.name));
+      freshSkills.forEach((s) => newlyGrantedNames.push(s.name));
+      freshTraits.forEach((t) => newlyGrantedNames.push(t.name));
+
+      updated = applyKitTraitGrantsToSheet(updated, {
+        ...grants,
+        powers: freshPowers,
+        skills: freshSkills,
+        traits: freshTraits,
+      });
+    }
+  });
+
+  return { updatedSheet: updated, newlyGrantedNames };
+};
+

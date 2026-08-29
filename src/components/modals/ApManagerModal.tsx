@@ -17,6 +17,8 @@ import {
   calculateAvailableAp,
 } from '../../types/game';
 import { getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
+import { checkAndAutoEquipLevelUpTraits } from '../../utils/bundleGrants';
+import { supabase } from '../../lib/supabase';
 
 interface ApManagerModalProps {
   isOpen: boolean;
@@ -549,10 +551,35 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                   min={1}
                   max={250}
                   value={level}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const val = Math.max(1, Math.min(250, parseInt(e.target.value, 10) || 1));
-                    updateActiveSheetData((prev: any) => ({ ...prev, level: val }));
-                    saveActiveCharacter();
+                    if (val > level) {
+                      try {
+                        const [{ data: catPowers }, { data: catSkills }, { data: catRules }] = await Promise.all([
+                          supabase.from('powers').select('*'),
+                          supabase.from('skills').select('*'),
+                          supabase.from('rules').select('*'),
+                        ]);
+                        const { updatedSheet, newlyGrantedNames } = checkAndAutoEquipLevelUpTraits(
+                          sheetData,
+                          val,
+                          catPowers || [],
+                          catSkills || [],
+                          catRules || []
+                        );
+                        updateActiveSheetData(() => updatedSheet);
+                        saveActiveCharacter();
+                        if (newlyGrantedNames.length > 0) {
+                          showToast(`🎉 Level ${val} Milestone: Auto-equipped ${newlyGrantedNames.join(', ')}!`);
+                        }
+                      } catch {
+                        updateActiveSheetData((prev: any) => ({ ...prev, level: val }));
+                        saveActiveCharacter();
+                      }
+                    } else {
+                      updateActiveSheetData((prev: any) => ({ ...prev, level: val }));
+                      saveActiveCharacter();
+                    }
                   }}
                   className="w-16 bg-slate-950 border border-amber-400 rounded-lg px-2 py-1 text-base font-mono font-black text-amber-300 text-center outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-400/50 shadow-inner"
                 />

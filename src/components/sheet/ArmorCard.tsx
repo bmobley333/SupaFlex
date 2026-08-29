@@ -348,7 +348,7 @@ export const ArmorCard: React.FC = () => {
       // Table Quick Deck Filter
       if (activeArmorTable === 'STARRED' && !isItemStarred(item)) return false;
       if (activeArmorTable !== 'ALL' && activeArmorTable !== 'STARRED') {
-        const tbl = (item.table_group || (item as any).category || '').toLowerCase();
+        const tbl = (item.kit || item.table_group || (item as any).category || '').toLowerCase();
         const activeLower = activeArmorTable.toLowerCase();
         if (tbl !== activeLower && !tbl.includes(activeLower)) {
           return false;
