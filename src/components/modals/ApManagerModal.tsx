@@ -558,7 +558,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                         const [{ data: catPowers }, { data: catSkills }, { data: catRules }] = await Promise.all([
                           supabase.from('powers').select('*'),
                           supabase.from('skills').select('*'),
-                          supabase.from('rules').select('*'),
+                          supabase.from('trait_rules').select('*'),
                         ]);
                         const { updatedSheet, newlyGrantedNames } = checkAndAutoEquipLevelUpTraits(
                           sheetData,

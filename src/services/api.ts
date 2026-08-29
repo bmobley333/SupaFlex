@@ -353,16 +353,18 @@ export const gameApi = {
     return (data || []) as SupabaseSkill[];
   },
 
-  // --- RULES & RULE MODIFIERS ---
+  // --- TRAIT RULES & RULE MODIFIERS ---
   async getRules(): Promise<SupabaseRule[]> {
-    let query = supabase.from('rules').select('*');
+    let query = supabase.from('trait_rules').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.eq('is_guildspace_locked', false);
     }
     const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
-      console.error('[gameApi] Error fetching rules:', error);
+      const fallback = await supabase.from('rules').select('*');
+      if (fallback.data) return fallback.data as SupabaseRule[];
+      console.error('[gameApi] Error fetching trait rules:', error);
       return [];
     }
     return (data || []) as SupabaseRule[];
@@ -374,7 +376,7 @@ export const gameApi = {
 
   async createRule(newRule: Omit<SupabaseRule, 'id' | 'created_at'>): Promise<SupabaseRule> {
     const { data: maxRows } = await supabase
-      .from('rules')
+      .from('trait_rules')
       .select('id')
       .order('id', { ascending: false })
       .limit(1);
@@ -382,13 +384,13 @@ export const gameApi = {
     const nextId = maxRows && maxRows.length > 0 && maxRows[0].id ? maxRows[0].id + 1 : 1;
 
     const { data, error } = await supabase
-      .from('rules')
+      .from('trait_rules')
       .insert({ ...newRule, id: nextId })
       .select()
       .single();
 
     if (error) {
-      console.error('[gameApi] Error creating custom rule:', error);
+      console.error('[gameApi] Error creating custom trait rule:', error);
       throw error;
     }
     return data as SupabaseRule;
