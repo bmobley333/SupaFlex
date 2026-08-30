@@ -738,7 +738,7 @@ export const SkillsetsPanel: React.FC = () => {
   }, [sortedAllCatalogSkills, skillsetDerivedSkillsSet, knownIndividualSkills, skillFilterCategory, isSkillStarred, allCatalogSkillsMap, rightSearchQuery, localGenreFilter, localAttributeFilter, localDisciplineFilter]);
 
   return (
-    <div className="bg-gradient-to-b from-indigo-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-indigo-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-indigo-950/20">
+    <div className="bg-gradient-to-b from-indigo-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-indigo-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-indigo-950/20 h-fit">
       {/* Main Sheet Card Header */}
       <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2.5 gap-2 flex-wrap">
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -757,16 +757,6 @@ export const SkillsetsPanel: React.FC = () => {
             </h3>
           </button>
           <CardHelpButton ruleKey="skills.basics" />
-
-          {/* Inline Count Badges */}
-          <div className="flex items-center gap-1.5 text-xs font-mono font-bold">
-            <span className="px-2 py-0.5 bg-indigo-950/80 text-indigo-300 border border-indigo-500/30 rounded-lg">
-              🎓 {uniqueKnownSkillsetNames.length} Skillset{uniqueKnownSkillsetNames.length === 1 ? '' : 's'}
-            </span>
-            <span className="px-2 py-0.5 bg-indigo-950/80 text-indigo-300 border border-indigo-500/30 rounded-lg">
-              ✨ {sortedActiveSkills.length} Derived
-            </span>
-          </div>
         </div>
 
         {/* Manage Skills Action Button */}
@@ -1698,7 +1688,7 @@ export const SkillsetsPanel: React.FC = () => {
           </div>
         ) : (
           <div className="p-3 bg-slate-950/40 rounded-lg border border-slate-800 text-xs text-slate-500 italic text-center">
-            No derived skills available. Click "Manage Skills" above to learn skillsets or individual skills.
+            No derived skills learned yet. Click Skills ✏️ above to learn skillsets or individual skills.
           </div>
         )}
       </div>

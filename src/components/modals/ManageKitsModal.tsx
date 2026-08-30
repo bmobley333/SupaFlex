@@ -24,39 +24,6 @@ interface ManageKitsModalProps {
   onClose: () => void;
 }
 
-const HALLMARK_RACES = [
-  'Human',
-  'Human - Bloodmarked',
-  'Elf',
-  'Dwarf',
-  'Dwarf - Blackaxe Clan',
-  'Orc',
-  'Orc - Ironfang',
-  'Halfling',
-  'Gnome',
-  'Dragonkin',
-  'Tiefling',
-  'Aasimar',
-  'Cyborg',
-  'Android',
-];
-
-const HALLMARK_CLASSES = [
-  'Vanguard',
-  'Berserker',
-  'Shadow',
-  'Mage',
-  'Sorce Adept',
-  'Psion',
-  'Cleric',
-  'Paladin',
-  'Ranger',
-  'Duelist',
-  'Operative',
-  'Tech-Priest',
-  'Biomancer',
-];
-
 export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClose }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const {
@@ -64,6 +31,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
     powers: stockPowersCatalog = [],
     skills: stockSkillsCatalog = [],
     traits: stockRulesCatalog = [],
+    kits: stockKitsCatalog = [],
     updateActiveSheetData,
     updateActiveCharacterMeta,
     saveActiveCharacter,
@@ -77,6 +45,62 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
   const [selectedExtraKitToBuy, setSelectedExtraKitToBuy] = useState<string>('');
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
+  // Dynamic Race and Class Kits from Supabase public.kits table
+  const raceKits = useMemo(() => {
+    const fromDb = stockKitsCatalog.filter((k) => k.category === 'Race').map((k) => k.name);
+    if (fromDb.length > 0) return fromDb.sort();
+    return [
+      'Dwarf',
+      'Dwarf - Blackaxe Clan',
+      'Elf',
+      'Fairy',
+      'Gnome',
+      'Goblin',
+      'Half-Orc',
+      'Human',
+      'Human - Bloodmarked',
+      'Nelf',
+      'Nymph',
+      'Orc',
+    ].sort();
+  }, [stockKitsCatalog]);
+
+  const classKits = useMemo(() => {
+    const fromDb = stockKitsCatalog.filter((k) => k.category === 'Class').map((k) => k.name);
+    if (fromDb.length > 0) return fromDb.sort();
+    return [
+      'Bard',
+      'Form - Giant',
+      'Form - Nymph',
+      'Form - Pixie',
+      'Healer',
+      'Healer - Sun-Devoted',
+      'Healer - Verdant Sentinel',
+      'Mage - Elemental',
+      'Mage - Geomancer',
+      'Mage - Magnetic',
+      'Mage - Void Magic',
+      'Martial Artist - Blade Saint',
+      'Monk',
+      'Psionics',
+      'Psionics - Sentinel',
+      'Psychosomatics',
+      'Starborn Ranger',
+      'Thief - Assassin',
+      'Trickster',
+      'Unique - Bio Engineer',
+      'Warrior',
+      'Warrior - Aetherblade',
+      'Warrior - Bloodfang Berserker',
+      'Warrior - Cursed Spartan',
+      'Warrior - Inferno Vanguard',
+      'Warrior - Lifestealer',
+      'Warrior - Punk',
+      'Warrior - Ranger',
+      'Warrior - Shield',
+    ].sort();
+  }, [stockKitsCatalog]);
+
   // Available AP calculation
   const availableAp = useMemo(() => {
     const sheet = activeCharacter?.sheet_data;
@@ -84,7 +108,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
   }, [activeCharacter?.sheet_data]);
 
   const activeRace = activeCharacter?.race || 'Human';
-  const activeClass = activeCharacter?.class || 'Vanguard';
+  const activeClass = activeCharacter?.class || (classKits[0] || 'Warrior');
 
   // Learned Kits list (Starting Race + Class + any learned extra kits)
   const learnedKits: string[] = useMemo(() => {
@@ -97,8 +121,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
   // All known discovered kit names from catalogs
   const allDiscoveredKits = useMemo(() => {
     const kitSet = new Set<string>();
-    [...HALLMARK_RACES, ...HALLMARK_CLASSES].forEach((k) => kitSet.add(k));
-
+    stockKitsCatalog.forEach((k) => kitSet.add(k.name));
     stockPowersCatalog.forEach((p) => {
       if (p.kit) kitSet.add(cleanKitName(p.kit));
     });
@@ -110,7 +133,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
     });
 
     return Array.from(kitSet).sort();
-  }, [stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
+  }, [stockKitsCatalog, stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
 
   // In-Kit Elements
   const inKitElements = useMemo(() => {
@@ -393,7 +416,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-outfit font-black text-lg tracking-wider text-white uppercase">
-                  Manage Kits & Progression
+                  Manage Kits
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full bg-purple-950/90 text-purple-300 border border-purple-500/40 text-[11px] font-mono font-bold">
                   {learnedKits.length} Active Kits
@@ -454,7 +477,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
                 onChange={(e) => handleSelectRaceKit(e.target.value)}
                 className="w-full bg-slate-900 text-xs px-3 py-2 rounded-lg border border-slate-700 text-white outline-none focus:border-purple-500 font-semibold"
               >
-                {HALLMARK_RACES.map((r) => (
+                {raceKits.map((r) => (
                   <option key={r} value={r}>
                     🧬 {r}
                   </option>
@@ -475,7 +498,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
                 onChange={(e) => handleSelectClassKit(e.target.value)}
                 className="w-full bg-slate-900 text-xs px-3 py-2 rounded-lg border border-slate-700 text-white outline-none focus:border-indigo-500 font-semibold"
               >
-                {HALLMARK_CLASSES.map((c) => (
+                {classKits.map((c) => (
                   <option key={c} value={c}>
                     ⚔️ {c}
                   </option>

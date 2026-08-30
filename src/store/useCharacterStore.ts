@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, SupabaseSkill, SupabaseTrait, TraitQuirkItem, EncounterLink } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, SupabaseSkill, SupabaseTrait, SupabaseKit, TraitQuirkItem, EncounterLink } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
@@ -24,6 +24,7 @@ interface CharacterStore {
   magicItems: MagicItem[];
   skills: SupabaseSkill[];
   traits: SupabaseTrait[];
+  kits: SupabaseKit[];
   isLoading: boolean;
   isSaving: boolean;
   dbConnected: boolean;
@@ -99,6 +100,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   magicItems: [],
   skills: [],
   traits: [],
+  kits: [],
   isLoading: false,
   isSaving: false,
   dbConnected: false,
@@ -173,12 +175,13 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return;
       }
 
-      const [chars, powers, items, skills, traits] = await Promise.all([
+      const [chars, powers, items, skills, traits, kits] = await Promise.all([
         gameApi.getCharacters(),
         gameApi.getPowers(),
         gameApi.getMagicItems(),
         gameApi.getSkills(),
         gameApi.getTraits(),
+        gameApi.getKits(),
       ]);
 
       const email = (get().playerEmail || '').trim().toLowerCase();
@@ -192,6 +195,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           magicItems: items,
           skills,
           traits,
+          kits,
           isLoading: false,
         });
         return;
@@ -212,14 +216,18 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       } else {
         const lastActiveIdStr = sessionStorage.getItem('supaflex_last_active_char_id');
         const lastActiveId = lastActiveIdStr ? Number(lastActiveIdStr) : null;
-        selectedChar = (lastActiveId ? myHeroes.find((c) => c.id === lastActiveId) : null) || myHeroes[0] || null;
+        const lastActiveChar = lastActiveId ? myHeroes.find((c) => c.id === lastActiveId) : null;
 
-        if (selectedChar) {
-          const migratedSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(selectedChar.sheet_data));
-          selectedChar = { ...selectedChar, sheet_data: migratedSheet };
-          sessionStorage.setItem('supaflex_last_active_char_id', String(selectedChar.id));
-        } else {
-          sessionStorage.removeItem('supaflex_last_active_char_id');
+        if (lastActiveChar) {
+          selectedChar = {
+            ...lastActiveChar,
+            sheet_data: migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(lastActiveChar.sheet_data)),
+          };
+        } else if (myHeroes.length > 0) {
+          selectedChar = {
+            ...myHeroes[0],
+            sheet_data: migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(myHeroes[0].sheet_data)),
+          };
         }
       }
 
@@ -230,6 +238,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         magicItems: items,
         skills,
         traits,
+        kits,
         isLoading: false,
       });
     } catch (err: any) {

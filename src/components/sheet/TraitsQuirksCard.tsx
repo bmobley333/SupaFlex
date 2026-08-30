@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles,
-  Eye,
-  EyeOff,
   ChevronDown,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
@@ -10,7 +8,7 @@ import { CardHelpButton } from '../common/CardHelpButton';
 import { ManageTraitsModal } from '../modals/ManageTraitsModal';
 
 export const TraitsQuirksCard: React.FC = () => {
-  const { activeCharacter, toggleTraitVisibility } = useCharacterStore();
+  const { activeCharacter } = useCharacterStore();
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
   const [visibilityFilter, setVisibilityFilter] = useState<'visible' | 'all'>('visible');
 
@@ -45,7 +43,7 @@ export const TraitsQuirksCard: React.FC = () => {
   }, [visibilityFilter, visibleTraits, validTraits]);
 
   return (
-    <div className="bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-4 flex flex-col gap-3 shadow-xl backdrop-blur-md relative overflow-hidden flex-1">
+    <div className="bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-4 flex flex-col gap-3 shadow-xl backdrop-blur-md relative overflow-hidden h-fit">
       {/* Standard Card Header */}
       <div className="flex items-center justify-between gap-2 flex-wrap border-b border-slate-800/80 pb-2.5">
         <div className="flex items-center gap-2">
@@ -111,7 +109,7 @@ export const TraitsQuirksCard: React.FC = () => {
       </div>
 
       {/* High-Density 2-Column Rules Strip */}
-      <div className="flex flex-col gap-2 flex-1 min-h-[140px] max-h-[420px] overflow-y-auto pr-1">
+      <div className="flex flex-col gap-2 max-h-[420px] overflow-y-auto pr-1">
         {displayedTraits.length > 0 ? (
           displayedTraits.map((t, idx) => {
             const isHidden = Boolean(t.is_hidden);
@@ -150,38 +148,12 @@ export const TraitsQuirksCard: React.FC = () => {
                     </div>
                   )}
                 </div>
-
-                {/* 3. Single-Click Visibility Toggle Action Button */}
-                <div className="shrink-0 self-end sm:self-center">
-                  <button
-                    type="button"
-                    onClick={() => toggleTraitVisibility(t.id || t.name)}
-                    className={`p-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      isHidden
-                        ? 'bg-slate-900/90 text-slate-400 hover:text-purple-300 border-slate-800 hover:border-purple-500/50'
-                        : 'bg-purple-950/70 text-purple-200 hover:text-white border-purple-500/40 hover:bg-purple-900/80 shadow-sm'
-                    }`}
-                    title={isHidden ? 'Rule is hidden from active sheet. Click to make viewable.' : 'Rule is visible on active sheet. Click to hide (read-once).'}
-                  >
-                    {isHidden ? (
-                      <>
-                        <Eye className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-[10px] font-mono hidden md:inline">Make Viewable</span>
-                      </>
-                    ) : (
-                      <>
-                        <EyeOff className="w-3.5 h-3.5 text-purple-300" />
-                        <span className="text-[10px] font-mono hidden md:inline">Hide Me</span>
-                      </>
-                    )}
-                  </button>
-                </div>
               </div>
             );
           })
         ) : validTraits.length > 0 ? (
-          <div className="p-6 bg-slate-950/40 rounded-xl border border-slate-800/80 text-xs text-slate-400 text-center flex flex-col items-center justify-center gap-2 flex-1">
-            <span className="font-mono text-slate-300">All {validTraits.length} rules are currently set to hidden (read-once).</span>
+          <div className="p-4 bg-slate-950/40 rounded-xl border border-slate-800/80 text-xs text-slate-400 text-center flex flex-col items-center justify-center gap-2">
+            <span className="font-mono text-slate-300">All {validTraits.length} rules are currently set to hidden.</span>
             <div className="flex items-center gap-2 mt-1">
               <button
                 type="button"
@@ -189,13 +161,6 @@ export const TraitsQuirksCard: React.FC = () => {
                 className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40 rounded-lg text-xs font-bold cursor-pointer transition-all"
               >
                 📜 Show All Rules ({validTraits.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowManageModal(true)}
-                className="px-3 py-1 bg-purple-950 hover:bg-purple-900 text-purple-200 border border-purple-500/50 rounded-lg text-xs font-bold cursor-pointer transition-all"
-              >
-                + Manage Rules
               </button>
             </div>
           </div>

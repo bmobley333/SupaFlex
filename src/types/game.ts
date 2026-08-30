@@ -39,6 +39,16 @@ export interface SupabaseRule {
 
 export type SupabaseTrait = SupabaseRule;
 
+export type KitCategory = 'Race' | 'Class' | 'Other';
+
+export interface SupabaseKit {
+  id: string;
+  name: string;
+  category: KitCategory;
+  description?: string;
+  created_at?: string;
+}
+
 export interface RuleItem {
   id?: string | number;
   name: string;

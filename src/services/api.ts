@@ -22,6 +22,7 @@ import {
   LootMainEntry,
   CustomCreationItem,
   PowerTable,
+  SupabaseKit,
 } from '../types/game';
 import { GmAdventure } from '../types/adventures';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
@@ -416,6 +417,16 @@ export const gameApi = {
 
   async createTrait(newTrait: Omit<SupabaseTrait, 'id' | 'created_at'>): Promise<SupabaseTrait> {
     return this.createSpecRule(newTrait);
+  },
+
+  // --- KITS CATALOG ---
+  async getKits(): Promise<SupabaseKit[]> {
+    const { data, error } = await supabase.from('kits').select('*').order('name', { ascending: true });
+    if (error) {
+      console.error('[gameApi] Error fetching kits catalog:', error);
+      return [];
+    }
+    return (data || []) as SupabaseKit[];
   },
 
   // --- ARMOR CATALOG ---
