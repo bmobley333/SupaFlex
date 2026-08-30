@@ -85,6 +85,7 @@ interface CharacterStore {
   // Traits & Quirks Actions
   addTraitQuirk: (trait: TraitQuirkItem) => void;
   removeTraitQuirk: (traitNameOrId: string | number) => void;
+  toggleTraitVisibility: (traitNameOrId: string | number) => void;
   toggleStarTrait: (id: string | number) => void;
   toggleFavoriteTraitTable: (tableGroup: string) => void;
   toggleFavoriteTraitKit: (kitName: string) => void;
@@ -874,6 +875,29 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           }
           return t.name !== traitNameOrId && t.id !== traitNameOrId;
         }),
+      };
+    });
+    get().saveActiveCharacter();
+  },
+
+  toggleTraitVisibility: (traitNameOrId: string | number) => {
+    get().updateActiveSheetData((prev) => {
+      const existing = prev.traits_quirks || [];
+      const updated = existing.map((t) => {
+        const matches = (typeof traitNameOrId === 'number' && t.id === traitNameOrId) ||
+          t.name === traitNameOrId ||
+          t.id === traitNameOrId;
+        if (matches) {
+          return {
+            ...t,
+            is_hidden: !t.is_hidden,
+          };
+        }
+        return t;
+      });
+      return {
+        ...prev,
+        traits_quirks: updated,
       };
     });
     get().saveActiveCharacter();

@@ -10,7 +10,8 @@ export type PowerReadyType = 'primary_arsenal' | 'mobility_defense' | 'support_p
 
 export type PowerDiscipline = 'Sorce' | 'Psionics' | 'Psychosomatics' | 'Martial' | 'Universal';
 export type TechDiscipline = 'Archaic' | 'Tech' | 'BioTech' | 'CyberTech';
-export type HardwareTier = 'Minor' | 'Lesser' | 'Greater' | 'Epic';
+export type ExoticTier = 'Minor' | 'Lesser' | 'Greater' | 'Epic';
+export type HardwareTier = ExoticTier;
 export type PowerTableCategory = 'Race' | 'Class' | 'Discipline' | 'Combat Style' | 'Handicap' | 'Luck' | 'Custom';
 export type TraitType = 'trait' | 'flaw';
 
@@ -33,6 +34,7 @@ export interface SupabaseRule {
   kit?: string;
   table_group?: string;
   is_guildspace_locked?: boolean;
+  is_hidden?: boolean;
   notes: string;
   created_at?: string;
 }
@@ -43,6 +45,7 @@ export interface RuleItem {
   id?: string | number;
   name: string;
   type: TraitType;
+  is_hidden?: boolean; // When true, hidden from main CS card view
   source?: string;
   kit?: string;
   table_group?: string;
@@ -878,15 +881,19 @@ export interface MagicItem {
   is_hardware?: boolean; // True if purchased hardware item
 }
 
-/** Canonical S-Tier type aliases for Relic, Hardware, and Loadout */
-export type Relic = MagicItem;
+/** Canonical S-Tier type aliases for Artifact, Exotic, Relic, Hardware, and Loadout */
+export type Artifact = MagicItem;
+export type Relic = Artifact;
 
-export interface HardwareItem extends MagicItem {
+export interface ExoticItem extends MagicItem {
   cost: string; // Required cost (e.g. "150s", "2g")
-  is_hardware: true;
+  is_exotic?: boolean;
+  is_hardware?: boolean;
 }
 
-export type LoadoutItem = MagicItem | HardwareItem;
+export type HardwareItem = ExoticItem;
+
+export type LoadoutItem = MagicItem | ExoticItem | HardwareItem;
 
 export type SkillAttributeIcon = '💪' | '🏃' | '👁️' | '✨' | '🫀';
 
@@ -957,6 +964,8 @@ export type AuthMode = 'login' | 'signup' | 'reset_password' | 'profile';
 export type CustomCreationType =
   | 'power'
   | 'power_table'
+  | 'artifact'
+  | 'exotic'
   | 'relic'
   | 'hardware'
   | 'skill'

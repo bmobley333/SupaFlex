@@ -238,13 +238,13 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       let data: any[] | null = null;
       if (isEpicTier) {
         const { data: epicData } = await supabase
-          .from('relics')
+          .from('artifacts')
           .select('*')
           .or('category.ilike.%Epic%,category.ilike.%Artifact%');
         data = epicData;
       } else {
         const { data: tierData } = await supabase
-          .from('relics')
+          .from('artifacts')
           .select('*')
           .ilike('category', `%${rarity}%`);
         data = tierData;
@@ -279,15 +279,16 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     }
   };
 
-  // Fetch random hardware item from Supabase hardware table
+  // Fetch random exotic item from Supabase exotics table
   const fetchRandomHardwareItem = async () => {
     try {
-      const { data } = await supabase.from('hardware').select('*');
+      const { data } = await supabase.from('exotics').select('*');
       if (data && data.length > 0) {
         const picked = data[Math.floor(Math.random() * data.length)];
         return {
           ...picked,
           is_hardware: true,
+          is_exotic: true,
           description: picked.effect || picked.notes || picked.description || 'Advanced technological device.'
         };
       }

@@ -295,41 +295,49 @@ export const gameApi = {
     return (data || []) as Power[];
   },
 
-  // --- RELICS, HARDWARE & LOADOUT CATALOG ---
-  async getRelics(): Promise<MagicItem[]> {
-    let query = supabase.from('relics').select('*');
+  // --- ARTIFACTS, EXOTICS & LOADOUT CATALOG ---
+  async getArtifacts(): Promise<MagicItem[]> {
+    let query = supabase.from('artifacts').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.eq('is_guildspace_locked', false);
     }
     const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
-      console.error('[gameApi] Error fetching relics:', error);
+      console.error('[gameApi] Error fetching artifacts:', error);
       return [];
     }
     return (data || []) as MagicItem[];
   },
 
-  async getHardware(): Promise<MagicItem[]> {
-    let query = supabase.from('hardware').select('*');
+  async getRelics(): Promise<MagicItem[]> {
+    return this.getArtifacts();
+  },
+
+  async getExotics(): Promise<MagicItem[]> {
+    let query = supabase.from('exotics').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.eq('is_guildspace_locked', false);
     }
     const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
-      console.error('[gameApi] Error fetching hardware catalog:', error);
+      console.error('[gameApi] Error fetching exotics catalog:', error);
       return [];
     }
-    return ((data || []).map((h) => ({ ...h, is_hardware: true }))) as MagicItem[];
+    return ((data || []).map((h) => ({ ...h, is_hardware: true, is_exotic: true }))) as MagicItem[];
+  },
+
+  async getHardware(): Promise<MagicItem[]> {
+    return this.getExotics();
   },
 
   async getLoadoutCatalog(): Promise<MagicItem[]> {
-    const [relics, hardware] = await Promise.all([
-      this.getRelics(),
-      this.getHardware(),
+    const [artifacts, exotics] = await Promise.all([
+      this.getArtifacts(),
+      this.getExotics(),
     ]);
-    const combined = [...relics, ...hardware];
+    const combined = [...artifacts, ...exotics];
     combined.sort((a, b) => a.name.localeCompare(b.name));
     return combined;
   },
@@ -1638,11 +1646,11 @@ export const gameApi = {
       const targetTable =
         item.type === 'power'
           ? 'powers'
-          : item.type === 'hardware'
-          ? 'hardware'
+          : (item.type === 'hardware' || item.type === 'exotic')
+          ? 'exotics'
           : item.type === 'skillset'
           ? 'skillsets'
-          : 'relics';
+          : 'artifacts';
 
       const masterPayload: any = {
         name: item.name,

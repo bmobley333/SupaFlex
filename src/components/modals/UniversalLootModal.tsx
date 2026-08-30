@@ -253,13 +253,13 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
       return items;
     }
 
-    // 6. Hardware Device
-    if (rType === 'hardware' || subKey === 'hardware') {
-      const { data: hwItems } = await supabase.from('hardware').select('*');
+    // 6. Hardware / Exotic Device
+    if (rType === 'hardware' || rType === 'exotic' || subKey === 'hardware' || subKey === 'exotics') {
+      const { data: hwItems } = await supabase.from('exotics').select('*');
       const picked = hwItems && hwItems.length > 0 ? hwItems[Math.floor(Math.random() * hwItems.length)] : null;
 
       items.push({
-        title: picked?.name || 'Technological Hardware Device',
+        title: picked?.name || 'Technological Exotic Device',
         categoryKey: 'hardware',
         description: picked?.description || picked?.effect || 'Advanced technological device with mechanical utility.',
         targetPlayer: target,
@@ -267,15 +267,15 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
       return items;
     }
 
-    // 7. Magic Item / Relic (Minor, Lesser, Greater, Epic)
-    if (rType === 'magic_item' || entry.result_name.toLowerCase().includes('magic') || entry.result_name.toLowerCase().includes('relic')) {
+    // 7. Magic Item / Artifact (Minor, Lesser, Greater, Epic)
+    if (rType === 'magic_item' || rType === 'artifact' || entry.result_name.toLowerCase().includes('magic') || entry.result_name.toLowerCase().includes('relic') || entry.result_name.toLowerCase().includes('artifact')) {
       let rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' = 'Lesser';
       const rawName = (entry.result_name + ' ' + (subKey || '')).toLowerCase();
       if (rawName.includes('minor')) rarity = 'Minor';
       else if (rawName.includes('greater')) rarity = 'Greater';
       else if (rawName.includes('epic') || rawName.includes('artifact')) rarity = 'Epic';
 
-      let query = supabase.from('relics').select('*');
+      let query = supabase.from('artifacts').select('*');
       if (rarity === 'Epic') {
         query = query.or('category.ilike.%Epic%,category.ilike.%Artifact%');
       } else {
@@ -286,10 +286,10 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
       const picked = relics && relics.length > 0 ? relics[Math.floor(Math.random() * relics.length)] : null;
 
       items.push({
-        title: picked?.name || `${rarity} Relic`,
+        title: picked?.name || `${rarity} Artifact`,
         categoryKey: `magic_${rarity}`,
         rarity,
-        description: picked?.effect || picked?.description || `Enchanted ${rarity} relic.`,
+        description: picked?.effect || picked?.description || `Enchanted ${rarity} artifact.`,
         magicItem: picked,
         targetPlayer: target,
       });
@@ -332,9 +332,9 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
 
     // 10. Special: Epic Hoard (100)
     if (rType === 'special' && entry.range_min === 100) {
-      // 1 Epic Magic Item
+      // 1 Epic Magic Item / Artifact
       const { data: epics } = await supabase
-        .from('relics')
+        .from('artifacts')
         .select('*')
         .or('category.ilike.%Epic%,category.ilike.%Artifact%');
       const epicPicked = epics && epics.length > 0 ? epics[Math.floor(Math.random() * epics.length)] : null;

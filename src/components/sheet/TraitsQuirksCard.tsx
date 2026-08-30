@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles,
   Plus,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -10,8 +12,9 @@ import { TraitQuirkItem, calculateLiveSheetSpentAp } from '../../types/game';
 import { cleanKitName } from '../../utils/kitUtils';
 
 export const TraitsQuirksCard: React.FC = () => {
-  const { activeCharacter } = useCharacterStore();
+  const { activeCharacter, toggleTraitVisibility } = useCharacterStore();
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
+  const [visibilityFilter, setVisibilityFilter] = useState<'visible' | 'all'>('visible');
 
   // Listen for global manager event
   useEffect(() => {
@@ -30,6 +33,14 @@ export const TraitsQuirksCard: React.FC = () => {
     return (equippedTraits || []).filter((t): t is TraitQuirkItem => Boolean(t && t.name));
   }, [equippedTraits]);
 
+  const visibleTraits = useMemo(() => {
+    return validTraits.filter((t) => !t.is_hidden);
+  }, [validTraits]);
+
+  const displayedTraits = useMemo(() => {
+    return visibilityFilter === 'visible' ? visibleTraits : validTraits;
+  }, [visibilityFilter, visibleTraits, validTraits]);
+
   const { flawBonusAp, rawFlawPoints } = useMemo(() => {
     return calculateLiveSheetSpentAp(activeCharacter?.sheet_data);
   }, [activeCharacter?.sheet_data]);
@@ -40,11 +51,11 @@ export const TraitsQuirksCard: React.FC = () => {
       <div className="flex items-center justify-between gap-2 flex-wrap border-b border-slate-800/80 pb-2.5">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-xl bg-purple-950/90 border border-purple-500/50 text-purple-300 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.25)]">
-            <span className="text-base leading-none">🧬</span>
+            <span className="text-base leading-none">📜</span>
           </div>
           <div className="flex items-center gap-1.5">
             <h3 className="font-outfit font-black text-sm tracking-wider text-slate-100 uppercase">
-              Trait Rules
+              Spec. Rules
             </h3>
             <CardHelpButton ruleKey="traits" />
           </div>
@@ -64,31 +75,66 @@ export const TraitsQuirksCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-1.5">
+        {/* Action Controls & Dyslexia-Friendly Visibility Pill Switch */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {validTraits.length > 0 && (
+            <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+              <button
+                type="button"
+                onClick={() => setVisibilityFilter('visible')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  visibilityFilter === 'visible'
+                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+                title="Show only active reference rules on main sheet"
+              >
+                <span>👁️</span>
+                <span>Active ({visibleTraits.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibilityFilter('all')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  visibilityFilter === 'all'
+                    ? 'bg-slate-800 text-purple-300 border border-purple-500/40 shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+                title="Show all rules including read-once/hidden background traits"
+              >
+                <span>📜</span>
+                <span>All ({validTraits.length})</span>
+              </button>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => setShowManageModal(true)}
-            className="px-3.5 py-1.5 bg-purple-950/80 hover:bg-purple-900/90 text-purple-200 border border-purple-500/50 hover:border-purple-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+            className="px-3 py-1.5 bg-purple-950/80 hover:bg-purple-900/90 text-purple-200 border border-purple-500/50 hover:border-purple-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+            title="Manage Character Rules & Flaws"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Manage Traits</span>
+            <span>Manage Rules</span>
           </button>
         </div>
       </div>
 
       {/* High-Density 2-Column Rules Strip */}
       <div className="flex flex-col gap-2 flex-1 min-h-[140px] max-h-[420px] overflow-y-auto pr-1">
-        {validTraits.length > 0 ? (
-          validTraits.map((t, idx) => {
+        {displayedTraits.length > 0 ? (
+          displayedTraits.map((t, idx) => {
             const isFlaw = (t.flaw_points || 0) > 0 || t.type === 'flaw';
             const originTag = cleanKitName(t.kit || t.table_group || t.source || 'General');
+            const isHidden = Boolean(t.is_hidden);
 
             return (
               <div
                 key={`${t.name}_${idx}`}
                 className={`p-2.5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm transition-all ${
-                  isFlaw
+                  isHidden
+                    ? 'bg-slate-950/40 border-slate-800/60 border-dashed opacity-75 hover:opacity-100'
+                    : isFlaw
                     ? 'bg-amber-950/20 border-amber-500/30 hover:border-amber-500/50'
                     : 'bg-slate-950/60 border-slate-850 hover:border-slate-800'
                 }`}
@@ -99,16 +145,24 @@ export const TraitsQuirksCard: React.FC = () => {
                     {t.name}
                   </span>
 
-                  {/* Clean Category Classification Pill */}
-                  {isFlaw ? (
-                    <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-amber-950/90 text-amber-300 border border-amber-500/40 w-fit flex items-center gap-1 mt-0.5">
-                      <span>⚠️</span> Flaw (+{t.flaw_points || 1} AP)
-                    </span>
-                  ) : (
-                    <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 w-fit flex items-center gap-1 mt-0.5">
-                      <span>🧬</span> {originTag}
-                    </span>
-                  )}
+                  {/* Clean Category Classification Pill & Hidden Tag */}
+                  <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                    {isFlaw ? (
+                      <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-amber-950/90 text-amber-300 border border-amber-500/40 w-fit flex items-center gap-1">
+                        <span>⚠️</span> Flaw (+{t.flaw_points || 1} AP)
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 w-fit flex items-center gap-1">
+                        <span>🧬</span> {originTag}
+                      </span>
+                    )}
+
+                    {isHidden && (
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-700/80 w-fit flex items-center gap-1">
+                        <span>🙈</span> Hidden
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* 2. Rule Description & Live Computed Stat Hook Column */}
@@ -133,9 +187,55 @@ export const TraitsQuirksCard: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* 3. Single-Click Visibility Toggle Action Button */}
+                <div className="shrink-0 self-end sm:self-center">
+                  <button
+                    type="button"
+                    onClick={() => toggleTraitVisibility(t.id || t.name)}
+                    className={`p-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                      isHidden
+                        ? 'bg-slate-900/90 text-slate-400 hover:text-purple-300 border-slate-800 hover:border-purple-500/50'
+                        : 'bg-purple-950/70 text-purple-200 hover:text-white border-purple-500/40 hover:bg-purple-900/80 shadow-sm'
+                    }`}
+                    title={isHidden ? 'Rule is hidden from active sheet. Click to make viewable.' : 'Rule is visible on active sheet. Click to hide (read-once).'}
+                  >
+                    {isHidden ? (
+                      <>
+                        <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="text-[10px] font-mono hidden md:inline">Hidden</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3.5 h-3.5 text-purple-300" />
+                        <span className="text-[10px] font-mono hidden md:inline">Viewable</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             );
           })
+        ) : validTraits.length > 0 ? (
+          <div className="p-6 bg-slate-950/40 rounded-xl border border-slate-800/80 text-xs text-slate-400 text-center flex flex-col items-center justify-center gap-2 flex-1">
+            <span className="font-mono text-slate-300">All {validTraits.length} rules are currently set to hidden (read-once).</span>
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                type="button"
+                onClick={() => setVisibilityFilter('all')}
+                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40 rounded-lg text-xs font-bold cursor-pointer transition-all"
+              >
+                📜 Show All Rules ({validTraits.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowManageModal(true)}
+                className="px-3 py-1 bg-purple-950 hover:bg-purple-900 text-purple-200 border border-purple-500/50 rounded-lg text-xs font-bold cursor-pointer transition-all"
+              >
+                + Manage Traits
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="p-6 bg-slate-950/40 rounded-xl border border-slate-800 text-xs text-slate-500 italic text-center flex flex-col items-center justify-center gap-1.5 flex-1">
             <span>No active core traits.</span>
