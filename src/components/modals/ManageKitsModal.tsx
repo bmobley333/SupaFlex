@@ -160,14 +160,14 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       // Rules
       stockRulesCatalog.forEach((r) => {
         if (r.kit && matchesKitFilter(r.kit, kitName)) {
-          const isTrait = (r.type === 'trait' || (r.kit || '').toLowerCase().includes('{trait}'));
+          const isTrait = (r.kit || '').toLowerCase().includes('{trait}');
           elements.push({
             type: 'rule',
             name: r.name,
             kit: kitName,
             cost: isTrait ? 0 : 1,
             isTrait,
-            description: r.notes || '',
+            description: r.notes || r.effect || '',
             raw: r,
           });
         }
@@ -361,12 +361,11 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
         if (rules.some((r) => r.name.toLowerCase() === el.name.toLowerCase())) return prev;
         const newRule: TraitQuirkItem = {
           name: el.raw.name,
-          type: el.raw.type || 'trait',
+          effect: el.raw.effect || '',
           notes: el.raw.notes || '',
           kit: el.kit,
           source: `${el.kit} Kit`,
           stat_hook: el.raw.stat_hook,
-          flaw_points: el.raw.flaw_points,
         };
         return { ...prev, traits_quirks: [...rules, newRule] };
       });

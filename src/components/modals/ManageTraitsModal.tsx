@@ -19,9 +19,7 @@ import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import {
   SupabaseRule,
   RuleItem,
-  TraitType,
   StatHookDefinition,
-  calculateLiveSheetSpentAp,
 } from '../../types/game';
 import { cleanKitName, sanitizeKitInput } from '../../utils/kitUtils';
 
@@ -34,6 +32,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const {
     activeCharacter,
+    activeRole,
     traits: stockRulesCatalog = [],
     addTraitQuirk,
     removeTraitQuirk,
@@ -52,9 +51,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
   // Custom Forge Form State
   const [customName, setCustomName] = useState<string>('');
-  const [customType, setCustomType] = useState<TraitType>('trait');
   const [customKit, setCustomKit] = useState<string>('Custom');
-  const [customFlawPoints, setCustomFlawPoints] = useState<number>(0);
   const [customStatHookPreset, setCustomStatHookPreset] = useState<string>('none');
   const [customNotes, setCustomNotes] = useState<string>('');
   const [forgeError, setForgeError] = useState<string | null>(null);
@@ -62,10 +59,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   const equippedRules: RuleItem[] = useMemo(() => {
     return activeCharacter?.sheet_data?.traits_quirks || [];
   }, [activeCharacter?.sheet_data?.traits_quirks]);
-
-  const { flawBonusAp, rawFlawPoints } = useMemo(() => {
-    return calculateLiveSheetSpentAp(activeCharacter?.sheet_data);
-  }, [activeCharacter?.sheet_data]);
 
   // Escape key to close
   useEffect(() => {
@@ -123,9 +116,8 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     const ruleKit = rule.kit || rule.table_group;
     const item: RuleItem = {
       name: rule.name,
-      type: rule.type,
+      effect: rule.effect || '',
       notes: rule.notes || '',
-      flaw_points: rule.flaw_points || 0,
       stat_hook: rule.stat_hook || null,
       kit: ruleKit,
       table_group: ruleKit,
@@ -162,13 +154,11 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
       parsedHook = { target: 'vitality', type: 'flat_bonus', value: -3 };
     }
 
-    const kitValue = `${sanitizeKitInput(customKit.trim()) || 'Custom'} {Trait}`;
+    const kitValue = `${sanitizeKitInput(customKit.trim()) || 'Custom'}`;
     const newRuleItem: RuleItem = {
       name: customName.trim(),
-      type: customType,
       kit: kitValue,
       table_group: kitValue,
-      flaw_points: customType === 'flaw' ? customFlawPoints : 0,
       notes: customNotes.trim(),
       source: 'Custom Forge',
       stat_hook: parsedHook,
@@ -178,12 +168,23 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
     // Reset Form
     setCustomName('');
-    setCustomType('trait');
     setCustomKit('Custom');
-    setCustomFlawPoints(0);
     setCustomStatHookPreset('none');
     setCustomNotes('');
     setRightActiveTab('catalog');
+  };
+
+  const handleRemoveRule = (rule: RuleItem) => {
+    const isTrait =
+      (rule.kit && rule.kit.includes('{Trait}')) ||
+      (rule.source && rule.source.includes('Trait')) ||
+      (rule.table_group && rule.table_group.includes('{Trait}'));
+
+    if (isTrait && activeRole !== 'gm') {
+      alert('Inherent traits (0 AP) are auto-taken and cannot be removed without GM approval. Switch to GM Mode to remove traits.');
+      return;
+    }
+    removeTraitQuirk(rule.name);
   };
 
   if (!isOpen) return null;
@@ -203,19 +204,14 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-outfit font-black text-base text-slate-100 uppercase tracking-wide">
-                  Manage Rules
+                  Manage Spec Rules
                 </h3>
                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/40">
                   Active Rules: {equippedRules.length}
                 </span>
-                {rawFlawPoints > 0 && (
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/40">
-                    ⚠️ Flaw Bonus: +{flawBonusAp} / +5 Max AP
-                  </span>
-                )}
               </div>
               <p className="text-xs text-slate-400">
-                Equip rules, manage in-game visibility, or forge custom rules & handicaps.
+                Equip spec rules, manage in-game sheet visibility, or forge custom rules & boons.
               </p>
             </div>
           </div>
@@ -262,34 +258,28 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
             <div className="flex-1 overflow-y-auto pr-1 space-y-2 min-h-0">
               {filteredEquippedRules.length > 0 ? (
                 filteredEquippedRules.map((rule, idx) => {
-                  const isFlaw = (rule.flaw_points || 0) > 0 || rule.type === 'flaw';
+                  const isTrait =
+                    (rule.kit && rule.kit.includes('{Trait}')) ||
+                    (rule.source && rule.source.includes('Trait')) ||
+                    (rule.table_group && rule.table_group.includes('{Trait}'));
 
                   return (
                     <div
                       key={`${rule.name}_${idx}`}
-                      className={`p-3 rounded-xl border flex flex-col gap-2 transition-all shadow-sm ${
-                        isFlaw
-                          ? 'bg-amber-950/20 border-amber-500/30 hover:border-amber-500/50'
-                          : 'bg-slate-900/80 border-slate-800/80 hover:border-slate-700'
-                      }`}
+                      className="p-3 rounded-xl border flex flex-col gap-2 transition-all shadow-sm bg-slate-900/80 border-slate-800/80 hover:border-slate-700"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-xs font-outfit font-bold text-slate-100 flex items-center gap-1">
-                            <span>{isFlaw ? '⚠️' : '📜'}</span>
+                            <span>{isTrait ? '🧬' : '📜'}</span>
                             <span>{rule.name}</span>
                           </span>
 
                           {/* Clean Classification Pill */}
-                          {isFlaw ? (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-amber-900/60 text-amber-300 border border-amber-500/40">
-                              Flaw (+{rule.flaw_points || 1} AP)
-                            </span>
-                          ) : (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-emerald-900/60 text-emerald-300 border border-emerald-500/40">
-                              📜 {cleanKitName(rule.kit || rule.table_group || rule.source || 'General')}
-                            </span>
-                          )}
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
+                            {isTrait ? '🧬 Trait • ' : '📜 '}
+                            {cleanKitName(rule.kit || rule.table_group || rule.source || 'General')}
+                          </span>
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -311,9 +301,13 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                           {/* Forget / Remove Button */}
                           <button
                             type="button"
-                            onClick={() => removeTraitQuirk(rule.name)}
-                            className="px-2 py-1 rounded-lg text-xs font-bold text-rose-300 bg-rose-950/40 border border-rose-500/30 hover:bg-rose-900/60 transition-all flex items-center gap-1 cursor-pointer"
-                            title="Remove Rule"
+                            onClick={() => handleRemoveRule(rule)}
+                            className={`px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                              isTrait && activeRole !== 'gm'
+                                ? 'text-slate-500 bg-slate-900 border border-slate-800 cursor-not-allowed opacity-60'
+                                : 'text-rose-300 bg-rose-950/40 border border-rose-500/30 hover:bg-rose-900/60'
+                            }`}
+                            title={isTrait && activeRole !== 'gm' ? 'Traits (0 AP) require GM approval to remove' : 'Remove Rule'}
                           >
                             <Trash2 className="w-3 h-3" />
                             <span>Forget</span>
@@ -323,19 +317,13 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
                       {/* Rule Description */}
                       <p className="text-xs text-slate-300 font-sans leading-relaxed">
-                        {rule.notes}
+                        {rule.notes || rule.effect}
                       </p>
 
                       {/* Stat Hook Badge */}
                       {rule.stat_hook && (
-                        <div
-                          className={`flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded border w-fit shadow-inner ${
-                            isFlaw
-                              ? 'text-amber-300 bg-amber-950/60 border-amber-500/40'
-                              : 'text-cyan-300 bg-cyan-950/40 border-cyan-500/30'
-                          }`}
-                        >
-                          <span>{isFlaw ? '⚠️' : '✨'}</span>
+                        <div className="flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded border w-fit shadow-inner text-cyan-300 bg-cyan-950/40 border-cyan-500/30">
+                          <Sparkles className="w-2.5 h-2.5 shrink-0" />
                           <span>
                             {rule.stat_hook.type === 'mind_die'
                               ? 'Base AR = Mind Die Rating'
@@ -392,14 +380,14 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               </button>
             </div>
 
-            {/* TAB 1: STANDALONE STOCK RULES & FLAWS CATALOG */}
+            {/* TAB 1: STANDALONE STOCK RULES CATALOG */}
             {rightActiveTab === 'catalog' && (
               <div className="flex flex-col flex-1 min-h-0">
                 <div className="relative mb-2.5">
                   <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="Search stock rules & flaws..."
+                    placeholder="Search stock spec rules..."
                     value={catalogSearchQuery}
                     onChange={(e) => setCatalogSearchQuery(e.target.value)}
                     className="w-full bg-slate-950 text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
@@ -411,7 +399,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     filteredCatalogRules.map((rule) => {
                       const equipped = isRuleEquipped(rule.name);
                       const starred = isRuleStarred(rule.id || rule.name);
-                      const isFlaw = (rule.flaw_points || 0) > 0 || rule.type === 'flaw';
 
                       return (
                         <div
@@ -425,22 +412,16 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                           <div className="flex flex-col gap-1 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs font-outfit font-black text-slate-100 flex items-center gap-1">
-                                {isFlaw ? '⚠️' : '📜'}
+                                <span>📜</span>
                                 <span>{rule.name}</span>
                               </span>
 
-                              {isFlaw ? (
-                                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-amber-900/60 text-amber-300 border border-amber-500/40">
-                                  Flaw (+{rule.flaw_points || 1} AP)
-                                </span>
-                              ) : (
-                                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-emerald-900/60 text-emerald-300 border border-emerald-500/40">
-                                  📜 {cleanKitName(rule.kit || rule.table_group || 'General')}
-                                </span>
-                              )}
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
+                                📜 {cleanKitName(rule.kit || rule.table_group || 'General')}
+                              </span>
                             </div>
 
-                            <p className="text-xs text-slate-300 leading-relaxed font-sans">{rule.notes}</p>
+                            <p className="text-xs text-slate-300 leading-relaxed font-sans">{rule.notes || rule.effect}</p>
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
@@ -464,8 +445,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition-all ${
                                 equipped
                                   ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                                  : isFlaw
-                                  ? 'bg-amber-600 hover:bg-amber-500 text-white cursor-pointer'
                                   : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
                               }`}
                             >
@@ -474,8 +453,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                                   <Check className="w-3.5 h-3.5 text-emerald-400" />
                                   <span>Equipped</span>
                                 </>
-                              ) : isFlaw ? (
-                                <span>+ Take Flaw (+{rule.flaw_points || 1} AP)</span>
                               ) : (
                                 <span>+ Learn</span>
                               )}
@@ -500,15 +477,15 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   <div className="p-3 bg-purple-950/20 border border-purple-500/30 rounded-xl flex items-center justify-between">
                     <span className="text-xs font-bold text-purple-200 flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-purple-400" />
-                      Create Custom Rule, Biological Trait or Handicap
+                      Create Custom Spec Rule or Passive Boon
                     </span>
                   </div>
 
-                  {/* Name & Type */}
+                  {/* Name & Kit */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-slate-300 flex items-center">
-                        Name
+                        Rule Name
                         <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer inline ml-1" />
                       </label>
                       <input
@@ -523,24 +500,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-slate-300 flex items-center">
-                        Classification Type
-                        <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer inline ml-1" />
-                      </label>
-                      <select
-                        value={customType}
-                        onChange={(e) => setCustomType(e.target.value as TraitType)}
-                        className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-purple-200 outline-none"
-                      >
-                        <option value="trait">📜 Rule (Physiology / Rule Exception / Background)</option>
-                        <option value="flaw">⚠️ Flaw (Handicap with AP Refund)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Kit & Flaw Points */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-300 flex items-center">
                         Kit / Source
                         <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer inline ml-1" />
                       </label>
@@ -551,25 +510,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                         onChange={(e) => setCustomKit(sanitizeKitInput(e.target.value))}
                         className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
                       />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-300 flex items-center">
-                        Flaw Points (Bonus AP)
-                        <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer inline ml-1" />
-                      </label>
-                      <select
-                        value={customFlawPoints}
-                        onChange={(e) => setCustomFlawPoints(parseInt(e.target.value, 10))}
-                        className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-amber-300 font-mono outline-none"
-                      >
-                        <option value={0}>0 AP (Standard Rule)</option>
-                        <option value={1}>+1 AP (Minor Flaw / Handicap)</option>
-                        <option value={2}>+2 AP (Major Flaw / Handicap)</option>
-                        <option value={3}>+3 AP (Severe Flaw / Handicap)</option>
-                        <option value={4}>+4 AP (Crippling Flaw / Handicap)</option>
-                        <option value={5}>+5 AP (Maximum Flaw Cap)</option>
-                      </select>
                     </div>
                   </div>
 
@@ -603,7 +543,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     <textarea
                       required
                       rows={3}
-                      placeholder="Describe the rule exception, biological trait, or flaw penalty..."
+                      placeholder="Describe the rule exception, biological trait, or boon..."
                       value={customNotes}
                       onChange={(e) => setCustomNotes(e.target.value)}
                       className="bg-slate-950 text-xs px-3 py-2 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500 resize-none"
@@ -636,10 +576,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               Hero: <span className="text-purple-300">{activeCharacter?.name || 'Unnamed Hero'}</span>
             </span>
             <span>•</span>
-            <span className="text-amber-300 font-mono font-bold">
-              Flaw Bonus: +{flawBonusAp} / +5 Max AP
-            </span>
-            <span>•</span>
             <span className="font-mono">Total Equipped: {equippedRules.length}</span>
           </div>
 
@@ -657,4 +593,5 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   );
 };
 
+export const ManageSpecRulesModal = ManageTraitsModal;
 export const ManageRulesModal = ManageTraitsModal;

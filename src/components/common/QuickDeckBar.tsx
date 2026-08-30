@@ -70,9 +70,6 @@ export const getTableIcon = (tableName: string, domain: QuickDeckDomain): string
     ) {
       return '✨';
     }
-    if (nameLower.includes('handicap') || nameLower.includes('flaw') || nameLower.includes('quirk')) {
-      return '⚠️';
-    }
     if (
       nameLower.includes('combat') ||
       nameLower.includes('style') ||
@@ -289,7 +286,6 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
       groups['✨ Discipline Kits'] = [];
       groups['👤 Class & Chapter Kits'] = [];
       groups['⚔️ Combat Style Kits'] = [];
-      groups['⚠️ Handicaps & Flaws'] = [];
       groups['🍀 Luck & General Kits'] = [];
       groups['📁 Custom & Other Kits'] = [];
 
@@ -331,8 +327,6 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
           nameLower.includes('psychosomatic')
         ) {
           groups['✨ Discipline Kits'].push(tblName);
-        } else if (sub.includes('handicap') || sub.includes('flaw') || nameLower.includes('handicap') || nameLower.includes('flaw')) {
-          groups['⚠️ Handicaps & Flaws'].push(tblName);
         } else if (
           sub.includes('combat') ||
           sub.includes('style') ||

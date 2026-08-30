@@ -84,7 +84,7 @@ interface CharacterStore {
 
   // Traits & Quirks Actions
   addTraitQuirk: (trait: TraitQuirkItem) => void;
-  removeTraitQuirk: (traitNameOrId: string | number) => void;
+  removeTraitQuirk: (traitNameOrId: string | number, forceGmOverride?: boolean) => void;
   toggleTraitVisibility: (traitNameOrId: string | number) => void;
   toggleStarTrait: (id: string | number) => void;
   toggleFavoriteTraitTable: (tableGroup: string) => void;
@@ -864,12 +864,29 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     get().saveActiveCharacter();
   },
 
-  removeTraitQuirk: (traitNameOrId: string | number) => {
+  removeTraitQuirk: (traitNameOrId: string | number, forceGmOverride = false) => {
+    const activeRole = get().activeRole;
+    const existing = get().activeCharacter?.sheet_data?.traits_quirks || [];
+    const target = existing.find((t) =>
+      typeof traitNameOrId === 'number' ? t.id === traitNameOrId : t.name === traitNameOrId || t.id === traitNameOrId
+    );
+
+    const isTrait =
+      target &&
+      ((target.kit && target.kit.includes('{Trait}')) ||
+        (target.source && target.source.includes('Trait')) ||
+        (target.table_group && target.table_group.includes('{Trait}')));
+
+    if (isTrait && activeRole !== 'gm' && !forceGmOverride) {
+      alert('Inherent traits (0 AP) are auto-taken and cannot be removed without GM approval. Switch to GM Mode to remove traits.');
+      return;
+    }
+
     get().updateActiveSheetData((prev) => {
-      const existing = prev.traits_quirks || [];
+      const prevExisting = prev.traits_quirks || [];
       return {
         ...prev,
-        traits_quirks: existing.filter((t) => {
+        traits_quirks: prevExisting.filter((t) => {
           if (typeof traitNameOrId === 'number') {
             return t.id !== traitNameOrId;
           }

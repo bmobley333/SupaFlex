@@ -106,9 +106,8 @@ export const applyKitTraitGrantsToSheet = (
       .filter((gt) => !existingTraits.some((et) => et.name.toLowerCase() === gt.name.toLowerCase()))
       .map((gt) => ({
         name: gt.name,
-        type: gt.type || 'trait',
+        effect: gt.effect || '',
         notes: gt.notes || '',
-        flaw_points: gt.flaw_points || 0,
         stat_hook: gt.stat_hook,
         kit: gt.kit || gt.table_group || `${kitLabel} {Trait}`,
         table_group: gt.kit || gt.table_group || `${kitLabel} {Trait}`,

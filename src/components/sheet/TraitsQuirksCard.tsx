@@ -8,7 +8,7 @@ import {
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ManageTraitsModal } from '../modals/ManageTraitsModal';
-import { TraitQuirkItem, calculateLiveSheetSpentAp } from '../../types/game';
+import { TraitQuirkItem } from '../../types/game';
 import { cleanKitName } from '../../utils/kitUtils';
 
 export const TraitsQuirksCard: React.FC = () => {
@@ -19,7 +19,7 @@ export const TraitsQuirksCard: React.FC = () => {
   // Listen for global manager event
   useEffect(() => {
     const handleOpen = (e: CustomEvent) => {
-      if (e.detail === 'traits') setShowManageModal(true);
+      if (e.detail === 'traits' || e.detail === 'spec_rules') setShowManageModal(true);
     };
     window.addEventListener('supaflex:open-manager' as any, handleOpen);
     return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
@@ -41,10 +41,6 @@ export const TraitsQuirksCard: React.FC = () => {
     return visibilityFilter === 'visible' ? visibleTraits : validTraits;
   }, [visibilityFilter, visibleTraits, validTraits]);
 
-  const { flawBonusAp, rawFlawPoints } = useMemo(() => {
-    return calculateLiveSheetSpentAp(activeCharacter?.sheet_data);
-  }, [activeCharacter?.sheet_data]);
-
   return (
     <div className="bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-4 flex flex-col gap-3 shadow-xl backdrop-blur-md relative overflow-hidden flex-1">
       {/* Standard Card Header */}
@@ -59,20 +55,9 @@ export const TraitsQuirksCard: React.FC = () => {
             </h3>
             <CardHelpButton ruleKey="traits" />
           </div>
-
-          {/* Flaw Bonus AP Indicator */}
-          <div
-            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] font-mono font-bold ${
-              rawFlawPoints > 0
-                ? 'bg-amber-950/60 text-amber-300 border-amber-500/50 shadow-sm'
-                : 'bg-slate-950 text-slate-400 border-slate-800'
-            }`}
-            title={`Handicaps & Flaws grant bonus AP (up to +5 AP max). Current: +${rawFlawPoints} flaw points.`}
-          >
-            <span>⚠️ Flaw AP:</span>
-            <strong className="text-amber-200">+{flawBonusAp}</strong>
-            <span className="text-slate-500 text-[10px]">/ +5 Max</span>
-          </div>
+          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/40">
+            {validTraits.length} Rules
+          </span>
         </div>
 
         {/* Action Controls & Dyslexia-Friendly Visibility Pill Switch */}
@@ -100,7 +85,7 @@ export const TraitsQuirksCard: React.FC = () => {
                     ? 'bg-slate-800 text-purple-300 border border-purple-500/40 shadow-sm font-extrabold'
                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
                 }`}
-                title="Show all rules including read-once/hidden background traits"
+                title="Show all rules including read-once/hidden background rules"
               >
                 <span>📜</span>
                 <span>All ({validTraits.length})</span>
@@ -112,7 +97,7 @@ export const TraitsQuirksCard: React.FC = () => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="px-3 py-1.5 bg-purple-950/80 hover:bg-purple-900/90 text-purple-200 border border-purple-500/50 hover:border-purple-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-            title="Manage Character Rules & Flaws"
+            title="Manage Character Spec Rules"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Manage Rules</span>
@@ -124,7 +109,10 @@ export const TraitsQuirksCard: React.FC = () => {
       <div className="flex flex-col gap-2 flex-1 min-h-[140px] max-h-[420px] overflow-y-auto pr-1">
         {displayedTraits.length > 0 ? (
           displayedTraits.map((t, idx) => {
-            const isFlaw = (t.flaw_points || 0) > 0 || t.type === 'flaw';
+            const isTrait =
+              (t.kit && t.kit.includes('{Trait}')) ||
+              (t.source && t.source.includes('Trait')) ||
+              (t.table_group && t.table_group.includes('{Trait}'));
             const originTag = cleanKitName(t.kit || t.table_group || t.source || 'General');
             const isHidden = Boolean(t.is_hidden);
 
@@ -134,8 +122,6 @@ export const TraitsQuirksCard: React.FC = () => {
                 className={`p-2.5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm transition-all ${
                   isHidden
                     ? 'bg-slate-950/40 border-slate-800/60 border-dashed opacity-75 hover:opacity-100'
-                    : isFlaw
-                    ? 'bg-amber-950/20 border-amber-500/30 hover:border-amber-500/50'
                     : 'bg-slate-950/60 border-slate-850 hover:border-slate-800'
                 }`}
               >
@@ -147,15 +133,9 @@ export const TraitsQuirksCard: React.FC = () => {
 
                   {/* Clean Category Classification Pill & Hidden Tag */}
                   <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                    {isFlaw ? (
-                      <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-amber-950/90 text-amber-300 border border-amber-500/40 w-fit flex items-center gap-1">
-                        <span>⚠️</span> Flaw (+{t.flaw_points || 1} AP)
-                      </span>
-                    ) : (
-                      <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 w-fit flex items-center gap-1">
-                        <span>🧬</span> {originTag}
-                      </span>
-                    )}
+                    <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-purple-950/90 text-purple-300 border border-purple-500/40 w-fit flex items-center gap-1">
+                      <span>{isTrait ? '🧬 Trait •' : '📜'}</span> {originTag}
+                    </span>
 
                     {isHidden && (
                       <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-700/80 w-fit flex items-center gap-1">
@@ -171,11 +151,7 @@ export const TraitsQuirksCard: React.FC = () => {
                     {t.notes || (t as any).effect || 'No rule description'}
                   </p>
                   {t.stat_hook && (
-                    <div className={`flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded border w-fit shadow-inner ${
-                      isFlaw
-                        ? 'text-amber-300 bg-amber-950/60 border-amber-500/40'
-                        : 'text-cyan-300 bg-cyan-950/40 border-cyan-500/30'
-                    }`}>
+                    <div className="flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded border w-fit shadow-inner text-cyan-300 bg-cyan-950/40 border-cyan-500/30">
                       <Sparkles className="w-2.5 h-2.5 shrink-0" />
                       <span>
                         {t.stat_hook.type === 'mind_die' && 'Base AR dynamically set to Mind Die'}
@@ -232,19 +208,19 @@ export const TraitsQuirksCard: React.FC = () => {
                 onClick={() => setShowManageModal(true)}
                 className="px-3 py-1 bg-purple-950 hover:bg-purple-900 text-purple-200 border border-purple-500/50 rounded-lg text-xs font-bold cursor-pointer transition-all"
               >
-                + Manage Traits
+                + Manage Rules
               </button>
             </div>
           </div>
         ) : (
           <div className="p-6 bg-slate-950/40 rounded-xl border border-slate-800 text-xs text-slate-500 italic text-center flex flex-col items-center justify-center gap-1.5 flex-1">
-            <span>No active core traits.</span>
+            <span>No active spec rules.</span>
             <button
               type="button"
               onClick={() => setShowManageModal(true)}
               className="text-purple-400 hover:text-purple-300 font-bold underline cursor-pointer text-xs"
             >
-              + Open Manage Traits to Select Core Kits & Rules
+              + Open Manage Rules to Learn Stock Rules & Boons
             </button>
           </div>
         )}
