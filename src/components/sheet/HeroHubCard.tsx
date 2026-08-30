@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
 import { UniversalLinksModal } from '../modals/UniversalLinksModal';
 import { ManageKitsModal } from '../modals/ManageKitsModal';
 
@@ -12,13 +11,7 @@ interface HeroHubCardProps {
 }
 
 export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, className = '' }) => {
-  const {
-    activeCharacter,
-    addCharacterLink,
-    updateCharacterLink,
-    deleteCharacterLink,
-    reorderCharacterLinkByIndex,
-  } = useCharacterStore();
+  const { activeCharacter } = useCharacterStore();
 
   const [showDossierModal, setShowDossierModal] = useState(false);
   const [showKitsModal, setShowKitsModal] = useState(false);
@@ -95,7 +88,7 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
           </div>
         </div>
 
-        {/* Right Zone: Dossier + Manage Kits + Character Links (Far Right) */}
+        {/* Right Zone: Dossier + Manage Kits Button */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <button
             type="button"
@@ -117,17 +110,6 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
             <span className="text-xs">🎭</span>
             <span className="font-outfit font-black tracking-wide">Manage Kits</span>
           </button>
-
-          {/* 🔗 Character Links Dropdown on the Very Far Right */}
-          <UniversalLinksDropdown
-            label="Character Links"
-            links={sheet?.character_links || []}
-            themeColor="teal"
-            onAddLink={addCharacterLink}
-            onUpdateLink={updateCharacterLink}
-            onDeleteLink={deleteCharacterLink}
-            onReorderLinkByIndex={reorderCharacterLinkByIndex}
-          />
         </div>
       </div>
 

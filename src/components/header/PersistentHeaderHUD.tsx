@@ -4,6 +4,7 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, DieRating } from '../../types/game';
 import { stepDownDie } from '../../lib/dice';
 import { CardHelpButton } from '../common/CardHelpButton';
+import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
 
 interface AttributeConfig {
   key: AttributeKey;
@@ -42,6 +43,10 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
     saveActiveCharacter,
     spendMeta,
     resetSparks,
+    addCharacterLink,
+    updateCharacterLink,
+    deleteCharacterLink,
+    reorderCharacterLinkByIndex,
   } = useCharacterStore();
   const [activeDrawer, setActiveDrawer] = useState<'none' | 'attributes' | 'focus' | 'spark' | 'luck'>('none');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -485,6 +490,19 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
             </div>
           )}
         </div>
+      </div>
+
+      {/* Right Zone: Character Links Dropdown (Row 2, Aligned below Player Links / Resources) */}
+      <div className="shrink-0 flex items-center justify-end">
+        <UniversalLinksDropdown
+          label="Character Links"
+          links={sheet?.character_links || []}
+          themeColor="teal"
+          onAddLink={addCharacterLink}
+          onUpdateLink={updateCharacterLink}
+          onDeleteLink={deleteCharacterLink}
+          onReorderLinkByIndex={reorderCharacterLinkByIndex}
+        />
       </div>
     </div>
   );

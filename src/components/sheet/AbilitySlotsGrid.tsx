@@ -1020,12 +1020,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         type === 'powers' ? 'border-orange-500/20' : 'border-pink-500/20'
       }`}>
         <div className="flex items-center gap-2.5 flex-1 justify-start">
-          <div className={`p-1.5 rounded-xl border flex items-center justify-center ${
+          <div className={`p-1.5 rounded-xl border flex items-center justify-center shrink-0 ${
             type === 'powers'
               ? 'bg-orange-950/90 border-orange-500/50 text-orange-300 shadow-[0_0_12px_rgba(249,115,22,0.25)]'
               : 'bg-pink-950/90 border-pink-500/50 text-pink-300 shadow-[0_0_12px_rgba(236,72,153,0.25)]'
           }`}>
-            <span className="text-base leading-none">{sectionIcon}</span>
+            <span className="text-base leading-none whitespace-nowrap flex items-center gap-0.5">{sectionIcon}</span>
           </div>
           <h3 className={`font-outfit font-extrabold text-sm tracking-widest uppercase flex items-center gap-2 ${
             type === 'powers' ? 'text-orange-200' : 'text-pink-200'
@@ -1083,10 +1083,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 <div className="px-4 py-2.5 border-b border-slate-800 bg-slate-950/80 flex flex-col gap-2 shrink-0">
                   <div className="flex items-center justify-between gap-3 w-full">
                     <div className="flex items-center gap-2.5 shrink-0">
-                      <div className={`p-2 rounded-xl border flex items-center justify-center ${
+                      <div className={`p-2 rounded-xl border flex items-center justify-center shrink-0 ${
                         type === 'powers' ? 'bg-amber-950/80 border-amber-500/30 text-amber-300' : 'bg-cyan-950/80 border-cyan-500/30 text-cyan-300'
                       }`}>
-                        <span className="text-lg leading-none">{sectionIcon}</span>
+                        <span className="text-lg leading-none whitespace-nowrap flex items-center gap-0.5">{sectionIcon}</span>
                       </div>
                       <div>
                         <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
