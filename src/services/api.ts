@@ -361,30 +361,36 @@ export const gameApi = {
     return (data || []) as SupabaseSkill[];
   },
 
-  // --- TRAIT RULES & RULE MODIFIERS ---
-  async getRules(): Promise<SupabaseRule[]> {
-    let query = supabase.from('trait_rules').select('*');
+  // --- SPEC RULES & RULE MODIFIERS ---
+  async getSpecRules(): Promise<SupabaseRule[]> {
+    let query = supabase.from('spec_rules').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.eq('is_guildspace_locked', false);
     }
     const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
-      const fallback = await supabase.from('rules').select('*');
-      if (fallback.data) return fallback.data as SupabaseRule[];
-      console.error('[gameApi] Error fetching trait rules:', error);
+      try {
+        const fallback = await supabase.from('trait_rules').select('*');
+        if (fallback.data) return fallback.data as SupabaseRule[];
+      } catch (_) {}
+      console.error('[gameApi] Error fetching spec rules:', error);
       return [];
     }
     return (data || []) as SupabaseRule[];
   },
 
-  async getTraits(): Promise<SupabaseRule[]> {
-    return this.getRules();
+  async getRules(): Promise<SupabaseRule[]> {
+    return this.getSpecRules();
   },
 
-  async createRule(newRule: Omit<SupabaseRule, 'id' | 'created_at'>): Promise<SupabaseRule> {
+  async getTraits(): Promise<SupabaseRule[]> {
+    return this.getSpecRules();
+  },
+
+  async createSpecRule(newRule: Omit<SupabaseRule, 'id' | 'created_at'>): Promise<SupabaseRule> {
     const { data: maxRows } = await supabase
-      .from('trait_rules')
+      .from('spec_rules')
       .select('id')
       .order('id', { ascending: false })
       .limit(1);
@@ -392,20 +398,24 @@ export const gameApi = {
     const nextId = maxRows && maxRows.length > 0 && maxRows[0].id ? maxRows[0].id + 1 : 1;
 
     const { data, error } = await supabase
-      .from('trait_rules')
+      .from('spec_rules')
       .insert({ ...newRule, id: nextId })
       .select()
       .single();
 
     if (error) {
-      console.error('[gameApi] Error creating custom trait rule:', error);
+      console.error('[gameApi] Error creating custom spec rule:', error);
       throw error;
     }
     return data as SupabaseRule;
   },
 
+  async createRule(newRule: Omit<SupabaseRule, 'id' | 'created_at'>): Promise<SupabaseRule> {
+    return this.createSpecRule(newRule);
+  },
+
   async createTrait(newTrait: Omit<SupabaseTrait, 'id' | 'created_at'>): Promise<SupabaseTrait> {
-    return this.createRule(newTrait);
+    return this.createSpecRule(newTrait);
   },
 
   // --- ARMOR CATALOG ---

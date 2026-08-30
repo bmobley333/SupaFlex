@@ -55,7 +55,7 @@ export const TraitsQuirksCard: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5">
             <h3 className="font-outfit font-black text-sm tracking-wider text-slate-100 uppercase">
-              Spec. Rules
+              Spec Rules
             </h3>
             <CardHelpButton ruleKey="traits" />
           </div>
