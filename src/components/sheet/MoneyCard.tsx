@@ -152,12 +152,20 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
       <div className={`bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-amber-400/90 p-3 flex items-center justify-between transition-all gap-2.5 flex-wrap shadow-lg shadow-amber-950/20 ${className}`}>
         {/* Left: Title */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)]">
-            <span className="text-base leading-none">💰</span>
-          </div>
-          <span className="font-outfit font-extrabold text-xs tracking-wider text-amber-200 uppercase">
-            Money
-          </span>
+          <button
+            type="button"
+            onClick={() => setShowManageModal(true)}
+            className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
+            title="Click to open Money & Valuables Manager"
+          >
+            <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] group-hover:scale-105 group-hover:border-amber-400 transition-all">
+              <span className="text-base leading-none">💰</span>
+            </div>
+            <span className="font-outfit font-extrabold text-xs tracking-wider text-amber-200 uppercase group-hover:text-white transition-colors flex items-center gap-1">
+              <span>Money</span>
+              <ChevronDown className="w-3 h-3 text-amber-400/70 group-hover:text-amber-300 group-hover:translate-y-0.5 transition-all" />
+            </span>
+          </button>
         </div>
 
         {/* Center: Quick Coin Displays */}
@@ -173,18 +181,14 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
           </div>
         </div>
 
-        {/* Right: Treasure / Valuables Trigger Button */}
+        {/* Right: Treasure / Valuables Action Button */}
         <button
           type="button"
           onClick={() => setShowManageModal(true)}
-          className="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1 shadow-sm bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/35 text-amber-300 cursor-pointer shrink-0"
-          title="Manage Money & Valuables"
+          className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-amber-950/80 hover:bg-amber-900/90 border-amber-500/40 hover:border-amber-400 text-amber-200 hover:text-white cursor-pointer shrink-0 group"
+          title="Open Money & Valuables Manager"
         >
-          <span className="font-outfit font-bold">Treasure</span>
-          <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-amber-900/80 rounded text-amber-200">
-            {treasure.length}
-          </span>
-          <ChevronDown className="w-3 h-3 text-amber-400" />
+          <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
         </button>
       </div>
 

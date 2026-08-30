@@ -295,26 +295,30 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       <div className={`bg-gradient-to-b from-teal-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-teal-500/90 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap shadow-lg shadow-teal-950/20 ${className}`}>
         {/* Left: Title */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="p-1.5 rounded-xl bg-teal-950/90 border border-teal-500/50 text-teal-300 flex items-center justify-center shadow-[0_0_12px_rgba(20,184,166,0.25)]">
-            <span className="text-base leading-none">⚙️</span>
-          </div>
-          <span className="font-outfit font-extrabold text-xs tracking-wider text-teal-200 uppercase">
-            Gear
-          </span>
+          <button
+            type="button"
+            onClick={() => setShowManageModal(true)}
+            className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
+            title="Click to open Gear Manager"
+          >
+            <div className="p-1.5 rounded-xl bg-teal-950/90 border border-teal-500/50 text-teal-300 flex items-center justify-center shadow-[0_0_12px_rgba(20,184,166,0.25)] group-hover:scale-105 group-hover:border-teal-400 transition-all">
+              <span className="text-base leading-none">⚙️</span>
+            </div>
+            <span className="font-outfit font-extrabold text-xs tracking-wider text-teal-200 uppercase group-hover:text-white transition-colors flex items-center gap-1">
+              <span>Gear</span>
+              <ChevronDown className="w-3 h-3 text-teal-400/70 group-hover:text-teal-300 group-hover:translate-y-0.5 transition-all" />
+            </span>
+          </button>
         </div>
 
-        {/* Right: Manage Gear Trigger Button */}
+        {/* Right: Manage Gear Action Button */}
         <button
           type="button"
           onClick={() => setShowManageModal(true)}
-          className="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1 shadow-sm bg-teal-950/40 hover:bg-teal-900/50 border-teal-500/35 text-teal-300 cursor-pointer shrink-0"
+          className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-teal-950/80 hover:bg-teal-900/90 border-teal-500/40 hover:border-teal-400 text-teal-200 hover:text-white cursor-pointer shrink-0 group"
           title="Open Gear Inventory & Catalog Modal"
         >
-          <span className="font-outfit font-bold">Manage Gear</span>
-          <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-teal-900/80 rounded text-teal-200">
-            {gearList.length}
-          </span>
-          <ChevronDown className="w-3 h-3 text-teal-400" />
+          <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
         </button>
       </div>
 

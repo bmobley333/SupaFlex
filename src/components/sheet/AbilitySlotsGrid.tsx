@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, ArrowDownToLine, Trash2, AlertCircle, Check } from 'lucide-react';
+import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, ArrowDownToLine, Trash2, AlertCircle, Check } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -1020,18 +1020,28 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         type === 'powers' ? 'border-orange-500/20' : 'border-pink-500/20'
       }`}>
         <div className="flex items-center gap-2.5 flex-1 justify-start">
-          <div className={`p-1.5 rounded-xl border flex items-center justify-center shrink-0 ${
-            type === 'powers'
-              ? 'bg-orange-950/90 border-orange-500/50 text-orange-300 shadow-[0_0_12px_rgba(249,115,22,0.25)]'
-              : 'bg-pink-950/90 border-pink-500/50 text-pink-300 shadow-[0_0_12px_rgba(236,72,153,0.25)]'
-          }`}>
-            <span className="text-base leading-none whitespace-nowrap flex items-center gap-0.5">{sectionIcon}</span>
-          </div>
-          <h3 className={`font-outfit font-extrabold text-sm tracking-widest uppercase flex items-center gap-2 ${
-            type === 'powers' ? 'text-orange-200' : 'text-pink-200'
-          }`}>
-            {displayTitle}
-          </h3>
+          <button
+            type="button"
+            onClick={() => setShowManageModal(true)}
+            className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
+            title={`Click to open ${type === 'powers' ? 'Powers' : 'Loadout'} Manager`}
+          >
+            <div className={`p-1.5 rounded-xl border flex items-center justify-center shrink-0 group-hover:scale-105 transition-all ${
+              type === 'powers'
+                ? 'bg-orange-950/90 border-orange-500/50 text-orange-300 shadow-[0_0_12px_rgba(249,115,22,0.25)] group-hover:border-orange-400'
+                : 'bg-pink-950/90 border-pink-500/50 text-pink-300 shadow-[0_0_12px_rgba(236,72,153,0.25)] group-hover:border-pink-400'
+            }`}>
+              <span className="text-base leading-none whitespace-nowrap flex items-center gap-0.5">{sectionIcon}</span>
+            </div>
+            <h3 className={`font-outfit font-extrabold text-sm tracking-widest uppercase flex items-center gap-1.5 group-hover:text-white transition-colors ${
+              type === 'powers' ? 'text-orange-200' : 'text-pink-200'
+            }`}>
+              <span>{displayTitle}</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-all group-hover:translate-y-0.5 ${
+                type === 'powers' ? 'text-orange-400/70 group-hover:text-orange-300' : 'text-pink-400/70 group-hover:text-pink-300'
+              }`} />
+            </h3>
+          </button>
           <CardHelpButton ruleKey={type === 'powers' ? 'powers.basics' : 'magic_items.basics'} />
         </div>
 
@@ -1050,27 +1060,22 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
         <div className="flex items-center justify-end gap-2 flex-1">
           <div className="relative">
-          <button
-            onClick={() => setShowManageModal(!showManageModal)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
-              showManageModal
-                ? type === 'powers'
-                  ? 'bg-amber-600/30 text-amber-200 border-amber-400 shadow-amber-500/30'
-                  : 'bg-cyan-600/30 text-cyan-200 border-cyan-400 shadow-cyan-500/30'
-                : type === 'powers'
-                ? 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-300'
-                : 'bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300'
-            }`}
-            title={`Manage ${type === 'powers' ? 'powers' : 'loadout'} roster and catalog`}
-          >
-            <span className="font-outfit font-bold">
-              Manage {type === 'powers' ? 'Powers' : 'Loadout'}
-            </span>
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
-              {slots.length}
-            </span>
-            {showManageModal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
+            <button
+              type="button"
+              onClick={() => setShowManageModal(!showManageModal)}
+              className={`p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm cursor-pointer group ${
+                showManageModal
+                  ? type === 'powers'
+                    ? 'bg-amber-600/30 text-amber-200 border-amber-400 shadow-amber-500/30'
+                    : 'bg-cyan-600/30 text-cyan-200 border-cyan-400 shadow-cyan-500/30'
+                  : type === 'powers'
+                  ? 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-300 hover:text-white'
+                  : 'bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300 hover:text-white'
+              }`}
+              title={`Open ${type === 'powers' ? 'Powers' : 'Loadout'} Manager`}
+            >
+              <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
+            </button>
 
           {/* MASTER 2-COLUMN SPLIT-PANE MANAGER MODAL */}
           {showManageModal && (

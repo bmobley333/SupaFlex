@@ -1,6 +1,6 @@
 // src/components/sheet/WeaponsCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, X, Check, Swords, Loader2, Search, Star } from 'lucide-react';
+import { ChevronDown, X, Check, Swords, Loader2, Search, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
@@ -482,31 +482,36 @@ export const WeaponsCard: React.FC = () => {
       {/* Card Header */}
       <div className="flex items-center justify-between border-b border-rose-500/20 pb-2.5">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-xl bg-rose-950/90 border border-rose-500/50 text-rose-300 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.25)]">
-            <span className="text-base leading-none">⚔️</span>
-          </div>
-          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-rose-200 uppercase flex items-center gap-2">
-            Weapons
-          </h3>
+          <button
+            type="button"
+            onClick={() => setShowManageModal(true)}
+            className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
+            title="Click to open Weapons Manager"
+          >
+            <div className="p-1.5 rounded-xl bg-rose-950/90 border border-rose-500/50 text-rose-300 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.25)] group-hover:scale-105 group-hover:border-rose-400 transition-all">
+              <span className="text-base leading-none">⚔️</span>
+            </div>
+            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-rose-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
+              <span>Weapons</span>
+              <ChevronDown className="w-3.5 h-3.5 text-rose-400/70 group-hover:text-rose-300 group-hover:translate-y-0.5 transition-all" />
+            </h3>
+          </button>
           <CardHelpButton ruleKey="weapons.basics" />
         </div>
 
-        {/* Manage Weapons Trigger Button */}
+        {/* Manage Weapons Action Button */}
         <div className="relative">
           <button
+            type="button"
             onClick={() => setShowManageModal(!showManageModal)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
+            className={`p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm cursor-pointer group ${
               showManageModal
                 ? 'bg-rose-600/30 text-rose-200 border-rose-400 shadow-rose-500/30'
-                : 'bg-rose-950/40 hover:bg-rose-900/50 border-rose-500/30 text-rose-300'
+                : 'bg-rose-950/40 hover:bg-rose-900/50 border-rose-500/30 text-rose-300 hover:text-white'
             }`}
-            title="Manage and equip weapons catalog"
+            title="Open Weapons Manager"
           >
-            <span className="font-outfit font-bold">Manage Weapons</span>
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
-              {weapons.length}
-            </span>
-            {showManageModal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
           </button>
 
           {/* Manage Weapons Master 2-Column Split-Pane Modal */}

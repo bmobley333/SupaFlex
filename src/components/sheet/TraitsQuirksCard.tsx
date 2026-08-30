@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles,
-  Plus,
   Eye,
   EyeOff,
+  ChevronDown,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ManageTraitsModal } from '../modals/ManageTraitsModal';
-import { TraitQuirkItem } from '../../types/game';
 
 export const TraitsQuirksCard: React.FC = () => {
   const { activeCharacter, toggleTraitVisibility } = useCharacterStore();
@@ -24,18 +23,23 @@ export const TraitsQuirksCard: React.FC = () => {
     return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
   }, []);
 
-  const equippedTraits: TraitQuirkItem[] = useMemo(() => {
-    return activeCharacter?.sheet_data?.traits_quirks || [];
+  // Sync Traits & Quirks from active character data
+  const rawTraits = useMemo(() => {
+    const list = activeCharacter?.sheet_data?.traits_quirks;
+    return Array.isArray(list) ? list : [];
   }, [activeCharacter?.sheet_data?.traits_quirks]);
 
+  // Clean empty entries
   const validTraits = useMemo(() => {
-    return (equippedTraits || []).filter((t): t is TraitQuirkItem => Boolean(t && t.name));
-  }, [equippedTraits]);
+    return rawTraits.filter((t) => t && t.name && t.name.trim() !== '');
+  }, [rawTraits]);
 
+  // Active (Visible) Filtered List
   const visibleTraits = useMemo(() => {
     return validTraits.filter((t) => !t.is_hidden);
   }, [validTraits]);
 
+  // Rendered list according to switch mode
   const displayedTraits = useMemo(() => {
     return visibilityFilter === 'visible' ? visibleTraits : validTraits;
   }, [visibilityFilter, visibleTraits, validTraits]);
@@ -45,15 +49,21 @@ export const TraitsQuirksCard: React.FC = () => {
       {/* Standard Card Header */}
       <div className="flex items-center justify-between gap-2 flex-wrap border-b border-slate-800/80 pb-2.5">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-xl bg-purple-950/90 border border-purple-500/50 text-purple-300 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.25)]">
-            <span className="text-base leading-none">📜</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <h3 className="font-outfit font-black text-sm tracking-wider text-slate-100 uppercase">
-              Spec Rules
+          <button
+            type="button"
+            onClick={() => setShowManageModal(true)}
+            className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
+            title="Click to open Spec Rules Manager"
+          >
+            <div className="p-1.5 rounded-xl bg-purple-950/90 border border-purple-500/50 text-purple-300 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.25)] group-hover:scale-105 group-hover:border-purple-400 transition-all">
+              <span className="text-base leading-none">📜</span>
+            </div>
+            <h3 className="font-outfit font-black text-sm tracking-wider text-slate-100 uppercase group-hover:text-purple-200 transition-colors flex items-center gap-1.5">
+              <span>Spec Rules</span>
+              <ChevronDown className="w-3.5 h-3.5 text-purple-400/70 group-hover:text-purple-300 group-hover:translate-y-0.5 transition-all" />
             </h3>
-            <CardHelpButton ruleKey="traits" />
-          </div>
+          </button>
+          <CardHelpButton ruleKey="traits" />
         </div>
 
         {/* Action Controls & Dyslexia-Friendly Visibility Pill Switch */}
@@ -92,11 +102,10 @@ export const TraitsQuirksCard: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowManageModal(true)}
-            className="px-3 py-1.5 bg-purple-950/80 hover:bg-purple-900/90 text-purple-200 border border-purple-500/50 hover:border-purple-400 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+            className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-purple-950/80 hover:bg-purple-900/90 border-purple-500/40 hover:border-purple-400 text-purple-200 hover:text-white cursor-pointer group"
             title="Manage Character Spec Rules"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Manage Rules</span>
+            <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
           </button>
         </div>
       </div>

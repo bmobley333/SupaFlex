@@ -1,6 +1,6 @@
 // src/components/sheet/ShieldCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, X, Check, Search, ShieldAlert, Loader2, Star } from 'lucide-react';
+import { ChevronDown, X, Check, Search, ShieldAlert, Loader2, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
@@ -356,12 +356,20 @@ export const ShieldCard: React.FC = () => {
       {/* Card Header */}
       <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2.5">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-xl bg-cyan-950/90 border border-cyan-500/50 text-cyan-300 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.25)]">
-            <span className="text-base leading-none">🛡️</span>
-          </div>
-          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-cyan-200 uppercase">
-            Shield
-          </h3>
+          <button
+            type="button"
+            onClick={() => setShowManageModal(true)}
+            className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
+            title="Click to open Shield Manager"
+          >
+            <div className="p-1.5 rounded-xl bg-cyan-950/90 border border-cyan-500/50 text-cyan-300 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.25)] group-hover:scale-105 group-hover:border-cyan-400 transition-all">
+              <span className="text-base leading-none">🛡️</span>
+            </div>
+            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-cyan-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
+              <span>Shield</span>
+              <ChevronDown className="w-3.5 h-3.5 text-cyan-400/70 group-hover:text-cyan-300 group-hover:translate-y-0.5 transition-all" />
+            </h3>
+          </button>
           <CardHelpButton ruleKey="col.shields.block" />
           {!shield.equipped && (
             <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-950 text-slate-400 rounded-full border border-slate-800">
@@ -370,20 +378,18 @@ export const ShieldCard: React.FC = () => {
           )}
         </div>
 
-        {/* Trigger Button */}
+        {/* Manage Shields Action Button */}
         <button
+          type="button"
           onClick={() => setShowManageModal(!showManageModal)}
-          className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm ${
+          className={`p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm cursor-pointer group ${
             showManageModal
-              ? 'bg-cyan-600/30 text-cyan-200 border-cyan-400'
-              : 'bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300'
+              ? 'bg-cyan-600/30 text-cyan-200 border-cyan-400 shadow-cyan-500/30'
+              : 'bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300 hover:text-white'
           }`}
+          title="Open Shield Manager"
         >
-          <span className="font-outfit">Manage Shields</span>
-          <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
-            {armory.length}
-          </span>
-          {showManageModal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
         </button>
 
         {/* Master 2-Column Split-Pane Manager Modal */}

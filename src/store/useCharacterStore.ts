@@ -7,7 +7,8 @@ import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCatego
 const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
   if (typeof window !== 'undefined') {
     try {
-      const em = email || sessionStorage.getItem('supaflex_player_email') || 'default';
+      const em = email || sessionStorage.getItem('supaflex_player_email') || '';
+      if (!em) return [];
       const saved = localStorage.getItem(`supaflex_player_links_${em}`);
       if (saved) return JSON.parse(saved);
     } catch {}
@@ -132,8 +133,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   })(),
 
   playerEmail: (() => {
-    if (typeof window === 'undefined') return 'default';
-    return sessionStorage.getItem('supaflex_player_email') || 'default';
+    if (typeof window === 'undefined') return '';
+    return sessionStorage.getItem('supaflex_player_email') || '';
   })(),
   playerName: (() => {
     if (typeof window === 'undefined') return '';
@@ -180,11 +181,28 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         gameApi.getTraits(),
       ]);
 
+      const email = (get().playerEmail || '').trim().toLowerCase();
+
+      // If unauthenticated, do not select any character
+      if (!email) {
+        set({
+          characters: chars,
+          activeCharacter: null,
+          powers,
+          magicItems: items,
+          skills,
+          traits,
+          isLoading: false,
+        });
+        return;
+      }
+
+      const myHeroes = chars.filter((c) => (c.owner_email || '').trim().toLowerCase() === email);
       const currentActive = get().activeCharacter;
       let selectedChar: Character | null = null;
 
-      if (currentActive && chars.some((c) => c.id === currentActive.id)) {
-        const freshChar = chars.find((c) => c.id === currentActive.id)!;
+      if (currentActive && myHeroes.some((c) => c.id === currentActive.id)) {
+        const freshChar = myHeroes.find((c) => c.id === currentActive.id)!;
         const migratedSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(freshChar.sheet_data));
         // Preserve active character object and unsaved local edits if present
         selectedChar = {
@@ -194,18 +212,14 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       } else {
         const lastActiveIdStr = sessionStorage.getItem('supaflex_last_active_char_id');
         const lastActiveId = lastActiveIdStr ? Number(lastActiveIdStr) : null;
-        selectedChar = (lastActiveId ? chars.find((c) => c.id === lastActiveId) : null) || chars[0] || null;
-
-        // If no character exists yet, auto-create a default Playtest hero
-        if (!selectedChar && isConnected) {
-          selectedChar = await gameApi.createCharacter('Hero of MetaScape', 'Vanguard', 'Human');
-          chars.push(selectedChar);
-        }
+        selectedChar = (lastActiveId ? myHeroes.find((c) => c.id === lastActiveId) : null) || myHeroes[0] || null;
 
         if (selectedChar) {
           const migratedSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(selectedChar.sheet_data));
           selectedChar = { ...selectedChar, sheet_data: migratedSheet };
           sessionStorage.setItem('supaflex_last_active_char_id', String(selectedChar.id));
+        } else {
+          sessionStorage.removeItem('supaflex_last_active_char_id');
         }
       }
 
@@ -269,13 +283,22 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
   setPlayerEmail: (email: string) => {
     const trimmed = email.trim();
-    sessionStorage.setItem('supaflex_player_email', trimmed);
+    if (trimmed) {
+      sessionStorage.setItem('supaflex_player_email', trimmed);
+    } else {
+      sessionStorage.removeItem('supaflex_player_email');
+    }
     set({ playerEmail: trimmed });
+    get().fetchPlayerLinks();
   },
 
   setPlayerName: (name: string) => {
     const trimmed = name.trim();
-    sessionStorage.setItem('supaflex_player_name', trimmed);
+    if (trimmed) {
+      sessionStorage.setItem('supaflex_player_name', trimmed);
+    } else {
+      sessionStorage.removeItem('supaflex_player_name');
+    }
     set({ playerName: trimmed });
   },
 
@@ -720,7 +743,11 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
   // --- PLAYER LINKS (Account-Wide) ---
   fetchPlayerLinks: () => {
-    const email = get().playerEmail || 'default';
+    const email = (get().playerEmail || '').trim().toLowerCase();
+    if (!email) {
+      set({ playerLinks: [] });
+      return;
+    }
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem(`supaflex_player_links_${email}`);
@@ -734,7 +761,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   addPlayerLink: (name: string, url: string, tag?: string, desc?: string) => {
-    const email = get().playerEmail || 'default';
+    const email = (get().playerEmail || '').trim().toLowerCase();
     const newLink: EncounterLink = {
       id: `pl_link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
@@ -746,13 +773,15 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     };
     const updated = [...get().playerLinks, newLink];
     set({ playerLinks: updated });
-    try {
-      localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(updated));
-    } catch {}
+    if (email) {
+      try {
+        localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(updated));
+      } catch {}
+    }
   },
 
   updatePlayerLink: (linkId: string, name: string, url: string, tag?: string, desc?: string) => {
-    const email = get().playerEmail || 'default';
+    const email = (get().playerEmail || '').trim().toLowerCase();
     const updated = get().playerLinks.map((l) =>
       l.id === linkId
         ? {
@@ -766,30 +795,36 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         : l
     );
     set({ playerLinks: updated });
-    try {
-      localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(updated));
-    } catch {}
+    if (email) {
+      try {
+        localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(updated));
+      } catch {}
+    }
   },
 
   deletePlayerLink: (linkId: string) => {
-    const email = get().playerEmail || 'default';
+    const email = (get().playerEmail || '').trim().toLowerCase();
     const updated = get().playerLinks.filter((l) => l.id !== linkId);
     set({ playerLinks: updated });
-    try {
-      localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(updated));
-    } catch {}
+    if (email) {
+      try {
+        localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(updated));
+      } catch {}
+    }
   },
 
   reorderPlayerLinkByIndex: (fromIdx: number, toIdx: number) => {
-    const email = get().playerEmail || 'default';
+    const email = (get().playerEmail || '').trim().toLowerCase();
     const links = [...get().playerLinks];
     if (fromIdx < 0 || fromIdx >= links.length || toIdx < 0 || toIdx >= links.length) return;
     const [moved] = links.splice(fromIdx, 1);
     links.splice(toIdx, 0, moved);
     set({ playerLinks: links });
-    try {
-      localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(links));
-    } catch {}
+    if (email) {
+      try {
+        localStorage.setItem(`supaflex_player_links_${email}`, JSON.stringify(links));
+      } catch {}
+    }
   },
 
   // --- CHARACTER LINKS & NOTES (Character-Specific) ---

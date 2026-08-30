@@ -1,6 +1,6 @@
 // src/components/sheet/ArmorCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, X, Check, Shirt, Search, Loader2, Star } from 'lucide-react';
+import { ChevronDown, X, Check, Shirt, Search, Loader2, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
@@ -380,28 +380,39 @@ export const ArmorCard: React.FC = () => {
 
   return (
     <div className="bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-amber-950/20">
+      {/* Card Header */}
       <div className="flex items-center justify-between border-b border-amber-500/20 pb-2.5">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)]">
-            <span className="text-base leading-none">🧥</span>
-          </div>
-          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase">
-            Armor
-          </h3>
+          <button
+            type="button"
+            onClick={() => setShowManageModal(true)}
+            className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
+            title="Click to open Armor Manager"
+          >
+            <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] group-hover:scale-105 group-hover:border-amber-400 transition-all">
+              <span className="text-base leading-none">🧥</span>
+            </div>
+            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
+              <span>Armor</span>
+              <ChevronDown className="w-3.5 h-3.5 text-amber-400/70 group-hover:text-amber-300 group-hover:translate-y-0.5 transition-all" />
+            </h3>
+          </button>
           <CardHelpButton ruleKey="col.armor.ar" />
         </div>
+
+        {/* Manage Armor Action Button */}
         <div className="relative">
           <button
+            type="button"
             onClick={() => setShowManageModal(!showManageModal)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
-              showManageModal ? 'bg-amber-600/30 text-amber-200 border-amber-400' : 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-300'
+            className={`p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm cursor-pointer group ${
+              showManageModal
+                ? 'bg-amber-600/30 text-amber-200 border-amber-400 shadow-amber-500/30'
+                : 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-300 hover:text-white'
             }`}
+            title="Open Armor Manager"
           >
-            <span className="font-outfit font-bold">Manage Armor</span>
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
-              {wardrobe.length}
-            </span>
-            {showManageModal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
           </button>
 
           {showManageModal && (

@@ -19,8 +19,14 @@ export const AccountPillButton: React.FC<AccountPillButtonProps> = ({
       className="flex items-center gap-2 px-3 py-1.5 bg-slate-950/90 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-xl text-xs transition-all shadow-sm group cursor-pointer"
       title="Click to open Launch & Account Hub (Manage Characters, Auth, Inspect & Parties)"
     >
-      <span className="font-mono text-amber-300 font-bold truncate max-w-[200px]">
-        {email || 'Guest'}
+      <span className="font-mono text-amber-300 font-bold truncate max-w-[200px] flex items-center gap-1">
+        {email?.trim() ? (
+          email.trim()
+        ) : (
+          <>
+            <span>🔒</span> Not Signed In
+          </>
+        )}
       </span>
 
       {isGmMode && (

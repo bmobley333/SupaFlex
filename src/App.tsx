@@ -76,7 +76,9 @@ export default function App() {
   }, []);
 
   // Unified Launch Hub & Party Session State
-  const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(false);
+  const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(
+    typeof window !== 'undefined' ? !sessionStorage.getItem('supaflex_player_email') : true
+  );
   const [launchHubInitialTab, setLaunchHubInitialTab] = useState<'account' | 'inspect' | 'party'>('account');
   const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
 
@@ -156,6 +158,10 @@ export default function App() {
         const userEmail = user.email.trim().toLowerCase();
         const userName = resolveGoogleName(user);
         handleAuthUser(userEmail, userName);
+      } else {
+        // Unauthenticated session: ensure modal is active and character is null
+        setShowUnifiedLaunchHubModal(true);
+        useCharacterStore.setState({ activeCharacter: null });
       }
     });
 
@@ -790,13 +796,23 @@ export default function App() {
             sessionStorage.setItem('supaflex_player_email', email);
             fetchInitialData();
           }}
-          onLogout={() => {
+          onLogout={async () => {
+            try {
+              await supabase.auth.signOut();
+            } catch (e) {
+              console.error('Error during signOut:', e);
+            }
             setPlayerEmail('');
+            setPlayerName('');
             setActiveRoomCode(null);
             sessionStorage.removeItem('supaflex_player_email');
+            sessionStorage.removeItem('supaflex_player_name');
+            sessionStorage.removeItem('supaflex_active_party_id');
+            sessionStorage.removeItem('supaflex_last_active_char_id');
             sessionStorage.removeItem('supaflex_auth_token');
             sessionStorage.removeItem('supaflex_tab_jwt');
-            useCharacterStore.setState({ activeCharacter: null });
+            useCharacterStore.setState({ activeCharacter: null, activePartyId: null, playerLinks: [] });
+            setLaunchHubInitialTab('account');
             setShowUnifiedLaunchHubModal(true);
           }}
           onCharacterCloned={(clonedChar) => {

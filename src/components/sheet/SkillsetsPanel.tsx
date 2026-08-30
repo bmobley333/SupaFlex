@@ -1,6 +1,6 @@
 // src/components/sheet/SkillsetsPanel.tsx
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Check, ChevronDown, ChevronUp, Search, X, Sparkles, Scroll, GraduationCap, Plus, AlertCircle, Edit2, Star } from 'lucide-react';
+import { Check, ChevronDown, Search, X, Sparkles, Scroll, GraduationCap, Plus, AlertCircle, Edit2, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
@@ -742,12 +742,20 @@ export const SkillsetsPanel: React.FC = () => {
       {/* Main Sheet Card Header */}
       <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2.5 gap-2 flex-wrap">
         <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="p-1.5 rounded-xl bg-indigo-900/90 border border-indigo-500/60 text-indigo-200 flex items-center justify-center shadow-[0_0_14px_rgba(99,102,241,0.35)]">
-            <span className="text-base leading-none">🎓</span>
-          </div>
-          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-indigo-200 uppercase">
-            Skills
-          </h3>
+          <button
+            type="button"
+            onClick={() => setShowManageModal(true)}
+            className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
+            title="Click to open Skills Manager"
+          >
+            <div className="p-1.5 rounded-xl bg-indigo-900/90 border border-indigo-500/60 text-indigo-200 flex items-center justify-center shadow-[0_0_14px_rgba(99,102,241,0.35)] group-hover:scale-105 group-hover:border-indigo-400 transition-all">
+              <span className="text-base leading-none">🎓</span>
+            </div>
+            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-indigo-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
+              <span>Skills</span>
+              <ChevronDown className="w-3.5 h-3.5 text-indigo-400/70 group-hover:text-indigo-300 group-hover:translate-y-0.5 transition-all" />
+            </h3>
+          </button>
           <CardHelpButton ruleKey="skills.basics" />
 
           {/* Inline Count Badges */}
@@ -761,26 +769,19 @@ export const SkillsetsPanel: React.FC = () => {
           </div>
         </div>
 
-        {/* Manage Skills Trigger Button */}
+        {/* Manage Skills Action Button */}
         <div className="relative">
           <button
+            type="button"
             onClick={() => setShowManageModal(!showManageModal)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
+            className={`p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm cursor-pointer group ${
               showManageModal
                 ? 'bg-indigo-600/30 text-indigo-200 border-indigo-400 shadow-indigo-500/30'
-                : 'bg-indigo-950/40 hover:bg-indigo-900/50 border-indigo-500/30 text-indigo-300'
+                : 'bg-indigo-950/40 hover:bg-indigo-900/50 border-indigo-500/30 text-indigo-300 hover:text-white'
             }`}
-            title="Manage character skills, skillsets, and custom skills"
+            title="Open Skills Manager"
           >
-            <span className="font-outfit font-bold">Manage Skills</span>
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-950 rounded text-slate-200">
-              {uniqueKnownSkillsetNames.length}/{effectiveSkillsets.length}
-            </span>
-            {showManageModal ? (
-              <ChevronUp className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
-            ) : (
-              <ChevronDown className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            )}
+            <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
           </button>
 
           {/* MASTER 2-COLUMN SPLIT-PANE GLASSMORPHIC MODAL */}
