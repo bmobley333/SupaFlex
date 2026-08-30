@@ -9,7 +9,6 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ManageTraitsModal } from '../modals/ManageTraitsModal';
 import { TraitQuirkItem } from '../../types/game';
-import { cleanKitName } from '../../utils/kitUtils';
 
 export const TraitsQuirksCard: React.FC = () => {
   const { activeCharacter, toggleTraitVisibility } = useCharacterStore();
@@ -55,9 +54,6 @@ export const TraitsQuirksCard: React.FC = () => {
             </h3>
             <CardHelpButton ruleKey="traits" />
           </div>
-          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/40">
-            {validTraits.length} Rules
-          </span>
         </div>
 
         {/* Action Controls & Dyslexia-Friendly Visibility Pill Switch */}
@@ -109,11 +105,6 @@ export const TraitsQuirksCard: React.FC = () => {
       <div className="flex flex-col gap-2 flex-1 min-h-[140px] max-h-[420px] overflow-y-auto pr-1">
         {displayedTraits.length > 0 ? (
           displayedTraits.map((t, idx) => {
-            const isTrait =
-              (t.kit && t.kit.includes('{Trait}')) ||
-              (t.source && t.source.includes('Trait')) ||
-              (t.table_group && t.table_group.includes('{Trait}'));
-            const originTag = cleanKitName(t.kit || t.table_group || t.source || 'General');
             const isHidden = Boolean(t.is_hidden);
 
             return (
@@ -125,24 +116,11 @@ export const TraitsQuirksCard: React.FC = () => {
                     : 'bg-slate-950/60 border-slate-850 hover:border-slate-800'
                 }`}
               >
-                {/* 1. Name & Classification Column */}
+                {/* 1. Name Column */}
                 <div className="w-44 sm:w-48 shrink-0 flex flex-col gap-0.5">
                   <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
                     {t.name}
                   </span>
-
-                  {/* Clean Category Classification Pill & Hidden Tag */}
-                  <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                    <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-purple-950/90 text-purple-300 border border-purple-500/40 w-fit flex items-center gap-1">
-                      <span>{isTrait ? '🧬 Trait •' : '📜'}</span> {originTag}
-                    </span>
-
-                    {isHidden && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-700/80 w-fit flex items-center gap-1">
-                        <span>🙈</span> Hidden
-                      </span>
-                    )}
-                  </div>
                 </div>
 
                 {/* 2. Rule Description & Live Computed Stat Hook Column */}
@@ -169,7 +147,7 @@ export const TraitsQuirksCard: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => toggleTraitVisibility(t.id || t.name)}
-                    className={`p-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                    className={`p-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                       isHidden
                         ? 'bg-slate-900/90 text-slate-400 hover:text-purple-300 border-slate-800 hover:border-purple-500/50'
                         : 'bg-purple-950/70 text-purple-200 hover:text-white border-purple-500/40 hover:bg-purple-900/80 shadow-sm'
@@ -178,13 +156,13 @@ export const TraitsQuirksCard: React.FC = () => {
                   >
                     {isHidden ? (
                       <>
-                        <EyeOff className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-[10px] font-mono hidden md:inline">Hidden</span>
+                        <Eye className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="text-[10px] font-mono hidden md:inline">Make Viewable</span>
                       </>
                     ) : (
                       <>
-                        <Eye className="w-3.5 h-3.5 text-purple-300" />
-                        <span className="text-[10px] font-mono hidden md:inline">Viewable</span>
+                        <EyeOff className="w-3.5 h-3.5 text-purple-300" />
+                        <span className="text-[10px] font-mono hidden md:inline">Hide Me</span>
                       </>
                     )}
                   </button>

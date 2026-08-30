@@ -11,8 +11,6 @@ import {
   Info,
   BookOpen,
   Trash2,
-  Eye,
-  EyeOff,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
@@ -283,20 +281,39 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {/* Visibility Toggle Button */}
-                          <button
-                            type="button"
-                            onClick={() => toggleTraitVisibility(rule.id || rule.name)}
-                            className={`px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                              rule.is_hidden
-                                ? 'text-slate-400 bg-slate-900 border border-slate-800 hover:text-purple-300'
-                                : 'text-purple-200 bg-purple-950/70 border border-purple-500/40 hover:bg-purple-900/80 shadow-sm'
-                            }`}
-                            title={rule.is_hidden ? 'Hidden from active character sheet. Click to make viewable.' : 'Visible on active character sheet. Click to hide.'}
-                          >
-                            {rule.is_hidden ? <EyeOff className="w-3 h-3 text-slate-400" /> : <Eye className="w-3 h-3 text-purple-300" />}
-                            <span className="text-[10px] font-mono hidden sm:inline">{rule.is_hidden ? 'Hidden' : 'Viewable'}</span>
-                          </button>
+                          {/* Dyslexia-Friendly KISS Visibility Pill Switch (Viewable / Hidden) */}
+                          <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (rule.is_hidden) toggleTraitVisibility(rule.id || rule.name);
+                              }}
+                              className={`py-1 px-2 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                !rule.is_hidden
+                                  ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                              title="Rule is visible on active character sheet"
+                            >
+                              <span>👁️</span>
+                              <span>Viewable</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!rule.is_hidden) toggleTraitVisibility(rule.id || rule.name);
+                              }}
+                              className={`py-1 px-2 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                rule.is_hidden
+                                  ? 'bg-slate-800 text-purple-300 border border-purple-500/40 shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                              title="Rule is hidden from active character sheet (read-once)"
+                            >
+                              <span>🙈</span>
+                              <span>Hidden</span>
+                            </button>
+                          </div>
 
                           {/* Forget / Remove Button */}
                           <button

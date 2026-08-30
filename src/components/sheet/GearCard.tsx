@@ -296,7 +296,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         {/* Left: Title */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="p-1.5 rounded-xl bg-teal-950/90 border border-teal-500/50 text-teal-300 flex items-center justify-center shadow-[0_0_12px_rgba(20,184,166,0.25)]">
-            <span className="text-base leading-none">🧰</span>
+            <span className="text-base leading-none">⚙️</span>
           </div>
           <span className="font-outfit font-extrabold text-xs tracking-wider text-teal-200 uppercase">
             Gear
@@ -318,7 +318,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         </button>
       </div>
 
-      {/* 🧰 GEAR INVENTORY & CATALOG MODAL */}
+      {/* ⚙️ GEAR INVENTORY & CATALOG MODAL */}
       {showManageModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
           <div
@@ -329,7 +329,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
             <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
               <div className="flex items-center gap-2.5 shrink-0">
                 <div className="p-2 rounded-xl bg-teal-950/80 border border-teal-500/30 text-teal-300 flex items-center justify-center">
-                  <span className="text-lg leading-none">🧰</span>
+                  <span className="text-lg leading-none">⚙️</span>
                 </div>
                 <div>
                   <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">

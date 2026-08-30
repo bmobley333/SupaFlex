@@ -95,7 +95,7 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
           </div>
         </div>
 
-        {/* Right Zone: Dossier + Character Links + Manage Kits Button (Far Right) */}
+        {/* Right Zone: Dossier + Manage Kits + Character Links (Far Right) */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <button
             type="button"
@@ -107,17 +107,7 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
             <span className="font-outfit font-extrabold tracking-wide">Dossier</span>
           </button>
 
-          <UniversalLinksDropdown
-            label="Character Links"
-            links={sheet?.character_links || []}
-            themeColor="teal"
-            onAddLink={addCharacterLink}
-            onUpdateLink={updateCharacterLink}
-            onDeleteLink={deleteCharacterLink}
-            onReorderLinkByIndex={reorderCharacterLinkByIndex}
-          />
-
-          {/* 🎭 Manage Kits Action Button on the Far Right */}
+          {/* 🎭 Manage Kits Action Button */}
           <button
             type="button"
             onClick={() => setShowKitsModal(true)}
@@ -127,6 +117,17 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
             <span className="text-xs">🎭</span>
             <span className="font-outfit font-black tracking-wide">Manage Kits</span>
           </button>
+
+          {/* 🔗 Character Links Dropdown on the Very Far Right */}
+          <UniversalLinksDropdown
+            label="Character Links"
+            links={sheet?.character_links || []}
+            themeColor="teal"
+            onAddLink={addCharacterLink}
+            onUpdateLink={updateCharacterLink}
+            onDeleteLink={deleteCharacterLink}
+            onReorderLinkByIndex={reorderCharacterLinkByIndex}
+          />
         </div>
       </div>
 

@@ -996,8 +996,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     });
   }, [type, activeDisplaySlots, slots, leftSearchQuery, catalogReadyFilter]);
 
-  const sectionIcon = type === 'powers' ? '🔥' : '💍';
-  const displayTitle = title || (type === 'powers' ? 'POWERS' : 'LOADOUT (Relics & Hardware)');
+  const sectionIcon = type === 'powers' ? '🔥' : '🧿💍';
+  const displayTitle = title || (type === 'powers' ? 'POWERS' : 'LOADOUT (Exotics & Artifacts)');
 
   // Default Action Economy Sorting for Active Sheet
   const sortedSlots = useMemo(() => {
@@ -1095,7 +1095,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         <p className="text-xs text-slate-400 hidden sm:block">
                           {type === 'powers'
                             ? 'Manage character powers side-by-side with the SupaFlex stock catalog and custom creator.'
-                            : 'Manage active Loadout items moving Relics & Hardware between the Vault and your Loadout, and unlocking Loadout Slots with AP.'}
+                            : 'Manage active Loadout items moving Exotics & Artifacts between the Vault and your Loadout, and unlocking Loadout Slots with AP.'}
                         </p>
                       </div>
                     </div>
