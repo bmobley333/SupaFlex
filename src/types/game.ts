@@ -39,7 +39,19 @@ export interface SupabaseRule {
 
 export type SupabaseTrait = SupabaseRule;
 
-export type KitCategory = 'Race' | 'Class' | 'Other';
+export type KitCategory =
+  | 'Race'
+  | 'Class'
+  | 'Ship Officer'
+  | 'Combat Style'
+  | 'Equipment'
+  | 'Artifacts'
+  | 'Armor'
+  | 'Weapons'
+  | 'Shields'
+  | 'Abilities'
+  | 'Other'
+  | string;
 
 export interface SupabaseKit {
   id: string;

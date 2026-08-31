@@ -42,8 +42,18 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
 
   const [rightActiveTab, setRightActiveTab] = useState<'in_kit' | 'out_of_kit' | 'kits_catalog'>('in_kit');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedKitCategory, setSelectedKitCategory] = useState<string>('All');
   const [selectedExtraKitToBuy, setSelectedExtraKitToBuy] = useState<string>('');
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+
+  // Dynamic available kit categories from database
+  const availableCategories = useMemo(() => {
+    const cats = new Set<string>();
+    stockKitsCatalog.forEach((k) => {
+      if (k.category && (k.category as string) !== '?') cats.add(k.category);
+    });
+    return ['All', ...Array.from(cats).sort()];
+  }, [stockKitsCatalog]);
 
   // Dynamic Race and Class Kits from Supabase public.kits table
   const raceKits = useMemo(() => {
@@ -134,6 +144,23 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
 
     return Array.from(kitSet).sort();
   }, [stockKitsCatalog, stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
+
+  // Extra learned kits (excluding active starting race and class)
+  const extraLearnedKits: string[] = useMemo(() => {
+    const fromSheet: string[] = activeCharacter?.sheet_data?.favorite_trait_kits || [];
+    return fromSheet.filter((k) => k !== activeRace && k !== activeClass);
+  }, [activeRace, activeClass, activeCharacter?.sheet_data?.favorite_trait_kits]);
+
+  // Filtered kits available to buy / learn based on category selection
+  const filteredKitsToBuy = useMemo(() => {
+    return allDiscoveredKits
+      .filter((k) => !learnedKits.includes(k))
+      .filter((k) => {
+        if (selectedKitCategory === 'All') return true;
+        const match = stockKitsCatalog.find((sk) => sk.name.toLowerCase() === k.toLowerCase());
+        return match?.category === selectedKitCategory;
+      });
+  }, [allDiscoveredKits, learnedKits, selectedKitCategory, stockKitsCatalog]);
 
   // In-Kit Elements
   const inKitElements = useMemo(() => {
@@ -300,8 +327,8 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
     setTimeout(() => setFeedbackMsg(null), 3000);
   };
 
-  // Handle purchasing new Kit (4 AP + GM Approval)
-  const handlePurchaseNewKit = () => {
+  // Handle learning new Kit (4 AP or Free)
+  const handleLearnNewKit = (cost: number) => {
     if (!selectedExtraKitToBuy) return;
     const clean = cleanKitName(selectedExtraKitToBuy);
     if (learnedKits.includes(clean)) {
@@ -309,18 +336,23 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       setTimeout(() => setFeedbackMsg(null), 3000);
       return;
     }
-    if (availableAp < 4) {
-      setFeedbackMsg(`❌ Not enough AP. Learning a new Kit requires 4 AP.`);
+    if (cost > 0 && availableAp < cost) {
+      setFeedbackMsg(`❌ Not enough AP. Learning a new Kit requires ${cost} AP.`);
       setTimeout(() => setFeedbackMsg(null), 3000);
       return;
     }
 
-    // Spend 4 AP
-    recordApExpenditure(4, 'Manual', `Learned New Kit: ${clean}`, 'Creation', 'Kits Hub');
+    // Record AP expenditure if cost > 0 or log free grant
+    if (cost > 0) {
+      recordApExpenditure(cost, 'Manual', `Learned New Kit: ${clean}`, 'Creation', 'Kits Hub');
+    } else {
+      recordApExpenditure(0, 'GM Bonus', `Learned Free Kit: ${clean}`, 'Creation', 'Kits Hub');
+    }
 
     // Update favorite/learned kits array
     updateActiveSheetData((prev) => {
       const current = prev.favorite_trait_kits || [];
+      if (current.includes(clean)) return prev;
       return {
         ...prev,
         favorite_trait_kits: [...current, clean],
@@ -339,7 +371,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
     saveActiveCharacter();
 
     setSelectedExtraKitToBuy('');
-    setFeedbackMsg(`🎉 Successfully learned Kit "${clean}" for 4 AP!`);
+    setFeedbackMsg(`🎉 Successfully learned Kit "${clean}" ${cost > 0 ? 'for 4 AP' : '(Free)'}!`);
     setTimeout(() => setFeedbackMsg(null), 4000);
   };
 
@@ -464,18 +496,15 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
               </span>
             </div>
 
-            {/* 1. Starting Race Kit */}
-            <div className="p-3 bg-purple-950/20 border border-purple-500/30 rounded-xl flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-outfit font-bold text-purple-200 flex items-center gap-1.5">
-                  <span>🧬</span> Starting Race Kit (Free)
-                </label>
-                <span className="text-[10px] font-mono text-purple-300 font-bold">0 AP Starting</span>
-              </div>
+            {/* 1. Single-Line Starting Race Kit */}
+            <div className="flex items-center gap-2 p-2 bg-purple-950/20 border border-purple-500/30 rounded-xl">
+              <label className="text-xs font-outfit font-bold text-purple-200 flex items-center gap-1 shrink-0 w-14">
+                <span>🧬</span> Race
+              </label>
               <select
                 value={activeRace}
                 onChange={(e) => handleSelectRaceKit(e.target.value)}
-                className="w-full bg-slate-900 text-xs px-3 py-2 rounded-lg border border-slate-700 text-white outline-none focus:border-purple-500 font-semibold"
+                className="flex-1 bg-slate-900 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-purple-500 font-semibold"
               >
                 {raceKits.map((r) => (
                   <option key={r} value={r}>
@@ -485,18 +514,15 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
               </select>
             </div>
 
-            {/* 2. Starting Class Kit */}
-            <div className="p-3 bg-indigo-950/20 border border-indigo-500/30 rounded-xl flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-outfit font-bold text-indigo-200 flex items-center gap-1.5">
-                  <span>⚔️</span> Starting Class Kit (Free)
-                </label>
-                <span className="text-[10px] font-mono text-indigo-300 font-bold">0 AP Starting</span>
-              </div>
+            {/* 2. Single-Line Starting Class Kit */}
+            <div className="flex items-center gap-2 p-2 bg-indigo-950/20 border border-indigo-500/30 rounded-xl">
+              <label className="text-xs font-outfit font-bold text-indigo-200 flex items-center gap-1 shrink-0 w-14">
+                <span>⚔️</span> Class
+              </label>
               <select
                 value={activeClass}
                 onChange={(e) => handleSelectClassKit(e.target.value)}
-                className="w-full bg-slate-900 text-xs px-3 py-2 rounded-lg border border-slate-700 text-white outline-none focus:border-indigo-500 font-semibold"
+                className="flex-1 bg-slate-900 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-indigo-500 font-semibold"
               >
                 {classKits.map((c) => (
                   <option key={c} value={c}>
@@ -506,65 +532,108 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
               </select>
             </div>
 
-            {/* 3. Additional Learned Kits List */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Additional Learned Kits ({learnedKits.length > 2 ? learnedKits.length - 2 : 0})
-              </span>
-              {learnedKits.length > 2 ? (
-                learnedKits.slice(2).map((k, idx) => (
-                  <div
-                    key={`${k}_${idx}`}
-                    className="p-2.5 bg-slate-900/80 border border-slate-800 rounded-xl flex items-center justify-between"
-                  >
-                    <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <span>🎭</span> {k}
-                    </span>
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold">✓ Learned (4 AP)</span>
-                  </div>
-                ))
-              ) : (
-                <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-800/60 text-xs text-slate-500 italic text-center">
-                  No additional kits learned yet.
-                </div>
-              )}
-            </div>
-
-            {/* 4. Unlock New Kit (4 AP + GM Approval) */}
-            <div className="p-3 bg-amber-950/20 border border-amber-500/30 rounded-xl flex flex-col gap-2 mt-auto">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-outfit font-bold text-amber-200 flex items-center gap-1.5">
-                  <span>✨</span> Learn New Kit (4 AP)
+            {/* 3. Additional Kits Controls */}
+            <div className="p-3 bg-amber-950/15 border border-amber-500/30 rounded-xl flex flex-col gap-2.5">
+              <span className="text-xs font-outfit font-bold text-amber-200 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span>✨</span> Additional Kits ({extraLearnedKits.length})
                 </span>
-                <span className="text-[10px] font-mono text-amber-300 font-bold">Requires GM Approval</span>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                Unlock an entire new Kit (Multiclass, Archetype, or Faction) for 4 AP to expand your in-kit catalog.
-              </p>
+                <span className="text-[10px] font-mono text-amber-300 font-normal">Available AP: {availableAp}</span>
+              </span>
+
+              {/* Line 1: Kit Category Dropdown */}
               <div className="flex items-center gap-2">
+                <label className="text-[11px] font-bold text-slate-300 shrink-0 w-22">
+                  Kit Category
+                </label>
+                <select
+                  value={selectedKitCategory}
+                  onChange={(e) => {
+                    setSelectedKitCategory(e.target.value);
+                    setSelectedExtraKitToBuy('');
+                  }}
+                  className="flex-1 bg-slate-900 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-amber-500 font-medium"
+                >
+                  {availableCategories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Line 2: New Kit Dropdown */}
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] font-bold text-slate-300 shrink-0 w-22">
+                  New Kit
+                </label>
                 <select
                   value={selectedExtraKitToBuy}
                   onChange={(e) => setSelectedExtraKitToBuy(e.target.value)}
                   className="flex-1 bg-slate-900 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-amber-500"
                 >
                   <option value="">-- Choose Kit to Learn --</option>
-                  {allDiscoveredKits
-                    .filter((k) => !learnedKits.includes(k))
-                    .map((k) => (
-                      <option key={k} value={k}>
-                        {k}
-                      </option>
-                    ))}
+                  {filteredKitsToBuy.map((k) => (
+                    <option key={k} value={k}>
+                      {k}
+                    </option>
+                  ))}
                 </select>
+              </div>
+
+              {/* Action Buttons: Learn (4 AP) & Learn Free */}
+              <div className="flex items-center gap-2 pt-0.5">
                 <button
                   type="button"
-                  onClick={handlePurchaseNewKit}
+                  onClick={() => handleLearnNewKit(4)}
                   disabled={!selectedExtraKitToBuy || availableAp < 4}
-                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer"
+                  className="flex-1 py-1.5 px-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm text-center"
                 >
                   Learn (4 AP)
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleLearnNewKit(0)}
+                  disabled={!selectedExtraKitToBuy}
+                  className="flex-1 py-1.5 px-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm text-center"
+                >
+                  Learn Free
+                </button>
               </div>
+            </div>
+
+            {/* 4. Additional Learned Kits Cards List */}
+            <div className="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto">
+              {extraLearnedKits.length > 0 ? (
+                extraLearnedKits.map((k, idx) => {
+                  const is4Ap = activeCharacter?.sheet_data?.ap_log?.some(
+                    (e) => e && e.description?.includes(k) && e.cost === 4
+                  );
+                  return (
+                    <div
+                      key={`${k}_${idx}`}
+                      className="p-2.5 bg-slate-900/80 border border-slate-800 rounded-xl flex items-center justify-between shadow-sm"
+                    >
+                      <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <span>🎭</span> {k}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold ${
+                          is4Ap
+                            ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-indigo-950/80 text-indigo-300 border border-indigo-500/40'
+                        }`}
+                      >
+                        {is4Ap ? '✓ 4 AP' : '✓ Free'}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-3 bg-slate-900/40 rounded-xl border border-slate-800/60 text-xs text-slate-500 italic text-center">
+                  No additional kits learned yet.
+                </div>
+              )}
             </div>
 
           </div>
@@ -755,16 +824,29 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
                           ✓ Learned
                         </span>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedExtraKitToBuy(kitName);
-                            handlePurchaseNewKit();
-                          }}
-                          className="px-2.5 py-1 rounded-lg text-xs font-bold text-amber-200 bg-amber-950/80 hover:bg-amber-900 border border-amber-500/40 shadow-sm transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <span>Learn (4 AP)</span>
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedExtraKitToBuy(kitName);
+                              handleLearnNewKit(4);
+                            }}
+                            disabled={availableAp < 4}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold text-amber-200 bg-amber-950/80 hover:bg-amber-900 disabled:opacity-40 border border-amber-500/40 shadow-sm transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Learn (4 AP)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedExtraKitToBuy(kitName);
+                              handleLearnNewKit(0);
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold text-indigo-200 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/40 shadow-sm transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Learn Free</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
