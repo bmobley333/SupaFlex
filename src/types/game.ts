@@ -61,6 +61,47 @@ export interface SupabaseKit {
   created_at?: string;
 }
 
+export type BundleCategory =
+  | 'Armor'
+  | 'Equipment'
+  | 'Toolkits'
+  | 'Starship'
+  | 'Cyberware'
+  | 'Other'
+  | string;
+
+export interface SupabaseBundle {
+  id: string;
+  name: string;
+  category: BundleCategory;
+  description?: string;
+  created_at?: string;
+}
+
+export interface HardwareBundleSubItem {
+  name: string;
+  table?: 'armor' | 'exotics' | 'gear' | 'weapons' | 'shields' | 'artifacts' | string;
+  effect?: string;
+  action?: string;
+  usage?: string;
+  tier?: string;
+  cost?: string;
+  notes?: string;
+}
+
+export interface HardwareBundleItem {
+  id?: string | number;
+  name: string;
+  category?: BundleCategory;
+  description?: string;
+  is_hidden?: boolean;
+  source?: string;
+  bundle?: string;
+  notes?: string;
+  items?: HardwareBundleSubItem[];
+  created_at?: string;
+}
+
 export interface RuleItem {
   id?: string | number;
   name: string;
@@ -151,6 +192,7 @@ export interface SupabaseArmor {
   cost: string;
   discipline?: string;
   kit?: string;
+  bundle?: string;
   table_group?: string;
   notes?: string;
   pic?: string;
@@ -166,6 +208,7 @@ export interface SupabaseGear {
   cost: string;
   discipline?: string;
   kit?: string;
+  bundle?: string;
   table_group?: string;
   action?: string;
   usage?: string;
@@ -292,6 +335,7 @@ export interface SupabaseShield {
   mr: string;
   discipline?: string;
   kit?: string;
+  bundle?: string;
   table_group?: string;
   notes?: string;
   cost: string;
@@ -353,6 +397,7 @@ export interface SupabaseWeapon {
   cost: string;
   discipline?: string;
   kit?: string;
+  bundle?: string;
   table_group?: string;
   notes?: string;
   pic?: string;
@@ -561,6 +606,7 @@ export interface CharacterSheetData {
   known_individual_skills?: string[]; // Individually learned skills outside a skillset
   custom_skillsets?: CustomSkillsetDefinition[]; // Custom user-created skillsets
   traits_quirks?: TraitQuirkItem[]; // Passive traits, racial adaptations, unique quirks & flaws
+  hardware_bundles?: HardwareBundleItem[]; // Equipped hardware suites, toolkits, armor suites, cyber rigs
   favorite_trait_tables?: string[]; // Favorited trait tables
   favorite_trait_kits?: string[]; // Favorited trait kits
   favorite_power_tables?: string[]; // Favorited power tables (table_name strings)
@@ -880,6 +926,7 @@ export interface MagicItem {
   sub?: string;
   table_name?: string;
   kit?: string;
+  bundle?: string;
   table_group?: string;
   discipline?: string;
   tier?: HardwareTier;

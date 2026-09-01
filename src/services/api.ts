@@ -23,6 +23,7 @@ import {
   CustomCreationItem,
   PowerTable,
   SupabaseKit,
+  SupabaseBundle,
 } from '../types/game';
 import { GmAdventure } from '../types/adventures';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
@@ -427,6 +428,16 @@ export const gameApi = {
       return [];
     }
     return (data || []) as SupabaseKit[];
+  },
+
+  // --- BUNDLES CATALOG ---
+  async getBundles(): Promise<SupabaseBundle[]> {
+    const { data, error } = await supabase.from('bundles').select('*').order('name', { ascending: true });
+    if (error) {
+      console.error('[gameApi] Error fetching bundles catalog:', error);
+      return [];
+    }
+    return (data || []) as SupabaseBundle[];
   },
 
   // --- ARMOR CATALOG ---

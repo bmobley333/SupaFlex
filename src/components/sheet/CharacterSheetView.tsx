@@ -5,6 +5,7 @@ import { HeroHubCard } from './HeroHubCard';
 import { MoneyCard } from './MoneyCard';
 import { GearCard } from './GearCard';
 import { TraitsQuirksCard } from './TraitsQuirksCard';
+import { HardwareBundlesCard } from './HardwareBundlesCard';
 import { SkillsetsPanel } from './SkillsetsPanel';
 import { WeaponsCard } from './WeaponsCard';
 import { ArmorCard } from './ArmorCard';
@@ -47,9 +48,14 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* Symmetrical 2-Column Capabilities Grid: Core Traits (Left) and Skills (Right) */}
+      {/* Symmetrical 2-Column Capabilities Grid: Spec Rules (Left) and Hardware Bundles (Right, Below Gear) */}
       <div id="section-capabilities" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
         <TraitsQuirksCard />
+        <HardwareBundlesCard />
+      </div>
+
+      {/* Dedicated Full-Width Skills Row */}
+      <div id="section-skills" className="w-full scroll-mt-32">
         <SkillsetsPanel />
       </div>
 

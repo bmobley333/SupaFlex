@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, SupabaseSkill, SupabaseTrait, SupabaseKit, TraitQuirkItem, EncounterLink } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
@@ -25,6 +25,7 @@ interface CharacterStore {
   skills: SupabaseSkill[];
   traits: SupabaseTrait[];
   kits: SupabaseKit[];
+  bundles: SupabaseBundle[];
   isLoading: boolean;
   isSaving: boolean;
   dbConnected: boolean;
@@ -91,6 +92,11 @@ interface CharacterStore {
   toggleStarTrait: (id: string | number) => void;
   toggleFavoriteTraitTable: (tableGroup: string) => void;
   toggleFavoriteTraitKit: (kitName: string) => void;
+
+  // Hardware Bundles Actions
+  addHardwareBundle: (bundle: HardwareBundleItem) => void;
+  removeHardwareBundle: (bundleNameOrId: string | number) => void;
+  toggleHardwareBundleVisibility: (bundleNameOrId: string | number) => void;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
@@ -101,6 +107,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   skills: [],
   traits: [],
   kits: [],
+  bundles: [],
   isLoading: false,
   isSaving: false,
   dbConnected: false,
@@ -175,13 +182,14 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return;
       }
 
-      const [chars, powers, items, skills, traits, kits] = await Promise.all([
+      const [chars, powers, items, skills, traits, kits, bundles] = await Promise.all([
         gameApi.getCharacters(),
         gameApi.getPowers(),
         gameApi.getMagicItems(),
         gameApi.getSkills(),
         gameApi.getTraits(),
         gameApi.getKits(),
+        gameApi.getBundles(),
       ]);
 
       const email = (get().playerEmail || '').trim().toLowerCase();
@@ -196,6 +204,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           skills,
           traits,
           kits,
+          bundles,
           isLoading: false,
         });
         return;
@@ -211,12 +220,11 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         // Preserve active character object and unsaved local edits if present
         selectedChar = {
           ...freshChar,
-          sheet_data: currentActive.sheet_data ? currentActive.sheet_data : migratedSheet,
+          sheet_data: migratedSheet,
         };
       } else {
-        const lastActiveIdStr = sessionStorage.getItem('supaflex_last_active_char_id');
-        const lastActiveId = lastActiveIdStr ? Number(lastActiveIdStr) : null;
-        const lastActiveChar = lastActiveId ? myHeroes.find((c) => c.id === lastActiveId) : null;
+        const lastActiveId = sessionStorage.getItem('supaflex_last_active_char_id');
+        const lastActiveChar = myHeroes.find((c) => String(c.id) === lastActiveId);
 
         if (lastActiveChar) {
           selectedChar = {
@@ -239,6 +247,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         skills,
         traits,
         kits,
+        bundles,
         isLoading: false,
       });
     } catch (err: any) {
@@ -989,6 +998,61 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         ...prev,
         favorite_trait_kits: nextList,
         favorite_trait_tables: nextList,
+      };
+    });
+    get().saveActiveCharacter();
+  },
+
+  // --- HARDWARE BUNDLES ACTIONS ---
+  addHardwareBundle: (bundle: HardwareBundleItem) => {
+    get().updateActiveSheetData((prev) => {
+      const existing = prev.hardware_bundles || [];
+      const alreadyHas = existing.some(
+        (b) => (b.id && bundle.id && b.id === bundle.id) || b.name.toLowerCase() === bundle.name.toLowerCase()
+      );
+      if (alreadyHas) return prev;
+      return {
+        ...prev,
+        hardware_bundles: [...existing, bundle],
+      };
+    });
+    get().saveActiveCharacter();
+  },
+
+  removeHardwareBundle: (bundleNameOrId: string | number) => {
+    get().updateActiveSheetData((prev) => {
+      const existing = prev.hardware_bundles || [];
+      return {
+        ...prev,
+        hardware_bundles: existing.filter((b) => {
+          if (typeof bundleNameOrId === 'number' || (typeof bundleNameOrId === 'string' && bundleNameOrId.length > 20)) {
+            return b.id !== bundleNameOrId && b.name !== bundleNameOrId;
+          }
+          return b.name.toLowerCase() !== String(bundleNameOrId).toLowerCase();
+        }),
+      };
+    });
+    get().saveActiveCharacter();
+  },
+
+  toggleHardwareBundleVisibility: (bundleNameOrId: string | number) => {
+    get().updateActiveSheetData((prev) => {
+      const existing = prev.hardware_bundles || [];
+      const updated = existing.map((b) => {
+        const matches =
+          b.id === bundleNameOrId ||
+          b.name.toLowerCase() === String(bundleNameOrId).toLowerCase();
+        if (matches) {
+          return {
+            ...b,
+            is_hidden: !b.is_hidden,
+          };
+        }
+        return b;
+      });
+      return {
+        ...prev,
+        hardware_bundles: updated,
       };
     });
     get().saveActiveCharacter();

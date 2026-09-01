@@ -1,8 +1,21 @@
 // src/utils/bundleGrants.ts
-// Auto-Grant Kit Bundling Engine for SupaFlex
-// Automatically equips starting {Trait} and {Trait[Level]} items across all kits (powers, skills, traits, gear, etc.)
+// Auto-Grant Kit & Bundle Engine for SupaFlex
+// Automatically equips starting {Trait} items across kits and collects hardware bundle modules
 
-import { Power, SupabaseSkill, SupabaseTrait, TraitQuirkItem, AbilitySlot, CharacterSheetData } from '../types/game';
+import {
+  Power,
+  SupabaseSkill,
+  SupabaseTrait,
+  TraitQuirkItem,
+  AbilitySlot,
+  CharacterSheetData,
+  SupabaseArmor,
+  SupabaseGear,
+  SupabaseWeapon,
+  SupabaseShield,
+  MagicItem,
+  HardwareBundleSubItem,
+} from '../types/game';
 import { matchesKitFilter, cleanKitName, parseKit } from './kitUtils';
 
 export interface KitTraitGrants {
@@ -190,5 +203,79 @@ export const checkAndAutoEquipLevelUpTraits = (
   });
 
   return { updatedSheet: updated, newlyGrantedNames };
+};
+
+/**
+ * Scans equipment catalogs for items tagged with a specific bundle name.
+ */
+export const collectHardwareBundleSubItems = (
+  targetBundleName: string,
+  catalogArmor: SupabaseArmor[] = [],
+  catalogGear: SupabaseGear[] = [],
+  catalogWeapons: SupabaseWeapon[] = [],
+  catalogShields: SupabaseShield[] = [],
+  catalogExotics: MagicItem[] = []
+): HardwareBundleSubItem[] => {
+  const cleanTarget = targetBundleName.trim().toLowerCase();
+  const subItems: HardwareBundleSubItem[] = [];
+
+  const matchesBundle = (bundleField?: string) => {
+    if (!bundleField) return false;
+    const cleanField = bundleField.toLowerCase();
+    return cleanField.includes(cleanTarget);
+  };
+
+  catalogArmor.filter((a) => matchesBundle(a.bundle)).forEach((a) => {
+    subItems.push({
+      name: a.name,
+      table: 'armor',
+      cost: a.cost,
+      notes: a.notes,
+    });
+  });
+
+  catalogGear.filter((g) => matchesBundle(g.bundle)).forEach((g) => {
+    subItems.push({
+      name: g.name,
+      table: 'gear',
+      action: g.action,
+      usage: g.usage,
+      cost: g.cost,
+      notes: g.notes,
+    });
+  });
+
+  catalogWeapons.filter((w) => matchesBundle(w.bundle)).forEach((w) => {
+    subItems.push({
+      name: w.name,
+      table: 'weapons',
+      cost: w.cost,
+      notes: w.notes,
+    });
+  });
+
+  catalogShields.filter((s) => matchesBundle(s.bundle)).forEach((s) => {
+    subItems.push({
+      name: s.name,
+      table: 'shields',
+      cost: s.cost,
+      notes: s.notes,
+    });
+  });
+
+  catalogExotics.filter((e) => matchesBundle(e.bundle)).forEach((e) => {
+    subItems.push({
+      name: e.name,
+      table: 'exotics',
+      action: e.action || undefined,
+      usage: e.usage || undefined,
+      tier: e.tier,
+      cost: e.cost,
+      effect: e.effect || undefined,
+      notes: e.notes,
+    });
+  });
+
+  return subItems;
 };
 
