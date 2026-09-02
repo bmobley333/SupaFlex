@@ -1,6 +1,3 @@
-// src/services/api.ts
-// Supabase Data Access Gateway for SupaFlex
-
 import { supabase } from '../lib/supabase';
 import {
   Character,
@@ -22,8 +19,10 @@ import {
   LootMainEntry,
   CustomCreationItem,
   PowerTable,
+  SupabasePath,
   SupabaseKit,
   SupabaseBundle,
+  getCategorySlotWeight,
 } from '../types/game';
 import { GmAdventure } from '../types/adventures';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
@@ -107,10 +106,18 @@ export function ensureLatestSheetSchema(rawSheet: any): CharacterSheetData {
     character_power_codex: Array.isArray(rawSheet.character_power_codex) ? rawSheet.character_power_codex : [],
     tactical_pivot_used_in_encounter: rawSheet.tactical_pivot_used_in_encounter ?? false,
     spell_slots: Array.isArray(rawSheet.spell_slots) ? rawSheet.spell_slots : [],
+    character_vault: Array.isArray(rawSheet.character_vault) ? rawSheet.character_vault : [],
     gear_slots: Array.isArray(rawSheet.gear_slots) ? rawSheet.gear_slots : [],
     weapons: Array.isArray(rawSheet.weapons) ? rawSheet.weapons : [],
     simple_gear: Array.isArray(rawSheet.simple_gear) ? rawSheet.simple_gear : [],
     chaos_gauntlet_slots: mergedGauntletSlots,
+    loadout_expansions_purchased: typeof rawSheet.loadout_expansions_purchased === 'number'
+      ? rawSheet.loadout_expansions_purchased
+      : (typeof rawSheet.unlocked_loadout_slots === 'number'
+        ? Math.max(0, Math.floor((rawSheet.unlocked_loadout_slots - 4) / 2))
+        : (typeof rawSheet.unlocked_magic_slots === 'number'
+          ? Math.max(0, rawSheet.unlocked_magic_slots - 3)
+          : 0)),
   };
 }
 
@@ -309,7 +316,12 @@ export const gameApi = {
       console.error('[gameApi] Error fetching artifacts:', error);
       return [];
     }
-    return (data || []) as MagicItem[];
+    return (data || []).map((item: any) => ({
+      ...item,
+      path: item.path || item.kit,
+      kit: item.kit || item.bundle,
+      slot_weight: getCategorySlotWeight(item.category),
+    })) as MagicItem[];
   },
 
   async getRelics(): Promise<MagicItem[]> {
@@ -327,7 +339,14 @@ export const gameApi = {
       console.error('[gameApi] Error fetching exotics catalog:', error);
       return [];
     }
-    return ((data || []).map((h) => ({ ...h, is_hardware: true, is_exotic: true }))) as MagicItem[];
+    return (data || []).map((h: any) => ({
+      ...h,
+      path: h.path || h.kit,
+      kit: h.kit || h.bundle,
+      is_hardware: true,
+      is_exotic: true,
+      slot_weight: getCategorySlotWeight(h.category),
+    })) as MagicItem[];
   },
 
   async getHardware(): Promise<MagicItem[]> {
@@ -420,24 +439,39 @@ export const gameApi = {
     return this.createSpecRule(newTrait);
   },
 
-  // --- KITS CATALOG ---
-  async getKits(): Promise<SupabaseKit[]> {
-    const { data, error } = await supabase.from('kits').select('*').order('name', { ascending: true });
+  // --- PATHS CATALOG (AP Character Suites) ---
+  async getPaths(): Promise<SupabasePath[]> {
+    const { data, error } = await supabase.from('paths').select('*').order('name', { ascending: true });
     if (error) {
-      console.error('[gameApi] Error fetching kits catalog:', error);
+      // Fallback for legacy schema
+      const fallback = await supabase.from('kits').select('*').order('name', { ascending: true });
+      if (fallback.data) return fallback.data as SupabasePath[];
+      console.error('[gameApi] Error fetching paths catalog:', error);
       return [];
     }
-    return (data || []) as SupabaseKit[];
+    return (data || []) as SupabasePath[];
   },
 
-  // --- BUNDLES CATALOG ---
+  // --- KITS CATALOG (Equipment & Hardware Suites) ---
+  async getKits(): Promise<SupabasePath[]> {
+    // For backwards compatibility with existing UI stores that call getKits() for Race/Class paths
+    return this.getPaths();
+  },
+
+  // --- EQUIPMENT KITS & BUNDLES CATALOG ---
   async getBundles(): Promise<SupabaseBundle[]> {
-    const { data, error } = await supabase.from('bundles').select('*').order('name', { ascending: true });
+    const { data, error } = await supabase.from('kits').select('*').order('name', { ascending: true });
     if (error) {
-      console.error('[gameApi] Error fetching bundles catalog:', error);
+      const fallback = await supabase.from('bundles').select('*').order('name', { ascending: true });
+      if (fallback.data) return fallback.data as SupabaseBundle[];
+      console.error('[gameApi] Error fetching kits/bundles catalog:', error);
       return [];
     }
     return (data || []) as SupabaseBundle[];
+  },
+
+  async getEquipmentKits(): Promise<SupabaseKit[]> {
+    return this.getBundles();
   },
 
   // --- ARMOR CATALOG ---

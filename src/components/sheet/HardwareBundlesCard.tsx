@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
-import { ManageHardwareBundlesModal } from '../modals/ManageHardwareBundlesModal';
+import { ManageEquipmentKitsModal } from '../modals/ManageEquipmentKitsModal';
 import { HardwareBundleItem } from '../../types/game';
 
 export const HardwareBundlesCard: React.FC = () => {
@@ -17,7 +17,7 @@ export const HardwareBundlesCard: React.FC = () => {
   // Listen for global manager open events
   useEffect(() => {
     const handleOpen = (e: CustomEvent) => {
-      if (e.detail === 'hardware_bundles' || e.detail === 'bundles') {
+      if (e.detail === 'equipment_kits' || e.detail === 'hardware_bundles' || e.detail === 'bundles' || e.detail === 'kits') {
         setShowManageModal(true);
       }
     };
@@ -25,7 +25,7 @@ export const HardwareBundlesCard: React.FC = () => {
     return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
   }, []);
 
-  // Sync Hardware Bundles from active character sheet_data
+  // Sync Equipment Kits / Bundles from active character sheet_data
   const rawBundles = useMemo(() => {
     const list = activeCharacter?.sheet_data?.hardware_bundles;
     return Array.isArray(list) ? list : [];
@@ -52,13 +52,13 @@ export const HardwareBundlesCard: React.FC = () => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title="Click to open Hardware Bundles Manager"
+            title="Click to open Equipment Kits Manager"
           >
             <div className="p-1.5 rounded-xl bg-cyan-950/90 border border-cyan-500/50 text-cyan-300 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.25)] group-hover:scale-105 group-hover:border-cyan-400 transition-all">
-              <span className="text-base leading-none">⚙️</span>
+              <span className="text-base leading-none">🎒</span>
             </div>
             <h3 className="font-outfit font-black text-sm tracking-wider text-slate-100 uppercase group-hover:text-cyan-200 transition-colors flex items-center gap-1.5">
-              <span>Hardware Bundles</span>
+              <span>Equipment Kits</span>
               <ChevronDown className="w-3.5 h-3.5 text-cyan-400/70 group-hover:text-cyan-300 group-hover:translate-y-0.5 transition-all" />
             </h3>
           </button>
@@ -187,7 +187,7 @@ export const HardwareBundlesCard: React.FC = () => {
 
       {/* Modal Dialog */}
       {showManageModal && (
-        <ManageHardwareBundlesModal
+        <ManageEquipmentKitsModal
           isOpen={showManageModal}
           onClose={() => setShowManageModal(false)}
         />

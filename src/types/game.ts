@@ -29,6 +29,7 @@ export interface SupabaseRule {
   stat_hook?: StatHookDefinition | null;
   genres: string[];
   discipline?: string;
+  path?: string;
   kit?: string;
   table_group?: string;
   is_guildspace_locked?: boolean;
@@ -39,17 +40,33 @@ export interface SupabaseRule {
 
 export type SupabaseTrait = SupabaseRule;
 
-export type KitCategory =
+export type PathCategory =
   | 'Race'
   | 'Class'
+  | 'Discipline'
+  | 'Specialization'
   | 'Ship Officer'
   | 'Combat Style'
-  | 'Equipment'
-  | 'Artifacts'
-  | 'Armor'
-  | 'Weapons'
-  | 'Shields'
   | 'Abilities'
+  | 'Other'
+  | string;
+
+export interface SupabasePath {
+  id: string;
+  name: string;
+  category: PathCategory;
+  ap_cost?: number;
+  description?: string;
+  created_at?: string;
+}
+
+export type KitCategory =
+  | 'Armor'
+  | 'Equipment'
+  | 'Toolkits'
+  | 'Survival'
+  | 'Tactical'
+  | 'Cyberware'
   | 'Other'
   | string;
 
@@ -57,25 +74,24 @@ export interface SupabaseKit {
   id: string;
   name: string;
   category: KitCategory;
+  cost?: string;
   description?: string;
   created_at?: string;
 }
 
-export type BundleCategory =
-  | 'Armor'
-  | 'Equipment'
-  | 'Toolkits'
-  | 'Starship'
-  | 'Cyberware'
-  | 'Other'
-  | string;
+export type BundleCategory = KitCategory;
+export type SupabaseBundle = SupabaseKit;
 
-export interface SupabaseBundle {
-  id: string;
-  name: string;
-  category: BundleCategory;
-  description?: string;
-  created_at?: string;
+/**
+ * Universal helper to calculate Loadout Slot cost (1, 2, 3, 4) from canonical category string.
+ */
+export function getCategorySlotWeight(category?: string): 1 | 2 | 3 | 4 {
+  if (!category) return 1;
+  if (category.includes('Minor')) return 1;
+  if (category.includes('Lesser')) return 2;
+  if (category.includes('Greater')) return 3;
+  if (category.includes('Epic') || category.includes('Relic')) return 4;
+  return 1;
 }
 
 export interface HardwareBundleSubItem {
@@ -96,6 +112,8 @@ export interface HardwareBundleItem {
   description?: string;
   is_hidden?: boolean;
   source?: string;
+  path?: string;
+  kit?: string;
   bundle?: string;
   notes?: string;
   items?: HardwareBundleSubItem[];
@@ -108,6 +126,7 @@ export interface RuleItem {
   effect?: string;
   is_hidden?: boolean; // When true, hidden from main CS card view
   source?: string;
+  path?: string;
   kit?: string;
   table_group?: string;
   stat_hook?: StatHookDefinition | null;
@@ -139,6 +158,7 @@ export interface AbilitySlot {
   ready?: PowerReadyType;
   is_readied?: boolean;
   notes?: string;
+  path?: string;
   kit?: string;
   table_group?: string;
   discipline?: string;
@@ -191,6 +211,7 @@ export interface SupabaseArmor {
   mr: string;
   cost: string;
   discipline?: string;
+  path?: string;
   kit?: string;
   bundle?: string;
   table_group?: string;
@@ -207,6 +228,7 @@ export interface SupabaseGear {
   name: string;
   cost: string;
   discipline?: string;
+  path?: string;
   kit?: string;
   bundle?: string;
   table_group?: string;
@@ -334,6 +356,7 @@ export interface SupabaseShield {
   max_block: string;
   mr: string;
   discipline?: string;
+  path?: string;
   kit?: string;
   bundle?: string;
   table_group?: string;
@@ -636,7 +659,8 @@ export interface CharacterSheetData {
   bio: CharacterBio;
   essence_core?: number; // 0-100 Essence Core Progress Ring
   character_vault?: MagicItem[]; // Unlimited storage vault for claimed Relics and Hardware
-  unlocked_loadout_slots?: number; // Total active Loadout Slots capacity purchased with AP (default 3)
+  loadout_expansions_purchased?: number; // Count of +2 Loadout Slots expansions purchased with AP (0, 1, 2, 3...)
+  unlocked_loadout_slots?: number; // Total active Loadout Slots capacity (Formula: 4 + expansions * 2)
   unlocked_magic_slots?: number; // Deprecated alias for unlocked_loadout_slots
   starred_loadout_items?: (number | string)[]; // Starred Loadout Wishlist IDs
   starred_magic_items?: (number | string)[]; // Starred Magic Item Wishlist IDs (alias)
@@ -721,18 +745,23 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
   const gmBonus = apLog.reduce((sum, e) => (e && (e.category === 'GM Bonus' || e.category === 'Manual') ? sum + (e.cost || 0) : sum), 0);
 
   const powerSlots = (sheetData.power_slots || []).filter(Boolean);
-  const totalPowerUnits = powerSlots.reduce((sum: number, slot: any) => sum + (slot?.version || 1), 0);
-  const powersNet = totalPowerUnits * 1;
-
-  const unlockedMagicSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
-  let magicSlotsApSpent = 0;
-  for (let s = 4; s <= Math.min(15, unlockedMagicSlots); s++) {
-    if (s <= 8) magicSlotsApSpent += 1;
-    else if (s <= 12) magicSlotsApSpent += 2;
-    else if (s <= 15) magicSlotsApSpent += 3;
+  let powersNet = 0;
+  for (let i = 1; i <= powerSlots.length; i++) {
+    if (i <= 6) powersNet += 1;
+    else if (i <= 9) powersNet += 2;
+    else if (i <= 14) powersNet += 3;
+    else powersNet += 4;
   }
 
-  const magicItemsNet = magicSlotsApSpent;
+  const expansions = typeof sheetData.loadout_expansions_purchased === 'number'
+    ? sheetData.loadout_expansions_purchased
+    : (typeof sheetData.unlocked_loadout_slots === 'number'
+      ? Math.max(0, Math.floor((sheetData.unlocked_loadout_slots - 4) / 2))
+      : (typeof sheetData.unlocked_magic_slots === 'number'
+        ? Math.max(0, sheetData.unlocked_magic_slots - 3)
+        : 0));
+  const loadoutNet = (expansions * (expansions + 1)) / 2;
+  const magicItemsNet = loadoutNet;
 
   const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
   const skilledShields = armory.filter((s: any) => s && s.sk);
@@ -756,6 +785,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     Capstones: capstonesNet,
     Focus: focusNet,
     'GM Bonus': gmBonus,
+    'Loadout Slots': loadoutNet,
     'Magic Items': magicItemsNet,
     Powers: powersNet,
     Shields: shieldsNet,
@@ -769,7 +799,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     attributesNet +
     capstonesNet +
     focusNet +
-    magicItemsNet +
+    loadoutNet +
     powersNet +
     shieldsNet +
     skillsNet +
@@ -925,6 +955,7 @@ export interface MagicItem {
   category?: string;
   sub?: string;
   table_name?: string;
+  path?: string;
   kit?: string;
   bundle?: string;
   table_group?: string;
@@ -962,6 +993,7 @@ export interface SupabaseSkill {
   skillset: string[];
   genres: string[];
   discipline?: string;
+  path?: string;
   kit?: string;
   table_group?: string;
   is_guildspace_locked?: boolean;

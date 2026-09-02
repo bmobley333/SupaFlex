@@ -1,13 +1,21 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, ArrowDownToLine, Trash2, AlertCircle, Check } from 'lucide-react';
+import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, Trash2, AlertCircle, Check, ArrowUpDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar } from '../common/QuickDeckBar';
-import { AbilitySlot, Power, MagicItem, calculateAvailableAp } from '../../types/game';
-import { getItemSlotWeight, calculateTotalLoadoutSlotsUsed, getApCostForNextSlot, getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
-import { getPowerReadyCategory, getReadySlotConfig, validateReadyMatrix } from '../../utils/readyMatrixSchedule';
+import { AbilitySlot, Power, MagicItem, calculateAvailableAp, getCategorySlotWeight } from '../../types/game';
+import {
+  calculateTotalLoadoutCapacity,
+  getApCostForNextExpansion,
+  calculateSpentApOnLoadoutExpansions,
+  calculateTotalLoadoutSlotsUsed,
+  getItemSlotWeight,
+  generateLoadoutScheduleRows,
+} from '../../utils/loadoutCapacitySchedule';
+import { getPowerReadyCategory } from '../../utils/readyMatrixSchedule';
+import { calculatePowersKnownApCost, getPowersSoftTaxBracket } from '../../utils/powersApTaxSchedule';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 import { cleanKitName, isTraitItem, getKitMinLevel } from '../../utils/kitUtils';
 
@@ -54,22 +62,6 @@ const MAIN_ABILITY_ICONS = [
   { icon: '🍀', label: 'Luck' },
 ];
 
-const SLOT_SCHEDULE_ROWS = [
-  { bracket: 'Level 1', maxSlots: 3, freeSlots: 3, apCost: '0 AP (Base Free)', cumAp: 0, minLvl: 1, maxLvl: 1, slotNum: 3 },
-  { bracket: 'Level 2–3', maxSlots: 4, freeSlots: 3, apCost: '1 AP (Slot 4)', cumAp: 1, minLvl: 2, maxLvl: 3, slotNum: 4 },
-  { bracket: 'Level 4–5', maxSlots: 5, freeSlots: 3, apCost: '1 AP (Slot 5)', cumAp: 2, minLvl: 4, maxLvl: 5, slotNum: 5 },
-  { bracket: 'Level 6–7', maxSlots: 6, freeSlots: 3, apCost: '1 AP (Slot 6)', cumAp: 3, minLvl: 6, maxLvl: 7, slotNum: 6 },
-  { bracket: 'Level 8–9', maxSlots: 7, freeSlots: 3, apCost: '1 AP (Slot 7)', cumAp: 4, minLvl: 8, maxLvl: 9, slotNum: 7 },
-  { bracket: 'Level 10–14', maxSlots: 8, freeSlots: 3, apCost: '1 AP (Slot 8)', cumAp: 5, minLvl: 10, maxLvl: 14, slotNum: 8 },
-  { bracket: 'Level 15–19', maxSlots: 9, freeSlots: 3, apCost: '2 AP (Slot 9)', cumAp: 7, minLvl: 15, maxLvl: 19, slotNum: 9 },
-  { bracket: 'Level 20–29', maxSlots: 10, freeSlots: 3, apCost: '2 AP (Slot 10)', cumAp: 9, minLvl: 20, maxLvl: 29, slotNum: 10 },
-  { bracket: 'Level 30–39', maxSlots: 11, freeSlots: 3, apCost: '2 AP (Slot 11)', cumAp: 11, minLvl: 30, maxLvl: 39, slotNum: 11 },
-  { bracket: 'Level 40–49', maxSlots: 12, freeSlots: 3, apCost: '2 AP (Slot 12)', cumAp: 13, minLvl: 40, maxLvl: 49, slotNum: 12 },
-  { bracket: 'Level 50–69', maxSlots: 13, freeSlots: 3, apCost: '3 AP (Slot 13)', cumAp: 16, minLvl: 50, maxLvl: 69, slotNum: 13 },
-  { bracket: 'Level 70–89', maxSlots: 14, freeSlots: 3, apCost: '3 AP (Slot 14)', cumAp: 19, minLvl: 70, maxLvl: 89, slotNum: 14 },
-  { bracket: 'Level 90–100+', maxSlots: 15, freeSlots: 3, apCost: '3 AP (Slot 15)', cumAp: 22, minLvl: 90, maxLvl: 999, slotNum: 15 },
-];
-
 const cleanName = (name: string) => name.replace(/\s*\[[A-Z]+\]$/i, '').trim();
 
 const parseUsageCount = (usage?: string): number => {
@@ -85,7 +77,7 @@ const parseAbilityVersion = (name: string): { baseName: string; version: number 
 };
 
 const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; icon: string; style: string; slotsText: string } => {
-  if (!itemObj) return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '🗲 1 Slot' };
+  if (!itemObj) return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '1 Slot' };
 
   let subStr = itemObj.category || itemObj.rarity || '';
 
@@ -103,16 +95,16 @@ const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; 
 
   const str = `${itemObj.rarity || ''} ${subStr} ${itemObj.name || itemObj.title || ''}`.toLowerCase();
 
-  if (str.includes('relic') || str.includes('epic') || str.includes('artifact')) {
-    return { label: 'Epic', icon: '💫', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40', slotsText: '🗲🗲🗲🗲 4 Slots' };
+  if (str.includes('relic') || str.includes('epic') || str.includes('artifact') || str.includes('💫')) {
+    return { label: 'Epic', icon: '💫', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40', slotsText: '4 Slots' };
   }
-  if (str.includes('greater')) {
-    return { label: 'Greater', icon: '✨', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40', slotsText: '🗲🗲🗲 3 Slots' };
+  if (str.includes('greater') || str.includes('🪬')) {
+    return { label: 'Greater', icon: '🪬', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40', slotsText: '3 Slots' };
   }
-  if (str.includes('lesser')) {
-    return { label: 'Lesser', icon: '🪄', style: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40', slotsText: '🗲🗲 2 Slots' };
+  if (str.includes('lesser') || str.includes('🪄')) {
+    return { label: 'Lesser', icon: '🪄', style: 'bg-blue-950/80 text-blue-300 border-blue-500/40', slotsText: '2 Slots' };
   }
-  return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '🗲 1 Slot' };
+  return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '1 Slot' };
 };
 
 const formatTableNameDisplay = (tblName: string): string => {
@@ -173,24 +165,76 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return pruneLesserPowerVersions(slots);
   }, [slots]);
 
-  // Powers / Spells AP Metrics across active slots and Vault
-  const allOwnedPowers = useMemo(() => {
-    if (type !== 'powers') return slots;
-    const codex: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex : [];
-    return [...slots, ...codex];
-  }, [type, slots, sheetData.character_power_codex]);
+  // Loadout Expansions & Universal Capacity
+  const loadoutExpansions = typeof sheetData.loadout_expansions_purchased === 'number'
+    ? sheetData.loadout_expansions_purchased
+    : (typeof sheetData.unlocked_loadout_slots === 'number'
+      ? Math.max(0, Math.floor((sheetData.unlocked_loadout_slots - 4) / 2))
+      : (typeof sheetData.unlocked_magic_slots === 'number'
+        ? Math.max(0, sheetData.unlocked_magic_slots - 3)
+        : 0));
 
-  const totalPowerUnits = useMemo(() => {
-    return calculateTotalPowerUnits(pruneLesserPowerVersions(allOwnedPowers));
-  }, [allOwnedPowers]);
+  const totalLoadoutCapacity = useMemo(() => {
+    return calculateTotalLoadoutCapacity(loadoutExpansions);
+  }, [loadoutExpansions]);
 
-  const apSpent = totalPowerUnits;
+  const totalUsedLoadoutSlots = useMemo(() => {
+    return calculateTotalLoadoutSlotsUsed(slots);
+  }, [slots]);
+
+  const nextLoadoutExpansionCost = getApCostForNextExpansion(loadoutExpansions);
+  const totalLoadoutApSpent = calculateSpentApOnLoadoutExpansions(loadoutExpansions);
+
+  // Powers / Spells AP Metrics
+  const apSpent = useMemo(() => {
+    if (type === 'powers') {
+      return calculatePowersKnownApCost(activeDisplaySlots.length);
+    }
+    return totalLoadoutApSpent;
+  }, [type, activeDisplaySlots.length, totalLoadoutApSpent]);
 
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
   );
 
+  const handleUnlockLoadoutExpansion = async () => {
+    if (availableAp < nextLoadoutExpansionCost) {
+      setCatalogFeedback({
+        type: 'error',
+        message: `Insufficient AP (${availableAp} AP available, ${nextLoadoutExpansionCost} AP required for +2 Slots).`,
+      });
+      return;
+    }
+
+    const newExpansions = loadoutExpansions + 1;
+    const newTotalSlots = calculateTotalLoadoutCapacity(newExpansions);
+
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      loadout_expansions_purchased: newExpansions,
+      unlocked_loadout_slots: newTotalSlots,
+      unlocked_magic_slots: newTotalSlots,
+    }));
+
+    recordApExpenditure(
+      nextLoadoutExpansionCost,
+      'Loadout Slots' as any,
+      `Unlocked Loadout Capacity (${newTotalSlots} Slots)`,
+      1,
+      'Loadout Manager'
+    );
+
+    await saveActiveCharacter();
+
+    setCatalogFeedback({
+      type: 'success',
+      message: `Successfully expanded Loadout Capacity to ${newTotalSlots} Slots!`,
+    });
+  };
+
+  const [powerSortMode, setPowerSortMode] = useState<'action' | 'name'>('action');
+  const [actionFilter, setActionFilter] = useState<'ALL' | 'AM' | 'A' | 'M' | 'P' | 'F'>('ALL');
   const [showManageModal, setShowManageModal] = useState(false);
   const [readyFeedback, setReadyFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [catalogFeedback, setCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
@@ -210,9 +254,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [leftSearchQuery, setLeftSearchQuery] = useState('');
   const [rightSearchQuery, setRightSearchQuery] = useState('');
   
-  // Right Pane Active View: 'VAULT', 'CODEX', 'CATALOG', 'SLOTS', 'CREATOR', or 'EDITOR'
+  // Right Pane Active View: 'VAULT' | 'CODEX' | 'CATALOG' | 'SLOTS' | 'CREATOR' | 'EDITOR'
   const [activeRightTab, setActiveRightTab] = useState<'VAULT' | 'CODEX' | 'CATALOG' | 'SLOTS' | 'CREATOR' | 'EDITOR'>(
-    type === 'spells' ? 'VAULT' : 'CODEX'
+    type === 'spells' ? 'VAULT' : 'CATALOG'
   );
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -516,7 +560,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           category: (item as any).category || null,
           cost: (item as any).cost,
           is_hardware: true,
-          slot_weight: (getItemSlotWeight(item, fullCatalog) as 1 | 2 | 3 | 4),
+          slot_weight: (getItemSlotWeight(item) as 1 | 2 | 3 | 4),
         };
 
         return {
@@ -677,7 +721,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             source: 'Unequipped from Loadout',
             created_at: new Date().toISOString(),
             category: catalogMatch?.category || (targetSlot as any).category || null,
-            slot_weight: (getItemSlotWeight(targetSlot, fullCatalog) as 1 | 2 | 3 | 4),
+            slot_weight: (getItemSlotWeight(targetSlot) as 1 | 2 | 3 | 4),
           };
           return { ...prev, [slotKey]: updated, character_vault: [...currentVault, vaultItem] };
         }
@@ -688,13 +732,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   };
 
   const handleEquipVaultItem = (vaultItem: MagicItem) => {
-    const weight = getItemSlotWeight(vaultItem, fullCatalog);
+    const weight = vaultItem.slot_weight || getCategorySlotWeight(vaultItem.category || vaultItem.rarity);
     const currentSlots = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
-    const activeSlotsUsed = calculateTotalLoadoutSlotsUsed(currentSlots, fullCatalog);
-    const unlockedSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
+    const activeSlotsUsed = calculateTotalLoadoutSlotsUsed(currentSlots);
 
-    if (activeSlotsUsed + weight > unlockedSlots) {
-      alert(`❌ Insufficient Relic & Hardware Slots! Active loadout is ${activeSlotsUsed}/${unlockedSlots} slots. Item requires ${weight} slots. Unlock more slots in AP Manager.`);
+    if (activeSlotsUsed + weight > totalLoadoutCapacity) {
+      alert(`❌ Insufficient Loadout Capacity! Active loadout is ${activeSlotsUsed}/${totalLoadoutCapacity} slots. Item requires ${weight} slots. Unlock +2 Loadout Slots in the Buy Slots tab or header button.`);
       return;
     }
 
@@ -714,7 +757,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         checked: [false, false, false],
         // Preserve tier metadata for round-trip slot weight resolution
         category: vaultItem.category || null,
-        slot_weight: vaultItem.slot_weight || (getItemSlotWeight(vaultItem, fullCatalog) as 1 | 2 | 3 | 4),
+        slot_weight: weight,
       };
 
       return {
@@ -999,15 +1042,22 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const sectionIcon = type === 'powers' ? '🔥' : '🧿💍';
   const displayTitle = title || (type === 'powers' ? 'POWERS' : 'LOADOUT (Exotics & Artifacts)');
 
-  // Default Action Economy Sorting for Active Sheet
+  // Action Economy or Alphabetical Sorting for Active Sheet (with Action Channel Filtering for Powers)
   const sortedSlots = useMemo(() => {
-    return [...activeDisplaySlots].sort((a, b) => {
+    let list = type === 'powers' ? activeDisplaySlots : slots;
+    if (type === 'powers' && actionFilter !== 'ALL') {
+      list = list.filter((s) => (s.action || '').toUpperCase() === actionFilter);
+    }
+    return [...list].sort((a, b) => {
+      if (type === 'powers' && powerSortMode === 'name') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
       const orderA = ACTION_ORDER[a.action?.toUpperCase() || ''] ?? 99;
       const orderB = ACTION_ORDER[b.action?.toUpperCase() || ''] ?? 99;
       if (orderA !== orderB) return orderA - orderB;
       return (a.name || '').localeCompare(b.name || '');
     });
-  }, [activeDisplaySlots]);
+  }, [activeDisplaySlots, slots, type, powerSortMode, actionFilter]);
 
   return (
     <div className={`rounded-2xl border border-slate-800 border-t-2 p-4 flex flex-col gap-4 shadow-lg ${
@@ -1045,8 +1095,92 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           <CardHelpButton ruleKey={type === 'powers' ? 'powers.basics' : 'magic_items.basics'} />
         </div>
 
-        {/* Center Actions: Clear Uses */}
+        {/* Center Actions: Sort Toggle, Action Channel Filter, Capacity Meter, Upgrade, & Clear Uses */}
         <div className="flex items-center justify-center gap-2 flex-1 flex-wrap">
+          {type === 'powers' && (
+            <>
+              {/* Sort Action Channel / Alphabetical Toggle (Icon Only) */}
+              <button
+                type="button"
+                onClick={() => setPowerSortMode((prev) => (prev === 'action' ? 'name' : 'action'))}
+                className={`p-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center shadow-sm cursor-pointer border ${
+                  powerSortMode === 'action'
+                    ? 'bg-amber-950/80 text-amber-300 border-amber-500/50 shadow-amber-950/40'
+                    : 'bg-slate-950/60 hover:bg-slate-800 border-slate-700/80 text-slate-400 hover:text-slate-100'
+                }`}
+                title={powerSortMode === 'action' ? 'Sort: By Action Channel (AM ➔ A ➔ M ➔ P ➔ F)' : 'Sort: Alphabetical (A ➔ Z)'}
+              >
+                <ArrowUpDown className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Action Channel Filter Pill Switch (All, AM, A, M, P, F) */}
+              <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md">
+                {(['ALL', 'AM', 'A', 'M', 'P', 'F'] as const).map((filterOpt) => {
+                  const isSelected = actionFilter === filterOpt;
+                  const activeColor =
+                    filterOpt === 'ALL'
+                      ? 'bg-amber-600 text-white font-extrabold shadow-sm'
+                      : filterOpt === 'AM'
+                      ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
+                      : filterOpt === 'A'
+                      ? 'bg-rose-600 text-white font-black shadow-sm'
+                      : filterOpt === 'M'
+                      ? 'bg-indigo-600 text-white font-black shadow-sm'
+                      : filterOpt === 'P'
+                      ? 'bg-emerald-600 text-white font-black shadow-sm'
+                      : 'bg-purple-600 text-white font-black shadow-sm';
+
+                  return (
+                    <button
+                      key={filterOpt}
+                      type="button"
+                      onClick={() => setActionFilter(filterOpt)}
+                      className={`py-0.5 px-2 text-[11px] font-mono rounded-lg transition-all cursor-pointer flex items-center justify-center ${
+                        isSelected
+                          ? activeColor
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                      title={
+                        filterOpt === 'ALL'
+                          ? 'Show all learned powers'
+                          : `Show only ${filterOpt} action channel powers`
+                      }
+                    >
+                      {filterOpt === 'ALL' ? 'All' : filterOpt}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {type === 'spells' && (
+            <>
+              <div
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 border shadow-sm ${
+                  totalUsedLoadoutSlots > totalLoadoutCapacity
+                    ? 'bg-rose-950/80 text-rose-300 border-rose-500/60 shadow-rose-950/40 animate-pulse'
+                    : totalUsedLoadoutSlots === totalLoadoutCapacity
+                    ? 'bg-amber-950/80 text-amber-300 border-amber-500/50 shadow-amber-950/40'
+                    : 'bg-slate-950/80 text-emerald-300 border-emerald-500/40'
+                }`}
+                title={`${totalUsedLoadoutSlots} of ${totalLoadoutCapacity} Loadout Slots in use`}
+              >
+                <span>⚡ {totalUsedLoadoutSlots}/{totalLoadoutCapacity} Slots</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleUnlockLoadoutExpansion}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/50 text-indigo-200 hover:text-white transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                title={`Unlock +2 Loadout Slots for ${nextLoadoutExpansionCost} AP (Available: ${availableAp} AP)`}
+              >
+                <Plus className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="font-outfit text-[11px] font-bold">+2 Slots ({nextLoadoutExpansionCost} AP)</span>
+              </button>
+            </>
+          )}
+
           <button
             type="button"
             onClick={handleClearAllUses}
@@ -1059,6 +1193,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         </div>
 
         <div className="flex items-center justify-end gap-2 flex-1">
+          {type === 'spells' && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveRightTab('VAULT');
+                setShowManageModal(true);
+              }}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-950/60 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-slate-100 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Open Vault storage"
+            >
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              <span className="font-outfit text-[11px] font-bold">Vault ({(sheetData.character_vault || []).length})</span>
+            </button>
+          )}
+
           <div className="relative">
             <button
               type="button"
@@ -1105,11 +1254,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </div>
                     </div>
 
-                    {/* Center: KISS Top-Center Header Status Pill */}
+                    {/* Center: Top-Center Header Status Pill */}
                     {type === 'powers' && (
                       <div className="px-3.5 py-1 bg-amber-950/70 border border-amber-500/40 rounded-full font-mono font-bold text-xs text-amber-200 flex items-center gap-2 shadow-md">
                         <span>
-                          Learned <strong className="text-amber-300">{totalPowerUnits}</strong>; Used{' '}
+                          Learned <strong className="text-amber-300">{activeDisplaySlots.length} Powers</strong>; Invested{' '}
                           <strong className="text-rose-300">{apSpent} AP</strong>; Available{' '}
                           <strong className="text-emerald-400">{availableAp} AP</strong>
                         </span>
@@ -1123,58 +1272,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-
-                  {/* Row 3: Global Ready Category Multi-Option Pill Switch (Powers Mode Only) */}
-                  {type === 'powers' && (
-                    <div className="flex items-center justify-center w-full">
-                      <div className="bg-slate-950/90 border border-slate-800 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md w-full max-w-2xl">
-                        <button
-                          type="button"
-                          onClick={() => setCatalogReadyFilter('all')}
-                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                            catalogReadyFilter === 'all'
-                              ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
-                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                          }`}
-                        >
-                          🌐 All
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCatalogReadyFilter('primary_arsenal')}
-                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                            catalogReadyFilter === 'primary_arsenal'
-                              ? 'bg-rose-900/70 text-rose-200 border border-rose-500/50 shadow-sm font-extrabold'
-                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                          }`}
-                        >
-                          ⚔️ Primary / Arsenal
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCatalogReadyFilter('mobility_defense')}
-                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                            catalogReadyFilter === 'mobility_defense'
-                              ? 'bg-indigo-900/70 text-indigo-200 border border-indigo-500/50 shadow-sm font-extrabold'
-                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                          }`}
-                        >
-                          👣 Mobility & Defense
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCatalogReadyFilter('support_passive')}
-                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                            catalogReadyFilter === 'support_passive'
-                              ? 'bg-emerald-900/70 text-emerald-200 border border-emerald-500/50 shadow-sm font-extrabold'
-                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                          }`}
-                        >
-                          🎓 Support & Passives
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* 2-COLUMN SPLIT-PANE BODY */}
@@ -1208,18 +1305,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
                     {/* Left Pane Slots Status Pill (Loadout Mode) */}
                     {type === 'spells' && (() => {
-                      const maxSlots = typeof sheetData.unlocked_loadout_slots === 'number' 
-                        ? sheetData.unlocked_loadout_slots 
-                        : (typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3);
-                      const usedSlots = calculateTotalLoadoutSlotsUsed(slots, fullCatalog);
-                      const remainingSlots = Math.max(0, maxSlots - usedSlots);
+                      const remainingSlots = Math.max(0, totalLoadoutCapacity - totalUsedLoadoutSlots);
                       return (
                         <div className="mt-2.5 px-3 py-1.5 bg-slate-900/90 border border-cyan-500/40 rounded-xl text-xs font-mono flex items-center justify-between gap-2 shadow-inner shrink-0">
                           <span className="text-cyan-300 font-bold flex items-center gap-1">💍 Loadout Slots:</span>
                           <div className="flex items-center gap-2 text-[11px] font-bold">
-                            <span className="text-slate-300">Max <strong className="text-slate-100">{maxSlots}</strong></span>
+                            <span className="text-slate-300">Capacity <strong className="text-slate-100">{totalLoadoutCapacity}</strong></span>
                             <span className="text-slate-600">|</span>
-                            <span className="text-amber-300">Used <strong className="text-amber-200">{usedSlots}</strong></span>
+                            <span className={totalUsedLoadoutSlots > totalLoadoutCapacity ? "text-rose-400" : "text-amber-300"}>
+                              Used <strong className={totalUsedLoadoutSlots > totalLoadoutCapacity ? "text-rose-300 font-extrabold" : "text-amber-200"}>{totalUsedLoadoutSlots}</strong>
+                            </span>
                             <span className="text-slate-600">|</span>
                             <span className={remainingSlots > 0 ? "text-emerald-400" : "text-rose-400"}>
                               Remaining <strong className="text-emerald-300">{remainingSlots}</strong>
@@ -1229,21 +1324,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       );
                     })()}
 
-                    {/* Left Pane Slots Status Pill (Powers Mode: Ready Matrix Model B) */}
+                    {/* Left Pane Slots Status Pill (Powers Mode: Progressive Soft Tax) */}
                     {type === 'powers' && (() => {
-                      const level = sheetData.level || 1;
-                      const readyConfig = getReadySlotConfig(level);
-                      const liveVal = validateReadyMatrix(slots, level);
+                      const powerCount = activeDisplaySlots.length;
+                      const totalApInvested = calculatePowersKnownApCost(powerCount);
+                      const bracket = getPowersSoftTaxBracket(powerCount);
                       return (
                         <div className="mt-2.5 px-3 py-1.5 bg-slate-900/90 border border-amber-500/40 rounded-xl text-xs font-mono flex items-center justify-between gap-2 shadow-inner shrink-0 flex-wrap">
-                          <span className="text-amber-300 font-bold flex items-center gap-1">⚡ Ready Matrix:</span>
-                          <div className="flex items-center gap-2 text-[11px] font-bold">
-                            <span className="text-slate-300">⚔️ Primary <strong className={liveVal.arsenalCount > readyConfig.maxArsenal ? "text-rose-400 font-extrabold" : "text-amber-200"}>{liveVal.arsenalCount}/{readyConfig.maxArsenal}</strong></span>
+                          <div className="flex items-center gap-2 font-bold">
+                            <span className="text-amber-300">🔥 Learned: <strong className="text-white">{powerCount} Powers</strong></span>
                             <span className="text-slate-600">|</span>
-                            <span className="text-slate-300">👣 Mobility <strong className={liveVal.mobilityCount > readyConfig.maxMobilityDefense ? "text-rose-400 font-extrabold" : "text-indigo-200"}>{liveVal.mobilityCount}/{readyConfig.maxMobilityDefense}</strong></span>
-                            <span className="text-slate-600">|</span>
-                            <span className="text-emerald-400">Total <strong className="text-emerald-300">{liveVal.arsenalCount + liveVal.mobilityCount}/{readyConfig.totalSlots}</strong></span>
+                            <span className="text-emerald-400">AP Invested: <strong className="text-emerald-300">{totalApInvested} AP</strong></span>
                           </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-950 text-amber-300 border border-amber-500/30">
+                            {bracket.tierName} (+{bracket.costPerNextPower} AP/power)
+                          </span>
                         </div>
                       );
                     })()}
@@ -1360,17 +1455,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     <div className="flex items-center gap-1">
                                       <button
                                         type="button"
-                                        onClick={() => toggleReadyPower(item.name)}
-                                        className="px-2 py-1 bg-amber-950/60 text-amber-300 border border-amber-500/40 hover:bg-amber-900/80 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer"
-                                        title="Move power to un-readied Vault"
-                                      >
-                                        <ArrowDownToLine className="w-3 h-3 text-amber-400" />
-                                        <span>To Vault</span>
-                                      </button>
-                                      <button
-                                        type="button"
                                         onClick={() => handleForgetAbility(item.name)}
-                                        className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                                        className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
                                         title="Forget Power permanently"
                                       >
                                         <Trash2 className="w-3.5 h-3.5" />
@@ -1422,23 +1508,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         </button>
                       )}
 
-                      {type === 'powers' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isVersionEditMode) setIsVersionEditMode(false);
-                            setActiveRightTab('CODEX');
-                          }}
-                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'CODEX'
-                              ? 'border-amber-400 text-amber-400'
-                              : 'border-transparent text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          🔒 Vault ({(Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex.length : 0)})
-                        </button>
-                      )}
-
                       <button
                         type="button"
                         onClick={() => {
@@ -1475,22 +1544,22 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         </button>
                       )}
 
-                      {type === 'powers' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isVersionEditMode) setIsVersionEditMode(false);
-                            setActiveRightTab('SLOTS');
-                          }}
-                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'SLOTS'
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isVersionEditMode) setIsVersionEditMode(false);
+                          setActiveRightTab('CREATOR');
+                        }}
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          activeRightTab === 'CREATOR'
+                            ? type === 'powers'
                               ? 'border-amber-400 text-amber-400'
-                              : 'border-transparent text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          ⚡ Ready Slots
-                        </button>
-                      )}
+                              : 'border-cyan-400 text-cyan-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        ✨ Custom Creator
+                      </button>
 
                       {isVersionEditMode && (
                         <button
@@ -1663,7 +1732,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               </div>
                             ) : (
                               filteredVault.map((item, idx) => {
-                                const weight = getItemSlotWeight(item, fullCatalog);
+                                const weight = getItemSlotWeight(item);
                                 const badge = getMagicItemTierBadge(item, fullCatalog);
                                 return (
                                   <div
@@ -1707,24 +1776,20 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       );
                     })()}
 
-                    {/* TAB: BUY SLOTS VIEW (spells mode) */}
+                    {/* TAB: BUY SLOTS (Uncapped Soft-Slope Loadout Capacity Engine) */}
                     {activeRightTab === 'SLOTS' && type === 'spells' && (() => {
-                      const unlockedSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
-                      const charLevel = sheetData.level || 1;
-                      const maxSlotsCap = getMaxSlotsForLevel(charLevel);
-                      const slotUpgradeInfo = getApCostForNextSlot(unlockedSlots, charLevel);
-                      const totalApSpentOnSlots = calculateSpentApOnMagicSlots(unlockedSlots);
+                      const scheduleRows = generateLoadoutScheduleRows(12);
 
                       return (
                         <div className="flex flex-col gap-3 flex-1 min-h-0 mt-2.5 overflow-y-auto pr-1">
-                          {/* Top Status Header Pill (Image 2 Style) */}
-                          <div className="px-3.5 py-1.5 bg-pink-950/70 border border-pink-500/40 rounded-full font-mono font-bold text-xs text-pink-200 flex items-center justify-between shadow-md shrink-0">
-                            <div className="flex items-center gap-2.5">
-                              <span>Lvl <strong className="text-amber-300">{charLevel}</strong></span>
+                          {/* Top Status Header Pill */}
+                          <div className="px-3.5 py-1.5 bg-pink-950/70 border border-pink-500/40 rounded-full font-mono font-bold text-xs text-pink-200 flex items-center justify-between shadow-md shrink-0 flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <span>Capacity <strong className="text-pink-300">{totalLoadoutCapacity} Slots</strong></span>
                               <span className="text-pink-500/60">•</span>
-                              <span>Slots <strong className="text-pink-300">{unlockedSlots}/{maxSlotsCap}</strong></span>
+                              <span>Used <strong className="text-amber-300">{totalUsedLoadoutSlots} Slots</strong></span>
                               <span className="text-pink-500/60">•</span>
-                              <span>Spent <strong className="text-rose-400">{totalApSpentOnSlots} AP</strong></span>
+                              <span>Spent <strong className="text-rose-400">{totalLoadoutApSpent} AP</strong></span>
                             </div>
                             <div>
                               <span>Available <strong className="text-emerald-400">{availableAp} AP</strong></span>
@@ -1737,48 +1802,26 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               <div className="flex items-center gap-1.5">
                                 <Sparkles className="w-4 h-4 text-pink-400" />
                                 <span className="font-outfit font-bold text-sm text-slate-100">
-                                  {slotUpgradeInfo.canUpgrade
-                                    ? `Next Slot Upgrade: Slot ${slotUpgradeInfo.nextSlotNum}`
-                                    : `Slot Capacity Status`}
+                                  Next Expansion: +2 Slots ({totalLoadoutCapacity + 2} Total Capacity)
                                 </span>
                               </div>
                               <p className="text-[11px] text-slate-400 font-mono">
-                                {slotUpgradeInfo.canUpgrade
-                                  ? `Requires Level ${slotUpgradeInfo.reqLevel} | Cost: ${slotUpgradeInfo.apCost} AP`
-                                  : slotUpgradeInfo.reason || 'Maximum slots reached'}
+                                Expansion #{loadoutExpansions + 1} | Cost: <strong className="text-amber-300">{nextLoadoutExpansionCost} AP</strong> (Uncapped Expansion)
                               </p>
                             </div>
 
                             <button
                               type="button"
-                              disabled={!slotUpgradeInfo.canUpgrade || availableAp < slotUpgradeInfo.apCost}
-                              onClick={() => {
-                                if (!slotUpgradeInfo.canUpgrade) return;
-                                if (availableAp < slotUpgradeInfo.apCost) {
-                                  alert(`❌ Insufficient Available AP! Requires ${slotUpgradeInfo.apCost} AP.`);
-                                  return;
-                                }
-                                recordApExpenditure(
-                                  slotUpgradeInfo.apCost,
-                                  'Magic Items' as any,
-                                  `Unlocked Magic Item Slot ${slotUpgradeInfo.nextSlotNum}`,
-                                  1,
-                                  'Magic Items Manager'
-                                );
-                                updateActiveSheetData((prev) => ({
-                                  ...prev,
-                                  unlocked_magic_slots: (prev.unlocked_magic_slots || 3) + 1,
-                                }));
-                                saveActiveCharacter();
-                              }}
+                              disabled={availableAp < nextLoadoutExpansionCost}
+                              onClick={handleUnlockLoadoutExpansion}
                               className={`px-3 py-1.5 rounded-xl font-outfit font-bold text-xs flex items-center gap-1.5 shadow-md transition-all shrink-0 ${
-                                slotUpgradeInfo.canUpgrade && availableAp >= slotUpgradeInfo.apCost
+                                availableAp >= nextLoadoutExpansionCost
                                   ? 'bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white cursor-pointer active:scale-95'
                                   : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
                               }`}
                             >
                               <Sparkles className="w-3.5 h-3.5 text-pink-300" />
-                              <span>Unlock Slot +1 ({slotUpgradeInfo.canUpgrade ? `${slotUpgradeInfo.apCost} AP` : 'Lvl Locked'})</span>
+                              <span>Unlock +2 Slots ({nextLoadoutExpansionCost} AP)</span>
                             </button>
                           </div>
 
@@ -1786,7 +1829,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           <div className="flex flex-col gap-1.5 shrink-0 pb-2">
                             <div className="flex items-center justify-between px-1">
                               <span className="font-outfit font-bold text-xs uppercase text-slate-300 tracking-wider flex items-center gap-1.5">
-                                <span>📜</span> Slot Progression & AP Cost Schedule
+                                <span>📜</span> Uncapped Loadout Capacity Schedule
                               </span>
                               <span className="text-[10px] text-slate-400 font-mono">Master Blueprint Schedule</span>
                             </div>
@@ -1795,24 +1838,24 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               <table className="w-full text-left text-[11px]">
                                 <thead className="bg-slate-900/90 text-slate-400 border-b border-slate-800 font-mono uppercase text-[10px]">
                                   <tr>
-                                    <th className="py-1.5 px-2.5">Level Bracket</th>
-                                    <th className="py-1.5 px-2.5">Max Slots</th>
-                                    <th className="py-1.5 px-2.5">AP Cost</th>
+                                    <th className="py-1.5 px-2.5">Expansion Level</th>
+                                    <th className="py-1.5 px-2.5">Total Capacity</th>
+                                    <th className="py-1.5 px-2.5">Step Cost</th>
                                     <th className="py-1.5 px-2.5">Cumulative AP</th>
                                     <th className="py-1.5 px-2.5 text-right">Status</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800/60 font-mono">
-                                  {SLOT_SCHEDULE_ROWS.map((row, idx) => {
-                                    const isCurrentBracket = charLevel >= row.minLvl && charLevel <= row.maxLvl;
-                                    const isUnlocked = unlockedSlots >= row.slotNum;
-                                    const isNextTarget = row.slotNum === unlockedSlots + 1;
+                                  {scheduleRows.map((row, idx) => {
+                                    const isCurrent = totalLoadoutCapacity === row.totalSlots;
+                                    const isUnlocked = totalLoadoutCapacity >= row.totalSlots;
+                                    const isNextTarget = row.step === loadoutExpansions + 1;
 
                                     return (
                                       <tr
                                         key={idx}
                                         className={`transition-colors ${
-                                          isCurrentBracket
+                                          isCurrent
                                             ? 'bg-pink-950/40 text-pink-100 font-bold border-l-2 border-l-pink-400'
                                             : isUnlocked
                                             ? 'text-slate-300 bg-slate-900/30'
@@ -1820,12 +1863,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                         }`}
                                       >
                                         <td className="py-1.5 px-2.5 flex items-center gap-1.5">
-                                          {isCurrentBracket && <span className="text-pink-400 text-xs">⭐</span>}
-                                          <span>{row.bracket}</span>
+                                          {isCurrent && <span className="text-pink-400 text-xs">⭐</span>}
+                                          <span>{row.label}</span>
                                         </td>
-                                        <td className="py-1.5 px-2.5 font-bold">{row.maxSlots} Slots</td>
-                                        <td className="py-1.5 px-2.5">{row.apCost}</td>
-                                        <td className="py-1.5 px-2.5 text-purple-300 font-bold">{row.cumAp} AP</td>
+                                        <td className="py-1.5 px-2.5 font-bold">{row.totalSlots} Slots</td>
+                                        <td className="py-1.5 px-2.5">{row.step === 0 ? '0 AP (Baseline)' : `${row.apCost} AP (+2 Slots)`}</td>
+                                        <td className="py-1.5 px-2.5 text-purple-300 font-bold">{row.cumulativeAp} AP</td>
                                         <td className="py-1.5 px-2.5 text-right">
                                           {isUnlocked ? (
                                             <span className="text-emerald-400 font-bold flex items-center justify-end gap-1">
@@ -1833,10 +1876,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             </span>
                                           ) : isNextTarget ? (
                                             <span className="text-pink-300 font-bold">⚡ Next Target</span>
-                                          ) : charLevel < row.minLvl ? (
-                                            <span className="text-slate-500">🔒 Req Lvl {row.minLvl}</span>
                                           ) : (
-                                            <span className="text-amber-400">Available</span>
+                                            <span className="text-slate-500">Uncapped Pool</span>
                                           )}
                                         </td>
                                       </tr>
@@ -1845,102 +1886,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 </tbody>
                               </table>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* TAB: READY SLOTS LEVEL PROGRESSION VIEW (powers mode) */}
-                    {activeRightTab === 'SLOTS' && type === 'powers' && (() => {
-                      const charLevel = sheetData.level || 1;
-                      const activeConfig = getReadySlotConfig(charLevel);
-
-                      const SCHEDULE_TIERS = [
-                        { tier: 1, name: 'Tier 1 (Initiate)', levels: 'Lvl 1–4', total: 4, arsenal: 3, mobility: 3, floor: 'Min 1 per category' },
-                        { tier: 2, name: 'Tier 2 (Adept)', levels: 'Lvl 5–9', total: 5, arsenal: 4, mobility: 4, floor: 'Min 1 per category' },
-                        { tier: 3, name: 'Tier 3 (Paragon)', levels: 'Lvl 10–14', total: 6, arsenal: 4, mobility: 4, floor: 'Min 2 per category' },
-                        { tier: 4, name: 'Tier 4 (Master)', levels: 'Lvl 15–19', total: 7, arsenal: 5, mobility: 5, floor: 'Min 2 per category' },
-                        { tier: 5, name: 'Tier 5 (Legend)', levels: 'Lvl 20+', total: 8, arsenal: 5, mobility: 5, floor: 'Min 3 per category' },
-                      ];
-
-                      return (
-                        <div className="flex flex-col gap-3 flex-1 min-h-0 mt-2.5 overflow-y-auto pr-1">
-                          {/* Active Level & Tier Header Pill */}
-                          <div className="px-3.5 py-1.5 bg-amber-950/70 border border-amber-500/40 rounded-full font-mono font-bold text-xs text-amber-200 flex items-center justify-between shadow-md shrink-0 flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              <span>Character Level <strong className="text-white">{charLevel}</strong></span>
-                              <span className="text-amber-500/60">•</span>
-                              <span className="text-amber-300">Tier {activeConfig.tier}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span>Active Capacity: <strong className="text-amber-300">{activeConfig.totalSlots} Tactical Slots</strong></span>
-                            </div>
-                          </div>
-
-                          {/* Informational Callout */}
-                          <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 flex items-center justify-between gap-2 shadow-inner">
-                            <div className="flex items-center gap-2">
-                              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
-                              <span className="text-[11px] leading-tight">
-                                Ready Slots scale <strong>automatically</strong> with Level / Tier at <strong>0 AP Cost</strong>.
-                              </span>
-                            </div>
-                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40 shrink-0">
-                              🎓 Passives: UNLIMITED
-                            </span>
-                          </div>
-
-                          {/* Tier Progression Cards */}
-                          <div className="space-y-2">
-                            {SCHEDULE_TIERS.map((t) => {
-                              const isCurrent = t.tier === activeConfig.tier;
-                              return (
-                                <div
-                                  key={t.tier}
-                                  className={`p-3 rounded-xl border transition-all flex flex-col gap-2 ${
-                                    isCurrent
-                                      ? 'bg-amber-950/40 border-amber-500/60 ring-1 ring-amber-500/50 shadow-md'
-                                      : 'bg-slate-900/70 border-slate-800 opacity-80'
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80">
-                                    <div className="flex items-center gap-2">
-                                      <span className={`font-outfit font-extrabold text-xs uppercase tracking-wide ${isCurrent ? 'text-amber-300' : 'text-slate-200'}`}>
-                                        {t.name}
-                                      </span>
-                                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800">
-                                        {t.levels}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                      {isCurrent && (
-                                        <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded bg-amber-500 text-slate-950">
-                                          CURRENT TIER
-                                        </span>
-                                      )}
-                                      <span className="text-xs font-mono font-extrabold text-white">
-                                        {t.total} Tactical Slots
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-3 gap-2 text-[11px] font-mono">
-                                    <div className="p-1.5 rounded-lg bg-rose-950/40 border border-rose-500/30 flex flex-col items-center justify-center text-center">
-                                      <span className="text-[10px] text-rose-300 font-bold">⚔️ Primary / Arsenal</span>
-                                      <span className="font-extrabold text-rose-200">{t.arsenal} Max</span>
-                                    </div>
-                                    <div className="p-1.5 rounded-lg bg-indigo-950/40 border border-indigo-500/30 flex flex-col items-center justify-center text-center">
-                                      <span className="text-[10px] text-indigo-300 font-bold">👣 Mobility & Def</span>
-                                      <span className="font-extrabold text-indigo-200">{t.mobility} Max</span>
-                                    </div>
-                                    <div className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 flex flex-col items-center justify-center text-center">
-                                      <span className="text-[10px] text-slate-400 font-bold">Category Floor</span>
-                                      <span className="font-bold text-slate-300 text-[10px]">{t.floor}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
                           </div>
                         </div>
                       );
@@ -2438,298 +2383,116 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       </div>
 
       {/* Main Character Sheet Card View */}
-      <div className="flex flex-col gap-4">
-        {type === 'powers' ? (
-          (() => {
-            const level = sheetData.level || 1;
-            const readyConfig = getReadySlotConfig(level);
-            const arsenalSlots = sortedSlots.filter((s) => getPowerReadyCategory(s) === 'primary_arsenal');
-            const mobilitySlots = sortedSlots.filter((s) => getPowerReadyCategory(s) === 'mobility_defense');
-            const supportSlots = sortedSlots.filter(
-              (s) => getPowerReadyCategory(s) === 'support_passive' || (getPowerReadyCategory(s) as any) === 'contextual_passive'
-            );
+      <div className="flex flex-col gap-2">
+        {sortedSlots.length > 0 ? (
+          sortedSlots.map((slot, index) => {
+            const cleaned = cleanName(slot.name);
+            const { baseName, version } = parseAbilityVersion(cleaned);
+            const actionUpper = (slot.action || '').toUpperCase();
+            const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+            const usageCount = parseUsageCount(slot.usage);
 
-            const renderPowerCard = (slot: AbilitySlot, index: number) => {
-              const cleaned = cleanName(slot.name);
-              const { baseName, version } = parseAbilityVersion(cleaned);
-              const cat = getPowerReadyCategory(slot);
-              const actionUpper = (slot.action || '').toUpperCase();
-              const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
-              const usageCount = parseUsageCount(slot.usage);
-
-              return (
-                <div
-                  key={index}
-                  className="p-3 bg-slate-950/60 rounded-xl border border-slate-850 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm hover:border-slate-800 transition-all"
-                >
-                  {/* 1. Name Column with Version & Category Badge */}
-                  <div className="w-36 sm:w-48 shrink-0 flex flex-col gap-0.5">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
-                        {baseName}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                      {version > 1 && (
-                        <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 flex items-center gap-0.5">
-                          <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                          v{version}
-                        </span>
-                      )}
-                      <span className={`text-[8.5px] font-mono font-bold px-1.5 py-0.2 rounded border ${
-                        cat === 'primary_arsenal'
-                          ? 'bg-rose-950/80 text-rose-300 border-rose-500/40'
-                          : cat === 'mobility_defense'
-                          ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
-                          : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-                      }`}>
-                        {cat === 'primary_arsenal' ? '⚔️ Primary' : cat === 'mobility_defense' ? '👣 Mobility' : '🎓 Support (0)'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 2. Action Badge Column */}
-                  <div className="w-12 shrink-0 flex items-center justify-center">
-                    {actionUpper ? (
-                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${actionClass}`}>
-                        {actionUpper}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-700 font-mono">-</span>
-                    )}
-                  </div>
-
-                  {/* 3. Uses Text Column */}
-                  <div className="w-20 shrink-0 flex items-center justify-start">
-                    {slot.usage ? (
-                      <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[11px] font-mono text-slate-300 truncate" title={slot.usage}>
-                        {slot.usage}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-700 font-mono">-</span>
-                    )}
-                  </div>
-
-                  {/* 4. Checkboxes Column */}
-                  <div className="w-16 shrink-0 flex items-center gap-1 min-w-[64px]">
-                    {usageCount > 0 ? (
-                      Array.from({ length: usageCount }).map((_, bIdx) => {
-                        const isChecked = !!(slot.checked && slot.checked[bIdx]);
-                        return (
-                          <input
-                            key={bIdx}
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => handleCheckboxToggle(slot, bIdx)}
-                            className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500 focus:ring-0 cursor-pointer accent-indigo-500"
-                            title={`Usage slot ${bIdx + 1}`}
-                          />
-                        );
-                      })
-                    ) : (
-                      <span className="text-[10px] text-slate-700 font-mono select-none">-</span>
-                    )}
-                  </div>
-
-                  {/* 5. Effect Description Column */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-300 whitespace-normal break-words leading-relaxed">
-                      {slot.effect || 'No effect description'}
-                    </p>
-                  </div>
-                </div>
-              );
-            };
+            const isFullySpent = (() => {
+              if (!slot.usage || !slot.usage.includes('Enc')) return false;
+              if (usageCount <= 0) return false;
+              const checkedCount = (slot.checked || []).filter(Boolean).length;
+              return checkedCount >= usageCount;
+            })();
 
             return (
-              <div className="flex flex-col gap-4">
-                {/* 1. Primary / Arsenal Sub-Zone Container (🔴 Rose / 6px Stripe) */}
-                <div className="bg-gradient-to-br from-rose-950/25 via-slate-900/60 to-slate-950/80 rounded-2xl border border-rose-500/30 border-l-[6px] border-l-rose-500 p-3 sm:p-3.5 flex flex-col gap-2.5 shadow-lg shadow-rose-950/20">
-                  {/* Container Header Bar */}
-                  <div className="flex items-center justify-between pb-2 border-b border-rose-500/20">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-rose-950/80 border border-rose-500/40 text-rose-300 text-xs flex items-center justify-center shadow-inner">
-                        ⚔️
-                      </div>
-                      <span className="font-outfit font-extrabold text-xs text-rose-200 uppercase tracking-wider">
-                        Primary / Arsenal
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-rose-950/90 text-rose-300 border border-rose-500/40 shadow-inner">
-                      {arsenalSlots.length}/{readyConfig.maxArsenal} MAX
+              <div
+                key={(slot as any).id || `${slot.name}_${index}`}
+                className={`p-3 bg-slate-950/60 rounded-xl border border-slate-850 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm hover:border-slate-800 transition-all ${
+                  isFullySpent ? 'opacity-50 grayscale-[40%]' : ''
+                }`}
+              >
+                {/* 1. Name Column with Version Badge */}
+                <div className="w-36 sm:w-44 shrink-0 flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
+                      {baseName}
                     </span>
+                    <ItemNotesPopover notes={slot.notes || (fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase()) as any)?.notes} itemName={baseName} />
                   </div>
-
-                  {/* Power Sub-Cards */}
-                  <div className="flex flex-col gap-2">
-                    {arsenalSlots.length > 0 ? (
-                      arsenalSlots.map((slot, idx) => renderPowerCard(slot, idx))
-                    ) : (
-                      <div className="p-3 bg-slate-950/50 rounded-xl border border-rose-500/15 text-xs text-slate-500 italic text-center">
-                        No Primary / Arsenal powers readied. Select from Codex or Catalog to ready.
-                      </div>
-                    )}
-                  </div>
+                  {version > 1 && (
+                    <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
+                      <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
+                      v{version}
+                    </span>
+                  )}
+                  {type === 'spells' && (() => {
+                    const badge = getMagicItemTierBadge(slot, fullCatalog);
+                    if (!badge) return null;
+                    return (
+                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 mt-0.5 ${badge.style}`}>
+                        <span>{badge.icon}</span>
+                        <span>{badge.label}</span>
+                        <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                      </span>
+                    );
+                  })()}
                 </div>
 
-                {/* 2. Mobility & Defense Sub-Zone Container (🔵 Indigo / 6px Stripe) */}
-                <div className="bg-gradient-to-br from-indigo-950/25 via-slate-900/60 to-slate-950/80 rounded-2xl border border-indigo-500/30 border-l-[6px] border-l-indigo-500 p-3 sm:p-3.5 flex flex-col gap-2.5 shadow-lg shadow-indigo-950/20">
-                  {/* Container Header Bar */}
-                  <div className="flex items-center justify-between pb-2 border-b border-indigo-500/20">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 text-xs flex items-center justify-center shadow-inner">
-                        👣
-                      </div>
-                      <span className="font-outfit font-extrabold text-xs text-indigo-200 uppercase tracking-wider">
-                        Mobility & Defense
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 shadow-inner">
-                      {mobilitySlots.length}/{readyConfig.maxMobilityDefense} MAX
+                {/* 2. Action Badge Column */}
+                <div className="w-12 shrink-0 flex items-center justify-center">
+                  {actionUpper ? (
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${actionClass}`}>
+                      {actionUpper}
                     </span>
-                  </div>
-
-                  {/* Power Sub-Cards */}
-                  <div className="flex flex-col gap-2">
-                    {mobilitySlots.length > 0 ? (
-                      mobilitySlots.map((slot, idx) => renderPowerCard(slot, idx))
-                    ) : (
-                      <div className="p-3 bg-slate-950/50 rounded-xl border border-indigo-500/15 text-xs text-slate-500 italic text-center">
-                        No Mobility & Defense powers readied. Select from Codex or Catalog to ready.
-                      </div>
-                    )}
-                  </div>
+                  ) : (
+                    <span className="text-[10px] text-slate-700 font-mono">-</span>
+                  )}
                 </div>
 
-                {/* 3. Support & Passives Sub-Zone Container (🟢 Emerald / 6px Stripe) */}
-                <div className="bg-gradient-to-br from-emerald-950/25 via-slate-900/60 to-slate-950/80 rounded-2xl border border-emerald-500/30 border-l-[6px] border-l-emerald-500 p-3 sm:p-3.5 flex flex-col gap-2.5 shadow-lg shadow-emerald-950/20">
-                  {/* Container Header Bar */}
-                  <div className="flex items-center justify-between pb-2 border-b border-emerald-500/20">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs flex items-center justify-center shadow-inner">
-                        🎓
-                      </div>
-                      <span className="font-outfit font-extrabold text-xs text-emerald-200 uppercase tracking-wider">
-                        Support & Passives
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 shadow-inner">
-                      UNLIMITED
+                {/* 3. Uses Text Column */}
+                <div className="w-20 shrink-0 flex items-center justify-start">
+                  {slot.usage ? (
+                    <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[11px] font-mono text-slate-300 truncate" title={slot.usage}>
+                      {slot.usage}
                     </span>
-                  </div>
+                  ) : (
+                    <span className="text-[10px] text-slate-700 font-mono">-</span>
+                  )}
+                </div>
 
-                  {/* Power Sub-Cards */}
-                  <div className="flex flex-col gap-2">
-                    {supportSlots.length > 0 ? (
-                      supportSlots.map((slot, idx) => renderPowerCard(slot, idx))
-                    ) : (
-                      <div className="p-3 bg-slate-950/50 rounded-xl border border-emerald-500/15 text-xs text-slate-500 italic text-center">
-                        No Support & Passive powers learned.
-                      </div>
-                    )}
-                  </div>
+                {/* 4. Checkboxes Column */}
+                <div className="w-16 shrink-0 flex items-center gap-1 min-w-[64px]">
+                  {usageCount > 0 ? (
+                    Array.from({ length: usageCount }).map((_, bIdx) => {
+                      const isChecked = !!(slot.checked && slot.checked[bIdx]);
+                      return (
+                        <input
+                          key={bIdx}
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleCheckboxToggle(slot, bIdx)}
+                          className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500 focus:ring-0 cursor-pointer accent-indigo-500"
+                          title={`Usage slot ${bIdx + 1}`}
+                        />
+                      );
+                    })
+                  ) : (
+                    <span className="text-[10px] text-slate-700 font-mono select-none">-</span>
+                  )}
+                </div>
+
+                {/* 5. Effect Description Column */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-300 whitespace-normal break-words leading-relaxed">
+                    {slot.effect || 'No effect description'}
+                  </p>
                 </div>
               </div>
             );
-          })()
+          })
         ) : (
-          sortedSlots.length > 0 ? (
-            sortedSlots.map((slot, index) => {
-              const cleaned = cleanName(slot.name);
-              const { baseName, version } = parseAbilityVersion(cleaned);
-              const actionUpper = (slot.action || '').toUpperCase();
-              const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
-              const usageCount = parseUsageCount(slot.usage);
-
-              return (
-                <div
-                  key={index}
-                  className="p-3 bg-slate-950/60 rounded-xl border border-slate-850 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm hover:border-slate-800 transition-all"
-                >
-                  {/* 1. Name Column with Version Badge */}
-                  <div className="w-36 sm:w-44 shrink-0 flex flex-col gap-0.5">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
-                        {baseName}
-                      </span>
-                      <ItemNotesPopover notes={slot.notes || (fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase()) as any)?.notes} itemName={baseName} />
-                    </div>
-                    {version > 1 && (
-                      <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
-                        <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                        v{version}
-                      </span>
-                    )}
-                    {type === 'spells' && (() => {
-                      const badge = getMagicItemTierBadge(slot, fullCatalog);
-                      if (!badge) return null;
-                      return (
-                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 mt-0.5 ${badge.style}`}>
-                          <span>{badge.icon}</span>
-                          <span>{badge.label}</span>
-                          <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                        </span>
-                      );
-                    })()}
-                  </div>
-
-                  {/* 2. Action Badge Column */}
-                  <div className="w-12 shrink-0 flex items-center justify-center">
-                    {actionUpper ? (
-                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${actionClass}`}>
-                        {actionUpper}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-700 font-mono">-</span>
-                    )}
-                  </div>
-
-                  {/* 3. Uses Text Column */}
-                  <div className="w-20 shrink-0 flex items-center justify-start">
-                    {slot.usage ? (
-                      <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[11px] font-mono text-slate-300 truncate" title={slot.usage}>
-                        {slot.usage}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-700 font-mono">-</span>
-                    )}
-                  </div>
-
-                  {/* 4. Checkboxes Column */}
-                  <div className="w-16 shrink-0 flex items-center gap-1 min-w-[64px]">
-                    {usageCount > 0 ? (
-                      Array.from({ length: usageCount }).map((_, bIdx) => {
-                        const isChecked = !!(slot.checked && slot.checked[bIdx]);
-                        return (
-                          <input
-                            key={bIdx}
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => handleCheckboxToggle(slot, bIdx)}
-                            className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500 focus:ring-0 cursor-pointer accent-indigo-500"
-                            title={`Usage slot ${bIdx + 1}`}
-                          />
-                        );
-                      })
-                    ) : (
-                      <span className="text-[10px] text-slate-700 font-mono select-none">-</span>
-                    )}
-                  </div>
-
-                  {/* 5. Effect Description Column */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-300 whitespace-normal break-words leading-relaxed">
-                      {slot.effect || 'No effect description'}
-                    </p>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="p-4 bg-slate-950/40 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
-              No loadout items equipped yet. Click "Manage Loadout" above to select abilities.
-            </div>
-          )
+          <div className="p-4 bg-slate-950/40 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
+            {type === 'powers'
+              ? actionFilter !== 'ALL'
+                ? `No ${actionFilter} action powers learned or visible.`
+                : 'No powers learned yet. Click "Powers Manager" above to browse the catalog.'
+              : 'No loadout items equipped yet. Click "Loadout Manager" above to select abilities.'}
+          </div>
         )}
       </div>
     </div>

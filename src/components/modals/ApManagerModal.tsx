@@ -16,7 +16,14 @@ import {
   calculateLiveSheetSpentAp,
   calculateAvailableAp,
 } from '../../types/game';
-import { getMaxSlotsForLevel, calculateSpentApOnMagicSlots } from '../../utils/magicSlotSchedule';
+import {
+  calculateTotalLoadoutCapacity,
+  calculateSpentApOnLoadoutExpansions,
+} from '../../utils/loadoutCapacitySchedule';
+import {
+  calculatePowersKnownApCost,
+  getPowersSoftTaxBracket,
+} from '../../utils/powersApTaxSchedule';
 import { checkAndAutoEquipLevelUpTraits } from '../../utils/bundleGrants';
 import { supabase } from '../../lib/supabase';
 
@@ -142,8 +149,6 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
   const spentAp = liveApData.totalSpent;
   const gmBonusAp = liveApData.gmBonus;
   const availableAp = calculateAvailableAp(level, sheetData);
-  const unlockedMagicSlots = typeof sheetData.unlocked_magic_slots === 'number' ? sheetData.unlocked_magic_slots : 3;
-  const maxSlotsCap = getMaxSlotsForLevel(level);
 
   const rawFocus = sheetData.focus_die_max || sheetData.focus_die_current || 'd4';
   const focusDie = normalizeDie(rawFocus);
@@ -176,10 +181,18 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
     const shieldsNet = skilledShields.length * 1;
 
     const powerSlots = (sheetData.power_slots || []).filter(Boolean);
-    const totalPowerUnits = powerSlots.reduce((sum: number, slot: any) => sum + (slot?.version || 1), 0);
-    const powersNet = totalPowerUnits * 1;
+    const powersNet = calculatePowersKnownApCost(powerSlots.length);
+    const powersBracket = getPowersSoftTaxBracket(powerSlots.length);
 
-    const magicItemsNet = calculateSpentApOnMagicSlots(unlockedMagicSlots);
+    const loadoutExpansions = typeof sheetData.loadout_expansions_purchased === 'number'
+      ? sheetData.loadout_expansions_purchased
+      : (typeof sheetData.unlocked_loadout_slots === 'number'
+        ? Math.max(0, Math.floor((sheetData.unlocked_loadout_slots - 4) / 2))
+        : (typeof sheetData.unlocked_magic_slots === 'number'
+          ? Math.max(0, sheetData.unlocked_magic_slots - 3)
+          : 0));
+    const totalLoadoutCapacity = calculateTotalLoadoutCapacity(loadoutExpansions);
+    const magicItemsNet = calculateSpentApOnLoadoutExpansions(loadoutExpansions);
 
     const sumLogCategory = (cat: string) =>
       apLog.reduce((sum, e) => (e && e.category === cat ? sum + (e.cost || 0) : sum), 0);
@@ -247,9 +260,10 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: magicItemsNet,
         badgeColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-500/30',
         details: [
-          { label: `Base Loadout Slots`, value: `3 Slots (0 AP Standard)` },
-          { label: `Unlocked Active Slot Capacity`, value: `${unlockedMagicSlots} / ${maxSlotsCap} Max Slots (Level ${level})` },
-          { label: `Total AP Spent on Loadout Slots`, value: `${magicItemsNet} AP` },
+          { label: `Base Loadout Slots`, value: `4 Slots (0 AP Baseline)` },
+          { label: `Purchased Expansions`, value: `${loadoutExpansions} Expansions (+${loadoutExpansions * 2} Slots)` },
+          { label: `Total Active Loadout Capacity`, value: `${totalLoadoutCapacity} Slots (Uncapped)` },
+          { label: `Total AP Invested`, value: `${magicItemsNet} AP` },
         ],
       },
       {
@@ -259,7 +273,8 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: powersNet,
         badgeColor: 'text-amber-400 bg-amber-950/60 border-amber-500/30',
         details: [
-          { label: `Learned Powers (${powerSlots.length})`, value: `${totalPowerUnits} Total Power Units (${powersNet} AP)` },
+          { label: `Learned Powers (${powerSlots.length} Powers)`, value: `${powersNet} AP Total` },
+          { label: `Soft Tax Bracket`, value: `${powersBracket.tierName} (+${powersBracket.costPerNextPower} AP/power)` },
         ],
       },
       {

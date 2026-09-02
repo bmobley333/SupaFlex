@@ -136,3 +136,15 @@ export const getUniqueBaseKits = (rawKits: (string | null | undefined)[]): strin
   });
   return Array.from(set).sort((a, b) => a.localeCompare(b));
 };
+
+// =========================================================================
+// PATH UTILITY ALIASES & EXPORTS (Paths: Race, Class, Discipline, Specialization)
+// =========================================================================
+export type ParsedPath = ParsedKit;
+export const parsePath = parseKit;
+export const getPathMinLevel = getKitMinLevel;
+export const cleanPathName = cleanKitName;
+export const formatPathWithLevel = formatKitWithLevel;
+export const matchesPathFilter = matchesKitFilter;
+export const sanitizePathInput = sanitizeKitInput;
+export const getUniqueBasePaths = getUniqueBaseKits;

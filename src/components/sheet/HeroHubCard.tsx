@@ -1,9 +1,9 @@
-// src/components/sheet/HeroHubCard.tsx
 import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { UniversalLinksModal } from '../modals/UniversalLinksModal';
-import { ManageKitsModal } from '../modals/ManageKitsModal';
+import { ManagePathsModal } from '../modals/ManagePathsModal';
+import { ManageEquipmentKitsModal } from '../modals/ManageEquipmentKitsModal';
 
 interface HeroHubCardProps {
   onOpenApManager?: () => void;
@@ -14,12 +14,16 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
   const { activeCharacter } = useCharacterStore();
 
   const [showDossierModal, setShowDossierModal] = useState(false);
-  const [showKitsModal, setShowKitsModal] = useState(false);
+  const [showPathsModal, setShowPathsModal] = useState(false);
+  const [showEquipmentKitsModal, setShowEquipmentKitsModal] = useState(false);
 
-  // Listen for global manager event
+  // Listen for global manager events
   useEffect(() => {
     const handleOpen = (e: CustomEvent) => {
-      if (e.detail === 'kits') setShowKitsModal(true);
+      if (e.detail === 'paths' || e.detail === 'kits') setShowPathsModal(true);
+      if (e.detail === 'equipment_kits' || e.detail === 'hardware_bundles' || e.detail === 'bundles') {
+        setShowEquipmentKitsModal(true);
+      }
     };
     window.addEventListener('supaflex:open-manager' as any, handleOpen);
     return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
@@ -66,29 +70,31 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
               <ChevronDown className="w-3 h-3 text-amber-400" />
             </button>
 
-            {/* 🧬 Race & Class Pills */}
+            {/* 🧬 Race & Class Path Pills */}
             <div className="flex items-center gap-1 shrink-0">
               <button
                 type="button"
-                onClick={() => setShowKitsModal(true)}
-                className="px-2 py-0.5 rounded-full bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/35 hover:border-purple-400 text-purple-300 text-[10px] font-bold cursor-pointer transition-all"
-                title="Manage Race Kit in Kits Hub"
+                onClick={() => setShowPathsModal(true)}
+                className="px-2 py-0.5 rounded-full bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/35 hover:border-purple-400 text-purple-300 text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1"
+                title="Manage Race Path in Paths Hub"
               >
-                {race}
+                <span>🧬</span>
+                <span>{race}</span>
               </button>
               <button
                 type="button"
-                onClick={() => setShowKitsModal(true)}
-                className="px-2 py-0.5 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/35 hover:border-indigo-400 text-indigo-300 text-[10px] font-bold cursor-pointer transition-all"
-                title="Manage Class Kit in Kits Hub"
+                onClick={() => setShowPathsModal(true)}
+                className="px-2 py-0.5 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/35 hover:border-indigo-400 text-indigo-300 text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1"
+                title="Manage Class Path in Paths Hub"
               >
-                {charClass}
+                <span>⚔️</span>
+                <span>{charClass}</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Right Zone: Dossier + Manage Kits Button */}
+        {/* Right Zone: Dossier + Manage Paths + Manage Kits Buttons */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <button
             type="button"
@@ -100,14 +106,25 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
             <span className="font-outfit font-extrabold tracking-wide">Dossier</span>
           </button>
 
-          {/* 🎭 Manage Kits Action Button */}
+          {/* 🧭 Manage Paths Action Button */}
           <button
             type="button"
-            onClick={() => setShowKitsModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm cursor-pointer bg-purple-950/80 hover:bg-purple-900/90 text-purple-200 border-purple-500/50 hover:border-purple-400 shadow-purple-950/40"
-            title="Manage Starting Kits, In-Kit AP Purchasing & Unlock New Kits"
+            onClick={() => setShowPathsModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm cursor-pointer bg-purple-950/80 hover:bg-purple-900/90 text-purple-200 border-purple-500/50 hover:border-purple-400 shadow-purple-950/40"
+            title="Manage Starting Paths, In-Path AP Purchasing & Unlock New Disciplines"
           >
-            <span className="text-xs">🎭</span>
+            <span className="text-xs">🧭</span>
+            <span className="font-outfit font-black tracking-wide">Manage Paths</span>
+          </button>
+
+          {/* 🎒 Manage Kits Action Button */}
+          <button
+            type="button"
+            onClick={() => setShowEquipmentKitsModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm cursor-pointer bg-cyan-950/80 hover:bg-cyan-900/90 text-cyan-200 border-cyan-500/50 hover:border-cyan-400 shadow-cyan-950/40"
+            title="Manage Equipment Suites, Hardware Packages & Survival Kits"
+          >
+            <span className="text-xs">🎒</span>
             <span className="font-outfit font-black tracking-wide">Manage Kits</span>
           </button>
         </div>
@@ -123,10 +140,17 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
         />
       )}
 
-      {showKitsModal && (
-        <ManageKitsModal
-          isOpen={showKitsModal}
-          onClose={() => setShowKitsModal(false)}
+      {showPathsModal && (
+        <ManagePathsModal
+          isOpen={showPathsModal}
+          onClose={() => setShowPathsModal(false)}
+        />
+      )}
+
+      {showEquipmentKitsModal && (
+        <ManageEquipmentKitsModal
+          isOpen={showEquipmentKitsModal}
+          onClose={() => setShowEquipmentKitsModal(false)}
         />
       )}
     </>

@@ -279,3 +279,10 @@ export const collectHardwareBundleSubItems = (
   return subItems;
 };
 
+// =========================================================================
+// PATH TRAIT ENGINE ALIASES (Paths: Race, Class, Discipline, Specialization)
+// =========================================================================
+export type PathTraitGrants = KitTraitGrants;
+export const collectPathTraitGrants = collectKitTraitGrants;
+export const applyPathTraitGrantsToSheet = applyKitTraitGrantsToSheet;
+

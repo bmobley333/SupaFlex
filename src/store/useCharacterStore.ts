@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
@@ -24,6 +24,8 @@ interface CharacterStore {
   magicItems: MagicItem[];
   skills: SupabaseSkill[];
   traits: SupabaseTrait[];
+  paths: SupabasePath[];
+  equipmentKits: SupabaseKit[];
   kits: SupabaseKit[];
   bundles: SupabaseBundle[];
   isLoading: boolean;
@@ -106,6 +108,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   magicItems: [],
   skills: [],
   traits: [],
+  paths: [],
+  equipmentKits: [],
   kits: [],
   bundles: [],
   isLoading: false,
@@ -182,13 +186,13 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return;
       }
 
-      const [chars, powers, items, skills, traits, kits, bundles] = await Promise.all([
+      const [chars, powers, items, skills, traits, pathsData, bundlesData] = await Promise.all([
         gameApi.getCharacters(),
         gameApi.getPowers(),
         gameApi.getMagicItems(),
         gameApi.getSkills(),
         gameApi.getTraits(),
-        gameApi.getKits(),
+        gameApi.getPaths(),
         gameApi.getBundles(),
       ]);
 
@@ -203,8 +207,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           magicItems: items,
           skills,
           traits,
-          kits,
-          bundles,
+          paths: pathsData,
+          equipmentKits: bundlesData,
+          kits: pathsData as any,
+          bundles: bundlesData,
           isLoading: false,
         });
         return;
@@ -246,8 +252,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         magicItems: items,
         skills,
         traits,
-        kits,
-        bundles,
+        paths: pathsData,
+        equipmentKits: bundlesData,
+        kits: pathsData as any,
+        bundles: bundlesData,
         isLoading: false,
       });
     } catch (err: any) {
