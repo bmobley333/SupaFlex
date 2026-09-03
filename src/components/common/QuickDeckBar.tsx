@@ -10,6 +10,8 @@ export type QuickDeckDomain =
   | 'gear'
   | 'hardware'
   | 'relics'
+  | 'exotics'
+  | 'kits'
   | 'skillsets'
   | 'traits'
   | 'generic';

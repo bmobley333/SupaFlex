@@ -306,15 +306,21 @@ export const gameApi = {
 
   // --- ARTIFACTS, EXOTICS & LOADOUT CATALOG ---
   async getArtifacts(): Promise<MagicItem[]> {
-    let query = supabase.from('artifacts').select('*');
+    let query = supabase.from('exotics').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.eq('is_guildspace_locked', false);
     }
+    query = query.eq('sub_category', 'Artifact');
     const { data, error } = await query.order('name', { ascending: true });
 
-    if (error) {
-      console.error('[gameApi] Error fetching artifacts:', error);
-      return [];
+    if (error || !data || data.length === 0) {
+      const { data: artData } = await supabase.from('artifacts').select('*').order('name', { ascending: true });
+      return (artData || []).map((item: any) => ({
+        ...item,
+        path: item.path || item.kit,
+        kit: item.kit || item.bundle,
+        slot_weight: getCategorySlotWeight(item.category),
+      })) as MagicItem[];
     }
     return (data || []).map((item: any) => ({
       ...item,
@@ -333,6 +339,7 @@ export const gameApi = {
     if (!isGuildSpaceUnlocked()) {
       query = query.eq('is_guildspace_locked', false);
     }
+    query = query.eq('sub_category', 'Spec Gear');
     const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
@@ -347,6 +354,24 @@ export const gameApi = {
       is_exotic: true,
       slot_weight: getCategorySlotWeight(h.category),
     })) as MagicItem[];
+  },
+
+  async getFunctions(): Promise<any[]> {
+    const { data, error } = await supabase.from('functions').select('*').order('name', { ascending: true });
+    if (error) {
+      console.error('[gameApi] Error fetching functions catalog:', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  async getMods(): Promise<any[]> {
+    const { data, error } = await supabase.from('mods').select('*').order('name', { ascending: true });
+    if (error) {
+      console.error('[gameApi] Error fetching mods catalog:', error);
+      return [];
+    }
+    return data || [];
   },
 
   async getHardware(): Promise<MagicItem[]> {

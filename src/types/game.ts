@@ -76,6 +76,9 @@ export interface SupabaseKit {
   category: KitCategory;
   cost?: string;
   description?: string;
+  genres?: string[];
+  notes?: string;
+  belongs_to?: string;
   created_at?: string;
 }
 
@@ -547,7 +550,8 @@ export interface SimpleGearItem {
   category?: string;
   cost?: string;
   notes?: string;
-  item_type?: 'gear' | 'weapon' | 'armor' | 'shield';
+  item_type?: 'gear' | 'weapon' | 'armor' | 'shield' | 'exotic' | 'kit';
+  belongs_to?: string;
   genres?: string[];
   pic?: string | null;
 }

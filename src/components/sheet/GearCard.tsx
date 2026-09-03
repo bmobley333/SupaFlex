@@ -19,13 +19,15 @@ import {
   SupabaseWeapon,
   SupabaseArmor,
   SupabaseShield,
+  MagicItem,
+  SupabaseBundle,
 } from '../../types/game';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar, QuickDeckDomain } from '../common/QuickDeckBar';
 import { gameApi } from '../../services/api';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 
-export type EquipmentCategoryTab = 'gear' | 'weapons' | 'armor' | 'shields';
+export type EquipmentCategoryTab = 'gear' | 'weapons' | 'armor' | 'shields' | 'exotics' | 'kits';
 
 /**
  * Calculates total gold and silver inventory value for equipped gear items.
@@ -67,6 +69,9 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [weaponsCatalog, setWeaponsCatalog] = useState<SupabaseWeapon[]>([]);
   const [armorCatalog, setArmorCatalog] = useState<SupabaseArmor[]>([]);
   const [shieldsCatalog, setShieldsCatalog] = useState<SupabaseShield[]>([]);
+  const [exoticsCatalog, setExoticsCatalog] = useState<MagicItem[]>([]);
+  const [kitsCatalog, setKitsCatalog] = useState<SupabaseBundle[]>([]);
+  const [modsCatalog, setModsCatalog] = useState<any[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
 
   // Search & Filter State
@@ -79,7 +84,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   // Calculate total inventory value (gold & silver, 100s = 1g)
   const inventoryValue = useMemo(() => calculateInventoryValue(gearList), [gearList]);
 
-  // Fetch all 4 Supabase Catalogs concurrently on modal open
+  // Fetch all Supabase Catalogs concurrently on modal open
   useEffect(() => {
     if (showManageModal) {
       setIsLoadingCatalog(true);
@@ -88,12 +93,18 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         gameApi.getWeapons(),
         gameApi.getArmor(),
         gameApi.getShields(),
+        gameApi.getExotics(),
+        gameApi.getBundles(),
+        gameApi.getMods(),
       ])
-        .then(([gearData, weaponsData, armorData, shieldsData]) => {
+        .then(([gearData, weaponsData, armorData, shieldsData, exoticsData, kitsData, modsData]) => {
           setGearCatalog(gearData || []);
           setWeaponsCatalog(weaponsData || []);
           setArmorCatalog(armorData || []);
           setShieldsCatalog(shieldsData || []);
+          setExoticsCatalog(exoticsData || []);
+          setKitsCatalog(kitsData || []);
+          setModsCatalog(modsData || []);
         })
         .catch((err) => console.error('Failed to load equipment catalogs:', err))
         .finally(() => setIsLoadingCatalog(false));
@@ -136,18 +147,22 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         return armorCatalog;
       case 'shields':
         return shieldsCatalog;
+      case 'exotics':
+        return exoticsCatalog;
+      case 'kits':
+        return kitsCatalog;
       case 'gear':
       default:
         return gearCatalog;
     }
-  }, [activeCategoryTab, gearCatalog, weaponsCatalog, armorCatalog, shieldsCatalog]);
+  }, [activeCategoryTab, gearCatalog, weaponsCatalog, armorCatalog, shieldsCatalog, exoticsCatalog, kitsCatalog]);
 
   // QuickDeck Domain and Theme
   const quickDeckDomain: QuickDeckDomain = useMemo(() => {
     return activeCategoryTab;
   }, [activeCategoryTab]);
 
-  const categoryColorTheme = useMemo<'emerald' | 'rose' | 'amber' | 'cyan'>(() => {
+  const categoryColorTheme = useMemo<'emerald' | 'rose' | 'amber' | 'cyan' | 'purple'>(() => {
     switch (activeCategoryTab) {
       case 'weapons':
         return 'rose';
@@ -155,6 +170,9 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         return 'amber';
       case 'shields':
         return 'cyan';
+      case 'exotics':
+      case 'kits':
+        return 'purple';
       case 'gear':
       default:
         return 'emerald';
@@ -169,6 +187,10 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         return '➕ Pin Armor Table';
       case 'shields':
         return '➕ Pin Shield Table';
+      case 'exotics':
+        return '➕ Pin Exotics Table';
+      case 'kits':
+        return '➕ Pin Kits Table';
       case 'gear':
       default:
         return '➕ Pin Gear Table';
@@ -345,20 +367,150 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
   // Equip / Purchase Handler
   const handleEquipItem = (
-    catalogItem: SupabaseGear | SupabaseWeapon | SupabaseArmor | SupabaseShield,
-    itemType: 'gear' | 'weapon' | 'armor' | 'shield'
+    catalogItem: any,
+    itemType: 'gear' | 'weapon' | 'armor' | 'shield' | 'exotic' | 'kit'
   ) => {
     setGearCatalogFeedback(null);
     const itemName = catalogItem.name;
-    const existingIndex = gearList.findIndex(
-      (g) => g.name.toLowerCase() === itemName.toLowerCase()
-    );
-
     const costStr = catalogItem.cost || '0s';
     const costInSilver = parseCostToSilver(costStr);
     const currentGold = sheet?.gold ?? 0;
     const currentSilver = sheet?.silver ?? 0;
     const deduction = deductFundsWithChange(currentGold, currentSilver, costInSilver);
+
+    if (itemType === 'kit') {
+      const kitName = catalogItem.name;
+      const matchedGear = gearCatalog.filter((g: any) => g.belongs_to && g.belongs_to.includes(kitName));
+      const matchedWeapons = weaponsCatalog.filter((w: any) => w.belongs_to && w.belongs_to.includes(kitName));
+      const matchedArmor = armorCatalog.filter((a: any) => a.belongs_to && a.belongs_to.includes(kitName));
+      const matchedShields = shieldsCatalog.filter((s: any) => s.belongs_to && s.belongs_to.includes(kitName));
+      const matchedExotics = exoticsCatalog.filter((e: any) => e.belongs_to && e.belongs_to.includes(kitName));
+
+      const newGearItems: SimpleGearItem[] = [
+        ...matchedGear.map((g: any) => ({
+          id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          name: g.name,
+          category: g.category || 'Kit Item',
+          cost: '0s',
+          qty: 1,
+          notes: g.notes || '',
+          item_type: 'gear' as const,
+          belongs_to: `Kit: ${kitName} {Free}`,
+        })),
+        ...matchedWeapons.map((w: any) => ({
+          id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          name: w.name,
+          category: 'Weapons',
+          cost: '0s',
+          qty: 1,
+          notes: w.notes || '',
+          item_type: 'weapon' as const,
+          belongs_to: `Kit: ${kitName} {Free}`,
+        })),
+        ...matchedArmor.map((a: any) => ({
+          id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          name: a.name,
+          category: 'Armor',
+          cost: '0s',
+          qty: 1,
+          notes: a.notes || '',
+          item_type: 'armor' as const,
+          belongs_to: `Kit: ${kitName} {Free}`,
+        })),
+        ...matchedShields.map((s: any) => ({
+          id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          name: s.name,
+          category: 'Shields',
+          cost: '0s',
+          qty: 1,
+          notes: s.notes || '',
+          item_type: 'shield' as const,
+          belongs_to: `Kit: ${kitName} {Free}`,
+        })),
+        {
+          id: `kit_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          name: kitName,
+          category: '🎒 Kits',
+          cost: costStr,
+          qty: 1,
+          notes: catalogItem.notes || 'Equipment Kit package',
+          item_type: 'kit' as const,
+        },
+      ];
+
+      updateActiveSheetData((prev) => {
+        const currentGear = prev.simple_gear || [];
+        const currentVault = prev.character_vault || [];
+        const updatePayload: any = {
+          ...prev,
+          simple_gear: [...currentGear, ...newGearItems],
+          character_vault: [...currentVault, ...matchedExotics],
+        };
+        if (deduction.success) {
+          updatePayload.gold = deduction.newGold;
+          updatePayload.silver = deduction.newSilver;
+        }
+        return updatePayload;
+      });
+      saveActiveCharacter();
+
+      setGearCatalogFeedback({
+        type: deduction.success ? 'success' : 'error',
+        message: deduction.success
+          ? `Purchased kit "${kitName}" for ${costStr}! Constituent items added to inventory and vault.`
+          : `Insufficient funds for kit "${kitName}" (${costStr})! Added unpaid.`,
+      });
+      return;
+    }
+
+    if (itemType === 'exotic') {
+      const existingIndex = gearList.findIndex((g) => g.name.toLowerCase() === itemName.toLowerCase());
+      if (existingIndex >= 0) {
+        setGearCatalogFeedback({
+          type: 'error',
+          message: `You already own "${itemName}"!`,
+        });
+        return;
+      }
+      const newGearItem: SimpleGearItem = {
+        id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        name: itemName,
+        category: '🚀 Spec Gear',
+        cost: costStr,
+        qty: 1,
+        notes: catalogItem.notes || '',
+        item_type: 'exotic',
+        genres: catalogItem.genres,
+        pic: catalogItem.pic,
+      };
+
+      updateActiveSheetData((prev) => {
+        const currentVault = prev.character_vault || [];
+        const updatePayload: any = {
+          ...prev,
+          simple_gear: [...(prev.simple_gear || []), newGearItem],
+          character_vault: [...currentVault, catalogItem],
+        };
+        if (deduction.success) {
+          updatePayload.gold = deduction.newGold;
+          updatePayload.silver = deduction.newSilver;
+        }
+        return updatePayload;
+      });
+      saveActiveCharacter();
+
+      setGearCatalogFeedback({
+        type: deduction.success ? 'success' : 'error',
+        message: deduction.success
+          ? `Purchased Spec Gear "${itemName}" for ${costStr}! Added to gear and vault.`
+          : `Insufficient funds! "${itemName}" costs ${costStr}. Added unpaid.`,
+      });
+      return;
+    }
+
+    const existingIndex = gearList.findIndex(
+      (g) => g.name.toLowerCase() === itemName.toLowerCase()
+    );
 
     if (existingIndex >= 0) {
       updateActiveSheetData((prev) => {
@@ -437,6 +589,47 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     }
   };
 
+  // Purchase Optional Component / Mod on Owned Item
+  const handlePurchaseOptionalMod = (modItem: any, parentItemName: string) => {
+    const modName = modItem.name;
+    const costStr = modItem.cost || '0s';
+    const costInSilver = parseCostToSilver(costStr);
+    const currentGold = sheet?.gold ?? 0;
+    const currentSilver = sheet?.silver ?? 0;
+    const deduction = deductFundsWithChange(currentGold, currentSilver, costInSilver);
+
+    const newModGearItem: SimpleGearItem = {
+      id: `mod_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      name: `${modName} (${parentItemName})`,
+      category: '🔌 Mod',
+      cost: costStr,
+      qty: 1,
+      notes: modItem.notes || `Installed modification on ${parentItemName}`,
+      item_type: 'gear',
+      belongs_to: `Exotic: ${parentItemName}`,
+    };
+
+    updateActiveSheetData((prev) => {
+      const updatePayload: any = {
+        ...prev,
+        simple_gear: [...(prev.simple_gear || []), newModGearItem],
+      };
+      if (deduction.success) {
+        updatePayload.gold = deduction.newGold;
+        updatePayload.silver = deduction.newSilver;
+      }
+      return updatePayload;
+    });
+    saveActiveCharacter();
+
+    setGearCatalogFeedback({
+      type: deduction.success ? 'success' : 'error',
+      message: deduction.success
+        ? `Purchased and installed "${modName}" on ${parentItemName} for ${costStr}!`
+        : `Insufficient funds for "${modName}" (${costStr})! Installed unpaid.`,
+    });
+  };
+
   // Helper for Category Badges
   const getCategoryBadgeClass = (category?: string, itemType?: string) => {
     const cat = (category || '').toLowerCase();
@@ -450,6 +643,12 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     if (type === 'shield' || cat.includes('shield')) {
       return 'bg-cyan-950/80 text-cyan-300 border-cyan-800/80';
     }
+    if (type === 'exotic' || cat.includes('exotic')) {
+      return 'bg-indigo-950/80 text-indigo-300 border-indigo-800/80';
+    }
+    if (type === 'kit' || cat.includes('kit')) {
+      return 'bg-purple-950/80 text-purple-300 border-purple-800/80';
+    }
     return 'bg-teal-950/80 text-teal-300 border-teal-800/80';
   };
 
@@ -459,6 +658,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     if (type === 'weapon' || cat.includes('weapon')) return '⚔️ Weapons';
     if (type === 'armor' || cat.includes('armor')) return '🥋 Armor';
     if (type === 'shield' || cat.includes('shield')) return '🛡️ Shields';
+    if (type === 'exotic' || cat.includes('exotic')) return '🚀 Spec Gear';
+    if (type === 'kit' || cat.includes('kit')) return '🎒 Kit';
     return category || '🎒 Gear';
   };
 
@@ -603,10 +804,41 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                             >
                               {getCategoryDisplayLabel(item.category, item.item_type)}
                             </span>
+                            {item.belongs_to && (
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/30 truncate max-w-[130px]" title={item.belongs_to}>
+                                🎒 {item.belongs_to.replace(/\{Free\}/g, '').trim()}
+                              </span>
+                            )}
                           </div>
                           <span className="text-[11px] font-mono text-teal-300/80 font-semibold">
                             Cost: {formatCostAbbreviated(item.cost)}
                           </span>
+
+                          {/* Optional Mods on Owned Exotics/Artifacts */}
+                          {modsCatalog
+                            .filter((m: any) => m.belongs_to && m.belongs_to.includes(item.name))
+                            .map((m: any) => {
+                              const isInstalled = gearList.some((g) => g.name.includes(m.name));
+                              if (isInstalled) {
+                                return (
+                                  <span key={m.id || m.name} className="text-[9px] font-mono text-emerald-400 flex items-center gap-1 mt-0.5">
+                                    ✓ Installed: {m.name}
+                                  </span>
+                                );
+                              }
+                              return (
+                                <div key={m.id || m.name} className="flex items-center justify-between mt-1 pt-1 border-t border-slate-800/60 text-[10px]">
+                                  <span className="text-indigo-300 font-semibold truncate">🔌 {m.name} ({m.cost || 'Free'})</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePurchaseOptionalMod(m, item.name)}
+                                    className="px-2 py-0.5 bg-indigo-600/90 hover:bg-indigo-500 text-white rounded font-bold cursor-pointer transition text-[9px]"
+                                  >
+                                    + Install Mod
+                                  </button>
+                                </div>
+                              );
+                            })}
                         </div>
 
                         {/* Qty & Actions */}
@@ -698,6 +930,28 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                     }`}
                   >
                     🛡️ Shields
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategoryTab('exotics')}
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      activeCategoryTab === 'exotics'
+                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🚀 Exotics
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategoryTab('kits')}
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      activeCategoryTab === 'kits'
+                        ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🎒 Kits
                   </button>
                 </div>
 
@@ -812,16 +1066,31 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                         itemSubtext = [catalogItem.ar ? `AR: ${catalogItem.ar}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Armor';
                       } else if (activeCategoryTab === 'shields') {
                         itemSubtext = [catalogItem.max_block ? `Block: ${catalogItem.max_block}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Shield';
+                      } else if (activeCategoryTab === 'exotics') {
+                        itemSubtext = ['🚀 Spec Gear', catalogItem.discipline].filter(Boolean).join(' • ') || 'Spec Gear';
+                      } else if (activeCategoryTab === 'kits') {
+                        itemSubtext = ['🎒 Kit Suite', catalogItem.category].filter(Boolean).join(' • ') || 'Equipment Kit';
                       }
 
-                      const itemTypeKey: 'gear' | 'weapon' | 'armor' | 'shield' =
+                      const itemTypeKey: 'gear' | 'weapon' | 'armor' | 'shield' | 'exotic' | 'kit' =
                         activeCategoryTab === 'weapons'
                           ? 'weapon'
                           : activeCategoryTab === 'armor'
                           ? 'armor'
                           : activeCategoryTab === 'shields'
                           ? 'shield'
+                          : activeCategoryTab === 'exotics'
+                          ? 'exotic'
+                          : activeCategoryTab === 'kits'
+                          ? 'kit'
                           : 'gear';
+
+                      const buyButtonLabel =
+                        activeCategoryTab === 'kits'
+                          ? '+ Buy Kit'
+                          : activeCategoryTab === 'exotics'
+                          ? '+ Buy Spec Gear'
+                          : '+ Equip';
 
                       return (
                         <div
@@ -862,10 +1131,16 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                             <button
                               type="button"
                               onClick={() => handleEquipItem(catalogItem, itemTypeKey)}
-                              className="px-2.5 py-1 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 text-xs font-bold rounded-lg transition shrink-0 cursor-pointer shadow-sm"
+                              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition shrink-0 cursor-pointer shadow-sm border ${
+                                activeCategoryTab === 'kits'
+                                  ? 'bg-purple-950/80 hover:bg-purple-900 border-purple-500/40 text-purple-300'
+                                  : activeCategoryTab === 'exotics'
+                                  ? 'bg-indigo-950/80 hover:bg-indigo-900 border-indigo-500/40 text-indigo-300'
+                                  : 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-300'
+                              }`}
                               title={`Purchase ${catalogItem.name} for ${costStr}`}
                             >
-                              + Equip
+                              {buyButtonLabel}
                             </button>
                           </div>
                         </div>

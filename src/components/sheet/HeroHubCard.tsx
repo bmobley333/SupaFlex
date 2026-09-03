@@ -3,7 +3,6 @@ import { ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { UniversalLinksModal } from '../modals/UniversalLinksModal';
 import { ManagePathsModal } from '../modals/ManagePathsModal';
-import { ManageEquipmentKitsModal } from '../modals/ManageEquipmentKitsModal';
 
 interface HeroHubCardProps {
   onOpenApManager?: () => void;
@@ -15,15 +14,11 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
 
   const [showDossierModal, setShowDossierModal] = useState(false);
   const [showPathsModal, setShowPathsModal] = useState(false);
-  const [showEquipmentKitsModal, setShowEquipmentKitsModal] = useState(false);
 
   // Listen for global manager events
   useEffect(() => {
     const handleOpen = (e: CustomEvent) => {
       if (e.detail === 'paths' || e.detail === 'kits') setShowPathsModal(true);
-      if (e.detail === 'equipment_kits' || e.detail === 'hardware_bundles' || e.detail === 'bundles') {
-        setShowEquipmentKitsModal(true);
-      }
     };
     window.addEventListener('supaflex:open-manager' as any, handleOpen);
     return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
@@ -116,17 +111,6 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
             <span className="text-xs">🧭</span>
             <span className="font-outfit font-black tracking-wide">Manage Paths</span>
           </button>
-
-          {/* 🎒 Manage Kits Action Button */}
-          <button
-            type="button"
-            onClick={() => setShowEquipmentKitsModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm cursor-pointer bg-cyan-950/80 hover:bg-cyan-900/90 text-cyan-200 border-cyan-500/50 hover:border-cyan-400 shadow-cyan-950/40"
-            title="Manage Equipment Suites, Hardware Packages & Survival Kits"
-          >
-            <span className="text-xs">🎒</span>
-            <span className="font-outfit font-black tracking-wide">Manage Kits</span>
-          </button>
         </div>
       </div>
 
@@ -144,13 +128,6 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
         <ManagePathsModal
           isOpen={showPathsModal}
           onClose={() => setShowPathsModal(false)}
-        />
-      )}
-
-      {showEquipmentKitsModal && (
-        <ManageEquipmentKitsModal
-          isOpen={showEquipmentKitsModal}
-          onClose={() => setShowEquipmentKitsModal(false)}
         />
       )}
     </>
