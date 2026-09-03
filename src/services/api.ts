@@ -608,9 +608,13 @@ export const gameApi = {
     return data as SupabaseShield;
   },
 
-  // --- GEAR CATALOG ---
+  // --- EQUIPMENT & GEAR CATALOG ---
+  async getEquipment(): Promise<SupabaseGear[]> {
+    return this.getGear();
+  },
+
   async getGear(): Promise<SupabaseGear[]> {
-    let query = supabase.from('gear').select('*');
+    let query = supabase.from('equipment').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.eq('is_guildspace_locked', false);
     }
@@ -619,7 +623,7 @@ export const gameApi = {
       .order('name', { ascending: true });
 
     if (error) {
-      console.error('[gameApi] Error fetching gear catalog:', error);
+      console.error('[gameApi] Error fetching equipment catalog:', error);
       return [];
     }
     return (data || []) as SupabaseGear[];
@@ -627,13 +631,13 @@ export const gameApi = {
 
   async createGear(newGear: Omit<SupabaseGear, 'id' | 'created_at'>): Promise<SupabaseGear> {
     const { data, error } = await supabase
-      .from('gear')
+      .from('equipment')
       .insert(newGear)
       .select()
       .single();
 
     if (error) {
-      console.error('[gameApi] Error creating custom gear:', error);
+      console.error('[gameApi] Error creating custom gear/equipment:', error);
       throw error;
     }
     return data as SupabaseGear;
@@ -1710,7 +1714,7 @@ export const gameApi = {
           genres: item.item_data?.genres && item.item_data.genres.length > 0 ? item.item_data.genres : ['Medieval', 'Modern', 'SciFi'],
           created_at: new Date().toISOString(),
         };
-        const { error: insertError } = await supabase.from('gear').insert([gearPayload]);
+        const { error: insertError } = await supabase.from('equipment').insert([gearPayload]);
         if (insertError) throw insertError;
         await this.updateCustomItem(item.id, { is_promoted: true });
         return true;

@@ -475,7 +475,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       const newGearItem: SimpleGearItem = {
         id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         name: itemName,
-        category: '🚀 Spec Gear',
+        category: '🧿 Exotic',
         cost: costStr,
         qty: 1,
         notes: catalogItem.notes || '',
@@ -502,7 +502,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       setGearCatalogFeedback({
         type: deduction.success ? 'success' : 'error',
         message: deduction.success
-          ? `Purchased Spec Gear "${itemName}" for ${costStr}! Added to gear and vault.`
+          ? `Purchased Exotic "${itemName}" for ${costStr}! Added to equipment and vault.`
           : `Insufficient funds! "${itemName}" costs ${costStr}. Added unpaid.`,
       });
       return;
@@ -652,15 +652,17 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     return 'bg-teal-950/80 text-teal-300 border-teal-800/80';
   };
 
-  const getCategoryDisplayLabel = (category?: string, itemType?: string) => {
+  const getCategoryDisplayLabel = (category?: string, itemType?: string, cost?: string) => {
     const cat = (category || '').toLowerCase();
     const type = (itemType || '').toLowerCase();
+    const costLower = (cost || '').toLowerCase();
     if (type === 'weapon' || cat.includes('weapon')) return '⚔️ Weapons';
     if (type === 'armor' || cat.includes('armor')) return '🥋 Armor';
     if (type === 'shield' || cat.includes('shield')) return '🛡️ Shields';
-    if (type === 'exotic' || cat.includes('exotic')) return '🚀 Spec Gear';
+    if (type === 'artifact' || cat.includes('artifact') || costLower === 'artifact') return '🔮 Artifact';
+    if (type === 'exotic' || cat.includes('exotic')) return '🧿 Exotic';
     if (type === 'kit' || cat.includes('kit')) return '🎒 Kit';
-    return category || '🎒 Gear';
+    return category || '⚙️ Gear';
   };
 
   const handleDropGear = (itemId: string) => {
@@ -694,13 +696,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title="Click to open Gear Manager"
+            title="Click to open Equipment Manager"
           >
             <div className="p-1.5 rounded-xl bg-teal-950/90 border border-teal-500/50 text-teal-300 flex items-center justify-center shadow-[0_0_12px_rgba(20,184,166,0.25)] group-hover:scale-105 group-hover:border-teal-400 transition-all">
-              <span className="text-base leading-none">⚙️</span>
+              <span className="text-base leading-none">🧰</span>
             </div>
             <span className="font-outfit font-extrabold text-xs tracking-wider text-teal-200 uppercase group-hover:text-white transition-colors flex items-center gap-1">
-              <span>Gear</span>
+              <span>Equipment</span>
               <ChevronDown className="w-3 h-3 text-teal-400/70 group-hover:text-teal-300 group-hover:translate-y-0.5 transition-all" />
             </span>
           </button>
@@ -711,13 +713,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
           type="button"
           onClick={() => setShowManageModal(true)}
           className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-teal-950/80 hover:bg-teal-900/90 border-teal-500/40 hover:border-teal-400 text-teal-200 hover:text-white cursor-pointer shrink-0 group"
-          title="Open Gear Manager"
+          title="Open Equipment Manager"
         >
           <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
         </button>
       </div>
 
-      {/* ⚙️ GEAR MANAGER MODAL */}
+      {/* 🧰 EQUIPMENT MANAGER MODAL */}
       {showManageModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
           <div
@@ -728,14 +730,14 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
             <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
               <div className="flex items-center gap-2.5 shrink-0">
                 <div className="p-2 rounded-xl bg-teal-950/80 border border-teal-500/30 text-teal-300 flex items-center justify-center shadow-[0_0_12px_rgba(20,184,166,0.25)]">
-                  <span className="text-lg leading-none">⚙️</span>
+                  <span className="text-lg leading-none">🧰</span>
                 </div>
                 <div>
                   <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                    Gear Manager
+                    Equipment Manager
                   </h3>
                   <p className="text-xs text-slate-400 hidden sm:block">
-                    Manage and purchase adventuring gear, weapons, armor, and shields from the Supabase stock catalog.
+                    Manage and purchase adventuring gear, weapons, armor, shields, exotics, and kits from the stock catalog.
                   </p>
                 </div>
               </div>
@@ -896,7 +898,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    🎒 Gear
+                    ⚙️ Gear
                   </button>
                   <button
                     type="button"
@@ -940,7 +942,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    🚀 Exotics
+                    🧿 Exotics
                   </button>
                   <button
                     type="button"
@@ -1172,3 +1174,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     </>
   );
 };
+
+export const EquipmentCard = GearCard;
+
