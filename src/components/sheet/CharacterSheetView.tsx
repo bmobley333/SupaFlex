@@ -33,7 +33,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
   const heroKey = activeCharacter?.id ? `hero_${activeCharacter.id}` : 'no_hero';
 
   return (
-    <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-16 relative">
+    <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-[60vh] relative">
       {/* High-Density Top Section: Hero Hub (Left), Money (Center), Gear (Right) */}
       <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch scroll-mt-32">
         <div className="lg:col-span-12 xl:col-span-5 2xl:col-span-6 flex">

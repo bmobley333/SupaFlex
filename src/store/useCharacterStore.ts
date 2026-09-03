@@ -99,6 +99,12 @@ interface CharacterStore {
   addHardwareBundle: (bundle: HardwareBundleItem) => void;
   removeHardwareBundle: (bundleNameOrId: string | number) => void;
   toggleHardwareBundleVisibility: (bundleNameOrId: string | number) => void;
+
+  // Shared Ability Sort & Filter State (Powers & Loadout)
+  abilitySortMode: 'action' | 'name';
+  abilityActionFilter: 'ALL' | 'AM' | 'A' | 'M' | 'P' | 'F';
+  setAbilitySortMode: (mode: 'action' | 'name') => void;
+  setAbilityActionFilter: (filter: 'ALL' | 'AM' | 'A' | 'M' | 'P' | 'F') => void;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
@@ -1065,4 +1071,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     });
     get().saveActiveCharacter();
   },
+
+  // Shared Ability Sort & Filter State & Setters
+  abilitySortMode: 'action',
+  abilityActionFilter: 'ALL',
+  setAbilitySortMode: (mode: 'action' | 'name') => set({ abilitySortMode: mode }),
+  setAbilityActionFilter: (filter: 'ALL' | 'AM' | 'A' | 'M' | 'P' | 'F') => set({ abilityActionFilter: filter }),
 }));

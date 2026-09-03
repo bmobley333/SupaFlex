@@ -462,9 +462,7 @@ export const gameApi = {
   async getBundles(): Promise<SupabaseBundle[]> {
     const { data, error } = await supabase.from('kits').select('*').order('name', { ascending: true });
     if (error) {
-      const fallback = await supabase.from('bundles').select('*').order('name', { ascending: true });
-      if (fallback.data) return fallback.data as SupabaseBundle[];
-      console.error('[gameApi] Error fetching kits/bundles catalog:', error);
+      console.error('[gameApi] Error fetching kits catalog:', error);
       return [];
     }
     return (data || []) as SupabaseBundle[];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, Trash2, AlertCircle, Check, ArrowUpDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
@@ -151,6 +151,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     saveActiveCharacter,
     recordApExpenditure,
     toggleReadyPower,
+    abilitySortMode,
+    abilityActionFilter,
+    setAbilitySortMode,
+    setAbilityActionFilter,
   } = useCharacterStore();
   const sheetData: any = activeCharacter?.sheet_data || {};
   const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
@@ -233,8 +237,36 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     });
   };
 
-  const [powerSortMode, setPowerSortMode] = useState<'action' | 'name'>('action');
-  const [actionFilter, setActionFilter] = useState<'ALL' | 'AM' | 'A' | 'M' | 'P' | 'F'>('ALL');
+  const cardContainerRef = useRef<HTMLDivElement>(null);
+  const prevTopRef = useRef<number | null>(null);
+
+  const handleSetActionFilter = (filter: 'ALL' | 'AM' | 'A' | 'M' | 'P' | 'F') => {
+    if (cardContainerRef.current) {
+      prevTopRef.current = cardContainerRef.current.getBoundingClientRect().top;
+    }
+    setAbilityActionFilter(filter);
+  };
+
+  const handleSetSortMode = (mode: 'action' | 'name') => {
+    if (cardContainerRef.current) {
+      prevTopRef.current = cardContainerRef.current.getBoundingClientRect().top;
+    }
+    setAbilitySortMode(mode);
+  };
+
+  useLayoutEffect(() => {
+    if (prevTopRef.current !== null && cardContainerRef.current) {
+      const currentTop = cardContainerRef.current.getBoundingClientRect().top;
+      const delta = currentTop - prevTopRef.current;
+      if (Math.abs(delta) > 0.5) {
+        window.scrollBy(0, delta);
+      }
+      prevTopRef.current = null;
+    }
+  }, [abilityActionFilter, abilitySortMode]);
+
+  const [isSortPopoverOpen, setIsSortPopoverOpen] = useState(false);
+  const sortPopoverRef = useRef<HTMLDivElement>(null);
   const [showManageModal, setShowManageModal] = useState(false);
   const [readyFeedback, setReadyFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [catalogFeedback, setCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
@@ -356,6 +388,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     if (showManageModal) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showManageModal]);
+
+  useEffect(() => {
+    const handleClickOutsideSort = (event: MouseEvent) => {
+      if (sortPopoverRef.current && !sortPopoverRef.current.contains(event.target as Node)) {
+        setIsSortPopoverOpen(false);
+      }
+    };
+    if (isSortPopoverOpen) document.addEventListener('mousedown', handleClickOutsideSort);
+    return () => document.removeEventListener('mousedown', handleClickOutsideSort);
+  }, [isSortPopoverOpen]);
 
   const handleCheckboxToggle = (targetSlot: AbilitySlot, checkIndex: number) => {
     updateActiveSheetData((prev) => {
@@ -1042,14 +1084,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const sectionIcon = type === 'powers' ? '🔥' : '🧿💍';
   const displayTitle = title || (type === 'powers' ? 'POWERS' : 'LOADOUT (Exotics & Artifacts)');
 
-  // Action Economy or Alphabetical Sorting for Active Sheet (with Action Channel Filtering for Powers)
+  // Action Economy or Alphabetical Sorting for Active Sheet (with Action Channel Filtering for Powers & Loadout)
   const sortedSlots = useMemo(() => {
     let list = type === 'powers' ? activeDisplaySlots : slots;
-    if (type === 'powers' && actionFilter !== 'ALL') {
-      list = list.filter((s) => (s.action || '').toUpperCase() === actionFilter);
+    if (abilityActionFilter !== 'ALL') {
+      list = list.filter((s) => (s.action || '').toUpperCase() === abilityActionFilter);
     }
     return [...list].sort((a, b) => {
-      if (type === 'powers' && powerSortMode === 'name') {
+      if (abilitySortMode === 'name') {
         return (a.name || '').localeCompare(b.name || '');
       }
       const orderA = ACTION_ORDER[a.action?.toUpperCase() || ''] ?? 99;
@@ -1057,19 +1099,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       if (orderA !== orderB) return orderA - orderB;
       return (a.name || '').localeCompare(b.name || '');
     });
-  }, [activeDisplaySlots, slots, type, powerSortMode, actionFilter]);
+  }, [activeDisplaySlots, slots, type, abilitySortMode, abilityActionFilter]);
 
   return (
-    <div className={`rounded-2xl border border-slate-800 border-t-2 p-4 flex flex-col gap-4 shadow-lg ${
+    <div
+      ref={cardContainerRef}
+      className={`rounded-2xl border border-slate-800 border-t-2 p-4 flex flex-col gap-4 shadow-lg ${
       type === 'powers'
         ? 'bg-gradient-to-b from-orange-950/30 via-slate-900/90 to-slate-950/95 border-t-orange-500/90 shadow-orange-950/20'
         : 'bg-gradient-to-b from-pink-950/30 via-slate-900/90 to-slate-950/95 border-t-pink-500/90 shadow-pink-950/20'
     }`}>
       {/* Header: Title, Icon, & Master Manager Trigger Button */}
-      <div className={`flex items-center justify-between border-b pb-2.5 ${
+      <div className={`flex items-center justify-between border-b pb-2.5 gap-2 ${
         type === 'powers' ? 'border-orange-500/20' : 'border-pink-500/20'
       }`}>
-        <div className="flex items-center gap-2.5 flex-1 justify-start">
+        <div className="flex items-center gap-2.5 shrink-0 justify-start">
           <button
             type="button"
             onClick={() => setShowManageModal(true)}
@@ -1095,96 +1139,110 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           <CardHelpButton ruleKey={type === 'powers' ? 'powers.basics' : 'magic_items.basics'} />
         </div>
 
-        {/* Center Actions: Sort Toggle, Action Channel Filter, Capacity Meter, Upgrade, & Clear Uses */}
-        <div className="flex items-center justify-center gap-2 flex-1 flex-wrap">
-          {type === 'powers' && (
-            <>
-              {/* Sort Action Channel / Alphabetical Toggle (Icon Only) */}
-              <button
-                type="button"
-                onClick={() => setPowerSortMode((prev) => (prev === 'action' ? 'name' : 'action'))}
-                className={`p-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center shadow-sm cursor-pointer border ${
-                  powerSortMode === 'action'
-                    ? 'bg-amber-950/80 text-amber-300 border-amber-500/50 shadow-amber-950/40'
-                    : 'bg-slate-950/60 hover:bg-slate-800 border-slate-700/80 text-slate-400 hover:text-slate-100'
-                }`}
-                title={powerSortMode === 'action' ? 'Sort: By Action Channel (AM ➔ A ➔ M ➔ P ➔ F)' : 'Sort: Alphabetical (A ➔ Z)'}
-              >
-                <ArrowUpDown className="w-3.5 h-3.5" />
-              </button>
+        {/* Center Actions: Sort Popover, Action Channel Filter, & Clear Uses */}
+        <div className="flex items-center justify-center gap-2 flex-1 flex-nowrap overflow-x-auto no-scrollbar">
+          {/* Sort Action Channel / Alphabetical Popover Trigger */}
+          <div className="relative shrink-0" ref={sortPopoverRef}>
+            <button
+              type="button"
+              onClick={() => setIsSortPopoverOpen(!isSortPopoverOpen)}
+              className={`p-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center shadow-sm cursor-pointer border ${
+                isSortPopoverOpen || abilitySortMode === 'name'
+                  ? 'bg-amber-950/80 text-amber-300 border-amber-500/50 shadow-amber-950/40'
+                  : 'bg-slate-950/60 hover:bg-slate-800 border-slate-700/80 text-slate-400 hover:text-slate-100'
+              }`}
+              title={abilitySortMode === 'action' ? 'Sort: Action Sort (AM ➔ A ➔ M ➔ P ➔ F)' : 'Sort: By Name (A ➔ Z)'}
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+            </button>
 
-              {/* Action Channel Filter Pill Switch (All, AM, A, M, P, F) */}
-              <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md">
-                {(['ALL', 'AM', 'A', 'M', 'P', 'F'] as const).map((filterOpt) => {
-                  const isSelected = actionFilter === filterOpt;
-                  const activeColor =
-                    filterOpt === 'ALL'
+            {/* Sort Popover Dropdown */}
+            {isSortPopoverOpen && (
+              <div className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 border border-slate-700/90 rounded-xl p-1 shadow-2xl backdrop-blur-md min-w-[160px] flex flex-col gap-1 animate-fadeIn">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSetSortMode('action');
+                    setIsSortPopoverOpen(false);
+                  }}
+                  className={`w-full py-1.5 px-2.5 text-xs rounded-lg transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                    abilitySortMode === 'action'
                       ? 'bg-amber-600 text-white font-extrabold shadow-sm'
-                      : filterOpt === 'AM'
-                      ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
-                      : filterOpt === 'A'
-                      ? 'bg-rose-600 text-white font-black shadow-sm'
-                      : filterOpt === 'M'
-                      ? 'bg-indigo-600 text-white font-black shadow-sm'
-                      : filterOpt === 'P'
-                      ? 'bg-emerald-600 text-white font-black shadow-sm'
-                      : 'bg-purple-600 text-white font-black shadow-sm';
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span>⚡</span>
+                    <span>Action Sort</span>
+                  </span>
+                  {abilitySortMode === 'action' && <Check className="w-3.5 h-3.5" />}
+                </button>
 
-                  return (
-                    <button
-                      key={filterOpt}
-                      type="button"
-                      onClick={() => setActionFilter(filterOpt)}
-                      className={`py-0.5 px-2 text-[11px] font-mono rounded-lg transition-all cursor-pointer flex items-center justify-center ${
-                        isSelected
-                          ? activeColor
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                      title={
-                        filterOpt === 'ALL'
-                          ? 'Show all learned powers'
-                          : `Show only ${filterOpt} action channel powers`
-                      }
-                    >
-                      {filterOpt === 'ALL' ? 'All' : filterOpt}
-                    </button>
-                  );
-                })}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSetSortMode('name');
+                    setIsSortPopoverOpen(false);
+                  }}
+                  className={`w-full py-1.5 px-2.5 text-xs rounded-lg transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                    abilitySortMode === 'name'
+                      ? 'bg-amber-600 text-white font-extrabold shadow-sm'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span>🔤</span>
+                    <span>By Name Sort</span>
+                  </span>
+                  {abilitySortMode === 'name' && <Check className="w-3.5 h-3.5" />}
+                </button>
               </div>
-            </>
-          )}
+            )}
+          </div>
 
-          {type === 'spells' && (
-            <>
-              <div
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 border shadow-sm ${
-                  totalUsedLoadoutSlots > totalLoadoutCapacity
-                    ? 'bg-rose-950/80 text-rose-300 border-rose-500/60 shadow-rose-950/40 animate-pulse'
-                    : totalUsedLoadoutSlots === totalLoadoutCapacity
-                    ? 'bg-amber-950/80 text-amber-300 border-amber-500/50 shadow-amber-950/40'
-                    : 'bg-slate-950/80 text-emerald-300 border-emerald-500/40'
-                }`}
-                title={`${totalUsedLoadoutSlots} of ${totalLoadoutCapacity} Loadout Slots in use`}
-              >
-                <span>⚡ {totalUsedLoadoutSlots}/{totalLoadoutCapacity} Slots</span>
-              </div>
+          {/* Action Channel Filter Pill Switch (All, AM, A, M, P, F) */}
+          <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
+            {(['ALL', 'AM', 'A', 'M', 'P', 'F'] as const).map((filterOpt) => {
+              const isSelected = abilityActionFilter === filterOpt;
+              const activeColor =
+                filterOpt === 'ALL'
+                  ? 'bg-amber-600 text-white font-extrabold shadow-sm'
+                  : filterOpt === 'AM'
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
+                  : filterOpt === 'A'
+                  ? 'bg-rose-600 text-white font-black shadow-sm'
+                  : filterOpt === 'M'
+                  ? 'bg-indigo-600 text-white font-black shadow-sm'
+                  : filterOpt === 'P'
+                  ? 'bg-emerald-600 text-white font-black shadow-sm'
+                  : 'bg-purple-600 text-white font-black shadow-sm';
 
-              <button
-                type="button"
-                onClick={handleUnlockLoadoutExpansion}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/50 text-indigo-200 hover:text-white transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-                title={`Unlock +2 Loadout Slots for ${nextLoadoutExpansionCost} AP (Available: ${availableAp} AP)`}
-              >
-                <Plus className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="font-outfit text-[11px] font-bold">+2 Slots ({nextLoadoutExpansionCost} AP)</span>
-              </button>
-            </>
-          )}
+              return (
+                <button
+                  key={filterOpt}
+                  type="button"
+                  onClick={() => handleSetActionFilter(filterOpt)}
+                  className={`py-0.5 px-2 text-[11px] font-mono rounded-lg transition-all cursor-pointer flex items-center justify-center ${
+                    isSelected
+                      ? activeColor
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                  title={
+                    filterOpt === 'ALL'
+                      ? 'Show all abilities'
+                      : `Show only ${filterOpt} action channel abilities`
+                  }
+                >
+                  {filterOpt === 'ALL' ? 'All' : filterOpt}
+                </button>
+              );
+            })}
+          </div>
 
           <button
             type="button"
             onClick={handleClearAllUses}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-950/60 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-slate-100 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-950/60 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-slate-100 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer shrink-0"
             title={`Uncheck all ${type === 'powers' ? 'power' : 'loadout item'} usage checkboxes`}
           >
             <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
@@ -1192,22 +1250,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           </button>
         </div>
 
-        <div className="flex items-center justify-end gap-2 flex-1">
-          {type === 'spells' && (
-            <button
-              type="button"
-              onClick={() => {
-                setActiveRightTab('VAULT');
-                setShowManageModal(true);
-              }}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-950/60 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-slate-100 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-              title="Open Vault storage"
-            >
-              <Lock className="w-3.5 h-3.5 text-amber-400" />
-              <span className="font-outfit text-[11px] font-bold">Vault ({(sheetData.character_vault || []).length})</span>
-            </button>
-          )}
-
+        <div className="flex items-center justify-end gap-2 shrink-0">
           <div className="relative">
             <button
               type="button"
@@ -2383,7 +2426,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       </div>
 
       {/* Main Character Sheet Card View */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 min-h-[260px]">
         {sortedSlots.length > 0 ? (
           sortedSlots.map((slot, index) => {
             const cleaned = cleanName(slot.name);
@@ -2487,10 +2530,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           })
         ) : (
           <div className="p-4 bg-slate-950/40 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
-            {type === 'powers'
-              ? actionFilter !== 'ALL'
-                ? `No ${actionFilter} action powers learned or visible.`
-                : 'No powers learned yet. Click "Powers Manager" above to browse the catalog.'
+            {abilityActionFilter !== 'ALL'
+              ? `No ${abilityActionFilter} action ${type === 'powers' ? 'powers' : 'loadout items'} learned or visible.`
+              : type === 'powers'
+              ? 'No powers learned yet. Click "Powers Manager" above to browse the catalog.'
               : 'No loadout items equipped yet. Click "Loadout Manager" above to select abilities.'}
           </div>
         )}

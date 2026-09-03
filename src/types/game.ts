@@ -362,6 +362,7 @@ export interface SupabaseShield {
   table_group?: string;
   notes?: string;
   cost: string;
+  pic?: string;
   created_at?: string;
 }
 
@@ -546,6 +547,9 @@ export interface SimpleGearItem {
   category?: string;
   cost?: string;
   notes?: string;
+  item_type?: 'gear' | 'weapon' | 'armor' | 'shield';
+  genres?: string[];
+  pic?: string | null;
 }
 
 export interface ApLogEntry {
@@ -669,6 +673,7 @@ export interface CharacterSheetData {
   starred_weapons?: (number | string)[]; // Starred Weapons Wishlist IDs
   starred_armor?: (number | string)[]; // Starred Armor Wishlist IDs
   starred_shields?: (number | string)[]; // Starred Shields Wishlist IDs
+  starred_gear?: (number | string)[]; // Starred Gear Wishlist IDs
   starred_skillsets?: (number | string)[]; // Starred Skillsets Wishlist IDs/Names
   starred_skills?: (number | string)[]; // Starred Individual Skills Wishlist IDs/Names
   chaos_gauntlet_slots?: ChaosGemSlot[]; // 6 Chaos Gem Slots (1 Wrist Mega Slot + 5 Fingers)
