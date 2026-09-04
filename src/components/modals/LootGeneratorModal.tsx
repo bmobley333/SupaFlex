@@ -238,14 +238,15 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       let data: any[] | null = null;
       if (isEpicTier) {
         const { data: epicData } = await supabase
-          .from('artifacts')
+          .from('equipment')
           .select('*')
-          .or('category.ilike.%Epic%,category.ilike.%Artifact%');
+          .or('category.ilike.%Epic%,category.ilike.%Artifact%,cost.ilike.%Artifact%');
         data = epicData;
       } else {
         const { data: tierData } = await supabase
-          .from('artifacts')
+          .from('equipment')
           .select('*')
+          .or('category.ilike.Artifact,cost.ilike.Artifact')
           .ilike('category', `%${rarity}%`);
         data = tierData;
       }
@@ -279,10 +280,15 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     }
   };
 
-  // Fetch random exotic item from Supabase exotics table
+  // Fetch random exotic item from Supabase equipment table
   const fetchRandomHardwareItem = async () => {
     try {
-      const { data } = await supabase.from('exotics').select('*');
+      const { data } = await supabase
+        .from('equipment')
+        .select('*')
+        .neq('category', 'Artifact')
+        .neq('cost', 'Artifact')
+        .not('discipline', 'is', null);
       if (data && data.length > 0) {
         const picked = data[Math.floor(Math.random() * data.length)];
         return {
@@ -298,10 +304,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     return { name: 'Communicator', category: '🍺 Minor', is_hardware: true, cost: '1g', description: 'Text, audio, and audiovisual comms.' };
   };
 
-  // Fetch random gear item from Supabase gear table for Quality combination
+  // Fetch random gear item from Supabase equipment table for Quality combination
   const fetchRandomGearItem = async () => {
     try {
-      const { data } = await supabase.from('gear').select('*');
+      const { data } = await supabase.from('equipment').select('*');
       if (data && data.length > 0) {
         const filtered = data.filter(g => !g.category.includes('💰') && !g.category.includes('Quality') && !g.category.includes('Art') && !g.category.includes('Curios') && !g.category.includes('Junk'));
         const pool = filtered.length > 0 ? filtered : data;

@@ -255,7 +255,12 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
 
     // 6. Hardware / Exotic Device
     if (rType === 'hardware' || rType === 'exotic' || subKey === 'hardware' || subKey === 'exotics') {
-      const { data: hwItems } = await supabase.from('exotics').select('*');
+      const { data: hwItems } = await supabase
+        .from('equipment')
+        .select('*')
+        .neq('category', 'Artifact')
+        .neq('cost', 'Artifact')
+        .not('discipline', 'is', null);
       const picked = hwItems && hwItems.length > 0 ? hwItems[Math.floor(Math.random() * hwItems.length)] : null;
 
       items.push({
@@ -275,9 +280,9 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
       else if (rawName.includes('greater')) rarity = 'Greater';
       else if (rawName.includes('epic') || rawName.includes('artifact')) rarity = 'Epic';
 
-      let query = supabase.from('artifacts').select('*');
+      let query = supabase.from('equipment').select('*').or('category.ilike.Artifact,cost.ilike.Artifact');
       if (rarity === 'Epic') {
-        query = query.or('category.ilike.%Epic%,category.ilike.%Artifact%');
+        query = query.or('category.ilike.%Epic%,category.ilike.%Artifact%,cost.ilike.%Artifact%');
       } else {
         query = query.ilike('category', `%${rarity}%`);
       }
@@ -334,9 +339,9 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     if (rType === 'special' && entry.range_min === 100) {
       // 1 Epic Magic Item / Artifact
       const { data: epics } = await supabase
-        .from('artifacts')
+        .from('equipment')
         .select('*')
-        .or('category.ilike.%Epic%,category.ilike.%Artifact%');
+        .or('category.ilike.%Epic%,category.ilike.%Artifact%,cost.ilike.%Artifact%');
       const epicPicked = epics && epics.length > 0 ? epics[Math.floor(Math.random() * epics.length)] : null;
 
       items.push({

@@ -306,21 +306,16 @@ export const gameApi = {
 
   // --- ARTIFACTS, EXOTICS & LOADOUT CATALOG ---
   async getArtifacts(): Promise<MagicItem[]> {
-    let query = supabase.from('exotics').select('*');
+    let query = supabase.from('equipment').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.eq('is_guildspace_locked', false);
     }
-    query = query.eq('sub_category', 'Artifact');
+    query = query.or('category.ilike.artifact,cost.ilike.artifact');
     const { data, error } = await query.order('name', { ascending: true });
 
-    if (error || !data || data.length === 0) {
-      const { data: artData } = await supabase.from('artifacts').select('*').order('name', { ascending: true });
-      return (artData || []).map((item: any) => ({
-        ...item,
-        path: item.path || item.kit,
-        kit: item.kit || item.bundle,
-        slot_weight: getCategorySlotWeight(item.category),
-      })) as MagicItem[];
+    if (error) {
+      console.error('[gameApi] Error fetching artifacts:', error);
+      return [];
     }
     return (data || []).map((item: any) => ({
       ...item,
@@ -335,11 +330,11 @@ export const gameApi = {
   },
 
   async getExotics(): Promise<MagicItem[]> {
-    let query = supabase.from('exotics').select('*');
+    let query = supabase.from('equipment').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.eq('is_guildspace_locked', false);
     }
-    query = query.eq('sub_category', 'Spec Gear');
+    query = query.neq('category', 'Artifact').neq('cost', 'Artifact').not('discipline', 'is', null);
     const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
