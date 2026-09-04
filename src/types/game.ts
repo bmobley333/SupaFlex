@@ -32,7 +32,6 @@ export interface SupabaseRule {
   path?: string;
   kit?: string;
   table_group?: string;
-  is_guildspace_locked?: boolean;
   is_hidden?: boolean;
   notes: string;
   created_at?: string;
@@ -135,7 +134,6 @@ export interface RuleItem {
   stat_hook?: StatHookDefinition | null;
   notes: string;
   genres?: string[];
-  is_guildspace_locked?: boolean;
   created_at?: string;
 }
 
@@ -208,7 +206,6 @@ export interface SupabaseArmor {
   id?: number;
   name: string;
   genres?: string[];
-  is_guildspace_locked?: boolean;
   requirement: string;
   ar: string;
   mr: string;
@@ -227,7 +224,6 @@ export interface SupabaseGear {
   id?: number;
   category: string;
   genres?: string[];
-  is_guildspace_locked?: boolean;
   name: string;
   cost: string;
   discipline?: string;
@@ -246,7 +242,6 @@ export interface SupabaseMonster {
   id?: number;
   name: string;
   genres?: string[];
-  is_guildspace_locked?: boolean;
   nish: string;
   mr: string;
   atk_dmg_ftg: string;
@@ -265,7 +260,6 @@ export interface SupabaseChaosGem {
   id?: number;
   name: string;
   genres?: string[];
-  is_guildspace_locked?: boolean;
   action?: string;
   usage?: string;
   effect: string;
@@ -354,7 +348,6 @@ export interface SupabaseShield {
   id?: number;
   name: string;
   genres?: string[];
-  is_guildspace_locked?: boolean;
   requirement: string;
   max_block: string;
   mr: string;
@@ -415,7 +408,6 @@ export interface SupabaseWeapon {
   id?: number;
   name: string;
   genres?: string[];
-  is_guildspace_locked?: boolean;
   type: string;
   requirement: string;
   atk: string;
@@ -710,7 +702,6 @@ export interface Power {
   id: number;
   name: string;
   genres?: string[];
-  is_guildspace_locked?: boolean;
   usage: string | null;
   action: string | null;
   effect: string | null;
@@ -954,7 +945,6 @@ export interface MagicItem {
   id: number;
   name: string;
   genres?: string[];
-  is_guildspace_locked?: boolean;
   usage: string | null;
   action: string | null;
   effect: string | null;
@@ -1005,7 +995,6 @@ export interface SupabaseSkill {
   path?: string;
   kit?: string;
   table_group?: string;
-  is_guildspace_locked?: boolean;
   notes?: string;
   created_at: string;
 }
@@ -1014,7 +1003,6 @@ export interface Skillset {
   id: number;
   name: string;
   genres?: string[];
-  is_guildspace_locked?: boolean;
   skills: string[];
   source: string | null;
   discipline?: string;
@@ -1080,7 +1068,6 @@ export interface PowerTable {
   name: string;
   category: PowerTableCategory | string;
   genres?: string[];
-  is_guildspace_locked?: boolean;
   created_at?: string;
   author_name?: string;
   author_email?: string;

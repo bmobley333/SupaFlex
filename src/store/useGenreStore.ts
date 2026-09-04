@@ -3,7 +3,7 @@
 
 import { create } from 'zustand';
 
-export type GenreType = 'All' | 'Medieval' | 'Modern' | 'SciFi' | 'GuildSpace';
+export type GenreType = 'All' | 'Medieval' | 'Modern' | 'SciFi';
 
 interface GenreStore {
   activeGenre: GenreType;
@@ -16,7 +16,7 @@ const STORAGE_KEY = 'supaflex_active_genre';
 const getInitialGenre = (): GenreType => {
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === 'Medieval' || saved === 'Modern' || saved === 'SciFi' || saved === 'GuildSpace' || saved === 'All') {
+    if (saved === 'Medieval' || saved === 'Modern' || saved === 'SciFi' || saved === 'All') {
       return saved;
     }
   }

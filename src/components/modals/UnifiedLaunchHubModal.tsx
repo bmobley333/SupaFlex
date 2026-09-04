@@ -99,7 +99,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
     const success = await unlockGuildSpace(guildSpacePasskey);
     if (success) {
-      setPasskeyFeedback({ type: 'success', message: '✨ GuildSpace Setting Unlocked! Authentic catalogs and filters are now active.' });
+      setPasskeyFeedback({ type: 'success', message: '✨ Private Setting Unlocked! Authentic catalogs and filters are now active.' });
       setGuildSpacePasskey('');
     } else {
       setPasskeyFeedback({ type: 'error', message: '❌ Invalid Setting Passkey. Access remained locked.' });
@@ -1058,10 +1058,10 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                         </div>
                         <div>
                           <h4 className="text-xs font-extrabold text-purple-200 font-outfit uppercase tracking-wider">
-                            GuildSpace Setting: Unlocked
+                            Private Setting: Unlocked
                           </h4>
                           <p className="text-[11px] text-purple-300/80 font-sans">
-                            Full authentic GuildSpace catalogs and genre filters are active for this session.
+                            Full authentic MSO catalogs and expansion suites are active for this session.
                           </p>
                         </div>
                       </div>

@@ -293,7 +293,7 @@ export const gameApi = {
   async getPowers(): Promise<Power[]> {
     let query = supabase.from('powers').select('*');
     if (!isGuildSpaceUnlocked()) {
-      query = query.eq('is_guildspace_locked', false);
+      query = query.not('name', 'ilike', '%(mso)%');
     }
     const { data, error } = await query.order('name', { ascending: true });
 
@@ -308,7 +308,7 @@ export const gameApi = {
   async getArtifacts(): Promise<MagicItem[]> {
     let query = supabase.from('equipment').select('*');
     if (!isGuildSpaceUnlocked()) {
-      query = query.eq('is_guildspace_locked', false);
+      query = query.not('name', 'ilike', '%(mso)%');
     }
     query = query.or('category.ilike.artifact,cost.ilike.artifact');
     const { data, error } = await query.order('name', { ascending: true });
@@ -332,7 +332,7 @@ export const gameApi = {
   async getExotics(): Promise<MagicItem[]> {
     let query = supabase.from('equipment').select('*');
     if (!isGuildSpaceUnlocked()) {
-      query = query.eq('is_guildspace_locked', false);
+      query = query.not('name', 'ilike', '%(mso)%');
     }
     query = query.neq('category', 'Artifact').neq('cost', 'Artifact').not('discipline', 'is', null);
     const { data, error } = await query.order('name', { ascending: true });
@@ -391,7 +391,7 @@ export const gameApi = {
   async getSkills(): Promise<SupabaseSkill[]> {
     let query = supabase.from('skills').select('*');
     if (!isGuildSpaceUnlocked()) {
-      query = query.eq('is_guildspace_locked', false);
+      query = query.not('name', 'ilike', '%(mso)%');
     }
     const { data, error } = await query.order('name', { ascending: true });
 
@@ -406,7 +406,7 @@ export const gameApi = {
   async getSpecRules(): Promise<SupabaseRule[]> {
     let query = supabase.from('spec_rules').select('*');
     if (!isGuildSpaceUnlocked()) {
-      query = query.eq('is_guildspace_locked', false);
+      query = query.not('name', 'ilike', '%(mso)%');
     }
     const { data, error } = await query.order('name', { ascending: true });
 
@@ -461,10 +461,18 @@ export const gameApi = {
 
   // --- PATHS CATALOG (AP Character Suites) ---
   async getPaths(): Promise<SupabasePath[]> {
-    const { data, error } = await supabase.from('paths').select('*').order('name', { ascending: true });
+    let query = supabase.from('paths').select('*');
+    if (!isGuildSpaceUnlocked()) {
+      query = query.not('name', 'ilike', '%(mso)%');
+    }
+    const { data, error } = await query.order('name', { ascending: true });
     if (error) {
       // Fallback for legacy schema
-      const fallback = await supabase.from('kits').select('*').order('name', { ascending: true });
+      let fallbackQuery = supabase.from('kits').select('*');
+      if (!isGuildSpaceUnlocked()) {
+        fallbackQuery = fallbackQuery.not('name', 'ilike', '%(mso)%');
+      }
+      const fallback = await fallbackQuery.order('name', { ascending: true });
       if (fallback.data) return fallback.data as SupabasePath[];
       console.error('[gameApi] Error fetching paths catalog:', error);
       return [];
@@ -480,7 +488,11 @@ export const gameApi = {
 
   // --- EQUIPMENT KITS & BUNDLES CATALOG ---
   async getBundles(): Promise<SupabaseBundle[]> {
-    const { data, error } = await supabase.from('kits').select('*').order('name', { ascending: true });
+    let query = supabase.from('kits').select('*');
+    if (!isGuildSpaceUnlocked()) {
+      query = query.not('name', 'ilike', '%(mso)%');
+    }
+    const { data, error } = await query.order('name', { ascending: true });
     if (error) {
       console.error('[gameApi] Error fetching kits catalog:', error);
       return [];
@@ -496,7 +508,7 @@ export const gameApi = {
   async getArmor(): Promise<SupabaseArmor[]> {
     let query = supabase.from('armor').select('*');
     if (!isGuildSpaceUnlocked()) {
-      query = query.eq('is_guildspace_locked', false);
+      query = query.not('name', 'ilike', '%(mso)%');
     }
     const { data, error } = await query.order('name', { ascending: true });
 
@@ -533,7 +545,7 @@ export const gameApi = {
   async getWeapons(): Promise<SupabaseWeapon[]> {
     let query = supabase.from('weapons').select('*');
     if (!isGuildSpaceUnlocked()) {
-      query = query.eq('is_guildspace_locked', false);
+      query = query.not('name', 'ilike', '%(mso)%');
     }
     const { data, error } = await query.order('name', { ascending: true });
 
@@ -570,7 +582,7 @@ export const gameApi = {
   async getShields(): Promise<SupabaseShield[]> {
     let query = supabase.from('shields').select('*');
     if (!isGuildSpaceUnlocked()) {
-      query = query.eq('is_guildspace_locked', false);
+      query = query.not('name', 'ilike', '%(mso)%');
     }
     const { data, error } = await query.order('name', { ascending: true });
 
@@ -611,7 +623,7 @@ export const gameApi = {
   async getGear(): Promise<SupabaseGear[]> {
     let query = supabase.from('equipment').select('*');
     if (!isGuildSpaceUnlocked()) {
-      query = query.eq('is_guildspace_locked', false);
+      query = query.not('name', 'ilike', '%(mso)%');
     }
     const { data, error } = await query
       .order('category', { ascending: true })
