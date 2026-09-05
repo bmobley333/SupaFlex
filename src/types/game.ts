@@ -436,6 +436,7 @@ export interface WeaponVariantOption {
   max_block: string;
   cost: string;
   rawType: string;
+  dmg?: string;
 }
 
 const parseAttributeNum = (dieRating?: string): number => {
@@ -502,6 +503,7 @@ export const splitWeaponIntoVariants = (weapon: SupabaseWeapon): WeaponVariantOp
       max_block: blockVal,
       cost: weapon.cost || '1g',
       rawType: weapon.type,
+      dmg: weapon.dmg,
     };
   });
 };

@@ -200,7 +200,8 @@ export const WeaponsCard: React.FC = () => {
   const handleEquipWeapon = (weapon: SupabaseWeapon, variantsToEquip: WeaponVariantOption[]) => {
     const newSlots: WeaponSlot[] = variantsToEquip.map((variant) => {
       const calculatedAtk = calculateWeaponAtk(variant.name, variant.mhs, attributeDice);
-      const calculatedDmg = calculateWeaponDmg(variant.name, variant.mhs, attributeDice);
+      const isSpecialDmg = variant.dmg === '❌' || weapon.dmg === '❌';
+      const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(variant.name, variant.mhs, attributeDice));
       const cleanBlockNum = variant.max_block ? variant.max_block.replace('🛡️', '') : 'n/a';
       const isLearnable = isWeaponVariantLearnable(variant, attributeDice);
       const slotName = weapon.type.includes(',') ? `${variant.name} (${variant.variantType})` : variant.name;
@@ -211,7 +212,7 @@ export const WeaponsCard: React.FC = () => {
         sk: isLearnable, // Skilled if learnable, Unskilled if requirements unmet
         mhs: variant.mhs,
         atk: String(calculatedAtk),
-        dmg: String(calculatedDmg),
+        dmg: calculatedDmg,
         max_blk: cleanBlockNum,
         effect: `${variant.variantType} Weapon (Req ${variant.requirementStr}, Cost ${variant.cost})`,
         notes: weapon.notes,
@@ -655,7 +656,8 @@ export const WeaponsCard: React.FC = () => {
                               <div className="flex flex-col gap-1.5 pt-0.5">
                                 {group.slots.map((item) => {
                                   const calculatedAtk = calculateWeaponAtk(item.name, item.mhs, attributeDice);
-                                  const calculatedDmg = calculateWeaponDmg(item.name, item.mhs, attributeDice);
+                                  const isSpecialDmg = item.dmg === '❌';
+                                  const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(item.name, item.mhs, attributeDice));
                                   const variantLabel = item.name.includes('(')
                                     ? item.name.substring(item.name.indexOf('(') + 1, item.name.indexOf(')'))
                                     : item.mhs === 'H' ? 'Hurled' : item.mhs === 'S' ? 'Shot' : 'Melee';
@@ -677,7 +679,7 @@ export const WeaponsCard: React.FC = () => {
                                       <div className="flex items-center gap-3 text-[10px] text-slate-400 font-mono">
                                         <span>Atk: <strong className="text-rose-300">{calculatedAtk}</strong></span>
                                         <span>•</span>
-                                        <span>Dmg: <strong className="text-rose-300">{calculatedDmg}</strong></span>
+                                        <span>Dmg: <strong className={isSpecialDmg ? "text-rose-400 font-black text-xs" : "text-rose-300"} title={isSpecialDmg ? "Special Damage: Governed by loaded ammunition type from Equipment" : undefined}>{calculatedDmg}</strong></span>
                                         <span>•</span>
                                         <span>Blk💪: <strong className="text-amber-300">{item.max_blk === 'n/a' ? 'n/a' : getDieNum(attributeDice.might)}</strong></span>
                                         <span>•</span>
@@ -892,7 +894,8 @@ export const WeaponsCard: React.FC = () => {
                                 <div className="flex flex-col gap-1.5 pt-0.5">
                                   {variants.map((v) => {
                                     const calculatedAtk = calculateWeaponAtk(v.name, v.mhs, attributeDice);
-                                    const calculatedDmg = calculateWeaponDmg(v.name, v.mhs, attributeDice);
+                                    const isSpecialDmg = v.dmg === '❌' || weapon.dmg === '❌';
+                                    const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(v.name, v.mhs, attributeDice));
                                     const qualifies = isWeaponVariantLearnable(v, attributeDice);
 
                                     return (
@@ -912,7 +915,7 @@ export const WeaponsCard: React.FC = () => {
                                         <div className="flex items-center gap-3">
                                           <span>Atk: <strong className="text-rose-200">{calculatedAtk}</strong></span>
                                           <span>•</span>
-                                          <span>Dmg: <strong className="text-rose-300">{calculatedDmg}</strong></span>
+                                          <span>Dmg: <strong className={isSpecialDmg ? "text-rose-400 font-black text-xs" : "text-rose-300"} title={isSpecialDmg ? "Special Damage: Governed by loaded ammunition type from Equipment" : undefined}>{calculatedDmg}</strong></span>
                                           <span>•</span>
                                           <span>Blk: <strong className="text-amber-300">{v.max_block}</strong></span>
                                           {qualifies ? (
@@ -986,7 +989,8 @@ export const WeaponsCard: React.FC = () => {
             .sort((a, b) => a.name.localeCompare(b.name))
             .map((item) => {
               const calculatedAtk = calculateWeaponAtk(item.name, item.mhs, attributeDice);
-              const calculatedDmg = calculateWeaponDmg(item.name, item.mhs, attributeDice);
+              const isSpecialDmg = item.dmg === '❌';
+              const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(item.name, item.mhs, attributeDice));
               const catKey = (item.mhs as string).startsWith('H') || (item.mhs as string) === 'Hurled'
                 ? 'H'
                 : (item.mhs as string).startsWith('S') || (item.mhs as string) === 'Shot'
@@ -1049,8 +1053,14 @@ export const WeaponsCard: React.FC = () => {
 
                   {/* Dmg Cell */}
                   <div
-                    className="bg-slate-950 border border-slate-800 text-rose-300 text-xs font-mono font-extrabold text-center py-1 rounded"
-                    title="Auto-updated from character attributes (-1d for Brawl / Unarmed)"
+                    className={`bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-center py-1 rounded flex items-center justify-center ${
+                      isSpecialDmg ? 'text-rose-400 font-black text-xs' : 'text-rose-300'
+                    }`}
+                    title={
+                      isSpecialDmg
+                        ? 'Special Damage: Governed by loaded ammunition type from Equipment'
+                        : 'Auto-updated from character attributes (-1d for Brawl / Unarmed)'
+                    }
                   >
                     {calculatedDmg}
                   </div>
