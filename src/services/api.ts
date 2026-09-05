@@ -23,6 +23,8 @@ import {
   SupabaseKit,
   SupabaseBundle,
   getCategorySlotWeight,
+  FunctionItem,
+  ModItem,
 } from '../types/game';
 import { GmAdventure } from '../types/adventures';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
@@ -351,22 +353,22 @@ export const gameApi = {
     })) as MagicItem[];
   },
 
-  async getFunctions(): Promise<any[]> {
+  async getFunctions(): Promise<FunctionItem[]> {
     const { data, error } = await supabase.from('functions').select('*').order('name', { ascending: true });
     if (error) {
       console.error('[gameApi] Error fetching functions catalog:', error);
       return [];
     }
-    return data || [];
+    return (data || []) as FunctionItem[];
   },
 
-  async getMods(): Promise<any[]> {
+  async getMods(): Promise<ModItem[]> {
     const { data, error } = await supabase.from('mods').select('*').order('name', { ascending: true });
     if (error) {
       console.error('[gameApi] Error fetching mods catalog:', error);
       return [];
     }
-    return data || [];
+    return (data || []) as ModItem[];
   },
 
   async getHardware(): Promise<MagicItem[]> {

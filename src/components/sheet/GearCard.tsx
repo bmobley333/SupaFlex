@@ -21,6 +21,7 @@ import {
   SupabaseShield,
   MagicItem,
   SupabaseBundle,
+  ModItem,
 } from '../../types/game';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar, QuickDeckDomain } from '../common/QuickDeckBar';
@@ -71,7 +72,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [shieldsCatalog, setShieldsCatalog] = useState<SupabaseShield[]>([]);
   const [exoticsCatalog, setExoticsCatalog] = useState<MagicItem[]>([]);
   const [kitsCatalog, setKitsCatalog] = useState<SupabaseBundle[]>([]);
-  const [modsCatalog, setModsCatalog] = useState<any[]>([]);
+  const [modsCatalog, setModsCatalog] = useState<ModItem[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
 
   // Search & Filter State

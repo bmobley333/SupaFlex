@@ -983,6 +983,32 @@ export type HardwareItem = ExoticItem;
 
 export type LoadoutItem = MagicItem | ExoticItem | HardwareItem;
 
+/** Canonical S-Tier Interface for Functions (Actionable abilities derived from Exotics/Artifacts/Mods) */
+export interface FunctionItem {
+  id: number;
+  name: string;
+  action: 'AM' | 'A' | 'M' | 'P' | 'F';
+  usage: string;
+  effect: string;
+  tier: HardwareTier;
+  slot_weight: 1 | 2 | 3 | 4;
+  belongs_to: string;
+  genres: string[];
+  notes?: string;
+  created_at?: string;
+}
+
+/** Canonical S-Tier Interface for Mods (Modular aftermarket modifications and hardware components) */
+export interface ModItem {
+  id: number;
+  name: string;
+  cost: string;
+  belongs_to: string;
+  genres: string[];
+  notes?: string;
+  created_at?: string;
+}
+
 export type SkillAttributeIcon = '💪' | '🏃' | '👁️' | '✨' | '🫀';
 
 export interface SupabaseSkill {
