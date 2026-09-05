@@ -56,7 +56,7 @@ const calculateWeaponAtk = (name: string, mhsCategory: string, attributeDice: Re
     baseVal = getDieNum(attributeDice?.mind);
   }
 
-  if (cleanName.includes('improvised') || cleanName.includes('throw object')) {
+  if (cleanName.includes('throw object') || cleanName === 'throw') {
     return getStepDownDie(baseVal);
   }
   return baseVal;
@@ -72,7 +72,7 @@ const calculateWeaponDmg = (name: string, mhsCategory: string, attributeDice: Re
     baseVal = getDieNum(attributeDice?.mind);
   }
 
-  if (cleanName.includes('brawl') || cleanName.includes('unarmed')) {
+  if (cleanName.includes('brawl') || cleanName.includes('unarmed') || cleanName.includes('improvised')) {
     return getStepDownDie(baseVal);
   }
   return baseVal;
@@ -1046,7 +1046,7 @@ export const WeaponsCard: React.FC = () => {
                   {/* Atk Cell */}
                   <div
                     className="bg-slate-950 border border-slate-800 text-rose-200 text-xs font-mono font-extrabold text-center py-1 rounded"
-                    title="Auto-updated from character attributes (-1d for Improvised Weapon / Throw Object)"
+                    title="Auto-updated from character attributes (-1d for Throw Object)"
                   >
                     {calculatedAtk}
                   </div>
@@ -1059,7 +1059,7 @@ export const WeaponsCard: React.FC = () => {
                     title={
                       isSpecialDmg
                         ? 'Special Damage: Governed by loaded ammunition type from Equipment'
-                        : 'Auto-updated from character attributes (-1d for Brawl / Unarmed)'
+                        : 'Auto-updated from character attributes (-1d for Brawl / Unarmed / Improvised Weapon)'
                     }
                   >
                     {calculatedDmg}
