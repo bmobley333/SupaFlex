@@ -56,7 +56,7 @@ const calculateWeaponAtk = (name: string, mhsCategory: string, attributeDice: Re
     baseVal = getDieNum(attributeDice?.mind);
   }
 
-  if (cleanName.includes('improvised')) {
+  if (cleanName.includes('improvised') || cleanName.includes('throw object')) {
     return getStepDownDie(baseVal);
   }
   return baseVal;
@@ -1046,7 +1046,7 @@ export const WeaponsCard: React.FC = () => {
                   {/* Atk Cell */}
                   <div
                     className="bg-slate-950 border border-slate-800 text-rose-200 text-xs font-mono font-extrabold text-center py-1 rounded"
-                    title="Auto-updated from character attributes (-1d for Improvised Weapon)"
+                    title="Auto-updated from character attributes (-1d for Improvised Weapon / Throw Object)"
                   >
                     {calculatedAtk}
                   </div>
