@@ -990,13 +990,22 @@ export interface FunctionItem {
   action: 'AM' | 'A' | 'M' | 'P' | 'F';
   usage: string;
   effect: string;
-  tier: HardwareTier;
-  slot_weight: 1 | 2 | 3 | 4;
+  tier: HardwareTier | string;
   belongs_to: string;
   genres: string[];
   notes?: string;
   created_at?: string;
 }
+
+/** Canonical helper to derive numeric slot weight (1-4) from tier or rarity string */
+export const getTierSlotWeight = (tier: string | number | undefined | null): 1 | 2 | 3 | 4 => {
+  if (typeof tier === 'number' && tier >= 1 && tier <= 4) return tier as 1 | 2 | 3 | 4;
+  const t = String(tier || '').toLowerCase();
+  if (t.includes('relic') || t.includes('epic') || t.includes('4')) return 4;
+  if (t.includes('greater') || t.includes('3')) return 3;
+  if (t.includes('lesser') || t.includes('2')) return 2;
+  return 1;
+};
 
 /** Canonical S-Tier Interface for Mods (Modular aftermarket modifications and hardware components) */
 export interface ModItem {
