@@ -16,6 +16,7 @@ import { supabase } from '../../lib/supabase';
 import { StagedLootItem } from '../../types/adventures';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { parseAndEvaluateFormula } from './LootGeneratorModal';
+import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
 export interface UniversalLootModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
   onSendToPartyVault,
 }) => {
   const activePartyId = useCharacterStore((state) => state.activePartyId);
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
 
   // Form & Drawer states
   const [activeCategoryTab, setActiveCategoryTab] = useState<LootCategoryTab>('random');
@@ -548,17 +550,19 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     }
   };
 
-  // Filter Catalog Items by Search
-  const filteredCatalog = catalogItems.filter((i) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      (i.name || '').toLowerCase().includes(q) ||
-      (i.category || '').toLowerCase().includes(q) ||
-      (i.effect || '').toLowerCase().includes(q) ||
-      (i.description || '').toLowerCase().includes(q)
-    );
-  });
+  // Filter Catalog Items by Search with MSO priority
+  const filteredCatalog = catalogItems
+    .filter((i) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        (i.name || '').toLowerCase().includes(q) ||
+        (i.category || '').toLowerCase().includes(q) ||
+        (i.effect || '').toLowerCase().includes(q) ||
+        (i.description || '').toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
 
   if (typeof document === 'undefined') return null;
 
@@ -1010,20 +1014,28 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
                     <div className="py-12 text-center text-slate-500 text-xs">No matching items found.</div>
                   ) : (
                     <div className="flex-1 overflow-y-auto min-h-0 space-y-1.5 pr-1">
-                      {filteredCatalog.slice(0, 50).map((item) => (
-                        <div
-                          key={item.id || item.name}
-                          className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between gap-3 hover:border-amber-500/40 transition"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <h5 className="font-bold text-xs text-slate-100 truncate">{item.name}</h5>
-                              {item.category && (
-                                <span className="text-[10px] text-amber-400/80 font-mono">
-                                  {item.category}
-                                </span>
-                              )}
-                            </div>
+                      {filteredCatalog.slice(0, 50).map((item) => {
+                        const isMso = isGsUnlocked && isMsoEntry(item.name);
+                        return (
+                          <div
+                            key={item.id || item.name}
+                            className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 transition ${
+                              isMso
+                                ? 'bg-purple-950/20 border-purple-500/40 hover:border-purple-400'
+                                : 'bg-slate-950 border-slate-800 hover:border-amber-500/40'
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <h5 className={`font-bold text-xs truncate ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                                  {isMso ? `🌌 ${item.name}` : item.name}
+                                </h5>
+                                {item.category && (
+                                  <span className="text-[10px] text-amber-400/80 font-mono">
+                                    {item.category}
+                                  </span>
+                                )}
+                              </div>
                             {(item.effect || item.description || item.notes) && (
                               <p className="text-[10px] text-slate-400 line-clamp-1">
                                 {item.effect || item.description || item.notes}
@@ -1040,8 +1052,9 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
                             <span>Add</span>
                           </button>
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })}
+                  </div>
                   )}
                 </div>
               )}

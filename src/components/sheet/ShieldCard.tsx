@@ -7,6 +7,7 @@ import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar } from '../common/QuickDeckBar';
+import { compareMsoItems, isMsoEntry } from '../../utils/kitUtils';
 import {
   ShieldData,
   SupabaseShield,
@@ -17,6 +18,7 @@ import {
 
 export const ShieldCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
 
   const shield: ShieldData = activeCharacter?.sheet_data?.shield_slot || {
@@ -316,40 +318,46 @@ export const ShieldCard: React.FC = () => {
   }, [shieldCatalog, isItemStarred]);
 
   const armoryNamesSet = useMemo(() => new Set(armory.map((s) => s.name.toLowerCase())), [armory]);
-  const filteredArmory = useMemo(
-    () => armory.filter((s) => s.name.toLowerCase().includes(leftSearchQuery.toLowerCase().trim())),
-    [armory, leftSearchQuery]
-  );
+  const filteredArmory = useMemo(() => {
+    let list = armory;
+    if (leftSearchQuery.trim()) {
+      list = armory.filter((s) => s.name.toLowerCase().includes(leftSearchQuery.toLowerCase().trim()));
+    }
+    return [...list].sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [armory, leftSearchQuery, isGsUnlocked]);
+
   const filteredCatalogShields = useMemo(() => {
-    return shieldCatalog.filter((item) => {
-      if (localGenreFilter !== 'ALL' && !matchesGenre(item.genres, localGenreFilter as any)) return false;
-      if (armoryNamesSet.has(item.name.toLowerCase())) return false;
+    return shieldCatalog
+      .filter((item) => {
+        if (localGenreFilter !== 'ALL' && !matchesGenre(item.genres, localGenreFilter as any)) return false;
+        if (armoryNamesSet.has(item.name.toLowerCase())) return false;
 
-      const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
-      if (skillFilterMode === 'skilled' && !isLearnable) return false;
-      if (skillFilterMode === 'unskilled' && isLearnable) return false;
+        const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
+        if (skillFilterMode === 'skilled' && !isLearnable) return false;
+        if (skillFilterMode === 'unskilled' && isLearnable) return false;
 
-      // Table Quick Deck Filter
-      if (activeShieldTable === 'STARRED' && !isItemStarred(item)) return false;
-      if (activeShieldTable !== 'ALL' && activeShieldTable !== 'STARRED') {
-        const tbl = (item.kit || item.table_group || (item as any).category || '').toLowerCase();
-        const activeLower = activeShieldTable.toLowerCase();
-        if (tbl !== activeLower && !tbl.includes(activeLower)) {
-          return false;
+        // Table Quick Deck Filter
+        if (activeShieldTable === 'STARRED' && !isItemStarred(item)) return false;
+        if (activeShieldTable !== 'ALL' && activeShieldTable !== 'STARRED') {
+          const tbl = (item.kit || item.table_group || (item as any).category || '').toLowerCase();
+          const activeLower = activeShieldTable.toLowerCase();
+          if (tbl !== activeLower && !tbl.includes(activeLower)) {
+            return false;
+          }
         }
-      }
 
-      if (rightSearchQuery.trim()) {
-        const q = rightSearchQuery.toLowerCase().trim();
-        return (
-          item.name.toLowerCase().includes(q) ||
-          (item.requirement || '').toLowerCase().includes(q) ||
-          (item.notes || '').toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [shieldCatalog, armoryNamesSet, skillFilterMode, activeShieldTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter]);
+        if (rightSearchQuery.trim()) {
+          const q = rightSearchQuery.toLowerCase().trim();
+          return (
+            item.name.toLowerCase().includes(q) ||
+            (item.requirement || '').toLowerCase().includes(q) ||
+            (item.notes || '').toLowerCase().includes(q)
+          );
+        }
+        return true;
+      })
+      .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [shieldCatalog, armoryNamesSet, skillFilterMode, activeShieldTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter, isGsUnlocked]);
 
   return (
     <div className="bg-gradient-to-b from-cyan-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-cyan-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-cyan-950/20">
@@ -360,13 +368,13 @@ export const ShieldCard: React.FC = () => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title="Click to open Shield Manager"
+            title="Click to open Shield SK Manager"
           >
             <div className="p-1.5 rounded-xl bg-cyan-950/90 border border-cyan-500/50 text-cyan-300 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.25)] group-hover:scale-105 group-hover:border-cyan-400 transition-all">
               <span className="text-base leading-none">🛡️</span>
             </div>
             <h3 className="font-outfit font-extrabold text-sm tracking-widest text-cyan-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
-              <span>Shield</span>
+              <span>Shield SK</span>
               <ChevronDown className="w-3.5 h-3.5 text-cyan-400/70 group-hover:text-cyan-300 group-hover:translate-y-0.5 transition-all" />
             </h3>
           </button>
@@ -387,7 +395,7 @@ export const ShieldCard: React.FC = () => {
               ? 'bg-cyan-600/30 text-cyan-200 border-cyan-400 shadow-cyan-500/30'
               : 'bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300 hover:text-white'
           }`}
-          title="Open Shield Manager"
+          title="Open Shield SK Manager"
         >
           <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
         </button>
@@ -405,10 +413,10 @@ export const ShieldCard: React.FC = () => {
                   <div className="p-2 rounded-xl bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">🛡️</div>
                   <div>
                     <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide">
-                      Shields Manager
+                      Shield SK Manager
                     </h3>
                     <p className="text-xs text-slate-400 hidden sm:block">
-                      Manage character shield armory side-by-side with stock catalog.
+                      Manage character shield block proficiencies and combat defensive techniques.
                     </p>
                   </div>
                 </div>
@@ -493,7 +501,9 @@ export const ShieldCard: React.FC = () => {
                                   <span className="text-[10px]">{isActive ? '●' : '○'}</span>
                                   <span>{isActive ? 'Active' : 'Equip'}</span>
                                 </button>
-                                <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
+                                <span className={`font-outfit font-bold text-sm ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                  {isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}
+                                </span>
                                 <ItemNotesPopover notes={item.notes || shieldCatalog.find((s) => s.name.toLowerCase() === item.name.toLowerCase())?.notes} itemName={item.name} />
                               </div>
 
@@ -644,7 +654,9 @@ export const ShieldCard: React.FC = () => {
                             >
                               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-bold text-sm text-slate-100">{item.name}</span>
+                                  <span className={`font-bold text-sm ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                    {isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}
+                                  </span>
                                   <ItemNotesPopover notes={item.notes} itemName={item.name} />
                                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
                                     {item.cost}
@@ -700,7 +712,7 @@ export const ShieldCard: React.FC = () => {
               <div className="px-4 py-3 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-400 shrink-0">
                 <div className="flex items-center gap-2.5">
                   <span className="text-base">🛡️</span>
-                  <span className="font-outfit font-bold text-slate-300">Shields Manager</span>
+                  <span className="font-outfit font-bold text-slate-300">Shield SK Manager</span>
                 </div>
                 
                 {/* Standardized Master Blueprint Done Footer Button */}
@@ -744,8 +756,11 @@ export const ShieldCard: React.FC = () => {
 
           {/* Shield Name (Unboxed Clean Text) + Notes Popover */}
           <div className="flex items-center gap-1.5 flex-1 min-w-[130px] pr-1">
-            <span className="font-semibold text-slate-100 text-xs truncate min-w-[100px]" title={shield.name}>
-              {shield.name}
+            <span
+              className={`text-xs truncate min-w-[100px] ${isGsUnlocked && isMsoEntry(shield.name) ? 'text-purple-300 font-bold' : 'font-semibold text-slate-100'}`}
+              title={shield.name}
+            >
+              {isGsUnlocked && isMsoEntry(shield.name) ? `🌌 ${shield.name}` : shield.name}
             </span>
             <ItemNotesPopover notes={shield.notes || shieldCatalog.find((s) => s.name.toLowerCase() === shield.name.toLowerCase())?.notes} itemName={shield.name} />
           </div>

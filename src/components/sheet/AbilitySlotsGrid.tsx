@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, Trash2, AlertCircle, Check, ArrowUpDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
@@ -17,7 +18,7 @@ import {
 import { getPowerReadyCategory } from '../../utils/readyMatrixSchedule';
 import { calculatePowersKnownApCost, getPowersSoftTaxBracket } from '../../utils/powersApTaxSchedule';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
-import { cleanKitName, isTraitItem, getKitMinLevel } from '../../utils/kitUtils';
+import { cleanKitName, isTraitItem, getKitMinLevel, isMsoEntry, compareMsoOptions, compareMsoItems } from '../../utils/kitUtils';
 
 interface AbilitySlotsGridProps {
   title: string;
@@ -155,6 +156,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     abilityActionFilter,
     setAbilitySortMode,
     setAbilityActionFilter,
+    isGuildSpaceUnlocked: isGsUnlocked,
   } = useCharacterStore();
   const sheetData: any = activeCharacter?.sheet_data || {};
   const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
@@ -266,7 +268,30 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   }, [abilityActionFilter, abilitySortMode]);
 
   const [isSortPopoverOpen, setIsSortPopoverOpen] = useState(false);
-  const sortPopoverRef = useRef<HTMLDivElement>(null);
+  const sortButtonRef = useRef<HTMLButtonElement>(null);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const [sortPopoverCoords, setSortPopoverCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  const handleToggleSortPopover = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isSortPopoverOpen && sortButtonRef.current) {
+      const rect = sortButtonRef.current.getBoundingClientRect();
+      const popoverWidth = 165;
+      let left = rect.left + rect.width / 2 - popoverWidth / 2;
+      if (left < 10) left = 10;
+      if (left + popoverWidth > window.innerWidth - 10) {
+        left = window.innerWidth - popoverWidth - 10;
+      }
+      setSortPopoverCoords({
+        top: rect.bottom + 6,
+        left,
+      });
+      setIsSortPopoverOpen(true);
+    } else {
+      setIsSortPopoverOpen(false);
+    }
+  };
   const [showManageModal, setShowManageModal] = useState(false);
   const [readyFeedback, setReadyFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [catalogFeedback, setCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
@@ -391,7 +416,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   useEffect(() => {
     const handleClickOutsideSort = (event: MouseEvent) => {
-      if (sortPopoverRef.current && !sortPopoverRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        sortButtonRef.current &&
+        !sortButtonRef.current.contains(target) &&
+        sortDropdownRef.current &&
+        !sortDropdownRef.current.contains(target)
+      ) {
         setIsSortPopoverOpen(false);
       }
     };
@@ -1048,8 +1079,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       if (!map[tbl]) map[tbl] = [];
       map[tbl].push(item);
     });
+    Object.keys(map).forEach((tbl) => {
+      map[tbl].sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+    });
     return map;
-  }, [filteredCatalogAbilities, type]);
+  }, [filteredCatalogAbilities, type, isGsUnlocked]);
 
   const sortedGroupedTableKeys = useMemo(() => {
     const keys = Object.keys(groupedFilteredAbilities);
@@ -1061,11 +1095,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         if (idxA !== -1 && idxB !== -1) return idxA - idxB;
         if (idxA !== -1) return -1;
         if (idxB !== -1) return 1;
-        return a.localeCompare(b);
+        return compareMsoOptions(a, b, isGsUnlocked);
       });
     }
-    return keys.sort((a, b) => a.localeCompare(b));
-  }, [groupedFilteredAbilities, type]);
+    return keys.sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [groupedFilteredAbilities, type, isGsUnlocked]);
 
   // Filtered learned roster for Left Column search (Highest Version Only)
   const filteredRoster = useMemo(() => {
@@ -1092,14 +1126,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     }
     return [...list].sort((a, b) => {
       if (abilitySortMode === 'name') {
-        return (a.name || '').localeCompare(b.name || '');
+        return compareMsoItems(a, b, isGsUnlocked);
       }
       const orderA = ACTION_ORDER[a.action?.toUpperCase() || ''] ?? 99;
       const orderB = ACTION_ORDER[b.action?.toUpperCase() || ''] ?? 99;
       if (orderA !== orderB) return orderA - orderB;
-      return (a.name || '').localeCompare(b.name || '');
+      return compareMsoItems(a, b, isGsUnlocked);
     });
-  }, [activeDisplaySlots, slots, type, abilitySortMode, abilityActionFilter]);
+  }, [activeDisplaySlots, slots, type, abilitySortMode, abilityActionFilter, isGsUnlocked]);
 
   return (
     <div
@@ -1142,10 +1176,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         {/* Center Actions: Sort Popover, Action Channel Filter, & Clear Uses */}
         <div className="flex items-center justify-center gap-2 flex-1 flex-nowrap overflow-x-auto no-scrollbar">
           {/* Sort Action Channel / Alphabetical Popover Trigger */}
-          <div className="relative shrink-0" ref={sortPopoverRef}>
+          <div className="shrink-0">
             <button
+              ref={sortButtonRef}
               type="button"
-              onClick={() => setIsSortPopoverOpen(!isSortPopoverOpen)}
+              onClick={handleToggleSortPopover}
               className={`p-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center shadow-sm cursor-pointer border ${
                 isSortPopoverOpen || abilitySortMode === 'name'
                   ? 'bg-amber-950/80 text-amber-300 border-amber-500/50 shadow-amber-950/40'
@@ -1156,9 +1191,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
               <ArrowUpDown className="w-3.5 h-3.5" />
             </button>
 
-            {/* Sort Popover Dropdown */}
-            {isSortPopoverOpen && (
-              <div className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 border border-slate-700/90 rounded-xl p-1 shadow-2xl backdrop-blur-md min-w-[160px] flex flex-col gap-1 animate-fadeIn">
+            {/* Sort Popover Dropdown via Portal (Eliminates Container Overflow Jitter & Clipping) */}
+            {isSortPopoverOpen && typeof document !== 'undefined' && createPortal(
+              <div
+                ref={sortDropdownRef}
+                style={{
+                  position: 'fixed',
+                  top: sortPopoverCoords.top,
+                  left: sortPopoverCoords.left,
+                  zIndex: 9999,
+                }}
+                className="bg-slate-900/95 border border-slate-700/90 rounded-xl p-1 shadow-2xl backdrop-blur-md min-w-[165px] flex flex-col gap-1 animate-fadeIn"
+              >
                 <button
                   type="button"
                   onClick={() => {
@@ -1196,7 +1240,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   </span>
                   {abilitySortMode === 'name' && <Check className="w-3.5 h-3.5" />}
                 </button>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
 
@@ -2159,7 +2204,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           {/* Header Row: Name, Version, Action & Usage (Adjacent), Buttons */}
                                           <div className="flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-1.5 flex-wrap">
-                                              <span className="font-bold text-sm text-slate-100">{baseName}</span>
+                                              <span className={`font-bold text-sm ${isGsUnlocked && isMsoEntry(baseName) ? 'text-purple-300' : 'text-slate-100'}`}>
+                                                {isGsUnlocked && isMsoEntry(baseName) ? `🌌 ${baseName}` : baseName}
+                                              </span>
                                               {type !== 'powers' && (
                                                 <ItemNotesPopover notes={(item as any).notes} itemName={baseName} />
                                               )}
@@ -2452,8 +2499,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 {/* 1. Name Column with Version Badge */}
                 <div className="w-36 sm:w-44 shrink-0 flex flex-col gap-0.5">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
-                      {baseName}
+                    <span className={`font-outfit font-bold text-xs block whitespace-normal break-words leading-tight ${
+                      isGsUnlocked && isMsoEntry(baseName) ? 'text-purple-300' : 'text-slate-100'
+                    }`}>
+                      {isGsUnlocked && isMsoEntry(baseName) ? `🌌 ${baseName}` : baseName}
                     </span>
                     <ItemNotesPopover notes={slot.notes || (fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase()) as any)?.notes} itemName={baseName} />
                   </div>

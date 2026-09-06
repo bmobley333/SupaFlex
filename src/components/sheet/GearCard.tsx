@@ -27,6 +27,7 @@ import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar, QuickDeckDomain } from '../common/QuickDeckBar';
 import { gameApi } from '../../services/api';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
+import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
 export type EquipmentCategoryTab = 'gear' | 'weapons' | 'armor' | 'shields' | 'exotics' | 'kits';
 
@@ -51,7 +52,7 @@ interface GearCardProps {
 
 export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, isGuildSpaceUnlocked: isGsUnlocked } = useCharacterStore();
   const sheet = activeCharacter?.sheet_data;
 
   const rawGearList: SimpleGearItem[] = sheet?.simple_gear || [];
@@ -337,14 +338,17 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       });
     }
 
-    if (!gearCatalogSearchQuery.trim()) return base;
-    const query = gearCatalogSearchQuery.toLowerCase().trim();
-    return base.filter((g: any) => {
-      const nameMatch = (g.name || '').toLowerCase().includes(query);
-      const catMatch = (g.category || g.discipline || g.type || '').toLowerCase().includes(query);
-      const noteMatch = (g.notes || '').toLowerCase().includes(query);
-      return nameMatch || catMatch || noteMatch;
-    });
+    const result = !gearCatalogSearchQuery.trim()
+      ? base
+      : base.filter((g: any) => {
+          const query = gearCatalogSearchQuery.toLowerCase().trim();
+          const nameMatch = (g.name || '').toLowerCase().includes(query);
+          const catMatch = (g.category || g.discipline || g.type || '').toLowerCase().includes(query);
+          const noteMatch = (g.notes || '').toLowerCase().includes(query);
+          return nameMatch || catMatch || noteMatch;
+        });
+
+    return [...result].sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
   }, [
     currentRawCatalog,
     gearList,
@@ -352,19 +356,23 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     isItemStarred,
     gearCatalogSearchQuery,
     localGenreFilter,
+    isGsUnlocked,
   ]);
 
   // Filtered Equipped Inventory
   const filteredGearInventory = useMemo(() => {
-    if (!gearInventorySearchQuery.trim()) return gearList;
-    const query = gearInventorySearchQuery.toLowerCase();
-    return gearList.filter(
-      (item) =>
-        item.name.toLowerCase().includes(query) ||
-        (item.category && item.category.toLowerCase().includes(query)) ||
-        (item.notes && item.notes.toLowerCase().includes(query))
-    );
-  }, [gearList, gearInventorySearchQuery]);
+    let list = gearList;
+    if (gearInventorySearchQuery.trim()) {
+      const query = gearInventorySearchQuery.toLowerCase();
+      list = gearList.filter(
+        (item) =>
+          item.name.toLowerCase().includes(query) ||
+          (item.category && item.category.toLowerCase().includes(query)) ||
+          (item.notes && item.notes.toLowerCase().includes(query))
+      );
+    }
+    return [...list].sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [gearList, gearInventorySearchQuery, isGsUnlocked]);
 
   // Equip / Purchase Handler
   const handleEquipItem = (
@@ -796,8 +804,10 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       >
                         <div className="flex flex-col min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-outfit font-bold text-xs text-slate-100 truncate">
-                              {item.name}
+                            <span className={`font-outfit font-bold text-xs truncate ${
+                              isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300' : 'text-slate-100'
+                            }`}>
+                              {isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}
                             </span>
                             <span
                               className={`text-[9px] font-mono px-1.5 py-0.2 border rounded ${getCategoryBadgeClass(
@@ -1113,8 +1123,10 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                             </button>
 
                             <div className="flex flex-col min-w-0 flex-1">
-                              <span className="font-outfit font-bold text-xs text-slate-100 truncate">
-                                {catalogItem.name}
+                              <span className={`font-outfit font-bold text-xs truncate ${
+                                isGsUnlocked && isMsoEntry(catalogItem.name) ? 'text-purple-300' : 'text-slate-100'
+                              }`}>
+                                {isGsUnlocked && isMsoEntry(catalogItem.name) ? `🌌 ${catalogItem.name}` : catalogItem.name}
                               </span>
                               <div className="flex items-center gap-2 text-[10px] text-slate-400">
                                 <span className="font-mono text-teal-300 font-bold">

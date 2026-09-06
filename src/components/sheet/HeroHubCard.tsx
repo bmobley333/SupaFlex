@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { UniversalLinksModal } from '../modals/UniversalLinksModal';
 import { ManagePathsModal } from '../modals/ManagePathsModal';
+import { isMsoEntry } from '../../utils/kitUtils';
 
 interface HeroHubCardProps {
   onOpenApManager?: () => void;
@@ -11,6 +12,7 @@ interface HeroHubCardProps {
 
 export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, className = '' }) => {
   const { activeCharacter } = useCharacterStore();
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
 
   const [showDossierModal, setShowDossierModal] = useState(false);
   const [showPathsModal, setShowPathsModal] = useState(false);
@@ -31,6 +33,9 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
   const level = sheet?.level ?? 1;
   const race = activeCharacter.race || 'Human';
   const charClass = activeCharacter.class || 'Vanguard';
+
+  const isRaceMso = isGsUnlocked && isMsoEntry(race);
+  const isClassMso = isGsUnlocked && isMsoEntry(charClass);
 
   const handleOpenApManager = () => {
     if (onOpenApManager) {
@@ -59,10 +64,10 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
               type="button"
               onClick={handleOpenApManager}
               className="flex items-center gap-1 px-2 py-0.5 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/40 rounded-lg text-amber-300 hover:text-amber-100 shadow-sm shrink-0 font-mono font-extrabold text-[11px] transition-all cursor-pointer"
-              title="Open Manage Level & AP Modal"
+              title="Manage Level & AP"
             >
               <span>Lvl {level}</span>
-              <ChevronDown className="w-3 h-3 text-amber-400" />
+              <ChevronDown className="w-3 text-amber-400" />
             </button>
 
             {/* 🧬 Race & Class Path Pills */}
@@ -70,19 +75,27 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
               <button
                 type="button"
                 onClick={() => setShowPathsModal(true)}
-                className="px-2 py-0.5 rounded-full bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/35 hover:border-purple-400 text-purple-300 text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1"
-                title="Manage Race Path in Paths Hub"
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
+                  isRaceMso
+                    ? 'bg-purple-950/80 hover:bg-purple-900 border border-purple-500/60 text-purple-300 shadow-sm font-extrabold'
+                    : 'bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/35 hover:border-purple-400 text-purple-300'
+                }`}
+                title="Manage Path"
               >
-                <span>🧬</span>
+                <span>{isRaceMso ? '🌌' : '🧬'}</span>
                 <span>{race}</span>
               </button>
               <button
                 type="button"
                 onClick={() => setShowPathsModal(true)}
-                className="px-2 py-0.5 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/35 hover:border-indigo-400 text-indigo-300 text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1"
-                title="Manage Class Path in Paths Hub"
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
+                  isClassMso
+                    ? 'bg-purple-950/80 hover:bg-purple-900 border border-purple-500/60 text-purple-300 shadow-sm font-extrabold'
+                    : 'bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/35 hover:border-indigo-400 text-indigo-300'
+                }`}
+                title="Manage Path"
               >
-                <span>⚔️</span>
+                <span>{isClassMso ? '🌌' : '⚔️'}</span>
                 <span>{charClass}</span>
               </button>
             </div>
@@ -95,7 +108,7 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
             type="button"
             onClick={() => setShowDossierModal(true)}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all border shadow-sm cursor-pointer bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/35 text-purple-300 shadow-purple-950/40"
-            title="Open Character Dossier Editor in Links & Notes Hub"
+            title="Open Character Dossier"
           >
             <span className="text-xs">👤</span>
             <span className="font-outfit font-extrabold tracking-wide">Dossier</span>
@@ -106,7 +119,7 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
             type="button"
             onClick={() => setShowPathsModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm cursor-pointer bg-purple-950/80 hover:bg-purple-900/90 text-purple-200 border-purple-500/50 hover:border-purple-400 shadow-purple-950/40"
-            title="Manage Starting Paths, In-Path AP Purchasing & Unlock New Disciplines"
+            title="Manage Starting Paths, In-Path AP Purchasing & Unlock New Paths"
           >
             <span className="text-xs">🧭</span>
             <span className="font-outfit font-black tracking-wide">Manage Paths</span>

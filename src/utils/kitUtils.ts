@@ -148,3 +148,40 @@ export const formatPathWithLevel = formatKitWithLevel;
 export const matchesPathFilter = matchesKitFilter;
 export const sanitizePathInput = sanitizeKitInput;
 export const getUniqueBasePaths = getUniqueBaseKits;
+
+/**
+ * Helper to check if a name represents an MSO (MetaScape Original) entry.
+ */
+export const isMsoEntry = (name?: string | null): boolean => {
+  if (!name) return false;
+  return /\(mso\)/i.test(name);
+};
+
+/**
+ * Sorts two option strings. When MSO is unlocked, any item with '(mso)' is prioritized at the top.
+ * Items within the same group (both MSO or both non-MSO) are sorted alphabetically.
+ */
+export const compareMsoOptions = (a: string, b: string, msoUnlocked: boolean = false): number => {
+  if (msoUnlocked) {
+    const aMso = isMsoEntry(a);
+    const bMso = isMsoEntry(b);
+    if (aMso && !bMso) return -1;
+    if (!aMso && bMso) return 1;
+  }
+  return a.localeCompare(b, undefined, { sensitivity: 'base' });
+};
+
+/**
+ * Generic comparator for catalog/inventory objects with a name or title property.
+ * Prioritizes (mso) entries at the top when msoUnlocked is true, then sorts alphabetically.
+ */
+export const compareMsoItems = <T extends { name?: string; title?: string }>(
+  a: T,
+  b: T,
+  msoUnlocked: boolean = false
+): number => {
+  const nameA = a.name || a.title || '';
+  const nameB = b.name || b.title || '';
+  return compareMsoOptions(nameA, nameB, msoUnlocked);
+};
+

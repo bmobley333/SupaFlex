@@ -16,6 +16,7 @@ import {
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar } from '../common/QuickDeckBar';
+import { compareMsoItems, compareMsoOptions, isMsoEntry } from '../../utils/kitUtils';
 
 const DIE_SCALE = [4, 6, 8, 10, 12];
 
@@ -80,6 +81,7 @@ const calculateWeaponDmg = (name: string, mhsCategory: string, attributeDice: Re
 
 export const WeaponsCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
   const rawWeapons: WeaponSlot[] = activeCharacter?.sheet_data?.weapons || [];
   const weapons: WeaponSlot[] = useMemo(() => {
@@ -181,8 +183,8 @@ export const WeaponsCard: React.FC = () => {
       map.get(key)!.slots.push(slot);
     });
 
-    return Array.from(map.values()).sort((a, b) => a.baseName.localeCompare(b.baseName));
-  }, [weapons, supabaseWeapons]);
+    return Array.from(map.values()).sort((a, b) => compareMsoItems({ name: a.baseName }, { name: b.baseName }, isGsUnlocked));
+  }, [weapons, supabaseWeapons, isGsUnlocked]);
 
   // Skilled weapon groups (groups containing at least 1 slot with sk === true)
   const skilledWeaponGroups = useMemo(() => {
@@ -233,7 +235,7 @@ export const WeaponsCard: React.FC = () => {
       }
       return {
         ...prev,
-        weapons: [...(prev.weapons || []), ...filteredNewSlots].sort((a, b) => a.name.localeCompare(b.name)),
+        weapons: [...(prev.weapons || []), ...filteredNewSlots].sort((a, b) => compareMsoItems(a, b, isGsUnlocked)),
       };
     });
     saveActiveCharacter();
@@ -250,7 +252,7 @@ export const WeaponsCard: React.FC = () => {
       ...prev,
       weapons: (prev.weapons || [])
         .filter((w) => getBaseWeaponName(w.name).toLowerCase() !== baseWeaponName.toLowerCase())
-        .sort((a, b) => a.name.localeCompare(b.name)),
+        .sort((a, b) => compareMsoItems(a, b, isGsUnlocked)),
     }));
 
     if (wasSkilled) {
@@ -366,8 +368,8 @@ export const WeaponsCard: React.FC = () => {
         set.add(w.discipline.trim());
       }
     });
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [supabaseWeapons]);
+    return Array.from(set).sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [supabaseWeapons, isGsUnlocked]);
 
   const favoriteWeaponTables: string[] = useMemo(() => {
     const favs = activeCharacter?.sheet_data?.favorite_weapon_tables;
@@ -401,82 +403,84 @@ export const WeaponsCard: React.FC = () => {
 
   // Filter stock catalog weapons for Right Column pane (strict deduplication & genre filtering)
   const filteredCatalogWeapons = useMemo(() => {
-    return supabaseWeapons.filter((weapon) => {
-      // 0. Local Setting Scope Filtering
-      if (localGenreFilter !== 'ALL' && !matchesGenre(weapon.genres, localGenreFilter as any)) {
-        return false;
-      }
-
-      // 1. Strict Deduplication: If already equipped in arsenal, filter out of Stock Catalog
-      if (equippedBaseNamesSet.has(weapon.name.toLowerCase())) {
-        return false;
-      }
-
-      const variants = splitWeaponIntoVariants(weapon);
-      const qualifying = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
-      const isAnyLearnable = qualifying.length > 0;
-
-      // 1.2. Discipline Dropdown Filter
-      if (weaponDisciplineFilter !== 'ALL') {
-        const disc = (weapon.discipline || '').toLowerCase().trim();
-        if (disc !== weaponDisciplineFilter.toLowerCase().trim()) {
+    return supabaseWeapons
+      .filter((weapon) => {
+        // 0. Local Setting Scope Filtering
+        if (localGenreFilter !== 'ALL' && !matchesGenre(weapon.genres, localGenreFilter as any)) {
           return false;
         }
-      }
 
-      // 1.3. Weapon Type Dropdown Filter
-      if (weaponTypeFilter !== 'ALL') {
-        const rawType = (weapon.type || '').toLowerCase().trim();
-        const nameLower = weapon.name.toLowerCase();
-        if (weaponTypeFilter === 'Melee, Hurled') {
-          if (!(rawType.includes('melee') && rawType.includes('hurled'))) return false;
-        } else if (weaponTypeFilter === 'Melee, Shot') {
-          if (!(rawType.includes('melee') && rawType.includes('shot'))) return false;
-        } else if (weaponTypeFilter === 'Melee') {
-          if (!rawType.includes('melee') || rawType.includes('hurled') || rawType.includes('shot')) return false;
-        } else if (weaponTypeFilter === 'Hurled') {
-          if (!rawType.includes('hurled') || rawType.includes('melee') || rawType.includes('shot')) return false;
-        } else if (weaponTypeFilter === 'Shot') {
-          if (!rawType.includes('shot') || rawType.includes('melee') || rawType.includes('hurled')) return false;
-        } else if (weaponTypeFilter === 'Unarmed') {
-          if (!rawType.includes('unarmed') && !nameLower.includes('brawl') && !nameLower.includes('unarmed')) return false;
-        } else {
-          if (!rawType.includes(weaponTypeFilter.toLowerCase())) return false;
-        }
-      }
-
-      // 1.5. Qualification Filter (All vs Skilled vs Unskilled)
-      if (skillFilterMode === 'skilled' && !isAnyLearnable) {
-        return false;
-      }
-      if (skillFilterMode === 'unskilled' && isAnyLearnable) {
-        return false;
-      }
-
-      // 2. Table Quick Deck Filter
-      if (activeWeaponTable === 'STARRED' && !isItemStarred(weapon)) {
-        return false;
-      }
-      if (activeWeaponTable !== 'ALL' && activeWeaponTable !== 'STARRED') {
-        const tbl = (weapon.kit || weapon.table_group || (weapon as any).table || (weapon as any).category || weapon.type || '').toLowerCase();
-        const activeLower = activeWeaponTable.toLowerCase();
-        if (tbl !== activeLower && !tbl.includes(activeLower)) {
+        // 1. Strict Deduplication: If already equipped in arsenal, filter out of Stock Catalog
+        if (equippedBaseNamesSet.has(weapon.name.toLowerCase())) {
           return false;
         }
-      }
 
-      // 3. Search filter
-      if (rightSearchQuery.trim()) {
-        const q = rightSearchQuery.toLowerCase().trim();
-        const matchesName = weapon.name.toLowerCase().includes(q);
-        const matchesType = (weapon.type || '').toLowerCase().includes(q);
-        const matchesNotes = (weapon.notes || '').toLowerCase().includes(q);
-        return matchesName || matchesType || matchesNotes;
-      }
+        const variants = splitWeaponIntoVariants(weapon);
+        const qualifying = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
+        const isAnyLearnable = qualifying.length > 0;
 
-      return true;
-    });
-  }, [supabaseWeapons, equippedBaseNamesSet, skillFilterMode, weaponDisciplineFilter, weaponTypeFilter, activeWeaponTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter]);
+        // 1.2. Discipline Dropdown Filter
+        if (weaponDisciplineFilter !== 'ALL') {
+          const disc = (weapon.discipline || '').toLowerCase().trim();
+          if (disc !== weaponDisciplineFilter.toLowerCase().trim()) {
+            return false;
+          }
+        }
+
+        // 1.3. Weapon Type Dropdown Filter
+        if (weaponTypeFilter !== 'ALL') {
+          const rawType = (weapon.type || '').toLowerCase().trim();
+          const nameLower = weapon.name.toLowerCase();
+          if (weaponTypeFilter === 'Melee, Hurled') {
+            if (!(rawType.includes('melee') && rawType.includes('hurled'))) return false;
+          } else if (weaponTypeFilter === 'Melee, Shot') {
+            if (!(rawType.includes('melee') && rawType.includes('shot'))) return false;
+          } else if (weaponTypeFilter === 'Melee') {
+            if (!rawType.includes('melee') || rawType.includes('hurled') || rawType.includes('shot')) return false;
+          } else if (weaponTypeFilter === 'Hurled') {
+            if (!rawType.includes('hurled') || rawType.includes('melee') || rawType.includes('shot')) return false;
+          } else if (weaponTypeFilter === 'Shot') {
+            if (!rawType.includes('shot') || rawType.includes('melee') || rawType.includes('hurled')) return false;
+          } else if (weaponTypeFilter === 'Unarmed') {
+            if (!rawType.includes('unarmed') && !nameLower.includes('brawl') && !nameLower.includes('unarmed')) return false;
+          } else {
+            if (!rawType.includes(weaponTypeFilter.toLowerCase())) return false;
+          }
+        }
+
+        // 1.5. Qualification Filter (All vs Skilled vs Unskilled)
+        if (skillFilterMode === 'skilled' && !isAnyLearnable) {
+          return false;
+        }
+        if (skillFilterMode === 'unskilled' && isAnyLearnable) {
+          return false;
+        }
+
+        // 2. Table Quick Deck Filter
+        if (activeWeaponTable === 'STARRED' && !isItemStarred(weapon)) {
+          return false;
+        }
+        if (activeWeaponTable !== 'ALL' && activeWeaponTable !== 'STARRED') {
+          const tbl = (weapon.kit || weapon.table_group || (weapon as any).table || (weapon as any).category || weapon.type || '').toLowerCase();
+          const activeLower = activeWeaponTable.toLowerCase();
+          if (tbl !== activeLower && !tbl.includes(activeLower)) {
+            return false;
+          }
+        }
+
+        // 3. Search filter
+        if (rightSearchQuery.trim()) {
+          const q = rightSearchQuery.toLowerCase().trim();
+          const matchesName = weapon.name.toLowerCase().includes(q);
+          const matchesType = (weapon.type || '').toLowerCase().includes(q);
+          const matchesNotes = (weapon.notes || '').toLowerCase().includes(q);
+          return matchesName || matchesType || matchesNotes;
+        }
+
+        return true;
+      })
+      .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [supabaseWeapons, equippedBaseNamesSet, skillFilterMode, weaponDisciplineFilter, weaponTypeFilter, activeWeaponTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter, isGsUnlocked]);
 
   return (
     <div className="bg-gradient-to-b from-rose-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-rose-500/90 p-4 flex flex-col gap-3 h-fit shadow-lg shadow-rose-950/20">
@@ -487,13 +491,13 @@ export const WeaponsCard: React.FC = () => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title="Click to open Weapons Manager"
+            title="Click to open Weapon SK Manager"
           >
             <div className="p-1.5 rounded-xl bg-rose-950/90 border border-rose-500/50 text-rose-300 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.25)] group-hover:scale-105 group-hover:border-rose-400 transition-all">
               <span className="text-base leading-none">⚔️</span>
             </div>
             <h3 className="font-outfit font-extrabold text-sm tracking-widest text-rose-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
-              <span>Weapons</span>
+              <span>Weapon SK</span>
               <ChevronDown className="w-3.5 h-3.5 text-rose-400/70 group-hover:text-rose-300 group-hover:translate-y-0.5 transition-all" />
             </h3>
           </button>
@@ -510,7 +514,7 @@ export const WeaponsCard: React.FC = () => {
                 ? 'bg-rose-600/30 text-rose-200 border-rose-400 shadow-rose-500/30'
                 : 'bg-rose-950/40 hover:bg-rose-900/50 border-rose-500/30 text-rose-300 hover:text-white'
             }`}
-            title="Open Weapons Manager"
+            title="Open Weapon SK Manager"
           >
             <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
           </button>
@@ -530,10 +534,10 @@ export const WeaponsCard: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                        Weapons Manager
+                        Weapon SK Manager
                       </h3>
                       <p className="text-xs text-slate-400 hidden sm:block">
-                        Manage character weapons and arsenal side-by-side with stock catalog.
+                        Manage character weapon proficiencies and combat skills side-by-side with stock catalog.
                       </p>
                     </div>
                   </div>
@@ -613,7 +617,9 @@ export const WeaponsCard: React.FC = () => {
                               {/* Card Header Row: Base Name, Type Badges, SINGLE - Drop Button */}
                               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-outfit font-bold text-sm text-slate-100">{group.baseName}</span>
+                                  <span className={`font-outfit font-bold text-sm ${isGsUnlocked && isMsoEntry(group.baseName) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                    {isGsUnlocked && isMsoEntry(group.baseName) ? `🌌 ${group.baseName}` : group.baseName}
+                                  </span>
                                   <ItemNotesPopover notes={group.notes} itemName={group.baseName} />
                                   {rawTypesList.map((t) => {
                                     const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
@@ -721,19 +727,26 @@ export const WeaponsCard: React.FC = () => {
                           <option value="SciFi">🚀 SciFi</option>
                         </select>
 
-                        {/* Discipline Selector */}
+                        {/* Specialization Selector */}
                         {availableDisciplines.length > 0 && (
                           <select
                             value={weaponDisciplineFilter}
                             onChange={(e) => setWeaponDisciplineFilter(e.target.value)}
                             className="bg-slate-900 text-cyan-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[110px]"
                           >
-                            <option value="ALL">🌐 All Disciplines</option>
-                            {availableDisciplines.map((d) => (
-                              <option key={d} value={d}>
-                                {d}
-                              </option>
-                            ))}
+                            <option value="ALL">🌐 All Specializations</option>
+                            {availableDisciplines.map((d) => {
+                              const isMso = isMsoEntry(d);
+                              return (
+                                <option
+                                  key={d}
+                                  value={d}
+                                  className={isGsUnlocked && isMso ? 'text-purple-300 font-bold bg-slate-900' : 'text-slate-100 bg-slate-950'}
+                                >
+                                  {isGsUnlocked && isMso ? `🌌 ${d}` : d}
+                                </option>
+                              );
+                            })}
                           </select>
                         )}
 
@@ -844,7 +857,9 @@ export const WeaponsCard: React.FC = () => {
                                 {/* Card Header Row: Name, Type Badges, Cost, SINGLE + Equip Button */}
                                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="font-bold text-sm text-slate-100">{weapon.name}</span>
+                                    <span className={`font-bold text-sm ${isGsUnlocked && isMsoEntry(weapon.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                      {isGsUnlocked && isMsoEntry(weapon.name) ? `🌌 ${weapon.name}` : weapon.name}
+                                    </span>
                                     <ItemNotesPopover notes={weapon.notes} itemName={weapon.name} />
                                     {rawTypesList.map((t) => {
                                       const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
@@ -948,7 +963,7 @@ export const WeaponsCard: React.FC = () => {
                 {/* Modal Footer Status Bar with Standardized "Done" Button */}
                 <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
                   <div className="flex items-center gap-3">
-                    <span className="font-outfit font-bold text-slate-300">⚔️ Weapons Manager</span>
+                    <span className="font-outfit font-bold text-slate-300">⚔️ Weapon SK Manager</span>
                   </div>
                   
                   {/* Standardized Master Blueprint Done Footer Button */}
@@ -984,10 +999,11 @@ export const WeaponsCard: React.FC = () => {
               <span className="text-center whitespace-nowrap">Blk Cap</span>
             </div>
 
-          {/* Weapons Rows (Sorted Alphabetically) */}
+          {/* Weapons Rows (Sorted Alphabetically with MSO Priority) */}
           {[...weapons]
-            .sort((a, b) => a.name.localeCompare(b.name))
+            .sort((a, b) => compareMsoItems(a, b, isGsUnlocked))
             .map((item) => {
+              const isMso = isMsoEntry(item.name);
               const calculatedAtk = calculateWeaponAtk(item.name, item.mhs, attributeDice);
               const isSpecialDmg = item.dmg === '❌';
               const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(item.name, item.mhs, attributeDice));
@@ -1033,8 +1049,11 @@ export const WeaponsCard: React.FC = () => {
 
                   {/* Weapon Name (Unboxed Clean Text) + Notes Popover */}
                   <div className="flex items-center gap-1.5 min-w-0 pr-1">
-                    <span className="font-semibold text-slate-100 text-xs truncate min-w-[100px]" title={item.name}>
-                      {item.name}
+                    <span
+                      className={`text-xs truncate min-w-[100px] ${isGsUnlocked && isMso ? 'text-purple-300 font-bold' : 'font-semibold text-slate-100'}`}
+                      title={item.name}
+                    >
+                      {isGsUnlocked && isMso ? `🌌 ${item.name}` : item.name}
                     </span>
                     {(() => {
                       const baseName = getBaseWeaponName(item.name);

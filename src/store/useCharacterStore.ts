@@ -3,6 +3,7 @@ import { Character, CharacterSheetData, Power, MagicItem, SupabaseSkill, Supabas
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
+import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 
 const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
   if (typeof window !== 'undefined') {
@@ -31,6 +32,7 @@ interface CharacterStore {
   isLoading: boolean;
   isSaving: boolean;
   dbConnected: boolean;
+  isGuildSpaceUnlocked: boolean;
   error: string | null;
 
   // Player Login & Filtering State
@@ -121,6 +123,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   isLoading: false,
   isSaving: false,
   dbConnected: false,
+  isGuildSpaceUnlocked: isGuildSpaceUnlocked(),
   error: null,
 
   tabSessionId: (() => {
@@ -176,7 +179,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       const isConnected = await gameApi.checkConnection();
       set({ dbConnected: isConnected });
 
-      // Register window network status listeners for dynamic offline warning popups
+      // Register window network status listeners for dynamic offline warning popups and GuildSpace lock/unlock catalog reloads
       if (typeof window !== 'undefined' && !(window as any)._supaflex_net_listeners_registered) {
         (window as any)._supaflex_net_listeners_registered = true;
         window.addEventListener('online', () => {
@@ -184,6 +187,14 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         });
         window.addEventListener('offline', () => {
           set({ dbConnected: false });
+        });
+        window.addEventListener('supaflex:guildspace-unlocked', () => {
+          set({ isGuildSpaceUnlocked: true });
+          get().fetchInitialData({ silent: true });
+        });
+        window.addEventListener('supaflex:guildspace-locked', () => {
+          set({ isGuildSpaceUnlocked: false });
+          get().fetchInitialData({ silent: true });
         });
       }
 

@@ -16,6 +16,8 @@ import {
   extractFirstInt,
   extractAllInts,
 } from '../../utils/monsterStatScaler';
+import { useCharacterStore } from '../../store/useCharacterStore';
+import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
 interface MonsterManagerModalProps {
   isOpen: boolean;
@@ -70,6 +72,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   onSaveMonsters,
   partyName,
 }) => {
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   // Paste Statblock Area State
   const [pasteInputText, setPasteInputText] = useState('');
 
@@ -578,16 +581,24 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                   <div className="max-h-[560px] overflow-y-auto space-y-2 pr-1">
                     {supabaseMonsters
                       .filter((m) => (!codexSearch || m.name?.toLowerCase().includes(codexSearch.toLowerCase())))
+                      .sort((a, b) => compareMsoItems(a, b, isGsUnlocked))
                       .map((sm) => {
                         const isAdded = !!addedCodexIds[sm.id || sm.name];
+                        const isMso = isGsUnlocked && isMsoEntry(sm.name);
                         return (
                           <div
                             key={sm.id || sm.name}
-                            className="flex items-center justify-between p-3 bg-slate-900/90 rounded-xl border border-slate-800/80 text-xs hover:border-indigo-500/50 transition-all"
+                            className={`flex items-center justify-between p-3 rounded-xl border text-xs transition-all ${
+                              isMso
+                                ? 'bg-purple-950/20 border-purple-500/40 hover:border-purple-400'
+                                : 'bg-slate-900/90 border-slate-800/80 hover:border-indigo-500/50'
+                            }`}
                           >
                             <div className="truncate pr-2">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-amber-300 font-outfit">{sm.name}</span>
+                                <span className={`font-bold font-outfit ${isMso ? 'text-purple-300' : 'text-amber-300'}`}>
+                                  {isMso ? `🌌 ${sm.name}` : sm.name}
+                                </span>
                                 <ItemNotesPopover notes={sm.notes || sm.abilities} itemName={sm.name} />
                               </div>
                               <span className="text-[11px] text-slate-400 font-mono flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-0.5">

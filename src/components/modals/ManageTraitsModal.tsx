@@ -19,7 +19,7 @@ import {
   RuleItem,
   StatHookDefinition,
 } from '../../types/game';
-import { cleanKitName, sanitizeKitInput } from '../../utils/kitUtils';
+import { cleanKitName, sanitizeKitInput, isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
 interface ManageTraitsModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ interface ManageTraitsModalProps {
 
 export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, onClose }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const {
     activeCharacter,
     activeRole,
@@ -71,34 +72,38 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
   // Filtered Equipped Rules
   const filteredEquippedRules = useMemo(() => {
-    return equippedRules.filter((t) => {
-      if (!t || !t.name) return false;
-      if (!leftSearchQuery.trim()) return true;
-      const q = leftSearchQuery.toLowerCase();
-      return (
-        t.name.toLowerCase().includes(q) ||
-        (t.notes || '').toLowerCase().includes(q) ||
-        (t.source || '').toLowerCase().includes(q)
-      );
-    });
-  }, [equippedRules, leftSearchQuery]);
+    return equippedRules
+      .filter((t) => {
+        if (!t || !t.name) return false;
+        if (!leftSearchQuery.trim()) return true;
+        const q = leftSearchQuery.toLowerCase();
+        return (
+          t.name.toLowerCase().includes(q) ||
+          (t.notes || '').toLowerCase().includes(q) ||
+          (t.source || '').toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [equippedRules, leftSearchQuery, isGsUnlocked]);
 
   // Standalone Stock Rules Catalog List
   const filteredCatalogRules = useMemo(() => {
-    return stockRulesCatalog.filter((r) => {
-      if (!matchesGenre(r.genres, activeGenre)) return false;
-      if (catalogSearchQuery.trim()) {
-        const q = catalogSearchQuery.toLowerCase();
-        const ruleKit = r.kit || r.table_group || '';
-        return (
-          r.name.toLowerCase().includes(q) ||
-          (r.notes || '').toLowerCase().includes(q) ||
-          ruleKit.toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [stockRulesCatalog, activeGenre, catalogSearchQuery]);
+    return stockRulesCatalog
+      .filter((r) => {
+        if (!matchesGenre(r.genres, activeGenre)) return false;
+        if (catalogSearchQuery.trim()) {
+          const q = catalogSearchQuery.toLowerCase();
+          const ruleKit = r.kit || r.table_group || '';
+          return (
+            r.name.toLowerCase().includes(q) ||
+            (r.notes || '').toLowerCase().includes(q) ||
+            ruleKit.toLowerCase().includes(q)
+          );
+        }
+        return true;
+      })
+      .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [stockRulesCatalog, activeGenre, catalogSearchQuery, isGsUnlocked]);
 
   const isRuleEquipped = (ruleName: string) => {
     return equippedRules.some((r) => r.name.toLowerCase() === ruleName.toLowerCase());
@@ -260,16 +265,21 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     (rule.kit && rule.kit.includes('{Trait}')) ||
                     (rule.source && rule.source.includes('Trait')) ||
                     (rule.table_group && rule.table_group.includes('{Trait}'));
+                  const isMso = isGsUnlocked && isMsoEntry(rule.name);
 
                   return (
                     <div
                       key={`${rule.name}_${idx}`}
-                      className="p-3 rounded-xl border flex flex-col gap-2 transition-all shadow-sm bg-slate-900/80 border-slate-800/80 hover:border-slate-700"
+                      className={`p-3 rounded-xl border flex flex-col gap-2 transition-all shadow-sm ${
+                        isMso
+                          ? 'bg-purple-950/20 border-purple-500/40 hover:border-purple-400/60'
+                          : 'bg-slate-900/80 border-slate-800/80 hover:border-slate-700'
+                      }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-outfit font-bold text-slate-100 flex items-center gap-1">
-                            <span>{isTrait ? '🧬' : '📜'}</span>
+                          <span className={`text-xs font-outfit font-bold flex items-center gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                            <span>{isMso ? '🌌' : isTrait ? '🧬' : '📜'}</span>
                             <span>{rule.name}</span>
                           </span>
 
@@ -417,19 +427,23 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                       const equipped = isRuleEquipped(rule.name);
                       const starred = isRuleStarred(rule.id || rule.name);
 
+                      const isMso = isGsUnlocked && isMsoEntry(rule.name);
+
                       return (
                         <div
                           key={rule.id}
                           className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
                             equipped
                               ? 'bg-purple-950/20 border-purple-500/40 opacity-80'
+                              : isMso
+                              ? 'bg-purple-950/20 border-purple-500/30 hover:border-purple-500/50'
                               : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
                           }`}
                         >
                           <div className="flex flex-col gap-1 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-outfit font-black text-slate-100 flex items-center gap-1">
-                                <span>📜</span>
+                              <span className={`text-xs font-outfit font-black flex items-center gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                                <span>{isMso ? '🌌' : '📜'}</span>
                                 <span>{rule.name}</span>
                               </span>
 

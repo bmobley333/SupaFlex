@@ -8,7 +8,7 @@ import { gameApi } from '../../services/api';
 import { CustomCreationType, CustomCreationItem } from '../../types/game';
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
 import { InfoTooltip } from '../common/InfoTooltip';
-import { sanitizeKitInput } from '../../utils/kitUtils';
+import { sanitizeKitInput, isMsoEntry, compareMsoOptions } from '../../utils/kitUtils';
 
 interface PlayerWorkshopModalProps {
   isOpen: boolean;
@@ -150,6 +150,7 @@ export const GuardrailBadge: React.FC<{ isValid: boolean }> = ({ isValid }) => (
 );
 
 export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen, onClose, onItemSaved }) => {
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const playerEmail = useCharacterStore((state) => state.playerEmail);
   const playerName = useCharacterStore((state) => state.playerName);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
@@ -366,24 +367,24 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       }
     });
 
-    // Sort alphabetically by clean skill name
+    // Sort alphabetically by clean skill name with MSO priority
     return Array.from(map.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
+      .sort((a, b) => compareMsoOptions(a[0], b[0], isGsUnlocked))
       .map((entry) => entry[1]);
-  }, [skills, activeCharacter, customSkillsList]);
+  }, [skills, activeCharacter, customSkillsList, isGsUnlocked]);
 
   // Group all available power tables by Category for clean <optgroup> dropdown selection
   const groupedPowerTables = useMemo(() => {
     const groups: Record<string, { name: string }[]> = {};
     const tableNames = Array.from(new Set(powers.map((p) => p.kit || p.table_group || p.table_name || 'General').filter(Boolean)));
-    tableNames.sort((a, b) => a.localeCompare(b)).forEach((tblName) => {
+    tableNames.sort((a, b) => compareMsoOptions(a, b, isGsUnlocked)).forEach((tblName) => {
       const sample = powers.find((p) => (p.kit || p.table_group || p.table_name) === tblName);
       const cat = sample?.category || sample?.discipline || 'General';
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push({ name: tblName });
     });
     return groups;
-  }, [powers]);
+  }, [powers, isGsUnlocked]);
 
   if (!isOpen) return null;
 
@@ -983,11 +984,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                     <option value="">-- Select a Power Table --</option>
                     {Object.entries(groupedPowerTables).map(([category, tables]) => (
                       <optgroup key={category} label={category}>
-                        {tables.map((t) => (
-                          <option key={t.name} value={t.name}>
-                            {t.name}
-                          </option>
-                        ))}
+                        {tables.map((t) => {
+                          const isMso = isGsUnlocked && isMsoEntry(t.name);
+                          return (
+                            <option key={t.name} value={t.name} className={isMso ? 'text-purple-300 font-bold' : ''}>
+                              {isMso ? `🌌 ${t.name}` : t.name}
+                            </option>
+                          );
+                        })}
                       </optgroup>
                     ))}
                   </select>
@@ -1396,11 +1400,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                         <option value="">
                           -- Select Skill #{idx + 1} {idx < 2 ? '(Required)' : ''} --
                         </option>
-                        {availableSkillsCatalog.map((sk) => (
-                          <option key={sk} value={sk}>
-                            {sk}
-                          </option>
-                        ))}
+                        {availableSkillsCatalog.map((sk) => {
+                          const isMso = isGsUnlocked && isMsoEntry(sk);
+                          return (
+                            <option key={sk} value={sk} className={isMso ? 'text-purple-300 font-bold' : ''}>
+                              {isMso ? `🌌 ${sk}` : sk}
+                            </option>
+                          );
+                        })}
                       </select>
 
                       {/* Remove Button */}

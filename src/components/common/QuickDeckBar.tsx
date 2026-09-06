@@ -1,6 +1,8 @@
 // src/components/common/QuickDeckBar.tsx
 import React, { useMemo } from 'react';
 import { X, Star } from 'lucide-react';
+import { useCharacterStore } from '../../store/useCharacterStore';
+import { isMsoEntry, compareMsoOptions } from '../../utils/kitUtils';
 
 export type QuickDeckDomain =
   | 'powers'
@@ -253,6 +255,8 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
   showStarredOption = true,
   totalCatalogCount,
 }) => {
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
+
   // 1. Group catalog items strictly by real kit
   const groupedTables = useMemo(() => {
     const acc: Record<string, any[]> = {};
@@ -276,8 +280,8 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
   }, [catalogItems, customTables]);
 
   const availableTableNames = useMemo(() => {
-    return Object.keys(groupedTables).sort((a, b) => a.localeCompare(b));
-  }, [groupedTables]);
+    return Object.keys(groupedTables).sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [groupedTables, isGsUnlocked]);
 
   // 2. Build Categorized OptGroups for the Pin Dropdown
   const categorizedTableGroups = useMemo(() => {
@@ -285,7 +289,7 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
 
     if (domain === 'powers') {
       groups['🧬 Racial Kits'] = [];
-      groups['✨ Discipline Kits'] = [];
+      groups['✨ Specialization Kits'] = [];
       groups['👤 Class & Chapter Kits'] = [];
       groups['⚔️ Combat Style Kits'] = [];
       groups['🍀 Luck & General Kits'] = [];
@@ -328,7 +332,7 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
           nameLower.includes('psionic') ||
           nameLower.includes('psychosomatic')
         ) {
-          groups['✨ Discipline Kits'].push(tblName);
+          groups['✨ Specialization Kits'].push(tblName);
         } else if (
           sub.includes('combat') ||
           sub.includes('style') ||
@@ -592,11 +596,20 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
                     if (unpinned.length === 0) return null;
                     return (
                       <optgroup key={groupLabel} label={groupLabel} className="bg-slate-950 text-slate-400 font-bold">
-                        {unpinned.map((tblName) => (
-                          <option key={tblName} value={tblName} className="bg-slate-900 text-slate-200 font-normal">
-                            {formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
-                          </option>
-                        ))}
+                        {[...unpinned]
+                          .sort((a, b) => compareMsoOptions(formatTableNameDisplay(a), formatTableNameDisplay(b), isGsUnlocked))
+                          .map((tblName) => {
+                            const isMso = isMsoEntry(tblName);
+                            return (
+                              <option
+                                key={tblName}
+                                value={tblName}
+                                className={isMso ? 'bg-slate-900 text-purple-300 font-bold' : 'bg-slate-900 text-slate-200 font-normal'}
+                              >
+                                {isMso ? `🌌 ${formatTableNameDisplay(tblName)}` : formatTableNameDisplay(tblName)} ({groupedTables[tblName]?.length || 0})
+                              </option>
+                            );
+                          })}
                       </optgroup>
                     );
                   })}
@@ -648,12 +661,12 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
             </button>
           )}
 
-          {/* Individual Pinned Deck Pills */}
           {[...pinnedTables]
-            .sort((a, b) => formatTableNameDisplay(a).localeCompare(formatTableNameDisplay(b)))
+            .sort((a, b) => compareMsoOptions(formatTableNameDisplay(a), formatTableNameDisplay(b), isGsUnlocked))
             .map((tblName) => {
               const isActive = activeTable === tblName;
-              const icon = getTableIcon(tblName, domain);
+              const isMso = isMsoEntry(tblName);
+              const icon = isGsUnlocked && isMso ? '🌌' : getTableIcon(tblName, domain);
               const itemCount = groupedTables[tblName]?.length || 0;
 
               return (
@@ -663,13 +676,15 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
                   className={`group py-1 pl-2.5 pr-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
                     isActive
                       ? themeClasses.activePill
+                      : isGsUnlocked && isMso
+                      ? 'bg-purple-950/40 text-purple-300 hover:text-white hover:bg-purple-900/60 border border-purple-500/40'
                       : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80'
                   }`}
                 >
                   <span>{icon}</span>
-                  <span>{formatTableNameDisplay(tblName)}</span>
+                  <span className={isGsUnlocked && isMso ? 'text-purple-200 font-bold' : ''}>{formatTableNameDisplay(tblName)}</span>
                   {itemCount > 0 && (
-                    <span className={`text-[10px] font-mono ${isActive ? 'text-white/80 font-normal' : 'text-slate-400'}`}>
+                    <span className={`text-[10px] font-mono ${isActive ? 'text-white/80 font-normal' : isGsUnlocked && isMso ? 'text-purple-300/80' : 'text-slate-400'}`}>
                       ({itemCount})
                     </span>
                   )}

@@ -7,7 +7,7 @@ import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp 
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar } from '../common/QuickDeckBar';
-import { isTraitItem } from '../../utils/kitUtils';
+import { isTraitItem, isMsoEntry, compareMsoOptions, compareMsoItems } from '../../utils/kitUtils';
 import { supabase } from '../../lib/supabase';
 
 interface DerivedSkill {
@@ -87,6 +87,7 @@ const parseSkill = (
 
 export const SkillsetsPanel: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const { activeCharacter, skills, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
 
   // Dynamically derive all SkillSets from atomic skills table + character custom skillsets
@@ -132,8 +133,8 @@ export const SkillsetsPanel: React.FC = () => {
       }
     });
 
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [skills, activeCharacter?.sheet_data?.custom_skillsets]);
+    return Array.from(map.values()).sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [skills, activeCharacter?.sheet_data?.custom_skillsets, isGsUnlocked]);
 
   const rawKnownSkillsetNames = activeCharacter?.sheet_data?.known_skillsets || [];
   const knownSkillsetNames = useMemo(() => {
@@ -456,9 +457,9 @@ export const SkillsetsPanel: React.FC = () => {
 
   const sortedAllCatalogSkills = useMemo(() => {
     return Array.from(allCatalogSkillsMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
+      compareMsoItems(a, b, isGsUnlocked)
     );
-  }, [allCatalogSkillsMap]);
+  }, [allCatalogSkillsMap, isGsUnlocked]);
 
   // Picker skills list for Custom Skillset Builder (catalog skills + custom individual skills)
   const availableSkillsForPicker = useMemo(() => {
@@ -546,13 +547,13 @@ export const SkillsetsPanel: React.FC = () => {
 
   const sortedActiveSkills = useMemo(() => {
     return Array.from(activeRegistrySkillsMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
+      compareMsoItems(a, b, isGsUnlocked)
     );
-  }, [activeRegistrySkillsMap]);
+  }, [activeRegistrySkillsMap, isGsUnlocked]);
 
   const uniqueKnownSkillsetNames = useMemo(() => {
-    return Array.from(new Set(knownSkillsetNames));
-  }, [knownSkillsetNames]);
+    return Array.from(new Set(knownSkillsetNames)).sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [knownSkillsetNames, isGsUnlocked]);
 
   const filteredKnownSkillsets = useMemo(() => {
     if (!leftSearchQuery.trim()) return uniqueKnownSkillsetNames;
@@ -649,8 +650,8 @@ export const SkillsetsPanel: React.FC = () => {
     sortedAllCatalogSkills.forEach((s) => {
       if (s.discipline?.trim()) set.add(s.discipline.trim());
     });
-    return Array.from(set).sort();
-  }, [skills, sortedAllCatalogSkills]);
+    return Array.from(set).sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [skills, sortedAllCatalogSkills, isGsUnlocked]);
 
   const favoriteSkillsetTables: string[] = useMemo(() => {
     const favs = activeCharacter?.sheet_data?.favorite_skillset_tables;
@@ -690,15 +691,18 @@ export const SkillsetsPanel: React.FC = () => {
       });
     }
 
-    if (!rightSearchQuery.trim()) return base;
-    const query = rightSearchQuery.toLowerCase().trim();
-    return base.filter((ks) => {
-      const nameMatch = ks.name.toLowerCase().includes(query);
-      const skillMatch = Array.isArray(ks.skills) && ks.skills.some((s) => s.toLowerCase().includes(query));
-      const noteMatch = (ks.notes || '').toLowerCase().includes(query);
-      return nameMatch || skillMatch || noteMatch;
-    });
-  }, [effectiveSkillsets, uniqueKnownSkillsetNames, activeSkillsetTable, isSkillsetStarred, rightSearchQuery, localGenreFilter]);
+    if (rightSearchQuery.trim()) {
+      const query = rightSearchQuery.toLowerCase().trim();
+      base = base.filter((ks) => {
+        const nameMatch = ks.name.toLowerCase().includes(query);
+        const skillMatch = Array.isArray(ks.skills) && ks.skills.some((s) => s.toLowerCase().includes(query));
+        const noteMatch = (ks.notes || '').toLowerCase().includes(query);
+        return nameMatch || skillMatch || noteMatch;
+      });
+    }
+
+    return base.sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [effectiveSkillsets, uniqueKnownSkillsetNames, activeSkillsetTable, isSkillsetStarred, rightSearchQuery, localGenreFilter, isGsUnlocked]);
 
   const filteredCatalogIndividualSkills = useMemo(() => {
     const unlearned = sortedAllCatalogSkills.filter((sk) => {
@@ -726,16 +730,19 @@ export const SkillsetsPanel: React.FC = () => {
       base = base.filter((sk) => isSkillStarred(sk.name));
     }
 
-    if (!rightSearchQuery.trim()) return base;
-    const query = rightSearchQuery.toLowerCase().trim();
-    return base.filter((sk) => {
-      const nameMatch = sk.name.toLowerCase().includes(query);
-      const skillsetMatch = sk.parentSkillsets.some((ps) => ps.toLowerCase().includes(query));
-      const noteMatch = (sk.notes || '').toLowerCase().includes(query);
-      const discMatch = (sk.discipline || '').toLowerCase().includes(query);
-      return nameMatch || skillsetMatch || noteMatch || discMatch;
-    });
-  }, [sortedAllCatalogSkills, skillsetDerivedSkillsSet, knownIndividualSkills, skillFilterCategory, isSkillStarred, allCatalogSkillsMap, rightSearchQuery, localGenreFilter, localAttributeFilter, localDisciplineFilter]);
+    if (rightSearchQuery.trim()) {
+      const query = rightSearchQuery.toLowerCase().trim();
+      base = base.filter((sk) => {
+        const nameMatch = sk.name.toLowerCase().includes(query);
+        const skillsetMatch = sk.parentSkillsets.some((ps) => ps.toLowerCase().includes(query));
+        const noteMatch = (sk.notes || '').toLowerCase().includes(query);
+        const discMatch = (sk.discipline || '').toLowerCase().includes(query);
+        return nameMatch || skillsetMatch || noteMatch || discMatch;
+      });
+    }
+
+    return base.sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [sortedAllCatalogSkills, skillsetDerivedSkillsSet, knownIndividualSkills, skillFilterCategory, isSkillStarred, allCatalogSkillsMap, rightSearchQuery, localGenreFilter, localAttributeFilter, localDisciplineFilter, isGsUnlocked]);
 
   return (
     <div className="bg-gradient-to-b from-indigo-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-indigo-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-indigo-950/20 h-fit">
@@ -859,16 +866,21 @@ export const SkillsetsPanel: React.FC = () => {
                           {filteredKnownSkillsets.map((ksName) => {
                             const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
                             const isCustom = ksObj?.source === 'Custom' || (activeCharacter?.sheet_data?.custom_skillsets || []).some((cs) => cs.name.toLowerCase() === ksName.toLowerCase());
+                            const isMso = isGsUnlocked && isMsoEntry(ksName);
 
                             return (
                               <div
                                 key={ksName}
-                                className="p-2.5 bg-indigo-950/40 rounded-xl border border-indigo-500/30 flex items-start justify-between gap-2 hover:border-indigo-400/50 transition-all shrink-0"
+                                className={`p-2.5 rounded-xl border flex items-start justify-between gap-2 transition-all shrink-0 ${
+                                  isMso
+                                    ? 'bg-purple-950/40 border-purple-500/40 hover:border-purple-400/60'
+                                    : 'bg-indigo-950/40 border-indigo-500/30 hover:border-indigo-400/50'
+                                }`}
                               >
                                 <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                  <span className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1.5">
+                                  <span className={`font-outfit font-bold text-xs flex items-center gap-1.5 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
                                     <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                                    <span>{ksName}</span>
+                                    <span>{isMso ? `🌌 ${ksName}` : ksName}</span>
                                     {isCustom && (
                                       <span className="text-[9px] font-mono font-bold bg-indigo-900/80 text-indigo-200 px-1.5 py-0.2 rounded border border-indigo-500/40 shrink-0">
                                         Custom
@@ -914,14 +926,19 @@ export const SkillsetsPanel: React.FC = () => {
                               {knownIndividualSkills.map((skName) => {
                                 const parsed = parseSkill(skName, allCatalogSkillsMap);
                                 const dieRating = dieToNum(attributeDice[parsed.attributeKey]);
+                                const isMso = isGsUnlocked && isMsoEntry(parsed.cleanName);
 
                                 return (
                                   <div
                                     key={skName}
-                                    className="p-2 bg-slate-900/90 rounded-lg border border-slate-800 flex items-center justify-between gap-2"
+                                    className={`p-2 rounded-lg border flex items-center justify-between gap-2 ${
+                                      isMso
+                                        ? 'bg-purple-950/40 border-purple-500/40'
+                                        : 'bg-slate-900/90 border-slate-800'
+                                    }`}
                                   >
-                                    <span className="text-xs font-semibold text-slate-200 truncate flex items-center gap-1">
-                                      <span>{parsed.cleanName}</span>
+                                    <span className={`text-xs truncate flex items-center gap-1 ${isMso ? 'text-purple-300 font-bold' : 'font-semibold text-slate-200'}`}>
+                                      <span>{isMso ? `🌌 ${parsed.cleanName}` : parsed.cleanName}</span>
                                       <span className="text-[11px] font-bold text-indigo-300 flex items-center gap-0.5 ml-1 shrink-0">
                                         <span>{parsed.emoji}</span>
                                         <span className="font-mono font-black">{dieRating}</span>
@@ -1060,6 +1077,7 @@ export const SkillsetsPanel: React.FC = () => {
                             filteredCatalogSkillsets.map((ks) => {
                               const isKnown = knownSkillsetNames.some((k) => k.toLowerCase() === ks.name.toLowerCase());
                               const isCustom = ks.source === 'Custom' || (activeCharacter?.sheet_data?.custom_skillsets || []).some((cs) => cs.name.toLowerCase() === ks.name.toLowerCase());
+                              const isMso = isGsUnlocked && isMsoEntry(ks.name);
 
                               return (
                                 <div
@@ -1067,13 +1085,15 @@ export const SkillsetsPanel: React.FC = () => {
                                   className={`p-2.5 rounded-xl border transition-all flex items-start justify-between gap-2 shrink-0 ${
                                     isKnown
                                       ? 'bg-indigo-950/40 border-indigo-500/40 text-indigo-100 shadow-sm'
+                                      : isMso
+                                      ? 'bg-purple-950/20 border-purple-500/30 text-slate-300 hover:border-purple-500/50'
                                       : 'bg-slate-900/90 border-slate-800 text-slate-300 hover:border-indigo-500/40'
                                   }`}
                                 >
                                   <div className="flex flex-col gap-1 flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5">
-                                      <span className="font-outfit font-bold text-xs text-slate-100 truncate">
-                                        {ks.name}
+                                      <span className={`font-outfit font-bold text-xs truncate ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                                        {isMso ? `🌌 ${ks.name}` : ks.name}
                                       </span>
                                       <ItemNotesPopover notes={ks.notes || effectiveSkillsets.find((s) => s.name.toLowerCase() === ks.name.toLowerCase())?.notes} itemName={ks.name} />
                                       {isCustom && (
@@ -1143,7 +1163,7 @@ export const SkillsetsPanel: React.FC = () => {
                     {/* TAB 2: INDIVIDUAL SKILLS VIEW */}
                     {activeRightTab === 'individual' && (
                       <div className="flex-1 flex flex-col min-h-0 mt-2.5 gap-2 overflow-hidden">
-                        {/* Dense Facet Toolbar: Genre, Attribute, Discipline, Starred */}
+                        {/* Dense Facet Toolbar: Genre, Attribute, Specialization, Starred */}
                         <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                           {/* Genre Selector */}
                           <select
@@ -1171,19 +1191,22 @@ export const SkillsetsPanel: React.FC = () => {
                             <option value="🫀">🫀 Moxie</option>
                           </select>
 
-                          {/* Discipline Selector */}
+                          {/* Specialization Selector */}
                           {availableDisciplines.length > 0 && (
                             <select
                               value={localDisciplineFilter}
                               onChange={(e) => setLocalDisciplineFilter(e.target.value)}
                               className="bg-slate-900 text-cyan-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 cursor-pointer flex-1 min-w-[120px]"
                             >
-                              <option value="ALL">🌐 All Disciplines</option>
-                              {availableDisciplines.map((d) => (
-                                <option key={d} value={d}>
-                                  {d}
-                                </option>
-                              ))}
+                              <option value="ALL">🌐 All Specializations</option>
+                              {availableDisciplines.map((d) => {
+                                const isMso = isGsUnlocked && isMsoEntry(d);
+                                return (
+                                  <option key={d} value={d} className={isMso ? 'text-purple-300 font-bold' : ''}>
+                                    {isMso ? `🌌 ${d}` : d}
+                                  </option>
+                                );
+                              })}
                             </select>
                           )}
 
@@ -1248,16 +1271,19 @@ export const SkillsetsPanel: React.FC = () => {
                               const isIndividuallyLearned = knownIndividualSkills.some(
                                 (s) => parseSkill(s, allCatalogSkillsMap).cleanName.toLowerCase() === sk.name.toLowerCase()
                               );
+                              const isMso = isGsUnlocked && isMsoEntry(sk.name);
 
                               return (
                                 <div
                                   key={sk.name}
-                                  className={`p-2.5 bg-slate-900/90 rounded-xl border flex items-center justify-between gap-2.5 shrink-0 shadow-sm transition-all ${
+                                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 shrink-0 shadow-sm transition-all ${
                                     isSkillsetDerived
-                                      ? 'border-indigo-500/30 text-indigo-200 opacity-90'
+                                      ? 'bg-slate-900/90 border-indigo-500/30 text-indigo-200 opacity-90'
                                       : isIndividuallyLearned
-                                      ? 'border-indigo-500/40 text-indigo-100'
-                                      : 'border-slate-800 text-slate-300 hover:border-indigo-500/40'
+                                      ? 'bg-slate-900/90 border-indigo-500/40 text-indigo-100'
+                                      : isMso
+                                      ? 'bg-purple-950/20 border-purple-500/30 text-slate-300 hover:border-purple-500/50'
+                                      : 'bg-slate-900/90 border-slate-800 text-slate-300 hover:border-indigo-500/40'
                                   }`}
                                 >
                                   <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -1281,8 +1307,8 @@ export const SkillsetsPanel: React.FC = () => {
 
                                     <div className="flex flex-col min-w-0 flex-1">
                                       <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="font-outfit font-bold text-xs text-slate-100 truncate">
-                                          {sk.name}
+                                        <span className={`font-outfit font-bold text-xs truncate ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                                          {isMso ? `🌌 ${sk.name}` : sk.name}
                                         </span>
                                         <ItemNotesPopover notes={sk.notes} itemName={sk.name} />
                                         {isTraitItem(sk) && (
@@ -1642,13 +1668,18 @@ export const SkillsetsPanel: React.FC = () => {
             {uniqueKnownSkillsetNames.map((ksName) => {
               const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
               const isCustom = ksObj?.source === 'Custom' || (activeCharacter?.sheet_data?.custom_skillsets || []).some((cs) => cs.name.toLowerCase() === ksName.toLowerCase());
+              const isMso = isGsUnlocked && isMsoEntry(ksName);
 
               return (
                 <span
                   key={ksName}
-                  className="px-2.5 py-1 bg-indigo-950/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm ${
+                    isMso
+                      ? 'bg-purple-950/60 text-purple-300 border border-purple-500/40 font-bold'
+                      : 'bg-indigo-950/50 text-indigo-200 border border-indigo-500/40'
+                  }`}
                 >
-                  <span className="text-xs">🎓</span>
+                  <span className="text-xs">{isMso ? '🌌' : '🎓'}</span>
                   <span>{ksName}</span>
                   {isCustom && (
                     <span className="text-[9px] font-mono font-bold bg-indigo-900/80 text-indigo-200 px-1 py-0.2 rounded border border-indigo-500/40">
@@ -1666,25 +1697,32 @@ export const SkillsetsPanel: React.FC = () => {
       <div className="flex flex-col gap-2">
         {sortedActiveSkills.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {sortedActiveSkills.map((skill) => (
-              <div
-                key={skill.name}
-                className={`px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1 shadow-sm ${
-                  skill.source === 'individual'
-                    ? 'bg-indigo-950/80 border-indigo-500/40 hover:border-indigo-400/60'
-                    : 'bg-slate-950/80 border-indigo-500/30 hover:border-indigo-400/60'
-                }`}
-                title={`${skill.name} (${skill.attributeKey.toUpperCase()}: d${skill.dieRating}) - ${
-                  skill.source === 'individual' ? 'Individually Learned' : 'Skillset Derived'
-                }`}
-              >
-                <span className="text-xs font-outfit font-bold text-slate-100">{skill.name}</span>
-                <span className="text-xs font-bold text-indigo-300 flex items-center gap-0.5 ml-1">
-                  <span>{skill.emoji}</span>
-                  <span className="font-mono font-black">{skill.dieRating}</span>
-                </span>
-              </div>
-            ))}
+            {sortedActiveSkills.map((skill) => {
+              const isMso = isGsUnlocked && isMsoEntry(skill.name);
+              return (
+                <div
+                  key={skill.name}
+                  className={`px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1 shadow-sm ${
+                    isMso
+                      ? 'bg-purple-950/60 border-purple-500/40 hover:border-purple-400/60'
+                      : skill.source === 'individual'
+                      ? 'bg-indigo-950/80 border-indigo-500/40 hover:border-indigo-400/60'
+                      : 'bg-slate-950/80 border-indigo-500/30 hover:border-indigo-400/60'
+                  }`}
+                  title={`${skill.name} (${skill.attributeKey.toUpperCase()}: d${skill.dieRating}) - ${
+                    skill.source === 'individual' ? 'Individually Learned' : 'Skillset Derived'
+                  }`}
+                >
+                  <span className={`text-xs font-outfit font-bold ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                    {isMso ? `🌌 ${skill.name}` : skill.name}
+                  </span>
+                  <span className="text-xs font-bold text-indigo-300 flex items-center gap-0.5 ml-1">
+                    <span>{skill.emoji}</span>
+                    <span className="font-mono font-black">{skill.dieRating}</span>
+                  </span>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="p-3 bg-slate-950/40 rounded-lg border border-slate-800 text-xs text-slate-500 italic text-center">

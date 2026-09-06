@@ -6,9 +6,11 @@ import {
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ManageTraitsModal } from '../modals/ManageTraitsModal';
+import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
 export const TraitsQuirksCard: React.FC = () => {
   const { activeCharacter } = useCharacterStore();
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
   const [visibilityFilter, setVisibilityFilter] = useState<'visible' | 'all'>('visible');
 
@@ -39,8 +41,9 @@ export const TraitsQuirksCard: React.FC = () => {
 
   // Rendered list according to switch mode
   const displayedTraits = useMemo(() => {
-    return visibilityFilter === 'visible' ? visibleTraits : validTraits;
-  }, [visibilityFilter, visibleTraits, validTraits]);
+    const list = visibilityFilter === 'visible' ? visibleTraits : validTraits;
+    return [...list].sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [visibilityFilter, visibleTraits, validTraits, isGsUnlocked]);
 
   return (
     <div className="bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-4 flex flex-col gap-3 shadow-xl backdrop-blur-md relative overflow-hidden h-fit">
@@ -113,6 +116,7 @@ export const TraitsQuirksCard: React.FC = () => {
         {displayedTraits.length > 0 ? (
           displayedTraits.map((t, idx) => {
             const isHidden = Boolean(t.is_hidden);
+            const isMso = isGsUnlocked && isMsoEntry(t.name);
 
             return (
               <div
@@ -120,13 +124,15 @@ export const TraitsQuirksCard: React.FC = () => {
                 className={`p-2.5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm transition-all ${
                   isHidden
                     ? 'bg-slate-950/40 border-slate-800/60 border-dashed opacity-75 hover:opacity-100'
+                    : isMso
+                    ? 'bg-purple-950/20 border-purple-500/30 hover:border-purple-500/50'
                     : 'bg-slate-950/60 border-slate-850 hover:border-slate-800'
                 }`}
               >
                 {/* 1. Name Column */}
                 <div className="w-44 sm:w-48 shrink-0 flex flex-col gap-0.5">
-                  <span className="font-outfit font-bold text-xs text-slate-100 block whitespace-normal break-words leading-tight">
-                    {t.name}
+                  <span className={`font-outfit font-bold text-xs block whitespace-normal break-words leading-tight ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                    {isMso ? `🌌 ${t.name}` : t.name}
                   </span>
                 </div>
 

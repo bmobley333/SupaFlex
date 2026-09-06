@@ -3,22 +3,15 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
-  Search,
   Sparkles,
   Layers,
-  Plus,
   Compass,
-  Info,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
-import {
-  AbilitySlot,
-  TraitQuirkItem,
-  calculateAvailableAp,
-} from '../../types/game';
-import { cleanPathName, matchesPathFilter } from '../../utils/kitUtils';
+import { calculateAvailableAp } from '../../types/game';
+import { cleanPathName, isMsoEntry, compareMsoOptions } from '../../utils/kitUtils';
 import { collectPathTraitGrants, applyPathTraitGrantsToSheet } from '../../utils/bundleGrants';
+import { isGuildSpaceUnlocked } from '../../utils/guildspaceAuth';
 
 interface ManagePathsModalProps {
   isOpen: boolean;
@@ -26,26 +19,44 @@ interface ManagePathsModalProps {
 }
 
 export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onClose }) => {
-  const activeGenre = useGenreStore((state) => state.activeGenre);
   const {
     activeCharacter,
     powers: stockPowersCatalog = [],
     skills: stockSkillsCatalog = [],
     traits: stockRulesCatalog = [],
     kits: stockPathsCatalog = [],
+    paths: pathsCatalog = [],
+    activeRole,
     updateActiveSheetData,
     updateActiveCharacterMeta,
     saveActiveCharacter,
     recordApExpenditure,
   } = useCharacterStore();
 
+  const resolvedPathsCatalog = useMemo(() => {
+    return pathsCatalog.length > 0 ? pathsCatalog : stockPathsCatalog;
+  }, [pathsCatalog, stockPathsCatalog]);
+
   const modalRef = useRef<HTMLDivElement>(null);
 
-  const [rightActiveTab, setRightActiveTab] = useState<'in_path' | 'out_of_path' | 'paths_catalog'>('in_path');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  // GuildSpace Setting Gate State
+  const [isGsUnlocked, setIsGsUnlocked] = useState(isGuildSpaceUnlocked());
   const [selectedPathCategory, setSelectedPathCategory] = useState<string>('All');
   const [selectedExtraPathToBuy, setSelectedExtraPathToBuy] = useState<string>('');
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleUnlock = () => setIsGsUnlocked(true);
+    const handleLock = () => setIsGsUnlocked(false);
+
+    window.addEventListener('supaflex:guildspace-unlocked', handleUnlock);
+    window.addEventListener('supaflex:guildspace-locked', handleLock);
+
+    return () => {
+      window.removeEventListener('supaflex:guildspace-unlocked', handleUnlock);
+      window.removeEventListener('supaflex:guildspace-locked', handleLock);
+    };
+  }, []);
 
   // Close on Escape key
   useEffect(() => {
@@ -61,67 +72,30 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
   // Dynamic available path categories from database
   const availableCategories = useMemo(() => {
     const cats = new Set<string>();
-    stockPathsCatalog.forEach((k) => {
+    resolvedPathsCatalog.forEach((k) => {
       if (k.category && (k.category as string) !== '?') cats.add(k.category);
     });
-    return ['All', ...Array.from(cats).sort()];
-  }, [stockPathsCatalog]);
+    return ['All', ...Array.from(cats).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))];
+  }, [resolvedPathsCatalog]);
 
   // Dynamic Race and Class Paths from Supabase public.paths / public.kits
   const racePaths = useMemo(() => {
-    const fromDb = stockPathsCatalog.filter((k) => k.category === 'Race').map((k) => k.name);
-    if (fromDb.length > 0) return fromDb.sort();
-    return [
-      'Dwarf',
-      'Dwarf - Blackaxe Clan',
-      'Elf',
-      'Fairy',
-      'Gnome',
-      'Goblin',
-      'Half-Orc',
-      'Human',
-      'Human - Bloodmarked',
-      'Nelf',
-      'Nymph',
-      'Orc',
-    ].sort();
-  }, [stockPathsCatalog]);
+    const fromDb = resolvedPathsCatalog.filter((k) => k.category === 'Race').map((k) => k.name);
+    const list =
+      fromDb.length > 0
+        ? Array.from(new Set(fromDb))
+        : ['Dwarf', 'Elf', 'Fairy', 'Gnome', 'Goblin', 'Half-Orc', 'Human', 'Nelf', 'Nymph', 'Orc'];
+    return [...list].sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [resolvedPathsCatalog, isGsUnlocked]);
 
   const classPaths = useMemo(() => {
-    const fromDb = stockPathsCatalog.filter((k) => k.category === 'Class').map((k) => k.name);
-    if (fromDb.length > 0) return fromDb.sort();
-    return [
-      'Bard',
-      'Form - Giant',
-      'Form - Nymph',
-      'Form - Pixie',
-      'Healer',
-      'Healer - Sun-Devoted',
-      'Healer - Verdant Sentinel',
-      'Mage - Elemental',
-      'Mage - Geomancer',
-      'Mage - Magnetic',
-      'Mage - Void Magic',
-      'Martial Artist - Blade Saint',
-      'Monk',
-      'Psionics',
-      'Psionics - Sentinel',
-      'Psychosomatics',
-      'Starborn Ranger',
-      'Thief - Assassin',
-      'Trickster',
-      'Unique - Bio Engineer',
-      'Warrior',
-      'Warrior - Aetherblade',
-      'Warrior - Bloodfang Berserker',
-      'Warrior - Cursed Spartan',
-      'Warrior - Inferno Vanguard',
-      'Warrior - Lifestealer',
-      'Warrior - Punk',
-      'Warrior - Ranger',
-      'Warrior - Shield',
-    ].sort();
-  }, [stockPathsCatalog]);
+    const fromDb = resolvedPathsCatalog.filter((k) => k.category === 'Class').map((k) => k.name);
+    const list =
+      fromDb.length > 0
+        ? Array.from(new Set(fromDb))
+        : ['Adventurer', 'Warrior', 'Mage', 'Thief', 'Healer', 'Bard', 'Monk', 'Psionics'];
+    return [...list].sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [resolvedPathsCatalog, isGsUnlocked]);
 
   // Available AP calculation
   const availableAp = useMemo(() => {
@@ -130,7 +104,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
   }, [activeCharacter?.sheet_data]);
 
   const activeRace = activeCharacter?.race || 'Human';
-  const activeClass = activeCharacter?.class || (classPaths[0] || 'Warrior');
+  const activeClass = activeCharacter?.class || classPaths[0] || 'Warrior';
 
   // Learned Paths list (Starting Race + Class + any learned extra paths)
   const learnedPaths: string[] = useMemo(() => {
@@ -143,6 +117,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
   // All known discovered path names from catalogs
   const allDiscoveredPaths = useMemo(() => {
     const pathSet = new Set<string>();
+    resolvedPathsCatalog.forEach((k) => pathSet.add(k.name));
     stockPathsCatalog.forEach((k) => pathSet.add(k.name));
     stockPowersCatalog.forEach((p) => {
       if (p.kit) pathSet.add(cleanPathName(p.kit));
@@ -154,8 +129,8 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
       if (r.kit) pathSet.add(cleanPathName(r.kit));
     });
 
-    return Array.from(pathSet).sort();
-  }, [stockPathsCatalog, stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
+    return Array.from(pathSet);
+  }, [resolvedPathsCatalog, stockPathsCatalog, stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
 
   // Extra learned paths (excluding active starting race and class)
   const extraLearnedPaths: string[] = useMemo(() => {
@@ -163,149 +138,25 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     return fromSheet.filter((k) => k !== activeRace && k !== activeClass);
   }, [activeRace, activeClass, activeCharacter?.sheet_data?.favorite_trait_kits]);
 
+  const sortedExtraLearnedPaths = useMemo(() => {
+    return [...extraLearnedPaths].sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [extraLearnedPaths, isGsUnlocked]);
+
   // Filtered paths available to buy / learn based on category selection
   const filteredPathsToBuy = useMemo(() => {
     return allDiscoveredPaths
       .filter((k) => !learnedPaths.includes(k))
       .filter((k) => {
         if (selectedPathCategory === 'All') return true;
-        const match = stockPathsCatalog.find((sk) => sk.name.toLowerCase() === k.toLowerCase());
+        const match =
+          resolvedPathsCatalog.find((sk) => sk.name.toLowerCase() === k.toLowerCase()) ||
+          stockPathsCatalog.find((sk) => sk.name.toLowerCase() === k.toLowerCase());
         return match?.category === selectedPathCategory;
-      });
-  }, [allDiscoveredPaths, learnedPaths, selectedPathCategory, stockPathsCatalog]);
+      })
+      .sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [allDiscoveredPaths, learnedPaths, selectedPathCategory, resolvedPathsCatalog, stockPathsCatalog, isGsUnlocked]);
 
-  // In-Path Elements
-  const inPathElements = useMemo(() => {
-    const elements: Array<{
-      type: 'power' | 'skill' | 'rule';
-      name: string;
-      path: string;
-      cost: number;
-      isTrait: boolean;
-      description: string;
-      raw: any;
-    }> = [];
-
-    learnedPaths.forEach((pathName) => {
-      // Powers
-      stockPowersCatalog.forEach((p) => {
-        if (p.kit && matchesPathFilter(p.kit, pathName)) {
-          const isTrait = p.kit.toLowerCase().includes('{trait}') || p.kit.toLowerCase().includes('{trait1}');
-          elements.push({
-            type: 'power',
-            name: p.name,
-            path: pathName,
-            cost: isTrait ? 0 : 1,
-            isTrait,
-            description: p.effect || (p as any).notes || '',
-            raw: p,
-          });
-        }
-      });
-
-      // Skills
-      stockSkillsCatalog.forEach((s) => {
-        if (s.kit && matchesPathFilter(s.kit, pathName)) {
-          const isTrait = (s.kit || '').toLowerCase().includes('{trait}');
-          elements.push({
-            type: 'skill',
-            name: s.name,
-            path: pathName,
-            cost: isTrait ? 0 : 1,
-            isTrait,
-            description: s.notes || `${s.name} skill (${s.attribute})`,
-            raw: s,
-          });
-        }
-      });
-
-      // Rules
-      stockRulesCatalog.forEach((r) => {
-        if (r.kit && matchesPathFilter(r.kit, pathName)) {
-          const isTrait = (r.kit || '').toLowerCase().includes('{trait}');
-          elements.push({
-            type: 'rule',
-            name: r.name,
-            path: pathName,
-            cost: isTrait ? 0 : 1,
-            isTrait,
-            description: r.notes || r.effect || '',
-            raw: r,
-          });
-        }
-      });
-    });
-
-    return elements;
-  }, [learnedPaths, stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
-
-  // Filtered In-Path Elements
-  const filteredInPathElements = useMemo(() => {
-    return inPathElements.filter((el) => {
-      if (!matchesGenre(el.raw.genres || ['All'], activeGenre)) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        return el.name.toLowerCase().includes(q) || el.path.toLowerCase().includes(q) || el.description.toLowerCase().includes(q);
-      }
-      return true;
-    });
-  }, [inPathElements, activeGenre, searchQuery]);
-
-  // Out-of-Path Elements
-  const outOfPathElements = useMemo(() => {
-    const elements: Array<{
-      type: 'power' | 'skill' | 'rule';
-      name: string;
-      path: string;
-      cost: number;
-      description: string;
-      raw: any;
-    }> = [];
-
-    stockPowersCatalog.forEach((p) => {
-      const pathName = cleanPathName(p.kit || 'General');
-      if (!learnedPaths.some((lk) => matchesPathFilter(pathName, lk))) {
-        elements.push({
-          type: 'power',
-          name: p.name,
-          path: pathName,
-          cost: 2, // 1 Base + 1 Surcharge
-          description: p.effect || (p as any).notes || '',
-          raw: p,
-        });
-      }
-    });
-
-    stockRulesCatalog.forEach((r) => {
-      const pathName = cleanPathName(r.kit || 'General');
-      if (!learnedPaths.some((lk) => matchesPathFilter(pathName, lk))) {
-        elements.push({
-          type: 'rule',
-          name: r.name,
-          path: pathName,
-          cost: 2, // 1 Base + 1 Surcharge
-          description: r.notes || '',
-          raw: r,
-        });
-      }
-    });
-
-    return elements;
-  }, [learnedPaths, stockPowersCatalog, stockRulesCatalog]);
-
-  // Filtered Out-of-Path Elements
-  const filteredOutOfPathElements = useMemo(() => {
-    return outOfPathElements.filter((el) => {
-      if (!matchesGenre(el.raw.genres || ['All'], activeGenre)) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        return el.name.toLowerCase().includes(q) || el.path.toLowerCase().includes(q) || el.description.toLowerCase().includes(q);
-      }
-      return true;
-    });
-  }, [outOfPathElements, activeGenre, searchQuery]);
-
-  // Handle changing Race Path
+  // Handle changing Race Path (GM only)
   const handleSelectRacePath = (newRace: string) => {
     if (!newRace || newRace === activeRace) return;
     updateActiveCharacterMeta({ race: newRace });
@@ -322,7 +173,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     setTimeout(() => setFeedbackMsg(null), 3000);
   };
 
-  // Handle changing Class Path
+  // Handle changing Class Path (GM only)
   const handleSelectClassPath = (newClass: string) => {
     if (!newClass || newClass === activeClass) return;
     updateActiveCharacterMeta({ class: newClass });
@@ -339,7 +190,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     setTimeout(() => setFeedbackMsg(null), 3000);
   };
 
-  // Handle learning new Path (4 AP or Free)
+  // Handle learning new Path (4 AP or Free GM Grant)
   const handleLearnNewPath = (cost: number) => {
     if (!selectedExtraPathToBuy) return;
     const clean = cleanPathName(selectedExtraPathToBuy);
@@ -383,96 +234,6 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     setTimeout(() => setFeedbackMsg(null), 3000);
   };
 
-  // Handle deleting learned extra path
-  const handleRemoveExtraPath = (pathName: string) => {
-    updateActiveSheetData((prev) => {
-      const currentList = Array.isArray(prev.favorite_trait_kits) ? prev.favorite_trait_kits : [];
-      return {
-        ...prev,
-        favorite_trait_kits: currentList.filter((k) => k !== pathName),
-      };
-    });
-    saveActiveCharacter();
-    setFeedbackMsg(`✓ Removed Path: ${pathName}`);
-    setTimeout(() => setFeedbackMsg(null), 3000);
-  };
-
-  // Equip In-Path / Out-of-Path Perk to Sheet
-  const handleEquipElement = (el: { type: 'power' | 'skill' | 'rule'; name: string; path: string; cost: number; raw: any }) => {
-    if (el.cost > 0 && availableAp < el.cost) {
-      setFeedbackMsg(`❌ Insufficient AP! Requires ${el.cost} AP.`);
-      setTimeout(() => setFeedbackMsg(null), 3000);
-      return;
-    }
-
-    if (el.type === 'power') {
-      const currentSlots: AbilitySlot[] = activeCharacter?.sheet_data?.power_slots || [];
-      const alreadyHas = currentSlots.some((s) => (s?.name || '').toLowerCase() === el.name.toLowerCase());
-      if (alreadyHas) {
-        setFeedbackMsg(`⚠️ Power "${el.name}" is already learned!`);
-        setTimeout(() => setFeedbackMsg(null), 3000);
-        return;
-      }
-      if (el.cost > 0) {
-        recordApExpenditure(el.cost, 'Powers', `Learned Power: ${el.name} (${el.path})`, 1, 'Paths Hub');
-      }
-      const newSlot: any = {
-        name: el.name,
-        action: (el.raw.action || 'AM') as any,
-        usage: el.raw.usage || '1-Enc',
-        effect: el.raw.effect || '',
-        checked: [false, false, false],
-        version: 1,
-        source: el.path,
-      };
-      updateActiveSheetData((prev) => ({
-        ...prev,
-        power_slots: [...(prev.power_slots || []), newSlot],
-      }));
-    } else if (el.type === 'skill') {
-      const currentIndiv: string[] = activeCharacter?.sheet_data?.known_individual_skills || [];
-      if (currentIndiv.includes(el.name)) {
-        setFeedbackMsg(`⚠️ Skill "${el.name}" is already learned!`);
-        setTimeout(() => setFeedbackMsg(null), 3000);
-        return;
-      }
-      if (el.cost > 0) {
-        recordApExpenditure(el.cost, 'Skills', `Learned Skill: ${el.name} (${el.path})`, 1, 'Paths Hub');
-      }
-      updateActiveSheetData((prev) => ({
-        ...prev,
-        known_individual_skills: [...currentIndiv, el.name],
-      }));
-    } else if (el.type === 'rule') {
-      const currentRules: TraitQuirkItem[] = activeCharacter?.sheet_data?.traits_quirks || [];
-      const alreadyHas = currentRules.some((r) => r.name.toLowerCase() === el.name.toLowerCase());
-      if (alreadyHas) {
-        setFeedbackMsg(`⚠️ Trait "${el.name}" is already equipped!`);
-        setTimeout(() => setFeedbackMsg(null), 3000);
-        return;
-      }
-      if (el.cost > 0) {
-        recordApExpenditure(el.cost, 'Manual', `Equipped Trait: ${el.name} (${el.path})`, 1, 'Paths Hub');
-      }
-      const newRule: TraitQuirkItem = {
-        id: el.raw.id || Date.now(),
-        name: el.name,
-        notes: el.raw.notes || el.raw.effect || '',
-        source: el.path,
-        is_hidden: false,
-        created_at: new Date().toISOString(),
-      };
-      updateActiveSheetData((prev) => ({
-        ...prev,
-        traits_quirks: [...currentRules, newRule],
-      }));
-    }
-
-    saveActiveCharacter();
-    setFeedbackMsg(`✓ Successfully learned ${el.name}!`);
-    setTimeout(() => setFeedbackMsg(null), 3000);
-  };
-
   if (!isOpen) return null;
 
   return createPortal(
@@ -491,11 +252,11 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
               <h2 className="font-outfit font-black text-lg text-purple-200 tracking-wide uppercase flex items-center gap-2">
                 <span>Manage Paths</span>
                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-500/40">
-                  Race • Class • Disciplines
+                  Race • Class • Bonus Paths
                 </span>
               </h2>
               <p className="text-xs text-slate-400 font-medium">
-                Select your starting hero progression paths, in-path perks, and unlock bonus disciplines.
+                View your active character paths and unlock new paths for your progression.
               </p>
             </div>
           </div>
@@ -510,7 +271,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
               title="Close (Esc)"
             >
               <X className="w-5 h-5" />
@@ -522,7 +283,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
         {feedbackMsg && (
           <div className="px-4 py-1.5 bg-purple-950/80 border-b border-purple-500/40 text-xs text-purple-200 font-bold flex items-center justify-between animate-fade-in shrink-0">
             <span>{feedbackMsg}</span>
-            <button type="button" onClick={() => setFeedbackMsg(null)} className="text-purple-400 hover:text-purple-200">
+            <button type="button" onClick={() => setFeedbackMsg(null)} className="text-purple-400 hover:text-purple-200 cursor-pointer">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -530,355 +291,306 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
 
         {/* Modal Body: 2-Pane Architecture */}
         <div className="flex-1 flex min-h-0 overflow-hidden">
-          {/* LEFT PANE: Active Character Starting Paths & Learned Disciplines */}
-          <div className="w-2/5 border-r border-slate-800/80 bg-slate-950/60 p-4 flex flex-col gap-4 overflow-y-auto">
-            {/* Starting Paths Selector Card */}
-            <div className="p-3.5 bg-slate-900/90 rounded-xl border border-purple-500/30 space-y-3 shadow-md">
-              <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-                <Compass className="w-4 h-4 text-purple-400" />
-                <span className="font-outfit font-extrabold text-xs uppercase tracking-wider text-purple-300">
-                  Starting Hero Paths
-                </span>
-              </div>
-
-              {/* Race Path Dropdown */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                  <span>🧬 Race Path</span>
-                  <span className="text-[10px] text-purple-400 font-mono">0 AP Auto-Grant</span>
-                </label>
-                <select
-                  value={activeRace}
-                  onChange={(e) => handleSelectRacePath(e.target.value)}
-                  className="w-full bg-slate-950 border border-purple-500/40 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 font-medium focus:outline-none focus:border-purple-400"
-                >
-                  {racePaths.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Class Path Dropdown */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                  <span>⚔️ Class Path</span>
-                  <span className="text-[10px] text-purple-400 font-mono">In-Path AP Pricing</span>
-                </label>
-                <select
-                  value={activeClass}
-                  onChange={(e) => handleSelectClassPath(e.target.value)}
-                  className="w-full bg-slate-950 border border-purple-500/40 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 font-medium focus:outline-none focus:border-purple-400"
-                >
-                  {classPaths.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Learned Extra Paths / Disciplines */}
-            <div className="p-3.5 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2.5 shadow-md">
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                <span className="font-outfit font-extrabold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Learned Bonus Paths ({extraLearnedPaths.length})</span>
-                </span>
-              </div>
-
-              {extraLearnedPaths.length === 0 ? (
-                <p className="text-[11px] text-slate-500 italic py-1">
-                  No additional paths learned. Unlock paths in the Path Catalog tab for 4 AP.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {extraLearnedPaths.map((pathName) => (
-                    <div
-                      key={pathName}
-                      className="px-2.5 py-1 rounded-lg bg-indigo-950/80 border border-indigo-500/40 text-indigo-200 text-xs font-bold flex items-center gap-1.5 shadow-sm"
-                    >
-                      <span>🧭 {pathName}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveExtraPath(pathName)}
-                        className="text-indigo-400 hover:text-rose-400 p-0.5 rounded transition-colors"
-                        title="Remove learned path"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
+          {/* LEFT PANE: Consolidated "My Paths" Card */}
+          <div className="w-2/5 border-r border-slate-800/80 bg-slate-950/70 p-4 flex flex-col gap-3 overflow-y-auto">
+            <div className="p-4 bg-gradient-to-b from-slate-900/95 to-slate-950/95 rounded-2xl border border-purple-500/40 space-y-4 shadow-xl flex-1 flex flex-col">
+              {/* Card Header */}
+              <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded-lg bg-purple-950 text-purple-300 border border-purple-500/40">
+                    <Compass className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <span className="font-outfit font-black text-sm uppercase tracking-wider text-purple-200">
+                    My Paths
+                  </span>
                 </div>
-              )}
-            </div>
+                <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-purple-950/90 text-purple-300 border border-purple-500/40">
+                  {learnedPaths.length} Active
+                </span>
+              </div>
 
-            {/* Active Paths Summary Roster */}
-            <div className="flex-1 flex flex-col min-h-0 space-y-1.5">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 px-1">
-                Active Paths Roster
-              </span>
-              <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
-                {learnedPaths.map((lp, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80 flex items-center justify-between text-xs"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-purple-400">🧭</span>
-                      <span className="font-bold text-slate-200">{lp}</span>
-                    </div>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 text-purple-300 border border-purple-500/30 font-bold">
-                      {lp === activeRace ? 'Race' : lp === activeClass ? 'Class' : 'Bonus'}
+              {/* Foundational Paths: Race & Class */}
+              <div className="space-y-2.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                  Foundational Hero Paths
+                </span>
+
+                {/* Race Foundation */}
+                <div className="p-2.5 rounded-xl bg-slate-950/90 border border-purple-500/30 shadow-inner space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🧬</span>
+                      <span>Race Path</span>
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/30">
+                      Race
                     </span>
                   </div>
-                ))}
+                  {activeRole === 'gm' ? (
+                    <select
+                      value={activeRace}
+                      onChange={(e) => handleSelectRacePath(e.target.value)}
+                      className="w-full mt-1 bg-slate-900 border border-purple-500/40 rounded-lg px-2.5 py-1 text-xs text-slate-100 font-bold focus:outline-none focus:border-purple-400 cursor-pointer"
+                    >
+                      {racePaths.map((r) => (
+                        <option
+                          key={r}
+                          value={r}
+                          className={isMsoEntry(r) ? 'font-bold text-purple-300 bg-slate-900' : 'text-slate-100 bg-slate-950'}
+                        >
+                          {isMsoEntry(r) ? `🌌 ${r}` : r}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="flex items-center justify-between pt-0.5">
+                      <span className={`text-xs font-black ${isMsoEntry(activeRace) ? 'text-purple-300' : 'text-slate-100'}`}>
+                        {isMsoEntry(activeRace) ? `🌌 ${activeRace}` : activeRace}
+                      </span>
+                      <span className="text-[10px] font-mono text-purple-400">0 AP Auto-Grant</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Class Foundation */}
+                <div className="p-2.5 rounded-xl bg-slate-950/90 border border-purple-500/30 shadow-inner space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>⚔️</span>
+                      <span>Class Path</span>
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/30">
+                      Class
+                    </span>
+                  </div>
+                  {activeRole === 'gm' ? (
+                    <select
+                      value={activeClass}
+                      onChange={(e) => handleSelectClassPath(e.target.value)}
+                      className="w-full mt-1 bg-slate-900 border border-purple-500/40 rounded-lg px-2.5 py-1 text-xs text-slate-100 font-bold focus:outline-none focus:border-purple-400 cursor-pointer"
+                    >
+                      {classPaths.map((c) => (
+                        <option
+                          key={c}
+                          value={c}
+                          className={isMsoEntry(c) ? 'font-bold text-purple-300 bg-slate-900' : 'text-slate-100 bg-slate-950'}
+                        >
+                          {isMsoEntry(c) ? `🌌 ${c}` : c}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="flex items-center justify-between pt-0.5">
+                      <span className={`text-xs font-black ${isMsoEntry(activeClass) ? 'text-purple-300' : 'text-slate-100'}`}>
+                        {isMsoEntry(activeClass) ? `🌌 ${activeClass}` : activeClass}
+                      </span>
+                      <span className="text-[10px] font-mono text-purple-400">In-Path Pricing</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Learned Bonus Paths */}
+              <div className="flex-1 flex flex-col min-h-0 space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                    <Layers className="w-3 h-3 text-indigo-400" />
+                    <span>Bonus Paths ({sortedExtraLearnedPaths.length})</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-500">
+                    🔒 Bound
+                  </span>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+                  {sortedExtraLearnedPaths.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-slate-950/50 border border-dashed border-slate-800 text-center space-y-1">
+                      <p className="text-xs font-bold text-slate-400">No Bonus Paths</p>
+                      <p className="text-[11px] text-slate-500">
+                        Unlock new paths from the catalog on the right for 4 AP to expand your progression.
+                      </p>
+                    </div>
+                  ) : (
+                    sortedExtraLearnedPaths.map((pathName) => {
+                      const isMso = isMsoEntry(pathName);
+                      return (
+                        <div
+                          key={pathName}
+                          className={`p-2.5 rounded-xl border flex items-center justify-between transition-all ${
+                            isMso
+                              ? 'bg-purple-950/40 border-purple-500/40 shadow-sm'
+                              : 'bg-slate-950/80 border-slate-800/80'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={isMso ? 'text-purple-400' : 'text-indigo-400'}>
+                              {isMso ? '🌌' : '🧭'}
+                            </span>
+                            <span className={`text-xs font-bold truncate ${isMso ? 'text-purple-200' : 'text-slate-200'}`}>
+                              {pathName}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-indigo-300 border border-indigo-500/30 font-semibold">
+                              Bonus
+                            </span>
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-700">
+                              🔒 Bound
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* RIGHT PANE: Tabs for In-Path Perks, Out-of-Path Perks & Path Catalog */}
+          {/* RIGHT PANE: Path Catalog & Unlocking */}
           <div className="w-3/5 flex flex-col bg-slate-900/40 overflow-hidden">
-            {/* Right Pane Tab Navigation Bar */}
-            <div className="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2 flex-wrap shrink-0">
-              <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setRightActiveTab('in_path')}
-                  className={`px-3 py-1.5 rounded-lg font-outfit font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
-                    rightActiveTab === 'in_path'
-                      ? 'bg-purple-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <Compass className="w-3.5 h-3.5" />
-                  <span>In-Path Perks ({inPathElements.length})</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setRightActiveTab('out_of_path')}
-                  className={`px-3 py-1.5 rounded-lg font-outfit font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
-                    rightActiveTab === 'out_of_path'
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Out-of-Path (+1 AP)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setRightActiveTab('paths_catalog')}
-                  className={`px-3 py-1.5 rounded-lg font-outfit font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
-                    rightActiveTab === 'paths_catalog'
-                      ? 'bg-purple-700 text-white shadow-md'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Unlock Paths (4 AP)</span>
-                </button>
-              </div>
-
-              {/* Search Bar for Perks */}
-              {rightActiveTab !== 'paths_catalog' && (
-                <div className="relative flex-1 max-w-[200px]">
-                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search perks..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* TAB CONTENT */}
-            <div className="flex-1 p-4 overflow-y-auto min-h-0 space-y-2">
-              {/* TAB 1: IN-PATH PERKS */}
-              {rightActiveTab === 'in_path' && (
-                <>
-                  {filteredInPathElements.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 text-xs italic">
-                      <Compass className="w-8 h-8 text-slate-700 mb-2 stroke-[1.5]" />
-                      <span>No in-path perks match your current search.</span>
-                    </div>
-                  ) : (
-                    filteredInPathElements.map((el, idx) => (
-                      <div
-                        key={el.name + idx}
-                        className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 hover:border-purple-500/40 flex items-start justify-between gap-3 shadow-md transition-all"
-                      >
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-outfit font-bold text-sm text-slate-100">{el.name}</span>
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/30">
-                              🧭 {el.path}
-                            </span>
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800 uppercase">
-                              {el.type}
-                            </span>
-                            {el.isTrait && (
-                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40">
-                                0 AP Starting Trait
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-300 leading-relaxed">{el.description}</p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleEquipElement(el)}
-                          className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-outfit font-bold text-xs shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Learn ({el.cost === 0 ? 'Free' : `${el.cost} AP`})</span>
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </>
-              )}
-
-              {/* TAB 2: OUT-OF-PATH PERKS */}
-              {rightActiveTab === 'out_of_path' && (
-                <>
-                  <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 flex items-center gap-2 mb-2 shrink-0">
-                    <Info className="w-4 h-4 text-indigo-400 shrink-0" />
-                    <span>
-                      Out-of-Path perks incur a <strong>+1 AP cross-discipline surcharge</strong>.
+            <div className="p-4 flex-1 overflow-y-auto space-y-4">
+              <div className="p-4 bg-slate-950/80 rounded-2xl border border-purple-500/40 space-y-4 shadow-lg">
+                {/* Header & Standard Cost */}
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-purple-400" />
+                    <span className="font-outfit font-black text-sm text-purple-200 uppercase tracking-wider">
+                      Unlock New Path
                     </span>
                   </div>
-
-                  {filteredOutOfPathElements.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 text-xs italic">
-                      <Sparkles className="w-8 h-8 text-slate-700 mb-2 stroke-[1.5]" />
-                      <span>No out-of-path perks found.</span>
-                    </div>
-                  ) : (
-                    filteredOutOfPathElements.map((el, idx) => (
-                      <div
-                        key={el.name + idx}
-                        className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 hover:border-indigo-500/40 flex items-start justify-between gap-3 shadow-md transition-all"
-                      >
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-outfit font-bold text-sm text-slate-100">{el.name}</span>
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-500/30">
-                              🧭 {el.path}
-                            </span>
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800 uppercase">
-                              {el.type}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-300 leading-relaxed">{el.description}</p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleEquipElement(el)}
-                          className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-outfit font-bold text-xs shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Learn ({el.cost} AP)</span>
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </>
-              )}
-
-              {/* TAB 3: UNLOCK NEW PATHS (4 AP) */}
-              {rightActiveTab === 'paths_catalog' && (
-                <div className="space-y-4">
-                  <div className="p-3.5 bg-slate-950/80 rounded-xl border border-purple-500/40 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-outfit font-extrabold text-sm text-purple-200 uppercase tracking-wider flex items-center gap-2">
-                        <Layers className="w-4 h-4 text-purple-400" />
-                        <span>Unlock New Discipline or Path</span>
-                      </span>
-                      <span className="text-xs font-mono font-bold text-amber-300">
-                        Standard Cost: 4 AP
-                      </span>
-                    </div>
-
-                    {/* Category Filter Pills */}
-                    <div className="flex flex-wrap gap-1">
-                      {availableCategories.map((cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => setSelectedPathCategory(cat)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono transition-all cursor-pointer ${
-                            selectedPathCategory === cat
-                              ? 'bg-purple-600 text-white shadow-sm'
-                              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                          }`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Path Selection Dropdown */}
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        Select Path to Unlock
-                      </label>
-                      <select
-                        value={selectedExtraPathToBuy}
-                        onChange={(e) => setSelectedExtraPathToBuy(e.target.value)}
-                        className="w-full bg-slate-900 border border-purple-500/40 rounded-lg px-3 py-2 text-xs text-slate-100 font-medium focus:outline-none focus:border-purple-400"
-                      >
-                        <option value="">-- Choose a Path ({filteredPathsToBuy.length} Available) --</option>
-                        {filteredPathsToBuy.map((pathName) => (
-                          <option key={pathName} value={pathName}>
-                            🧭 {pathName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        disabled={!selectedExtraPathToBuy || availableAp < 4}
-                        onClick={() => handleLearnNewPath(4)}
-                        className={`flex-1 py-2 px-3 rounded-xl font-outfit font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition-all ${
-                          selectedExtraPathToBuy && availableAp >= 4
-                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white cursor-pointer active:scale-95'
-                            : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                        }`}
-                      >
-                        <Sparkles className="w-4 h-4 text-purple-300" />
-                        <span>Unlock Path (4 AP)</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={!selectedExtraPathToBuy}
-                        onClick={() => handleLearnNewPath(0)}
-                        className={`py-2 px-3 rounded-xl font-outfit font-bold text-xs flex items-center justify-center gap-1.5 border transition-all ${
-                          selectedExtraPathToBuy
-                            ? 'bg-slate-900 hover:bg-slate-800 text-emerald-300 border-emerald-500/40 cursor-pointer'
-                            : 'bg-slate-950 text-slate-600 border-slate-800 cursor-not-allowed'
-                        }`}
-                        title="Unlock as Free GM grant (0 AP)"
-                      >
-                        <span>🎁 Free GM Grant</span>
-                      </button>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold text-amber-300 bg-amber-950/50 border border-amber-500/30 px-2.5 py-0.5 rounded-lg">
+                      Standard Cost: 4 AP
+                    </span>
                   </div>
                 </div>
-              )}
+
+                {/* Permanent Acquisition Warning Banner */}
+                <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs font-medium flex items-start gap-2.5 shadow-sm">
+                  <span className="text-base leading-none">⚠️</span>
+                  <div className="space-y-0.5">
+                    <strong className="text-amber-300 font-bold block">Path Acquisition is Permanent</strong>
+                    <p className="text-amber-200/90 text-[11px] leading-relaxed">
+                      Once unlocked, paths are permanently bound to your hero and cannot be refunded or sold for AP.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Category Filter Pills */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Filter by Category</span>
+                    <span className="text-[10px] font-mono text-slate-500">{availableCategories.length} Categories</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1">
+                    {availableCategories.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setSelectedPathCategory(cat)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono transition-all cursor-pointer ${
+                          selectedPathCategory === cat
+                            ? 'bg-purple-600 text-white shadow-sm'
+                            : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Path Selection Dropdown */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Select Path to Unlock</span>
+                    <span className="text-[10px] font-mono text-purple-300 font-bold">
+                      {filteredPathsToBuy.length} Available
+                    </span>
+                  </label>
+                  <select
+                    value={selectedExtraPathToBuy}
+                    onChange={(e) => setSelectedExtraPathToBuy(e.target.value)}
+                    className="w-full bg-slate-900 border border-purple-500/40 rounded-xl px-3 py-2.5 text-xs text-slate-100 font-medium focus:outline-none focus:border-purple-400 cursor-pointer shadow-inner"
+                  >
+                    <option value="">-- Choose a Path ({filteredPathsToBuy.length} Available) --</option>
+                    {filteredPathsToBuy.map((pathName) => {
+                      const isMso = isMsoEntry(pathName);
+                      return (
+                        <option
+                          key={pathName}
+                          value={pathName}
+                          className={isMso ? 'font-bold text-purple-300 bg-slate-900' : 'text-slate-100 bg-slate-950'}
+                        >
+                          {isMso ? `🌌 ${pathName}` : `🧭 ${pathName}`}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Selected Path Details Card (if selected) */}
+                {selectedExtraPathToBuy && (
+                  <div className="p-3 bg-purple-950/30 border border-purple-500/30 rounded-xl space-y-1.5 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-purple-200 flex items-center gap-1.5">
+                        <span>{isMsoEntry(selectedExtraPathToBuy) ? '🌌' : '🧭'}</span>
+                        <span>{selectedExtraPathToBuy}</span>
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40">
+                        {resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy)?.category || 'Path'}
+                      </span>
+                    </div>
+                    {(() => {
+                      const pathData = resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy);
+                      const desc = pathData?.description || (pathData as any)?.notes;
+                      return desc ? (
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          {desc}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-slate-400 italic">
+                          Unlocks in-path abilities, trait bundles, and mastery progressions for this path.
+                        </p>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2.5 pt-2 border-t border-slate-800/80">
+                  <button
+                    type="button"
+                    disabled={!selectedExtraPathToBuy || availableAp < 4}
+                    onClick={() => handleLearnNewPath(4)}
+                    className={`flex-1 py-2.5 px-4 rounded-xl font-outfit font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all ${
+                      selectedExtraPathToBuy && availableAp >= 4
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white cursor-pointer active:scale-95'
+                        : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4 text-purple-300" />
+                    <span>Unlock Path (4 AP)</span>
+                  </button>
+
+                  {activeRole === 'gm' && (
+                    <button
+                      type="button"
+                      disabled={!selectedExtraPathToBuy}
+                      onClick={() => handleLearnNewPath(0)}
+                      className={`py-2.5 px-4 rounded-xl font-outfit font-bold text-xs flex items-center justify-center gap-1.5 border transition-all ${
+                        selectedExtraPathToBuy
+                          ? 'bg-slate-900 hover:bg-slate-800 text-emerald-300 border-emerald-500/40 cursor-pointer'
+                          : 'bg-slate-950 text-slate-600 border-slate-800 cursor-not-allowed'
+                      }`}
+                      title="Unlock as Free GM grant (0 AP)"
+                    >
+                      <span>🎁 Free GM Grant</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

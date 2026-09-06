@@ -7,6 +7,7 @@ import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar } from '../common/QuickDeckBar';
+import { compareMsoItems, isMsoEntry } from '../../utils/kitUtils';
 import {
   ArmorData,
   MovementRateData,
@@ -25,6 +26,7 @@ const getDieNum = (dieRating?: string): number => {
 
 export const ArmorCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
   const statHooks = useMemo(() => resolveStatHooks(activeCharacter?.sheet_data), [activeCharacter?.sheet_data]);
 
@@ -331,41 +333,46 @@ export const ArmorCard: React.FC = () => {
 
   const wardrobeNamesSet = useMemo(() => new Set(wardrobe.map((w) => w.name.toLowerCase())), [wardrobe]);
   const filteredWardrobe = useMemo(() => {
-    if (!leftSearchQuery.trim()) return wardrobe;
-    const q = leftSearchQuery.toLowerCase().trim();
-    return wardrobe.filter((w) => w.name.toLowerCase().includes(q));
-  }, [wardrobe, leftSearchQuery]);
+    let list = wardrobe;
+    if (leftSearchQuery.trim()) {
+      const q = leftSearchQuery.toLowerCase().trim();
+      list = wardrobe.filter((w) => w.name.toLowerCase().includes(q));
+    }
+    return [...list].sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [wardrobe, leftSearchQuery, isGsUnlocked]);
 
   const filteredCatalogArmor = useMemo(() => {
-    return armorCatalog.filter((item) => {
-      if (localGenreFilter !== 'ALL' && !matchesGenre(item.genres, localGenreFilter as any)) return false;
-      if (wardrobeNamesSet.has(item.name.toLowerCase())) return false;
+    return armorCatalog
+      .filter((item) => {
+        if (localGenreFilter !== 'ALL' && !matchesGenre(item.genres, localGenreFilter as any)) return false;
+        if (wardrobeNamesSet.has(item.name.toLowerCase())) return false;
 
-      const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
-      if (skillFilterMode === 'skilled' && !isLearnable) return false;
-      if (skillFilterMode === 'unskilled' && isLearnable) return false;
+        const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
+        if (skillFilterMode === 'skilled' && !isLearnable) return false;
+        if (skillFilterMode === 'unskilled' && isLearnable) return false;
 
-      // Table Quick Deck Filter
-      if (activeArmorTable === 'STARRED' && !isItemStarred(item)) return false;
-      if (activeArmorTable !== 'ALL' && activeArmorTable !== 'STARRED') {
-        const tbl = (item.kit || item.table_group || (item as any).category || '').toLowerCase();
-        const activeLower = activeArmorTable.toLowerCase();
-        if (tbl !== activeLower && !tbl.includes(activeLower)) {
-          return false;
+        // Table Quick Deck Filter
+        if (activeArmorTable === 'STARRED' && !isItemStarred(item)) return false;
+        if (activeArmorTable !== 'ALL' && activeArmorTable !== 'STARRED') {
+          const tbl = (item.kit || item.table_group || (item as any).category || '').toLowerCase();
+          const activeLower = activeArmorTable.toLowerCase();
+          if (tbl !== activeLower && !tbl.includes(activeLower)) {
+            return false;
+          }
         }
-      }
 
-      if (rightSearchQuery.trim()) {
-        const q = rightSearchQuery.toLowerCase().trim();
-        return (
-          item.name.toLowerCase().includes(q) ||
-          (item.requirement || '').toLowerCase().includes(q) ||
-          (item.notes || '').toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [armorCatalog, wardrobeNamesSet, skillFilterMode, activeArmorTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter]);
+        if (rightSearchQuery.trim()) {
+          const q = rightSearchQuery.toLowerCase().trim();
+          return (
+            item.name.toLowerCase().includes(q) ||
+            (item.requirement || '').toLowerCase().includes(q) ||
+            (item.notes || '').toLowerCase().includes(q)
+          );
+        }
+        return true;
+      })
+      .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [armorCatalog, wardrobeNamesSet, skillFilterMode, activeArmorTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter, isGsUnlocked]);
 
   const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
   const isShieldEquipped = shieldSlot?.equipped ?? false;
@@ -387,13 +394,13 @@ export const ArmorCard: React.FC = () => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title="Click to open Armor Manager"
+            title="Click to open Armor SK Manager"
           >
             <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] group-hover:scale-105 group-hover:border-amber-400 transition-all">
               <span className="text-base leading-none">🧥</span>
             </div>
             <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
-              <span>Armor</span>
+              <span>Armor SK</span>
               <ChevronDown className="w-3.5 h-3.5 text-amber-400/70 group-hover:text-amber-300 group-hover:translate-y-0.5 transition-all" />
             </h3>
           </button>
@@ -410,7 +417,7 @@ export const ArmorCard: React.FC = () => {
                 ? 'bg-amber-600/30 text-amber-200 border-amber-400 shadow-amber-500/30'
                 : 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/30 text-amber-300 hover:text-white'
             }`}
-            title="Open Armor Manager"
+            title="Open Armor SK Manager"
           >
             <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
           </button>
@@ -422,7 +429,7 @@ export const ArmorCard: React.FC = () => {
                   <div className="flex items-center gap-2.5 shrink-0">
                     <div className="p-2 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-300">🧥</div>
                     <div>
-                      <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide">Armor Manager</h3>
+                      <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide">Armor SK Manager</h3>
                     </div>
                   </div>
 
@@ -451,7 +458,9 @@ export const ArmorCard: React.FC = () => {
                             <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                               <div className="flex items-center gap-2">
                                 <button type="button" onClick={() => handleSelectActiveArmor(item)} className={`px-2 py-0.5 text-xs font-bold rounded-lg border ${isActive ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50' : 'bg-slate-950 text-slate-400 border-slate-800'}`}>{isActive ? '● Active' : '○ Wear'}</button>
-                                <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
+                                <span className={`font-outfit font-bold text-sm ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                  {isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}
+                                </span>
                                 <ItemNotesPopover notes={item.notes || armorCatalog.find((a) => a.name.toLowerCase() === item.name.toLowerCase())?.notes} itemName={item.name} />
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
@@ -583,7 +592,9 @@ export const ArmorCard: React.FC = () => {
                               >
                                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="font-bold text-sm text-slate-100">{item.name}</span>
+                                    <span className={`font-bold text-sm ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                      {isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}
+                                    </span>
                                     <ItemNotesPopover notes={item.notes} itemName={item.name} />
                                     <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
                                       {item.cost}
@@ -635,7 +646,7 @@ export const ArmorCard: React.FC = () => {
                 {/* Modal Footer Status Bar with Standardized "Done" Button */}
                 <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
                   <div className="flex items-center gap-3">
-                    <span className="font-outfit font-bold text-slate-300">🧥 Armor Manager</span>
+                    <span className="font-outfit font-bold text-slate-300">🧥 Armor SK Manager</span>
                   </div>
                   
                   {/* Standardized Master Blueprint Done Footer Button */}
@@ -679,8 +690,11 @@ export const ArmorCard: React.FC = () => {
 
         {/* Armor Name (Unboxed Clean Text) + Notes Popover */}
         <div className="flex items-center gap-1.5 flex-1 min-w-[130px] pr-1">
-          <span className="font-semibold text-slate-100 text-xs truncate min-w-[100px]" title={armor.name}>
-            {armor.name}
+          <span
+            className={`text-xs truncate min-w-[100px] ${isGsUnlocked && isMsoEntry(armor.name) ? 'text-purple-300 font-bold' : 'font-semibold text-slate-100'}`}
+            title={armor.name}
+          >
+            {isGsUnlocked && isMsoEntry(armor.name) ? `🌌 ${armor.name}` : armor.name}
           </span>
           <ItemNotesPopover notes={armor.notes || armorCatalog.find((a) => a.name.toLowerCase() === armor.name.toLowerCase())?.notes} itemName={armor.name} />
         </div>

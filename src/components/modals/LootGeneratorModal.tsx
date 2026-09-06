@@ -9,6 +9,7 @@ import { LootDraftModal } from './LootDraftModal';
 import { EchoVaultModal } from './EchoVaultModal';
 import { ChaosGauntletSocketModal } from './ChaosGauntletSocketModal';
 import { VaultItem, SupabaseChaosGem } from '../../types/game';
+import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
 export interface MoveToSheetPayload {
   title: string;
@@ -116,6 +117,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   onMoveToSheet
 }) => {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
+  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
   const magicItems = useCharacterStore((state) => state.magicItems);
@@ -1647,21 +1649,30 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                               (i.description || '').toLowerCase().includes(q)
                             );
                           })
+                          .sort((a, b) => compareMsoItems(a, b, isGsUnlocked))
                           .slice(0, 50)
-                          .map((item) => (
-                            <div
-                              key={item.id || item.name}
-                              className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between gap-2 hover:border-indigo-500/40 transition"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                  <h5 className="font-bold text-xs text-slate-100 truncate">{item.name}</h5>
-                                  {item.category && (
-                                    <span className="text-[9px] text-amber-400/80 font-mono">
-                                      {item.category}
-                                    </span>
-                                  )}
-                                </div>
+                          .map((item) => {
+                            const isMso = isGsUnlocked && isMsoEntry(item.name);
+                            return (
+                              <div
+                                key={item.id || item.name}
+                                className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition ${
+                                  isMso
+                                    ? 'bg-purple-950/20 border-purple-500/40 hover:border-purple-400'
+                                    : 'bg-slate-950 border-slate-800 hover:border-indigo-500/40'
+                                }`}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 mb-0.5">
+                                    <h5 className={`font-bold text-xs truncate ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                                      {isMso ? `🌌 ${item.name}` : item.name}
+                                    </h5>
+                                    {item.category && (
+                                      <span className="text-[9px] text-amber-400/80 font-mono">
+                                        {item.category}
+                                      </span>
+                                    )}
+                                  </div>
                                 {(item.effect || item.description || item.notes) && (
                                   <p className="text-[10px] text-slate-400 line-clamp-1">
                                     {item.effect || item.description || item.notes}
@@ -1696,7 +1707,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                                 <span>Award</span>
                               </button>
                             </div>
-                          ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

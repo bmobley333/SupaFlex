@@ -9,6 +9,7 @@ import { GenrePillSwitch } from '../common/GenrePillSwitch';
 import { InfoTooltip } from '../common/InfoTooltip';
 import { sanitizeRoomCodeInput, isValidRoomCodeFormat } from '../../utils/roomId';
 import { isGuildSpaceUnlocked, unlockGuildSpace, lockGuildSpace } from '../../utils/guildspaceAuth';
+import { isMsoEntry, compareMsoOptions } from '../../utils/kitUtils';
 
 interface UnifiedLaunchHubModalProps {
   isOpen: boolean;
@@ -43,12 +44,13 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 }) => {
   const activeRole = useCharacterStore((state) => state.activeRole);
   const setActiveRole = useCharacterStore((state) => state.setActiveRole);
+  const paths = useCharacterStore((state) => state.paths || []);
   const [rightSubTab, setRightSubTab] = useState<'account' | 'genre' | 'inspect' | 'party'>(initialTab);
 
   // Create Hero State
   const [isCreatingHero, setIsCreatingHero] = useState(false);
   const [newHeroName, setNewHeroName] = useState('');
-  const [newHeroClass, setNewHeroClass] = useState('Adventurer');
+  const [newHeroClass, setNewHeroClass] = useState('Warrior');
   const [newHeroRace, setNewHeroRace] = useState('Human');
 
   useEffect(() => {
@@ -93,6 +95,18 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     };
   }, []);
 
+  const raceOptions = React.useMemo(() => {
+    const list = paths.filter((p) => p.category === 'Race').map((p) => p.name);
+    const base = list.length > 0 ? list : ['Dwarf', 'Elf', 'Fairy', 'Gnome', 'Goblin', 'Half-Orc', 'Human', 'Nelf', 'Nymph', 'Orc'];
+    return [...base].sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [paths, isGsUnlocked]);
+
+  const classOptions = React.useMemo(() => {
+    const list = paths.filter((p) => p.category === 'Class').map((p) => p.name);
+    const base = list.length > 0 ? list : ['Adventurer', 'Warrior', 'Mage', 'Thief', 'Healer', 'Bard', 'Monk', 'Psionics'];
+    return [...base].sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [paths, isGsUnlocked]);
+
   const handleUnlockGuildSpace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guildSpacePasskey.trim()) return;
@@ -101,6 +115,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     if (success) {
       setPasskeyFeedback({ type: 'success', message: '✨ Private Setting Unlocked! Authentic catalogs and filters are now active.' });
       setGuildSpacePasskey('');
+      useCharacterStore.getState().fetchInitialData({ silent: true });
     } else {
       setPasskeyFeedback({ type: 'error', message: '❌ Invalid Setting Passkey. Access remained locked.' });
     }
@@ -640,21 +655,39 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Race</label>
-                        <input
-                          type="text"
+                        <select
                           value={newHeroRace}
                           onChange={(e) => setNewHeroRace(e.target.value)}
-                          className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
-                        />
+                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-400 cursor-pointer"
+                        >
+                          {raceOptions.map((r) => (
+                            <option
+                              key={r}
+                              value={r}
+                              className={isMsoEntry(r) ? 'font-bold text-purple-300 bg-slate-900' : 'text-slate-100 bg-slate-950'}
+                            >
+                              {isMsoEntry(r) ? `🌌 ${r}` : r}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Class</label>
-                        <input
-                          type="text"
+                        <select
                           value={newHeroClass}
                           onChange={(e) => setNewHeroClass(e.target.value)}
-                          className="w-full px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100"
-                        />
+                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-indigo-400 cursor-pointer"
+                        >
+                          {classOptions.map((c) => (
+                            <option
+                              key={c}
+                              value={c}
+                              className={isMsoEntry(c) ? 'font-bold text-purple-300 bg-slate-900' : 'text-slate-100 bg-slate-950'}
+                            >
+                              {isMsoEntry(c) ? `🌌 ${c}` : c}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                     <button
@@ -725,18 +758,36 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                                   className="w-full px-2.5 py-1 bg-slate-950 border border-indigo-500/60 rounded text-xs text-slate-100 font-bold"
                                 />
                                 <div className="grid grid-cols-2 gap-2">
-                                  <input
-                                    type="text"
+                                  <select
                                     value={editRace}
                                     onChange={(e) => setEditRace(e.target.value)}
-                                    className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200"
-                                  />
-                                  <input
-                                    type="text"
+                                    className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200 cursor-pointer"
+                                  >
+                                    {raceOptions.map((r) => (
+                                      <option
+                                        key={r}
+                                        value={r}
+                                        className={isMsoEntry(r) ? 'font-bold text-purple-300 bg-slate-900' : 'text-slate-100 bg-slate-950'}
+                                      >
+                                        {isMsoEntry(r) ? `🌌 ${r}` : r}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <select
                                     value={editClass}
                                     onChange={(e) => setEditClass(e.target.value)}
-                                    className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200"
-                                  />
+                                    className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200 cursor-pointer"
+                                  >
+                                    {classOptions.map((c) => (
+                                      <option
+                                        key={c}
+                                        value={c}
+                                        className={isMsoEntry(c) ? 'font-bold text-purple-300 bg-slate-900' : 'text-slate-100 bg-slate-950'}
+                                      >
+                                        {isMsoEntry(c) ? `🌌 ${c}` : c}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
                                 <div className="flex justify-end gap-1.5 pt-1">
                                   <button
@@ -1071,6 +1122,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           lockGuildSpace();
                           setGuildSpacePasskey('');
                           setPasskeyFeedback(null);
+                          useCharacterStore.getState().fetchInitialData({ silent: true });
                         }}
                         className="px-3 py-1.5 bg-slate-900 hover:bg-red-950 text-slate-300 hover:text-red-200 border border-slate-700 hover:border-red-500/50 rounded-lg text-xs font-bold transition cursor-pointer shrink-0"
                       >
