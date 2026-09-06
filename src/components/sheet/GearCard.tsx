@@ -84,6 +84,25 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [gearCatalogFeedback, setGearCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [expandedCatalogModId, setExpandedCatalogModId] = useState<string | null>(null);
 
+  // Character Currency & Wallet Funds
+  const gold = sheet?.gold ?? 0;
+  const silver = sheet?.silver ?? 0;
+  const totalAvailableSilver = useMemo(() => (gold * 100) + silver, [gold, silver]);
+
+  // Ephemeral "Not Enough Money" Popover Target State
+  const [notEnoughMoneyTarget, setNotEnoughMoneyTarget] = useState<{ id: string; name: string; costStr: string } | null>(null);
+
+  const triggerNotEnoughMoney = useCallback((id: string, name: string, costStr: string, costInSilver: number) => {
+    setNotEnoughMoneyTarget({ id, name, costStr });
+    setGearCatalogFeedback({
+      type: 'error',
+      message: `⚠️ Not Enough Money! "${name}" costs ${costStr} (${costInSilver}s), but you only have ${gold}g ${silver}s.`,
+    });
+    setTimeout(() => {
+      setNotEnoughMoneyTarget((prev) => (prev?.id === id ? null : prev));
+    }, 2500);
+  }, [gold, silver]);
+
   // Calculate total inventory value (gold & silver, 100s = 1g)
   const inventoryValue = useMemo(() => calculateInventoryValue(gearList), [gearList]);
 
@@ -390,9 +409,14 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     const itemName = catalogItem.name;
     const costStr = catalogItem.cost || '0s';
     const costInSilver = parseCostToSilver(costStr);
-    const currentGold = sheet?.gold ?? 0;
-    const currentSilver = sheet?.silver ?? 0;
-    const deduction = deductFundsWithChange(currentGold, currentSilver, costInSilver);
+    const itemKey = String(catalogItem.id || catalogItem.name);
+
+    if (costInSilver > totalAvailableSilver) {
+      triggerNotEnoughMoney(itemKey, itemName, costStr, costInSilver);
+      return;
+    }
+
+    const deduction = deductFundsWithChange(gold, silver, costInSilver);
 
     if (itemType === 'kit') {
       const kitName = catalogItem.name;
@@ -457,24 +481,19 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       updateActiveSheetData((prev) => {
         const currentGear = prev.simple_gear || [];
         const currentVault = prev.character_vault || [];
-        const updatePayload: any = {
+        return {
           ...prev,
           simple_gear: [...currentGear, ...newGearItems],
           character_vault: [...currentVault, ...matchedExotics],
+          gold: deduction.newGold,
+          silver: deduction.newSilver,
         };
-        if (deduction.success) {
-          updatePayload.gold = deduction.newGold;
-          updatePayload.silver = deduction.newSilver;
-        }
-        return updatePayload;
       });
       saveActiveCharacter();
 
       setGearCatalogFeedback({
-        type: deduction.success ? 'success' : 'error',
-        message: deduction.success
-          ? `Purchased kit "${kitName}" for ${costStr}! Constituent items added to inventory and vault.`
-          : `Insufficient funds for kit "${kitName}" (${costStr})! Added unpaid.`,
+        type: 'success',
+        message: `Purchased kit "${kitName}" for ${costStr}! Constituent items added to inventory and vault.`,
       });
       return;
     }
@@ -502,24 +521,19 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
       updateActiveSheetData((prev) => {
         const currentVault = prev.character_vault || [];
-        const updatePayload: any = {
+        return {
           ...prev,
           simple_gear: [...(prev.simple_gear || []), newGearItem],
           character_vault: [...currentVault, catalogItem],
+          gold: deduction.newGold,
+          silver: deduction.newSilver,
         };
-        if (deduction.success) {
-          updatePayload.gold = deduction.newGold;
-          updatePayload.silver = deduction.newSilver;
-        }
-        return updatePayload;
       });
       saveActiveCharacter();
 
       setGearCatalogFeedback({
-        type: deduction.success ? 'success' : 'error',
-        message: deduction.success
-          ? `Purchased Exotic "${itemName}" for ${costStr}! Added to equipment and vault.`
-          : `Insufficient funds! "${itemName}" costs ${costStr}. Added unpaid.`,
+        type: 'success',
+        message: `Purchased Exotic "${itemName}" for ${costStr}! Added to equipment and vault.`,
       });
       return;
     }
@@ -535,29 +549,19 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
           ...currentGear[existingIndex],
           qty: (currentGear[existingIndex].qty || 1) + 1,
         };
-        const updatePayload: any = {
+        return {
           ...prev,
           simple_gear: currentGear,
+          gold: deduction.newGold,
+          silver: deduction.newSilver,
         };
-        if (deduction.success) {
-          updatePayload.gold = deduction.newGold;
-          updatePayload.silver = deduction.newSilver;
-        }
-        return updatePayload;
       });
       saveActiveCharacter();
 
-      if (deduction.success) {
-        setGearCatalogFeedback({
-          type: 'success',
-          message: `Purchased another "${itemName}" for ${costStr}!`,
-        });
-      } else {
-        setGearCatalogFeedback({
-          type: 'error',
-          message: `Insufficient funds! "${itemName}" costs ${costStr}, but you only have ${currentGold}g ${currentSilver}s. Added to inventory unpaid.`,
-        });
-      }
+      setGearCatalogFeedback({
+        type: 'success',
+        message: `Purchased another "${itemName}" for ${costStr}!`,
+      });
       return;
     }
 
@@ -579,30 +583,18 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       pic: catalogItem.pic,
     };
 
-    updateActiveSheetData((prev) => {
-      const updatePayload: any = {
-        ...prev,
-        simple_gear: [...(prev.simple_gear || []), newGearItem],
-      };
-      if (deduction.success) {
-        updatePayload.gold = deduction.newGold;
-        updatePayload.silver = deduction.newSilver;
-      }
-      return updatePayload;
-    });
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      simple_gear: [...(prev.simple_gear || []), newGearItem],
+      gold: deduction.newGold,
+      silver: deduction.newSilver,
+    }));
     saveActiveCharacter();
 
-    if (deduction.success) {
-      setGearCatalogFeedback({
-        type: 'success',
-        message: `Purchased "${itemName}" for ${costStr}!`,
-      });
-    } else {
-      setGearCatalogFeedback({
-        type: 'error',
-        message: `Insufficient funds! "${itemName}" costs ${costStr}, but you only have ${currentGold}g ${currentSilver}s. Added to inventory unpaid.`,
-      });
-    }
+    setGearCatalogFeedback({
+      type: 'success',
+      message: `Purchased "${itemName}" for ${costStr}!`,
+    });
   };
 
   // Purchase Optional Component / Mod on Owned Item
@@ -610,9 +602,14 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     const modName = modItem.name;
     const costStr = modItem.cost || '0s';
     const costInSilver = parseCostToSilver(costStr);
-    const currentGold = sheet?.gold ?? 0;
-    const currentSilver = sheet?.silver ?? 0;
-    const deduction = deductFundsWithChange(currentGold, currentSilver, costInSilver);
+    const modKey = String(modItem.id || modItem.name);
+
+    if (costInSilver > totalAvailableSilver) {
+      triggerNotEnoughMoney(modKey, modName, costStr, costInSilver);
+      return;
+    }
+
+    const deduction = deductFundsWithChange(gold, silver, costInSilver);
 
     const newModGearItem: SimpleGearItem = {
       id: `mod_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -625,24 +622,17 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       belongs_to: `Supplies: ${parentItemName}`,
     };
 
-    updateActiveSheetData((prev) => {
-      const updatePayload: any = {
-        ...prev,
-        simple_gear: [...(prev.simple_gear || []), newModGearItem],
-      };
-      if (deduction.success) {
-        updatePayload.gold = deduction.newGold;
-        updatePayload.silver = deduction.newSilver;
-      }
-      return updatePayload;
-    });
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      simple_gear: [...(prev.simple_gear || []), newModGearItem],
+      gold: deduction.newGold,
+      silver: deduction.newSilver,
+    }));
     saveActiveCharacter();
 
     setGearCatalogFeedback({
-      type: deduction.success ? 'success' : 'error',
-      message: deduction.success
-        ? `Purchased and installed "${modName}" on ${parentItemName} for ${costStr}!`
-        : `Insufficient funds for "${modName}" (${costStr})! Installed unpaid.`,
+      type: 'success',
+      message: `Purchased and installed "${modName}" on ${parentItemName} for ${costStr}!`,
     });
   };
 
@@ -758,9 +748,21 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                 </div>
               </div>
 
-              {/* Inventory Total Value Pill in Header */}
-              <div className="flex items-center gap-2 px-3 py-1 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs font-bold text-teal-300 shadow-inner">
-                <span>Value: 🪙 {inventoryValue.gold}g 🥈 {inventoryValue.silver}s</span>
+              {/* Currency Funds & Total Value in Header */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Character Wallet Funds Pill */}
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-950/80 border border-amber-500/50 rounded-xl font-mono text-xs font-extrabold text-amber-300 shadow-md shadow-amber-950/30">
+                  <span className="text-sm leading-none">💰</span>
+                  <span className="text-amber-200">Funds:</span>
+                  <span className="text-white">🪙 {gold}g</span>
+                  <span className="text-white">🥈 {silver}s</span>
+                </div>
+
+                {/* Inventory Total Value Pill in Header */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs font-bold text-teal-300 shadow-inner hidden sm:flex">
+                  <span className="text-slate-400 font-sans font-semibold text-[11px]">Gear Value:</span>
+                  <span>🪙 {inventoryValue.gold}g 🥈 {inventoryValue.silver}s</span>
+                </div>
               </div>
 
               <button
@@ -846,16 +848,42 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                   </span>
                                 );
                               }
+                              const modCostSilver = parseCostToSilver(m.cost);
+                              const canAffordMod = modCostSilver <= totalAvailableSilver;
+                              const modKey = String(m.id || m.name);
+
                               return (
-                                <div key={m.id || m.name} className="flex items-center justify-between mt-1 pt-1 border-t border-slate-800/60 text-[10px]">
+                                <div key={modKey} className="flex items-center justify-between mt-1 pt-1 border-t border-slate-800/60 text-[10px] gap-2">
                                   <span className="text-indigo-300 font-semibold truncate">🔌 {m.name} ({m.cost || 'Free'})</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handlePurchaseOptionalMod(m, item.name)}
-                                    className="px-2 py-0.5 bg-indigo-600/90 hover:bg-indigo-500 text-white rounded font-bold cursor-pointer transition text-[9px]"
-                                  >
-                                    + Install Mod
-                                  </button>
+                                  <div className="relative flex items-center shrink-0">
+                                    {notEnoughMoneyTarget?.id === modKey && (
+                                      <div className="absolute bottom-full right-0 mb-1 z-30 px-2 py-0.5 bg-rose-950 border border-rose-500 rounded-lg shadow-xl text-[9px] font-bold text-rose-200 whitespace-nowrap animate-fadeIn flex items-center gap-1 pointer-events-none">
+                                        <span>❌ Not Enough Money</span>
+                                      </div>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!canAffordMod) {
+                                          triggerNotEnoughMoney(modKey, m.name, m.cost || '0s', modCostSilver);
+                                        } else {
+                                          handlePurchaseOptionalMod(m, item.name);
+                                        }
+                                      }}
+                                      className={`px-2 py-0.5 rounded font-bold transition text-[9px] border ${
+                                        !canAffordMod
+                                          ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-500 border-slate-700/80 opacity-60 cursor-not-allowed'
+                                          : 'bg-indigo-600/90 hover:bg-indigo-500 text-white border-transparent cursor-pointer'
+                                      }`}
+                                      title={
+                                        canAffordMod
+                                          ? `Install ${m.name} for ${m.cost || 'Free'}`
+                                          : `Not Enough Money (Costs ${m.cost || '0s'}, you have ${gold}g ${silver}s)`
+                                      }
+                                    >
+                                      + Install Mod
+                                    </button>
+                                  </div>
                                 </div>
                               );
                             })}
@@ -1078,6 +1106,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                     filteredCatalog.map((catalogItem: any) => {
                       const starred = isItemStarred(catalogItem);
                       const costStr = catalogItem.cost || '0s';
+                      const itemCostSilver = parseCostToSilver(costStr);
+                      const canAfford = itemCostSilver <= totalAvailableSilver;
 
                       let itemSubtext = catalogItem.category || 'Supplies';
                       if (activeCategoryTab === 'weapons') {
@@ -1175,20 +1205,40 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                 notes={catalogItem.notes || ''}
                                 itemName={catalogItem.name}
                               />
-                              <button
-                                type="button"
-                                onClick={() => handleEquipItem(catalogItem, itemTypeKey)}
-                                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition shrink-0 cursor-pointer shadow-sm border ${
-                                  activeCategoryTab === 'kits'
-                                    ? 'bg-purple-950/80 hover:bg-purple-900 border-purple-500/40 text-purple-300'
-                                    : activeCategoryTab === 'exotics'
-                                    ? 'bg-indigo-950/80 hover:bg-indigo-900 border-indigo-500/40 text-indigo-300'
-                                    : 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-300'
-                                }`}
-                                title={`Purchase ${catalogItem.name} for ${costStr}`}
-                              >
-                                {buyButtonLabel}
-                              </button>
+                              <div className="relative flex items-center shrink-0">
+                                {notEnoughMoneyTarget?.id === itemKey && (
+                                  <div className="absolute bottom-full right-0 mb-1.5 z-30 px-2.5 py-1 bg-rose-950 border border-rose-500 rounded-lg shadow-xl text-[10px] font-bold text-rose-200 whitespace-nowrap animate-fadeIn flex items-center gap-1 pointer-events-none">
+                                    <span>❌ Not Enough Money</span>
+                                    <span className="text-rose-300/80">({notEnoughMoneyTarget.costStr})</span>
+                                  </div>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!canAfford) {
+                                      triggerNotEnoughMoney(itemKey, catalogItem.name, costStr, itemCostSilver);
+                                    } else {
+                                      handleEquipItem(catalogItem, itemTypeKey);
+                                    }
+                                  }}
+                                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition shrink-0 shadow-sm border ${
+                                    !canAfford
+                                      ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-500 border-slate-700/80 opacity-60 cursor-not-allowed'
+                                      : activeCategoryTab === 'kits'
+                                      ? 'bg-purple-950/80 hover:bg-purple-900 border-purple-500/40 text-purple-300 cursor-pointer'
+                                      : activeCategoryTab === 'exotics'
+                                      ? 'bg-indigo-950/80 hover:bg-indigo-900 border-indigo-500/40 text-indigo-300 cursor-pointer'
+                                      : 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-300 cursor-pointer'
+                                  }`}
+                                  title={
+                                    canAfford
+                                      ? `Purchase ${catalogItem.name} for ${costStr}`
+                                      : `Not Enough Money (Costs ${costStr}, you have ${gold}g ${silver}s)`
+                                  }
+                                >
+                                  {buyButtonLabel}
+                                </button>
+                              </div>
                             </div>
                           </div>
 
@@ -1224,10 +1274,17 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2 text-xs font-mono font-bold text-teal-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
-                <span className="text-slate-400 font-sans font-semibold text-[11px]">Total Gear Value:</span>
-                <span>🪙 {inventoryValue.gold}g 🥈 {inventoryValue.silver}s</span>
+            <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0 flex-wrap gap-2">
+              <div className="flex items-center gap-2.5 text-xs font-mono font-bold flex-wrap">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-950/60 border border-amber-500/40 rounded-lg text-amber-300">
+                  <span className="text-slate-400 font-sans font-semibold text-[11px]">Available Funds:</span>
+                  <span className="text-white">🪙 {gold}g</span>
+                  <span className="text-white">🥈 {silver}s</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-teal-300">
+                  <span className="text-slate-400 font-sans font-semibold text-[11px]">Total Gear Value:</span>
+                  <span>🪙 {inventoryValue.gold}g 🥈 {inventoryValue.silver}s</span>
+                </div>
               </div>
 
               <button

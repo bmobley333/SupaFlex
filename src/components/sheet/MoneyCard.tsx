@@ -162,7 +162,7 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
               <span className="text-base leading-none">💰</span>
             </div>
             <span className="font-outfit font-extrabold text-xs tracking-wider text-amber-200 uppercase group-hover:text-white transition-colors flex items-center gap-1">
-              <span>Money</span>
+              <span>Money & Valuables</span>
               <ChevronDown className="w-3 h-3 text-amber-400/70 group-hover:text-amber-300 group-hover:translate-y-0.5 transition-all" />
             </span>
           </button>
