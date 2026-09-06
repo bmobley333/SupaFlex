@@ -1,6 +1,6 @@
 // src/components/sheet/SkillsetsPanel.tsx
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Check, ChevronDown, Search, X, Sparkles, Scroll, GraduationCap, Plus, AlertCircle, Edit2, Star } from 'lucide-react';
+import { Check, ChevronDown, Search, X, Scroll, GraduationCap, Star } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
@@ -8,7 +8,6 @@ import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar } from '../common/QuickDeckBar';
 import { isTraitItem, isMsoEntry, compareMsoOptions, compareMsoItems } from '../../utils/kitUtils';
-import { supabase } from '../../lib/supabase';
 
 interface DerivedSkill {
   name: string;
@@ -39,14 +38,6 @@ const EMOJI_MAP: Record<string, { key: AttributeKey; label: string; icon: string
   '🫀': { key: 'moxie', label: 'Moxie', icon: '🫀' },
   '🎭': { key: 'moxie', label: 'Moxie', icon: '🫀' },
 };
-
-const ATTRIBUTE_OPTIONS: { key: AttributeKey; label: string; icon: string }[] = [
-  { key: 'might', label: 'Might', icon: '💪' },
-  { key: 'motion', label: 'Motion', icon: '🏃' },
-  { key: 'mind', label: 'Mind', icon: '👁️' },
-  { key: 'magic', label: 'Magic', icon: '✨' },
-  { key: 'moxie', label: 'Moxie', icon: '🫀' },
-];
 
 const dieToNum = (die?: string): string => {
   if (!die) return '4';
@@ -174,23 +165,10 @@ export const SkillsetsPanel: React.FC = () => {
     window.addEventListener('supaflex:open-manager' as any, handleOpen);
     return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
   }, []);
-  const [activeRightTab, setActiveRightTab] = useState<'skillsets' | 'individual' | 'creator'>('skillsets');
-  const [creatorSubMode, setCreatorSubMode] = useState<'skillset' | 'single'>('skillset');
+  const [activeRightTab, setActiveRightTab] = useState<'skillsets' | 'individual'>('skillsets');
   
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
   const [rightSearchQuery, setRightSearchQuery] = useState<string>('');
-  
-  // Single Skill Creator state
-  const [newSkillName, setNewSkillName] = useState<string>('');
-  const [newSkillAttribute, setNewSkillAttribute] = useState<AttributeKey>('might');
-  const [customSkillError, setCustomSkillError] = useState<string | null>(null);
-
-  // Custom Skillset Creator & Editor state
-  const [customSkillsetName, setCustomSkillsetName] = useState<string>('');
-  const [selectedCustomSkills, setSelectedCustomSkills] = useState<string[]>([]);
-  const [editingCustomSkillsetOriginalName, setEditingCustomSkillsetOriginalName] = useState<string | null>(null);
-  const [skillPickerSearch, setSkillPickerSearch] = useState<string>('');
-  const [customSkillsetError, setCustomSkillsetError] = useState<string | null>(null);
 
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -212,149 +190,6 @@ export const SkillsetsPanel: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showManageModal]);
-
-  const handleCreateCustomSingleSkill = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCustomSkillError(null);
-
-    const cleanName = newSkillName.trim();
-    if (!cleanName) {
-      setCustomSkillError('Please enter a valid skill name.');
-      return;
-    }
-
-    const isAlreadyLearned = knownIndividualSkills.some((s) => {
-      const parsed = parseSkill(s, allCatalogSkillsMap);
-      return parsed.cleanName.toLowerCase() === cleanName.toLowerCase();
-    });
-
-    if (isAlreadyLearned) {
-      setCustomSkillError(`Skill "${cleanName}" is already learned!`);
-      return;
-    }
-
-    const foundAttr = ATTRIBUTE_OPTIONS.find((a) => a.key === newSkillAttribute);
-    const emojiToUse = foundAttr ? foundAttr.icon : '✨';
-    const formattedSkillString = `${emojiToUse} ${cleanName}`;
-
-    updateActiveSheetData((prev) => {
-      const current = prev.known_individual_skills || [];
-      return {
-        ...prev,
-        known_individual_skills: [...current, formattedSkillString],
-      };
-    });
-
-    recordApExpenditure(1, 'Skills', `Learned Custom Skill: ${cleanName} (1 AP)`, 1, 'Manage Skills');
-    saveActiveCharacter();
-
-    setNewSkillName('');
-    setNewSkillAttribute('might');
-    setCustomSkillError(null);
-    setActiveRightTab('individual');
-  };
-
-  const handleSaveCustomSkillset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCustomSkillsetError(null);
-
-    const cleanName = customSkillsetName.trim();
-    if (!cleanName) {
-      setCustomSkillsetError('Please enter a skillset name.');
-      return;
-    }
-
-    if (selectedCustomSkills.length < 2 || selectedCustomSkills.length > 5) {
-      setCustomSkillsetError(`A custom skillset must contain between 2 and 5 skills. (Currently ${selectedCustomSkills.length})`);
-      return;
-    }
-
-    const isEditing = Boolean(editingCustomSkillsetOriginalName);
-
-    if (!isEditing) {
-      const isDuplicate = effectiveSkillsets.some(
-        (s) => s.name.toLowerCase() === cleanName.toLowerCase()
-      );
-      if (isDuplicate) {
-        setCustomSkillsetError(`A skillset named "${cleanName}" already exists!`);
-        return;
-      }
-    }
-
-    updateActiveSheetData((prev) => {
-      const existingCustoms = prev.custom_skillsets || [];
-      let updatedCustoms: CustomSkillsetDefinition[];
-
-      if (isEditing) {
-        updatedCustoms = existingCustoms.map((cs) =>
-          cs.name.toLowerCase() === editingCustomSkillsetOriginalName!.toLowerCase()
-            ? { ...cs, name: cleanName, skills: selectedCustomSkills }
-            : cs
-        );
-        if (!updatedCustoms.some((cs) => cs.name.toLowerCase() === cleanName.toLowerCase())) {
-          updatedCustoms.push({ name: cleanName, skills: selectedCustomSkills, source: 'Custom' });
-        }
-      } else {
-        updatedCustoms = [
-          ...existingCustoms,
-          { name: cleanName, skills: selectedCustomSkills, source: 'Custom' },
-        ];
-      }
-
-      const currentKnown = prev.known_skillsets || [];
-      let updatedKnown = currentKnown;
-      if (isEditing && editingCustomSkillsetOriginalName && editingCustomSkillsetOriginalName !== cleanName) {
-        updatedKnown = currentKnown.map((k) => (k === editingCustomSkillsetOriginalName ? cleanName : k));
-      } else if (!currentKnown.includes(cleanName)) {
-        updatedKnown = [...currentKnown, cleanName];
-      }
-
-      return {
-        ...prev,
-        custom_skillsets: updatedCustoms,
-        known_skillsets: updatedKnown,
-      };
-    });
-
-    try {
-      if (isEditing && editingCustomSkillsetOriginalName) {
-        await supabase
-          .from('skillsets')
-          .update({ name: cleanName, skills: selectedCustomSkills })
-          .eq('name', editingCustomSkillsetOriginalName);
-      } else {
-        await supabase
-          .from('skillsets')
-          .insert({ name: cleanName, skills: selectedCustomSkills, source: 'Custom' });
-      }
-    } catch (err) {
-      console.warn('[SkillsetsPanel] Supabase sync for custom skillset deferred:', err);
-    }
-
-    if (!isEditing) {
-      recordApExpenditure(2, 'Skills', `Created Custom Skillset: ${cleanName} (2 AP)`, 1, 'Manage Skills');
-    }
-
-    saveActiveCharacter();
-
-    setCustomSkillsetName('');
-    setSelectedCustomSkills([]);
-    setEditingCustomSkillsetOriginalName(null);
-    setCustomSkillsetError(null);
-    setActiveRightTab('skillsets');
-  };
-
-  const handleStartEditCustomSkillset = (ksName: string) => {
-    const found = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
-    if (!found) return;
-
-    setActiveRightTab('creator');
-    setCreatorSubMode('skillset');
-    setEditingCustomSkillsetOriginalName(found.name);
-    setCustomSkillsetName(found.name);
-    setSelectedCustomSkills(Array.isArray(found.skills) ? [...found.skills] : []);
-    setCustomSkillsetError(null);
-  };
 
   const handleToggleSkillset = (name: string) => {
     const uniqueCurrent = Array.from(new Set(knownSkillsetNames));
@@ -460,34 +295,6 @@ export const SkillsetsPanel: React.FC = () => {
       compareMsoItems(a, b, isGsUnlocked)
     );
   }, [allCatalogSkillsMap, isGsUnlocked]);
-
-  // Picker skills list for Custom Skillset Builder (catalog skills + custom individual skills)
-  const availableSkillsForPicker = useMemo(() => {
-    const list: { name: string; emoji: string; category: string }[] = [];
-    const seen = new Set<string>();
-
-    sortedAllCatalogSkills.forEach((sk) => {
-      const key = sk.name.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        list.push({ name: sk.name, emoji: sk.emoji, category: 'Catalog' });
-      }
-    });
-
-    knownIndividualSkills.forEach((raw) => {
-      const parsed = parseSkill(raw, allCatalogSkillsMap);
-      const key = parsed.cleanName.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        list.push({ name: parsed.cleanName, emoji: parsed.emoji, category: 'Custom Skill' });
-      }
-    });
-
-    if (!skillPickerSearch.trim()) return list;
-    const q = skillPickerSearch.toLowerCase().trim();
-    return list.filter((item) => item.name.toLowerCase().includes(q));
-  }, [sortedAllCatalogSkills, knownIndividualSkills, allCatalogSkillsMap, skillPickerSearch]);
-
   // Set of skills derived directly from active skillsets
   const skillsetDerivedSkillsSet = useMemo(() => {
     const set = new Set<string>();
@@ -895,16 +702,6 @@ export const SkillsetsPanel: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                  {isCustom && (
-                                    <button
-                                      onClick={() => handleStartEditCustomSkillset(ksName)}
-                                      className="p-1 text-[10px] font-bold rounded border bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 transition-all flex items-center gap-1"
-                                      title="Edit Custom Skillset"
-                                    >
-                                      <Edit2 className="w-3 h-3" />
-                                      <span>Edit</span>
-                                    </button>
-                                  )}
                                   <button
                                     onClick={() => handleToggleSkillset(ksName)}
                                     className="px-2.5 py-1 text-[10px] font-extrabold rounded-lg border bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30 hover:text-rose-100 shrink-0 transition-all"
@@ -985,18 +782,6 @@ export const SkillsetsPanel: React.FC = () => {
                         }`}
                       >
                         📜 Catalog ({sortedAllCatalogSkills.length})
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveRightTab('creator')}
-                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                          activeRightTab === 'creator'
-                            ? 'border-amber-400 text-amber-400'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        ✨ Creator
                       </button>
                     </div>
 
@@ -1127,16 +912,6 @@ export const SkillsetsPanel: React.FC = () => {
                                     >
                                       <Star className={`w-3.5 h-3.5 ${isSkillsetStarred(ks.name) ? 'fill-amber-400' : ''}`} />
                                     </button>
-                                    {isCustom && (
-                                      <button
-                                        onClick={() => handleStartEditCustomSkillset(ks.name)}
-                                        className="p-1 text-xs font-bold rounded-lg border bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 transition-all flex items-center gap-1"
-                                        title="Edit Custom Skillset"
-                                      >
-                                        <Edit2 className="w-3.5 h-3.5" />
-                                        <span>Edit</span>
-                                      </button>
-                                    )}
                                     <button
                                       onClick={() => handleToggleSkillset(ks.name)}
                                       className={`px-2.5 py-1 text-xs font-bold rounded-lg border shrink-0 transition-all ${
@@ -1379,260 +1154,7 @@ export const SkillsetsPanel: React.FC = () => {
                       </div>
                     )}
 
-                    {/* TAB 3: CREATOR VIEW */}
-                    {activeRightTab === 'creator' && (
-                      <div className="flex-1 flex flex-col min-h-0 mt-2.5 overflow-hidden">
-                        {/* Creator Sub-Mode Switcher */}
-                        <div className="flex items-center gap-2 mb-2.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => setCreatorSubMode('skillset')}
-                            className={`flex-1 py-1 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border ${
-                              creatorSubMode === 'skillset'
-                                ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 shadow-sm'
-                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-                            }`}
-                          >
-                            <Sparkles className="w-3.5 h-3.5 text-indigo-300" />
-                            <span>Custom Skillset (2 AP)</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setCreatorSubMode('single')}
-                            className={`flex-1 py-1 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border ${
-                              creatorSubMode === 'single'
-                                ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 shadow-sm'
-                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-                            }`}
-                          >
-                            <Plus className="w-3.5 h-3.5 text-indigo-300" />
-                            <span>Single Skill (1 AP)</span>
-                          </button>
-                        </div>
-
-                        {/* MODE 1: CUSTOM SKILLSET CREATOR & EDITOR */}
-                        {creatorSubMode === 'skillset' && (
-                          <form onSubmit={handleSaveCustomSkillset} className="flex-1 flex flex-col gap-2.5 min-h-0 overflow-y-auto pr-1">
-                            <div className="flex items-center justify-between border-b border-indigo-500/20 pb-1.5 shrink-0">
-                              <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-                                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                                {editingCustomSkillsetOriginalName ? `Editing: ${editingCustomSkillsetOriginalName}` : 'Create Custom Skillset'}
-                              </span>
-                              {editingCustomSkillsetOriginalName && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingCustomSkillsetOriginalName(null);
-                                    setCustomSkillsetName('');
-                                    setSelectedCustomSkills([]);
-                                    setCustomSkillsetError(null);
-                                  }}
-                                  className="text-[10px] text-amber-300 hover:text-amber-200 underline font-semibold"
-                                >
-                                  Cancel Edit
-                                </button>
-                              )}
-                            </div>
-
-                            {/* Name Input */}
-                            <div className="flex flex-col gap-1 shrink-0">
-                              <label className="text-[11px] font-bold text-slate-300">Skillset Name</label>
-                              <input
-                                type="text"
-                                value={customSkillsetName}
-                                onChange={(e) => setCustomSkillsetName(e.target.value)}
-                                className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-indigo-400"
-                                required
-                              />
-                            </div>
-
-                            {/* Selected Skills Tray */}
-                            <div className="flex flex-col gap-1.5 p-2 bg-slate-950/80 rounded-xl border border-slate-800 shrink-0">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-bold text-slate-300">Included Skills</span>
-                                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
-                                  selectedCustomSkills.length >= 2 && selectedCustomSkills.length <= 5
-                                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-                                    : 'bg-amber-950/80 text-amber-300 border-amber-500/40'
-                                }`}>
-                                  {selectedCustomSkills.length} / 5 Skills (Min 2, Max 5)
-                                </span>
-                              </div>
-
-                              {selectedCustomSkills.length > 0 ? (
-                                <div className="flex flex-wrap gap-1 pt-0.5">
-                                  {selectedCustomSkills.map((skName) => (
-                                    <span
-                                      key={skName}
-                                      className="px-2 py-0.5 bg-indigo-900/60 text-indigo-200 border border-indigo-500/40 rounded-lg text-xs font-semibold flex items-center gap-1"
-                                    >
-                                      <span>{skName}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => setSelectedCustomSkills((prev) => prev.filter((s) => s !== skName))}
-                                        className="text-indigo-300 hover:text-rose-300 ml-0.5"
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-[11px] text-slate-500 italic py-1">
-                                  No skills added yet. Select 2 to 5 skills from list below.
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Skill Picker Search & List */}
-                            <div className="flex-1 flex flex-col gap-1 min-h-[130px] bg-slate-950/50 p-2 rounded-xl border border-slate-800 overflow-hidden">
-                              <div className="relative shrink-0">
-                                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                                <input
-                                  type="text"
-                                  value={skillPickerSearch}
-                                  onChange={(e) => setSkillPickerSearch(e.target.value)}
-                                  className="bg-slate-900 text-slate-200 text-[11px] pl-8 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-indigo-500 w-full"
-                                />
-                              </div>
-
-                              <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1 min-h-0">
-                                {availableSkillsForPicker.map((skItem) => {
-                                  const isSelected = selectedCustomSkills.includes(skItem.name);
-                                  const disabled = !isSelected && selectedCustomSkills.length >= 5;
-
-                                  return (
-                                    <div
-                                      key={skItem.name}
-                                      className="p-1.5 bg-slate-900/80 rounded-lg border border-slate-800/80 flex items-center justify-between text-xs gap-2 shrink-0"
-                                    >
-                                      <div className="flex items-center gap-1.5 truncate">
-                                        <span>{skItem.emoji}</span>
-                                        <span className="text-slate-200 font-medium truncate">{skItem.name}</span>
-                                        <span className="text-[9px] font-mono text-slate-500 bg-slate-950 px-1 py-0.2 rounded">
-                                          {skItem.category}
-                                        </span>
                                       </div>
-
-                                      {isSelected ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => setSelectedCustomSkills((prev) => prev.filter((s) => s !== skItem.name))}
-                                          className="px-2 py-0.5 text-[10px] font-bold rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 shrink-0"
-                                        >
-                                          Remove
-                                        </button>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          disabled={disabled}
-                                          onClick={() => {
-                                            if (selectedCustomSkills.length < 5) {
-                                              setSelectedCustomSkills((prev) => [...prev, skItem.name]);
-                                            }
-                                          }}
-                                          className={`px-2 py-0.5 text-[10px] font-bold rounded border shrink-0 ${
-                                            disabled
-                                              ? 'opacity-40 bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
-                                              : 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50 cursor-pointer'
-                                          }`}
-                                        >
-                                          + Add
-                                        </button>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-
-                            {customSkillsetError && (
-                              <div className="p-2 bg-rose-950/40 border border-rose-500/30 rounded text-rose-300 text-xs flex items-center gap-1.5 shrink-0">
-                                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                                <span>{customSkillsetError}</span>
-                              </div>
-                            )}
-
-                            <div className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between text-xs font-mono shrink-0">
-                              <span className="text-slate-400">AP Cost:</span>
-                              <strong className="text-amber-300">
-                                {editingCustomSkillsetOriginalName ? '0 AP (Editing Existing)' : '2 AP (Auto-Learned)'}
-                              </strong>
-                            </div>
-
-                            <button
-                              type="submit"
-                              disabled={selectedCustomSkills.length < 2 || selectedCustomSkills.length > 5 || !customSkillsetName.trim()}
-                              className={`font-bold text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow transition-all shrink-0 ${
-                                selectedCustomSkills.length >= 2 && selectedCustomSkills.length <= 5 && customSkillsetName.trim()
-                                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer'
-                                  : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                              }`}
-                            >
-                              <Sparkles className="w-4 h-4" />
-                              <span>
-                                {editingCustomSkillsetOriginalName ? 'Save Skillset Changes' : 'Create & Learn Skillset (2 AP)'}
-                              </span>
-                            </button>
-                          </form>
-                        )}
-
-                        {/* MODE 2: SINGLE CUSTOM SKILL CREATOR */}
-                        {creatorSubMode === 'single' && (
-                          <form onSubmit={handleCreateCustomSingleSkill} className="p-3 bg-indigo-950/20 rounded-xl border border-indigo-500/30 flex flex-col gap-3">
-                            <div className="flex items-center justify-between border-b border-indigo-500/20 pb-1 flex-wrap">
-                              <span className="text-xs font-bold text-indigo-300 flex items-center gap-1">
-                                <Plus className="w-3.5 h-3.5 text-indigo-400" /> Create Custom Single Skill
-                              </span>
-                            </div>
-
-                            <input
-                              type="text"
-                              value={newSkillName}
-                              onChange={(e) => setNewSkillName(e.target.value)}
-                              className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-white outline-none focus:border-indigo-400"
-                              required
-                            />
-
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-bold text-slate-300">Attribute</span>
-                              <select
-                                value={newSkillAttribute}
-                                onChange={(e) => setNewSkillAttribute(e.target.value as AttributeKey)}
-                                className="bg-slate-950 text-xs px-2.5 py-1 rounded border border-slate-700 text-indigo-200 outline-none"
-                              >
-                                {ATTRIBUTE_OPTIONS.map((opt) => (
-                                  <option key={opt.key} value={opt.key}>
-                                    {opt.icon} {opt.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between text-xs font-mono">
-                              <span className="text-slate-400">AP Cost:</span>
-                              <strong className="text-amber-300">1 AP (Individually Learned)</strong>
-                            </div>
-
-                            {customSkillError && (
-                              <div className="p-2 bg-rose-950/40 border border-rose-500/30 rounded text-rose-300 text-xs flex items-center gap-1.5">
-                                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                                <span>{customSkillError}</span>
-                              </div>
-                            )}
-
-                            <button
-                              type="submit"
-                              className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
-                            >
-                              <Plus className="w-4 h-4" />
-                              <span>Save & Learn Skill (1 AP)</span>
-                            </button>
-                          </form>
-                        )}
-                      </div>
-                    )}
-                  </div>
 
                 </div>
 

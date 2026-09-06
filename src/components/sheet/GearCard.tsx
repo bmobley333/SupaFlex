@@ -29,7 +29,7 @@ import { gameApi } from '../../services/api';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
-export type EquipmentCategoryTab = 'gear' | 'weapons' | 'armor' | 'shields' | 'exotics' | 'kits';
+export type EquipmentCategoryTab = 'supplies' | 'weapons' | 'armor' | 'shields' | 'exotics' | 'kits';
 
 /**
  * Calculates total gold and silver inventory value for equipped gear items.
@@ -63,8 +63,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Active Category Tab: gear | weapons | armor | shields
-  const [activeCategoryTab, setActiveCategoryTab] = useState<EquipmentCategoryTab>('gear');
+  // Active Category Tab: supplies | weapons | armor | shields | exotics | kits
+  const [activeCategoryTab, setActiveCategoryTab] = useState<EquipmentCategoryTab>('supplies');
 
   // Supabase Catalogs State
   const [gearCatalog, setGearCatalog] = useState<SupabaseGear[]>([]);
@@ -82,6 +82,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [activeFilterTable, setActiveFilterTable] = useState<string>('ALL');
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [gearCatalogFeedback, setGearCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+  const [expandedCatalogModId, setExpandedCatalogModId] = useState<string | null>(null);
 
   // Calculate total inventory value (gold & silver, 100s = 1g)
   const inventoryValue = useMemo(() => calculateInventoryValue(gearList), [gearList]);
@@ -91,7 +92,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     if (showManageModal) {
       setIsLoadingCatalog(true);
       Promise.all([
-        gameApi.getGear(),
+        gameApi.getSupplies(),
         gameApi.getWeapons(),
         gameApi.getArmor(),
         gameApi.getShields(),
@@ -153,7 +154,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         return exoticsCatalog;
       case 'kits':
         return kitsCatalog;
-      case 'gear':
+      case 'supplies':
       default:
         return gearCatalog;
     }
@@ -175,7 +176,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       case 'exotics':
       case 'kits':
         return 'purple';
-      case 'gear':
+      case 'supplies':
       default:
         return 'emerald';
     }
@@ -193,9 +194,9 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         return '➕ Pin Exotics Table';
       case 'kits':
         return '➕ Pin Kits Table';
-      case 'gear':
+      case 'supplies':
       default:
-        return '➕ Pin Gear Table';
+        return '➕ Pin Supplies Table';
     }
   }, [activeCategoryTab]);
 
@@ -210,7 +211,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         return sheetData.favorite_armor_tables || [];
       case 'shields':
         return sheetData.favorite_shield_tables || [];
-      case 'gear':
+      case 'supplies':
       default:
         return sheetData.favorite_gear_tables || [];
     }
@@ -250,7 +251,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         case 'shields':
           starredList = sheetData.starred_shields || [];
           break;
-        case 'gear':
+        case 'supplies':
         default:
           starredList = sheetData.starred_gear || sheetData.starred_armor || [];
           break;
@@ -315,7 +316,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   // Filtered Catalog
   const filteredCatalog = useMemo(() => {
     const equippedNames = new Set(gearList.map((g) => g.name.toLowerCase()));
-    const unequipped = currentRawCatalog.filter((g) => !equippedNames.has(g.name.toLowerCase()));
+    const unequipped = currentRawCatalog.filter((g: any) => {
+      if (equippedNames.has(g.name.toLowerCase())) return false;
+      const costLower = (g.cost || '').toLowerCase().trim();
+      const catLower = (g.category || '').toLowerCase().trim();
+      if (costLower === 'artifact' || catLower === 'artifact') return false;
+      return true;
+    });
 
     let base = unequipped.filter((g) =>
       localGenreFilter === 'ALL' ? true : matchesGenre(g.genres, localGenreFilter as any)
@@ -439,7 +446,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         {
           id: `kit_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
           name: kitName,
-          category: '🎒 Kits',
+          category: '📦 Kits',
           cost: costStr,
           qty: 1,
           notes: catalogItem.notes || 'Equipment Kit package',
@@ -615,7 +622,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       qty: 1,
       notes: modItem.notes || `Installed modification on ${parentItemName}`,
       item_type: 'gear',
-      belongs_to: `Exotic: ${parentItemName}`,
+      belongs_to: `Supplies: ${parentItemName}`,
     };
 
     updateActiveSheetData((prev) => {
@@ -670,8 +677,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     if (type === 'shield' || cat.includes('shield')) return '🛡️ Shields';
     if (type === 'artifact' || cat.includes('artifact') || costLower === 'artifact') return '🔮 Artifact';
     if (type === 'exotic' || cat.includes('exotic')) return '🧿 Exotic';
-    if (type === 'kit' || cat.includes('kit')) return '🎒 Kit';
-    return category || '⚙️ Gear';
+    if (type === 'kit' || cat.includes('kit')) return '📦 Kit';
+    return category || '🎒 Supplies';
   };
 
   const handleDropGear = (itemId: string) => {
@@ -705,13 +712,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title="Click to open Equipment Manager"
+            title="Click to open Gear Manager"
           >
             <div className="p-1.5 rounded-xl bg-teal-950/90 border border-teal-500/50 text-teal-300 flex items-center justify-center shadow-[0_0_12px_rgba(20,184,166,0.25)] group-hover:scale-105 group-hover:border-teal-400 transition-all">
-              <span className="text-base leading-none">🧰</span>
+              <span className="text-base leading-none">⚙️</span>
             </div>
             <span className="font-outfit font-extrabold text-xs tracking-wider text-teal-200 uppercase group-hover:text-white transition-colors flex items-center gap-1">
-              <span>Equipment</span>
+              <span>Gear</span>
               <ChevronDown className="w-3 h-3 text-teal-400/70 group-hover:text-teal-300 group-hover:translate-y-0.5 transition-all" />
             </span>
           </button>
@@ -722,13 +729,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
           type="button"
           onClick={() => setShowManageModal(true)}
           className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-teal-950/80 hover:bg-teal-900/90 border-teal-500/40 hover:border-teal-400 text-teal-200 hover:text-white cursor-pointer shrink-0 group"
-          title="Open Equipment Manager"
+          title="Open Gear Manager"
         >
           <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
         </button>
       </div>
 
-      {/* 🧰 EQUIPMENT MANAGER MODAL */}
+      {/* ⚙️ GEAR MANAGER MODAL */}
       {showManageModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
           <div
@@ -739,14 +746,14 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
             <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
               <div className="flex items-center gap-2.5 shrink-0">
                 <div className="p-2 rounded-xl bg-teal-950/80 border border-teal-500/30 text-teal-300 flex items-center justify-center shadow-[0_0_12px_rgba(20,184,166,0.25)]">
-                  <span className="text-lg leading-none">🧰</span>
+                  <span className="text-lg leading-none">⚙️</span>
                 </div>
                 <div>
                   <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                    Equipment Manager
+                    Gear Manager
                   </h3>
                   <p className="text-xs text-slate-400 hidden sm:block">
-                    Manage and purchase adventuring gear, weapons, armor, shields, exotics, and kits from the stock catalog.
+                    Manage and purchase supplies, weapons, armor, shields, exotics, and kits from the stock catalog.
                   </p>
                 </div>
               </div>
@@ -902,14 +909,14 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                 <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md mb-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => setActiveCategoryTab('gear')}
+                    onClick={() => setActiveCategoryTab('supplies')}
                     className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                      activeCategoryTab === 'gear'
+                      activeCategoryTab === 'supplies'
                         ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    ⚙️ Gear
+                    🎒 Supplies
                   </button>
                   <button
                     type="button"
@@ -964,7 +971,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    🎒 Kits
+                    📦 Kits
                   </button>
                 </div>
 
@@ -1072,7 +1079,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       const starred = isItemStarred(catalogItem);
                       const costStr = catalogItem.cost || '0s';
 
-                      let itemSubtext = catalogItem.category || 'General';
+                      let itemSubtext = catalogItem.category || 'Supplies';
                       if (activeCategoryTab === 'weapons') {
                         itemSubtext = [catalogItem.type, catalogItem.discipline].filter(Boolean).join(' • ') || 'Weapon';
                       } else if (activeCategoryTab === 'armor') {
@@ -1080,9 +1087,11 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       } else if (activeCategoryTab === 'shields') {
                         itemSubtext = [catalogItem.max_block ? `Block: ${catalogItem.max_block}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Shield';
                       } else if (activeCategoryTab === 'exotics') {
-                        itemSubtext = ['🚀 Spec Gear', catalogItem.discipline].filter(Boolean).join(' • ') || 'Spec Gear';
+                        itemSubtext = ['🧿 Exotic', catalogItem.discipline].filter(Boolean).join(' • ') || 'Exotic';
                       } else if (activeCategoryTab === 'kits') {
-                        itemSubtext = ['🎒 Kit Suite', catalogItem.category].filter(Boolean).join(' • ') || 'Equipment Kit';
+                        itemSubtext = ['📦 Kit Suite', catalogItem.category].filter(Boolean).join(' • ') || 'Kit Suite';
+                      } else if (activeCategoryTab === 'supplies') {
+                        itemSubtext = ['🎒 Supplies', catalogItem.category].filter(Boolean).join(' • ') || 'Supplies';
                       }
 
                       const itemTypeKey: 'gear' | 'weapon' | 'armor' | 'shield' | 'exotic' | 'kit' =
@@ -1102,62 +1111,110 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                         activeCategoryTab === 'kits'
                           ? '+ Buy Kit'
                           : activeCategoryTab === 'exotics'
-                          ? '+ Buy Spec Gear'
+                          ? '+ Buy Exotic'
+                          : activeCategoryTab === 'supplies'
+                          ? '+ Buy'
                           : '+ Equip';
+
+                      const itemKey = String(catalogItem.id || catalogItem.name);
+                      const isModsExpanded = expandedCatalogModId === itemKey;
+                      const availableMods = modsCatalog.filter((m: any) => {
+                        if (!m.belongs_to || !catalogItem.name) return false;
+                        return m.belongs_to.toLowerCase().includes(catalogItem.name.toLowerCase());
+                      });
 
                       return (
                         <div
-                          key={catalogItem.id || catalogItem.name}
-                          className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 hover:border-teal-500/40 transition flex items-center justify-between gap-2 shadow-sm"
+                          key={itemKey}
+                          className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 hover:border-teal-500/40 transition flex flex-col gap-2 shadow-sm"
                         >
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleStarItem(catalogItem)}
-                              className={`p-1 rounded hover:bg-slate-800 transition cursor-pointer ${
-                                starred ? 'text-amber-400' : 'text-slate-600 hover:text-slate-400'
-                              }`}
-                              title={starred ? 'Unstar item' : 'Star item'}
-                            >
-                              <Star className="w-3.5 h-3.5 fill-current" />
-                            </button>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStarItem(catalogItem)}
+                                className={`p-1 rounded hover:bg-slate-800 transition cursor-pointer ${
+                                  starred ? 'text-amber-400' : 'text-slate-600 hover:text-slate-400'
+                                }`}
+                                title={starred ? 'Unstar item' : 'Star item'}
+                              >
+                                <Star className="w-3.5 h-3.5 fill-current" />
+                              </button>
 
-                            <div className="flex flex-col min-w-0 flex-1">
-                              <span className={`font-outfit font-bold text-xs truncate ${
-                                isGsUnlocked && isMsoEntry(catalogItem.name) ? 'text-purple-300' : 'text-slate-100'
-                              }`}>
-                                {isGsUnlocked && isMsoEntry(catalogItem.name) ? `🌌 ${catalogItem.name}` : catalogItem.name}
-                              </span>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                                <span className="font-mono text-teal-300 font-bold">
-                                  {formatCostAbbreviated(costStr)}
-                                </span>
-                                <span>•</span>
-                                <span className="truncate">{itemSubtext}</span>
+                              <div className="flex flex-col min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={`font-outfit font-bold text-xs truncate ${
+                                    isGsUnlocked && isMsoEntry(catalogItem.name) ? 'text-purple-300' : 'text-slate-100'
+                                  }`}>
+                                    {isGsUnlocked && isMsoEntry(catalogItem.name) ? `🌌 ${catalogItem.name}` : catalogItem.name}
+                                  </span>
+                                  {availableMods.length > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedCatalogModId(isModsExpanded ? null : itemKey)}
+                                      className="px-1.5 py-0.5 rounded bg-indigo-950/80 hover:bg-indigo-900/90 text-indigo-300 border border-indigo-500/30 text-[9px] font-mono flex items-center gap-1 cursor-pointer transition shrink-0"
+                                      title="Toggle compatible modifications"
+                                    >
+                                      <span>🔌 {availableMods.length} {availableMods.length === 1 ? 'Mod' : 'Mods'}</span>
+                                      <ChevronDown className={`w-2.5 h-2.5 transition-transform ${isModsExpanded ? 'rotate-180' : ''}`} />
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                  <span className="font-mono text-teal-300 font-bold">
+                                    {formatCostAbbreviated(costStr)}
+                                  </span>
+                                  <span>•</span>
+                                  <span className="truncate">{itemSubtext}</span>
+                                </div>
                               </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <ItemNotesPopover
+                                notes={catalogItem.notes || ''}
+                                itemName={catalogItem.name}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleEquipItem(catalogItem, itemTypeKey)}
+                                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition shrink-0 cursor-pointer shadow-sm border ${
+                                  activeCategoryTab === 'kits'
+                                    ? 'bg-purple-950/80 hover:bg-purple-900 border-purple-500/40 text-purple-300'
+                                    : activeCategoryTab === 'exotics'
+                                    ? 'bg-indigo-950/80 hover:bg-indigo-900 border-indigo-500/40 text-indigo-300'
+                                    : 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-300'
+                                }`}
+                                title={`Purchase ${catalogItem.name} for ${costStr}`}
+                              >
+                                {buyButtonLabel}
+                              </button>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <ItemNotesPopover
-                              notes={catalogItem.notes || ''}
-                              itemName={catalogItem.name}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleEquipItem(catalogItem, itemTypeKey)}
-                              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition shrink-0 cursor-pointer shadow-sm border ${
-                                activeCategoryTab === 'kits'
-                                  ? 'bg-purple-950/80 hover:bg-purple-900 border-purple-500/40 text-purple-300'
-                                  : activeCategoryTab === 'exotics'
-                                  ? 'bg-indigo-950/80 hover:bg-indigo-900 border-indigo-500/40 text-indigo-300'
-                                  : 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-300'
-                              }`}
-                              title={`Purchase ${catalogItem.name} for ${costStr}`}
-                            >
-                              {buyButtonLabel}
-                            </button>
-                          </div>
+                          {/* Inline Expandable Mod Preview */}
+                          {isModsExpanded && availableMods.length > 0 && (
+                            <div className="mt-1 pt-2 border-t border-slate-800/80 flex flex-col gap-1.5 bg-slate-950/60 p-2 rounded-lg">
+                              <span className="text-[10px] font-mono font-bold text-indigo-300 uppercase tracking-wide flex items-center gap-1">
+                                <span>🔌 Compatible Modifications ({availableMods.length}):</span>
+                              </span>
+                              {availableMods.map((mod: any) => (
+                                <div
+                                  key={mod.id || mod.name}
+                                  className="flex items-center justify-between gap-2 text-[10px] bg-slate-900/80 p-1.5 rounded border border-slate-800/80"
+                                >
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-slate-200 font-semibold truncate">🔌 {mod.name}</span>
+                                    <span className="font-mono text-teal-300 font-bold">({formatCostAbbreviated(mod.cost || '0s')})</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <ItemNotesPopover notes={mod.notes || ''} itemName={mod.name} />
+                                    <span className="text-[9px] text-slate-400 italic">Install once owned</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     })

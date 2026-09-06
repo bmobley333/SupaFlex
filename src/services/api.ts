@@ -11,7 +11,7 @@ import {
   SupabaseArmor,
   SupabaseWeapon,
   SupabaseShield,
-  SupabaseGear,
+  SupabaseSupply,
   SupabaseMonster,
   SupabaseChaosGem,
   ChaosGemSlot,
@@ -308,7 +308,7 @@ export const gameApi = {
 
   // --- ARTIFACTS, EXOTICS & LOADOUT CATALOG ---
   async getArtifacts(): Promise<MagicItem[]> {
-    let query = supabase.from('equipment').select('*');
+    let query = supabase.from('supplies').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -332,7 +332,7 @@ export const gameApi = {
   },
 
   async getExotics(): Promise<MagicItem[]> {
-    let query = supabase.from('equipment').select('*');
+    let query = supabase.from('supplies').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -617,13 +617,17 @@ export const gameApi = {
     return data as SupabaseShield;
   },
 
-  // --- EQUIPMENT & GEAR CATALOG ---
-  async getEquipment(): Promise<SupabaseGear[]> {
-    return this.getGear();
+  // --- SUPPLIES & GEAR CATALOG ---
+  async getEquipment(): Promise<SupabaseSupply[]> {
+    return this.getSupplies();
   },
 
-  async getGear(): Promise<SupabaseGear[]> {
-    let query = supabase.from('equipment').select('*');
+  async getGear(): Promise<SupabaseSupply[]> {
+    return this.getSupplies();
+  },
+
+  async getSupplies(): Promise<SupabaseSupply[]> {
+    let query = supabase.from('supplies').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -632,24 +636,28 @@ export const gameApi = {
       .order('name', { ascending: true });
 
     if (error) {
-      console.error('[gameApi] Error fetching equipment catalog:', error);
+      console.error('[gameApi] Error fetching supplies catalog:', error);
       return [];
     }
-    return (data || []) as SupabaseGear[];
+    return (data || []) as SupabaseSupply[];
   },
 
-  async createGear(newGear: Omit<SupabaseGear, 'id' | 'created_at'>): Promise<SupabaseGear> {
+  async createGear(newGear: Omit<SupabaseSupply, 'id' | 'created_at'>): Promise<SupabaseSupply> {
+    return this.createSupply(newGear);
+  },
+
+  async createSupply(newSupply: Omit<SupabaseSupply, 'id' | 'created_at'>): Promise<SupabaseSupply> {
     const { data, error } = await supabase
-      .from('equipment')
-      .insert(newGear)
+      .from('supplies')
+      .insert(newSupply)
       .select()
       .single();
 
     if (error) {
-      console.error('[gameApi] Error creating custom gear/equipment:', error);
+      console.error('[gameApi] Error creating custom supply:', error);
       throw error;
     }
-    return data as SupabaseGear;
+    return data as SupabaseSupply;
   },
 
   // --- HEALTH CHECK ---
@@ -1723,7 +1731,7 @@ export const gameApi = {
           genres: item.item_data?.genres && item.item_data.genres.length > 0 ? item.item_data.genres : ['Medieval', 'Modern', 'SciFi'],
           created_at: new Date().toISOString(),
         };
-        const { error: insertError } = await supabase.from('equipment').insert([gearPayload]);
+        const { error: insertError } = await supabase.from('gear').insert([gearPayload]);
         if (insertError) throw insertError;
         await this.updateCustomItem(item.id, { is_promoted: true });
         return true;

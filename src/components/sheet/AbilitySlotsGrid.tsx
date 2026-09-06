@@ -228,7 +228,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       'Loadout Slots' as any,
       `Unlocked Loadout Capacity (${newTotalSlots} Slots)`,
       1,
-      'Loadout Manager'
+      'Functions Manager'
     );
 
     await saveActiveCharacter();
@@ -311,8 +311,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [leftSearchQuery, setLeftSearchQuery] = useState('');
   const [rightSearchQuery, setRightSearchQuery] = useState('');
   
-  // Right Pane Active View: 'VAULT' | 'CODEX' | 'CATALOG' | 'SLOTS' | 'CREATOR' | 'EDITOR'
-  const [activeRightTab, setActiveRightTab] = useState<'VAULT' | 'CODEX' | 'CATALOG' | 'SLOTS' | 'CREATOR' | 'EDITOR'>(
+  // Right Pane Active View: 'VAULT' | 'CODEX' | 'CATALOG' | 'SLOTS' | 'EDITOR'
+  const [activeRightTab, setActiveRightTab] = useState<'VAULT' | 'CODEX' | 'CATALOG' | 'SLOTS' | 'EDITOR'>(
     type === 'spells' ? 'VAULT' : 'CATALOG'
   );
 
@@ -1336,7 +1336,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         </h3>
                         <p className="text-xs text-slate-400 hidden sm:block">
                           {type === 'powers'
-                            ? 'Manage character powers side-by-side with the SupaFlex stock catalog and custom creator.'
+                            ? 'Manage character powers side-by-side with the SupaFlex stock catalog.'
                             : 'Manage active Function Slots (🧿) moving abilities between the Vault and your active slots.'}
                         </p>
                       </div>
@@ -1365,14 +1365,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 {/* 2-COLUMN SPLIT-PANE BODY */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
                   
-                  {/* --- LEFT COLUMN: ACTIVE LOADOUT ONLY --- */}
+                  {/* --- LEFT COLUMN: ACTIVE FUNCTIONS ONLY --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                     {/* Pane Header */}
                     <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <Flame className={`w-4 h-4 ${type === 'powers' ? 'text-amber-400' : 'text-pink-400'}`} />
-                        <span className={`text-xs font-outfit font-bold uppercase tracking-wider ${type === 'powers' ? 'text-amber-300' : 'text-pink-300'}`}>
-                          {type === 'powers' ? 'Ready Powers' : '💍 Active Loadout'}
+                        {type === 'powers' ? (
+                          <Flame className="w-4 h-4 text-amber-400" />
+                        ) : (
+                          <span className="text-sm leading-none">🧿</span>
+                        )}
+                        <span className={`text-xs font-outfit font-bold uppercase tracking-wider ${type === 'powers' ? 'text-amber-300' : 'text-cyan-300'}`}>
+                          {type === 'powers' ? 'Ready Powers' : 'Active Functions'}
                         </span>
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
                           {type === 'powers' ? activeDisplaySlots.length : slots.length}
@@ -1391,12 +1395,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </div>
                     </div>
 
-                    {/* Left Pane Slots Status Pill (Loadout Mode) */}
+                    {/* Left Pane Slots Status Pill (Functions Mode) */}
                     {type === 'spells' && (() => {
                       const remainingSlots = Math.max(0, totalLoadoutCapacity - totalUsedLoadoutSlots);
                       return (
                         <div className="mt-2.5 px-3 py-1.5 bg-slate-900/90 border border-cyan-500/40 rounded-xl text-xs font-mono flex items-center justify-between gap-2 shadow-inner shrink-0">
-                          <span className="text-cyan-300 font-bold flex items-center gap-1">💍 Loadout Slots:</span>
+                          <span className="text-cyan-300 font-bold flex items-center gap-1">🧿 Function Slots:</span>
                           <div className="flex items-center gap-2 text-[11px] font-bold">
                             <span className="text-slate-300">Capacity <strong className="text-slate-100">{totalLoadoutCapacity}</strong></span>
                             <span className="text-slate-600">|</span>
@@ -1592,28 +1596,26 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               : 'border-transparent text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          🏺 Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
+                          🏺 Function Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
                         </button>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isVersionEditMode) setIsVersionEditMode(false);
-                          setActiveRightTab('CATALOG');
-                        }}
-                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                          activeRightTab === 'CATALOG'
-                            ? type === 'powers'
+                      {type === 'powers' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isVersionEditMode) setIsVersionEditMode(false);
+                            setActiveRightTab('CATALOG');
+                          }}
+                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'CATALOG'
                               ? 'border-amber-400 text-amber-400'
-                              : 'border-cyan-400 text-cyan-400'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        {type === 'powers'
-                          ? `🌐 Catalog (${filteredCatalogAbilities.length})`
-                          : `⚙️ Hardware Catalog (${filteredCatalogAbilities.length})`}
-                      </button>
+                              : 'border-transparent text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          🌐 Catalog ({filteredCatalogAbilities.length})
+                        </button>
+                      )}
 
                       {type === 'spells' && (
                         <button
@@ -1631,23 +1633,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           ⚡ Buy Slots
                         </button>
                       )}
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isVersionEditMode) setIsVersionEditMode(false);
-                          setActiveRightTab('CREATOR');
-                        }}
-                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                          activeRightTab === 'CREATOR'
-                            ? type === 'powers'
-                              ? 'border-amber-400 text-amber-400'
-                              : 'border-cyan-400 text-cyan-400'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        ✨ Custom Creator
-                      </button>
 
                       {isVersionEditMode && (
                         <button
@@ -2453,7 +2438,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
                   <div className="flex items-center gap-3">
                     <span className="font-outfit font-bold text-slate-300">
-                      {type === 'powers' ? '🔥 Powers Manager' : '💍 Loadout Manager'}
+                      {type === 'powers' ? '🔥 Powers Manager' : '🧿 Functions Manager'}
                     </span>
                   </div>
                   
@@ -2580,10 +2565,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         ) : (
           <div className="p-4 bg-slate-950/40 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
             {abilityActionFilter !== 'ALL'
-              ? `No ${abilityActionFilter} action ${type === 'powers' ? 'powers' : 'loadout items'} learned or visible.`
+              ? `No ${abilityActionFilter} action ${type === 'powers' ? 'powers' : 'functions'} learned or visible.`
               : type === 'powers'
               ? 'No powers learned yet. Click "Powers Manager" above to browse the catalog.'
-              : 'No loadout items equipped yet. Click "Loadout Manager" above to select abilities.'}
+              : 'No active functions equipped yet. Click "Functions Manager" above to select abilities.'}
           </div>
         )}
       </div>

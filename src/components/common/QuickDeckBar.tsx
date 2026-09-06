@@ -10,6 +10,7 @@ export type QuickDeckDomain =
   | 'armor'
   | 'shields'
   | 'gear'
+  | 'supplies'
   | 'hardware'
   | 'relics'
   | 'exotics'
@@ -201,7 +202,7 @@ export const getTableIcon = (tableName: string, domain: QuickDeckDomain): string
     return '⚙️';
   }
 
-  if (domain === 'gear') {
+  if (domain === 'gear' || domain === 'supplies') {
     if (nameLower.includes('adventure') || nameLower.includes('pack') || nameLower.includes('bag') || nameLower.includes('camp')) {
       return '🎒';
     }

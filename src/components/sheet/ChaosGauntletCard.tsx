@@ -39,15 +39,7 @@ export const ChaosGauntletCard: React.FC = () => {
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<string>('finger_1');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeModalTab, setActiveModalTab] = useState<'CATALOG' | 'FORGE'>('CATALOG');
   const modalRef = useRef<HTMLDivElement>(null);
-
-  // Custom Forge Form State
-  const [customName, setCustomName] = useState('');
-  const [customAction, setCustomAction] = useState('F');
-  const [customUsage, setCustomUsage] = useState('3');
-  const [customEffect, setCustomEffect] = useState('');
-  const customEffectRef = useRef<HTMLTextAreaElement>(null);
 
   // Normalize 6 ordered slots (Slots 1 to 6)
   const gauntletSlots: ChaosGemSlot[] = useMemo(() => {
@@ -181,39 +173,6 @@ export const ChaosGauntletCard: React.FC = () => {
 
     await saveActiveCharacter();
     showToast(`💎 Socketed '${newGem.name}' into ${targetMeta?.label || 'Conduit'}!`, 'success');
-  };
-
-  const insertIconAtCursor = (iconStr: string) => {
-    const textarea = customEffectRef.current;
-    if (!textarea) {
-      setCustomEffect((prev) => (prev ? prev + ' ' + iconStr : iconStr));
-      return;
-    }
-    const start = textarea.selectionStart || 0;
-    const end = textarea.selectionEnd || 0;
-    const updated = customEffect.substring(0, start) + iconStr + customEffect.substring(end);
-    setCustomEffect(updated);
-    requestAnimationFrame(() => {
-      textarea.focus();
-      const newPos = start + iconStr.length;
-      textarea.setSelectionRange(newPos, newPos);
-    });
-  };
-
-  const handleForgeAndSocket = async () => {
-    if (!customName.trim()) return;
-
-    const forgedGem: Partial<SupabaseChaosGem> = {
-      name: customName.trim(),
-      action: customAction,
-      usage: customUsage,
-      effect: customEffect.trim(),
-      genres: ['Medieval', 'Modern', 'SciFi'],
-    };
-
-    await handleSocketGemToConduit(forgedGem);
-    setCustomName('');
-    setCustomEffect('');
   };
 
   // Handle Toggle Checkbox on a Socketed Gem (Auto-Shatter on 3rd Checked Box)
@@ -371,7 +330,7 @@ export const ChaosGauntletCard: React.FC = () => {
                       Chaos Gauntlet Manager
                     </h3>
                     <p className="text-xs text-slate-400 hidden sm:block">
-                      Socket volatile chaos gems into gauntlet conduits, browse stock gems, or forge custom volatility.
+                      Socket volatile chaos gems into gauntlet conduits from the stock catalog.
                     </p>
                   </div>
                 </div>
@@ -475,192 +434,82 @@ export const ChaosGauntletCard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN: Stock Catalog & Custom Forge */}
+                {/* RIGHT COLUMN: Stock Catalog */}
                 <div className="md:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-3.5 gap-3 overflow-hidden">
-                  {/* Tab Selector */}
+                  {/* Header */}
                   <div className="flex items-center justify-between gap-2 shrink-0">
-                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner">
-                      <button
-                        type="button"
-                        onClick={() => setActiveModalTab('CATALOG')}
-                        className={`py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                          activeModalTab === 'CATALOG'
-                            ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        <span>💎 Stock Catalog ({filteredCatalogGems.length})</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveModalTab('FORGE')}
-                        className={`py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                          activeModalTab === 'FORGE'
-                            ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        <span>✨ Custom Forge</span>
-                      </button>
-                    </div>
+                    <span className="font-outfit font-bold text-xs text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>💎 Stock Chaos Gems ({filteredCatalogGems.length})</span>
+                    </span>
 
                     <div className="text-[11px] text-slate-400 font-mono">
                       Target: <strong className="text-purple-300">{selectedSlotMeta?.label || 'Conduit'}</strong>
                     </div>
                   </div>
 
-                  {activeModalTab === 'CATALOG' ? (
-                    <div className="flex-1 min-h-0 flex flex-col gap-2.5 overflow-hidden">
-                      {/* Search Bar */}
-                      <div className="relative shrink-0">
-                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input
-                          type="text"
-                          placeholder="Search stock chaos gems..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
-                        />
-                      </div>
-
-                      {/* Gems List */}
-                      <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 no-scrollbar">
-                        {isLoadingCatalog ? (
-                          <div className="flex items-center justify-center py-12 text-slate-500 gap-2">
-                            <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                            <span>Loading Chaos Gems...</span>
-                          </div>
-                        ) : filteredCatalogGems.length === 0 ? (
-                          <div className="p-8 text-center text-xs text-slate-500 italic bg-slate-950/40 rounded-xl border border-slate-800">
-                            {searchQuery ? `No chaos gems found matching '${searchQuery}'.` : 'No chaos gems in catalog.'}
-                          </div>
-                        ) : (
-                          filteredCatalogGems.map((gem) => (
-                            <div
-                              key={gem.id}
-                              className="p-3 bg-slate-950/70 hover:bg-slate-950/90 border border-slate-800 hover:border-purple-500/40 rounded-xl flex items-start justify-between gap-3 transition-all"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1">
-                                    <span className="text-purple-400">💎</span>
-                                    <span>{gem.name}</span>
-                                  </span>
-                                  {gem.action && (
-                                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/30">
-                                      {gem.action}
-                                    </span>
-                                  )}
-                                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-800">
-                                    {gem.usage || 3} Uses
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
-                                  {gem.effect}
-                                </p>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => handleSocketGemToConduit(gem)}
-                                className="shrink-0 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white text-xs font-bold rounded-lg transition shadow-sm cursor-pointer flex items-center gap-1.5"
-                                title={`Socket into ${selectedSlotMeta?.label || 'selected conduit'}`}
-                              >
-                                <span>💎 Socket</span>
-                              </button>
-                            </div>
-                          ))
-                        )}
-                      </div>
+                  <div className="flex-1 min-h-0 flex flex-col gap-2.5 overflow-hidden">
+                    {/* Search Bar */}
+                    <div className="relative shrink-0">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search stock chaos gems..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
+                      />
                     </div>
-                  ) : (
-                    /* Custom Forge Form */
-                    <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 no-scrollbar">
-                      <div>
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                          Gem Name
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Voidfire Catalyst"
-                          value={customName}
-                          onChange={(e) => setCustomName(e.target.value)}
-                          className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-purple-500 transition"
-                        />
-                      </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                            Action Code
-                          </label>
-                          <select
-                            value={customAction}
-                            onChange={(e) => setCustomAction(e.target.value)}
-                            className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-purple-500 transition"
+                    {/* Gems List */}
+                    <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 no-scrollbar">
+                      {isLoadingCatalog ? (
+                        <div className="flex items-center justify-center py-12 text-slate-500 gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                          <span>Loading Chaos Gems...</span>
+                        </div>
+                      ) : filteredCatalogGems.length === 0 ? (
+                        <div className="p-8 text-center text-xs text-slate-500 italic bg-slate-950/40 rounded-xl border border-slate-800">
+                          {searchQuery ? `No chaos gems found matching '${searchQuery}'.` : 'No chaos gems in catalog.'}
+                        </div>
+                      ) : (
+                        filteredCatalogGems.map((gem) => (
+                          <div
+                            key={gem.id}
+                            className="p-3 bg-slate-950/70 hover:bg-slate-950/90 border border-slate-800 hover:border-purple-500/40 rounded-xl flex items-start justify-between gap-3 transition-all"
                           >
-                            <option value="F">F (Free / Interrupt)</option>
-                            <option value="A">A (Attack / Standard)</option>
-                            <option value="AM">AM (Full Action)</option>
-                            <option value="M">M (Move / Utility)</option>
-                            <option value="P">P (Passive / Reaction)</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                            Durability Uses
-                          </label>
-                          <input
-                            type="number"
-                            value={customUsage}
-                            onChange={(e) => setCustomUsage(e.target.value)}
-                            className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-purple-500 transition"
-                            min={1}
-                            max={3}
-                          />
-                        </div>
-                      </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1">
+                                  <span className="text-purple-400">💎</span>
+                                  <span>{gem.name}</span>
+                                </span>
+                                {gem.action && (
+                                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/30">
+                                    {gem.action}
+                                  </span>
+                                )}
+                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-800">
+                                  {gem.usage || 3} Uses
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                                {gem.effect}
+                              </p>
+                            </div>
 
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            Volatile Effect
-                          </label>
-                          {/* Icon Inserters */}
-                          <div className="flex items-center gap-1">
-                            {['✨', '💪', '👁️', '🏃', '🫀', '🍀', '⚡'].map((ic) => (
-                              <button
-                                key={ic}
-                                type="button"
-                                onClick={() => insertIconAtCursor(ic)}
-                                className="px-1.5 py-0.5 text-xs bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded text-slate-300 transition"
-                              >
-                                {ic}
-                              </button>
-                            ))}
+                            <button
+                              type="button"
+                              onClick={() => handleSocketGemToConduit(gem)}
+                              className="shrink-0 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white text-xs font-bold rounded-lg transition shadow-sm cursor-pointer flex items-center gap-1.5"
+                              title={`Socket into ${selectedSlotMeta?.label || 'selected conduit'}`}
+                            >
+                              <span>💎 Socket</span>
+                            </button>
                           </div>
-                        </div>
-                        <textarea
-                          ref={customEffectRef}
-                          rows={3}
-                          placeholder="e.g. Rng Short; burst of dark fire Atk ✨ Dmg 2d8; Wnds = Blinded."
-                          value={customEffect}
-                          onChange={(e) => setCustomEffect(e.target.value)}
-                          className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleForgeAndSocket}
-                        disabled={!customName.trim()}
-                        className="w-full py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Socket Custom Gem into {selectedSlotMeta?.label || 'Conduit'}</span>
-                      </button>
+                        ))
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
 

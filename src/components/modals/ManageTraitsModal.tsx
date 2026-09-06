@@ -4,11 +4,9 @@ import { createPortal } from 'react-dom';
 import {
   X,
   Search,
-  AlertCircle,
   Sparkles,
   Star,
   Check,
-  Info,
   BookOpen,
   Trash2,
 } from 'lucide-react';
@@ -17,9 +15,8 @@ import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import {
   SupabaseRule,
   RuleItem,
-  StatHookDefinition,
 } from '../../types/game';
-import { cleanKitName, sanitizeKitInput, isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
+import { cleanKitName, isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
 interface ManageTraitsModalProps {
   isOpen: boolean;
@@ -44,16 +41,8 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   // Left Pane Search State
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
 
-  // Right Pane Tab & Search State
-  const [rightActiveTab, setRightActiveTab] = useState<'catalog' | 'forge'>('catalog');
+  // Right Pane Search State
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
-
-  // Custom Forge Form State
-  const [customName, setCustomName] = useState<string>('');
-  const [customKit, setCustomKit] = useState<string>('Custom');
-  const [customStatHookPreset, setCustomStatHookPreset] = useState<string>('none');
-  const [customNotes, setCustomNotes] = useState<string>('');
-  const [forgeError, setForgeError] = useState<string | null>(null);
 
   const equippedRules: RuleItem[] = useMemo(() => {
     return activeCharacter?.sheet_data?.traits_quirks || [];
@@ -129,54 +118,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     addTraitQuirk(item);
   };
 
-  const handleCreateCustomForge = (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgeError(null);
-
-    if (!customName.trim()) {
-      setForgeError('Rule name is required.');
-      return;
-    }
-    if (!customNotes.trim()) {
-      setForgeError('Rule description/notes is required.');
-      return;
-    }
-
-    let parsedHook: StatHookDefinition | null = null;
-    if (customStatHookPreset === 'mind_ar') {
-      parsedHook = { target: 'ar', type: 'mind_die' };
-    } else if (customStatHookPreset === 'natural_ar_1') {
-      parsedHook = { target: 'ar', type: 'flat_bonus', value: 1 };
-    } else if (customStatHookPreset === 'mr_plus_1') {
-      parsedHook = { target: 'mr', type: 'flat_bonus', value: 1 };
-    } else if (customStatHookPreset === 'mr_minus_1') {
-      parsedHook = { target: 'mr', type: 'flat_bonus', value: -1 };
-    } else if (customStatHookPreset === 'luck_plus_1') {
-      parsedHook = { target: 'luck', type: 'flat_bonus', value: 1 };
-    } else if (customStatHookPreset === 'vit_minus_3') {
-      parsedHook = { target: 'vitality', type: 'flat_bonus', value: -3 };
-    }
-
-    const kitValue = `${sanitizeKitInput(customKit.trim()) || 'Custom'}`;
-    const newRuleItem: RuleItem = {
-      name: customName.trim(),
-      kit: kitValue,
-      table_group: kitValue,
-      notes: customNotes.trim(),
-      source: 'Custom Forge',
-      stat_hook: parsedHook,
-    };
-
-    addTraitQuirk(newRuleItem);
-
-    // Reset Form
-    setCustomName('');
-    setCustomKit('Custom');
-    setCustomStatHookPreset('none');
-    setCustomNotes('');
-    setRightActiveTab('catalog');
-  };
-
   const handleRemoveRule = (rule: RuleItem) => {
     const isTrait =
       (rule.kit && rule.kit.includes('{Trait}')) ||
@@ -214,7 +155,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Equip spec rules, manage in-game sheet visibility, or forge custom rules & boons.
+                Equip spec rules and manage in-game sheet visibility.
               </p>
             </div>
           </div>
@@ -367,49 +308,28 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                 <div className="p-8 text-center text-xs text-slate-500 italic bg-slate-900/30 rounded-xl border border-slate-800/60 flex flex-col items-center justify-center gap-1">
                   <span>No active rules equipped.</span>
                   <span className="text-slate-600 text-[11px]">
-                    Equip rules from the stock catalog on the right or forge custom rules.
+                    Equip rules from the stock catalog on the right.
                   </span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ================= RIGHT COLUMN: STOCK CATALOG & CUSTOM FORGE ================= */}
+          {/* ================= RIGHT COLUMN: STOCK RULES CATALOG ================= */}
           <div className="flex flex-col bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 min-h-0 shadow-inner">
-            {/* Top Navigation Tabs */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 shrink-0 gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setRightActiveTab('catalog')}
-                  className={`py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    rightActiveTab === 'catalog'
-                      ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  <span>📜 Stock Rules ({stockRulesCatalog.length})</span>
-                </button>
+            {/* Header: Stock Rules Catalog */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 shrink-0">
+              <div className="flex items-center gap-1.5 font-outfit font-bold text-xs text-slate-200 uppercase tracking-wider">
+                <BookOpen className="w-3.5 h-3.5 text-purple-400" />
+                <span>📜 Stock Rules Catalog ({stockRulesCatalog.length})</span>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setRightActiveTab('forge')}
-                className={`py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  rightActiveTab === 'forge'
-                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>✨ Custom Forge</span>
-              </button>
+              <span className="text-[11px] font-mono text-slate-400">
+                {filteredCatalogRules.length} Available
+              </span>
             </div>
 
-            {/* TAB 1: STANDALONE STOCK RULES CATALOG */}
-            {rightActiveTab === 'catalog' && (
-              <div className="flex flex-col flex-1 min-h-0">
+            {/* Standalone Stock Rules Catalog Content */}
+            <div className="flex flex-col flex-1 min-h-0">
                 <div className="relative mb-2.5">
                   <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -499,104 +419,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   )}
                 </div>
               </div>
-            )}
-
-            {/* TAB 2: CUSTOM FORGE */}
-            {rightActiveTab === 'forge' && (
-              <div className="flex flex-col flex-1 min-h-0 pt-2 overflow-y-auto pr-1">
-                <form onSubmit={handleCreateCustomForge} className="flex flex-col gap-3">
-                  <div className="p-3 bg-purple-950/20 border border-purple-500/30 rounded-xl flex items-center justify-between">
-                    <span className="text-xs font-bold text-purple-200 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-purple-400" />
-                      Create Custom Spec Rule or Passive Boon
-                    </span>
-                  </div>
-
-                  {/* Name & Kit */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-300 flex items-center">
-                        Rule Name
-                        <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer inline ml-1" />
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Iron Will..."
-                        value={customName}
-                        onChange={(e) => setCustomName(e.target.value)}
-                        className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-slate-300 flex items-center">
-                        Kit / Source
-                        <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer inline ml-1" />
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Custom"
-                        value={customKit}
-                        onChange={(e) => setCustomKit(sanitizeKitInput(e.target.value))}
-                        className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Stat Hook Preset */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-300 flex items-center">
-                      Derived Stat Hook (Optional Dynamic Calculation)
-                      <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer inline ml-1" />
-                    </label>
-                    <select
-                      value={customStatHookPreset}
-                      onChange={(e) => setCustomStatHookPreset(e.target.value)}
-                      className="bg-slate-950 text-xs px-3 py-1.5 rounded-lg border border-slate-800 text-cyan-200 outline-none"
-                    >
-                      <option value="none">None (Purely Narrative / Tactical Rule)</option>
-                      <option value="mind_ar">🧥 Base AR = Mind Die Rating (Impossible Robes)</option>
-                      <option value="natural_ar_1">🧥 +1 Natural AR Bonus (Tough Hide / Scales)</option>
-                      <option value="mr_plus_1">👣 +1 Movement Rate (Swift Step)</option>
-                      <option value="mr_minus_1">👣 -1 Movement Rate (Limping Gait / Heavy Frame)</option>
-                      <option value="luck_plus_1">🍀 +1 Max Luck Pool (Fortune's Child)</option>
-                      <option value="vit_minus_3">❤️ -3 Max Vitality Penalty (Glass Cannon)</option>
-                    </select>
-                  </div>
-
-                  {/* Rule Description (Notes) */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-300 flex items-center">
-                      Rule Description & Effect
-                      <Info className="w-3 h-3 text-slate-500 hover:text-slate-300 cursor-pointer inline ml-1" />
-                    </label>
-                    <textarea
-                      required
-                      rows={3}
-                      placeholder="Describe the rule exception, biological trait, or boon..."
-                      value={customNotes}
-                      onChange={(e) => setCustomNotes(e.target.value)}
-                      className="bg-slate-950 text-xs px-3 py-2 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500 resize-none"
-                    />
-                  </div>
-
-                  {forgeError && (
-                    <div className="p-2.5 rounded-lg bg-rose-950/60 border border-rose-500/40 text-xs text-rose-300 flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{forgeError}</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    className="w-full mt-2 py-2 px-4 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <span>Save & Learn Custom Rule</span>
-                  </button>
-                </form>
-              </div>
-            )}
           </div>
         </div>
 

@@ -220,7 +220,7 @@ export interface SupabaseArmor {
   created_at?: string;
 }
 
-export interface SupabaseGear {
+export interface SupabaseSupply {
   id?: number;
   category: string;
   genres?: string[];
@@ -237,6 +237,9 @@ export interface SupabaseGear {
   pic?: string;
   created_at?: string;
 }
+
+export type SupabaseGear = SupabaseSupply;
+export type SupabaseEquipment = SupabaseSupply;
 
 export interface SupabaseMonster {
   id?: number;

@@ -240,13 +240,13 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       let data: any[] | null = null;
       if (isEpicTier) {
         const { data: epicData } = await supabase
-          .from('equipment')
+          .from('supplies')
           .select('*')
           .or('category.ilike.%Epic%,category.ilike.%Artifact%,cost.ilike.%Artifact%');
         data = epicData;
       } else {
         const { data: tierData } = await supabase
-          .from('equipment')
+          .from('supplies')
           .select('*')
           .or('category.ilike.Artifact,cost.ilike.Artifact')
           .ilike('category', `%${rarity}%`);
@@ -286,7 +286,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const fetchRandomHardwareItem = async () => {
     try {
       const { data } = await supabase
-        .from('equipment')
+        .from('supplies')
         .select('*')
         .neq('category', 'Artifact')
         .neq('cost', 'Artifact')
@@ -309,7 +309,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   // Fetch random gear item from Supabase equipment table for Quality combination
   const fetchRandomGearItem = async () => {
     try {
-      const { data } = await supabase.from('equipment').select('*');
+      const { data } = await supabase.from('supplies').select('*');
       if (data && data.length > 0) {
         const filtered = data.filter(g => !g.category.includes('💰') && !g.category.includes('Quality') && !g.category.includes('Art') && !g.category.includes('Curios') && !g.category.includes('Junk'));
         const pool = filtered.length > 0 ? filtered : data;
