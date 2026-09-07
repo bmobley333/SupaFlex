@@ -8,6 +8,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import {
   ChaosGemSlot,
   ChaosGemItem,
@@ -199,9 +200,10 @@ export const ChaosGauntletSocketModal: React.FC<ChaosGauntletSocketModalProps> =
 
                         <div className="truncate">
                           {isOccupied ? (
-                            <span className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1 truncate">
+                            <span className="font-outfit font-bold text-xs text-slate-100 inline-flex items-center align-baseline gap-1 truncate">
                               <span>💎</span>
                               <span className="truncate">{slotObj?.gem?.name}</span>
+                              <ItemNotesPopover notes={(slotObj?.gem as any)?.notes} itemName={slotObj?.gem?.name || ''} inline />
                             </span>
                           ) : (
                             <span className="text-xs text-slate-500 italic">
@@ -276,9 +278,10 @@ export const ChaosGauntletSocketModal: React.FC<ChaosGauntletSocketModalProps> =
 
               {/* Gem Title & Genres */}
               <div>
-                <h4 className="font-outfit font-extrabold text-lg text-slate-100 flex items-center gap-2">
+                <h4 className="font-outfit font-extrabold text-lg text-slate-100 inline-flex items-center align-baseline gap-2">
                   <span>💎</span>
                   <span>{incomingGem.name}</span>
+                  <ItemNotesPopover notes={(incomingGem as any).notes} itemName={incomingGem.name} inline />
                 </h4>
                 <div className="flex flex-wrap items-center gap-1 mt-1.5">
                   {(incomingGem.genres || ['Medieval', 'Modern', 'SciFi']).map((g) => (

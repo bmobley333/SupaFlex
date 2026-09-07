@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { gameApi } from '../../services/api';
 import {
   ChaosGemSlot,
@@ -418,6 +419,7 @@ export const ChaosGauntletCard: React.FC = () => {
                               <div className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1">
                                 <span className="text-purple-400">💎</span>
                                 <span>{slot.gem!.name}</span>
+                                <ItemNotesPopover notes={(slot.gem as any).notes} itemName={slot.gem!.name} inline />
                               </div>
                               <p className="text-[10px] text-slate-400 line-clamp-2 mt-0.5 leading-tight">
                                 {slot.gem!.effect}
@@ -479,9 +481,10 @@ export const ChaosGauntletCard: React.FC = () => {
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1">
+                                <span className="font-outfit font-bold text-xs text-slate-100 inline-flex items-center align-baseline gap-1">
                                   <span className="text-purple-400">💎</span>
                                   <span>{gem.name}</span>
+                                  <ItemNotesPopover notes={(gem as any).notes} itemName={gem.name} inline />
                                 </span>
                                 {gem.action && (
                                   <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/30">
@@ -630,9 +633,10 @@ export const ChaosGauntletCard: React.FC = () => {
 
                 {/* 2. Gem Name */}
                 <div className="w-28 sm:w-36 shrink-0 truncate">
-                  <span className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1">
+                  <span className="font-outfit font-bold text-xs text-slate-100 inline-flex items-center align-baseline gap-1">
                     <span className="text-[11px] leading-none">💎</span>
                     <span className="truncate" title={gem.name}>{gem.name}</span>
+                    <ItemNotesPopover notes={(gem as any).notes} itemName={gem.name} inline />
                   </span>
                 </div>
 

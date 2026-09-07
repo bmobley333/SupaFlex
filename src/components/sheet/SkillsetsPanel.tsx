@@ -15,6 +15,7 @@ interface DerivedSkill {
   attributeKey: AttributeKey;
   dieRating: string;
   source: 'skillset' | 'individual';
+  notes?: string;
 }
 
 interface CatalogSkillOption {
@@ -322,12 +323,14 @@ export const SkillsetsPanel: React.FC = () => {
           const key = parsed.cleanName.toLowerCase();
 
           if (parsed.cleanName && !map.has(key)) {
+            const catalogInfo = allCatalogSkillsMap.get(key);
             map.set(key, {
               name: parsed.cleanName,
               emoji: parsed.emoji,
               attributeKey: parsed.attributeKey,
               dieRating: dieToNum(attributeDice[parsed.attributeKey]),
               source: 'skillset',
+              notes: catalogInfo?.notes,
             });
           }
         });
@@ -339,12 +342,14 @@ export const SkillsetsPanel: React.FC = () => {
       const key = parsed.cleanName.toLowerCase();
 
       if (parsed.cleanName && !map.has(key)) {
+        const catalogInfo = allCatalogSkillsMap.get(key);
         map.set(key, {
           name: parsed.cleanName,
           emoji: parsed.emoji,
           attributeKey: parsed.attributeKey,
           dieRating: dieToNum(attributeDice[parsed.attributeKey]),
           source: 'individual',
+          notes: catalogInfo?.notes,
         });
       }
     });
@@ -876,11 +881,11 @@ export const SkillsetsPanel: React.FC = () => {
                                   }`}
                                 >
                                   <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className={`font-outfit font-bold text-xs truncate ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                                        {isMso ? `🌌 ${ks.name}` : ks.name}
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                                        <span className="truncate">{isMso ? `🌌 ${ks.name}` : ks.name}</span>
+                                        <ItemNotesPopover notes={ks.notes || effectiveSkillsets.find((s) => s.name.toLowerCase() === ks.name.toLowerCase())?.notes} itemName={ks.name} inline />
                                       </span>
-                                      <ItemNotesPopover notes={ks.notes || effectiveSkillsets.find((s) => s.name.toLowerCase() === ks.name.toLowerCase())?.notes} itemName={ks.name} />
                                       {isCustom && (
                                         <span className="text-[9px] font-mono font-bold bg-indigo-900/80 text-indigo-200 px-1.5 py-0.2 rounded border border-indigo-500/40 shrink-0">
                                           Custom
@@ -1082,10 +1087,10 @@ export const SkillsetsPanel: React.FC = () => {
 
                                     <div className="flex flex-col min-w-0 flex-1">
                                       <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className={`font-outfit font-bold text-xs truncate ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                                          {isMso ? `🌌 ${sk.name}` : sk.name}
+                                        <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                                          <span className="truncate">{isMso ? `🌌 ${sk.name}` : sk.name}</span>
+                                          <ItemNotesPopover notes={sk.notes} itemName={sk.name} inline />
                                         </span>
-                                        <ItemNotesPopover notes={sk.notes} itemName={sk.name} />
                                         {isTraitItem(sk) && (
                                           <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 shrink-0">
                                             <span>🧬</span> Trait (Free)
@@ -1235,8 +1240,9 @@ export const SkillsetsPanel: React.FC = () => {
                     skill.source === 'individual' ? 'Individually Learned' : 'Skillset Derived'
                   }`}
                 >
-                  <span className={`text-xs font-outfit font-bold ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                    {isMso ? `🌌 ${skill.name}` : skill.name}
+                  <span className={`text-xs font-outfit font-bold inline-flex items-center align-baseline ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                    <span>{isMso ? `🌌 ${skill.name}` : skill.name}</span>
+                    <ItemNotesPopover notes={skill.notes} itemName={skill.name} inline />
                   </span>
                   <span className="text-xs font-bold text-indigo-300 flex items-center gap-0.5 ml-1">
                     <span>{skill.emoji}</span>

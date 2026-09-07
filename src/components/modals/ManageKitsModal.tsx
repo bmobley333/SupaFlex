@@ -10,6 +10,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import {
   AbilitySlot,
@@ -708,9 +709,10 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-outfit font-bold text-slate-100 flex items-center gap-1">
+                          <span className="text-xs font-outfit font-bold text-slate-100 inline-flex items-center align-baseline gap-1">
                             <span>{el.type === 'power' ? '🔥' : el.type === 'skill' ? '🎓' : '📜'}</span>
                             <span>{el.name}</span>
+                            <ItemNotesPopover notes={el.raw?.notes || el.description} itemName={el.name} inline />
                           </span>
                           <span className="px-2 py-0.2 rounded text-[10px] font-mono font-bold bg-purple-950 text-purple-300 border border-purple-500/40">
                             🎭 {el.kit}
@@ -767,9 +769,10 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-outfit font-bold text-slate-100 flex items-center gap-1">
+                        <span className="text-xs font-outfit font-bold text-slate-100 inline-flex items-center align-baseline gap-1">
                           <span>{el.type === 'power' ? '🔥' : '📜'}</span>
                           <span>{el.name}</span>
+                          <ItemNotesPopover notes={el.raw?.notes || el.description} itemName={el.name} inline />
                         </span>
                         <span className="px-2 py-0.2 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700">
                           From: {el.kit}

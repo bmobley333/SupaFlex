@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { ManageTraitsModal } from '../modals/ManageTraitsModal';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
@@ -131,8 +132,9 @@ export const TraitsQuirksCard: React.FC = () => {
               >
                 {/* 1. Name Column */}
                 <div className="w-44 sm:w-48 shrink-0 flex flex-col gap-0.5">
-                  <span className={`font-outfit font-bold text-xs block whitespace-normal break-words leading-tight ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                    {isMso ? `🌌 ${t.name}` : t.name}
+                  <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline flex-wrap leading-tight ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                    <span>{isMso ? `🌌 ${t.name}` : t.name}</span>
+                    <ItemNotesPopover notes={t.notes || (t as any).effect} itemName={t.name} inline />
                   </span>
                 </div>
 

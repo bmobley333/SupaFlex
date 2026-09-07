@@ -501,10 +501,10 @@ export const ShieldCard: React.FC = () => {
                                   <span className="text-[10px]">{isActive ? '●' : '○'}</span>
                                   <span>{isActive ? 'Active' : 'Equip'}</span>
                                 </button>
-                                <span className={`font-outfit font-bold text-sm ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
-                                  {isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}
+                                <span className={`font-outfit font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                  <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
+                                  <ItemNotesPopover notes={item.notes || shieldCatalog.find((s) => s.name.toLowerCase() === item.name.toLowerCase())?.notes} itemName={item.name} inline />
                                 </span>
-                                <ItemNotesPopover notes={item.notes || shieldCatalog.find((s) => s.name.toLowerCase() === item.name.toLowerCase())?.notes} itemName={item.name} />
                               </div>
 
                               <div className="flex items-center gap-2 shrink-0">
@@ -654,10 +654,10 @@ export const ShieldCard: React.FC = () => {
                             >
                               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`font-bold text-sm ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
-                                    {isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}
+                                  <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                    <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
+                                    <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
                                   </span>
-                                  <ItemNotesPopover notes={item.notes} itemName={item.name} />
                                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
                                     {item.cost}
                                   </span>
@@ -757,12 +757,12 @@ export const ShieldCard: React.FC = () => {
           {/* Shield Name (Unboxed Clean Text) + Notes Popover */}
           <div className="flex items-center gap-1.5 flex-1 min-w-[130px] pr-1">
             <span
-              className={`text-xs truncate min-w-[100px] ${isGsUnlocked && isMsoEntry(shield.name) ? 'text-purple-300 font-bold' : 'font-semibold text-slate-100'}`}
+              className={`text-xs inline-flex items-center align-baseline min-w-[100px] max-w-full ${isGsUnlocked && isMsoEntry(shield.name) ? 'text-purple-300 font-bold' : 'font-semibold text-slate-100'}`}
               title={shield.name}
             >
-              {isGsUnlocked && isMsoEntry(shield.name) ? `🌌 ${shield.name}` : shield.name}
+              <span className="truncate">{isGsUnlocked && isMsoEntry(shield.name) ? `🌌 ${shield.name}` : shield.name}</span>
+              <ItemNotesPopover notes={shield.notes || shieldCatalog.find((s) => s.name.toLowerCase() === shield.name.toLowerCase())?.notes} itemName={shield.name} inline />
             </span>
-            <ItemNotesPopover notes={shield.notes || shieldCatalog.find((s) => s.name.toLowerCase() === shield.name.toLowerCase())?.notes} itemName={shield.name} />
           </div>
 
           {/* Block Cell (Auto-Updated from Might) */}

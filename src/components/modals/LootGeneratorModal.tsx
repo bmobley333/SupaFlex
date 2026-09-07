@@ -8,6 +8,7 @@ import { gameApi } from '../../services/api';
 import { LootDraftModal } from './LootDraftModal';
 import { EchoVaultModal } from './EchoVaultModal';
 import { ChaosGauntletSocketModal } from './ChaosGauntletSocketModal';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { VaultItem, SupabaseChaosGem } from '../../types/game';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
@@ -1664,8 +1665,9 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                               >
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 mb-0.5">
-                                    <h5 className={`font-bold text-xs truncate ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                                      {isMso ? `🌌 ${item.name}` : item.name}
+                                    <h5 className={`font-bold text-xs truncate inline-flex items-center align-baseline gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                                      <span className="truncate">{isMso ? `🌌 ${item.name}` : item.name}</span>
+                                      <ItemNotesPopover notes={item.notes || item.description || item.effect} itemName={item.name} inline />
                                     </h5>
                                     {item.category && (
                                       <span className="text-[9px] text-amber-400/80 font-mono">

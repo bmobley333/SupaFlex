@@ -596,10 +596,10 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                           >
                             <div className="truncate pr-2">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`font-bold font-outfit ${isMso ? 'text-purple-300' : 'text-amber-300'}`}>
-                                  {isMso ? `🌌 ${sm.name}` : sm.name}
+                                <span className={`font-bold font-outfit inline-flex items-center align-baseline ${isMso ? 'text-purple-300' : 'text-amber-300'}`}>
+                                  <span>{isMso ? `🌌 ${sm.name}` : sm.name}</span>
+                                  <ItemNotesPopover notes={sm.notes || sm.abilities} itemName={sm.name} inline />
                                 </span>
-                                <ItemNotesPopover notes={sm.notes || sm.abilities} itemName={sm.name} />
                               </div>
                               <span className="text-[11px] text-slate-400 font-mono flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-0.5">
                                 <span>🚩 {extractFirstInt(sm.nish, 10)}</span>

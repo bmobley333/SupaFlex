@@ -13,6 +13,7 @@ import {
   Coins,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { HardwareBundleItem, SupabaseBundle } from '../../types/game';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 
@@ -249,8 +250,9 @@ export const ManageEquipmentKitsModal: React.FC<ManageEquipmentKitsModalProps> =
                     {/* Bundle Top Bar */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-outfit font-bold text-xs text-cyan-300 block whitespace-normal break-words">
-                          🎒 {bundle.name}
+                        <span className="font-outfit font-bold text-xs text-cyan-300 inline-flex items-center align-baseline flex-wrap">
+                          <span>🎒 {bundle.name}</span>
+                          <ItemNotesPopover notes={(bundle as any).notes} itemName={bundle.name} inline />
                         </span>
                         {bundle.category && (
                           <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-cyan-950/90 text-cyan-400 border border-cyan-500/30">
@@ -296,7 +298,10 @@ export const ManageEquipmentKitsModal: React.FC<ManageEquipmentKitsModalProps> =
                             className="flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-lg bg-slate-900/90 border border-slate-700/80 text-slate-200"
                           >
                             <span>{item.table === 'armor' ? '🛡️' : item.usage ? '⚡' : '🔧'}</span>
-                            <span className="font-semibold">{item.name}</span>
+                            <span className="font-semibold inline-flex items-center align-baseline">
+                              <span>{item.name}</span>
+                              <ItemNotesPopover notes={item.notes || (item as any).effect} itemName={item.name} inline />
+                            </span>
                             {item.usage && (
                               <span className="font-mono text-[9px] px-1 py-0.2 rounded bg-amber-950/80 text-amber-300 border border-amber-500/30">
                                 {item.usage}
@@ -380,7 +385,10 @@ export const ManageEquipmentKitsModal: React.FC<ManageEquipmentKitsModalProps> =
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex flex-col gap-1 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-xs text-slate-100">{bundle.name}</span>
+                            <span className="font-bold text-xs text-slate-100 inline-flex items-center align-baseline">
+                              <span>{bundle.name}</span>
+                              <ItemNotesPopover notes={(bundle as any).notes} itemName={bundle.name} inline />
+                            </span>
                             {bundle.category && (
                               <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-500/30">
                                 {bundle.category}

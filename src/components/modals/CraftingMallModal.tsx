@@ -3,6 +3,7 @@ import { X, Send, Check, Trash2, Plus, AlertCircle, RefreshCw, Crown } from 'luc
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CustomCreationItem, CustomCreationType, Power, MagicItem, AbilitySlot, WeaponSlot, ArmorData, ShieldData, SimpleGearItem, SupabaseChaosGem } from '../../types/game';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
 import { getPowerReadyCategory } from '../../utils/readyMatrixSchedule';
 import { ChaosGauntletSocketModal } from './ChaosGauntletSocketModal';
@@ -613,8 +614,9 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                     <div className="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-2">
                       <div className="flex flex-col gap-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-outfit font-extrabold text-sm text-slate-100 truncate">
-                            {item.name}
+                          <span className="font-outfit font-extrabold text-sm text-slate-100 truncate inline-flex items-center align-baseline">
+                            <span>{item.name}</span>
+                            <ItemNotesPopover notes={item.notes || item.item_data?.notes} itemName={item.name} inline />
                           </span>
                           <span
                             className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${

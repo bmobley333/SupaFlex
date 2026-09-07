@@ -1466,17 +1466,19 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-outfit font-bold text-sm text-slate-100">{baseName}</span>
-                                    {type !== 'powers' && (() => {
-                                      const resolvedNotes =
-                                        (item as any).notes ||
-                                        (fullCatalog.find(
-                                          (c) =>
-                                            c.name.toLowerCase() === baseName.toLowerCase() ||
-                                            c.name.toLowerCase() === cleanName(item.name).toLowerCase()
-                                        ) as any)?.notes;
-                                      return <ItemNotesPopover notes={resolvedNotes} itemName={baseName} />;
-                                    })()}
+                                    <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
+                                      <span>{baseName}</span>
+                                      {(() => {
+                                        const resolvedNotes =
+                                          (item as any).notes ||
+                                          (fullCatalog.find(
+                                            (c) =>
+                                              c.name.toLowerCase() === baseName.toLowerCase() ||
+                                              c.name.toLowerCase() === cleanName(item.name).toLowerCase()
+                                          ) as any)?.notes;
+                                        return <ItemNotesPopover notes={resolvedNotes} itemName={baseName} inline />;
+                                      })()}
+                                    </span>
                                     {version > 1 && (
                                       <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
                                         v{version}
@@ -1815,8 +1817,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
                                       <div className="flex flex-col gap-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className="font-outfit font-bold text-sm text-slate-100">{item.name}</span>
-                                          <ItemNotesPopover notes={(item as any).notes || (fullCatalog.find((c) => c.name.toLowerCase() === cleanName(item.name).toLowerCase()) as any)?.notes} itemName={item.name} />
+                                          <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
+                                            <span>{item.name}</span>
+                                            <ItemNotesPopover notes={(item as any).notes || (fullCatalog.find((c) => c.name.toLowerCase() === cleanName(item.name).toLowerCase()) as any)?.notes} itemName={item.name} inline />
+                                          </span>
                                         </div>
                                         {badge && (
                                           <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
@@ -2189,12 +2193,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           {/* Header Row: Name, Version, Action & Usage (Adjacent), Buttons */}
                                           <div className="flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-1.5 flex-wrap">
-                                              <span className={`font-bold text-sm ${isGsUnlocked && isMsoEntry(baseName) ? 'text-purple-300' : 'text-slate-100'}`}>
-                                                {isGsUnlocked && isMsoEntry(baseName) ? `🌌 ${baseName}` : baseName}
+                                              <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(baseName) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                                <span>{isGsUnlocked && isMsoEntry(baseName) ? `🌌 ${baseName}` : baseName}</span>
+                                                <ItemNotesPopover notes={(item as any).notes} itemName={baseName} inline />
                                               </span>
-                                              {type !== 'powers' && (
-                                                <ItemNotesPopover notes={(item as any).notes} itemName={baseName} />
-                                              )}
                                               {isSpells && (
                                                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/40">
                                                   {((item as any).category || (item as any).tier || 'Minor').replace(/[^\w\s\(\)]/g, '').trim()}
@@ -2484,12 +2486,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 {/* 1. Name Column with Version Badge */}
                 <div className="w-36 sm:w-44 shrink-0 flex flex-col gap-0.5">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={`font-outfit font-bold text-xs block whitespace-normal break-words leading-tight ${
+                    <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline flex-wrap leading-tight ${
                       isGsUnlocked && isMsoEntry(baseName) ? 'text-purple-300' : 'text-slate-100'
                     }`}>
-                      {isGsUnlocked && isMsoEntry(baseName) ? `🌌 ${baseName}` : baseName}
+                      <span className="break-words">{isGsUnlocked && isMsoEntry(baseName) ? `🌌 ${baseName}` : baseName}</span>
+                      <ItemNotesPopover notes={slot.notes || (fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase()) as any)?.notes} itemName={baseName} inline />
                     </span>
-                    <ItemNotesPopover notes={slot.notes || (fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase()) as any)?.notes} itemName={baseName} />
                   </div>
                   {version > 1 && (
                     <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">

@@ -7,12 +7,14 @@ interface ItemNotesPopoverProps {
   notes?: string | null;
   itemName: string;
   className?: string;
+  inline?: boolean;
 }
 
 export const ItemNotesPopover: React.FC<ItemNotesPopoverProps> = ({
   notes,
   itemName,
   className = '',
+  inline = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -29,8 +31,8 @@ export const ItemNotesPopover: React.FC<ItemNotesPopoverProps> = ({
   const updatePosition = () => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    const popoverWidth = 280;
-    const popoverHeight = 160;
+    const popoverWidth = Math.min(320, window.innerWidth - 24);
+    const popoverHeight = 200;
 
     let left = rect.left + rect.width / 2 - popoverWidth / 2;
     // Boundary collision checks (horizontal)
@@ -125,12 +127,12 @@ export const ItemNotesPopover: React.FC<ItemNotesPopoverProps> = ({
         e.stopPropagation();
         if (e.nativeEvent) e.nativeEvent.stopImmediatePropagation();
       }}
-      className="w-72 p-3 bg-slate-950/95 border border-indigo-500/60 rounded-xl shadow-2xl backdrop-blur-md z-[9999] text-xs text-slate-200 animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
+      className="w-80 max-w-[92vw] p-3 bg-slate-950/95 border border-indigo-500/60 rounded-xl shadow-2xl backdrop-blur-md z-[9999] text-xs text-slate-200 animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
     >
       {/* Popover Header */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
-        <span className="font-bold text-indigo-300 flex items-center gap-1.5 font-outfit text-xs truncate max-w-[210px]">
-          <span>📜</span> {itemName}
+        <span className="font-bold text-indigo-300 flex items-center gap-1.5 font-outfit text-xs truncate max-w-[240px]">
+          <span>ℹ️</span> {itemName}
         </span>
         <button
           type="button"
@@ -148,14 +150,14 @@ export const ItemNotesPopover: React.FC<ItemNotesPopoverProps> = ({
       </div>
 
       {/* Notes Content */}
-      <div className="text-slate-300 text-[11px] leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap font-sans">
+      <div className="text-slate-300 text-[11px] leading-relaxed max-h-64 sm:max-h-80 overflow-y-auto whitespace-pre-wrap font-sans pr-1">
         {cleanNotes}
       </div>
     </div>
   ) : null;
 
   return (
-    <div className={`inline-flex items-center align-middle shrink-0 ${className}`}>
+    <span className={`inline-flex items-center align-middle shrink-0 select-none ${inline ? 'ml-1' : ''} ${className}`}>
       <button
         ref={triggerRef}
         type="button"
@@ -164,14 +166,14 @@ export const ItemNotesPopover: React.FC<ItemNotesPopoverProps> = ({
           e.stopPropagation();
           if (e.nativeEvent) e.nativeEvent.stopImmediatePropagation();
         }}
-        className="p-0.5 text-xs select-none transition-transform hover:scale-125 cursor-pointer focus:outline-none inline-flex items-center justify-center shrink-0"
-        title={`View notes for ${itemName}`}
-        aria-label={`View notes for ${itemName}`}
+        className="p-0.5 text-xs select-none transition-transform hover:scale-125 cursor-pointer focus:outline-none inline-flex items-center justify-center shrink-0 leading-none"
+        title={`View full notes for ${itemName}`}
+        aria-label={`View full notes for ${itemName}`}
       >
         ℹ️
       </button>
 
       {typeof document !== 'undefined' && isOpen && ReactDOM.createPortal(popoverContent, document.body)}
-    </div>
+    </span>
   );
 };

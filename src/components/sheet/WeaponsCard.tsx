@@ -617,10 +617,10 @@ export const WeaponsCard: React.FC = () => {
                               {/* Card Header Row: Base Name, Type Badges, SINGLE - Drop Button */}
                               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`font-outfit font-bold text-sm ${isGsUnlocked && isMsoEntry(group.baseName) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
-                                    {isGsUnlocked && isMsoEntry(group.baseName) ? `🌌 ${group.baseName}` : group.baseName}
+                                  <span className={`font-outfit font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(group.baseName) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                    <span>{isGsUnlocked && isMsoEntry(group.baseName) ? `🌌 ${group.baseName}` : group.baseName}</span>
+                                    <ItemNotesPopover notes={group.notes} itemName={group.baseName} inline />
                                   </span>
-                                  <ItemNotesPopover notes={group.notes} itemName={group.baseName} />
                                   {rawTypesList.map((t) => {
                                     const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
                                     const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
@@ -857,10 +857,10 @@ export const WeaponsCard: React.FC = () => {
                                 {/* Card Header Row: Name, Type Badges, Cost, SINGLE + Equip Button */}
                                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className={`font-bold text-sm ${isGsUnlocked && isMsoEntry(weapon.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
-                                      {isGsUnlocked && isMsoEntry(weapon.name) ? `🌌 ${weapon.name}` : weapon.name}
+                                    <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(weapon.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                      <span>{isGsUnlocked && isMsoEntry(weapon.name) ? `🌌 ${weapon.name}` : weapon.name}</span>
+                                      <ItemNotesPopover notes={weapon.notes} itemName={weapon.name} inline />
                                     </span>
-                                    <ItemNotesPopover notes={weapon.notes} itemName={weapon.name} />
                                     {rawTypesList.map((t) => {
                                       const catKey = t.startsWith('H') ? 'H' : t.startsWith('S') ? 'S' : 'M';
                                       const badgeClass = MHS_COLORS[catKey]?.badge || MHS_COLORS.M.badge;
@@ -1048,18 +1048,18 @@ export const WeaponsCard: React.FC = () => {
                   </div>
 
                   {/* Weapon Name (Unboxed Clean Text) + Notes Popover */}
-                  <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                  <div className="flex items-center min-w-0 pr-1">
                     <span
-                      className={`text-xs truncate min-w-[100px] ${isGsUnlocked && isMso ? 'text-purple-300 font-bold' : 'font-semibold text-slate-100'}`}
+                      className={`text-xs inline-flex items-center align-baseline min-w-[100px] max-w-full ${isGsUnlocked && isMso ? 'text-purple-300 font-bold' : 'font-semibold text-slate-100'}`}
                       title={item.name}
                     >
-                      {isGsUnlocked && isMso ? `🌌 ${item.name}` : item.name}
+                      <span className="truncate">{isGsUnlocked && isMso ? `🌌 ${item.name}` : item.name}</span>
+                      {(() => {
+                        const baseName = getBaseWeaponName(item.name);
+                        const resolvedNotes = item.notes || supabaseWeapons.find((w) => w.name.toLowerCase() === baseName.toLowerCase())?.notes;
+                        return <ItemNotesPopover notes={resolvedNotes} itemName={item.name} inline />;
+                      })()}
                     </span>
-                    {(() => {
-                      const baseName = getBaseWeaponName(item.name);
-                      const resolvedNotes = item.notes || supabaseWeapons.find((w) => w.name.toLowerCase() === baseName.toLowerCase())?.notes;
-                      return <ItemNotesPopover notes={resolvedNotes} itemName={item.name} />;
-                    })()}
                   </div>
 
                   {/* Atk Cell */}

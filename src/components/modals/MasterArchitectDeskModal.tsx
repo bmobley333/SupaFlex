@@ -6,6 +6,7 @@ import { X, Check, AlertCircle, RefreshCw, Star, Trash2, Award } from 'lucide-re
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CustomCreationItem, CustomCreationType } from '../../types/game';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 
 interface MasterArchitectDeskModalProps {
   isOpen: boolean;
@@ -255,7 +256,10 @@ export const MasterArchitectDeskModal: React.FC<MasterArchitectDeskModalProps> =
                   <div className="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-2">
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-outfit font-extrabold text-sm text-slate-100">{item.name}</span>
+                        <span className="font-outfit font-extrabold text-sm text-slate-100 inline-flex items-center align-baseline">
+                          <span>{item.name}</span>
+                          <ItemNotesPopover notes={item.notes || item.item_data?.notes} itemName={item.name} inline />
+                        </span>
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-300">
                           {item.type.toUpperCase()}
                         </span>

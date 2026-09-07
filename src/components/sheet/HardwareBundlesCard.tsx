@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { ManageEquipmentKitsModal } from '../modals/ManageEquipmentKitsModal';
 import { HardwareBundleItem } from '../../types/game';
 
@@ -127,8 +128,9 @@ export const HardwareBundlesCard: React.FC = () => {
                 {/* Bundle Header */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <span className="font-outfit font-bold text-xs text-cyan-300 block whitespace-normal break-words leading-tight">
-                      {b.name}
+                    <span className="font-outfit font-bold text-xs text-cyan-300 inline-flex items-center align-baseline flex-wrap leading-tight">
+                      <span>{b.name}</span>
+                      <ItemNotesPopover notes={(b as any).notes} itemName={b.name} inline />
                     </span>
                     {b.category && (
                       <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-md bg-cyan-950/80 text-cyan-400 border border-cyan-500/30">
@@ -157,7 +159,10 @@ export const HardwareBundlesCard: React.FC = () => {
                         <span className="text-xs">
                           {item.table === 'armor' ? '🛡️' : item.table === 'weapons' ? '⚔️' : item.usage ? '⚡' : '🔧'}
                         </span>
-                        <span className="font-semibold">{item.name}</span>
+                        <span className="font-semibold inline-flex items-center align-baseline">
+                          <span>{item.name}</span>
+                          <ItemNotesPopover notes={item.notes || (item as any).effect} itemName={item.name} inline />
+                        </span>
                         {item.usage && (
                           <span className="font-mono text-[9px] px-1 py-0.2 rounded bg-amber-950/80 text-amber-300 border border-amber-500/30">
                             {item.usage}

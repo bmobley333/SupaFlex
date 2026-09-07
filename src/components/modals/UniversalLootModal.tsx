@@ -15,6 +15,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { StagedLootItem } from '../../types/adventures';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { parseAndEvaluateFormula } from './LootGeneratorModal';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
@@ -1027,8 +1028,9 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 mb-0.5">
-                                <h5 className={`font-bold text-xs truncate ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                                  {isMso ? `🌌 ${item.name}` : item.name}
+                                <h5 className={`font-bold text-xs truncate inline-flex items-center align-baseline gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                                  <span className="truncate">{isMso ? `🌌 ${item.name}` : item.name}</span>
+                                  <ItemNotesPopover notes={item.notes || item.description || item.effect} itemName={item.name} inline />
                                 </h5>
                                 {item.category && (
                                   <span className="text-[10px] text-amber-400/80 font-mono">

@@ -8,6 +8,7 @@ import {
   Compass,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { calculateAvailableAp } from '../../types/game';
 import { cleanPathName, isMsoEntry, compareMsoOptions } from '../../utils/kitUtils';
 import { collectPathTraitGrants, applyPathTraitGrantsToSheet } from '../../utils/bundleGrants';
@@ -344,8 +345,9 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                     </select>
                   ) : (
                     <div className="flex items-center justify-between pt-0.5">
-                      <span className={`text-xs font-black ${isMsoEntry(activeRace) ? 'text-purple-300' : 'text-slate-100'}`}>
-                        {isMsoEntry(activeRace) ? `🌌 ${activeRace}` : activeRace}
+                      <span className={`text-xs font-black inline-flex items-center align-baseline gap-1 ${isMsoEntry(activeRace) ? 'text-purple-300' : 'text-slate-100'}`}>
+                        <span>{isMsoEntry(activeRace) ? `🌌 ${activeRace}` : activeRace}</span>
+                        <ItemNotesPopover notes={resolvedPathsCatalog.find((p) => p.name === activeRace)?.description || (resolvedPathsCatalog.find((p) => p.name === activeRace) as any)?.notes} itemName={activeRace} inline />
                       </span>
                       <span className="text-[10px] font-mono text-purple-400">0 AP Auto-Grant</span>
                     </div>
@@ -381,8 +383,9 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                     </select>
                   ) : (
                     <div className="flex items-center justify-between pt-0.5">
-                      <span className={`text-xs font-black ${isMsoEntry(activeClass) ? 'text-purple-300' : 'text-slate-100'}`}>
-                        {isMsoEntry(activeClass) ? `🌌 ${activeClass}` : activeClass}
+                      <span className={`text-xs font-black inline-flex items-center align-baseline gap-1 ${isMsoEntry(activeClass) ? 'text-purple-300' : 'text-slate-100'}`}>
+                        <span>{isMsoEntry(activeClass) ? `🌌 ${activeClass}` : activeClass}</span>
+                        <ItemNotesPopover notes={resolvedPathsCatalog.find((p) => p.name === activeClass)?.description || (resolvedPathsCatalog.find((p) => p.name === activeClass) as any)?.notes} itemName={activeClass} inline />
                       </span>
                       <span className="text-[10px] font-mono text-purple-400">In-Path Pricing</span>
                     </div>
@@ -426,8 +429,9 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                             <span className={isMso ? 'text-purple-400' : 'text-indigo-400'}>
                               {isMso ? '🌌' : '🧭'}
                             </span>
-                            <span className={`text-xs font-bold truncate ${isMso ? 'text-purple-200' : 'text-slate-200'}`}>
-                              {pathName}
+                            <span className={`text-xs font-bold inline-flex items-center align-baseline gap-1 truncate ${isMso ? 'text-purple-200' : 'text-slate-200'}`}>
+                              <span className="truncate">{pathName}</span>
+                              <ItemNotesPopover notes={resolvedPathsCatalog.find((p) => p.name === pathName)?.description || (resolvedPathsCatalog.find((p) => p.name === pathName) as any)?.notes} itemName={pathName} inline />
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
@@ -534,9 +538,10 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                 {selectedExtraPathToBuy && (
                   <div className="p-3 bg-purple-950/30 border border-purple-500/30 rounded-xl space-y-1.5 animate-fade-in">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-purple-200 flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-purple-200 inline-flex items-center align-baseline gap-1.5">
                         <span>{isMsoEntry(selectedExtraPathToBuy) ? '🌌' : '🧭'}</span>
                         <span>{selectedExtraPathToBuy}</span>
+                        <ItemNotesPopover notes={resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy)?.description || (resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy) as any)?.notes} itemName={selectedExtraPathToBuy} inline />
                       </span>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40">
                         {resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy)?.category || 'Path'}

@@ -813,10 +813,11 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       >
                         <div className="flex flex-col min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`font-outfit font-bold text-xs truncate ${
+                            <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline ${
                               isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300' : 'text-slate-100'
                             }`}>
-                              {isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}
+                              <span className="truncate">{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
+                              <ItemNotesPopover notes={item.notes || ''} itemName={item.name} inline />
                             </span>
                             <span
                               className={`text-[9px] font-mono px-1.5 py-0.2 border rounded ${getCategoryBadgeClass(
@@ -843,8 +844,9 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                               const isInstalled = gearList.some((g) => g.name.includes(m.name));
                               if (isInstalled) {
                                 return (
-                                  <span key={m.id || m.name} className="text-[9px] font-mono text-emerald-400 flex items-center gap-1 mt-0.5">
-                                    ✓ Installed: {m.name}
+                                  <span key={m.id || m.name} className="text-[9px] font-mono text-emerald-400 inline-flex items-center align-baseline gap-1 mt-0.5">
+                                    <span>✓ Installed: {m.name}</span>
+                                    <ItemNotesPopover notes={m.notes || ''} itemName={m.name} inline />
                                   </span>
                                 );
                               }
@@ -854,7 +856,10 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
                               return (
                                 <div key={modKey} className="flex items-center justify-between mt-1 pt-1 border-t border-slate-800/60 text-[10px] gap-2">
-                                  <span className="text-indigo-300 font-semibold truncate">🔌 {m.name} ({m.cost || 'Free'})</span>
+                                  <span className="text-indigo-300 font-semibold inline-flex items-center align-baseline truncate">
+                                    <span>🔌 {m.name} ({m.cost || 'Free'})</span>
+                                    <ItemNotesPopover notes={m.notes || ''} itemName={m.name} inline />
+                                  </span>
                                   <div className="relative flex items-center shrink-0">
                                     {notEnoughMoneyTarget?.id === modKey && (
                                       <div className="absolute bottom-full right-0 mb-1 z-30 px-2 py-0.5 bg-rose-950 border border-rose-500 rounded-lg shadow-xl text-[9px] font-bold text-rose-200 whitespace-nowrap animate-fadeIn flex items-center gap-1 pointer-events-none">
@@ -910,11 +915,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                               +
                             </button>
                           </div>
-
-                          <ItemNotesPopover
-                            notes={item.notes || ''}
-                            itemName={item.name}
-                          />
 
                           <button
                             type="button"
@@ -1173,10 +1173,11 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
                               <div className="flex flex-col min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className={`font-outfit font-bold text-xs truncate ${
+                                  <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline ${
                                     isGsUnlocked && isMsoEntry(catalogItem.name) ? 'text-purple-300' : 'text-slate-100'
                                   }`}>
-                                    {isGsUnlocked && isMsoEntry(catalogItem.name) ? `🌌 ${catalogItem.name}` : catalogItem.name}
+                                    <span className="truncate">{isGsUnlocked && isMsoEntry(catalogItem.name) ? `🌌 ${catalogItem.name}` : catalogItem.name}</span>
+                                    <ItemNotesPopover notes={catalogItem.notes || ''} itemName={catalogItem.name} inline />
                                   </span>
                                   {availableMods.length > 0 && (
                                     <button
@@ -1201,10 +1202,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                             </div>
 
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <ItemNotesPopover
-                                notes={catalogItem.notes || ''}
-                                itemName={catalogItem.name}
-                              />
                               <div className="relative flex items-center shrink-0">
                                 {notEnoughMoneyTarget?.id === itemKey && (
                                   <div className="absolute bottom-full right-0 mb-1.5 z-30 px-2.5 py-1 bg-rose-950 border border-rose-500 rounded-lg shadow-xl text-[10px] font-bold text-rose-200 whitespace-nowrap animate-fadeIn flex items-center gap-1 pointer-events-none">
@@ -1254,11 +1251,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                   className="flex items-center justify-between gap-2 text-[10px] bg-slate-900/80 p-1.5 rounded border border-slate-800/80"
                                 >
                                   <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="text-slate-200 font-semibold truncate">🔌 {mod.name}</span>
+                                    <span className="text-slate-200 font-semibold inline-flex items-center align-baseline truncate">
+                                      <span>🔌 {mod.name}</span>
+                                      <ItemNotesPopover notes={mod.notes || ''} itemName={mod.name} inline />
+                                    </span>
                                     <span className="font-mono text-teal-300 font-bold">({formatCostAbbreviated(mod.cost || '0s')})</span>
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
-                                    <ItemNotesPopover notes={mod.notes || ''} itemName={mod.name} />
                                     <span className="text-[9px] text-slate-400 italic">Install once owned</span>
                                   </div>
                                 </div>

@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import {
   SupabaseRule,
@@ -219,9 +220,10 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`text-xs font-outfit font-bold flex items-center gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                          <span className={`text-xs font-outfit font-bold inline-flex items-center align-baseline gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
                             <span>{isMso ? '🌌' : isTrait ? '🧬' : '📜'}</span>
                             <span>{rule.name}</span>
+                            <ItemNotesPopover notes={rule.notes || rule.effect} itemName={rule.name} inline />
                           </span>
 
                           {/* Clean Classification Pill */}
@@ -362,9 +364,10 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                         >
                           <div className="flex flex-col gap-1 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-xs font-outfit font-black flex items-center gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                              <span className={`text-xs font-outfit font-black inline-flex items-center align-baseline gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
                                 <span>{isMso ? '🌌' : '📜'}</span>
                                 <span>{rule.name}</span>
+                                <ItemNotesPopover notes={rule.notes || rule.effect} itemName={rule.name} inline />
                               </span>
 
                               <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
