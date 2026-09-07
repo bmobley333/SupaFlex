@@ -19,8 +19,8 @@ const HUD_ITEMS: HUDItem[] = [
   },
   {
     id: 'section-capabilities',
-    label: 'Spec Rules & Skillsets',
-    icons: '📜 🎓',
+    label: 'Traits & Skillsets',
+    icons: '🧬 🎓',
     activeColorClass: 'bg-purple-900/60 text-purple-200 border-purple-400 shadow-purple-500/30',
     borderColorClass: 'hover:border-purple-500/50 hover:bg-purple-950/40 text-slate-300',
   },

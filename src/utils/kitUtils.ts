@@ -4,16 +4,19 @@
 export interface ParsedKit {
   baseKit: string;
   isTrait: boolean;
+  isPerk?: boolean;
+  isFreeTrait?: boolean;
   minLevel: number;
   rawKit: string;
 }
 
 /**
- * Parses a raw kit string to extract the base kit name, trait status, and minimum required level.
+ * Parses a raw kit string to extract the base kit name, trait/perk status, and minimum required level.
  * Examples:
+ *   "Dwarf {Perk}"    -> { baseKit: "Dwarf", isTrait: true, minLevel: 1, rawKit: "Dwarf {Perk}" }
+ *   "Dwarf {Perk1}"   -> { baseKit: "Dwarf", isTrait: true, minLevel: 1, rawKit: "Dwarf {Perk1}" }
+ *   "Dwarf {Perk5}"   -> { baseKit: "Dwarf", isTrait: true, minLevel: 5, rawKit: "Dwarf {Perk5}" }
  *   "Dwarf {Trait}"   -> { baseKit: "Dwarf", isTrait: true, minLevel: 1, rawKit: "Dwarf {Trait}" }
- *   "Dwarf {Trait1}"  -> { baseKit: "Dwarf", isTrait: true, minLevel: 1, rawKit: "Dwarf {Trait1}" }
- *   "Dwarf {Trait5}"  -> { baseKit: "Dwarf", isTrait: true, minLevel: 5, rawKit: "Dwarf {Trait5}" }
  *   "Dwarf {3}"       -> { baseKit: "Dwarf", isTrait: false, minLevel: 3, rawKit: "Dwarf {3}" }
  *   "Dwarf {1}"       -> { baseKit: "Dwarf", isTrait: false, minLevel: 1, rawKit: "Dwarf {1}" }
  *   "Dwarf"           -> { baseKit: "Dwarf", isTrait: false, minLevel: 1, rawKit: "Dwarf" }
@@ -24,6 +27,8 @@ export const parseKit = (rawKit?: string | null): ParsedKit => {
     return {
       baseKit: 'General',
       isTrait: false,
+      isPerk: false,
+      isFreeTrait: false,
       minLevel: 1,
       rawKit: '',
     };
@@ -31,18 +36,20 @@ export const parseKit = (rawKit?: string | null): ParsedKit => {
 
   const trimmed = rawKit.trim();
 
-  // Match Curly-Brace Kit Syntax: "{Trait}", "{Trait5}", "{3}", "{1}", "{Trait 5}"
+  // Match Curly-Brace Kit Syntax: "{Perk}", "{Perk5}", "{Trait}", "{Trait5}", "{3}", "{1}", "{Perk 5}"
   const curlyMatch = trimmed.match(/^(.*?)(?:\s*\{([a-zA-Z]*)\s*(\d+)?\})$/i);
 
   if (curlyMatch) {
     const base = curlyMatch[1].trim() || 'General';
     const tag = (curlyMatch[2] || '').toLowerCase();
     const levelNum = curlyMatch[3] ? parseInt(curlyMatch[3], 10) : 1;
-    const isTrait = tag.includes('trait') || tag.includes('innate') || tag.includes('free');
+    const isTrait = tag.includes('perk') || tag.includes('trait') || tag.includes('innate') || tag.includes('free');
 
     return {
       baseKit: base,
       isTrait,
+      isPerk: isTrait,
+      isFreeTrait: isTrait,
       minLevel: Math.max(1, isNaN(levelNum) ? 1 : levelNum),
       rawKit: trimmed,
     };
@@ -51,13 +58,15 @@ export const parseKit = (rawKit?: string | null): ParsedKit => {
   return {
     baseKit: trimmed,
     isTrait: false,
+    isPerk: false,
+    isFreeTrait: false,
     minLevel: 1,
     rawKit: trimmed,
   };
 };
 
 /**
- * Returns true if an item has a {Trait} or {Trait[Level]} suffix in its kit or table_group.
+ * Returns true if an item has a {Perk} / {Trait} or {Perk[Level]} suffix in its kit or table_group.
  */
 export const isTraitItem = (item?: { kit?: string | null; table_group?: string | null } | null): boolean => {
   if (!item) return false;
@@ -77,14 +86,14 @@ export const getKitMinLevel = (item?: { kit?: string | null; table_group?: strin
 };
 
 /**
- * Strips the {...} suffix to return the clean base kit name (e.g. "Dwarf {Trait5}" -> "Dwarf").
+ * Strips the {...} suffix to return the clean base kit name (e.g. "Dwarf {Perk5}" -> "Dwarf").
  */
 export const cleanKitName = (rawKit?: string | null): string => {
   return parseKit(rawKit).baseKit;
 };
 
 /**
- * Formats a base kit name with curly-brace level or trait notation.
+ * Formats a base kit name with curly-brace level or perk/trait notation.
  */
 export const formatKitWithLevel = (
   baseKit: string,
@@ -93,7 +102,7 @@ export const formatKitWithLevel = (
 ): string => {
   const clean = cleanKitName(baseKit);
   if (isTrait) {
-    return minLevel > 1 ? `${clean} {Trait${minLevel}}` : `${clean} {Trait}`;
+    return minLevel > 1 ? `${clean} {Perk${minLevel}}` : `${clean} {Perk}`;
   }
   return minLevel > 1 ? `${clean} {${minLevel}}` : clean;
 };

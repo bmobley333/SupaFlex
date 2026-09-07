@@ -5,7 +5,6 @@ import {
   MagicItem,
   SupabaseSkill,
   SupabaseTrait,
-  SupabaseRule,
   CharacterSheetData,
   DieRating,
   SupabaseArmor,
@@ -404,9 +403,9 @@ export const gameApi = {
     return (data || []) as SupabaseSkill[];
   },
 
-  // --- SPEC RULES & RULE MODIFIERS ---
-  async getSpecRules(): Promise<SupabaseRule[]> {
-    let query = supabase.from('spec_rules').select('*');
+  // --- TRAITS & RULE MODIFIERS ---
+  async getTraits(): Promise<SupabaseTrait[]> {
+    let query = supabase.from('traits').select('*');
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -414,26 +413,26 @@ export const gameApi = {
 
     if (error) {
       try {
-        const fallback = await supabase.from('trait_rules').select('*');
-        if (fallback.data) return fallback.data as SupabaseRule[];
+        const fallback = await supabase.from('spec_rules').select('*');
+        if (fallback.data) return fallback.data as SupabaseTrait[];
       } catch (_) {}
-      console.error('[gameApi] Error fetching spec rules:', error);
+      console.error('[gameApi] Error fetching traits:', error);
       return [];
     }
-    return (data || []) as SupabaseRule[];
+    return (data || []) as SupabaseTrait[];
   },
 
-  async getRules(): Promise<SupabaseRule[]> {
-    return this.getSpecRules();
+  async getSpecRules(): Promise<SupabaseTrait[]> {
+    return this.getTraits();
   },
 
-  async getTraits(): Promise<SupabaseRule[]> {
-    return this.getSpecRules();
+  async getRules(): Promise<SupabaseTrait[]> {
+    return this.getTraits();
   },
 
-  async createSpecRule(newRule: Omit<SupabaseRule, 'id' | 'created_at'>): Promise<SupabaseRule> {
+  async createTrait(newTrait: Omit<SupabaseTrait, 'id' | 'created_at'>): Promise<SupabaseTrait> {
     const { data: maxRows } = await supabase
-      .from('spec_rules')
+      .from('traits')
       .select('id')
       .order('id', { ascending: false })
       .limit(1);
@@ -441,24 +440,24 @@ export const gameApi = {
     const nextId = maxRows && maxRows.length > 0 && maxRows[0].id ? maxRows[0].id + 1 : 1;
 
     const { data, error } = await supabase
-      .from('spec_rules')
-      .insert({ ...newRule, id: nextId })
+      .from('traits')
+      .insert({ ...newTrait, id: nextId })
       .select()
       .single();
 
     if (error) {
-      console.error('[gameApi] Error creating custom spec rule:', error);
+      console.error('[gameApi] Error creating custom trait:', error);
       throw error;
     }
-    return data as SupabaseRule;
+    return data as SupabaseTrait;
   },
 
-  async createRule(newRule: Omit<SupabaseRule, 'id' | 'created_at'>): Promise<SupabaseRule> {
-    return this.createSpecRule(newRule);
+  async createSpecRule(newRule: Omit<SupabaseTrait, 'id' | 'created_at'>): Promise<SupabaseTrait> {
+    return this.createTrait(newRule);
   },
 
-  async createTrait(newTrait: Omit<SupabaseTrait, 'id' | 'created_at'>): Promise<SupabaseTrait> {
-    return this.createSpecRule(newTrait);
+  async createRule(newRule: Omit<SupabaseTrait, 'id' | 'created_at'>): Promise<SupabaseTrait> {
+    return this.createTrait(newRule);
   },
 
   // --- PATHS CATALOG (AP Character Suites) ---

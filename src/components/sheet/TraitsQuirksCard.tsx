@@ -55,13 +55,13 @@ export const TraitsQuirksCard: React.FC = () => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title="Click to open Spec Rules Manager"
+            title="Click to open Traits Manager"
           >
             <div className="p-1.5 rounded-xl bg-purple-950/90 border border-purple-500/50 text-purple-300 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.25)] group-hover:scale-105 group-hover:border-purple-400 transition-all">
-              <span className="text-base leading-none">📜</span>
+              <span className="text-base leading-none">🧬</span>
             </div>
             <h3 className="font-outfit font-black text-sm tracking-wider text-slate-100 uppercase group-hover:text-purple-200 transition-colors flex items-center gap-1.5">
-              <span>Spec Rules</span>
+              <span>Traits</span>
               <ChevronDown className="w-3.5 h-3.5 text-purple-400/70 group-hover:text-purple-300 group-hover:translate-y-0.5 transition-all" />
             </h3>
           </button>
@@ -80,7 +80,7 @@ export const TraitsQuirksCard: React.FC = () => {
                     ? 'bg-purple-600 text-white shadow-sm font-extrabold'
                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
                 }`}
-                title="Show only active reference rules on main sheet"
+                title="Show only active reference traits on main sheet"
               >
                 <span>👁️</span>
                 <span>Active ({visibleTraits.length})</span>
@@ -93,9 +93,9 @@ export const TraitsQuirksCard: React.FC = () => {
                     ? 'bg-slate-800 text-purple-300 border border-purple-500/40 shadow-sm font-extrabold'
                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
                 }`}
-                title="Show all rules including read-once/hidden background rules"
+                title="Show all traits including read-once/hidden background traits"
               >
-                <span>📜</span>
+                <span>🧬</span>
                 <span>All ({validTraits.length})</span>
               </button>
             </div>
@@ -105,7 +105,7 @@ export const TraitsQuirksCard: React.FC = () => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-purple-950/80 hover:bg-purple-900/90 border-purple-500/40 hover:border-purple-400 text-purple-200 hover:text-white cursor-pointer group"
-            title="Manage Character Spec Rules"
+            title="Manage Character Traits"
           >
             <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
           </button>
@@ -168,19 +168,19 @@ export const TraitsQuirksCard: React.FC = () => {
                 onClick={() => setVisibilityFilter('all')}
                 className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40 rounded-lg text-xs font-bold cursor-pointer transition-all"
               >
-                📜 Show All Rules ({validTraits.length})
+                🧬 Show All Traits ({validTraits.length})
               </button>
             </div>
           </div>
         ) : (
           <div className="p-6 bg-slate-950/40 rounded-xl border border-slate-800 text-xs text-slate-500 italic text-center flex flex-col items-center justify-center gap-1.5 flex-1">
-            <span>No active spec rules.</span>
+            <span>No active traits.</span>
             <button
               type="button"
               onClick={() => setShowManageModal(true)}
               className="text-purple-400 hover:text-purple-300 font-bold underline cursor-pointer text-xs"
             >
-              + Open Manage Rules to Learn Stock Rules & Boons
+              + Open Manage Traits to Learn Stock Traits & Boons
             </button>
           </div>
         )}

@@ -14,8 +14,8 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import {
-  SupabaseRule,
-  RuleItem,
+  SupabaseTrait,
+  TraitItem,
 } from '../../types/game';
 import { cleanKitName, isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
@@ -45,7 +45,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   // Right Pane Search State
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
 
-  const equippedRules: RuleItem[] = useMemo(() => {
+  const equippedRules: TraitItem[] = useMemo(() => {
     return activeCharacter?.sheet_data?.traits_quirks || [];
   }, [activeCharacter?.sheet_data?.traits_quirks]);
 
@@ -104,26 +104,26 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     return starredList.some((s) => String(s) === String(ruleIdOrName));
   };
 
-  const handleEquipStockRule = (rule: SupabaseRule) => {
+  const handleEquipStockRule = (rule: SupabaseTrait) => {
     if (isRuleEquipped(rule.name)) return;
     const ruleKit = rule.kit || rule.table_group;
-    const item: RuleItem = {
+    const item: TraitItem = {
       name: rule.name,
       effect: rule.effect || '',
       notes: rule.notes || '',
       stat_hook: rule.stat_hook || null,
       kit: ruleKit,
       table_group: ruleKit,
-      source: ruleKit || 'Stock Rules',
+      source: ruleKit || 'Stock Traits',
     };
     addTraitQuirk(item);
   };
 
-  const handleRemoveRule = (rule: RuleItem) => {
+  const handleRemoveRule = (rule: TraitItem) => {
     const isTrait =
-      (rule.kit && rule.kit.includes('{Trait}')) ||
-      (rule.source && rule.source.includes('Trait')) ||
-      (rule.table_group && rule.table_group.includes('{Trait}'));
+      (rule.kit && (rule.kit.includes('{Perk}') || rule.kit.includes('{Trait}'))) ||
+      (rule.source && (rule.source.includes('Perk') || rule.source.includes('Trait'))) ||
+      (rule.table_group && (rule.table_group.includes('{Perk}') || rule.table_group.includes('{Trait}')));
 
     if (isTrait && activeRole !== 'gm') {
       alert('Inherent traits (0 AP) are auto-taken and cannot be removed without GM approval. Switch to GM Mode to remove traits.');
@@ -144,19 +144,19 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
         <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0 gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-purple-950/90 border border-purple-500/40 text-purple-300 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.25)]">
-              <span className="text-xl leading-none">📜</span>
+              <span className="text-xl leading-none">🧬</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-outfit font-black text-base text-slate-100 uppercase tracking-wide">
-                  Manage Spec Rules
+                  Manage Traits
                 </h3>
                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/40">
-                  Active Rules: {equippedRules.length}
+                  Active Traits: {equippedRules.length}
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Equip spec rules and manage in-game sheet visibility.
+                Equip traits and manage in-game sheet visibility.
               </p>
             </div>
           </div>
@@ -173,13 +173,13 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
         {/* ================= 2. SPLIT-PANE 2-COLUMN BODY ================= */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
           
-          {/* ================= LEFT COLUMN: EQUIPPED ACTIVE RULES PANE ================= */}
+          {/* ================= LEFT COLUMN: EQUIPPED ACTIVE TRAITS PANE ================= */}
           <div className="flex flex-col bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 min-h-0 shadow-inner">
             <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span className="font-outfit font-bold text-xs text-slate-200 uppercase tracking-wider">
-                  Equipped Rules ({equippedRules.length})
+                  Equipped Traits ({equippedRules.length})
                 </span>
               </div>
               <span className="text-[11px] font-mono text-slate-400">
@@ -192,7 +192,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Filter active rules..."
+                placeholder="Filter active traits..."
                 value={leftSearchQuery}
                 onChange={(e) => setLeftSearchQuery(e.target.value)}
                 className="w-full bg-slate-900/90 text-xs pl-8 pr-2.5 py-1.5 rounded-xl border border-slate-800 text-white outline-none focus:border-purple-500 transition-all placeholder:text-slate-500"
@@ -204,9 +204,9 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               {filteredEquippedRules.length > 0 ? (
                 filteredEquippedRules.map((rule, idx) => {
                   const isTrait =
-                    (rule.kit && rule.kit.includes('{Trait}')) ||
-                    (rule.source && rule.source.includes('Trait')) ||
-                    (rule.table_group && rule.table_group.includes('{Trait}'));
+                    (rule.kit && (rule.kit.includes('{Perk}') || rule.kit.includes('{Trait}'))) ||
+                    (rule.source && (rule.source.includes('Perk') || rule.source.includes('Trait'))) ||
+                    (rule.table_group && (rule.table_group.includes('{Perk}') || rule.table_group.includes('{Trait}')));
                   const isMso = isGsUnlocked && isMsoEntry(rule.name);
 
                   return (
@@ -221,14 +221,14 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={`text-xs font-outfit font-bold inline-flex items-center align-baseline gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                            <span>{isMso ? '🌌' : isTrait ? '🧬' : '📜'}</span>
+                            <span>{isMso ? '🌌' : '🧬'}</span>
                             <span>{rule.name}</span>
                             <ItemNotesPopover notes={rule.notes || rule.effect} itemName={rule.name} inline />
                           </span>
 
                           {/* Clean Classification Pill */}
                           <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                            {isTrait ? '🧬 Trait • ' : '📜 '}
+                            {isTrait ? '🧬 Trait (Free) • ' : '🧬 '}
                             {cleanKitName(rule.kit || rule.table_group || rule.source || 'General')}
                           </span>
                         </div>
@@ -246,7 +246,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                                   ? 'bg-purple-600 text-white shadow-sm font-extrabold'
                                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
                               }`}
-                              title="Rule is visible on active character sheet"
+                              title="Trait is visible on active character sheet"
                             >
                               <span>👁️</span>
                               <span>Viewable</span>
@@ -261,7 +261,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                                   ? 'bg-slate-800 text-purple-300 border border-purple-500/40 shadow-sm font-extrabold'
                                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
                               }`}
-                              title="Rule is hidden from active character sheet (read-once)"
+                              title="Trait is hidden from active character sheet (read-once)"
                             >
                               <span>🙈</span>
                               <span>Hidden</span>
@@ -277,7 +277,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                                 ? 'text-slate-500 bg-slate-900 border border-slate-800 cursor-not-allowed opacity-60'
                                 : 'text-rose-300 bg-rose-950/40 border border-rose-500/30 hover:bg-rose-900/60'
                             }`}
-                            title={isTrait && activeRole !== 'gm' ? 'Traits (0 AP) require GM approval to remove' : 'Remove Rule'}
+                            title={isTrait && activeRole !== 'gm' ? 'Traits (0 AP) require GM approval to remove' : 'Remove Trait'}
                           >
                             <Trash2 className="w-3 h-3" />
                             <span>Forget</span>
@@ -308,22 +308,22 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                 })
               ) : (
                 <div className="p-8 text-center text-xs text-slate-500 italic bg-slate-900/30 rounded-xl border border-slate-800/60 flex flex-col items-center justify-center gap-1">
-                  <span>No active rules equipped.</span>
+                  <span>No active traits equipped.</span>
                   <span className="text-slate-600 text-[11px]">
-                    Equip rules from the stock catalog on the right.
+                    Equip traits from the stock catalog on the right.
                   </span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ================= RIGHT COLUMN: STOCK RULES CATALOG ================= */}
+          {/* ================= RIGHT COLUMN: STOCK TRAITS CATALOG ================= */}
           <div className="flex flex-col bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 min-h-0 shadow-inner">
-            {/* Header: Stock Rules Catalog */}
+            {/* Header: Stock Traits Catalog */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 shrink-0">
               <div className="flex items-center gap-1.5 font-outfit font-bold text-xs text-slate-200 uppercase tracking-wider">
                 <BookOpen className="w-3.5 h-3.5 text-purple-400" />
-                <span>📜 Stock Rules Catalog ({stockRulesCatalog.length})</span>
+                <span>🧬 Stock Traits Catalog ({stockRulesCatalog.length})</span>
               </div>
               <span className="text-[11px] font-mono text-slate-400">
                 {filteredCatalogRules.length} Available
@@ -336,7 +336,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="Search stock spec rules..."
+                    placeholder="Search stock traits..."
                     value={catalogSearchQuery}
                     onChange={(e) => setCatalogSearchQuery(e.target.value)}
                     className="w-full bg-slate-950 text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
@@ -365,13 +365,13 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                           <div className="flex flex-col gap-1 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className={`text-xs font-outfit font-black inline-flex items-center align-baseline gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                                <span>{isMso ? '🌌' : '📜'}</span>
+                                <span>{isMso ? '🌌' : '🧬'}</span>
                                 <span>{rule.name}</span>
                                 <ItemNotesPopover notes={rule.notes || rule.effect} itemName={rule.name} inline />
                               </span>
 
                               <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                                📜 {cleanKitName(rule.kit || rule.table_group || 'General')}
+                                🧬 {cleanKitName(rule.kit || rule.table_group || 'General')}
                               </span>
                             </div>
 
@@ -417,7 +417,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     })
                   ) : (
                     <div className="p-8 text-center text-xs text-slate-500 italic bg-slate-900/40 rounded-xl border border-slate-800">
-                      No stock rules found matching search.
+                      No stock traits found matching search.
                     </div>
                   )}
                 </div>

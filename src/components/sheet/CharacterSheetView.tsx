@@ -47,7 +47,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* Symmetrical 2-Column Capabilities Grid: Spec Rules (Left) and Skills (Right) */}
+      {/* Symmetrical 2-Column Capabilities Grid: Traits (Left) and Skills (Right) */}
       <div id="section-capabilities" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
         <TraitsQuirksCard />
         <SkillsetsPanel />

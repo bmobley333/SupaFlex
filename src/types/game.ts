@@ -22,7 +22,7 @@ export interface StatHookDefinition {
   effectDescription?: string;
 }
 
-export interface SupabaseRule {
+export interface SupabaseTrait {
   id: number;
   name: string;
   effect?: string;
@@ -37,7 +37,7 @@ export interface SupabaseRule {
   created_at?: string;
 }
 
-export type SupabaseTrait = SupabaseRule;
+export type SupabaseRule = SupabaseTrait;
 
 export type PathCategory =
   | 'Race'
@@ -122,7 +122,7 @@ export interface HardwareBundleItem {
   created_at?: string;
 }
 
-export interface RuleItem {
+export interface TraitItem {
   id?: string | number;
   name: string;
   effect?: string;
@@ -137,7 +137,8 @@ export interface RuleItem {
   created_at?: string;
 }
 
-export type TraitQuirkItem = RuleItem;
+export type RuleItem = TraitItem;
+export type TraitQuirkItem = TraitItem;
 
 export interface ReadySlotConfig {
   tier: number;

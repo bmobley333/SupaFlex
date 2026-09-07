@@ -951,9 +951,9 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
     const isTrait =
       target &&
-      ((target.kit && target.kit.includes('{Trait}')) ||
-        (target.source && target.source.includes('Trait')) ||
-        (target.table_group && target.table_group.includes('{Trait}')));
+      ((target.kit && (target.kit.includes('{Perk}') || target.kit.includes('{Trait}'))) ||
+        (target.source && (target.source.includes('Perk') || target.source.includes('Trait'))) ||
+        (target.table_group && (target.table_group.includes('{Perk}') || target.table_group.includes('{Trait}'))));
 
     if (isTrait && activeRole !== 'gm' && !forceGmOverride) {
       alert('Inherent traits (0 AP) are auto-taken and cannot be removed without GM approval. Switch to GM Mode to remove traits.');

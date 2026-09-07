@@ -179,7 +179,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       // Powers
       stockPowersCatalog.forEach((p) => {
         if (p.kit && matchesKitFilter(p.kit, kitName)) {
-          const isTrait = p.kit.toLowerCase().includes('{trait}') || p.kit.toLowerCase().includes('{trait1}');
+          const isTrait = p.kit.toLowerCase().includes('{perk}') || p.kit.toLowerCase().includes('{trait}') || p.kit.toLowerCase().includes('{trait1}') || p.kit.toLowerCase().includes('{perk1}');
           elements.push({
             type: 'power',
             name: p.name,
@@ -195,7 +195,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       // Skills
       stockSkillsCatalog.forEach((s) => {
         if (s.kit && matchesKitFilter(s.kit, kitName)) {
-          const isTrait = (s.kit || '').toLowerCase().includes('{trait}');
+          const isTrait = (s.kit || '').toLowerCase().includes('{perk}') || (s.kit || '').toLowerCase().includes('{trait}');
           elements.push({
             type: 'skill',
             name: s.name,
@@ -208,10 +208,10 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
         }
       });
 
-      // Rules
+      // Rules / Traits
       stockRulesCatalog.forEach((r) => {
         if (r.kit && matchesKitFilter(r.kit, kitName)) {
-          const isTrait = (r.kit || '').toLowerCase().includes('{trait}');
+          const isTrait = (r.kit || '').toLowerCase().includes('{perk}') || (r.kit || '').toLowerCase().includes('{trait}');
           elements.push({
             type: 'rule',
             name: r.name,
@@ -710,7 +710,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-outfit font-bold text-slate-100 inline-flex items-center align-baseline gap-1">
-                            <span>{el.type === 'power' ? '🔥' : el.type === 'skill' ? '🎓' : '📜'}</span>
+                            <span>{el.type === 'power' ? '🔥' : el.type === 'skill' ? '🎓' : '🧬'}</span>
                             <span>{el.name}</span>
                             <ItemNotesPopover notes={el.raw?.notes || el.description} itemName={el.name} inline />
                           </span>
@@ -719,7 +719,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
                           </span>
                           {el.isTrait && (
                             <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-extrabold bg-emerald-950 text-emerald-300 border border-emerald-500/40">
-                              🧬 Trait (0 AP)
+                              🧬 Trait (Free)
                             </span>
                           )}
                         </div>
@@ -770,7 +770,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-outfit font-bold text-slate-100 inline-flex items-center align-baseline gap-1">
-                          <span>{el.type === 'power' ? '🔥' : '📜'}</span>
+                          <span>{el.type === 'power' ? '🔥' : '🧬'}</span>
                           <span>{el.name}</span>
                           <ItemNotesPopover notes={el.raw?.notes || el.description} itemName={el.name} inline />
                         </span>
