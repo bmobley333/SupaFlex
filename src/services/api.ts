@@ -335,7 +335,7 @@ export const gameApi = {
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
-    query = query.neq('category', 'Artifact').neq('cost', 'Artifact').not('discipline', 'is', null);
+    query = query.neq('category', 'Artifact').neq('cost', 'Artifact').not('domain', 'is', null);
     const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {

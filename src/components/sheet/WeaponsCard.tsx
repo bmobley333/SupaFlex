@@ -364,8 +364,9 @@ export const WeaponsCard: React.FC = () => {
   const availableDisciplines = useMemo(() => {
     const set = new Set<string>();
     supabaseWeapons.forEach((w) => {
-      if (w.discipline && w.discipline.trim()) {
-        set.add(w.discipline.trim());
+      const d = w.domain || w.discipline;
+      if (d && d.trim()) {
+        set.add(d.trim());
       }
     });
     return Array.from(set).sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
@@ -419,9 +420,9 @@ export const WeaponsCard: React.FC = () => {
         const qualifying = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
         const isAnyLearnable = qualifying.length > 0;
 
-        // 1.2. Discipline Dropdown Filter
+        // 1.2. Domain / Discipline Dropdown Filter
         if (weaponDisciplineFilter !== 'ALL') {
-          const disc = (weapon.discipline || '').toLowerCase().trim();
+          const disc = (weapon.domain || weapon.discipline || '').toLowerCase().trim();
           if (disc !== weaponDisciplineFilter.toLowerCase().trim()) {
             return false;
           }

@@ -10,6 +10,7 @@ export type PowerReadyType = 'primary_arsenal' | 'mobility_defense' | 'support_p
 
 export type PowerDiscipline = 'Sorce' | 'Psionics' | 'Psychosomatics' | 'Martial' | 'Universal';
 export type TechDiscipline = 'Archaic' | 'Tech' | 'BioTech' | 'CyberTech';
+export type EquipmentDomain = 'Archaic' | 'BioTech' | 'CyberTech' | 'Tech' | 'Psionics' | 'Psychosomatics' | 'Sorce';
 export type ExoticTier = 'Minor' | 'Lesser' | 'Greater' | 'Epic';
 export type HardwareTier = ExoticTier;
 export type PowerTableCategory = 'Race' | 'Class' | 'Discipline' | 'Combat Style' | 'Handicap' | 'Luck' | 'Custom';
@@ -77,6 +78,8 @@ export interface SupabaseKit {
   description?: string;
   genres?: string[];
   notes?: string;
+  domain?: EquipmentDomain | string;
+  discipline?: string;
   belongs_to?: string;
   created_at?: string;
 }
@@ -211,6 +214,7 @@ export interface SupabaseArmor {
   ar: string;
   mr: string;
   cost: string;
+  domain?: EquipmentDomain | string;
   discipline?: string;
   path?: string;
   kit?: string;
@@ -227,6 +231,7 @@ export interface SupabaseSupply {
   genres?: string[];
   name: string;
   cost: string;
+  domain?: EquipmentDomain | string;
   discipline?: string;
   path?: string;
   kit?: string;
@@ -355,6 +360,7 @@ export interface SupabaseShield {
   requirement: string;
   max_block: string;
   mr: string;
+  domain?: EquipmentDomain | string;
   discipline?: string;
   path?: string;
   kit?: string;
@@ -418,6 +424,7 @@ export interface SupabaseWeapon {
   dmg: string;
   max_block: string;
   cost: string;
+  domain?: EquipmentDomain | string;
   discipline?: string;
   kit?: string;
   bundle?: string;
@@ -547,6 +554,7 @@ export interface SimpleGearItem {
   name: string;
   category?: string;
   cost?: string;
+  domain?: EquipmentDomain | string;
   notes?: string;
   item_type?: 'gear' | 'weapon' | 'armor' | 'shield' | 'exotic' | 'kit';
   belongs_to?: string;

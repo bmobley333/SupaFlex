@@ -31,7 +31,15 @@ import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
 export type EquipmentCategoryTab = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields' | 'kits';
 export type GearTierFilter = 'ALL' | 'STANDARD' | 'EXOTIC';
-export type GearScienceFilter = 'ALL' | 'Archaic' | 'BioTech' | 'CyberTech' | 'Tech';
+export type GearDomainFilter =
+  | 'ALL'
+  | 'Archaic'
+  | 'BioTech'
+  | 'CyberTech'
+  | 'Tech'
+  | 'Psionics'
+  | 'Psychosomatics'
+  | 'Sorce';
 export type GearViewFilter = 'ALL' | 'STARRED';
 
 /**
@@ -84,7 +92,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [gearInventorySearchQuery, setGearInventorySearchQuery] = useState<string>('');
   const [gearCatalogSearchQuery, setGearCatalogSearchQuery] = useState<string>('');
   const [gearTierFilter, setGearTierFilter] = useState<GearTierFilter>('ALL');
-  const [gearScienceFilter, setGearScienceFilter] = useState<GearScienceFilter>('ALL');
+  const [gearDomainFilter, setGearDomainFilter] = useState<GearDomainFilter>('ALL');
   const [gearViewFilter, setGearViewFilter] = useState<GearViewFilter>('ALL');
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [gearCatalogFeedback, setGearCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
@@ -203,8 +211,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       if (rawName && (modHostNames.has(rawName) || modHostNames.has(strippedName))) return true;
       const cat = (item.category || '').toLowerCase();
       if (cat.includes('exotic') || cat.includes('cyberware') || cat.includes('biotech') || cat.includes('cybertech')) return true;
-      const disc = (item.discipline || '').toLowerCase();
-      if (disc.includes('cybertech') || disc.includes('biotech')) return true;
+      const dom = (item.domain || item.discipline || '').toLowerCase();
+      if (dom.includes('cybertech') || dom.includes('biotech')) return true;
       return false;
     },
     [functionHostNames, modHostNames]
@@ -330,27 +338,11 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     return currentRawCatalog.filter((item) => isItemStarred(item)).length;
   }, [currentRawCatalog, isItemStarred]);
 
-  // Science Discipline Matcher (Strict canonical match on discipline & category, avoiding note false positives)
-  const matchesScience = useCallback((item: any, science: GearScienceFilter): boolean => {
-    if (science === 'ALL') return true;
-    const disc = (item.discipline || '').toLowerCase();
-    const cat = (item.category || '').toLowerCase();
-    const target = science.toLowerCase();
-
-    if (target === 'archaic') {
-      return disc.includes('archaic') || cat.includes('archaic');
-    }
-    if (target === 'biotech') {
-      return disc.includes('biotech') || cat.includes('biotech');
-    }
-    if (target === 'cybertech') {
-      return disc.includes('cybertech') || cat.includes('cybertech');
-    }
-    if (target === 'tech') {
-      if (disc.includes('biotech') || disc.includes('cybertech')) return false;
-      return disc.includes('tech') || cat.includes('tech');
-    }
-    return false;
+  // Domain Matcher (Exact canonical match on domain or fallback discipline)
+  const matchesDomain = useCallback((item: any, domain: GearDomainFilter): boolean => {
+    if (domain === 'ALL') return true;
+    const itemDomain = (item.domain || item.discipline || '').toLowerCase().trim();
+    return itemDomain === domain.toLowerCase().trim();
   }, []);
 
   // Filtered Catalog Pipeline
@@ -376,9 +368,9 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       base = base.filter((g) => isItemExotic(g));
     }
 
-    // 3. Science discipline filter
-    if (gearScienceFilter !== 'ALL') {
-      base = base.filter((g) => matchesScience(g, gearScienceFilter));
+    // 3. Domain filter
+    if (gearDomainFilter !== 'ALL') {
+      base = base.filter((g) => matchesDomain(g, gearDomainFilter));
     }
 
     // 4. View / Starred filter
@@ -392,7 +384,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       : base.filter((g: any) => {
           const query = gearCatalogSearchQuery.toLowerCase().trim();
           const nameMatch = (g.name || '').toLowerCase().includes(query);
-          const catMatch = (g.category || g.discipline || g.type || '').toLowerCase().includes(query);
+          const catMatch = (g.category || g.domain || g.discipline || g.type || '').toLowerCase().includes(query);
           const noteMatch = (g.notes || '').toLowerCase().includes(query);
           return nameMatch || catMatch || noteMatch;
         });
@@ -402,11 +394,11 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     currentRawCatalog,
     gearList,
     gearTierFilter,
-    gearScienceFilter,
+    gearDomainFilter,
     gearViewFilter,
     isItemStarred,
     isItemExotic,
-    matchesScience,
+    matchesDomain,
     gearCatalogSearchQuery,
     localGenreFilter,
     isGsUnlocked,
@@ -1009,16 +1001,16 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                     </select>
                   </div>
 
-                  {/* Science Filter */}
+                  {/* Domain Filter */}
                   <div className="flex flex-col min-w-0">
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 px-0.5 truncate">
-                      Science
+                      Domain
                     </span>
                     <select
-                      value={gearScienceFilter}
-                      onChange={(e) => setGearScienceFilter(e.target.value as any)}
+                      value={gearDomainFilter}
+                      onChange={(e) => setGearDomainFilter(e.target.value as any)}
                       className={`bg-slate-900 text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-colors ${
-                        gearScienceFilter !== 'ALL'
+                        gearDomainFilter !== 'ALL'
                           ? 'border-cyan-500 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
                           : 'border-slate-700 text-slate-200 focus:border-teal-500'
                       }`}
@@ -1028,6 +1020,9 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       <option value="BioTech">🧬 BioTech</option>
                       <option value="CyberTech">🦾 CyberTech</option>
                       <option value="Tech">⚡ Tech</option>
+                      <option value="Psionics">🧠 Psionics</option>
+                      <option value="Psychosomatics">🌀 Psychosomatics</option>
+                      <option value="Sorce">✨ Sorce</option>
                     </select>
                   </div>
 
@@ -1150,7 +1145,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                         setActiveCategoryTab('all');
                         setGearTierFilter('ALL');
                         setLocalGenreFilter(activeGenre || 'SciFi');
-                        setGearScienceFilter('ALL');
+                        setGearDomainFilter('ALL');
                         setGearViewFilter('ALL');
                         setGearCatalogSearchQuery('');
                       }}
@@ -1214,19 +1209,20 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                           ? 'exotic'
                           : 'gear');
 
+                      const itemDomain = catalogItem.domain || catalogItem.discipline;
                       let itemSubtext = catalogItem.category || 'Supplies';
                       if (isWeapon) {
-                        itemSubtext = [isExoticItem ? '🧿 Exotic Weapon' : '⚔️ Weapon', catalogItem.type, catalogItem.discipline].filter(Boolean).join(' • ') || 'Weapon';
+                        itemSubtext = [isExoticItem ? '🧿 Exotic Weapon' : '⚔️ Weapon', catalogItem.type, itemDomain].filter(Boolean).join(' • ') || 'Weapon';
                       } else if (isArmor) {
-                        itemSubtext = [isExoticItem ? '🧿 Exotic Armor' : '🥋 Armor', catalogItem.ar ? `AR: ${catalogItem.ar}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Armor';
+                        itemSubtext = [isExoticItem ? '🧿 Exotic Armor' : '🥋 Armor', catalogItem.ar ? `AR: ${catalogItem.ar}` : null, itemDomain].filter(Boolean).join(' • ') || 'Armor';
                       } else if (isShield) {
-                        itemSubtext = [isExoticItem ? '🧿 Exotic Shield' : '🛡️ Shield', catalogItem.max_block ? `Block: ${catalogItem.max_block}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Shield';
+                        itemSubtext = [isExoticItem ? '🧿 Exotic Shield' : '🛡️ Shield', catalogItem.max_block ? `Block: ${catalogItem.max_block}` : null, itemDomain].filter(Boolean).join(' • ') || 'Shield';
                       } else if (isKit) {
-                        itemSubtext = ['📦 Kit', catalogItem.category].filter(Boolean).join(' • ') || 'Kit';
+                        itemSubtext = ['📦 Kit', catalogItem.category, itemDomain].filter(Boolean).join(' • ') || 'Kit';
                       } else if (isExoticItem) {
-                        itemSubtext = ['🧿 Exotic', catalogItem.discipline || catalogItem.category].filter(Boolean).join(' • ') || 'Exotic';
+                        itemSubtext = ['🧿 Exotic', itemDomain || catalogItem.category].filter(Boolean).join(' • ') || 'Exotic';
                       } else {
-                        itemSubtext = ['🎒 Supplies', catalogItem.category || catalogItem.discipline].filter(Boolean).join(' • ') || 'Supplies';
+                        itemSubtext = ['🎒 Supplies', catalogItem.category || itemDomain].filter(Boolean).join(' • ') || 'Supplies';
                       }
 
                       const buyButtonLabel = isKit
