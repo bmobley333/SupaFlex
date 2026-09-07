@@ -216,13 +216,37 @@ export const calculateSpentApOnMagicSlots = (unlockedSlots: number = 3): number 
 };
 
 /**
+ * Purges raw gear items (weapons/armor/shields/supplies without effects) that were erroneously
+ * injected into character_vault instead of functions, while preserving legitimate Relics and Functions.
+ */
+export const sanitizeCharacterVault = (sheetData: any): any => {
+  if (!sheetData || !Array.isArray(sheetData.character_vault)) return sheetData;
+
+  const initialVault: MagicItem[] = sheetData.character_vault;
+  // A legitimate vault item MUST have a non-empty effect. Raw items injected from gear tables lack 'effect'.
+  const cleanedVault = initialVault.filter((item: any) => {
+    if (!item || !item.name) return false;
+    const hasEffect = typeof item.effect === 'string' && item.effect.trim() !== '';
+    return hasEffect;
+  });
+
+  if (cleanedVault.length === initialVault.length) return sheetData;
+
+  return {
+    ...sheetData,
+    character_vault: cleanedVault,
+  };
+};
+
+/**
  * Automatically migrates existing character sheet items from spell_slots to character_vault
  * if total active slot weight exceeds unlocked_loadout_slots (default 3).
  * Keeps items up to unlocked_loadout_slots weight in spell_slots (first-come-first-serve);
  * moves excess items into character_vault so zero items are lost.
  */
-export const migrateCharacterMagicItemsToVault = (sheetData: any): any => {
-  if (!sheetData) return sheetData;
+export const migrateCharacterMagicItemsToVault = (rawSheetData: any): any => {
+  if (!rawSheetData) return rawSheetData;
+  const sheetData = sanitizeCharacterVault(rawSheetData);
 
   const unlockedSlots = typeof sheetData.unlocked_loadout_slots === 'number' 
     ? sheetData.unlocked_loadout_slots 

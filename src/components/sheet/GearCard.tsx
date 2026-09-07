@@ -23,6 +23,7 @@ import {
   SupabaseBundle,
   ModItem,
   FunctionItem,
+  getCategorySlotWeight,
 } from '../../types/game';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { gameApi } from '../../services/api';
@@ -82,7 +83,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [weaponsCatalog, setWeaponsCatalog] = useState<SupabaseWeapon[]>([]);
   const [armorCatalog, setArmorCatalog] = useState<SupabaseArmor[]>([]);
   const [shieldsCatalog, setShieldsCatalog] = useState<SupabaseShield[]>([]);
-  const [exoticsCatalog, setExoticsCatalog] = useState<MagicItem[]>([]);
   const [kitsCatalog, setKitsCatalog] = useState<SupabaseBundle[]>([]);
   const [modsCatalog, setModsCatalog] = useState<ModItem[]>([]);
   const [functionsCatalog, setFunctionsCatalog] = useState<FunctionItem[]>([]);
@@ -129,17 +129,15 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         gameApi.getWeapons(),
         gameApi.getArmor(),
         gameApi.getShields(),
-        gameApi.getExotics(),
         gameApi.getBundles(),
         gameApi.getMods(),
         gameApi.getFunctions(),
       ])
-        .then(([gearData, weaponsData, armorData, shieldsData, exoticsData, kitsData, modsData, functionsData]) => {
+        .then(([gearData, weaponsData, armorData, shieldsData, kitsData, modsData, functionsData]) => {
           setGearCatalog(gearData || []);
           setWeaponsCatalog(weaponsData || []);
           setArmorCatalog(armorData || []);
           setShieldsCatalog(shieldsData || []);
-          setExoticsCatalog(exoticsData || []);
           setKitsCatalog(kitsData || []);
           setModsCatalog(modsData || []);
           setFunctionsCatalog(functionsData || []);
@@ -167,27 +165,55 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       .toLowerCase();
   };
 
-  // Host sets derived deterministically from functions and mods catalogs
-  const functionHostNames = useMemo(() => {
+  // Mods that have at least one function in functionsCatalog
+  const modsWithFunctions = useMemo(() => {
     const set = new Set<string>();
     functionsCatalog.forEach((fn) => {
       if (!fn.belongs_to) return;
       const parts = fn.belongs_to.split(',');
       for (const part of parts) {
-        const cleaned = cleanBelongsToName(part);
-        if (cleaned) {
-          set.add(cleaned);
-          set.add(cleaned.replace(/\(mso\)/gi, '').trim());
+        const trimmed = part.trim();
+        if (/^Mod:\s*/i.test(trimmed)) {
+          const cleaned = cleanBelongsToName(trimmed);
+          if (cleaned) {
+            set.add(cleaned);
+            set.add(cleaned.replace(/\(mso\)/gi, '').trim());
+          }
         }
       }
     });
     return set;
   }, [functionsCatalog]);
 
-  const modHostNames = useMemo(() => {
+  // Host gear names directly referenced in functionsCatalog
+  const functionHostNames = useMemo(() => {
+    const set = new Set<string>();
+    functionsCatalog.forEach((fn) => {
+      if (!fn.belongs_to) return;
+      const parts = fn.belongs_to.split(',');
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (!/^Mod:\s*/i.test(trimmed)) {
+          const cleaned = cleanBelongsToName(trimmed);
+          if (cleaned) {
+            set.add(cleaned);
+            set.add(cleaned.replace(/\(mso\)/gi, '').trim());
+          }
+        }
+      }
+    });
+    return set;
+  }, [functionsCatalog]);
+
+  // Host gear names referenced in modsCatalog that have a function
+  const modFunctionHostNames = useMemo(() => {
     const set = new Set<string>();
     modsCatalog.forEach((m) => {
-      if (!m.belongs_to) return;
+      const modClean = cleanBelongsToName(m.name || '');
+      const modStripped = modClean.replace(/\(mso\)/gi, '').trim();
+      const hasFunction = modsWithFunctions.has(modClean) || modsWithFunctions.has(modStripped);
+      if (!hasFunction || !m.belongs_to) return;
+
       const parts = m.belongs_to.split(',');
       for (const part of parts) {
         const cleaned = cleanBelongsToName(part);
@@ -198,25 +224,85 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       }
     });
     return set;
-  }, [modsCatalog]);
+  }, [modsCatalog, modsWithFunctions]);
 
   // Canonical Exotic Detection across all gear categories
   const isItemExotic = useCallback(
     (item: any): boolean => {
       if (!item) return false;
       if (item.is_exotic) return true;
-      const rawName = (item.name || '').toLowerCase().trim();
+      const cat = (item.category || '').toLowerCase();
+      if (cat.includes('exotic') || cat.includes('artifact')) return true;
+      const costLower = (item.cost || '').toLowerCase();
+      if (costLower === 'artifact') return true;
+
+      const rawName = cleanBelongsToName(item.name || '');
       const strippedName = rawName.replace(/\(mso\)/gi, '').trim();
       if (rawName && (functionHostNames.has(rawName) || functionHostNames.has(strippedName))) return true;
-      if (rawName && (modHostNames.has(rawName) || modHostNames.has(strippedName))) return true;
-      const cat = (item.category || '').toLowerCase();
-      if (cat.includes('exotic') || cat.includes('cyberware') || cat.includes('biotech') || cat.includes('cybertech')) return true;
-      const dom = (item.domain || item.discipline || '').toLowerCase();
-      if (dom.includes('cybertech') || dom.includes('biotech')) return true;
+      if (rawName && (modFunctionHostNames.has(rawName) || modFunctionHostNames.has(strippedName))) return true;
       return false;
     },
-    [functionHostNames, modHostNames]
+    [functionHostNames, modFunctionHostNames]
   );
+
+  // Helper to find all direct functions belonging to a gear item
+  const getFunctionsForGearItem = useCallback(
+    (itemName: string): FunctionItem[] => {
+      const cleanItem = cleanBelongsToName(itemName);
+      const cleanStripped = cleanItem.replace(/\(mso\)/gi, '').trim();
+      return functionsCatalog.filter((fn) => {
+        if (!fn.belongs_to) return false;
+        const parts = fn.belongs_to.split(',');
+        return parts.some((p) => {
+          const trimmed = p.trim();
+          if (/^Mod:\s*/i.test(trimmed)) return false;
+          const cleaned = cleanBelongsToName(trimmed);
+          const stripped = cleaned.replace(/\(mso\)/gi, '').trim();
+          return cleaned === cleanItem || stripped === cleanStripped || cleaned === cleanStripped || stripped === cleanItem;
+        });
+      });
+    },
+    [functionsCatalog]
+  );
+
+  // Helper to find all functions belonging to an installed mod
+  const getFunctionsForMod = useCallback(
+    (modName: string): FunctionItem[] => {
+      const cleanMod = cleanBelongsToName(modName);
+      const cleanStripped = cleanMod.replace(/\(mso\)/gi, '').trim();
+      return functionsCatalog.filter((fn) => {
+        if (!fn.belongs_to) return false;
+        const parts = fn.belongs_to.split(',');
+        return parts.some((p) => {
+          const trimmed = p.trim();
+          if (!/^Mod:\s*/i.test(trimmed)) return false;
+          const cleaned = cleanBelongsToName(trimmed);
+          const stripped = cleaned.replace(/\(mso\)/gi, '').trim();
+          return cleaned === cleanMod || stripped === cleanStripped || cleaned === cleanStripped || stripped === cleanMod;
+        });
+      });
+    },
+    [functionsCatalog]
+  );
+
+  // Convert FunctionItem to MagicItem for character_vault
+  const mapFunctionToVaultItem = useCallback((fn: FunctionItem, hostName: string): MagicItem => {
+    return {
+      id: typeof fn.id === 'number' ? fn.id : Date.now() + Math.floor(Math.random() * 10000),
+      name: fn.name,
+      base_name: fn.name.replace(/\s*v\d+$/i, '').trim(),
+      version: 1,
+      action: (fn.action?.toUpperCase() as any) || 'P',
+      usage: fn.usage || '1-Enc',
+      effect: fn.effect || '',
+      notes: fn.notes || `Inherent function of ${hostName}`,
+      source: `Exotic Gear: ${hostName}`,
+      created_at: new Date().toISOString(),
+      category: fn.tier || (fn as any).category || 'Minor',
+      slot_weight: ((fn as any).slot_weight || getCategorySlotWeight(fn.tier || (fn as any).category) || 1) as 1 | 2 | 3 | 4,
+      is_hardware: true,
+    };
+  }, []);
 
   // Current Raw Catalog for Active Shelf Tab
   const currentRawCatalog = useMemo(() => {
@@ -443,7 +529,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       const matchedWeapons = weaponsCatalog.filter((w: any) => w.belongs_to && w.belongs_to.includes(kitName));
       const matchedArmor = armorCatalog.filter((a: any) => a.belongs_to && a.belongs_to.includes(kitName));
       const matchedShields = shieldsCatalog.filter((s: any) => s.belongs_to && s.belongs_to.includes(kitName));
-      const matchedExotics = exoticsCatalog.filter((e: any) => e.belongs_to && e.belongs_to.includes(kitName));
 
       const newGearItems: SimpleGearItem[] = [
         ...matchedGear.map((g: any) => ({
@@ -497,13 +582,26 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         },
       ];
 
+      // Collect any real functions from constituent items
+      const kitConstituents = [...matchedGear, ...matchedWeapons, ...matchedArmor, ...matchedShields];
+      const kitFunctions: MagicItem[] = [];
+      kitConstituents.forEach((item) => {
+        const fns = getFunctionsForGearItem(item.name);
+        fns.forEach((fn) => {
+          kitFunctions.push(mapFunctionToVaultItem(fn, item.name));
+        });
+      });
+
       updateActiveSheetData((prev) => {
         const currentGear = prev.simple_gear || [];
         const currentVault = prev.character_vault || [];
+        const newFunctionsToAdd = kitFunctions.filter(
+          (kf) => !currentVault.some((v: any) => cleanBelongsToName(v.name) === cleanBelongsToName(kf.name))
+        );
         return {
           ...prev,
           simple_gear: [...currentGear, ...newGearItems],
-          character_vault: [...currentVault, ...matchedExotics],
+          character_vault: [...currentVault, ...newFunctionsToAdd],
           gold: deduction.newGold,
           silver: deduction.newSilver,
         };
@@ -512,7 +610,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
       setGearCatalogFeedback({
         type: 'success',
-        message: `Purchased kit "${kitName}" for ${costStr}! Constituent items added to inventory and vault.`,
+        message: `Purchased kit "${kitName}" for ${costStr}! Constituent items added to inventory.`,
       });
       return;
     }
@@ -538,12 +636,17 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         pic: catalogItem.pic,
       };
 
+      const linkedFns = getFunctionsForGearItem(itemName).map((fn) => mapFunctionToVaultItem(fn, itemName));
+
       updateActiveSheetData((prev) => {
         const currentVault = prev.character_vault || [];
+        const fnsToAdd = linkedFns.filter(
+          (lf) => !currentVault.some((v: any) => cleanBelongsToName(v.name) === cleanBelongsToName(lf.name))
+        );
         return {
           ...prev,
           simple_gear: [...(prev.simple_gear || []), newGearItem],
-          character_vault: [...currentVault, catalogItem],
+          character_vault: [...currentVault, ...fnsToAdd],
           gold: deduction.newGold,
           silver: deduction.newSilver,
         };
@@ -552,7 +655,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
       setGearCatalogFeedback({
         type: 'success',
-        message: `Purchased Exotic "${itemName}" for ${costStr}! Added to equipment and vault.`,
+        message: `Purchased Exotic "${itemName}" for ${costStr}! Added to equipment${linkedFns.length ? ' and Function Vault' : ''}.`,
       });
       return;
     }
@@ -602,14 +705,18 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       pic: catalogItem.pic,
     };
 
+    const linkedFns = getFunctionsForGearItem(itemName).map((fn) => mapFunctionToVaultItem(fn, itemName));
+
     updateActiveSheetData((prev) => {
       const currentGear = prev.simple_gear || [];
       const currentVault = prev.character_vault || [];
-      const shouldAddToVault = isItemExotic(catalogItem) && !currentVault.some((v: any) => (v.name || '').toLowerCase() === itemName.toLowerCase());
+      const fnsToAdd = linkedFns.filter(
+        (lf) => !currentVault.some((v: any) => cleanBelongsToName(v.name) === cleanBelongsToName(lf.name))
+      );
       return {
         ...prev,
         simple_gear: [...currentGear, newGearItem],
-        ...(shouldAddToVault ? { character_vault: [...currentVault, catalogItem] } : {}),
+        character_vault: [...currentVault, ...fnsToAdd],
         gold: deduction.newGold,
         silver: deduction.newSilver,
       };
@@ -647,12 +754,23 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       belongs_to: `Supplies: ${parentItemName}`,
     };
 
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      simple_gear: [...(prev.simple_gear || []), newModGearItem],
-      gold: deduction.newGold,
-      silver: deduction.newSilver,
-    }));
+    const modFunctions = getFunctionsForMod(modName).map((fn) =>
+      mapFunctionToVaultItem(fn, `${modName} (${parentItemName})`)
+    );
+
+    updateActiveSheetData((prev) => {
+      const currentVault = prev.character_vault || [];
+      const fnsToAdd = modFunctions.filter(
+        (mf) => !currentVault.some((v: any) => cleanBelongsToName(v.name) === cleanBelongsToName(mf.name))
+      );
+      return {
+        ...prev,
+        simple_gear: [...(prev.simple_gear || []), newModGearItem],
+        character_vault: [...currentVault, ...fnsToAdd],
+        gold: deduction.newGold,
+        silver: deduction.newSilver,
+      };
+    });
     saveActiveCharacter();
 
     setGearCatalogFeedback({
@@ -697,10 +815,38 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   };
 
   const handleDropGear = (itemId: string) => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      simple_gear: (prev.simple_gear || []).filter((g) => g.id !== itemId),
-    }));
+    const droppedItem = gearList.find((g) => g.id === itemId);
+    if (!droppedItem) return;
+
+    // Find any direct functions or mod functions belonging to this dropped item
+    const directFns = getFunctionsForGearItem(droppedItem.name);
+    const modFns = getFunctionsForMod(droppedItem.name);
+    const allFnNames = new Set([
+      ...directFns.map((fn) => cleanBelongsToName(fn.name)),
+      ...modFns.map((fn) => cleanBelongsToName(fn.name)),
+    ]);
+
+    updateActiveSheetData((prev) => {
+      const remainingGear = (prev.simple_gear || []).filter((g) => g.id !== itemId);
+      const stillHasSameGear = remainingGear.some(
+        (g) => cleanBelongsToName(g.name) === cleanBelongsToName(droppedItem.name)
+      );
+
+      let updatedVault = prev.character_vault || [];
+      let updatedSlots = prev.spell_slots || [];
+
+      if (!stillHasSameGear && allFnNames.size > 0) {
+        updatedVault = updatedVault.filter((v: any) => !allFnNames.has(cleanBelongsToName(v.name)));
+        updatedSlots = updatedSlots.filter((s: any) => !allFnNames.has(cleanBelongsToName(s.name)));
+      }
+
+      return {
+        ...prev,
+        simple_gear: remainingGear,
+        character_vault: updatedVault,
+        spell_slots: updatedSlots,
+      };
+    });
     saveActiveCharacter();
   };
 
