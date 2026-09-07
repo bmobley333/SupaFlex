@@ -1,5 +1,5 @@
 // src/components/modals/ManageTraitsModal.tsx
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -7,8 +7,8 @@ import {
   Sparkles,
   Star,
   Check,
-  BookOpen,
   Trash2,
+  AlertCircle,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
@@ -16,8 +16,10 @@ import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import {
   SupabaseTrait,
   TraitItem,
+  calculateAvailableAp,
 } from '../../types/game';
-import { cleanKitName, isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
+import { cleanKitName, isMsoEntry, compareMsoItems, compareMsoOptions } from '../../utils/kitUtils';
+import { getCharacterKnownPaths, isItemInPath } from '../../utils/pathApUtils';
 
 interface ManageTraitsModalProps {
   isOpen: boolean;
@@ -35,6 +37,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     removeTraitQuirk,
     toggleTraitVisibility,
     toggleStarTrait,
+    recordApExpenditure,
   } = useCharacterStore();
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -42,12 +45,46 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   // Left Pane Search State
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
 
-  // Right Pane Search State
+  // Right Pane Catalog Filter States
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
+  const [localDomainFilter, setLocalDomainFilter] = useState<string>('ALL');
+  const [traitTypeFilter, setTraitTypeFilter] = useState<'ALL' | 'INHERENT' | 'MODULAR' | 'STARRED'>('ALL');
+  const [traitCategoryFilter, setTraitCategoryFilter] = useState<'all' | 'in_path' | 'out_of_path'>('all');
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
+
+  // Sync genre filter when modal opens
+  useEffect(() => {
+    if (isOpen && activeGenre) {
+      setLocalGenreFilter(activeGenre);
+    }
+  }, [isOpen, activeGenre]);
 
   const equippedRules: TraitItem[] = useMemo(() => {
     return activeCharacter?.sheet_data?.traits_quirks || [];
   }, [activeCharacter?.sheet_data?.traits_quirks]);
+
+  const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
+
+  const isTraitInherent = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
+    const kitStr = (rule.kit || rule.table_group || (rule as any).source || '').toLowerCase();
+    return kitStr.includes('{perk}') || kitStr.includes('{trait}') || kitStr.includes('perk') || kitStr.includes('trait');
+  }, []);
+
+  const isTraitInPath = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
+    const pathVal = rule.path || rule.kit || rule.table_group || (rule as any).discipline;
+    return isItemInPath(pathVal, knownPaths);
+  }, [knownPaths]);
+
+  const getTraitApCost = useCallback((rule: SupabaseTrait | TraitItem): number => {
+    if (isTraitInherent(rule)) return 0;
+    if (isTraitInPath(rule)) return 1;
+    return 3;
+  }, [isTraitInherent, isTraitInPath]);
+
+  const availableAp = calculateAvailableAp(
+    activeCharacter?.sheet_data?.level || 1,
+    activeCharacter?.sheet_data
+  );
 
   // Escape key to close
   useEffect(() => {
@@ -60,7 +97,17 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Filtered Equipped Rules
+  // Unique domains / kits for Dropdown 2
+  const uniqueDomains = useMemo(() => {
+    const set = new Set<string>();
+    stockRulesCatalog.forEach((r) => {
+      if (r.discipline?.trim()) set.add(r.discipline.trim());
+      if (r.kit?.trim()) set.add(cleanKitName(r.kit.trim()));
+    });
+    return Array.from(set).sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
+  }, [stockRulesCatalog, isGsUnlocked]);
+
+  // Filtered Equipped Rules (Left Column)
   const filteredEquippedRules = useMemo(() => {
     return equippedRules
       .filter((t) => {
@@ -76,36 +123,84 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
       .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
   }, [equippedRules, leftSearchQuery, isGsUnlocked]);
 
-  // Standalone Stock Rules Catalog List
+  const isRuleEquipped = (ruleName: string) => {
+    return equippedRules.some((r) => r.name.toLowerCase() === ruleName.toLowerCase());
+  };
+
+  const isRuleStarred = useCallback((ruleIdOrName: number | string) => {
+    const starredList = activeCharacter?.sheet_data?.starred_traits || [];
+    return starredList.some((s) => String(s) === String(ruleIdOrName));
+  }, [activeCharacter?.sheet_data?.starred_traits]);
+
+  const starredTraitsCount = useMemo(() => {
+    return stockRulesCatalog.filter((r) => isRuleStarred(r.id || r.name)).length;
+  }, [stockRulesCatalog, isRuleStarred]);
+
+  // Filtered Stock Rules Catalog (Right Column)
   const filteredCatalogRules = useMemo(() => {
     return stockRulesCatalog
       .filter((r) => {
-        if (!matchesGenre(r.genres, activeGenre)) return false;
+        // 1. Genre Filter
+        if (localGenreFilter !== 'ALL' && !matchesGenre(r.genres, localGenreFilter as any)) {
+          return false;
+        }
+
+        // 2. Domain / Kit Filter
+        if (localDomainFilter !== 'ALL') {
+          const disc = (r.discipline || '').toLowerCase();
+          const kit = cleanKitName(r.kit || r.table_group || '').toLowerCase();
+          const target = localDomainFilter.toLowerCase();
+          if (disc !== target && kit !== target && !kit.includes(target)) {
+            return false;
+          }
+        }
+
+        // 3. Filter Dropdown (Inherent, Modular, Starred)
+        if (traitTypeFilter === 'INHERENT') {
+          if (!isTraitInherent(r)) return false;
+        } else if (traitTypeFilter === 'MODULAR') {
+          if (isTraitInherent(r)) return false;
+        } else if (traitTypeFilter === 'STARRED') {
+          if (!isRuleStarred(r.id || r.name)) return false;
+        }
+
+        // 4. Category Switch (All, In-Path, Out-of-Path)
+        if (traitCategoryFilter === 'in_path') {
+          if (!isTraitInPath(r)) return false;
+        } else if (traitCategoryFilter === 'out_of_path') {
+          if (isTraitInPath(r)) return false;
+        }
+
+        // 5. Search Query
         if (catalogSearchQuery.trim()) {
-          const q = catalogSearchQuery.toLowerCase();
+          const q = catalogSearchQuery.toLowerCase().trim();
           const ruleKit = r.kit || r.table_group || '';
           return (
             r.name.toLowerCase().includes(q) ||
             (r.notes || '').toLowerCase().includes(q) ||
-            ruleKit.toLowerCase().includes(q)
+            (r.effect || '').toLowerCase().includes(q) ||
+            ruleKit.toLowerCase().includes(q) ||
+            (r.discipline || '').toLowerCase().includes(q)
           );
         }
         return true;
       })
       .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
-  }, [stockRulesCatalog, activeGenre, catalogSearchQuery, isGsUnlocked]);
-
-  const isRuleEquipped = (ruleName: string) => {
-    return equippedRules.some((r) => r.name.toLowerCase() === ruleName.toLowerCase());
-  };
-
-  const isRuleStarred = (ruleIdOrName: number | string) => {
-    const starredList = activeCharacter?.sheet_data?.starred_traits || [];
-    return starredList.some((s) => String(s) === String(ruleIdOrName));
-  };
+  }, [stockRulesCatalog, localGenreFilter, localDomainFilter, traitTypeFilter, traitCategoryFilter, catalogSearchQuery, isTraitInherent, isTraitInPath, isRuleStarred, isGsUnlocked]);
 
   const handleEquipStockRule = (rule: SupabaseTrait) => {
     if (isRuleEquipped(rule.name)) return;
+    const inPath = isTraitInPath(rule);
+    const inherent = isTraitInherent(rule);
+    const cost = inherent ? 0 : inPath ? 1 : 3;
+
+    if (!inPath && !inherent && activeRole !== 'gm') {
+      const confirmed = window.confirm(
+        `⚠️ Out-of-Path Trait: "${rule.name}" is outside your character's known paths.\n\nLearning it costs 3 AP and requires GM approval. Proceed?`
+      );
+      if (!confirmed) return;
+    }
+
     const ruleKit = rule.kit || rule.table_group;
     const item: TraitItem = {
       name: rule.name,
@@ -115,21 +210,26 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
       kit: ruleKit,
       table_group: ruleKit,
       source: ruleKit || 'Stock Traits',
+      path: rule.path,
+      ap_cost: cost,
     };
     addTraitQuirk(item);
+    if (cost > 0) {
+      recordApExpenditure(cost, 'Skills', `Learned Trait: ${rule.name} (${cost} AP)`, 1, 'Manage Traits');
+    }
   };
 
   const handleRemoveRule = (rule: TraitItem) => {
-    const isTrait =
-      (rule.kit && (rule.kit.includes('{Perk}') || rule.kit.includes('{Trait}'))) ||
-      (rule.source && (rule.source.includes('Perk') || rule.source.includes('Trait'))) ||
-      (rule.table_group && (rule.table_group.includes('{Perk}') || rule.table_group.includes('{Trait}')));
-
-    if (isTrait && activeRole !== 'gm') {
+    const inherent = isTraitInherent(rule);
+    if (inherent && activeRole !== 'gm') {
       alert('Inherent traits (0 AP) are auto-taken and cannot be removed without GM approval. Switch to GM Mode to remove traits.');
       return;
     }
     removeTraitQuirk(rule.name);
+    const cost = typeof rule.ap_cost === 'number' && rule.ap_cost > 0 ? rule.ap_cost : (inherent ? 0 : 1);
+    if (cost > 0) {
+      recordApExpenditure(-cost, 'Skills', `Removed Trait: ${rule.name} (-${cost} AP Refunded)`, 1, 'Manage Traits');
+    }
   };
 
   if (!isOpen) return null;
@@ -152,7 +252,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   Manage Traits
                 </h3>
                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/40">
-                  Active Traits: {equippedRules.length}
+                  Traits {equippedRules.length}; Available <strong className="text-emerald-400">{availableAp} AP</strong>
                 </span>
               </div>
               <p className="text-xs text-slate-400">
@@ -203,11 +303,11 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
             <div className="flex-1 overflow-y-auto pr-1 space-y-2 min-h-0">
               {filteredEquippedRules.length > 0 ? (
                 filteredEquippedRules.map((rule, idx) => {
-                  const isTrait =
-                    (rule.kit && (rule.kit.includes('{Perk}') || rule.kit.includes('{Trait}'))) ||
-                    (rule.source && (rule.source.includes('Perk') || rule.source.includes('Trait'))) ||
-                    (rule.table_group && (rule.table_group.includes('{Perk}') || rule.table_group.includes('{Trait}')));
+                  const inherent = isTraitInherent(rule);
                   const isMso = isGsUnlocked && isMsoEntry(rule.name);
+                  const costBadge = typeof rule.ap_cost === 'number'
+                    ? (rule.ap_cost === 0 ? '0 AP (Free)' : `${rule.ap_cost} AP`)
+                    : (inherent ? '0 AP (Free)' : '1 AP');
 
                   return (
                     <div
@@ -226,10 +326,20 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                             <ItemNotesPopover notes={rule.notes || rule.effect} itemName={rule.name} inline />
                           </span>
 
+                          {/* AP Badge */}
+                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
+                            costBadge.includes('0')
+                              ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
+                              : costBadge.includes('3')
+                              ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+                              : 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
+                          }`}>
+                            {costBadge}
+                          </span>
+
                           {/* Clean Classification Pill */}
                           <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                            {isTrait ? '🧬 Trait (Free) • ' : '🧬 '}
-                            {cleanKitName(rule.kit || rule.table_group || rule.source || 'General')}
+                            🧬 {cleanKitName(rule.kit || rule.table_group || rule.source || 'General')}
                           </span>
                         </div>
 
@@ -273,11 +383,11 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                             type="button"
                             onClick={() => handleRemoveRule(rule)}
                             className={`px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                              isTrait && activeRole !== 'gm'
+                              inherent && activeRole !== 'gm'
                                 ? 'text-slate-500 bg-slate-900 border border-slate-800 cursor-not-allowed opacity-60'
                                 : 'text-rose-300 bg-rose-950/40 border border-rose-500/30 hover:bg-rose-900/60'
                             }`}
-                            title={isTrait && activeRole !== 'gm' ? 'Traits (0 AP) require GM approval to remove' : 'Remove Trait'}
+                            title={inherent && activeRole !== 'gm' ? 'Inherent Traits (0 AP) require GM approval to remove' : 'Remove Trait'}
                           >
                             <Trash2 className="w-3 h-3" />
                             <span>Forget</span>
@@ -317,111 +427,225 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
             </div>
           </div>
 
-          {/* ================= RIGHT COLUMN: STOCK TRAITS CATALOG ================= */}
-          <div className="flex flex-col bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 min-h-0 shadow-inner">
-            {/* Header: Stock Traits Catalog */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 shrink-0">
-              <div className="flex items-center gap-1.5 font-outfit font-bold text-xs text-slate-200 uppercase tracking-wider">
-                <BookOpen className="w-3.5 h-3.5 text-purple-400" />
-                <span>🧬 Stock Traits Catalog ({stockRulesCatalog.length})</span>
-              </div>
-              <span className="text-[11px] font-mono text-slate-400">
-                {filteredCatalogRules.length} Available
-              </span>
+          {/* ================= RIGHT COLUMN: STANDARDIZED 3-ROW CATALOG PANE ================= */}
+          <div className="flex flex-col bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 min-h-0 shadow-inner gap-2.5">
+            {/* ROW 1: 3 Dropdowns (Genre, Domain, Filter) */}
+            <div className="grid grid-cols-3 gap-2 shrink-0">
+              {/* Dropdown 1: Genre */}
+              <select
+                value={localGenreFilter}
+                onChange={(e) => setLocalGenreFilter(e.target.value)}
+                className="bg-slate-900 text-amber-300 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 cursor-pointer w-full truncate shadow-sm"
+              >
+                <option value="ALL">🌐 All Genres</option>
+                <option value="Medieval">🏰 Medieval</option>
+                <option value="Modern">⚙️ Modern</option>
+                <option value="SciFi">🚀 SciFi</option>
+              </select>
+
+              {/* Dropdown 2: Domain */}
+              <select
+                value={localDomainFilter}
+                onChange={(e) => setLocalDomainFilter(e.target.value)}
+                className="bg-slate-900 text-cyan-300 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 cursor-pointer w-full truncate shadow-sm"
+              >
+                <option value="ALL">🌐 All Domains</option>
+                {uniqueDomains.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+
+              {/* Dropdown 3: Filter (Inherent, Modular, Starred) */}
+              <select
+                value={traitTypeFilter}
+                onChange={(e) => setTraitTypeFilter(e.target.value as any)}
+                className="bg-slate-900 text-purple-300 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 cursor-pointer w-full truncate shadow-sm"
+              >
+                <option value="ALL">🌐 All Traits</option>
+                <option value="INHERENT">🧬 Inherent ({'{Perk}'})</option>
+                <option value="MODULAR">⚙️ Modular</option>
+                <option value="STARRED">⭐ Starred ({starredTraitsCount})</option>
+              </select>
             </div>
 
-            {/* Standalone Stock Rules Catalog Content */}
-            <div className="flex flex-col flex-1 min-h-0">
-                <div className="relative mb-2.5">
-                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search stock traits..."
-                    value={catalogSearchQuery}
-                    onChange={(e) => setCatalogSearchQuery(e.target.value)}
-                    className="w-full bg-slate-950 text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-800 text-white outline-none focus:border-purple-500"
-                  />
-                </div>
+            {/* ROW 2: KISS Dyslexia-Friendly Multi-Option Pill Switch */}
+            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+              <button
+                type="button"
+                onClick={() => setTraitCategoryFilter('all')}
+                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  traitCategoryFilter === 'all'
+                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🌐 All
+              </button>
+              <button
+                type="button"
+                onClick={() => setTraitCategoryFilter('in_path')}
+                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  traitCategoryFilter === 'in_path'
+                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🧬 In-Path (1 AP / Free)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTraitCategoryFilter('out_of_path')}
+                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  traitCategoryFilter === 'out_of_path'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                👑 Out-of-Path (3 AP)
+              </button>
+            </div>
 
-                <div className="flex-1 overflow-y-auto pr-1 space-y-2 min-h-0">
-                  {filteredCatalogRules.length > 0 ? (
-                    filteredCatalogRules.map((rule) => {
-                      const equipped = isRuleEquipped(rule.name);
-                      const starred = isRuleStarred(rule.id || rule.name);
-
-                      const isMso = isGsUnlocked && isMsoEntry(rule.name);
-
-                      return (
-                        <div
-                          key={rule.id}
-                          className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-                            equipped
-                              ? 'bg-purple-950/20 border-purple-500/40 opacity-80'
-                              : isMso
-                              ? 'bg-purple-950/20 border-purple-500/30 hover:border-purple-500/50'
-                              : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-                          }`}
-                        >
-                          <div className="flex flex-col gap-1 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-xs font-outfit font-black inline-flex items-center align-baseline gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                                <span>{isMso ? '🌌' : '🧬'}</span>
-                                <span>{rule.name}</span>
-                                <ItemNotesPopover notes={rule.notes || rule.effect} itemName={rule.name} inline />
-                              </span>
-
-                              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                                🧬 {cleanKitName(rule.kit || rule.table_group || 'General')}
-                              </span>
-                            </div>
-
-                            <p className="text-xs text-slate-300 leading-relaxed font-sans">{rule.notes || rule.effect}</p>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => toggleStarTrait(rule.id)}
-                              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                                starred
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                  : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-slate-300'
-                              }`}
-                              title="Star favorite"
-                            >
-                              <Star className={`w-3.5 h-3.5 ${starred ? 'fill-amber-400 text-amber-400' : ''}`} />
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={equipped}
-                              onClick={() => handleEquipStockRule(rule)}
-                              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition-all ${
-                                equipped
-                                  ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                                  : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
-                              }`}
-                            >
-                              {equipped ? (
-                                <>
-                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span>Equipped</span>
-                                </>
-                              ) : (
-                                <span>+ Learn</span>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="p-8 text-center text-xs text-slate-500 italic bg-slate-900/40 rounded-xl border border-slate-800">
-                      No stock traits found matching search.
-                    </div>
-                  )}
-                </div>
+            {/* Out-of-Path GM Notice Banner */}
+            {traitCategoryFilter === 'out_of_path' && (
+              <div className="p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center gap-2 text-xs text-amber-200 shrink-0">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="leading-tight">
+                  <strong>👑 Out-of-Path Acquisition:</strong> Traits outside known character paths cost <strong>3 AP</strong> and require GM approval.
+                </span>
               </div>
+            )}
+
+            {/* ROW 3: Search Bar + Dynamic Result Count */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="relative flex-1">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search stock traits, perks, notes..."
+                  value={catalogSearchQuery}
+                  onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                  className="w-full bg-slate-900 text-slate-200 text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
+                />
+              </div>
+              <div className="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono font-bold text-slate-300 shrink-0">
+                {filteredCatalogRules.length} {filteredCatalogRules.length === 1 ? 'item' : 'items'}
+              </div>
+            </div>
+
+            {/* Zero Matches Feedback & 1-Click Reset */}
+            {filteredCatalogRules.length === 0 && (
+              <div className="p-3.5 bg-slate-950/60 rounded-xl border border-purple-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
+                <span className="text-purple-300 font-semibold">
+                  0 traits match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
+                  {localDomainFilter !== 'ALL' ? ` • ${localDomainFilter}` : ''}
+                  {traitTypeFilter !== 'ALL' ? ` • ${traitTypeFilter}` : ''})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocalGenreFilter(activeGenre || 'SciFi');
+                    setLocalDomainFilter('ALL');
+                    setTraitTypeFilter('ALL');
+                    setTraitCategoryFilter('all');
+                    setCatalogSearchQuery('');
+                  }}
+                  className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
+                >
+                  Reset All Filters
+                </button>
+              </div>
+            )}
+
+            {/* Scrollable Catalog List */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-2 min-h-0">
+              {filteredCatalogRules.map((rule) => {
+                const equipped = isRuleEquipped(rule.name);
+                const starred = isRuleStarred(rule.id || rule.name);
+                const isMso = isGsUnlocked && isMsoEntry(rule.name);
+                const inPath = isTraitInPath(rule);
+                const inherent = isTraitInherent(rule);
+                const apCost = getTraitApCost(rule);
+
+                return (
+                  <div
+                    key={rule.id}
+                    className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                      equipped
+                        ? 'bg-purple-950/20 border-purple-500/40 opacity-80'
+                        : isMso
+                        ? 'bg-purple-950/20 border-purple-500/30 hover:border-purple-500/50'
+                        : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex flex-col gap-1 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-xs font-outfit font-black inline-flex items-center align-baseline gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+                          <span>{isMso ? '🌌' : '🧬'}</span>
+                          <span>{rule.name}</span>
+                          <ItemNotesPopover notes={rule.notes || rule.effect} itemName={rule.name} inline />
+                        </span>
+
+                        {/* AP Badge */}
+                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
+                          inherent
+                            ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
+                            : inPath
+                            ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
+                            : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+                        }`}>
+                          {inherent ? '0 AP (Free)' : inPath ? '1 AP' : '👑 3 AP'}
+                        </span>
+
+                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
+                          🧬 {cleanKitName(rule.kit || rule.table_group || 'General')}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-slate-300 leading-relaxed font-sans">{rule.notes || rule.effect}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => toggleStarTrait(rule.id)}
+                        className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                          starred
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                            : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-slate-300'
+                        }`}
+                        title="Star favorite"
+                      >
+                        <Star className={`w-3.5 h-3.5 ${starred ? 'fill-amber-400 text-amber-400' : ''}`} />
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={equipped}
+                        onClick={() => handleEquipStockRule(rule)}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition-all ${
+                          equipped
+                            ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                            : !inPath && !inherent
+                            ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer font-extrabold'
+                            : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
+                        }`}
+                      >
+                        {equipped ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Equipped</span>
+                          </>
+                        ) : (
+                          <span>+ Learn ({inherent ? 'Free' : `${apCost} AP`})</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 

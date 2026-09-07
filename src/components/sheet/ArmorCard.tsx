@@ -6,17 +6,22 @@ import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
-import { QuickDeckBar } from '../common/QuickDeckBar';
 import { compareMsoItems, isMsoEntry } from '../../utils/kitUtils';
 import {
   ArmorData,
   MovementRateData,
   SupabaseArmor,
-  isRequirementLearnable,
   calculateAvailableAp,
   calculateMovementRate,
 } from '../../types/game';
 import { resolveStatHooks } from '../../utils/statHooks';
+import {
+  getCharacterKnownPaths,
+  evaluateItemAp,
+  matchesApCategoryFilter,
+  ApCostCategory,
+  ApEvaluationResult,
+} from '../../utils/pathApUtils';
 
 const getDieNum = (dieRating?: string): number => {
   if (!dieRating) return 4;
@@ -62,19 +67,28 @@ export const ArmorCard: React.FC = () => {
 
   const derivedDodge = getDieNum(attributeDice.motion);
 
+  const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
+
+  const getArmorEvalResult = useCallback(
+    (item: SupabaseArmor): ApEvaluationResult => {
+      return evaluateItemAp(item.path, item.requirement, attributeDice, knownPaths, undefined);
+    },
+    [knownPaths, attributeDice]
+  );
+
   const isArmorSkilled = (item: ArmorData): boolean => {
     if (!item || item.id === 'arm_none') return false;
-    if (item.sk === true) return true;
-    if (item.sk === false) return false;
-    return isRequirementLearnable(item.requirement || '💪 4', attributeDice);
+    return item.sk ?? true;
   };
 
   const skilledArmorList = useMemo(() => {
     return wardrobe.filter(isArmorSkilled);
-  }, [wardrobe, attributeDice]);
+  }, [wardrobe]);
 
   const skilledArmorCount = skilledArmorList.length;
-  const armorApSpent = skilledArmorCount * 1;
+  const armorApSpent = useMemo(() => {
+    return skilledArmorList.reduce((acc, item) => acc + (item.ap_cost || 1), 0);
+  }, [skilledArmorList]);
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
@@ -160,29 +174,46 @@ export const ArmorCard: React.FC = () => {
   };
 
   const handleAddToWardrobe = (item: SupabaseArmor) => {
-    const numericAr = typeof item.ar === 'number' ? item.ar : parseInt(String(item.ar || 0).replace(/[^0-9]/g, ''), 10) || 0;
-    const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
+    const evalResult = getArmorEvalResult(item);
+
+    if (evalResult.requiresGmApproval) {
+      const confirmed = window.confirm(
+        `Learning "${item.name}" is Out-of-Path and costs ${evalResult.apCost} AP.\n\nOut-of-Path equipment requires GM approval in campaign play. Proceed with learning?`
+      );
+      if (!confirmed) return;
+    }
+
+    let numericAr = typeof item.ar === 'number' ? item.ar : parseInt(String(item.ar || 0).replace(/[^0-9]/g, ''), 10) || 0;
+    if (!evalResult.meetsReq) {
+      numericAr = Math.max(2, numericAr - 2);
+    }
+
     const newArmorItem: ArmorData = {
       id: `arm_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       name: item.name,
-      sk: isLearnable,
+      sk: true,
       ar: numericAr,
       requirement: item.requirement,
       mr: item.mr,
       cost: item.cost,
       notes: item.notes,
+      ap_cost: evalResult.apCost,
+      effect: `${evalResult.apCost} AP${evalResult.statDownscaled ? ' (Downscaled -2 AR)' : ''}`,
     };
+
     updateActiveSheetData((prev) => {
       const existingWardrobe = prev.wardrobe || wardrobe;
       const isAlreadyInWardrobe = existingWardrobe.some(
         (w) => w.name.toLowerCase() === item.name.toLowerCase()
       );
       if (!isAlreadyInWardrobe) {
-        if (isLearnable) {
-          recordApExpenditure(1, 'Armor', `Learned Skilled Armor: ${item.name} (1 AP)`, 1, 'Manage Armor');
-        } else {
-          recordApExpenditure(0, 'Armor', `Added Unskilled Armor: ${item.name} (0 AP - Unskilled)`, 1, 'Manage Armor');
-        }
+        recordApExpenditure(
+          evalResult.apCost,
+          'Armor',
+          `Learned Armor: ${item.name} (${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' • 👑 GM Approval' : ''})`,
+          1,
+          'Manage Armor'
+        );
       }
       const updatedWardrobe = isAlreadyInWardrobe ? existingWardrobe : [...existingWardrobe, newArmorItem];
       const updatedSheet = {
@@ -202,6 +233,7 @@ export const ArmorCard: React.FC = () => {
   const handleDropFromWardrobe = (armorName: string) => {
     const targetArmor = wardrobe.find((w) => w.name.toLowerCase() === armorName.toLowerCase());
     const wasSkilled = targetArmor ? isArmorSkilled(targetArmor) : false;
+    const apRefund = targetArmor?.ap_cost || 1;
 
     updateActiveSheetData((prev) => {
       const existingWardrobe = prev.wardrobe || wardrobe;
@@ -219,9 +251,7 @@ export const ArmorCard: React.FC = () => {
       }
 
       if (wasSkilled) {
-        recordApExpenditure(-1, 'Armor', `Unlearned Skilled Armor: ${armorName} (-1 AP Refunded)`, 1, 'Manage Armor');
-      } else {
-        recordApExpenditure(0, 'Armor', `Dropped Unskilled Armor: ${armorName} (0 AP)`, 1, 'Manage Armor');
+        recordApExpenditure(-apRefund, 'Armor', `Unlearned Armor: ${armorName} (-${apRefund} AP Refunded)`, 1, 'Manage Armor');
       }
 
       const updatedSheet = {
@@ -301,8 +331,9 @@ export const ArmorCard: React.FC = () => {
   };
 
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
-  const [skillFilterMode, setSkillFilterMode] = useState<'all' | 'skilled' | 'unskilled'>('all');
-  const [activeArmorTable, setActiveArmorTable] = useState<string>('ALL');
+  const [armorDomainFilter, setArmorDomainFilter] = useState<string>('ALL');
+  const [armorFilter, setArmorFilter] = useState<string>('ALL');
+  const [activeApCategory, setActiveApCategory] = useState<ApCostCategory>('all');
 
   // Keep local genre synced to active campaign setting when modal opens
   useEffect(() => {
@@ -311,21 +342,14 @@ export const ArmorCard: React.FC = () => {
     }
   }, [showManageModal, activeGenre]);
 
-  const favoriteArmorTables: string[] = useMemo(() => {
-    const favs = activeCharacter?.sheet_data?.favorite_armor_tables;
-    if (Array.isArray(favs) && favs.length > 0) {
-      return favs;
-    }
-    return [];
-  }, [activeCharacter?.sheet_data?.favorite_armor_tables]);
-
-  const handleUpdatePinnedArmorTables = (tables: string[]) => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      favorite_armor_tables: tables,
-    }));
-    saveActiveCharacter();
-  };
+  const availableDisciplines = useMemo(() => {
+    const set = new Set<string>();
+    armorCatalog.forEach((a) => {
+      const d = a.domain || a.discipline;
+      if (d && d.trim()) set.add(d.trim());
+    });
+    return Array.from(set).sort((a, b) => compareMsoItems({ name: a }, { name: b }, isGsUnlocked));
+  }, [armorCatalog, isGsUnlocked]);
 
   const starredArmorCount = useMemo(() => {
     return armorCatalog.filter((a) => isItemStarred(a)).length;
@@ -347,20 +371,25 @@ export const ArmorCard: React.FC = () => {
         if (localGenreFilter !== 'ALL' && !matchesGenre(item.genres, localGenreFilter as any)) return false;
         if (wardrobeNamesSet.has(item.name.toLowerCase())) return false;
 
-        const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
-        if (skillFilterMode === 'skilled' && !isLearnable) return false;
-        if (skillFilterMode === 'unskilled' && isLearnable) return false;
-
-        // Table Quick Deck Filter
-        if (activeArmorTable === 'STARRED' && !isItemStarred(item)) return false;
-        if (activeArmorTable !== 'ALL' && activeArmorTable !== 'STARRED') {
-          const tbl = (item.kit || item.table_group || (item as any).category || '').toLowerCase();
-          const activeLower = activeArmorTable.toLowerCase();
-          if (tbl !== activeLower && !tbl.includes(activeLower)) {
-            return false;
-          }
+        // 1. Domain Filter
+        if (armorDomainFilter !== 'ALL') {
+          const disc = (item.domain || item.discipline || '').toLowerCase().trim();
+          if (disc !== armorDomainFilter.toLowerCase().trim()) return false;
         }
 
+        // 2. AR / Starred Filter
+        if (armorFilter === 'STARRED') {
+          if (!isItemStarred(item)) return false;
+        } else if (armorFilter !== 'ALL') {
+          const itemAr = typeof item.ar === 'number' ? item.ar : parseInt(String(item.ar || item.requirement || '').replace(/[^0-9]/g, ''), 10);
+          if (itemAr !== parseInt(armorFilter, 10)) return false;
+        }
+
+        // 3. Category Row (AP cost / Path / Req)
+        const evalResult = getArmorEvalResult(item);
+        if (!matchesApCategoryFilter(activeApCategory, evalResult)) return false;
+
+        // 4. Search query
         if (rightSearchQuery.trim()) {
           const q = rightSearchQuery.toLowerCase().trim();
           return (
@@ -372,7 +401,18 @@ export const ArmorCard: React.FC = () => {
         return true;
       })
       .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
-  }, [armorCatalog, wardrobeNamesSet, skillFilterMode, activeArmorTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter, isGsUnlocked]);
+  }, [
+    armorCatalog,
+    wardrobeNamesSet,
+    armorDomainFilter,
+    armorFilter,
+    activeApCategory,
+    rightSearchQuery,
+    getArmorEvalResult,
+    isItemStarred,
+    localGenreFilter,
+    isGsUnlocked,
+  ]);
 
   const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
   const isShieldEquipped = shieldSlot?.equipped ?? false;
@@ -424,7 +464,7 @@ export const ArmorCard: React.FC = () => {
 
           {showManageModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-              <div ref={modalRef} className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden">
+              <div ref={modalRef} className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[88vh] max-h-[720px] flex flex-col shadow-2xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
                   <div className="flex items-center gap-2.5 shrink-0">
                     <div className="p-2 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-300">🧥</div>
@@ -479,7 +519,12 @@ export const ArmorCard: React.FC = () => {
                                 <button onClick={() => handleDropFromWardrobe(item.name)} className="px-2 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold rounded-lg">Forget</button>
                               </div>
                             </div>
-                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400"><span>AR: {item.ar} | MR: {item.mr}</span></div>
+                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                              <span>AR: {item.ar} | MR: {item.mr}</span>
+                              <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-slate-300 font-bold">
+                                {item.ap_cost || 1} AP
+                              </span>
+                            </div>
                           </div>
                         );
                       })}
@@ -496,48 +541,154 @@ export const ArmorCard: React.FC = () => {
 
                     {/* Stock Catalog Content */}
                     <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
-                      {/* 1. DENSE DROPDOWN FACET TOOLBAR */}
-                      <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-                        {/* Local Setting Genre Selector */}
-                        <select
-                          value={localGenreFilter}
-                          onChange={(e) => setLocalGenreFilter(e.target.value)}
-                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 cursor-pointer flex-1 min-w-[110px]"
-                        >
-                          <option value="ALL">🌐 All Genres</option>
-                          <option value="Medieval">🏰 Medieval</option>
-                          <option value="Modern">⚙️ Modern</option>
-                          <option value="SciFi">🚀 SciFi</option>
-                        </select>
+                      {/* 1. 3-Dropdown Filter Strip (Genre, Domain, Filter) */}
+                      <div className="grid grid-cols-3 gap-1.5 mb-1 shrink-0">
+                        {/* 1. Genre Filter */}
+                        <div className="flex flex-col min-w-0">
+                          <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                            localGenreFilter !== 'ALL' ? 'text-amber-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                          }`}>
+                            {localGenreFilter !== 'ALL' && <span className="text-[7px]">●</span>} Genre
+                          </span>
+                          <select
+                            value={localGenreFilter}
+                            onChange={(e) => setLocalGenreFilter(e.target.value)}
+                            className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                              localGenreFilter !== 'ALL'
+                                ? 'bg-amber-950/90 border-amber-400 text-amber-100 ring-1 ring-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.3)] font-extrabold'
+                                : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-amber-500'
+                            }`}
+                          >
+                            <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                            <option value="Medieval" className="bg-slate-900 text-slate-200">🏰 Medieval</option>
+                            <option value="Modern" className="bg-slate-900 text-slate-200">⚙️ Modern</option>
+                            <option value="SciFi" className="bg-slate-900 text-slate-200">🚀 SciFi</option>
+                          </select>
+                        </div>
 
-                        {/* Qualification Dropdown */}
-                        <select
-                          value={skillFilterMode}
-                          onChange={(e) => setSkillFilterMode(e.target.value as any)}
-                          className="bg-slate-900 text-emerald-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500 cursor-pointer flex-1 min-w-[130px]"
-                        >
-                          <option value="all">🌐 All Qualifications</option>
-                          <option value="skilled">🎓 Skilled Only</option>
-                          <option value="unskilled">⚪ Unskilled Only</option>
-                        </select>
+                        {/* 2. Domain Filter */}
+                        <div className="flex flex-col min-w-0">
+                          <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                            armorDomainFilter !== 'ALL' ? 'text-cyan-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                          }`}>
+                            {armorDomainFilter !== 'ALL' && <span className="text-[7px]">●</span>} Domain
+                          </span>
+                          <select
+                            value={armorDomainFilter}
+                            onChange={(e) => setArmorDomainFilter(e.target.value)}
+                            className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                              armorDomainFilter !== 'ALL'
+                                ? 'bg-cyan-950/90 border-cyan-400 text-cyan-100 ring-1 ring-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.3)] font-extrabold'
+                                : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-amber-500'
+                            }`}
+                          >
+                            <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                            {availableDisciplines.map((d) => (
+                              <option key={d} value={d} className="bg-slate-900 text-slate-200">
+                                {d}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* 3. Filter (Discrete AR Values 4, 6, 8, 10, 12, Starred) */}
+                        <div className="flex flex-col min-w-0">
+                          <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                            armorFilter !== 'ALL' ? 'text-yellow-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                          }`}>
+                            {armorFilter !== 'ALL' && <span className="text-[7px]">●</span>} Filter
+                          </span>
+                          <select
+                            value={armorFilter}
+                            onChange={(e) => setArmorFilter(e.target.value)}
+                            className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                              armorFilter !== 'ALL'
+                                ? 'bg-yellow-950/90 border-yellow-400 text-yellow-100 ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] font-extrabold'
+                                : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-amber-500'
+                            }`}
+                          >
+                            <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                            <option value="4" className="bg-slate-900 text-slate-200">🧥 AR 4</option>
+                            <option value="6" className="bg-slate-900 text-slate-200">🧥 AR 6</option>
+                            <option value="8" className="bg-slate-900 text-slate-200">🧥 AR 8</option>
+                            <option value="10" className="bg-slate-900 text-slate-200">🧥 AR 10</option>
+                            <option value="12" className="bg-slate-900 text-slate-200">🧥 AR 12</option>
+                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredArmorCount > 0 ? `(${starredArmorCount})` : ''}</option>
+                          </select>
+                        </div>
                       </div>
 
-                      {/* 2. Universal Quick Deck Bar */}
-                      <QuickDeckBar
-                        domain="armor"
-                        activeTable={activeArmorTable}
-                        onSelectTable={setActiveArmorTable}
-                        pinnedTables={favoriteArmorTables}
-                        onUpdatePinnedTables={handleUpdatePinnedArmorTables}
-                        catalogItems={armorCatalog}
-                        starredCount={starredArmorCount}
-                        colorTheme="amber"
-                        totalCatalogCount={armorCatalog.length}
-                        placeholderText="➕ Pin Armor Table"
-                      />
+                      {/* 2. Category Multi-Option Pill Switch (KISS Dyslexia-Friendly Standard) */}
+                      <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md mb-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setActiveApCategory('all')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            activeApCategory === 'all'
+                              ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          🌐 All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveApCategory('1AP')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            activeApCategory === '1AP'
+                              ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          ⚡ 1AP (Path & Req)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveApCategory('2AP')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            activeApCategory === '2AP'
+                              ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          ⏳ 2AP (Path, ~Req)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveApCategory('3AP')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            activeApCategory === '3AP'
+                              ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          👑 3AP (~Path & Req)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveApCategory('4AP')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            activeApCategory === '4AP'
+                              ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          ⚠️ 4AP (~Path, ~Req)
+                        </button>
+                      </div>
+
+                      {/* Out-of-Path GM Notice Banner */}
+                      {(activeApCategory === '3AP' || activeApCategory === '4AP') && (
+                        <div className="mb-1 px-3 py-1.5 bg-indigo-950/70 border border-indigo-500/40 rounded-xl text-indigo-200 text-xs flex items-center gap-2 shrink-0">
+                          <span>👑</span>
+                          <span>
+                            <strong>Out-of-Path:</strong> Costs +2 AP and requires GM Approval in campaign play.
+                          </span>
+                        </div>
+                      )}
 
                       {/* 3. Search Bar + Dynamic Result Breadcrumb */}
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2 pb-2 border-b border-slate-800/80 shrink-0">
                         <div className="relative flex-1">
                           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                           <input
@@ -558,15 +709,17 @@ export const ArmorCard: React.FC = () => {
                         <div className="p-3.5 bg-slate-950/60 rounded-xl border border-amber-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
                           <span className="text-amber-300 font-semibold">
                             0 armor sets match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
-                            {skillFilterMode !== 'all' ? ` • ${skillFilterMode}` : ''}
-                            {activeArmorTable !== 'ALL' && activeArmorTable !== 'STARRED' ? ` • ${activeArmorTable}` : ''})
+                            {armorDomainFilter !== 'ALL' ? ` • ${armorDomainFilter}` : ''}
+                            {armorFilter !== 'ALL' ? ` • ${armorFilter}` : ''}
+                            {activeApCategory !== 'all' ? ` • ${activeApCategory}` : ''})
                           </span>
                           <button
                             type="button"
                             onClick={() => {
                               setLocalGenreFilter(activeGenre || 'SciFi');
-                              setSkillFilterMode('all');
-                              setActiveArmorTable('ALL');
+                              setArmorDomainFilter('ALL');
+                              setArmorFilter('ALL');
+                              setActiveApCategory('all');
                               setRightSearchQuery('');
                             }}
                             className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
@@ -584,7 +737,7 @@ export const ArmorCard: React.FC = () => {
                           </div>
                         ) : filteredCatalogArmor.length > 0 ? (
                           filteredCatalogArmor.map((item, idx) => {
-                            const qualifies = isRequirementLearnable(item.requirement, attributeDice);
+                            const evalResult = getArmorEvalResult(item);
                             return (
                               <div
                                 key={item.id || idx}
@@ -598,6 +751,20 @@ export const ArmorCard: React.FC = () => {
                                     </span>
                                     <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
                                       {item.cost}
+                                    </span>
+                                    {/* AP Cost Badge */}
+                                    <span
+                                      className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${
+                                        evalResult.apCost === 1
+                                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                                          : evalResult.apCost === 2
+                                          ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
+                                          : evalResult.apCost === 3
+                                          ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
+                                          : 'bg-rose-950/80 text-rose-300 border-rose-500/40'
+                                      }`}
+                                    >
+                                      {evalResult.apCost} AP {evalResult.requiresGmApproval ? '• 👑 GM' : evalResult.statDownscaled ? '• ⏳ ~Req' : '• Path'}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0">
@@ -615,13 +782,18 @@ export const ArmorCard: React.FC = () => {
                                     </button>
                                     <button
                                       onClick={() => handleAddToWardrobe(item)}
-                                      className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
-                                        qualifies
-                                          ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50'
-                                          : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50'
+                                      className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
+                                        evalResult.apCost === 1
+                                          ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
+                                          : evalResult.apCost === 2
+                                          ? 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
+                                          : evalResult.apCost === 3
+                                          ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50 shadow-sm'
+                                          : 'bg-rose-600/30 text-rose-200 border-rose-500/50 hover:bg-rose-600/50 shadow-sm'
                                       }`}
+                                      title={`Learn ${item.name} for ${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' (Requires GM Approval)' : ''}`}
                                     >
-                                      + Learn
+                                      + Learn ({evalResult.apCost} AP)
                                     </button>
                                   </div>
                                 </div>
@@ -629,6 +801,15 @@ export const ArmorCard: React.FC = () => {
                                   <span>Req: <strong className="text-slate-200">{item.requirement}</strong></span>
                                   <span>AR: <strong className="text-amber-300">{item.ar}</strong></span>
                                   <span>MR: <strong className="text-cyan-300">{item.mr}</strong></span>
+                                  {evalResult.statDownscaled ? (
+                                    <span className="text-[10px] text-amber-400 font-sans font-semibold">
+                                      Downscaled (-2 AR)
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] text-emerald-400 font-sans font-bold">
+                                      Qualified
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             );

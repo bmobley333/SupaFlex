@@ -138,6 +138,7 @@ export interface TraitItem {
   notes: string;
   genres?: string[];
   created_at?: string;
+  ap_cost?: number;
 }
 
 export type RuleItem = TraitItem;
@@ -168,6 +169,7 @@ export interface AbilitySlot {
   table_group?: string;
   discipline?: string;
   stat_hook?: any;
+  ap_cost?: number;
 }
 
 export interface EquipmentSlot {
@@ -190,6 +192,7 @@ export interface WeaponSlot {
   max_blk: string;
   effect?: string;
   notes?: string;
+  ap_cost?: number;
 }
 
 export interface ArmorData {
@@ -204,6 +207,7 @@ export interface ArmorData {
   cost?: string;
   effect?: string;
   notes?: string;
+  ap_cost?: number;
 }
 
 export interface SupabaseArmor {
@@ -426,6 +430,7 @@ export interface SupabaseWeapon {
   cost: string;
   domain?: EquipmentDomain | string;
   discipline?: string;
+  path?: string;
   kit?: string;
   bundle?: string;
   table_group?: string;
@@ -532,6 +537,7 @@ export interface ShieldData {
   effect?: string;
   mr_adjustment?: string;
   notes?: string;
+  ap_cost?: number;
 }
 
 export interface MovementRateData {
@@ -730,6 +736,8 @@ export interface Power {
   stat_hook?: any;
   version?: number;
   base_name?: string;
+  path?: string;
+  domain?: string;
 }
 
 export const calculateLifetimeAp = (level: number): number => {
@@ -748,7 +756,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
 
   const wardrobe = Array.isArray(sheetData.wardrobe) ? sheetData.wardrobe : [];
   const skilledArmor = wardrobe.filter((a: any) => a && a.sk);
-  const armorNet = skilledArmor.length * 1;
+  const armorNet = skilledArmor.reduce((sum: number, a: any) => sum + (typeof a.ap_cost === 'number' && a.ap_cost > 0 ? a.ap_cost : 1), 0);
 
   const sumLogCategory = (cat: string) =>
     apLog.reduce((sum, e) => (e && e.category === cat ? sum + (e.cost || 0) : sum), 0);
@@ -760,11 +768,17 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
 
   const powerSlots = (sheetData.power_slots || []).filter(Boolean);
   let powersNet = 0;
-  for (let i = 1; i <= powerSlots.length; i++) {
-    if (i <= 6) powersNet += 1;
-    else if (i <= 9) powersNet += 2;
-    else if (i <= 14) powersNet += 3;
-    else powersNet += 4;
+  for (let i = 0; i < powerSlots.length; i++) {
+    const p = powerSlots[i];
+    if (typeof p.ap_cost === 'number' && p.ap_cost > 0) {
+      powersNet += p.ap_cost;
+    } else {
+      const slotNum = i + 1;
+      if (slotNum <= 6) powersNet += 1;
+      else if (slotNum <= 9) powersNet += 2;
+      else if (slotNum <= 14) powersNet += 3;
+      else powersNet += 4;
+    }
   }
 
   const expansions = typeof sheetData.loadout_expansions_purchased === 'number'
@@ -779,7 +793,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
 
   const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
   const skilledShields = armory.filter((s: any) => s && s.sk);
-  const shieldsNet = skilledShields.length * 1;
+  const shieldsNet = skilledShields.reduce((sum: number, s: any) => sum + (typeof s.ap_cost === 'number' && s.ap_cost > 0 ? s.ap_cost : 1), 0);
 
   const knownSkillsets = Array.isArray(sheetData.known_skillsets) ? sheetData.known_skillsets : [];
   const knownIndivSkills = Array.isArray(sheetData.known_individual_skills) ? sheetData.known_individual_skills : [];
@@ -791,7 +805,10 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
 
   const weapons = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
   const skilledWeapons = weapons.filter((w: any) => w && w.sk);
-  const weaponsNet = skilledWeapons.length * 1;
+  const weaponsNet = skilledWeapons.reduce((sum: number, w: any) => sum + (typeof w.ap_cost === 'number' && w.ap_cost > 0 ? w.ap_cost : 1), 0);
+
+  const traits = Array.isArray(sheetData.traits_quirks) ? sheetData.traits_quirks : [];
+  const traitsNet = traits.reduce((sum: number, t: any) => sum + (typeof t.ap_cost === 'number' && t.ap_cost > 0 ? t.ap_cost : 0), 0);
 
   const categories = {
     Armor: armorNet,
@@ -804,6 +821,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     Powers: powersNet,
     Shields: shieldsNet,
     Skills: skillsNet,
+    Traits: traitsNet,
     Vitality: vitalityNet,
     Weapons: weaponsNet,
   };
@@ -817,6 +835,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     powersNet +
     shieldsNet +
     skillsNet +
+    traitsNet +
     vitalityNet +
     weaponsNet;
 

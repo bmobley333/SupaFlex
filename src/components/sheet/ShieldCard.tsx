@@ -6,15 +6,20 @@ import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
-import { QuickDeckBar } from '../common/QuickDeckBar';
 import { compareMsoItems, isMsoEntry } from '../../utils/kitUtils';
 import {
   ShieldData,
   SupabaseShield,
-  isRequirementLearnable,
   calculateAvailableAp,
   calculateMovementRate,
 } from '../../types/game';
+import {
+  getCharacterKnownPaths,
+  evaluateItemAp,
+  matchesApCategoryFilter,
+  ApCostCategory,
+  ApEvaluationResult,
+} from '../../utils/pathApUtils';
 
 export const ShieldCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
@@ -56,19 +61,28 @@ export const ShieldCard: React.FC = () => {
 
   const derivedBlock = getDieNum(attributeDice.might);
 
+  const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
+
+  const getShieldEvalResult = useCallback(
+    (item: SupabaseShield): ApEvaluationResult => {
+      return evaluateItemAp(item.path, item.requirement, attributeDice, knownPaths, undefined);
+    },
+    [knownPaths, attributeDice]
+  );
+
   const isShieldSkilled = (item: ShieldData): boolean => {
     if (!item || item.id === 'shd_none') return false;
-    if (item.sk === true) return true;
-    if (item.sk === false) return false;
-    return isRequirementLearnable(item.requirement || '💪 4', attributeDice);
+    return item.sk ?? true;
   };
 
   const skilledShieldList = useMemo(() => {
     return armory.filter(isShieldSkilled);
-  }, [armory, attributeDice]);
+  }, [armory]);
 
   const skilledShieldCount = skilledShieldList.length;
-  const shieldApSpent = skilledShieldCount;
+  const shieldApSpent = useMemo(() => {
+    return skilledShieldList.reduce((acc, item) => acc + (item.ap_cost || 1), 0);
+  }, [skilledShieldList]);
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
@@ -155,29 +169,47 @@ export const ShieldCard: React.FC = () => {
   };
 
   const handleAddToArmory = (item: SupabaseShield) => {
-    const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
+    const evalResult = getShieldEvalResult(item);
+
+    if (evalResult.requiresGmApproval) {
+      const confirmed = window.confirm(
+        `Learning "${item.name}" is Out-of-Path and costs ${evalResult.apCost} AP.\n\nOut-of-Path equipment requires GM approval in campaign play. Proceed with learning?`
+      );
+      if (!confirmed) return;
+    }
+
+    let blockVal = parseInt((item.max_block || '12').replace(/\D/g, ''), 10) || 12;
+    if (!evalResult.meetsReq) {
+      blockVal = Math.max(4, blockVal - 4);
+    }
+
     const newShieldItem: ShieldData = {
       id: `shd_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       equipped: true,
       name: item.name,
-      sk: isLearnable,
-      max_block: parseInt((item.max_block || '12').replace(/\D/g, ''), 10) || 12,
+      sk: true,
+      max_block: blockVal,
       requirement: item.requirement,
       mr_adjustment: item.mr,
       cost: item.cost,
       notes: item.notes,
+      ap_cost: evalResult.apCost,
+      effect: `${evalResult.apCost} AP${evalResult.statDownscaled ? ' (Downscaled -4 Blk)' : ''}`,
     };
+
     updateActiveSheetData((prev) => {
       const existingArmory = prev.armory || armory;
       const isAlreadyInArmory = existingArmory.some(
         (s) => s.name.toLowerCase() === item.name.toLowerCase()
       );
       if (!isAlreadyInArmory) {
-        if (isLearnable) {
-          recordApExpenditure(1, 'Shields', `Learned Skilled Shield: ${item.name} (1 AP)`, 1, 'Manage Shields');
-        } else {
-          recordApExpenditure(0, 'Shields', `Added Unskilled Shield: ${item.name} (0 AP - Unskilled)`, 1, 'Manage Shields');
-        }
+        recordApExpenditure(
+          evalResult.apCost,
+          'Shields',
+          `Learned Shield: ${item.name} (${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' • 👑 GM Approval' : ''})`,
+          1,
+          'Manage Shields'
+        );
       }
       const updatedSheet = {
         ...prev,
@@ -195,6 +227,7 @@ export const ShieldCard: React.FC = () => {
   const handleDropFromArmory = (shieldName: string) => {
     const targetShield = armory.find((s) => s.name.toLowerCase() === shieldName.toLowerCase());
     const wasSkilled = targetShield ? isShieldSkilled(targetShield) : false;
+    const apRefund = targetShield?.ap_cost || 1;
 
     updateActiveSheetData((prev) => {
       const updatedArmory = (prev.armory || armory).filter((s) => s.name.toLowerCase() !== shieldName.toLowerCase());
@@ -206,9 +239,7 @@ export const ShieldCard: React.FC = () => {
       }
 
       if (wasSkilled) {
-        recordApExpenditure(-1, 'Shields', `Unlearned Skilled Shield: ${shieldName} (-1 AP Refunded)`, 1, 'Manage Shields');
-      } else {
-        recordApExpenditure(0, 'Shields', `Dropped Unskilled Shield: ${shieldName} (0 AP)`, 1, 'Manage Shields');
+        recordApExpenditure(-apRefund, 'Shields', `Unlearned Shield: ${shieldName} (-${apRefund} AP Refunded)`, 1, 'Manage Shields');
       }
 
       const updatedSheet = {
@@ -287,8 +318,9 @@ export const ShieldCard: React.FC = () => {
   };
 
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
-  const [skillFilterMode, setSkillFilterMode] = useState<'all' | 'skilled' | 'unskilled'>('all');
-  const [activeShieldTable, setActiveShieldTable] = useState<string>('ALL');
+  const [shieldDomainFilter, setShieldDomainFilter] = useState<string>('ALL');
+  const [shieldFilter, setShieldFilter] = useState<string>('ALL');
+  const [activeApCategory, setActiveApCategory] = useState<ApCostCategory>('all');
 
   // Keep local genre synced to active campaign setting when modal opens
   useEffect(() => {
@@ -297,21 +329,14 @@ export const ShieldCard: React.FC = () => {
     }
   }, [showManageModal, activeGenre]);
 
-  const favoriteShieldTables: string[] = useMemo(() => {
-    const favs = activeCharacter?.sheet_data?.favorite_shield_tables;
-    if (Array.isArray(favs) && favs.length > 0) {
-      return favs;
-    }
-    return [];
-  }, [activeCharacter?.sheet_data?.favorite_shield_tables]);
-
-  const handleUpdatePinnedShieldTables = (tables: string[]) => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      favorite_shield_tables: tables,
-    }));
-    saveActiveCharacter();
-  };
+  const uniqueShieldDomains = useMemo(() => {
+    const set = new Set<string>();
+    shieldCatalog.forEach((s) => {
+      const d = s.domain || s.discipline;
+      if (d && d.trim()) set.add(d.trim());
+    });
+    return Array.from(set).sort((a, b) => compareMsoItems({ name: a }, { name: b }, isGsUnlocked));
+  }, [shieldCatalog, isGsUnlocked]);
 
   const starredShieldsCount = useMemo(() => {
     return shieldCatalog.filter((s) => isItemStarred(s)).length;
@@ -332,20 +357,25 @@ export const ShieldCard: React.FC = () => {
         if (localGenreFilter !== 'ALL' && !matchesGenre(item.genres, localGenreFilter as any)) return false;
         if (armoryNamesSet.has(item.name.toLowerCase())) return false;
 
-        const isLearnable = isRequirementLearnable(item.requirement, attributeDice);
-        if (skillFilterMode === 'skilled' && !isLearnable) return false;
-        if (skillFilterMode === 'unskilled' && isLearnable) return false;
-
-        // Table Quick Deck Filter
-        if (activeShieldTable === 'STARRED' && !isItemStarred(item)) return false;
-        if (activeShieldTable !== 'ALL' && activeShieldTable !== 'STARRED') {
-          const tbl = (item.kit || item.table_group || (item as any).category || '').toLowerCase();
-          const activeLower = activeShieldTable.toLowerCase();
-          if (tbl !== activeLower && !tbl.includes(activeLower)) {
-            return false;
-          }
+        // 1. Domain Filter
+        if (shieldDomainFilter !== 'ALL') {
+          const disc = (item.domain || item.discipline || '').toLowerCase().trim();
+          if (disc !== shieldDomainFilter.toLowerCase().trim()) return false;
         }
 
+        // 2. Shield / Block / Requirement Filter (4, 6, 8, 10, 12, Starred)
+        if (shieldFilter === 'STARRED') {
+          if (!isItemStarred(item)) return false;
+        } else if (shieldFilter !== 'ALL') {
+          const reqNum = parseInt(String(item.requirement || '').replace(/[^0-9]/g, ''), 10);
+          if (reqNum !== parseInt(shieldFilter, 10)) return false;
+        }
+
+        // 3. Category Row (AP cost / Path / Req)
+        const evalResult = getShieldEvalResult(item);
+        if (!matchesApCategoryFilter(activeApCategory, evalResult)) return false;
+
+        // 4. Search query
         if (rightSearchQuery.trim()) {
           const q = rightSearchQuery.toLowerCase().trim();
           return (
@@ -357,7 +387,18 @@ export const ShieldCard: React.FC = () => {
         return true;
       })
       .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
-  }, [shieldCatalog, armoryNamesSet, skillFilterMode, activeShieldTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter, isGsUnlocked]);
+  }, [
+    shieldCatalog,
+    armoryNamesSet,
+    shieldDomainFilter,
+    shieldFilter,
+    activeApCategory,
+    rightSearchQuery,
+    getShieldEvalResult,
+    isItemStarred,
+    localGenreFilter,
+    isGsUnlocked,
+  ]);
 
   return (
     <div className="bg-gradient-to-b from-cyan-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-cyan-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-cyan-950/20">
@@ -405,7 +446,7 @@ export const ShieldCard: React.FC = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
             <div
               ref={modalRef}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden"
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[88vh] max-h-[720px] flex flex-col shadow-2xl overflow-hidden"
             >
               {/* Top Bar */}
               <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
@@ -432,7 +473,7 @@ export const ShieldCard: React.FC = () => {
 
                 <button
                   onClick={handleCloseManageModal}
-                  className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 shrink-0"
+                  className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 shrink-0 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -474,9 +515,6 @@ export const ShieldCard: React.FC = () => {
                     ) : (
                       filteredArmory.map((item) => {
                         const isActive = shield.equipped && shield.name.toLowerCase() === item.name.toLowerCase();
-                        const isLearnable = item.requirement
-                          ? isRequirementLearnable(item.requirement, attributeDice)
-                          : true;
 
                         return (
                           <div
@@ -492,7 +530,7 @@ export const ShieldCard: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleSelectActiveShield(item)}
-                                  className={`px-2 py-0.5 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all ${
+                                  className={`px-2 py-0.5 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all cursor-pointer ${
                                     isActive
                                       ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 shadow-sm'
                                       : 'bg-slate-950 text-slate-400 border-slate-700 hover:text-slate-200'
@@ -508,6 +546,9 @@ export const ShieldCard: React.FC = () => {
                               </div>
 
                               <div className="flex items-center gap-2 shrink-0">
+                                <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
+                                  {item.ap_cost || 1} AP
+                                </span>
                                 <button
                                   type="button"
                                   onClick={() => handleToggleStarItem(item)}
@@ -522,7 +563,7 @@ export const ShieldCard: React.FC = () => {
                                 </button>
                                 <button
                                   onClick={() => handleDropFromArmory(item.name)}
-                                  className="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0"
+                                  className="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0 cursor-pointer"
                                 >
                                   Forget
                                 </button>
@@ -533,11 +574,11 @@ export const ShieldCard: React.FC = () => {
                               <span>Req: <strong className="text-slate-200">{item.requirement || '💪 4'}</strong></span>
                               <span>Blk: <strong className="text-amber-300">🛡️{item.max_block}</strong></span>
                               <span>MR: <strong className="text-cyan-300">{item.mr_adjustment || '👣0'}</strong></span>
-                              {isLearnable ? (
-                                <span className="text-[10px] text-emerald-400 font-sans font-bold">Skilled</span>
-                              ) : (
-                                <span className="text-[10px] text-amber-400 font-sans font-semibold">Unskilled</span>
-                              )}
+                              <span className={`text-[10px] font-sans font-bold ${
+                                (item.ap_cost === 1 || item.ap_cost === 2) ? 'text-emerald-400' : 'text-amber-400'
+                              }`}>
+                                {item.ap_cost === 1 ? 'In-Path (Skilled)' : item.ap_cost === 2 ? 'In-Path (-4 Blk)' : item.ap_cost === 3 ? 'Out-Path (Skilled)' : 'Out-Path (-4 Blk)'}
+                              </span>
                             </div>
                           </div>
                         );
@@ -557,48 +598,148 @@ export const ShieldCard: React.FC = () => {
 
                   {/* Stock Catalog Content */}
                   <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
-                    {/* 1. DENSE DROPDOWN FACET TOOLBAR */}
-                    <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-                      {/* Local Setting Genre Selector */}
-                      <select
-                        value={localGenreFilter}
-                        onChange={(e) => setLocalGenreFilter(e.target.value)}
-                        className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 cursor-pointer flex-1 min-w-[110px]"
-                      >
-                        <option value="ALL">🌐 All Genres</option>
-                        <option value="Medieval">🏰 Medieval</option>
-                        <option value="Modern">⚙️ Modern</option>
-                        <option value="SciFi">🚀 SciFi</option>
-                      </select>
+                    {/* 1. DENSE 3-DROPDOWN ROW (Genre, Domain, Filter) */}
+                    <div className="grid grid-cols-3 gap-1.5 shrink-0">
+                      {/* Genre Dropdown */}
+                      <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 min-w-0">
+                        <span className="text-[10px] font-mono font-bold text-slate-400 uppercase shrink-0">
+                          Genre
+                        </span>
+                        <select
+                          value={localGenreFilter}
+                          onChange={(e) => setLocalGenreFilter(e.target.value)}
+                          className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                            localGenreFilter !== 'ALL'
+                              ? 'bg-cyan-950/90 border-cyan-400 text-cyan-100 ring-1 ring-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.3)] font-extrabold'
+                              : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-cyan-500'
+                          }`}
+                        >
+                          <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                          <option value="Medieval" className="bg-slate-900 text-slate-200">🏰 Med</option>
+                          <option value="Modern" className="bg-slate-900 text-slate-200">⚙️ Mod</option>
+                          <option value="SciFi" className="bg-slate-900 text-slate-200">🚀 SciFi</option>
+                        </select>
+                      </div>
 
-                      {/* Qualification Dropdown */}
-                      <select
-                        value={skillFilterMode}
-                        onChange={(e) => setSkillFilterMode(e.target.value as any)}
-                        className="bg-slate-900 text-emerald-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 cursor-pointer flex-1 min-w-[130px]"
-                      >
-                        <option value="all">🌐 All Qualifications</option>
-                        <option value="skilled">🎓 Skilled Only</option>
-                        <option value="unskilled">⚪ Unskilled Only</option>
-                      </select>
+                      {/* Domain Dropdown */}
+                      <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 min-w-0">
+                        <span className="text-[10px] font-mono font-bold text-slate-400 uppercase shrink-0">
+                          Domain
+                        </span>
+                        <select
+                          value={shieldDomainFilter}
+                          onChange={(e) => setShieldDomainFilter(e.target.value)}
+                          className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                            shieldDomainFilter !== 'ALL'
+                              ? 'bg-cyan-950/90 border-cyan-400 text-cyan-100 ring-1 ring-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.3)] font-extrabold'
+                              : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-cyan-500'
+                          }`}
+                        >
+                          <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                          {uniqueShieldDomains.map((dom) => (
+                            <option key={dom} value={dom} className="bg-slate-900 text-slate-200">
+                              {dom}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Filter Dropdown (Block / Starred) */}
+                      <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 min-w-0">
+                        <span className="text-[10px] font-mono font-bold text-slate-400 uppercase shrink-0">
+                          Filter
+                        </span>
+                        <select
+                          value={shieldFilter}
+                          onChange={(e) => setShieldFilter(e.target.value)}
+                          className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                            shieldFilter !== 'ALL'
+                              ? 'bg-yellow-950/90 border-yellow-400 text-yellow-100 ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] font-extrabold'
+                              : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-cyan-500'
+                          }`}
+                        >
+                          <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                          <option value="4" className="bg-slate-900 text-slate-200">🛡️ Blk 4</option>
+                          <option value="6" className="bg-slate-900 text-slate-200">🛡️ Blk 6</option>
+                          <option value="8" className="bg-slate-900 text-slate-200">🛡️ Blk 8</option>
+                          <option value="10" className="bg-slate-900 text-slate-200">🛡️ Blk 10</option>
+                          <option value="12" className="bg-slate-900 text-slate-200">🛡️ Blk 12</option>
+                          <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredShieldsCount > 0 ? `(${starredShieldsCount})` : ''}</option>
+                        </select>
+                      </div>
                     </div>
 
-                    {/* 2. Universal Quick Deck Bar */}
-                    <QuickDeckBar
-                      domain="shields"
-                      activeTable={activeShieldTable}
-                      onSelectTable={setActiveShieldTable}
-                      pinnedTables={favoriteShieldTables}
-                      onUpdatePinnedTables={handleUpdatePinnedShieldTables}
-                      catalogItems={shieldCatalog}
-                      starredCount={starredShieldsCount}
-                      colorTheme="cyan"
-                      totalCatalogCount={shieldCatalog.length}
-                      placeholderText="➕ Pin Shield Table"
-                    />
+                    {/* 2. Category Multi-Option Pill Switch (KISS Dyslexia-Friendly Standard) */}
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md mb-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveApCategory('all')}
+                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          activeApCategory === 'all'
+                            ? 'bg-slate-800 text-cyan-300 border border-cyan-500/40 shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        🌐 All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveApCategory('1AP')}
+                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          activeApCategory === '1AP'
+                            ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        ⚡ 1AP (Path & Req)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveApCategory('2AP')}
+                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          activeApCategory === '2AP'
+                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        ⏳ 2AP (Path, ~Req)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveApCategory('3AP')}
+                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          activeApCategory === '3AP'
+                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        👑 3AP (~Path & Req)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveApCategory('4AP')}
+                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          activeApCategory === '4AP'
+                            ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        ⚠️ 4AP (~Path, ~Req)
+                      </button>
+                    </div>
+
+                    {/* Out-of-Path GM Notice Banner */}
+                    {(activeApCategory === '3AP' || activeApCategory === '4AP') && (
+                      <div className="mb-1 px-3 py-1.5 bg-indigo-950/70 border border-indigo-500/40 rounded-xl text-indigo-200 text-xs flex items-center gap-2 shrink-0">
+                        <span>👑</span>
+                        <span>
+                          <strong>Out-of-Path:</strong> Costs +2 AP and requires GM Approval in campaign play.
+                        </span>
+                      </div>
+                    )}
 
                     {/* 3. Search Bar + Dynamic Result Breadcrumb */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 pb-2 border-b border-slate-800/80 shrink-0">
                       <div className="relative flex-1">
                         <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                         <input
@@ -619,15 +760,17 @@ export const ShieldCard: React.FC = () => {
                       <div className="p-3.5 bg-slate-950/60 rounded-xl border border-cyan-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
                         <span className="text-cyan-300 font-semibold">
                           0 shields match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
-                          {skillFilterMode !== 'all' ? ` • ${skillFilterMode}` : ''}
-                          {activeShieldTable !== 'ALL' && activeShieldTable !== 'STARRED' ? ` • ${activeShieldTable}` : ''})
+                          {shieldDomainFilter !== 'ALL' ? ` • ${shieldDomainFilter}` : ''}
+                          {shieldFilter !== 'ALL' ? ` • ${shieldFilter}` : ''}
+                          {activeApCategory !== 'all' ? ` • ${activeApCategory}` : ''})
                         </span>
                         <button
                           type="button"
                           onClick={() => {
                             setLocalGenreFilter(activeGenre || 'SciFi');
-                            setSkillFilterMode('all');
-                            setActiveShieldTable('ALL');
+                            setShieldDomainFilter('ALL');
+                            setShieldFilter('ALL');
+                            setActiveApCategory('all');
                             setRightSearchQuery('');
                           }}
                           className="px-3 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
@@ -645,7 +788,7 @@ export const ShieldCard: React.FC = () => {
                         </div>
                       ) : filteredCatalogShields.length > 0 ? (
                         filteredCatalogShields.map((item, idx) => {
-                          const qualifies = isRequirementLearnable(item.requirement, attributeDice);
+                          const evalResult = getShieldEvalResult(item);
 
                           return (
                             <div
@@ -660,6 +803,20 @@ export const ShieldCard: React.FC = () => {
                                   </span>
                                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
                                     {item.cost}
+                                  </span>
+                                  {/* AP Cost Badge */}
+                                  <span
+                                    className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${
+                                      evalResult.apCost === 1
+                                        ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                                        : evalResult.apCost === 2
+                                        ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
+                                        : evalResult.apCost === 3
+                                        ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
+                                        : 'bg-rose-950/80 text-rose-300 border-rose-500/40'
+                                    }`}
+                                  >
+                                    {evalResult.apCost} AP {evalResult.requiresGmApproval ? '• 👑 GM' : evalResult.statDownscaled ? '• ⏳ ~Req' : '• Path'}
                                   </span>
                                 </div>
 
@@ -678,22 +835,35 @@ export const ShieldCard: React.FC = () => {
                                   </button>
                                   <button
                                     onClick={() => handleAddToArmory(item)}
-                                    className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
-                                      qualifies
+                                    className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
+                                      evalResult.apCost === 1
                                         ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
-                                        : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
+                                        : evalResult.apCost === 2
+                                        ? 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
+                                        : evalResult.apCost === 3
+                                        ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50 shadow-sm'
+                                        : 'bg-rose-600/30 text-rose-200 border-rose-500/50 hover:bg-rose-600/50 shadow-sm'
                                     }`}
-                                    title={qualifies ? 'Learn shield with skilled training' : 'Equip shield as unskilled'}
+                                    title={`Learn ${item.name} for ${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' (Requires GM Approval)' : ''}`}
                                   >
-                                    + Learn
+                                    + Learn ({evalResult.apCost} AP)
                                   </button>
                                 </div>
                               </div>
 
-                              <div className="flex items-center justify-between text-xs font-mono pt-0.5 text-slate-400">
+                              <div className="flex items-center justify-between text-xs font-mono text-slate-400">
                                 <span>Req: <strong className="text-slate-200">{item.requirement}</strong></span>
                                 <span>Blk: <strong className="text-amber-300">{item.max_block}</strong></span>
                                 <span>MR: <strong className="text-cyan-300">{item.mr}</strong></span>
+                                {evalResult.statDownscaled ? (
+                                  <span className="text-[10px] text-amber-400 font-sans font-semibold">
+                                    Downscaled (-4 Blk)
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-emerald-400 font-sans font-bold">
+                                    Qualified
+                                  </span>
+                                )}
                               </div>
                             </div>
                           );

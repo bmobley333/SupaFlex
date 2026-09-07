@@ -9,14 +9,21 @@ import {
   SupabaseWeapon,
   WeaponVariantOption,
   splitWeaponIntoVariants,
-  isWeaponVariantLearnable,
   calculateAvailableAp,
 } from '../../types/game';
 
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
-import { QuickDeckBar } from '../common/QuickDeckBar';
 import { compareMsoItems, compareMsoOptions, isMsoEntry } from '../../utils/kitUtils';
+import {
+  getCharacterKnownPaths,
+  evaluateItemAp,
+  matchesApCategoryFilter,
+  ApCostCategory,
+  ApEvaluationResult,
+  isItemInPath,
+  isItemRequirementMet,
+} from '../../utils/pathApUtils';
 
 const DIE_SCALE = [4, 6, 8, 10, 12];
 
@@ -192,46 +199,92 @@ export const WeaponsCard: React.FC = () => {
   }, [groupedEquippedWeapons]);
 
   const skilledWeaponsCount = skilledWeaponGroups.length;
-  const weaponApSpent = skilledWeaponsCount * 1;
+  const weaponApSpent = useMemo(() => {
+    return skilledWeaponGroups.reduce((acc, g) => {
+      const groupCost = g.slots.reduce((max, s) => Math.max(max, s.ap_cost || 1), 1);
+      return acc + groupCost;
+    }, 0);
+  }, [skilledWeaponGroups]);
+
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
   );
 
+  const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
+
+  const getWeaponEvalResult = useCallback(
+    (weapon: SupabaseWeapon): ApEvaluationResult => {
+      const inPath = isItemInPath(weapon.path, knownPaths);
+      const variants = splitWeaponIntoVariants(weapon);
+      const anyMeetsReq = variants.some((v) => isItemRequirementMet(v.requirementStr, attributeDice, v.variantType));
+
+      if (inPath && anyMeetsReq) {
+        return { inPath: true, meetsReq: true, category: '1AP', apCost: 1, requiresGmApproval: false, statDownscaled: false };
+      } else if (inPath && !anyMeetsReq) {
+        return { inPath: true, meetsReq: false, category: '2AP', apCost: 2, requiresGmApproval: false, statDownscaled: true };
+      } else if (!inPath && anyMeetsReq) {
+        return { inPath: false, meetsReq: true, category: '3AP', apCost: 3, requiresGmApproval: true, statDownscaled: false };
+      } else {
+        return { inPath: false, meetsReq: false, category: '4AP', apCost: 4, requiresGmApproval: true, statDownscaled: true };
+      }
+    },
+    [knownPaths, attributeDice]
+  );
+
   // Equip all variants of a weapon to the character sheet
   const handleEquipWeapon = (weapon: SupabaseWeapon, variantsToEquip: WeaponVariantOption[]) => {
+    const evalResult = getWeaponEvalResult(weapon);
+
+    if (evalResult.requiresGmApproval) {
+      const confirmed = window.confirm(
+        `Learning "${weapon.name}" is Out-of-Path and costs ${evalResult.apCost} AP.\n\nOut-of-Path equipment requires GM approval in campaign play. Proceed with learning?`
+      );
+      if (!confirmed) return;
+    }
+
     const newSlots: WeaponSlot[] = variantsToEquip.map((variant) => {
-      const calculatedAtk = calculateWeaponAtk(variant.name, variant.mhs, attributeDice);
+      const variantEval = evaluateItemAp(weapon.path, variant.requirementStr, attributeDice, knownPaths, variant.variantType);
+      let calculatedAtk = calculateWeaponAtk(variant.name, variant.mhs, attributeDice);
       const isSpecialDmg = variant.dmg === '❌' || weapon.dmg === '❌';
-      const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(variant.name, variant.mhs, attributeDice));
+      let calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(variant.name, variant.mhs, attributeDice));
+
+      // Temporary downscale (-1 die step) if requirements are unmet
+      if (!variantEval.meetsReq) {
+        calculatedAtk = getStepDownDie(calculatedAtk);
+        if (calculatedDmg !== '❌') {
+          calculatedDmg = String(getStepDownDie(parseInt(calculatedDmg, 10) || 4));
+        }
+      }
+
       const cleanBlockNum = variant.max_block ? variant.max_block.replace('🛡️', '') : 'n/a';
-      const isLearnable = isWeaponVariantLearnable(variant, attributeDice);
       const slotName = weapon.type.includes(',') ? `${variant.name} (${variant.variantType})` : variant.name;
 
       return {
         id: `wep_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         name: slotName,
-        sk: isLearnable, // Skilled if learnable, Unskilled if requirements unmet
+        sk: true,
         mhs: variant.mhs,
         atk: String(calculatedAtk),
         dmg: calculatedDmg,
         max_blk: cleanBlockNum,
-        effect: `${variant.variantType} Weapon (Req ${variant.requirementStr}, Cost ${variant.cost})`,
+        effect: `${variant.variantType} Weapon (${evalResult.apCost} AP${variantEval.statDownscaled ? ', Downscaled' : ''}, Req ${variant.requirementStr}, Cost ${variant.cost})`,
         notes: weapon.notes,
+        ap_cost: evalResult.apCost,
       };
     });
-
-    const isEquippedAsSkilled = newSlots.some((s) => s.sk);
 
     updateActiveSheetData((prev) => {
       const existingNames = new Set((prev.weapons || []).map((w) => w.name.toLowerCase()));
       const filteredNewSlots = newSlots.filter((s) => !existingNames.has(s.name.toLowerCase()));
       if (filteredNewSlots.length > 0) {
-        if (isEquippedAsSkilled) {
-          recordApExpenditure(1, 'Weapons', `Learned Skilled Weapon: ${weapon.name} (1 AP)`, 1, 'Manage Weapons');
-        } else {
-          recordApExpenditure(0, 'Weapons', `Equipped Unskilled Weapon: ${weapon.name} (0 AP - Unskilled)`, 1, 'Manage Weapons');
-        }
+        recordApExpenditure(
+          evalResult.apCost,
+          'Weapons',
+          `Learned Weapon: ${weapon.name} (${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' • 👑 GM Approval' : ''})`,
+          1,
+          'Manage Weapons'
+        );
       }
       return {
         ...prev,
@@ -247,6 +300,7 @@ export const WeaponsCard: React.FC = () => {
       (g) => g.baseName.toLowerCase() === baseWeaponName.toLowerCase()
     );
     const wasSkilled = targetGroup ? targetGroup.slots.some((s) => s.sk) : false;
+    const apRefund = targetGroup ? (targetGroup.slots.find((s) => s.ap_cost)?.ap_cost || 1) : 1;
 
     updateActiveSheetData((prev) => ({
       ...prev,
@@ -256,9 +310,7 @@ export const WeaponsCard: React.FC = () => {
     }));
 
     if (wasSkilled) {
-      recordApExpenditure(-1, 'Weapons', `Unlearned Skilled Weapon: ${baseWeaponName} (-1 AP Refunded)`, 1, 'Manage Weapons');
-    } else {
-      recordApExpenditure(0, 'Weapons', `Dropped Unskilled Weapon: ${baseWeaponName} (0 AP)`, 1, 'Manage Weapons');
+      recordApExpenditure(-apRefund, 'Weapons', `Unlearned Weapon: ${baseWeaponName} (-${apRefund} AP Refunded)`, 1, 'Manage Weapons');
     }
 
     saveActiveCharacter();
@@ -351,8 +403,7 @@ export const WeaponsCard: React.FC = () => {
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [weaponDisciplineFilter, setWeaponDisciplineFilter] = useState<string>('ALL');
   const [weaponTypeFilter, setWeaponTypeFilter] = useState<string>('ALL');
-  const [skillFilterMode, setSkillFilterMode] = useState<'all' | 'skilled' | 'unskilled'>('skilled');
-  const [activeWeaponTable, setActiveWeaponTable] = useState<string>('ALL');
+  const [activeApCategory, setActiveApCategory] = useState<ApCostCategory>('all');
 
   // Keep local genre synced to active campaign setting when modal opens
   useEffect(() => {
@@ -371,22 +422,6 @@ export const WeaponsCard: React.FC = () => {
     });
     return Array.from(set).sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
   }, [supabaseWeapons, isGsUnlocked]);
-
-  const favoriteWeaponTables: string[] = useMemo(() => {
-    const favs = activeCharacter?.sheet_data?.favorite_weapon_tables;
-    if (Array.isArray(favs) && favs.length > 0) {
-      return favs;
-    }
-    return [];
-  }, [activeCharacter?.sheet_data?.favorite_weapon_tables]);
-
-  const handleUpdatePinnedWeaponTables = (tables: string[]) => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      favorite_weapon_tables: tables,
-    }));
-    saveActiveCharacter();
-  };
 
   const starredWeaponsCount = useMemo(() => {
     return supabaseWeapons.filter((w) => isItemStarred(w)).length;
@@ -416,10 +451,6 @@ export const WeaponsCard: React.FC = () => {
           return false;
         }
 
-        const variants = splitWeaponIntoVariants(weapon);
-        const qualifying = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
-        const isAnyLearnable = qualifying.length > 0;
-
         // 1.2. Domain / Discipline Dropdown Filter
         if (weaponDisciplineFilter !== 'ALL') {
           const disc = (weapon.domain || weapon.discipline || '').toLowerCase().trim();
@@ -428,8 +459,10 @@ export const WeaponsCard: React.FC = () => {
           }
         }
 
-        // 1.3. Weapon Type Dropdown Filter
-        if (weaponTypeFilter !== 'ALL') {
+        // 1.3. Filter Dropdown (Types & Starred)
+        if (weaponTypeFilter === 'STARRED') {
+          if (!isItemStarred(weapon)) return false;
+        } else if (weaponTypeFilter !== 'ALL') {
           const rawType = (weapon.type || '').toLowerCase().trim();
           const nameLower = weapon.name.toLowerCase();
           if (weaponTypeFilter === 'Melee, Hurled') {
@@ -449,24 +482,10 @@ export const WeaponsCard: React.FC = () => {
           }
         }
 
-        // 1.5. Qualification Filter (All vs Skilled vs Unskilled)
-        if (skillFilterMode === 'skilled' && !isAnyLearnable) {
+        // 2. Category Row AP / Path / Req filter
+        const evalResult = getWeaponEvalResult(weapon);
+        if (!matchesApCategoryFilter(activeApCategory, evalResult)) {
           return false;
-        }
-        if (skillFilterMode === 'unskilled' && isAnyLearnable) {
-          return false;
-        }
-
-        // 2. Table Quick Deck Filter
-        if (activeWeaponTable === 'STARRED' && !isItemStarred(weapon)) {
-          return false;
-        }
-        if (activeWeaponTable !== 'ALL' && activeWeaponTable !== 'STARRED') {
-          const tbl = (weapon.kit || weapon.table_group || (weapon as any).table || (weapon as any).category || weapon.type || '').toLowerCase();
-          const activeLower = activeWeaponTable.toLowerCase();
-          if (tbl !== activeLower && !tbl.includes(activeLower)) {
-            return false;
-          }
         }
 
         // 3. Search filter
@@ -481,7 +500,18 @@ export const WeaponsCard: React.FC = () => {
         return true;
       })
       .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
-  }, [supabaseWeapons, equippedBaseNamesSet, skillFilterMode, weaponDisciplineFilter, weaponTypeFilter, activeWeaponTable, rightSearchQuery, attributeDice, isItemStarred, localGenreFilter, isGsUnlocked]);
+  }, [
+    supabaseWeapons,
+    equippedBaseNamesSet,
+    activeApCategory,
+    weaponDisciplineFilter,
+    weaponTypeFilter,
+    rightSearchQuery,
+    getWeaponEvalResult,
+    isItemStarred,
+    localGenreFilter,
+    isGsUnlocked,
+  ]);
 
   return (
     <div className="bg-gradient-to-b from-rose-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-rose-500/90 p-4 flex flex-col gap-3 h-fit shadow-lg shadow-rose-950/20">
@@ -525,7 +555,7 @@ export const WeaponsCard: React.FC = () => {
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
               <div
                 ref={modalRef}
-                className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden"
+                className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[88vh] max-h-[720px] flex flex-col shadow-2xl overflow-hidden"
               >
                 {/* Modal Top Bar */}
                 <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
@@ -674,13 +704,16 @@ export const WeaponsCard: React.FC = () => {
                                       key={item.id}
                                       className="p-2 rounded-lg border bg-slate-950/60 border-slate-850 flex items-center justify-between text-xs font-mono"
                                     >
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1.5">
                                         <span className="font-bold text-slate-300 w-16">{variantLabel}:</span>
                                         {item.sk ? (
                                           <span className="text-[10px] font-sans font-bold text-emerald-400">Skilled</span>
                                         ) : (
                                           <span className="text-[10px] font-sans font-semibold text-amber-400">Unskilled</span>
                                         )}
+                                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-slate-300 font-bold">
+                                          {item.ap_cost || 1} AP
+                                        </span>
                                       </div>
 
                                       <div className="flex items-center gap-3 text-[10px] text-slate-400 font-mono">
@@ -714,86 +747,155 @@ export const WeaponsCard: React.FC = () => {
 
                     {/* Stock Catalog Content */}
                     <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
-                      {/* 1. DENSE DROPDOWN FACET TOOLBAR (Genre, Discipline, Type, Qualification) */}
-                      <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-                        {/* Local Setting Genre Selector */}
-                        <select
-                          value={localGenreFilter}
-                          onChange={(e) => setLocalGenreFilter(e.target.value)}
-                          className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[110px]"
-                        >
-                          <option value="ALL">🌐 All Genres</option>
-                          <option value="Medieval">🏰 Medieval</option>
-                          <option value="Modern">⚙️ Modern</option>
-                          <option value="SciFi">🚀 SciFi</option>
-                        </select>
+                      {/* 1. 3-Dropdown Filter Strip (Genre, Domain, Filter) */}
+                      <div className="grid grid-cols-3 gap-1.5 mb-1 shrink-0">
+                        {/* 1. Genre Filter */}
+                        <div className="flex flex-col min-w-0">
+                          <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                            localGenreFilter !== 'ALL' ? 'text-amber-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                          }`}>
+                            {localGenreFilter !== 'ALL' && <span className="text-[7px]">●</span>} Genre
+                          </span>
+                          <select
+                            value={localGenreFilter}
+                            onChange={(e) => setLocalGenreFilter(e.target.value)}
+                            className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                              localGenreFilter !== 'ALL'
+                                ? 'bg-amber-950/90 border-amber-400 text-amber-100 ring-1 ring-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.3)] font-extrabold'
+                                : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-rose-500'
+                            }`}
+                          >
+                            <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                            <option value="Medieval" className="bg-slate-900 text-slate-200">🏰 Medieval</option>
+                            <option value="Modern" className="bg-slate-900 text-slate-200">⚙️ Modern</option>
+                            <option value="SciFi" className="bg-slate-900 text-slate-200">🚀 SciFi</option>
+                          </select>
+                        </div>
 
-                        {/* Specialization Selector */}
-                        {availableDisciplines.length > 0 && (
+                        {/* 2. Domain Filter */}
+                        <div className="flex flex-col min-w-0">
+                          <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                            weaponDisciplineFilter !== 'ALL' ? 'text-cyan-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                          }`}>
+                            {weaponDisciplineFilter !== 'ALL' && <span className="text-[7px]">●</span>} Domain
+                          </span>
                           <select
                             value={weaponDisciplineFilter}
                             onChange={(e) => setWeaponDisciplineFilter(e.target.value)}
-                            className="bg-slate-900 text-cyan-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[110px]"
+                            className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                              weaponDisciplineFilter !== 'ALL'
+                                ? 'bg-cyan-950/90 border-cyan-400 text-cyan-100 ring-1 ring-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.3)] font-extrabold'
+                                : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-rose-500'
+                            }`}
                           >
-                            <option value="ALL">🌐 All Specializations</option>
-                            {availableDisciplines.map((d) => {
-                              const isMso = isMsoEntry(d);
-                              return (
-                                <option
-                                  key={d}
-                                  value={d}
-                                  className={isGsUnlocked && isMso ? 'text-purple-300 font-bold bg-slate-900' : 'text-slate-100 bg-slate-950'}
-                                >
-                                  {isGsUnlocked && isMso ? `🌌 ${d}` : d}
-                                </option>
-                              );
-                            })}
+                            <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                            {availableDisciplines.map((d) => (
+                              <option key={d} value={d} className="bg-slate-900 text-slate-200">
+                                {d}
+                              </option>
+                            ))}
                           </select>
-                        )}
+                        </div>
 
-                        {/* Weapon Type Dropdown */}
-                        <select
-                          value={weaponTypeFilter}
-                          onChange={(e) => setWeaponTypeFilter(e.target.value)}
-                          className="bg-slate-900 text-rose-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[110px]"
-                        >
-                          <option value="ALL">🌐 All Types</option>
-                          <option value="Hurled">🪓 Hurled</option>
-                          <option value="Melee">🗡️ Melee</option>
-                          <option value="Melee, Hurled">⚔️ Melee, Hurled</option>
-                          <option value="Melee, Shot">🏹 Melee, Shot</option>
-                          <option value="Shot">🏹 Shot</option>
-                          <option value="Unarmed">🥊 Unarmed</option>
-                        </select>
-
-                        {/* Qualification Dropdown */}
-                        <select
-                          value={skillFilterMode}
-                          onChange={(e) => setSkillFilterMode(e.target.value as any)}
-                          className="bg-slate-900 text-emerald-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-rose-500 cursor-pointer flex-1 min-w-[125px]"
-                        >
-                          <option value="all">🌐 All Qualifications</option>
-                          <option value="skilled">🎓 Skilled Only</option>
-                          <option value="unskilled">⚪ Unskilled Only</option>
-                        </select>
+                        {/* 3. Filter (Types & Starred) */}
+                        <div className="flex flex-col min-w-0">
+                          <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                            weaponTypeFilter !== 'ALL' ? 'text-yellow-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                          }`}>
+                            {weaponTypeFilter !== 'ALL' && <span className="text-[7px]">●</span>} Filter
+                          </span>
+                          <select
+                            value={weaponTypeFilter}
+                            onChange={(e) => setWeaponTypeFilter(e.target.value)}
+                            className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                              weaponTypeFilter !== 'ALL'
+                                ? 'bg-yellow-950/90 border-yellow-400 text-yellow-100 ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] font-extrabold'
+                                : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-rose-500'
+                            }`}
+                          >
+                            <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                            <option value="Unarmed" className="bg-slate-900 text-slate-200">🥊 Unarmed</option>
+                            <option value="Hurled" className="bg-slate-900 text-slate-200">🪓 Hurled</option>
+                            <option value="Melee" className="bg-slate-900 text-slate-200">🗡️ Melee</option>
+                            <option value="Melee, Hurled" className="bg-slate-900 text-slate-200">⚔️ Melee, Hurled</option>
+                            <option value="Melee, Shot" className="bg-slate-900 text-slate-200">🏹 Melee, Shot</option>
+                            <option value="Shot" className="bg-slate-900 text-slate-200">🎯 Shot</option>
+                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredWeaponsCount > 0 ? `(${starredWeaponsCount})` : ''}</option>
+                          </select>
+                        </div>
                       </div>
 
-                      {/* 2. Universal Quick Deck Bar */}
-                      <QuickDeckBar
-                        domain="weapons"
-                        activeTable={activeWeaponTable}
-                        onSelectTable={setActiveWeaponTable}
-                        pinnedTables={favoriteWeaponTables}
-                        onUpdatePinnedTables={handleUpdatePinnedWeaponTables}
-                        catalogItems={supabaseWeapons}
-                        starredCount={starredWeaponsCount}
-                        colorTheme="rose"
-                        totalCatalogCount={supabaseWeapons.length}
-                        placeholderText="➕ Pin Weapon Table"
-                      />
+                      {/* 2. Category Multi-Option Pill Switch (KISS Dyslexia-Friendly Standard) */}
+                      <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md mb-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setActiveApCategory('all')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            activeApCategory === 'all'
+                              ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          🌐 All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveApCategory('1AP')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            activeApCategory === '1AP'
+                              ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          ⚡ 1AP (Path & Req)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveApCategory('2AP')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            activeApCategory === '2AP'
+                              ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          ⏳ 2AP (Path, ~Req)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveApCategory('3AP')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            activeApCategory === '3AP'
+                              ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          👑 3AP (~Path & Req)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveApCategory('4AP')}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            activeApCategory === '4AP'
+                              ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          ⚠️ 4AP (~Path, ~Req)
+                        </button>
+                      </div>
+
+                      {/* Out-of-Path GM Notice Banner */}
+                      {(activeApCategory === '3AP' || activeApCategory === '4AP') && (
+                        <div className="mb-1 px-3 py-1.5 bg-indigo-950/70 border border-indigo-500/40 rounded-xl text-indigo-200 text-xs flex items-center gap-2 shrink-0">
+                          <span>👑</span>
+                          <span>
+                            <strong>Out-of-Path:</strong> Costs +2 AP and requires GM Approval in campaign play.
+                          </span>
+                        </div>
+                      )}
 
                       {/* 3. Search Bar + Dynamic Result Breadcrumb */}
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2 pb-2 border-b border-slate-800/80 shrink-0">
                         <div className="relative flex-1">
                           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                           <input
@@ -816,8 +918,7 @@ export const WeaponsCard: React.FC = () => {
                             0 weapons match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
                             {weaponDisciplineFilter !== 'ALL' ? ` • ${weaponDisciplineFilter}` : ''}
                             {weaponTypeFilter !== 'ALL' ? ` • ${weaponTypeFilter}` : ''}
-                            {skillFilterMode !== 'all' ? ` • ${skillFilterMode}` : ''}
-                            {activeWeaponTable !== 'ALL' && activeWeaponTable !== 'STARRED' ? ` • ${activeWeaponTable}` : ''})
+                            {activeApCategory !== 'all' ? ` • ${activeApCategory}` : ''})
                           </span>
                           <button
                             type="button"
@@ -825,8 +926,7 @@ export const WeaponsCard: React.FC = () => {
                               setLocalGenreFilter(activeGenre || 'SciFi');
                               setWeaponDisciplineFilter('ALL');
                               setWeaponTypeFilter('ALL');
-                              setSkillFilterMode('all');
-                              setActiveWeaponTable('ALL');
+                              setActiveApCategory('all');
                               setRightSearchQuery('');
                             }}
                             className="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
@@ -846,8 +946,7 @@ export const WeaponsCard: React.FC = () => {
                         ) : filteredCatalogWeapons.length > 0 ? (
                           filteredCatalogWeapons.map((weapon, idx) => {
                             const variants = splitWeaponIntoVariants(weapon);
-                            const qualifyingVariants = variants.filter((v) => isWeaponVariantLearnable(v, attributeDice));
-                            const isAnyLearnable = qualifyingVariants.length > 0;
+                            const evalResult = getWeaponEvalResult(weapon);
                             const rawTypesList = (weapon.type || 'Melee').split(',').map((t) => t.trim());
 
                             return (
@@ -877,6 +976,20 @@ export const WeaponsCard: React.FC = () => {
                                     <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
                                       {weapon.cost}
                                     </span>
+                                    {/* AP Cost Badge */}
+                                    <span
+                                      className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${
+                                        evalResult.apCost === 1
+                                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                                          : evalResult.apCost === 2
+                                          ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
+                                          : evalResult.apCost === 3
+                                          ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
+                                          : 'bg-rose-950/80 text-rose-300 border-rose-500/40'
+                                      }`}
+                                    >
+                                      {evalResult.apCost} AP {evalResult.requiresGmApproval ? '• 👑 GM' : evalResult.statDownscaled ? '• ⏳ ~Req' : '• Path'}
+                                    </span>
                                   </div>
 
                                   <div className="flex items-center gap-2 shrink-0">
@@ -894,14 +1007,18 @@ export const WeaponsCard: React.FC = () => {
                                     </button>
                                     <button
                                       onClick={() => handleEquipWeapon(weapon, variants)}
-                                      className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 ${
-                                        isAnyLearnable
+                                      className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
+                                        evalResult.apCost === 1
                                           ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
-                                          : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
+                                          : evalResult.apCost === 2
+                                          ? 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
+                                          : evalResult.apCost === 3
+                                          ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50 shadow-sm'
+                                          : 'bg-rose-600/30 text-rose-200 border-rose-500/50 hover:bg-rose-600/50 shadow-sm'
                                       }`}
-                                      title={isAnyLearnable ? 'Equip as Trained/Skilled' : 'Equip as Unskilled'}
+                                      title={`Learn ${weapon.name} for ${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' (Requires GM Approval)' : ''}`}
                                     >
-                                      + Learn
+                                      + Learn ({evalResult.apCost} AP)
                                     </button>
                                   </div>
                                 </div>
@@ -909,18 +1026,25 @@ export const WeaponsCard: React.FC = () => {
                                 {/* Variant Stats Sub-Rows */}
                                 <div className="flex flex-col gap-1.5 pt-0.5">
                                   {variants.map((v) => {
-                                    const calculatedAtk = calculateWeaponAtk(v.name, v.mhs, attributeDice);
+                                    const variantEval = evaluateItemAp(weapon.path, v.requirementStr, attributeDice, knownPaths, v.variantType);
+                                    let calculatedAtk = calculateWeaponAtk(v.name, v.mhs, attributeDice);
                                     const isSpecialDmg = v.dmg === '❌' || weapon.dmg === '❌';
-                                    const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(v.name, v.mhs, attributeDice));
-                                    const qualifies = isWeaponVariantLearnable(v, attributeDice);
+                                    let calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(v.name, v.mhs, attributeDice));
+
+                                    if (!variantEval.meetsReq) {
+                                      calculatedAtk = getStepDownDie(calculatedAtk);
+                                      if (calculatedDmg !== '❌') {
+                                        calculatedDmg = String(getStepDownDie(parseInt(calculatedDmg, 10) || 4));
+                                      }
+                                    }
 
                                     return (
                                       <div
                                         key={v.variantType}
                                         className={`p-2 rounded-lg border flex items-center justify-between text-xs font-mono transition-all ${
-                                          qualifies
+                                          variantEval.meetsReq
                                             ? 'bg-slate-900/80 border-slate-800'
-                                            : 'bg-slate-950/40 border-slate-850 opacity-60'
+                                            : 'bg-slate-950/40 border-slate-850 opacity-75'
                                         }`}
                                       >
                                         <div className="flex items-center gap-2">
@@ -934,13 +1058,13 @@ export const WeaponsCard: React.FC = () => {
                                           <span>Dmg: <strong className={isSpecialDmg ? "text-rose-400 font-black text-xs" : "text-rose-300"} title={isSpecialDmg ? "Special Damage: Governed by loaded ammunition type from Equipment" : undefined}>{calculatedDmg}</strong></span>
                                           <span>•</span>
                                           <span>Blk: <strong className="text-amber-300">{v.max_block}</strong></span>
-                                          {qualifies ? (
+                                          {variantEval.meetsReq ? (
                                             <span className="text-[10px] text-emerald-400 font-sans font-bold flex items-center gap-0.5 ml-1">
                                               Qualified
                                             </span>
                                           ) : (
-                                            <span className="text-[10px] text-amber-400/80 font-sans font-semibold ml-1">
-                                              Unskilled Fallback
+                                            <span className="text-[10px] text-amber-400 font-sans font-semibold ml-1">
+                                              Downscaled (-1 die)
                                             </span>
                                           )}
                                         </div>
