@@ -1104,90 +1104,98 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
               {/* Right Column: Supabase Stock Multi-Category Catalog */}
               <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                {/* 1. 4-Dropdown Filter Strip (KISS Information Density Standard) */}
+                {/* 1. 4-Dropdown Filter Strip (Genre, Domain, Exotic, Filter) */}
                 <div className="grid grid-cols-4 gap-1.5 mb-2 shrink-0">
-                  {/* Exotic Filter */}
+                  {/* 1. Genre Filter */}
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 px-0.5 truncate">
-                      Exotic
-                    </span>
-                    <select
-                      value={gearTierFilter}
-                      onChange={(e) => setGearTierFilter(e.target.value as any)}
-                      className={`bg-slate-900 text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-colors ${
-                        gearTierFilter !== 'ALL'
-                          ? 'border-indigo-500 text-indigo-300 shadow-[0_0_8px_rgba(99,102,241,0.2)]'
-                          : 'border-slate-700 text-slate-200 focus:border-teal-500'
-                      }`}
-                    >
-                      <option value="ALL">🌐 All</option>
-                      <option value="STANDARD">⚙️ Standard</option>
-                      <option value="EXOTIC">🧿 Exotics</option>
-                    </select>
-                  </div>
-
-                  {/* Genre Filter */}
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 px-0.5 truncate">
-                      Genre
+                    <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                      localGenreFilter !== 'ALL' ? 'text-amber-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                    }`}>
+                      {localGenreFilter !== 'ALL' && <span className="text-[7px]">●</span>} Genre
                     </span>
                     <select
                       value={localGenreFilter}
                       onChange={(e) => setLocalGenreFilter(e.target.value)}
-                      className={`bg-slate-900 text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-colors ${
+                      className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
                         localGenreFilter !== 'ALL'
-                          ? 'border-amber-500 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
-                          : 'border-slate-700 text-slate-200 focus:border-teal-500'
+                          ? 'bg-amber-950/90 border-amber-400 text-amber-100 ring-1 ring-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.3)] font-extrabold'
+                          : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-teal-500'
                       }`}
                     >
-                      <option value="ALL">🌐 All</option>
-                      <option value="Medieval">🏰 Medieval</option>
-                      <option value="Modern">⚙️ Modern</option>
-                      <option value="SciFi">🚀 SciFi</option>
+                      <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                      <option value="Medieval" className="bg-slate-900 text-slate-200">🏰 Medieval</option>
+                      <option value="Modern" className="bg-slate-900 text-slate-200">⚙️ Modern</option>
+                      <option value="SciFi" className="bg-slate-900 text-slate-200">🚀 SciFi</option>
                     </select>
                   </div>
 
-                  {/* Domain Filter */}
+                  {/* 2. Domain Filter */}
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 px-0.5 truncate">
-                      Domain
+                    <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                      gearDomainFilter !== 'ALL' ? 'text-cyan-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                    }`}>
+                      {gearDomainFilter !== 'ALL' && <span className="text-[7px]">●</span>} Domain
                     </span>
                     <select
                       value={gearDomainFilter}
                       onChange={(e) => setGearDomainFilter(e.target.value as any)}
-                      className={`bg-slate-900 text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-colors ${
+                      className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
                         gearDomainFilter !== 'ALL'
-                          ? 'border-cyan-500 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
-                          : 'border-slate-700 text-slate-200 focus:border-teal-500'
+                          ? 'bg-cyan-950/90 border-cyan-400 text-cyan-100 ring-1 ring-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.3)] font-extrabold'
+                          : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-teal-500'
                       }`}
                     >
-                      <option value="ALL">🌐 All</option>
-                      <option value="Archaic">🗡️ Archaic</option>
-                      <option value="BioTech">🧬 BioTech</option>
-                      <option value="CyberTech">🦾 CyberTech</option>
-                      <option value="Tech">⚡ Tech</option>
-                      <option value="Psionics">🧠 Psionics</option>
-                      <option value="Psychosomatics">🌀 Psychosomatics</option>
-                      <option value="Sorce">✨ Sorce</option>
+                      <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                      <option value="Archaic" className="bg-slate-900 text-slate-200">🗡️ Archaic</option>
+                      <option value="BioTech" className="bg-slate-900 text-slate-200">🧬 BioTech</option>
+                      <option value="CyberTech" className="bg-slate-900 text-slate-200">🦾 CyberTech</option>
+                      <option value="Tech" className="bg-slate-900 text-slate-200">⚡ Tech</option>
+                      <option value="Psionics" className="bg-slate-900 text-slate-200">🧠 Psionics</option>
+                      <option value="Psychosomatics" className="bg-slate-900 text-slate-200">🌀 Psychosomatics</option>
+                      <option value="Sorce" className="bg-slate-900 text-slate-200">✨ Sorce</option>
                     </select>
                   </div>
 
-                  {/* View Filter */}
+                  {/* 3. Exotic Filter */}
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 px-0.5 truncate">
-                      View
+                    <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                      gearTierFilter !== 'ALL' ? 'text-indigo-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                    }`}>
+                      {gearTierFilter !== 'ALL' && <span className="text-[7px]">●</span>} Exotic
+                    </span>
+                    <select
+                      value={gearTierFilter}
+                      onChange={(e) => setGearTierFilter(e.target.value as any)}
+                      className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                        gearTierFilter !== 'ALL'
+                          ? 'bg-indigo-950/90 border-indigo-400 text-indigo-100 ring-1 ring-indigo-400/50 shadow-[0_0_12px_rgba(99,102,241,0.3)] font-extrabold'
+                          : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-teal-500'
+                      }`}
+                    >
+                      <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                      <option value="STANDARD" className="bg-slate-900 text-slate-200">⚙️ Standard</option>
+                      <option value="EXOTIC" className="bg-slate-900 text-slate-200">🧿 Exotics</option>
+                    </select>
+                  </div>
+
+                  {/* 4. Filter (formerly View) */}
+                  <div className="flex flex-col min-w-0">
+                    <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                      gearViewFilter !== 'ALL' ? 'text-yellow-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                    }`}>
+                      {gearViewFilter !== 'ALL' && <span className="text-[7px]">●</span>} Filter
                     </span>
                     <select
                       value={gearViewFilter}
                       onChange={(e) => setGearViewFilter(e.target.value as any)}
-                      className={`bg-slate-900 text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-colors ${
+                      className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
                         gearViewFilter !== 'ALL'
-                          ? 'border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.2)]'
-                          : 'border-slate-700 text-slate-200 focus:border-teal-500'
+                          ? 'bg-yellow-950/90 border-yellow-400 text-yellow-100 ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] font-extrabold'
+                          : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-teal-500'
                       }`}
                     >
-                      <option value="ALL">🌐 All</option>
-                      <option value="STARRED">⭐ Starred {starredCount > 0 ? `(${starredCount})` : ''}</option>
+                      <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                      <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredCount > 0 ? `(${starredCount})` : ''}</option>
                     </select>
                   </div>
                 </div>
