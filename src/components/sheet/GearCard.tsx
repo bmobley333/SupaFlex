@@ -22,6 +22,7 @@ import {
   MagicItem,
   SupabaseBundle,
   ModItem,
+  FunctionItem,
 } from '../../types/game';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { gameApi } from '../../services/api';
@@ -76,6 +77,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [exoticsCatalog, setExoticsCatalog] = useState<MagicItem[]>([]);
   const [kitsCatalog, setKitsCatalog] = useState<SupabaseBundle[]>([]);
   const [modsCatalog, setModsCatalog] = useState<ModItem[]>([]);
+  const [functionsCatalog, setFunctionsCatalog] = useState<FunctionItem[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
 
   // Search & Filter State
@@ -122,8 +124,9 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         gameApi.getExotics(),
         gameApi.getBundles(),
         gameApi.getMods(),
+        gameApi.getFunctions(),
       ])
-        .then(([gearData, weaponsData, armorData, shieldsData, exoticsData, kitsData, modsData]) => {
+        .then(([gearData, weaponsData, armorData, shieldsData, exoticsData, kitsData, modsData, functionsData]) => {
           setGearCatalog(gearData || []);
           setWeaponsCatalog(weaponsData || []);
           setArmorCatalog(armorData || []);
@@ -131,6 +134,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
           setExoticsCatalog(exoticsData || []);
           setKitsCatalog(kitsData || []);
           setModsCatalog(modsData || []);
+          setFunctionsCatalog(functionsData || []);
         })
         .catch((err) => console.error('Failed to load equipment catalogs:', err))
         .finally(() => setIsLoadingCatalog(false));
@@ -144,22 +148,66 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     }
   }, [showManageModal, activeGenre]);
 
-  // Exotic Detection Set & Helper
-  const exoticNameSet = useMemo(() => {
-    return new Set(exoticsCatalog.map((e) => (e.name || '').toLowerCase().trim()));
-  }, [exoticsCatalog]);
+  // Helper to normalize belongs_to references from functions & mods
+  const cleanBelongsToName = (raw: string): string => {
+    return raw
+      .trim()
+      .replace(/^(Weapon|Armor|Shield|Gear|Supplies):\s*/i, '')
+      .replace(/\{[^}]+\}/g, '')
+      .replace(/\(x\d+\)/gi, '')
+      .trim()
+      .toLowerCase();
+  };
 
+  // Host sets derived deterministically from functions and mods catalogs
+  const functionHostNames = useMemo(() => {
+    const set = new Set<string>();
+    functionsCatalog.forEach((fn) => {
+      if (!fn.belongs_to) return;
+      const parts = fn.belongs_to.split(',');
+      for (const part of parts) {
+        const cleaned = cleanBelongsToName(part);
+        if (cleaned) {
+          set.add(cleaned);
+          set.add(cleaned.replace(/\(mso\)/gi, '').trim());
+        }
+      }
+    });
+    return set;
+  }, [functionsCatalog]);
+
+  const modHostNames = useMemo(() => {
+    const set = new Set<string>();
+    modsCatalog.forEach((m) => {
+      if (!m.belongs_to) return;
+      const parts = m.belongs_to.split(',');
+      for (const part of parts) {
+        const cleaned = cleanBelongsToName(part);
+        if (cleaned) {
+          set.add(cleaned);
+          set.add(cleaned.replace(/\(mso\)/gi, '').trim());
+        }
+      }
+    });
+    return set;
+  }, [modsCatalog]);
+
+  // Canonical Exotic Detection across all gear categories
   const isItemExotic = useCallback(
     (item: any): boolean => {
       if (!item) return false;
       if (item.is_exotic) return true;
-      const cat = (item.category || '').toLowerCase();
-      if (cat.includes('exotic')) return true;
       const rawName = (item.name || '').toLowerCase().trim();
-      if (rawName && exoticNameSet.has(rawName)) return true;
+      const strippedName = rawName.replace(/\(mso\)/gi, '').trim();
+      if (rawName && (functionHostNames.has(rawName) || functionHostNames.has(strippedName))) return true;
+      if (rawName && (modHostNames.has(rawName) || modHostNames.has(strippedName))) return true;
+      const cat = (item.category || '').toLowerCase();
+      if (cat.includes('exotic') || cat.includes('cyberware') || cat.includes('biotech') || cat.includes('cybertech')) return true;
+      const disc = (item.discipline || '').toLowerCase();
+      if (disc.includes('cybertech') || disc.includes('biotech')) return true;
       return false;
     },
-    [exoticNameSet]
+    [functionHostNames, modHostNames]
   );
 
   // Current Raw Catalog for Active Shelf Tab
@@ -282,27 +330,25 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     return currentRawCatalog.filter((item) => isItemStarred(item)).length;
   }, [currentRawCatalog, isItemStarred]);
 
-  // Science Discipline Matcher
+  // Science Discipline Matcher (Strict canonical match on discipline & category, avoiding note false positives)
   const matchesScience = useCallback((item: any, science: GearScienceFilter): boolean => {
     if (science === 'ALL') return true;
     const disc = (item.discipline || '').toLowerCase();
     const cat = (item.category || '').toLowerCase();
-    const notes = (item.notes || '').toLowerCase();
-    const name = (item.name || '').toLowerCase();
     const target = science.toLowerCase();
 
     if (target === 'archaic') {
-      return disc.includes('archaic') || cat.includes('archaic') || notes.includes('archaic');
+      return disc.includes('archaic') || cat.includes('archaic');
     }
     if (target === 'biotech') {
-      return disc.includes('biotech') || cat.includes('biotech') || notes.includes('biotech') || name.includes('bio-');
+      return disc.includes('biotech') || cat.includes('biotech');
     }
     if (target === 'cybertech') {
-      return disc.includes('cybertech') || cat.includes('cybertech') || notes.includes('cybertech') || name.includes('cyber') || disc.includes('cyber');
+      return disc.includes('cybertech') || cat.includes('cybertech');
     }
     if (target === 'tech') {
-      if (disc.includes('tech') && !disc.includes('biotech') && !disc.includes('cybertech')) return true;
-      return disc.includes('tech') || cat.includes('tech') || notes.includes('tech');
+      if (disc.includes('biotech') || disc.includes('cybertech')) return false;
+      return disc.includes('tech') || cat.includes('tech');
     }
     return false;
   }, []);
@@ -564,12 +610,18 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       pic: catalogItem.pic,
     };
 
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      simple_gear: [...(prev.simple_gear || []), newGearItem],
-      gold: deduction.newGold,
-      silver: deduction.newSilver,
-    }));
+    updateActiveSheetData((prev) => {
+      const currentGear = prev.simple_gear || [];
+      const currentVault = prev.character_vault || [];
+      const shouldAddToVault = isItemExotic(catalogItem) && !currentVault.some((v: any) => (v.name || '').toLowerCase() === itemName.toLowerCase());
+      return {
+        ...prev,
+        simple_gear: [...currentGear, newGearItem],
+        ...(shouldAddToVault ? { character_vault: [...currentVault, catalogItem] } : {}),
+        gold: deduction.newGold,
+        silver: deduction.newSilver,
+      };
+    });
     saveActiveCharacter();
 
     setGearCatalogFeedback({
@@ -1135,11 +1187,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
                       <span>Loading stock catalog...</span>
                     </div>
-                  ) : filteredCatalog.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic">
-                      <span>No matching {activeCategoryTab} in catalog.</span>
-                    </div>
-                  ) : (
+                  ) : filteredCatalog.length === 0 ? null : (
                     filteredCatalog.map((catalogItem: any) => {
                       const starred = isItemStarred(catalogItem);
                       const costStr = catalogItem.cost || '0s';
@@ -1147,6 +1195,11 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       const canAfford = itemCostSilver <= totalAvailableSilver;
 
                       const isExoticItem = isItemExotic(catalogItem);
+                      const isWeapon = catalogItem.item_type === 'weapon' || activeCategoryTab === 'weapons';
+                      const isArmor = catalogItem.item_type === 'armor' || activeCategoryTab === 'armor';
+                      const isShield = catalogItem.item_type === 'shield' || activeCategoryTab === 'shields';
+                      const isKit = catalogItem.item_type === 'kit' || activeCategoryTab === 'kits';
+
                       const itemTypeKey: 'gear' | 'weapon' | 'armor' | 'shield' | 'exotic' | 'kit' =
                         catalogItem.item_type ||
                         (activeCategoryTab === 'weapons'
@@ -1162,30 +1215,29 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                           : 'gear');
 
                       let itemSubtext = catalogItem.category || 'Supplies';
-                      if (itemTypeKey === 'weapon') {
-                        itemSubtext = ['⚔️ Weapon', catalogItem.type, catalogItem.discipline].filter(Boolean).join(' • ') || 'Weapon';
-                      } else if (itemTypeKey === 'armor') {
-                        itemSubtext = ['🥋 Armor', catalogItem.ar ? `AR: ${catalogItem.ar}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Armor';
-                      } else if (itemTypeKey === 'shield') {
-                        itemSubtext = ['🛡️ Shield', catalogItem.max_block ? `Block: ${catalogItem.max_block}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Shield';
-                      } else if (itemTypeKey === 'kit') {
+                      if (isWeapon) {
+                        itemSubtext = [isExoticItem ? '🧿 Exotic Weapon' : '⚔️ Weapon', catalogItem.type, catalogItem.discipline].filter(Boolean).join(' • ') || 'Weapon';
+                      } else if (isArmor) {
+                        itemSubtext = [isExoticItem ? '🧿 Exotic Armor' : '🥋 Armor', catalogItem.ar ? `AR: ${catalogItem.ar}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Armor';
+                      } else if (isShield) {
+                        itemSubtext = [isExoticItem ? '🧿 Exotic Shield' : '🛡️ Shield', catalogItem.max_block ? `Block: ${catalogItem.max_block}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Shield';
+                      } else if (isKit) {
                         itemSubtext = ['📦 Kit', catalogItem.category].filter(Boolean).join(' • ') || 'Kit';
-                      } else if (itemTypeKey === 'exotic') {
+                      } else if (isExoticItem) {
                         itemSubtext = ['🧿 Exotic', catalogItem.discipline || catalogItem.category].filter(Boolean).join(' • ') || 'Exotic';
                       } else {
                         itemSubtext = ['🎒 Supplies', catalogItem.category || catalogItem.discipline].filter(Boolean).join(' • ') || 'Supplies';
                       }
 
-                      const buyButtonLabel =
-                        itemTypeKey === 'kit'
-                          ? '+ Buy Kit'
-                          : itemTypeKey === 'exotic'
-                          ? '+ Buy Exotic'
-                          : itemTypeKey === 'gear'
-                          ? '+ Buy'
-                          : '+ Equip';
+                      const buyButtonLabel = isKit
+                        ? '+ Buy Kit'
+                        : isExoticItem
+                        ? '+ Buy Exotic'
+                        : isWeapon || isArmor || isShield
+                        ? '+ Equip'
+                        : '+ Buy';
 
-                      const itemKey = String(catalogItem.id || catalogItem.name);
+                      const itemKey = `${catalogItem.item_type || activeCategoryTab}_${catalogItem.id || 'x'}_${catalogItem.name}`;
                       const isModsExpanded = expandedCatalogModId === itemKey;
                       const availableMods = modsCatalog.filter((m: any) => {
                         if (!m.belongs_to || !catalogItem.name) return false;
