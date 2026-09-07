@@ -24,12 +24,14 @@ import {
   ModItem,
 } from '../../types/game';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
-import { QuickDeckBar, QuickDeckDomain } from '../common/QuickDeckBar';
 import { gameApi } from '../../services/api';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
-export type EquipmentCategoryTab = 'supplies' | 'weapons' | 'armor' | 'shields' | 'exotics' | 'kits';
+export type EquipmentCategoryTab = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields' | 'kits';
+export type GearTierFilter = 'ALL' | 'STANDARD' | 'EXOTIC';
+export type GearScienceFilter = 'ALL' | 'Archaic' | 'BioTech' | 'CyberTech' | 'Tech';
+export type GearViewFilter = 'ALL' | 'STARRED';
 
 /**
  * Calculates total gold and silver inventory value for equipped gear items.
@@ -63,8 +65,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Active Category Tab: supplies | weapons | armor | shields | exotics | kits
-  const [activeCategoryTab, setActiveCategoryTab] = useState<EquipmentCategoryTab>('supplies');
+  // Active Category Tab: all | supplies | weapons | armor | shields | kits
+  const [activeCategoryTab, setActiveCategoryTab] = useState<EquipmentCategoryTab>('all');
 
   // Supabase Catalogs State
   const [gearCatalog, setGearCatalog] = useState<SupabaseGear[]>([]);
@@ -79,7 +81,9 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   // Search & Filter State
   const [gearInventorySearchQuery, setGearInventorySearchQuery] = useState<string>('');
   const [gearCatalogSearchQuery, setGearCatalogSearchQuery] = useState<string>('');
-  const [activeFilterTable, setActiveFilterTable] = useState<string>('ALL');
+  const [gearTierFilter, setGearTierFilter] = useState<GearTierFilter>('ALL');
+  const [gearScienceFilter, setGearScienceFilter] = useState<GearScienceFilter>('ALL');
+  const [gearViewFilter, setGearViewFilter] = useState<GearViewFilter>('ALL');
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [gearCatalogFeedback, setGearCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [expandedCatalogModId, setExpandedCatalogModId] = useState<string | null>(null);
@@ -140,140 +144,85 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     }
   }, [showManageModal, activeGenre]);
 
-  // Reset active filter table when switching categories
-  useEffect(() => {
-    setActiveFilterTable('ALL');
-  }, [activeCategoryTab]);
+  // Exotic Detection Set & Helper
+  const exoticNameSet = useMemo(() => {
+    return new Set(exoticsCatalog.map((e) => (e.name || '').toLowerCase().trim()));
+  }, [exoticsCatalog]);
 
-  // Click outside to close modal
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        setShowManageModal(false);
-      }
-    };
-    if (showManageModal) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showManageModal]);
+  const isItemExotic = useCallback(
+    (item: any): boolean => {
+      if (!item) return false;
+      if (item.is_exotic) return true;
+      const cat = (item.category || '').toLowerCase();
+      if (cat.includes('exotic')) return true;
+      const rawName = (item.name || '').toLowerCase().trim();
+      if (rawName && exoticNameSet.has(rawName)) return true;
+      return false;
+    },
+    [exoticNameSet]
+  );
 
-  // Current Raw Catalog for Active Tab
+  // Current Raw Catalog for Active Shelf Tab
   const currentRawCatalog = useMemo(() => {
     switch (activeCategoryTab) {
       case 'weapons':
-        return weaponsCatalog;
+        return weaponsCatalog.map((w: any) => ({ ...w, item_type: 'weapon' as const }));
       case 'armor':
-        return armorCatalog;
+        return armorCatalog.map((a: any) => ({ ...a, item_type: 'armor' as const }));
       case 'shields':
-        return shieldsCatalog;
-      case 'exotics':
-        return exoticsCatalog;
+        return shieldsCatalog.map((s: any) => ({ ...s, item_type: 'shield' as const }));
       case 'kits':
-        return kitsCatalog;
+        return kitsCatalog.map((k: any) => ({ ...k, item_type: 'kit' as const }));
       case 'supplies':
-      default:
-        return gearCatalog;
+        return gearCatalog.map((g: any) => ({
+          ...g,
+          item_type: isItemExotic(g) ? ('exotic' as const) : ('gear' as const),
+        }));
+      case 'all':
+      default: {
+        const suppliesItems = gearCatalog.map((g: any) => ({
+          ...g,
+          item_type: isItemExotic(g) ? ('exotic' as const) : ('gear' as const),
+        }));
+        const weaponsItems = weaponsCatalog.map((w: any) => ({ ...w, item_type: 'weapon' as const }));
+        const armorItems = armorCatalog.map((a: any) => ({ ...a, item_type: 'armor' as const }));
+        const shieldsItems = shieldsCatalog.map((s: any) => ({ ...s, item_type: 'shield' as const }));
+        const kitsItems = kitsCatalog.map((k: any) => ({ ...k, item_type: 'kit' as const }));
+        return [...suppliesItems, ...weaponsItems, ...armorItems, ...shieldsItems, ...kitsItems];
+      }
     }
-  }, [activeCategoryTab, gearCatalog, weaponsCatalog, armorCatalog, shieldsCatalog, exoticsCatalog, kitsCatalog]);
+  }, [
+    activeCategoryTab,
+    gearCatalog,
+    weaponsCatalog,
+    armorCatalog,
+    shieldsCatalog,
+    kitsCatalog,
+    isItemExotic,
+  ]);
 
-  // QuickDeck Domain and Theme
-  const quickDeckDomain: QuickDeckDomain = useMemo(() => {
-    return activeCategoryTab;
-  }, [activeCategoryTab]);
-
-  const categoryColorTheme = useMemo<'emerald' | 'rose' | 'amber' | 'cyan' | 'purple'>(() => {
-    switch (activeCategoryTab) {
-      case 'weapons':
-        return 'rose';
-      case 'armor':
-        return 'amber';
-      case 'shields':
-        return 'cyan';
-      case 'exotics':
-      case 'kits':
-        return 'purple';
-      case 'supplies':
-      default:
-        return 'emerald';
-    }
-  }, [activeCategoryTab]);
-
-  const categoryPlaceholderText = useMemo<string>(() => {
-    switch (activeCategoryTab) {
-      case 'weapons':
-        return '➕ Pin Weapon Table';
-      case 'armor':
-        return '➕ Pin Armor Table';
-      case 'shields':
-        return '➕ Pin Shield Table';
-      case 'exotics':
-        return '➕ Pin Exotics Table';
-      case 'kits':
-        return '➕ Pin Kits Table';
-      case 'supplies':
-      default:
-        return '➕ Pin Supplies Table';
-    }
-  }, [activeCategoryTab]);
-
-  // Pinned Tables per Category
-  const currentPinnedTables: string[] = useMemo(() => {
-    const sheetData = activeCharacter?.sheet_data;
-    if (!sheetData) return [];
-    switch (activeCategoryTab) {
-      case 'weapons':
-        return sheetData.favorite_weapon_tables || [];
-      case 'armor':
-        return sheetData.favorite_armor_tables || [];
-      case 'shields':
-        return sheetData.favorite_shield_tables || [];
-      case 'supplies':
-      default:
-        return sheetData.favorite_gear_tables || [];
-    }
-  }, [activeCategoryTab, activeCharacter?.sheet_data]);
-
-  const handleUpdatePinnedTables = (tables: string[]) => {
-    const key =
-      activeCategoryTab === 'weapons'
-        ? 'favorite_weapon_tables'
-        : activeCategoryTab === 'armor'
-        ? 'favorite_armor_tables'
-        : activeCategoryTab === 'shields'
-        ? 'favorite_shield_tables'
-        : 'favorite_gear_tables';
-
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      [key]: tables,
-    }));
-    saveActiveCharacter();
-  };
-
-  // Starred Items per Category
+  // Starred Items Check
   const isItemStarred = useCallback(
     (targetItem: any) => {
       const sheetData = activeCharacter?.sheet_data;
       if (!sheetData) return false;
 
       let starredList: (string | number)[] = [];
-      switch (activeCategoryTab) {
-        case 'weapons':
-          starredList = sheetData.starred_weapons || [];
-          break;
-        case 'armor':
-          starredList = sheetData.starred_armor || [];
-          break;
-        case 'shields':
-          starredList = sheetData.starred_shields || [];
-          break;
-        case 'supplies':
-        default:
-          starredList = sheetData.starred_gear || sheetData.starred_armor || [];
-          break;
+      if (activeCategoryTab === 'all') {
+        starredList = [
+          ...(sheetData.starred_gear || []),
+          ...(sheetData.starred_weapons || []),
+          ...(sheetData.starred_armor || []),
+          ...(sheetData.starred_shields || []),
+        ];
+      } else if (activeCategoryTab === 'weapons') {
+        starredList = sheetData.starred_weapons || [];
+      } else if (activeCategoryTab === 'armor') {
+        starredList = sheetData.starred_armor || [];
+      } else if (activeCategoryTab === 'shields') {
+        starredList = sheetData.starred_shields || [];
+      } else {
+        starredList = sheetData.starred_gear || sheetData.starred_armor || [];
       }
 
       if (!starredList.length) return false;
@@ -293,12 +242,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const handleToggleStarItem = (targetItem: any) => {
     const rawName = targetItem.name || '';
     const itemKey = targetItem.id || rawName;
+    const itemType = targetItem.item_type || activeCategoryTab;
     const key =
-      activeCategoryTab === 'weapons'
+      itemType === 'weapon' || itemType === 'weapons'
         ? 'starred_weapons'
-        : activeCategoryTab === 'armor'
+        : itemType === 'armor'
         ? 'starred_armor'
-        : activeCategoryTab === 'shields'
+        : itemType === 'shield' || itemType === 'shields'
         ? 'starred_shields'
         : 'starred_gear';
 
@@ -332,7 +282,32 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     return currentRawCatalog.filter((item) => isItemStarred(item)).length;
   }, [currentRawCatalog, isItemStarred]);
 
-  // Filtered Catalog
+  // Science Discipline Matcher
+  const matchesScience = useCallback((item: any, science: GearScienceFilter): boolean => {
+    if (science === 'ALL') return true;
+    const disc = (item.discipline || '').toLowerCase();
+    const cat = (item.category || '').toLowerCase();
+    const notes = (item.notes || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    const target = science.toLowerCase();
+
+    if (target === 'archaic') {
+      return disc.includes('archaic') || cat.includes('archaic') || notes.includes('archaic');
+    }
+    if (target === 'biotech') {
+      return disc.includes('biotech') || cat.includes('biotech') || notes.includes('biotech') || name.includes('bio-');
+    }
+    if (target === 'cybertech') {
+      return disc.includes('cybertech') || cat.includes('cybertech') || notes.includes('cybertech') || name.includes('cyber') || disc.includes('cyber');
+    }
+    if (target === 'tech') {
+      if (disc.includes('tech') && !disc.includes('biotech') && !disc.includes('cybertech')) return true;
+      return disc.includes('tech') || cat.includes('tech') || notes.includes('tech');
+    }
+    return false;
+  }, []);
+
+  // Filtered Catalog Pipeline
   const filteredCatalog = useMemo(() => {
     const equippedNames = new Set(gearList.map((g) => g.name.toLowerCase()));
     const unequipped = currentRawCatalog.filter((g: any) => {
@@ -343,27 +318,29 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       return true;
     });
 
+    // 1. Genre filter
     let base = unequipped.filter((g) =>
       localGenreFilter === 'ALL' ? true : matchesGenre(g.genres, localGenreFilter as any)
     );
 
-    if (activeFilterTable === 'STARRED') {
-      base = base.filter((g) => isItemStarred(g));
-    } else if (activeFilterTable !== 'ALL' && activeFilterTable !== 'STARRED') {
-      const activeLower = activeFilterTable.toLowerCase();
-      base = base.filter((g: any) => {
-        const tbl = (
-          g.table_group ||
-          g.discipline ||
-          g.category ||
-          g.kit ||
-          g.type ||
-          'General'
-        ).toLowerCase();
-        return tbl === activeLower || tbl.includes(activeLower);
-      });
+    // 2. Exotic / Tier filter
+    if (gearTierFilter === 'STANDARD') {
+      base = base.filter((g) => !isItemExotic(g));
+    } else if (gearTierFilter === 'EXOTIC') {
+      base = base.filter((g) => isItemExotic(g));
     }
 
+    // 3. Science discipline filter
+    if (gearScienceFilter !== 'ALL') {
+      base = base.filter((g) => matchesScience(g, gearScienceFilter));
+    }
+
+    // 4. View / Starred filter
+    if (gearViewFilter === 'STARRED') {
+      base = base.filter((g) => isItemStarred(g));
+    }
+
+    // 5. Keyword search filter
     const result = !gearCatalogSearchQuery.trim()
       ? base
       : base.filter((g: any) => {
@@ -378,8 +355,12 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   }, [
     currentRawCatalog,
     gearList,
-    activeFilterTable,
+    gearTierFilter,
+    gearScienceFilter,
+    gearViewFilter,
     isItemStarred,
+    isItemExotic,
+    matchesScience,
     gearCatalogSearchQuery,
     localGenreFilter,
     isGsUnlocked,
@@ -933,8 +914,104 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
               {/* Right Column: Supabase Stock Multi-Category Catalog */}
               <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                {/* 1. Category Multi-Option Pill Switch (KISS Dyslexia-Friendly Standard) */}
+                {/* 1. 4-Dropdown Filter Strip (KISS Information Density Standard) */}
+                <div className="grid grid-cols-4 gap-1.5 mb-2 shrink-0">
+                  {/* Exotic Filter */}
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 px-0.5 truncate">
+                      Exotic
+                    </span>
+                    <select
+                      value={gearTierFilter}
+                      onChange={(e) => setGearTierFilter(e.target.value as any)}
+                      className={`bg-slate-900 text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-colors ${
+                        gearTierFilter !== 'ALL'
+                          ? 'border-indigo-500 text-indigo-300 shadow-[0_0_8px_rgba(99,102,241,0.2)]'
+                          : 'border-slate-700 text-slate-200 focus:border-teal-500'
+                      }`}
+                    >
+                      <option value="ALL">🌐 All</option>
+                      <option value="STANDARD">⚙️ Standard</option>
+                      <option value="EXOTIC">🧿 Exotics</option>
+                    </select>
+                  </div>
+
+                  {/* Genre Filter */}
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 px-0.5 truncate">
+                      Genre
+                    </span>
+                    <select
+                      value={localGenreFilter}
+                      onChange={(e) => setLocalGenreFilter(e.target.value)}
+                      className={`bg-slate-900 text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-colors ${
+                        localGenreFilter !== 'ALL'
+                          ? 'border-amber-500 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
+                          : 'border-slate-700 text-slate-200 focus:border-teal-500'
+                      }`}
+                    >
+                      <option value="ALL">🌐 All</option>
+                      <option value="Medieval">🏰 Medieval</option>
+                      <option value="Modern">⚙️ Modern</option>
+                      <option value="SciFi">🚀 SciFi</option>
+                    </select>
+                  </div>
+
+                  {/* Science Filter */}
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 px-0.5 truncate">
+                      Science
+                    </span>
+                    <select
+                      value={gearScienceFilter}
+                      onChange={(e) => setGearScienceFilter(e.target.value as any)}
+                      className={`bg-slate-900 text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-colors ${
+                        gearScienceFilter !== 'ALL'
+                          ? 'border-cyan-500 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
+                          : 'border-slate-700 text-slate-200 focus:border-teal-500'
+                      }`}
+                    >
+                      <option value="ALL">🌐 All</option>
+                      <option value="Archaic">🗡️ Archaic</option>
+                      <option value="BioTech">🧬 BioTech</option>
+                      <option value="CyberTech">🦾 CyberTech</option>
+                      <option value="Tech">⚡ Tech</option>
+                    </select>
+                  </div>
+
+                  {/* View Filter */}
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 px-0.5 truncate">
+                      View
+                    </span>
+                    <select
+                      value={gearViewFilter}
+                      onChange={(e) => setGearViewFilter(e.target.value as any)}
+                      className={`bg-slate-900 text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-colors ${
+                        gearViewFilter !== 'ALL'
+                          ? 'border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.2)]'
+                          : 'border-slate-700 text-slate-200 focus:border-teal-500'
+                      }`}
+                    >
+                      <option value="ALL">🌐 All</option>
+                      <option value="STARRED">⭐ Starred {starredCount > 0 ? `(${starredCount})` : ''}</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 2. Category Multi-Option Pill Switch (KISS Dyslexia-Friendly Standard) */}
                 <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md mb-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategoryTab('all')}
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      activeCategoryTab === 'all'
+                        ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🌐 All
+                  </button>
                   <button
                     type="button"
                     onClick={() => setActiveCategoryTab('supplies')}
@@ -981,17 +1058,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActiveCategoryTab('exotics')}
-                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                      activeCategoryTab === 'exotics'
-                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    🧿 Exotics
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setActiveCategoryTab('kits')}
                     className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                       activeCategoryTab === 'kits'
@@ -1003,51 +1069,20 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                   </button>
                 </div>
 
-                {/* 2. QuickDeckBar & Search Filter Stack */}
-                <div className="flex flex-col gap-2 pb-2 border-b border-slate-800/80 shrink-0">
-                  {/* Genre Dropdown */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <select
-                      value={localGenreFilter}
-                      onChange={(e) => setLocalGenreFilter(e.target.value)}
-                      className="bg-slate-900 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-teal-500 cursor-pointer flex-1"
-                    >
-                      <option value="ALL">🌐 All Genres</option>
-                      <option value="Medieval">🏰 Medieval</option>
-                      <option value="Modern">⚙️ Modern</option>
-                      <option value="SciFi">🚀 SciFi</option>
-                    </select>
+                {/* 3. Search Bar + Dynamic Result Breadcrumb */}
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-800/80 shrink-0">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder={`Search ${activeCategoryTab === 'all' ? 'all gear' : activeCategoryTab}, categories, notes...`}
+                      value={gearCatalogSearchQuery}
+                      onChange={(e) => setGearCatalogSearchQuery(e.target.value)}
+                      className="w-full bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-teal-500"
+                    />
                   </div>
-
-                  {/* Universal Quick Deck Bar */}
-                  <QuickDeckBar
-                    domain={quickDeckDomain}
-                    activeTable={activeFilterTable}
-                    onSelectTable={setActiveFilterTable}
-                    pinnedTables={currentPinnedTables}
-                    onUpdatePinnedTables={handleUpdatePinnedTables}
-                    catalogItems={currentRawCatalog}
-                    starredCount={starredCount}
-                    colorTheme={categoryColorTheme}
-                    totalCatalogCount={currentRawCatalog.length}
-                    placeholderText={categoryPlaceholderText}
-                  />
-
-                  {/* Search Bar + Dynamic Result Breadcrumb */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="relative flex-1">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder={`Search ${activeCategoryTab}, categories, notes...`}
-                        value={gearCatalogSearchQuery}
-                        onChange={(e) => setGearCatalogSearchQuery(e.target.value)}
-                        className="w-full bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-teal-500"
-                      />
-                    </div>
-                    <div className="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono font-bold text-slate-300 shrink-0">
-                      {filteredCatalog.length} {filteredCatalog.length === 1 ? 'item' : 'items'}
-                    </div>
+                  <div className="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono font-bold text-slate-300 shrink-0">
+                    {filteredCatalog.length} {filteredCatalog.length === 1 ? 'item' : 'items'}
                   </div>
                 </div>
 
@@ -1055,14 +1090,16 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                 {filteredCatalog.length === 0 && !isLoadingCatalog && (
                   <div className="p-3.5 bg-slate-950/60 rounded-xl border border-teal-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
                     <span className="text-teal-300 font-semibold">
-                      0 {activeCategoryTab} match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
-                      {activeFilterTable !== 'ALL' && activeFilterTable !== 'STARRED' ? ` • ${activeFilterTable}` : ''})
+                      0 items match active filters
                     </span>
                     <button
                       type="button"
                       onClick={() => {
+                        setActiveCategoryTab('all');
+                        setGearTierFilter('ALL');
                         setLocalGenreFilter(activeGenre || 'SciFi');
-                        setActiveFilterTable('ALL');
+                        setGearScienceFilter('ALL');
+                        setGearViewFilter('ALL');
                         setGearCatalogSearchQuery('');
                       }}
                       className="px-3 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
@@ -1109,40 +1146,42 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       const itemCostSilver = parseCostToSilver(costStr);
                       const canAfford = itemCostSilver <= totalAvailableSilver;
 
-                      let itemSubtext = catalogItem.category || 'Supplies';
-                      if (activeCategoryTab === 'weapons') {
-                        itemSubtext = [catalogItem.type, catalogItem.discipline].filter(Boolean).join(' • ') || 'Weapon';
-                      } else if (activeCategoryTab === 'armor') {
-                        itemSubtext = [catalogItem.ar ? `AR: ${catalogItem.ar}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Armor';
-                      } else if (activeCategoryTab === 'shields') {
-                        itemSubtext = [catalogItem.max_block ? `Block: ${catalogItem.max_block}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Shield';
-                      } else if (activeCategoryTab === 'exotics') {
-                        itemSubtext = ['🧿 Exotic', catalogItem.discipline].filter(Boolean).join(' • ') || 'Exotic';
-                      } else if (activeCategoryTab === 'kits') {
-                        itemSubtext = ['📦 Kit Suite', catalogItem.category].filter(Boolean).join(' • ') || 'Kit Suite';
-                      } else if (activeCategoryTab === 'supplies') {
-                        itemSubtext = ['🎒 Supplies', catalogItem.category].filter(Boolean).join(' • ') || 'Supplies';
-                      }
-
+                      const isExoticItem = isItemExotic(catalogItem);
                       const itemTypeKey: 'gear' | 'weapon' | 'armor' | 'shield' | 'exotic' | 'kit' =
-                        activeCategoryTab === 'weapons'
+                        catalogItem.item_type ||
+                        (activeCategoryTab === 'weapons'
                           ? 'weapon'
                           : activeCategoryTab === 'armor'
                           ? 'armor'
                           : activeCategoryTab === 'shields'
                           ? 'shield'
-                          : activeCategoryTab === 'exotics'
-                          ? 'exotic'
                           : activeCategoryTab === 'kits'
                           ? 'kit'
-                          : 'gear';
+                          : isExoticItem
+                          ? 'exotic'
+                          : 'gear');
+
+                      let itemSubtext = catalogItem.category || 'Supplies';
+                      if (itemTypeKey === 'weapon') {
+                        itemSubtext = ['⚔️ Weapon', catalogItem.type, catalogItem.discipline].filter(Boolean).join(' • ') || 'Weapon';
+                      } else if (itemTypeKey === 'armor') {
+                        itemSubtext = ['🥋 Armor', catalogItem.ar ? `AR: ${catalogItem.ar}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Armor';
+                      } else if (itemTypeKey === 'shield') {
+                        itemSubtext = ['🛡️ Shield', catalogItem.max_block ? `Block: ${catalogItem.max_block}` : null, catalogItem.discipline].filter(Boolean).join(' • ') || 'Shield';
+                      } else if (itemTypeKey === 'kit') {
+                        itemSubtext = ['📦 Kit', catalogItem.category].filter(Boolean).join(' • ') || 'Kit';
+                      } else if (itemTypeKey === 'exotic') {
+                        itemSubtext = ['🧿 Exotic', catalogItem.discipline || catalogItem.category].filter(Boolean).join(' • ') || 'Exotic';
+                      } else {
+                        itemSubtext = ['🎒 Supplies', catalogItem.category || catalogItem.discipline].filter(Boolean).join(' • ') || 'Supplies';
+                      }
 
                       const buyButtonLabel =
-                        activeCategoryTab === 'kits'
+                        itemTypeKey === 'kit'
                           ? '+ Buy Kit'
-                          : activeCategoryTab === 'exotics'
+                          : itemTypeKey === 'exotic'
                           ? '+ Buy Exotic'
-                          : activeCategoryTab === 'supplies'
+                          : itemTypeKey === 'gear'
                           ? '+ Buy'
                           : '+ Equip';
 
@@ -1221,9 +1260,9 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                   className={`px-2.5 py-1 text-xs font-bold rounded-lg transition shrink-0 shadow-sm border ${
                                     !canAfford
                                       ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-500 border-slate-700/80 opacity-60 cursor-not-allowed'
-                                      : activeCategoryTab === 'kits'
+                                      : itemTypeKey === 'kit'
                                       ? 'bg-purple-950/80 hover:bg-purple-900 border-purple-500/40 text-purple-300 cursor-pointer'
-                                      : activeCategoryTab === 'exotics'
+                                      : itemTypeKey === 'exotic'
                                       ? 'bg-indigo-950/80 hover:bg-indigo-900 border-indigo-500/40 text-indigo-300 cursor-pointer'
                                       : 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-300 cursor-pointer'
                                   }`}
