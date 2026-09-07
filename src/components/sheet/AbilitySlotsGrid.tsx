@@ -1676,9 +1676,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
                   {/* --- RIGHT COLUMN: TABS INTERFACE --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                    {/* Pane Sub-Tab Header */}
-                    <div className="flex border-b border-slate-800 mb-4 shrink-0">
-                      {type === 'spells' && (
+                    {/* Pane Sub-Tab Header (Spells only; Powers has a single unified catalog pane) */}
+                    {type === 'spells' && (
+                      <div className="flex border-b border-slate-800 mb-4 shrink-0">
                         <button
                           type="button"
                           onClick={() => {
@@ -1693,26 +1693,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         >
                           🏺 Function Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
                         </button>
-                      )}
-
-                      {type === 'powers' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isVersionEditMode) setIsVersionEditMode(false);
-                            setActiveRightTab('CATALOG');
-                          }}
-                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'CATALOG'
-                              ? 'border-amber-400 text-amber-400'
-                              : 'border-transparent text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          🌐 Catalog ({filteredCatalogAbilities.length})
-                        </button>
-                      )}
-
-                      {type === 'spells' && (
                         <button
                           type="button"
                           onClick={() => {
@@ -1727,22 +1707,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         >
                           ⚡ Buy Slots
                         </button>
-                      )}
-
-                      {isVersionEditMode && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveRightTab('EDITOR')}
-                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'EDITOR'
-                              ? 'border-violet-400 text-violet-400'
-                              : 'border-transparent text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          ✨ Version Editor
-                        </button>
-                      )}
-                    </div>
+                        {isVersionEditMode && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveRightTab('EDITOR')}
+                            className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                              activeRightTab === 'EDITOR'
+                                ? 'border-violet-400 text-violet-400'
+                                : 'border-transparent text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            ✨ Version Editor
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     {/* TAB: POWER CODEX VIEW (powers mode) */}
                     {activeRightTab === 'CODEX' && type === 'powers' && (() => {
@@ -2071,14 +2050,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               {/* 1. DENSE 3-DROPDOWN ROW (Genre, Domain, Filter) */}
                               <div className="grid grid-cols-3 gap-1.5 shrink-0">
                                 {/* Genre Dropdown */}
-                                <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 min-w-0">
+                                <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 min-w-0 overflow-hidden">
                                   <span className="text-[10px] font-mono font-bold text-slate-400 uppercase shrink-0">
                                     Genre
                                   </span>
                                   <select
                                     value={localGenreFilter}
                                     onChange={(e) => setLocalGenreFilter(e.target.value)}
-                                    className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                                    className={`text-xs font-bold px-1.5 py-0.5 rounded-lg border outline-none cursor-pointer truncate flex-1 min-w-0 w-full transition-all ${
                                       localGenreFilter !== 'ALL'
                                         ? 'bg-amber-950/90 border-amber-400 text-amber-100 ring-1 ring-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.3)] font-extrabold'
                                         : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-amber-500'
@@ -2092,14 +2071,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 </div>
 
                                 {/* Domain Dropdown */}
-                                <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 min-w-0">
+                                <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 min-w-0 overflow-hidden">
                                   <span className="text-[10px] font-mono font-bold text-slate-400 uppercase shrink-0">
                                     Domain
                                   </span>
                                   <select
                                     value={powerDomainFilter}
                                     onChange={(e) => setPowerDomainFilter(e.target.value)}
-                                    className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                                    className={`text-xs font-bold px-1.5 py-0.5 rounded-lg border outline-none cursor-pointer truncate flex-1 min-w-0 w-full transition-all ${
                                       powerDomainFilter !== 'ALL'
                                         ? 'bg-amber-950/90 border-amber-400 text-amber-100 ring-1 ring-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.3)] font-extrabold'
                                         : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-amber-500'
@@ -2115,28 +2094,28 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 </div>
 
                                 {/* Filter Dropdown (Discipline / Starred) */}
-                                <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 min-w-0">
+                                <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 min-w-0 overflow-hidden">
                                   <span className="text-[10px] font-mono font-bold text-slate-400 uppercase shrink-0">
                                     Filter
                                   </span>
                                   <select
                                     value={powerDisciplineFilter}
                                     onChange={(e) => setPowerDisciplineFilter(e.target.value)}
-                                    className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                                    className={`text-xs font-bold px-1.5 py-0.5 rounded-lg border outline-none cursor-pointer truncate flex-1 min-w-0 w-full transition-all ${
                                       powerDisciplineFilter !== 'ALL'
                                         ? 'bg-yellow-950/90 border-yellow-400 text-yellow-100 ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] font-extrabold'
                                         : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-amber-500'
                                     }`}
                                   >
                                     <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                                    <option value="STARRED" className="bg-slate-900 text-slate-200">
+                                      ⭐ Starred {starredCatalogItems.length > 0 ? `(${starredCatalogItems.length})` : ''}
+                                    </option>
                                     {POWER_DISCIPLINES.map((disc) => (
                                       <option key={disc} value={disc} className="bg-slate-900 text-slate-200">
                                         {disc}
                                       </option>
                                     ))}
-                                    <option value="STARRED" className="bg-slate-900 text-slate-200">
-                                      ⭐ Starred {starredCatalogItems.length > 0 ? `(${starredCatalogItems.length})` : ''}
-                                    </option>
                                   </select>
                                 </div>
                               </div>

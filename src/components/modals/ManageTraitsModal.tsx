@@ -48,7 +48,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   // Right Pane Catalog Filter States
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [localDomainFilter, setLocalDomainFilter] = useState<string>('ALL');
-  const [traitTypeFilter, setTraitTypeFilter] = useState<'ALL' | 'INHERENT' | 'MODULAR' | 'STARRED'>('ALL');
+  const [traitTypeFilter, setTraitTypeFilter] = useState<'ALL' | 'STARRED'>('ALL');
   const [traitCategoryFilter, setTraitCategoryFilter] = useState<'all' | 'in_path' | 'out_of_path'>('all');
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
 
@@ -155,12 +155,8 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
           }
         }
 
-        // 3. Filter Dropdown (Inherent, Modular, Starred)
-        if (traitTypeFilter === 'INHERENT') {
-          if (!isTraitInherent(r)) return false;
-        } else if (traitTypeFilter === 'MODULAR') {
-          if (isTraitInherent(r)) return false;
-        } else if (traitTypeFilter === 'STARRED') {
+        // 3. Filter Dropdown (Starred)
+        if (traitTypeFilter === 'STARRED') {
           if (!isRuleStarred(r.id || r.name)) return false;
         }
 
@@ -457,15 +453,13 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                 ))}
               </select>
 
-              {/* Dropdown 3: Filter (Inherent, Modular, Starred) */}
+              {/* Dropdown 3: Filter (Starred) */}
               <select
                 value={traitTypeFilter}
                 onChange={(e) => setTraitTypeFilter(e.target.value as any)}
                 className="bg-slate-900 text-purple-300 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 cursor-pointer w-full truncate shadow-sm"
               >
                 <option value="ALL">🌐 All Traits</option>
-                <option value="INHERENT">🧬 Inherent ({'{Perk}'})</option>
-                <option value="MODULAR">⚙️ Modular</option>
                 <option value="STARRED">⭐ Starred ({starredTraitsCount})</option>
               </select>
             </div>

@@ -811,12 +811,12 @@ export const SkillsetsPanel: React.FC = () => {
                         className="bg-slate-900 text-indigo-300 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-indigo-500 cursor-pointer w-full truncate shadow-sm"
                       >
                         <option value="ALL">🌐 All Attributes</option>
+                        <option value="STARRED">⭐ Starred ({starredSkillsetsCount + starredSkillsCount})</option>
                         <option value="💪">💪 Might</option>
                         <option value="🏃">🏃 Motion</option>
                         <option value="👁️">👁️ Mind</option>
                         <option value="✨">✨ Magic</option>
                         <option value="🫀">🫀 Moxie</option>
-                        <option value="STARRED">⭐ Starred ({starredSkillsetsCount + starredSkillsCount})</option>
                       </select>
                     </div>
 

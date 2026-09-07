@@ -532,13 +532,6 @@ export const ArmorCard: React.FC = () => {
                   </div>
                   {/* --- RIGHT COLUMN: STOCK CATALOG PANE --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                    {/* Catalog Header */}
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 shrink-0">
-                      <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                        🌐 Stock Catalog ({filteredCatalogArmor.length})
-                      </span>
-                    </div>
-
                     {/* Stock Catalog Content */}
                     <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
                       {/* 1. 3-Dropdown Filter Strip (Genre, Domain, Filter) */}
@@ -608,12 +601,12 @@ export const ArmorCard: React.FC = () => {
                             }`}
                           >
                             <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredArmorCount > 0 ? `(${starredArmorCount})` : ''}</option>
                             <option value="4" className="bg-slate-900 text-slate-200">🧥 AR 4</option>
                             <option value="6" className="bg-slate-900 text-slate-200">🧥 AR 6</option>
                             <option value="8" className="bg-slate-900 text-slate-200">🧥 AR 8</option>
                             <option value="10" className="bg-slate-900 text-slate-200">🧥 AR 10</option>
                             <option value="12" className="bg-slate-900 text-slate-200">🧥 AR 12</option>
-                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredArmorCount > 0 ? `(${starredArmorCount})` : ''}</option>
                           </select>
                         </div>
                       </div>
@@ -748,9 +741,6 @@ export const ArmorCard: React.FC = () => {
                                     <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
                                       <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
                                       <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
-                                    </span>
-                                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
-                                      {item.cost}
                                     </span>
                                     {/* AP Cost Badge */}
                                     <span

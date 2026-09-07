@@ -268,7 +268,7 @@ export const WeaponsCard: React.FC = () => {
         atk: String(calculatedAtk),
         dmg: calculatedDmg,
         max_blk: cleanBlockNum,
-        effect: `${variant.variantType} Weapon (${evalResult.apCost} AP${variantEval.statDownscaled ? ', Downscaled' : ''}, Req ${variant.requirementStr}, Cost ${variant.cost})`,
+        effect: `${variant.variantType} Weapon (${evalResult.apCost} AP${variantEval.statDownscaled ? ', Downscaled' : ''}, Req ${variant.requirementStr})`,
         notes: weapon.notes,
         ap_cost: evalResult.apCost,
       };
@@ -738,13 +738,6 @@ export const WeaponsCard: React.FC = () => {
 
                   {/* --- RIGHT COLUMN: STOCK CATALOG PANE --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                    {/* Catalog Header */}
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 shrink-0">
-                      <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
-                        🌐 Stock Catalog ({filteredCatalogWeapons.length})
-                      </span>
-                    </div>
-
                     {/* Stock Catalog Content */}
                     <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-hidden">
                       {/* 1. 3-Dropdown Filter Strip (Genre, Domain, Filter) */}
@@ -814,13 +807,13 @@ export const WeaponsCard: React.FC = () => {
                             }`}
                           >
                             <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredWeaponsCount > 0 ? `(${starredWeaponsCount})` : ''}</option>
                             <option value="Unarmed" className="bg-slate-900 text-slate-200">🥊 Unarmed</option>
                             <option value="Hurled" className="bg-slate-900 text-slate-200">🪓 Hurled</option>
                             <option value="Melee" className="bg-slate-900 text-slate-200">🗡️ Melee</option>
                             <option value="Melee, Hurled" className="bg-slate-900 text-slate-200">⚔️ Melee, Hurled</option>
                             <option value="Melee, Shot" className="bg-slate-900 text-slate-200">🏹 Melee, Shot</option>
                             <option value="Shot" className="bg-slate-900 text-slate-200">🎯 Shot</option>
-                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredWeaponsCount > 0 ? `(${starredWeaponsCount})` : ''}</option>
                           </select>
                         </div>
                       </div>
@@ -973,9 +966,7 @@ export const WeaponsCard: React.FC = () => {
                                         </span>
                                       );
                                     })}
-                                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-amber-200 border border-slate-750">
-                                      {weapon.cost}
-                                    </span>
+
                                     {/* AP Cost Badge */}
                                     <span
                                       className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${
