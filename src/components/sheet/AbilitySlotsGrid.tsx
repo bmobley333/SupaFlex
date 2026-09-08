@@ -34,11 +34,11 @@ const POWER_DISCIPLINES = [
   'Mental',
   'Physical',
   'Psionics',
-  'Psychosomatics',
   'Social',
-  'Sorce',
+  'Somatics',
   'Tech',
   'Universal',
+  'Void Magic',
 ];
 
 interface AbilitySlotsGridProps {

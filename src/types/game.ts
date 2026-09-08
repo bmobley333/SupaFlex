@@ -8,9 +8,9 @@ export type AttributeKey = 'might' | 'motion' | 'mind' | 'magic' | 'moxie';
 export type DieRating = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'Exhausted';
 export type PowerReadyType = 'primary_arsenal' | 'mobility_defense' | 'support_passive' | 'contextual_passive';
 
-export type PowerDiscipline = 'Sorce' | 'Psionics' | 'Psychosomatics' | 'Martial' | 'Universal';
+export type PowerDiscipline = 'Void Magic' | 'Psionics' | 'Somatics' | 'Martial' | 'Universal';
 export type TechDiscipline = 'Archaic' | 'Tech' | 'BioTech' | 'CyberTech';
-export type EquipmentDomain = 'Archaic' | 'BioTech' | 'CyberTech' | 'Tech' | 'Psionics' | 'Psychosomatics' | 'Sorce';
+export type EquipmentDomain = 'Archaic' | 'BioTech' | 'CyberTech' | 'Tech' | 'Psionics' | 'Somatics' | 'Void Magic';
 export type ExoticTier = 'Minor' | 'Lesser' | 'Greater' | 'Epic';
 export type HardwareTier = ExoticTier;
 export type PowerTableCategory = 'Race' | 'Class' | 'Discipline' | 'Combat Style' | 'Handicap' | 'Luck' | 'Custom';

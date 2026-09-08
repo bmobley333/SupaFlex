@@ -39,8 +39,8 @@ export type GearDomainFilter =
   | 'CyberTech'
   | 'Tech'
   | 'Psionics'
-  | 'Psychosomatics'
-  | 'Sorce';
+  | 'Somatics'
+  | 'Void Magic';
 export type GearViewFilter = 'ALL' | 'STARRED';
 
 /**
@@ -1151,8 +1151,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       <option value="CyberTech" className="bg-slate-900 text-slate-200">🦾 CyberTech</option>
                       <option value="Tech" className="bg-slate-900 text-slate-200">⚡ Tech</option>
                       <option value="Psionics" className="bg-slate-900 text-slate-200">🧠 Psionics</option>
-                      <option value="Psychosomatics" className="bg-slate-900 text-slate-200">🌀 Psychosomatics</option>
-                      <option value="Sorce" className="bg-slate-900 text-slate-200">✨ Sorce</option>
+                      <option value="Somatics" className="bg-slate-900 text-slate-200">🌀 Somatics</option>
+                      <option value="Void Magic" className="bg-slate-900 text-slate-200">🌌 Void Magic</option>
                     </select>
                   </div>
 

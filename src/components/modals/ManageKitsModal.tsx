@@ -95,7 +95,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       'Monk',
       'Psionics',
       'Psionics - Sentinel',
-      'Psychosomatics',
+      'Somatics',
       'Starborn Ranger',
       'Thief - Assassin',
       'Trickster',

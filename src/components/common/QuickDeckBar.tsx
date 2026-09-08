@@ -68,8 +68,10 @@ export const getTableIcon = (tableName: string, domain: QuickDeckDomain): string
     }
     if (
       nameLower.includes('sorce') ||
+      nameLower.includes('void magic') ||
       nameLower.includes('psionic') ||
       nameLower.includes('psychosomatic') ||
+      nameLower.includes('somatic') ||
       nameLower.includes('discipline') ||
       nameLower.includes('magic')
     ) {
@@ -327,11 +329,15 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
           groups['🧬 Racial Kits'].push(tblName);
         } else if (
           sub.includes('sorce') ||
+          sub.includes('void magic') ||
           sub.includes('psionic') ||
           sub.includes('psychosomatic') ||
+          sub.includes('somatic') ||
           nameLower.includes('sorce') ||
+          nameLower.includes('void magic') ||
           nameLower.includes('psionic') ||
-          nameLower.includes('psychosomatic')
+          nameLower.includes('psychosomatic') ||
+          nameLower.includes('somatic')
         ) {
           groups['✨ Specialization Kits'].push(tblName);
         } else if (
