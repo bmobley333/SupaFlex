@@ -124,8 +124,8 @@ export const resolveFunctionSource = (
     return null;
   }
 
-  // Parse belongs_to string (e.g. "Mod: Suit Biometer (mso), Gear: Biometer (mso)")
-  const parts = catalogFn.belongs_to.split(',').map((p) => p.trim()).filter(Boolean);
+  // Parse belongs_to string using regex to preserve item names that contain commas (e.g. "Crawler, Personal (mso)")
+  const parts = catalogFn.belongs_to.split(/,\s*(?=[A-Za-z]+:)/).map((p) => p.trim()).filter(Boolean);
   const gearCandidates: string[] = [];
   const modCandidates: string[] = [];
 
@@ -147,7 +147,7 @@ export const resolveFunctionSource = (
     const modNorm = normalizeBaseName(resolvedMod);
     const catalogMod = modsCatalog.find((m) => normalizeBaseName(m.name) === modNorm);
     if (catalogMod && catalogMod.belongs_to) {
-      const modHostParts = catalogMod.belongs_to.split(',').map((p) => p.trim()).filter(Boolean);
+      const modHostParts = catalogMod.belongs_to.split(/,\s*(?=[A-Za-z]+:)/).map((p) => p.trim()).filter(Boolean);
       const hostGears = modHostParts.map((p) => p.replace(/^(Gear|Armor|Weapon|Equipment|Supplies|Exotic|Relic):\s*/i, '').trim());
 
       // If active character is available, check if the character owns any of these compatible gear/armor items
