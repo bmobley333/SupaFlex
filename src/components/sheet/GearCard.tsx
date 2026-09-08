@@ -927,6 +927,45 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   };
 
   const handleUpdateGearQty = (itemId: string, delta: number) => {
+    const targetItem = (sheet?.simple_gear || gearList).find((g) => g.id === itemId);
+    if (!targetItem) return;
+
+    if (delta > 0) {
+      setGearCatalogFeedback(null);
+      const unitCostStr = targetItem.cost || '0s';
+      const unitCostInSilver = parseCostToSilver(unitCostStr);
+
+      if (unitCostInSilver > 0) {
+        if (unitCostInSilver > totalAvailableSilver) {
+          triggerNotEnoughMoney(targetItem.id, targetItem.name, unitCostStr, unitCostInSilver);
+          return;
+        }
+
+        const deduction = deductFundsWithChange(gold, silver, unitCostInSilver);
+        if (!deduction.success) {
+          triggerNotEnoughMoney(targetItem.id, targetItem.name, unitCostStr, unitCostInSilver);
+          return;
+        }
+
+        updateActiveSheetData((prev) => ({
+          ...prev,
+          simple_gear: (prev.simple_gear || []).map((g) => {
+            if (g.id === itemId) {
+              const newQty = (g.qty || 1) + delta;
+              return { ...g, qty: newQty };
+            }
+            return g;
+          }),
+          gold: deduction.newGold,
+          silver: deduction.newSilver,
+        }));
+        saveActiveCharacter();
+        return;
+      }
+    }
+
+    // delta < 0 or free item (unitCostInSilver === 0)
+    // Note: No funds refunded when quantity is reduced (strict no-selling policy)
     updateActiveSheetData((prev) => ({
       ...prev,
       simple_gear: (prev.simple_gear || []).map((g) => {

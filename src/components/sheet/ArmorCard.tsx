@@ -154,24 +154,6 @@ export const ArmorCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const handleSkToggle = (skChecked: boolean) => {
-    const updatedArmor = { ...armor, sk: skChecked };
-    updateActiveSheetData((prev) => {
-      const updatedWardrobe = (prev.wardrobe || wardrobe).map((item) =>
-        item.name.toLowerCase() === armor.name.toLowerCase() ? { ...item, sk: skChecked } : item
-      );
-      const updatedSheet = {
-        ...prev,
-        armor_slot: updatedArmor,
-        wardrobe: updatedWardrobe,
-      };
-      return {
-        ...updatedSheet,
-        movement_rate: calculateMovementRate(updatedSheet),
-      };
-    });
-    saveActiveCharacter();
-  };
 
   const handleAddToWardrobe = (item: SupabaseArmor) => {
     const evalResult = getArmorEvalResult(item);
@@ -188,10 +170,14 @@ export const ArmorCard: React.FC = () => {
       numericAr = Math.max(2, numericAr - 2);
     }
 
+    const apCost = evalResult.apCost;
+    const canAfford = availableAp >= apCost;
+    const isSkilled = canAfford;
+
     const newArmorItem: ArmorData = {
       id: `arm_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       name: item.name,
-      sk: true,
+      sk: isSkilled,
       ar: numericAr,
       requirement: item.requirement,
       mr: item.mr,
@@ -206,7 +192,7 @@ export const ArmorCard: React.FC = () => {
       const isAlreadyInWardrobe = existingWardrobe.some(
         (w) => w.name.toLowerCase() === item.name.toLowerCase()
       );
-      if (!isAlreadyInWardrobe) {
+      if (!isAlreadyInWardrobe && isSkilled) {
         recordApExpenditure(
           evalResult.apCost,
           'Armor',
@@ -228,6 +214,83 @@ export const ArmorCard: React.FC = () => {
       };
     });
     saveActiveCharacter();
+
+    if (!isSkilled) {
+      window.alert(
+        `Learned "${item.name}" as Unskilled!\n\nYou have ${availableAp} AP available, but becoming Skilled requires ${apCost} AP.\n\nYou can toggle this to Skilled in the Armor SK Manager once you have enough AP.`
+      );
+    }
+  };
+
+  // Toggle Skilled (SK) state for an armor piece in wardrobe
+  const handleToggleSkArmor = (item: ArmorData, wantSkilled: boolean) => {
+    const isCurrentlySkilled = isArmorSkilled(item);
+    if (isCurrentlySkilled === wantSkilled) return;
+
+    const apCost = item.ap_cost || 1;
+
+    if (wantSkilled) {
+      if (availableAp < apCost) {
+        window.alert(
+          `Cannot mark "${item.name}" as Skilled!\n\nRequires ${apCost} AP, but you only have ${availableAp} AP available.`
+        );
+        return;
+      }
+
+      updateActiveSheetData((prev) => {
+        const updatedWardrobe = (prev.wardrobe || wardrobe).map((w) =>
+          w.name.toLowerCase() === item.name.toLowerCase() ? { ...w, sk: true } : w
+        );
+        let nextArmorSlot = prev.armor_slot;
+        if (prev.armor_slot && prev.armor_slot.name.toLowerCase() === item.name.toLowerCase()) {
+          nextArmorSlot = { ...prev.armor_slot, sk: true };
+        }
+        const updatedSheet = {
+          ...prev,
+          armor_slot: nextArmorSlot,
+          wardrobe: updatedWardrobe,
+        };
+        return {
+          ...updatedSheet,
+          movement_rate: calculateMovementRate(updatedSheet),
+        };
+      });
+      recordApExpenditure(
+        apCost,
+        'Armor',
+        `Learned Armor Proficiency: ${item.name} (${apCost} AP)`,
+        1,
+        'Manage Armor'
+      );
+      saveActiveCharacter();
+    } else {
+      updateActiveSheetData((prev) => {
+        const updatedWardrobe = (prev.wardrobe || wardrobe).map((w) =>
+          w.name.toLowerCase() === item.name.toLowerCase() ? { ...w, sk: false } : w
+        );
+        let nextArmorSlot = prev.armor_slot;
+        if (prev.armor_slot && prev.armor_slot.name.toLowerCase() === item.name.toLowerCase()) {
+          nextArmorSlot = { ...prev.armor_slot, sk: false };
+        }
+        const updatedSheet = {
+          ...prev,
+          armor_slot: nextArmorSlot,
+          wardrobe: updatedWardrobe,
+        };
+        return {
+          ...updatedSheet,
+          movement_rate: calculateMovementRate(updatedSheet),
+        };
+      });
+      recordApExpenditure(
+        -apCost,
+        'Armor',
+        `Marked Armor as Unskilled: ${item.name} (-${apCost} AP Refunded)`,
+        1,
+        'Manage Armor'
+      );
+      saveActiveCharacter();
+    }
   };
 
   const handleDropFromWardrobe = (armorName: string) => {
@@ -493,6 +556,8 @@ export const ArmorCard: React.FC = () => {
                     <div className="flex-1 overflow-y-auto mt-2.5 flex flex-col gap-2.5">
                       {filteredWardrobe.map((item) => {
                         const isActive = armor.name.toLowerCase() === item.name.toLowerCase();
+                        const isSkilled = isArmorSkilled(item);
+                        const apCost = item.ap_cost || 1;
                         return (
                           <div key={item.id} className={`p-3 rounded-xl border flex flex-col gap-2 ${isActive ? 'bg-amber-950/40 border-amber-500/60' : 'bg-slate-900/90 border-slate-800'}`}>
                             <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
@@ -504,6 +569,37 @@ export const ArmorCard: React.FC = () => {
                                 </span>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
+                                {/* Option A: KISS Micro Multi-Option Pill Switch SK [✓ | ✗] */}
+                                <div className="flex items-center gap-0.5 bg-slate-950/80 border border-slate-800/90 rounded-lg p-0.5 shadow-inner">
+                                  <span className="text-[10px] font-mono font-extrabold text-slate-400 pl-1 pr-0.5 select-none">
+                                    SK
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleSkArmor(item, true)}
+                                    className={`p-1 rounded transition-all cursor-pointer ${
+                                      isSkilled
+                                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                        : 'text-slate-500 hover:text-slate-300 border border-transparent'
+                                    }`}
+                                    title={isSkilled ? 'Skilled' : `Click to mark Skilled (${apCost} AP)`}
+                                  >
+                                    <Check className="w-3 h-3 stroke-[3]" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleSkArmor(item, false)}
+                                    className={`p-1 rounded transition-all cursor-pointer ${
+                                      !isSkilled
+                                        ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                                        : 'text-slate-500 hover:text-slate-300 border border-transparent'
+                                    }`}
+                                    title={!isSkilled ? 'Unskilled' : `Click to mark Unskilled (Refund ${apCost} AP)`}
+                                  >
+                                    <X className="w-3 h-3 stroke-[3]" />
+                                  </button>
+                                </div>
+
                                 <button
                                   type="button"
                                   onClick={() => handleToggleStarItem(item)}
@@ -830,27 +926,25 @@ export const ArmorCard: React.FC = () => {
 
       {/* Main Character Sheet Card View - High Density Single Line */}
       <div className="flex flex-wrap items-center gap-2.5 pt-1 animate-fadeIn">
-        {/* Sk Checkbox / Red X Toggle */}
+        {/* Read-Only Sk Indicator (Managed via Armor SK Manager) */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <label className="text-xs font-bold text-slate-300 cursor-pointer">
+          <span className="text-xs font-bold text-slate-300 select-none">
             Sk
-          </label>
-          <button
-            type="button"
-            onClick={() => handleSkToggle(!(armor.sk ?? true))}
-            className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-pointer shrink-0 ${
+          </span>
+          <div
+            className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-default select-none shrink-0 ${
               (armor.sk ?? true)
-                ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm hover:bg-cyan-600/50'
-                : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md hover:bg-rose-900/90'
+                ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm'
+                : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md'
             }`}
-            title={(armor.sk ?? true) ? 'Skilled (Click to mark Unskilled)' : 'Unskilled (Click to mark Skilled)'}
+            title={(armor.sk ?? true) ? 'Skilled (Manage in Armor SK Manager)' : 'Unskilled (Manage in Armor SK Manager)'}
           >
             {(armor.sk ?? true) ? (
               <Check className="w-3.5 h-3.5 stroke-[3]" />
             ) : (
               <X className="w-3.5 h-3.5 stroke-[3]" />
             )}
-          </button>
+          </div>
         </div>
 
         {/* Armor Name (Unboxed Clean Text) + Notes Popover */}

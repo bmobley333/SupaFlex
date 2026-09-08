@@ -150,23 +150,6 @@ export const ShieldCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const handleSkToggle = (skChecked: boolean) => {
-    const updatedShield = { ...shield, sk: skChecked };
-    updateActiveSheetData((prev) => {
-      const updatedSheet = {
-        ...prev,
-        shield_slot: updatedShield,
-        armory: (prev.armory || armory).map((item) =>
-          item.name.toLowerCase() === shield.name.toLowerCase() ? { ...item, sk: skChecked } : item
-        ),
-      };
-      return {
-        ...updatedSheet,
-        movement_rate: calculateMovementRate(updatedSheet),
-      };
-    });
-    saveActiveCharacter();
-  };
 
   const handleAddToArmory = (item: SupabaseShield) => {
     const evalResult = getShieldEvalResult(item);
@@ -183,11 +166,15 @@ export const ShieldCard: React.FC = () => {
       blockVal = Math.max(4, blockVal - 4);
     }
 
+    const apCost = evalResult.apCost;
+    const canAfford = availableAp >= apCost;
+    const isSkilled = canAfford;
+
     const newShieldItem: ShieldData = {
       id: `shd_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       equipped: true,
       name: item.name,
-      sk: true,
+      sk: isSkilled,
       max_block: blockVal,
       requirement: item.requirement,
       mr_adjustment: item.mr,
@@ -202,7 +189,7 @@ export const ShieldCard: React.FC = () => {
       const isAlreadyInArmory = existingArmory.some(
         (s) => s.name.toLowerCase() === item.name.toLowerCase()
       );
-      if (!isAlreadyInArmory) {
+      if (!isAlreadyInArmory && isSkilled) {
         recordApExpenditure(
           evalResult.apCost,
           'Shields',
@@ -222,6 +209,83 @@ export const ShieldCard: React.FC = () => {
       };
     });
     saveActiveCharacter();
+
+    if (!isSkilled) {
+      window.alert(
+        `Learned "${item.name}" as Unskilled!\n\nYou have ${availableAp} AP available, but becoming Skilled requires ${apCost} AP.\n\nYou can toggle this to Skilled in the Shield SK Manager once you have enough AP.`
+      );
+    }
+  };
+
+  // Toggle Skilled (SK) state for a shield in armory
+  const handleToggleSkShield = (item: ShieldData, wantSkilled: boolean) => {
+    const isCurrentlySkilled = isShieldSkilled(item);
+    if (isCurrentlySkilled === wantSkilled) return;
+
+    const apCost = item.ap_cost || 1;
+
+    if (wantSkilled) {
+      if (availableAp < apCost) {
+        window.alert(
+          `Cannot mark "${item.name}" as Skilled!\n\nRequires ${apCost} AP, but you only have ${availableAp} AP available.`
+        );
+        return;
+      }
+
+      updateActiveSheetData((prev) => {
+        const updatedArmory = (prev.armory || armory).map((s) =>
+          s.name.toLowerCase() === item.name.toLowerCase() ? { ...s, sk: true } : s
+        );
+        let nextShieldSlot = prev.shield_slot;
+        if (prev.shield_slot && prev.shield_slot.name.toLowerCase() === item.name.toLowerCase()) {
+          nextShieldSlot = { ...prev.shield_slot, sk: true };
+        }
+        const updatedSheet = {
+          ...prev,
+          shield_slot: nextShieldSlot,
+          armory: updatedArmory,
+        };
+        return {
+          ...updatedSheet,
+          movement_rate: calculateMovementRate(updatedSheet),
+        };
+      });
+      recordApExpenditure(
+        apCost,
+        'Shields',
+        `Learned Shield Proficiency: ${item.name} (${apCost} AP)`,
+        1,
+        'Manage Shields'
+      );
+      saveActiveCharacter();
+    } else {
+      updateActiveSheetData((prev) => {
+        const updatedArmory = (prev.armory || armory).map((s) =>
+          s.name.toLowerCase() === item.name.toLowerCase() ? { ...s, sk: false } : s
+        );
+        let nextShieldSlot = prev.shield_slot;
+        if (prev.shield_slot && prev.shield_slot.name.toLowerCase() === item.name.toLowerCase()) {
+          nextShieldSlot = { ...prev.shield_slot, sk: false };
+        }
+        const updatedSheet = {
+          ...prev,
+          shield_slot: nextShieldSlot,
+          armory: updatedArmory,
+        };
+        return {
+          ...updatedSheet,
+          movement_rate: calculateMovementRate(updatedSheet),
+        };
+      });
+      recordApExpenditure(
+        -apCost,
+        'Shields',
+        `Marked Shield as Unskilled: ${item.name} (-${apCost} AP Refunded)`,
+        1,
+        'Manage Shields'
+      );
+      saveActiveCharacter();
+    }
   };
 
   const handleDropFromArmory = (shieldName: string) => {
@@ -549,6 +613,37 @@ export const ShieldCard: React.FC = () => {
                                 <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
                                   {item.ap_cost || 1} AP
                                 </span>
+                                {/* Option A: KISS Micro Multi-Option Pill Switch SK [✓ | ✗] */}
+                                <div className="flex items-center gap-0.5 bg-slate-950/80 border border-slate-800/90 rounded-lg p-0.5 shadow-inner">
+                                  <span className="text-[10px] font-mono font-extrabold text-slate-400 pl-1 pr-0.5 select-none">
+                                    SK
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleSkShield(item, true)}
+                                    className={`p-1 rounded transition-all cursor-pointer ${
+                                      isShieldSkilled(item)
+                                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                        : 'text-slate-500 hover:text-slate-300 border border-transparent'
+                                    }`}
+                                    title={isShieldSkilled(item) ? 'Skilled' : `Click to mark Skilled (${item.ap_cost || 1} AP)`}
+                                  >
+                                    <Check className="w-3 h-3 stroke-[3]" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleSkShield(item, false)}
+                                    className={`p-1 rounded transition-all cursor-pointer ${
+                                      !isShieldSkilled(item)
+                                        ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                                        : 'text-slate-500 hover:text-slate-300 border border-transparent'
+                                    }`}
+                                    title={!isShieldSkilled(item) ? 'Unskilled' : `Click to mark Unskilled (Refund ${item.ap_cost || 1} AP)`}
+                                  >
+                                    <X className="w-3 h-3 stroke-[3]" />
+                                  </button>
+                                </div>
+
                                 <button
                                   type="button"
                                   onClick={() => handleToggleStarItem(item)}
@@ -880,27 +975,25 @@ export const ShieldCard: React.FC = () => {
       {/* Main Character Sheet Card View */}
       {shield.equipped ? (
         <div className="flex flex-wrap items-center gap-2.5 pt-1 animate-fadeIn">
-          {/* Sk Checkbox / Red X Toggle */}
+          {/* Read-Only Sk Indicator (Managed via Shield SK Manager) */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <label className="text-xs font-bold text-slate-300 cursor-pointer">
+            <span className="text-xs font-bold text-slate-300 select-none">
               Sk
-            </label>
-            <button
-              type="button"
-              onClick={() => handleSkToggle(!shield.sk)}
-              className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-pointer shrink-0 ${
+            </span>
+            <div
+              className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-default select-none shrink-0 ${
                 shield.sk
-                  ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm hover:bg-cyan-600/50'
-                  : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md hover:bg-rose-900/90'
+                  ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm'
+                  : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md'
               }`}
-              title={shield.sk ? 'Skilled (Click to mark Unskilled)' : 'Unskilled (Click to mark Skilled)'}
+              title={shield.sk ? 'Skilled (Manage in Shield SK Manager)' : 'Unskilled (Manage in Shield SK Manager)'}
             >
               {shield.sk ? (
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
               ) : (
                 <X className="w-3.5 h-3.5 stroke-[3]" />
               )}
-            </button>
+            </div>
           </div>
 
           {/* Shield Name (Unboxed Clean Text) + Notes Popover */}

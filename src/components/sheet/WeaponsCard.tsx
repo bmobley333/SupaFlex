@@ -164,13 +164,6 @@ export const WeaponsCard: React.FC = () => {
     };
   }, [showManageModal]);
 
-  const handleWeaponChange = (id: string, updates: Partial<WeaponSlot>) => {
-    updateActiveSheetData((prev) => {
-      const updated = (prev.weapons || []).map((w) => (w.id === id ? { ...w, ...updates } : w));
-      return { ...prev, updates: updated };
-    });
-    saveActiveCharacter();
-  };
 
   // Group active equipped weapon slots by base weapon name for Left Column pane
   const groupedEquippedWeapons = useMemo(() => {
@@ -243,6 +236,10 @@ export const WeaponsCard: React.FC = () => {
       if (!confirmed) return;
     }
 
+    const apCost = evalResult.apCost;
+    const canAfford = availableAp >= apCost;
+    const isSkilled = canAfford;
+
     const newSlots: WeaponSlot[] = variantsToEquip.map((variant) => {
       const variantEval = evaluateItemAp(weapon.path, variant.requirementStr, attributeDice, knownPaths, variant.variantType);
       let calculatedAtk = calculateWeaponAtk(variant.name, variant.mhs, attributeDice);
@@ -263,7 +260,7 @@ export const WeaponsCard: React.FC = () => {
       return {
         id: `wep_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         name: slotName,
-        sk: true,
+        sk: isSkilled,
         mhs: variant.mhs,
         atk: String(calculatedAtk),
         dmg: calculatedDmg,
@@ -277,7 +274,7 @@ export const WeaponsCard: React.FC = () => {
     updateActiveSheetData((prev) => {
       const existingNames = new Set((prev.weapons || []).map((w) => w.name.toLowerCase()));
       const filteredNewSlots = newSlots.filter((s) => !existingNames.has(s.name.toLowerCase()));
-      if (filteredNewSlots.length > 0) {
+      if (filteredNewSlots.length > 0 && isSkilled) {
         recordApExpenditure(
           evalResult.apCost,
           'Weapons',
@@ -292,6 +289,68 @@ export const WeaponsCard: React.FC = () => {
       };
     });
     saveActiveCharacter();
+
+    if (!isSkilled) {
+      window.alert(
+        `Learned "${weapon.name}" as Unskilled!\n\nYou have ${availableAp} AP available, but becoming Skilled requires ${apCost} AP.\n\nYou can toggle this to Skilled in the Weapon SK Manager once you have enough AP.`
+      );
+    }
+  };
+
+  // Toggle Skilled (SK) state for an entire weapon group
+  const handleToggleSkWeaponGroup = (baseWeaponName: string, wantSkilled: boolean) => {
+    const targetGroup = groupedEquippedWeapons.find(
+      (g) => g.baseName.toLowerCase() === baseWeaponName.toLowerCase()
+    );
+    if (!targetGroup) return;
+
+    const currentlySkilled = targetGroup.slots.some((s) => s.sk);
+    if (currentlySkilled === wantSkilled) return;
+
+    const groupCost = targetGroup.slots.reduce((max, s) => Math.max(max, s.ap_cost || 1), 1);
+
+    if (wantSkilled) {
+      if (availableAp < groupCost) {
+        window.alert(
+          `Cannot mark "${baseWeaponName}" as Skilled!\n\nRequires ${groupCost} AP, but you only have ${availableAp} AP available.`
+        );
+        return;
+      }
+
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        weapons: (prev.weapons || []).map((w) =>
+          getBaseWeaponName(w.name).toLowerCase() === baseWeaponName.toLowerCase()
+            ? { ...w, sk: true }
+            : w
+        ),
+      }));
+      recordApExpenditure(
+        groupCost,
+        'Weapons',
+        `Learned Weapon Proficiency: ${baseWeaponName} (${groupCost} AP)`,
+        1,
+        'Manage Weapons'
+      );
+      saveActiveCharacter();
+    } else {
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        weapons: (prev.weapons || []).map((w) =>
+          getBaseWeaponName(w.name).toLowerCase() === baseWeaponName.toLowerCase()
+            ? { ...w, sk: false }
+            : w
+        ),
+      }));
+      recordApExpenditure(
+        -groupCost,
+        'Weapons',
+        `Marked Weapon as Unskilled: ${baseWeaponName} (-${groupCost} AP Refunded)`,
+        1,
+        'Manage Weapons'
+      );
+      saveActiveCharacter();
+    }
   };
 
   // Un-equip all variants matching a base weapon name
@@ -632,6 +691,8 @@ export const WeaponsCard: React.FC = () => {
                         </div>
                       ) : (
                         filteredGroupedEquippedWeapons.map((group) => {
+                          const isGroupSkilled = group.slots.some((s) => s.sk);
+                          const groupCost = group.slots.reduce((max, s) => Math.max(max, s.ap_cost || 1), 1);
                           const rawTypesList = Array.from(
                             new Set(
                               group.slots.map((s) =>
@@ -667,6 +728,37 @@ export const WeaponsCard: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
+                                  {/* Option A: KISS Micro Multi-Option Pill Switch SK [✓ | ✗] */}
+                                  <div className="flex items-center gap-0.5 bg-slate-950/80 border border-slate-800/90 rounded-lg p-0.5 shadow-inner">
+                                    <span className="text-[10px] font-mono font-extrabold text-slate-400 pl-1 pr-0.5 select-none">
+                                      SK
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleSkWeaponGroup(group.baseName, true)}
+                                      className={`p-1 rounded transition-all cursor-pointer ${
+                                        isGroupSkilled
+                                          ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                          : 'text-slate-500 hover:text-slate-300 border border-transparent'
+                                      }`}
+                                      title={isGroupSkilled ? 'Skilled' : `Click to mark Skilled (${groupCost} AP)`}
+                                    >
+                                      <Check className="w-3 h-3 stroke-[3]" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleSkWeaponGroup(group.baseName, false)}
+                                      className={`p-1 rounded transition-all cursor-pointer ${
+                                        !isGroupSkilled
+                                          ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                                          : 'text-slate-500 hover:text-slate-300 border border-transparent'
+                                      }`}
+                                      title={!isGroupSkilled ? 'Unskilled' : `Click to mark Unskilled (Refund ${groupCost} AP)`}
+                                    >
+                                      <X className="w-3 h-3 stroke-[3]" />
+                                    </button>
+                                  </div>
+
                                   <button
                                     type="button"
                                     onClick={() => handleToggleStarItem({ name: group.baseName })}
@@ -1121,24 +1213,22 @@ export const WeaponsCard: React.FC = () => {
                   key={item.id}
                   className="grid grid-cols-[34px_68px_1fr_48px_48px_56px_60px] gap-2 items-center px-2 py-1.5 bg-slate-950/60 rounded-lg border border-slate-850 hover:border-slate-750 transition-all"
                 >
-                  {/* Sk Checkbox / Red X Toggle */}
+                  {/* Read-Only Sk Indicator (Managed via Weapon SK Manager) */}
                   <div className="flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => handleWeaponChange(item.id, { sk: !item.sk })}
-                      className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-pointer shrink-0 ${
+                    <div
+                      className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-default select-none shrink-0 ${
                         item.sk
-                          ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm hover:bg-cyan-600/50'
-                          : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md hover:bg-rose-900/90'
+                          ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm'
+                          : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md'
                       }`}
-                      title={item.sk ? 'Skilled (Click to mark Unskilled)' : 'Unskilled (Click to mark Skilled)'}
+                      title={item.sk ? 'Skilled (Manage in Weapon SK Manager)' : 'Unskilled (Manage in Weapon SK Manager)'}
                     >
                       {item.sk ? (
                         <Check className="w-3.5 h-3.5 stroke-[3]" />
                       ) : (
                         <X className="w-3.5 h-3.5 stroke-[3]" />
                       )}
-                    </button>
+                    </div>
                   </div>
 
                   {/* Color-Coded M/H/S Category Display Box (Read-Only) */}

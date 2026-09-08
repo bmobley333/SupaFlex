@@ -275,7 +275,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span className="font-outfit font-bold text-xs text-slate-200 uppercase tracking-wider">
-                  Equipped Traits ({equippedRules.length})
+                  My Traits ({equippedRules.length})
                 </span>
               </div>
               <span className="text-[11px] font-mono text-slate-400">
