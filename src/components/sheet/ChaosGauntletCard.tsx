@@ -240,23 +240,26 @@ export const ChaosGauntletCard: React.FC = () => {
           <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
         </button>
 
-        {/* MASTER 2-COLUMN SPLIT-PANE MANAGER MODAL */}
+        {/* CHAOS GAUNTLET MANAGER MODAL */}
         {showManageModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
             <div
               ref={modalRef}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden relative"
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden relative"
             >
               {/* Modal Top Bar */}
               <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
                 <div className="flex items-center gap-2.5 shrink-0">
                   <div className="p-2 rounded-xl bg-purple-950/80 border border-purple-500/30 text-purple-300">💎</div>
                   <div>
-                    <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide">
-                      Chaos Gauntlet Manager
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide">
+                        Chaos Gauntlet Manager
+                      </h3>
+                      <CardHelpButton ruleKey="chaos_gauntlet.basics" />
+                    </div>
                     <p className="text-xs text-slate-400 hidden sm:block">
-                      Conduit review and volatile matrix management.
+                      Review socketed chaos gems and shatter matrices to free conduits.
                     </p>
                   </div>
                 </div>
@@ -278,155 +281,91 @@ export const ChaosGauntletCard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Modal Body: 2-Column Split Pane */}
-              <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-slate-800 overflow-hidden">
-                {/* LEFT COLUMN: 6 Gauntlet Conduit Sockets */}
-                <div className="md:col-span-6 flex flex-col min-h-0 bg-slate-950/40 p-4 gap-3 overflow-hidden">
-                  <div className="flex items-center justify-between shrink-0">
-                    <span className="font-outfit font-bold text-xs text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <span>⚡ Conduits ({equippedGemsCount}/6 Active)</span>
-                    </span>
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      {6 - equippedGemsCount} Available
-                    </span>
-                  </div>
+              {/* Modal Body: 6 Conduits in Responsive 2-Column Grid */}
+              <div className="flex-1 min-h-0 p-4 overflow-y-auto bg-slate-950/30 no-scrollbar">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {gauntletSlots.map((slot) => {
+                    const isWrist = slot.slot_type === 'wrist';
+                    const meta = SLOT_METADATA.find((m) => m.slot_id === slot.slot_id);
+                    const hasGem = Boolean(slot.gem && slot.gem.name);
 
-                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1 no-scrollbar">
-                    {gauntletSlots.map((slot) => {
-                      const isWrist = slot.slot_type === 'wrist';
-                      const meta = SLOT_METADATA.find((m) => m.slot_id === slot.slot_id);
-                      const hasGem = Boolean(slot.gem && slot.gem.name);
-
-                      return (
-                        <div
-                          key={slot.slot_id}
-                          className={`p-3 rounded-xl border transition-all flex flex-col gap-2 ${
-                            hasGem
-                              ? isWrist
-                                ? 'bg-slate-900/90 border-amber-500/40 shadow-sm shadow-amber-950/20'
-                                : 'bg-slate-900/90 border-slate-700/80 shadow-sm'
-                              : 'bg-slate-950/40 border-dashed border-slate-800/80'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
-                                isWrist
-                                  ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
-                                  : 'bg-slate-950 text-slate-300 border-slate-800'
-                              }`}>
-                                {meta?.shortLabel || `Slot ${slot.slot_number}`}
-                              </span>
-                              {hasGem && (
-                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950/70 text-purple-300 border border-purple-500/30">
-                                  {slot.gem!.action || 'F'} • {slot.gem!.usage ?? 3} Uses
-                                </span>
-                              )}
-                            </div>
-
+                    return (
+                      <div
+                        key={slot.slot_id}
+                        className={`p-3 rounded-xl border transition-all flex flex-col gap-2 ${
+                          hasGem
+                            ? isWrist
+                              ? 'bg-slate-900/90 border-amber-500/40 shadow-sm shadow-amber-950/20'
+                              : 'bg-slate-900/90 border-slate-700/80 shadow-sm'
+                            : 'bg-slate-950/40 border-dashed border-slate-800/80'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                              isWrist
+                                ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
+                                : 'bg-slate-950 text-slate-300 border-slate-800'
+                            }`}>
+                              {meta?.shortLabel || `Slot ${slot.slot_number}`}
+                            </span>
                             {hasGem && (
-                              <button
-                                type="button"
-                                onClick={() => setConfirmRemovalSlotId(slot.slot_id)}
-                                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-rose-500/30"
-                                title="Shatter & destroy socketed gem"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950/70 text-purple-300 border border-purple-500/30">
+                                {slot.gem!.action || 'F'} • {slot.gem!.usage ?? 3} Uses
+                              </span>
                             )}
                           </div>
 
-                          {hasGem ? (
-                            <div className="flex flex-col gap-1">
-                              <div className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1.5">
-                                <span className="text-purple-400">💎</span>
-                                <span className="text-slate-100">{slot.gem!.name}</span>
-                                <ItemNotesPopover notes={(slot.gem as any).notes} itemName={slot.gem!.name} inline />
-                              </div>
-                              <p className="text-[11px] text-slate-300 leading-snug">
-                                {slot.gem!.effect}
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="text-[11px] text-slate-500 italic py-1 flex items-center gap-1.5">
-                              <Sparkles className="w-3 h-3 text-slate-600" />
-                              <span>Empty Conduit — Fused via Loot drops</span>
-                            </div>
+                          {hasGem && (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmRemovalSlotId(slot.slot_id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-rose-500/30"
+                              title="Shatter & destroy socketed gem"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
 
-                {/* RIGHT COLUMN: Loot Guidance & Generator Launcher */}
-                <div className="md:col-span-6 flex flex-col min-h-0 bg-slate-900/60 p-4 gap-3.5 overflow-y-auto no-scrollbar">
-                  {/* Section Title */}
-                  <div className="flex items-center justify-between gap-2 shrink-0 border-b border-slate-800 pb-2.5">
-                    <span className="font-outfit font-bold text-xs text-purple-200 uppercase tracking-wider flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-purple-400 shrink-0" />
-                      <span>Chaos Gem Acquisition Rules</span>
-                    </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-500/30">
-                      Loot Only
-                    </span>
-                  </div>
-
-                  {/* Informational Guidance Cards */}
-                  <div className="flex flex-col gap-3 text-xs leading-relaxed text-slate-300">
-                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 flex flex-col gap-1.5 shadow-sm">
-                      <div className="font-outfit font-bold text-slate-200 flex items-center gap-1.5">
-                        <span>🎲</span>
-                        <span>Discovered Exclusively Through Loot</span>
+                        {hasGem ? (
+                          <div className="flex flex-col gap-1">
+                            <div className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1.5">
+                              <span className="text-purple-400">💎</span>
+                              <span className="text-slate-100">{slot.gem!.name}</span>
+                              <ItemNotesPopover notes={(slot.gem as any).notes} itemName={slot.gem!.name} inline />
+                            </div>
+                            <p className="text-[11px] text-slate-300 leading-snug">
+                              {slot.gem!.effect}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-slate-500 italic py-1 flex items-center gap-1.5">
+                            <Sparkles className="w-3 h-3 text-slate-600" />
+                            <span>Empty Conduit — Fused via Loot drops</span>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-[11px] text-slate-400 leading-normal">
-                        Chaos Gems are volatile, attuned crystallizations that <strong className="text-slate-200">cannot be purchased from merchants</strong> or forged on demand. They are discovered exclusively as rare encounter loot drops or awarded directly by the GM.
-                      </p>
-                    </div>
-
-                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 flex flex-col gap-1.5 shadow-sm">
-                      <div className="font-outfit font-bold text-slate-200 flex items-center gap-1.5">
-                        <span>⚡</span>
-                        <span>Irrevocable Conduit Fusion</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-normal">
-                        Chaos Gems cannot be carried loosely in pouches or backpacks. When discovered, they form an instant metaphysical bond and must be fused directly into an available gauntlet conduit.
-                      </p>
-                    </div>
-
-                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 flex flex-col gap-1.5 shadow-sm">
-                      <div className="font-outfit font-bold text-slate-200 flex items-center gap-1.5">
-                        <span>💥</span>
-                        <span>3-Use Lifespan & Shattering</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-normal">
-                        Each gem begins with 3 durability uses. Expending the final use collapses its energy matrix and destroys it permanently. To free a conduit early for a new gem, click the <strong className="text-rose-300">trashcan icon (🗑️)</strong> on any conduit to deliberately shatter it.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Loot Generator Action Launcher */}
-                  <div className="mt-auto pt-3 border-t border-slate-800/80 flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleCloseManageModal();
-                        window.dispatchEvent(new CustomEvent('supaflex:open-loot-generator'));
-                      }}
-                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 active:from-purple-700 active:to-indigo-700 text-white font-outfit font-bold text-xs tracking-wide transition-all shadow-md shadow-purple-950/50 flex items-center justify-center gap-2 cursor-pointer border border-purple-400/40"
-                    >
-                      <Sparkles className="w-4 h-4 text-purple-200" />
-                      <span>🎲 Open Loot Generator</span>
-                    </button>
-                    <p className="text-[10px] text-slate-500 text-center italic">
-                      Roll for encounter treasure, credits, and rare Chaos Gem drops.
-                    </p>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Modal Bottom Footer Bar */}
-              <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/80 flex items-center justify-end shrink-0">
+              <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCloseManageModal();
+                    window.dispatchEvent(new CustomEvent('supaflex:open-loot-generator'));
+                  }}
+                  className="py-1.5 px-3.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-outfit font-bold text-xs tracking-wide transition-all shadow-md shadow-purple-950/40 flex items-center gap-1.5 cursor-pointer border border-purple-400/40"
+                  title="Open Loot Generator to roll for encounter treasure and Chaos Gems"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+                  <span>🎲 Open Loot Generator</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleCloseManageModal}
