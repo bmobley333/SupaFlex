@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, ModItem } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
@@ -29,6 +29,8 @@ interface CharacterStore {
   equipmentKits: SupabaseKit[];
   kits: SupabaseKit[];
   bundles: SupabaseBundle[];
+  functionsCatalog: FunctionItem[];
+  modsCatalog: ModItem[];
   isLoading: boolean;
   isSaving: boolean;
   dbConnected: boolean;
@@ -120,6 +122,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   equipmentKits: [],
   kits: [],
   bundles: [],
+  functionsCatalog: [],
+  modsCatalog: [],
   isLoading: false,
   isSaving: false,
   dbConnected: false,
@@ -203,7 +207,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return;
       }
 
-      const [chars, powers, items, skills, traits, pathsData, bundlesData] = await Promise.all([
+      const [chars, powers, items, skills, traits, pathsData, bundlesData, functionsData, modsData] = await Promise.all([
         gameApi.getCharacters(),
         gameApi.getPowers(),
         gameApi.getMagicItems(),
@@ -211,6 +215,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         gameApi.getTraits(),
         gameApi.getPaths(),
         gameApi.getBundles(),
+        gameApi.getFunctions(),
+        gameApi.getMods(),
       ]);
 
       const email = (get().playerEmail || '').trim().toLowerCase();
@@ -228,6 +234,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           equipmentKits: bundlesData,
           kits: pathsData as any,
           bundles: bundlesData,
+          functionsCatalog: functionsData || [],
+          modsCatalog: modsData || [],
           isLoading: false,
         });
         return;
@@ -273,6 +281,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         equipmentKits: bundlesData,
         kits: pathsData as any,
         bundles: bundlesData,
+        functionsCatalog: functionsData || [],
+        modsCatalog: modsData || [],
         isLoading: false,
       });
     } catch (err: any) {

@@ -26,6 +26,7 @@ import {
   ApCostCategory,
   ApEvaluationResult,
 } from '../../utils/pathApUtils';
+import { resolveFunctionSource, matchFunctionSourceSearch } from '../../utils/functionSourceHelper';
 
 const POWER_DISCIPLINES = [
   'BioTech',
@@ -169,6 +170,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     activeCharacter,
     powers,
     magicItems,
+    functionsCatalog,
+    modsCatalog,
     updateActiveSheetData,
     saveActiveCharacter,
     recordApExpenditure,
@@ -812,7 +815,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             usage: targetSlot.usage,
             action: targetSlot.action,
             effect: targetSlot.effect,
-            source: 'Unequipped from Loadout',
+            notes: targetSlot.notes,
+            source: (targetSlot as any).source || 'Unequipped from Loadout',
+            source_gear: (targetSlot as any).source_gear,
+            source_mod: (targetSlot as any).source_mod,
             created_at: new Date().toISOString(),
             category: catalogMatch?.category || (targetSlot as any).category || null,
             slot_weight: (getItemSlotWeight(targetSlot) as 1 | 2 | 3 | 4),
@@ -849,6 +855,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         usage: vaultItem.usage || '1-Enc',
         effect: vaultItem.effect || '',
         checked: [false, false, false],
+        notes: vaultItem.notes,
+        source: vaultItem.source,
+        source_gear: (vaultItem as any).source_gear,
+        source_mod: (vaultItem as any).source_mod,
         // Preserve tier metadata for round-trip slot weight resolution
         category: vaultItem.category || null,
         slot_weight: weight,
@@ -1204,9 +1214,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       }
       if (!leftSearchQuery.trim()) return true;
       const q = leftSearchQuery.toLowerCase().trim();
-      return cleanName(s.name).toLowerCase().includes(q) || (s.effect || '').toLowerCase().includes(q);
+      const textMatch = cleanName(s.name).toLowerCase().includes(q) || (s.effect || '').toLowerCase().includes(q);
+      if (textMatch) return true;
+      if (type === 'spells') {
+        return matchFunctionSourceSearch(q, s, functionsCatalog, modsCatalog, activeCharacter);
+      }
+      return false;
     });
-  }, [type, activeDisplaySlots, slots, leftSearchQuery, catalogReadyFilter]);
+  }, [type, activeDisplaySlots, slots, leftSearchQuery, catalogReadyFilter, functionsCatalog, modsCatalog, activeCharacter]);
 
   const sectionIcon = type === 'powers' ? '🔥' : '🧿';
   const displayTitle = title || (type === 'powers' ? 'POWERS' : 'FUNCTIONS');
@@ -1591,13 +1606,25 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   </div>
                                   {type === 'spells' && (() => {
                                     const badge = getMagicItemTierBadge(item, fullCatalog);
-                                    if (!badge) return null;
+                                    const sourceBadge = resolveFunctionSource(item, functionsCatalog, modsCatalog, activeCharacter);
                                     return (
-                                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                                        <span>{badge.icon}</span>
-                                        <span>{badge.label}</span>
-                                        <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                                      </span>
+                                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                        {badge && (
+                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
+                                            <span>{badge.icon}</span>
+                                            <span>{badge.label}</span>
+                                            <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                                          </span>
+                                        )}
+                                        {sourceBadge && (
+                                          <span
+                                            className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded border bg-slate-900/90 text-cyan-300 border-cyan-500/30 w-fit flex items-center gap-1 truncate max-w-full"
+                                            title={sourceBadge.badgeText}
+                                          >
+                                            <span className="truncate">{sourceBadge.badgeText}</span>
+                                          </span>
+                                        )}
+                                      </div>
                                     );
                                   })()}
                                 </div>
@@ -1849,7 +1876,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     {activeRightTab === 'VAULT' && type === 'spells' && (() => {
                       const vaultList: MagicItem[] = Array.isArray(sheetData.character_vault) ? sheetData.character_vault : [];
                       const filteredVault = rightSearchQuery.trim()
-                        ? vaultList.filter((v) => (v.name || '').toLowerCase().includes(rightSearchQuery.toLowerCase()) || (v.effect || '').toLowerCase().includes(rightSearchQuery.toLowerCase()))
+                        ? vaultList.filter((v) => {
+                            const q = rightSearchQuery.toLowerCase().trim();
+                            const textMatch = (v.name || '').toLowerCase().includes(q) || (v.effect || '').toLowerCase().includes(q);
+                            if (textMatch) return true;
+                            return matchFunctionSourceSearch(q, v, functionsCatalog, modsCatalog, activeCharacter);
+                          })
                         : vaultList;
 
                       return (
@@ -1894,13 +1926,28 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             <ItemNotesPopover notes={(item as any).notes || (fullCatalog.find((c) => c.name.toLowerCase() === cleanName(item.name).toLowerCase()) as any)?.notes} itemName={item.name} inline />
                                           </span>
                                         </div>
-                                        {badge && (
-                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                                            <span>{badge.icon}</span>
-                                            <span>{badge.label}</span>
-                                            <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                                          </span>
-                                        )}
+                                        {(() => {
+                                          const sourceBadge = resolveFunctionSource(item, functionsCatalog, modsCatalog, activeCharacter);
+                                          return (
+                                            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                              {badge && (
+                                                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
+                                                  <span>{badge.icon}</span>
+                                                  <span>{badge.label}</span>
+                                                  <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                                                </span>
+                                              )}
+                                              {sourceBadge && (
+                                                <span
+                                                  className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded border bg-slate-900/90 text-cyan-300 border-cyan-500/30 w-fit flex items-center gap-1 truncate max-w-full"
+                                                  title={sourceBadge.badgeText}
+                                                >
+                                                  <span className="truncate">{sourceBadge.badgeText}</span>
+                                                </span>
+                                              )}
+                                            </div>
+                                          );
+                                        })()}
                                       </div>
                                       <button
                                         type="button"
@@ -2767,7 +2814,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 }`}
               >
                 {/* 1. Name Column with Version Badge */}
-                <div className="w-36 sm:w-44 shrink-0 flex flex-col gap-0.5">
+                <div className="w-40 sm:w-52 shrink-0 flex flex-col gap-0.5">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline flex-wrap leading-tight ${
                       isGsUnlocked && isMsoEntry(baseName) ? 'text-purple-300' : 'text-slate-100'
@@ -2784,13 +2831,25 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   )}
                   {type === 'spells' && (() => {
                     const badge = getMagicItemTierBadge(slot, fullCatalog);
-                    if (!badge) return null;
+                    const sourceBadge = resolveFunctionSource(slot, functionsCatalog, modsCatalog, activeCharacter);
                     return (
-                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 mt-0.5 ${badge.style}`}>
-                        <span>{badge.icon}</span>
-                        <span>{badge.label}</span>
-                        <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                      </span>
+                      <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                        {badge && (
+                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
+                            <span>{badge.icon}</span>
+                            <span>{badge.label}</span>
+                            <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                          </span>
+                        )}
+                        {sourceBadge && (
+                          <span
+                            className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded border bg-slate-900/90 text-cyan-300 border-cyan-500/30 w-fit flex items-center gap-1 truncate max-w-full"
+                            title={sourceBadge.badgeText}
+                          >
+                            <span className="truncate">{sourceBadge.badgeText}</span>
+                          </span>
+                        )}
+                      </div>
                     );
                   })()}
                 </div>

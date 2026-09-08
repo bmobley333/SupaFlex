@@ -286,7 +286,15 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   );
 
   // Convert FunctionItem to MagicItem for character_vault
-  const mapFunctionToVaultItem = useCallback((fn: FunctionItem, hostName: string): MagicItem => {
+  const mapFunctionToVaultItem = useCallback((fn: FunctionItem, hostName: string, modName?: string): MagicItem => {
+    let finalGear = hostName;
+    let finalMod = modName;
+    const parentMatch = hostName.match(/^(.+?)\s*\(([^)]+)\)$/);
+    if (!finalMod && parentMatch) {
+      finalMod = parentMatch[1];
+      finalGear = parentMatch[2];
+    }
+
     return {
       id: typeof fn.id === 'number' ? fn.id : Date.now() + Math.floor(Math.random() * 10000),
       name: fn.name,
@@ -297,6 +305,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       effect: fn.effect || '',
       notes: fn.notes || `Inherent function of ${hostName}`,
       source: `Exotic Gear: ${hostName}`,
+      source_gear: finalGear,
+      source_mod: finalMod,
       created_at: new Date().toISOString(),
       category: fn.tier || (fn as any).category || 'Minor',
       slot_weight: ((fn as any).slot_weight || getCategorySlotWeight(fn.tier || (fn as any).category) || 1) as 1 | 2 | 3 | 4,
@@ -755,7 +765,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     };
 
     const modFunctions = getFunctionsForMod(modName).map((fn) =>
-      mapFunctionToVaultItem(fn, `${modName} (${parentItemName})`)
+      mapFunctionToVaultItem(fn, parentItemName, modName)
     );
 
     updateActiveSheetData((prev) => {

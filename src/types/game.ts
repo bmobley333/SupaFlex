@@ -170,6 +170,8 @@ export interface AbilitySlot {
   discipline?: string;
   stat_hook?: any;
   ap_cost?: number;
+  source_gear?: string;
+  source_mod?: string;
 }
 
 export interface EquipmentSlot {
@@ -1000,6 +1002,8 @@ export interface MagicItem {
   rarity?: 'Minor' | 'Lesser' | 'Greater' | 'Relic' | 'Epic';
   cost?: string; // Optional cost for Hardware items
   is_hardware?: boolean; // True if purchased hardware item
+  source_gear?: string;
+  source_mod?: string;
 }
 
 /** Canonical S-Tier type aliases for Artifact, Exotic, Relic, Hardware, and Loadout */
@@ -1027,6 +1031,8 @@ export interface FunctionItem {
   belongs_to: string;
   genres: string[];
   notes?: string;
+  source_gear?: string;
+  source_mod?: string;
   created_at?: string;
 }
 
