@@ -1,6 +1,6 @@
 // src/components/sheet/ArmorCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, X, Check, Shirt, Search, Loader2, Star } from 'lucide-react';
+import { ChevronDown, X, Check, Shirt, Search, Loader2, Star, Trash2, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
@@ -487,7 +487,7 @@ export const ArmorCard: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden">
                     <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80">
-                      <div className="flex items-center gap-1.5"><Shirt className="w-4 h-4 text-amber-400" /><span className="text-xs font-outfit font-bold uppercase tracking-wider text-amber-300">Armory</span></div>
+                      <div className="flex items-center gap-1.5"><Shirt className="w-4 h-4 text-amber-400" /><span className="text-xs font-outfit font-bold uppercase tracking-wider text-amber-300">Proficiencies</span></div>
                       <div className="relative"><Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" /><input type="text" value={leftSearchQuery} onChange={(e) => setLeftSearchQuery(e.target.value)} className="bg-slate-900 text-slate-200 text-[11px] pl-6 py-0.5 rounded border border-slate-700 w-24" /></div>
                     </div>
                     <div className="flex-1 overflow-y-auto mt-2.5 flex flex-col gap-2.5">
@@ -516,7 +516,14 @@ export const ArmorCard: React.FC = () => {
                                 >
                                   <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
                                 </button>
-                                <button onClick={() => handleDropFromWardrobe(item.name)} className="px-2 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold rounded-lg">Forget</button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDropFromWardrobe(item.name)}
+                                  className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+                                  title="Forget armor proficiency"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               </div>
                             </div>
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
@@ -672,10 +679,10 @@ export const ArmorCard: React.FC = () => {
 
                       {/* Out-of-Path GM Notice Banner */}
                       {(activeApCategory === '3AP' || activeApCategory === '4AP') && (
-                        <div className="mb-1 px-3 py-1.5 bg-indigo-950/70 border border-indigo-500/40 rounded-xl text-indigo-200 text-xs flex items-center gap-2 shrink-0">
-                          <span>👑</span>
-                          <span>
-                            <strong>Out-of-Path:</strong> Costs +2 AP and requires GM Approval in campaign play.
+                        <div className="p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center gap-2 text-xs text-amber-200 shrink-0">
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                          <span className="leading-tight">
+                            <strong>👑 Out-of-Path Acquisitions:</strong> cost more AP AND require GM Approval.
                           </span>
                         </div>
                       )}
@@ -722,6 +729,7 @@ export const ArmorCard: React.FC = () => {
                         </div>
                       )}
 
+                      {/* Scrollable Catalog List */}
                       <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
                         {isLoadingCatalog ? (
                           <div className="h-full flex items-center justify-center p-6 text-slate-400 text-xs gap-2">
@@ -741,20 +749,6 @@ export const ArmorCard: React.FC = () => {
                                     <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
                                       <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
                                       <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
-                                    </span>
-                                    {/* AP Cost Badge */}
-                                    <span
-                                      className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${
-                                        evalResult.apCost === 1
-                                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-                                          : evalResult.apCost === 2
-                                          ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
-                                          : evalResult.apCost === 3
-                                          ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
-                                          : 'bg-rose-950/80 text-rose-300 border-rose-500/40'
-                                      }`}
-                                    >
-                                      {evalResult.apCost} AP {evalResult.requiresGmApproval ? '• 👑 GM' : evalResult.statDownscaled ? '• ⏳ ~Req' : '• Path'}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0">

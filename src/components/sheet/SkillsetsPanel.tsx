@@ -1,6 +1,6 @@
 // src/components/sheet/SkillsetsPanel.tsx
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Check, ChevronDown, Search, X, Scroll, GraduationCap, Star } from 'lucide-react';
+import { Check, ChevronDown, Search, X, Scroll, GraduationCap, Star, Trash2 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
@@ -717,11 +717,12 @@ export const SkillsetsPanel: React.FC = () => {
 
                                 <div className="flex items-center gap-1.5 shrink-0">
                                   <button
+                                    type="button"
                                     onClick={() => handleToggleSkillset(ksName)}
-                                    className="px-2.5 py-1 text-[10px] font-extrabold rounded-lg border bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30 hover:text-rose-100 shrink-0 transition-all"
+                                    className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
                                     title="Forget Skillset"
                                   >
-                                    Forget
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
                               </div>
@@ -756,10 +757,12 @@ export const SkillsetsPanel: React.FC = () => {
                                       </span>
                                     </span>
                                     <button
+                                      type="button"
                                       onClick={() => handleToggleIndividualSkill(skName)}
-                                      className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 transition-all shrink-0"
+                                      className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+                                      title="Forget Skill"
                                     >
-                                      Forget
+                                      <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 );
@@ -1070,9 +1073,10 @@ export const SkillsetsPanel: React.FC = () => {
                                     <button
                                       type="button"
                                       onClick={() => handleToggleIndividualSkill(sk.name)}
-                                      className="px-2.5 py-1 text-xs font-bold rounded-lg border bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-600/30 shrink-0 transition-all cursor-pointer"
+                                      className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+                                      title="Forget Skill"
                                     >
-                                      Forget
+                                      <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                   ) : (
                                     <button

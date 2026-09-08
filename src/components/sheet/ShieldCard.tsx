@@ -1,6 +1,6 @@
 // src/components/sheet/ShieldCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, X, Check, Search, ShieldAlert, Loader2, Star } from 'lucide-react';
+import { ChevronDown, X, Check, Search, ShieldAlert, Loader2, Star, Trash2, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
@@ -488,7 +488,7 @@ export const ShieldCard: React.FC = () => {
                     <div className="flex items-center gap-1.5">
                       <ShieldAlert className="w-4 h-4 text-cyan-400" />
                       <span className="text-xs font-outfit font-bold uppercase tracking-wider text-cyan-300">
-                        Armory
+                        Proficiencies
                       </span>
                       <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
                         {armory.length}
@@ -562,10 +562,12 @@ export const ShieldCard: React.FC = () => {
                                   <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleDropFromArmory(item.name)}
-                                  className="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg transition-all shrink-0 cursor-pointer"
+                                  className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+                                  title="Forget shield proficiency"
                                 >
-                                  Forget
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </div>
@@ -723,10 +725,10 @@ export const ShieldCard: React.FC = () => {
 
                     {/* Out-of-Path GM Notice Banner */}
                     {(activeApCategory === '3AP' || activeApCategory === '4AP') && (
-                      <div className="mb-1 px-3 py-1.5 bg-indigo-950/70 border border-indigo-500/40 rounded-xl text-indigo-200 text-xs flex items-center gap-2 shrink-0">
-                        <span>👑</span>
-                        <span>
-                          <strong>Out-of-Path:</strong> Costs +2 AP and requires GM Approval in campaign play.
+                      <div className="p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center gap-2 text-xs text-amber-200 shrink-0">
+                        <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span className="leading-tight">
+                          <strong>👑 Out-of-Path Acquisitions:</strong> cost more AP AND require GM Approval.
                         </span>
                       </div>
                     )}
@@ -773,6 +775,7 @@ export const ShieldCard: React.FC = () => {
                       </div>
                     )}
 
+                    {/* Scrollable Catalog List */}
                     <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
                       {isLoadingCatalog ? (
                         <div className="h-full flex items-center justify-center p-6 text-slate-400 text-xs gap-2">
@@ -793,20 +796,6 @@ export const ShieldCard: React.FC = () => {
                                   <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
                                     <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
                                     <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
-                                  </span>
-                                  {/* AP Cost Badge */}
-                                  <span
-                                    className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${
-                                      evalResult.apCost === 1
-                                        ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-                                        : evalResult.apCost === 2
-                                        ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
-                                        : evalResult.apCost === 3
-                                        ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
-                                        : 'bg-rose-950/80 text-rose-300 border-rose-500/40'
-                                    }`}
-                                  >
-                                    {evalResult.apCost} AP {evalResult.requiresGmApproval ? '• 👑 GM' : evalResult.statDownscaled ? '• ⏳ ~Req' : '• Path'}
                                   </span>
                                 </div>
 

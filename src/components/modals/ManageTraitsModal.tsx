@@ -377,16 +377,16 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                           {/* Forget / Remove Button */}
                           <button
                             type="button"
+                            disabled={inherent && activeRole !== 'gm'}
                             onClick={() => handleRemoveRule(rule)}
-                            className={`px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                            className={`p-1 transition-colors ${
                               inherent && activeRole !== 'gm'
-                                ? 'text-slate-500 bg-slate-900 border border-slate-800 cursor-not-allowed opacity-60'
-                                : 'text-rose-300 bg-rose-950/40 border border-rose-500/30 hover:bg-rose-900/60'
+                                ? 'text-slate-700 cursor-not-allowed opacity-50'
+                                : 'text-slate-500 hover:text-rose-400 cursor-pointer'
                             }`}
                             title={inherent && activeRole !== 'gm' ? 'Inherent Traits (0 AP) require GM approval to remove' : 'Remove Trait'}
                           >
-                            <Trash2 className="w-3 h-3" />
-                            <span>Forget</span>
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -506,7 +506,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               <div className="p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center gap-2 text-xs text-amber-200 shrink-0">
                 <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
                 <span className="leading-tight">
-                  <strong>👑 Out-of-Path Acquisition:</strong> Traits outside known character paths cost <strong>3 AP</strong> and require GM approval.
+                  <strong>👑 Out-of-Path Acquisitions:</strong> cost more AP AND require GM Approval.
                 </span>
               </div>
             )}

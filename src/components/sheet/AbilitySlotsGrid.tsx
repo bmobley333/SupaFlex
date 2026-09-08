@@ -1889,14 +1889,19 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     {/* TAB 1: CHARACTER VAULT VIEW (spells mode) */}
                     {activeRightTab === 'VAULT' && type === 'spells' && (() => {
                       const vaultList: MagicItem[] = Array.isArray(sheetData.character_vault) ? sheetData.character_vault : [];
-                      const filteredVault = rightSearchQuery.trim()
+                      const filteredVault = (rightSearchQuery.trim()
                         ? vaultList.filter((v) => {
                             const q = rightSearchQuery.toLowerCase().trim();
                             const textMatch = (v.name || '').toLowerCase().includes(q) || (v.effect || '').toLowerCase().includes(q);
                             if (textMatch) return true;
                             return matchFunctionSourceSearch(q, v, functionsCatalog, modsCatalog, activeCharacter);
                           })
-                        : vaultList;
+                        : vaultList
+                      ).slice().sort((a, b) => {
+                        const nameA = formatCompositeFunctionName(a, functionsCatalog, modsCatalog, activeCharacter, ' • ');
+                        const nameB = formatCompositeFunctionName(b, functionsCatalog, modsCatalog, activeCharacter, ' • ');
+                        return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+                      });
 
                       return (
                         <div className="flex flex-col gap-2.5 flex-1 min-h-0 mt-2.5">
@@ -1928,6 +1933,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 const weight = getItemSlotWeight(item);
                                 const badge = getMagicItemTierBadge(item, fullCatalog);
                                 const displayName = formatCompositeFunctionName(item, functionsCatalog, modsCatalog, activeCharacter, ' • ');
+                                const matchedCatalogFn = functionsCatalog.find(
+                                  (f) => f.name.toLowerCase() === cleanName(item.name).toLowerCase()
+                                );
+                                const rawAction = item.action || matchedCatalogFn?.action || '';
+                                const actionUpper = rawAction.toUpperCase();
+                                const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+                                const resolvedUsage = item.usage || matchedCatalogFn?.usage || '';
+
                                 return (
                                   <div
                                     key={item.id || item.name + idx}
@@ -1951,14 +1964,28 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           </div>
                                         )}
                                       </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleEquipVaultItem(item)}
-                                        className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                      >
-                                        <Plus className="w-3.5 h-3.5" />
-                                        Equip ({weight} Slot{weight > 1 ? 's' : ''})
-                                      </button>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <div className="flex items-center gap-1">
+                                          {actionUpper && (
+                                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
+                                              {actionUpper}
+                                            </span>
+                                          )}
+                                          {resolvedUsage && (
+                                            <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
+                                              {resolvedUsage}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleEquipVaultItem(item)}
+                                          className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
+                                        >
+                                          <Plus className="w-3.5 h-3.5" />
+                                          Activate ({weight} Slot{weight > 1 ? 's' : ''})
+                                        </button>
+                                      </div>
                                     </div>
                                     <div className="text-xs pt-1">
                                       <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
@@ -2208,10 +2235,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
                               {/* Out-of-Path GM Notice Banner */}
                               {activePowerApCategory === '3AP' && (
-                                <div className="mb-1 px-3 py-1.5 bg-indigo-950/70 border border-indigo-500/40 rounded-xl text-indigo-200 text-xs flex items-center gap-2 shrink-0">
-                                  <span>👑</span>
-                                  <span>
-                                    <strong>Out-of-Path:</strong> Costs 3 AP (+2 AP surcharge) and requires GM Approval in campaign play.
+                                <div className="p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center gap-2 text-xs text-amber-200 shrink-0">
+                                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                                  <span className="leading-tight">
+                                    <strong>👑 Out-of-Path Acquisitions:</strong> cost more AP AND require GM Approval.
                                   </span>
                                 </div>
                               )}
