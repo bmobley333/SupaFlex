@@ -2870,19 +2870,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       v{version}
                     </span>
                   )}
-                  {type === 'spells' && (() => {
-                    const badge = getMagicItemTierBadge(slot, fullCatalog);
-                    if (!badge) return null;
-                    return (
-                      <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                          <span>{badge.icon}</span>
-                          <span>{badge.label}</span>
-                          <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                        </span>
-                      </div>
-                    );
-                  })()}
                 </div>
 
                 {/* 2. Action Badge Column */}

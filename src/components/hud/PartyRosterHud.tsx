@@ -232,7 +232,7 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
           title="Click to manage active party session or join a new party"
         >
           <Users className={`w-3.5 h-3.5 ${activePartyId ? 'text-cyan-400' : 'text-slate-500'}`} />
-          <span className="font-outfit font-bold uppercase text-[11px]">Manage Party:</span>
+          <span className="font-outfit font-bold uppercase text-[11px]">Join Party:</span>
           <span className="font-mono font-extrabold text-xs">
             {displayRoomCode || (activePartyId ? activePartyId.slice(0, 4).toUpperCase() : '----')}
           </span>

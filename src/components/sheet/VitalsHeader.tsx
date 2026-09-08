@@ -50,8 +50,8 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
     setHealInput('');
   };
 
-  // Draggable Progress Bar Pointer Handlers
-  const updateVitFromPointer = (clientX: number) => {
+  // Draggable Progress Bar Pointer Handlers (Smooth 60fps tracking, save only on pointer release)
+  const updateVitFromPointer = (clientX: number, shouldSave: boolean = false) => {
     if (!barRef.current || maxVit <= 0) return;
     const rect = barRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
@@ -62,18 +62,20 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
       ...prev,
       current_vitality: newVit,
     }));
-    saveActiveCharacter();
+    if (shouldSave) {
+      saveActiveCharacter();
+    }
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     setIsDragging(true);
     e.currentTarget.setPointerCapture(e.pointerId);
-    updateVitFromPointer(e.clientX);
+    updateVitFromPointer(e.clientX, false);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isDragging) {
-      updateVitFromPointer(e.clientX);
+      updateVitFromPointer(e.clientX, false);
     }
   };
 
@@ -83,6 +85,17 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
       try {
         e.currentTarget.releasePointerCapture(e.pointerId);
       } catch (_) {}
+      updateVitFromPointer(e.clientX, true);
+    }
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      setIsDragging(false);
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch (_) {}
+      saveActiveCharacter();
     }
   };
 
@@ -144,11 +157,12 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
             className="relative w-full max-w-[280px] h-4 bg-slate-900 rounded-full overflow-hidden border border-slate-800 cursor-ew-resize select-none touch-none group transition-all hover:border-emerald-500/50"
             title="Click or drag left/right to adjust Vitality level"
           >
             <div
-              className={`h-full transition-all duration-75 relative ${
+              className={`h-full relative ${isDragging ? 'transition-none' : 'transition-all duration-150'} ${
                 currentVit < 0 ? 'bg-rose-950/40' : vitPercent > 50 ? 'bg-emerald-500' : vitPercent > 20 ? 'bg-amber-500' : 'bg-rose-500'
               }`}
               style={{ width: `${currentVit < 0 ? 0 : vitPercent}%` }}
