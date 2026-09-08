@@ -27,6 +27,7 @@ import {
   ApEvaluationResult,
 } from '../../utils/pathApUtils';
 import { formatCompositeFunctionName, matchFunctionSourceSearch } from '../../utils/functionSourceHelper';
+import { reconcileCharacterVaultWithGear } from '../../utils/gearFunctionSync';
 
 const POWER_DISCIPLINES = [
   'BioTech',
@@ -330,6 +331,19 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     window.addEventListener('supaflex:open-manager' as any, handleOpen);
     return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
   }, [type]);
+
+  // Reconcile Function Vault with physically owned simple_gear when Functions Manager opens
+  useEffect(() => {
+    if (showManageModal && type === 'spells' && functionsCatalog.length > 0) {
+      updateActiveSheetData((prev) => {
+        const res = reconcileCharacterVaultWithGear(prev, functionsCatalog, modsCatalog);
+        if (res.addedFunctions.length > 0 || res.removedFunctions.length > 0) {
+          return res.updatedSheet;
+        }
+        return prev;
+      });
+    }
+  }, [showManageModal, type, functionsCatalog, modsCatalog, updateActiveSheetData]);
   
   // Search Filters for Left and Right Panes
   const [leftSearchQuery, setLeftSearchQuery] = useState('');

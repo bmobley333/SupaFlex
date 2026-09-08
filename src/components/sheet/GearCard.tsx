@@ -29,6 +29,13 @@ import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { gameApi } from '../../services/api';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
+import {
+  reconcileCharacterVaultWithGear,
+  cleanBelongsToName,
+  isModFreeForHost,
+  getFunctionsForMod as getFunctionsForModSync,
+  getFunctionsForGearItem as getFunctionsForGearItemSync,
+} from '../../utils/gearFunctionSync';
 
 export type EquipmentCategoryTab = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields' | 'kits';
 export type GearTierFilter = 'ALL' | 'STANDARD' | 'EXOTIC';
@@ -155,16 +162,18 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     }
   }, [showManageModal, activeGenre]);
 
-  // Helper to normalize belongs_to references from functions & mods
-  const cleanBelongsToName = (raw: string): string => {
-    return raw
-      .trim()
-      .replace(/^(Weapon|Armor|Shield|Gear|Supplies):\s*/i, '')
-      .replace(/\{[^}]+\}/g, '')
-      .replace(/\(x\d+\)/gi, '')
-      .trim()
-      .toLowerCase();
-  };
+  // Reconcile Function Vault with physically owned simple_gear when Gear Manager opens
+  useEffect(() => {
+    if (showManageModal && functionsCatalog.length > 0) {
+      updateActiveSheetData((prev) => {
+        const res = reconcileCharacterVaultWithGear(prev, functionsCatalog, modsCatalog);
+        if (res.addedFunctions.length > 0 || res.removedFunctions.length > 0) {
+          return res.updatedSheet;
+        }
+        return prev;
+      });
+    }
+  }, [showManageModal, functionsCatalog, modsCatalog, updateActiveSheetData]);
 
   // Strict Table- and MSO-aware matcher for mod compatibility
   const isModCompatibleWithItem = useCallback(
@@ -173,7 +182,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       item: { name: string; item_type?: string; category?: string }
     ): boolean => {
       if (!mod.belongs_to || !item.name) return false;
-      const itemNameClean = item.name.trim().toLowerCase();
+      const itemNameClean = cleanBelongsToName(item.name);
       const itemTypeLower = (item.item_type || item.category || '').toLowerCase();
 
       const parts = mod.belongs_to.split(',');
@@ -182,11 +191,11 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         if (!trimmed) return false;
         const withoutFree = trimmed.replace(/\{free\}/gi, '').trim();
         if (!withoutFree.includes(':')) {
-          return withoutFree.toLowerCase() === itemNameClean;
+          return cleanBelongsToName(withoutFree) === itemNameClean;
         }
         const [prefix, target] = withoutFree.split(':', 2);
         const prefLower = prefix.trim().toLowerCase();
-        const targetLower = target.trim().toLowerCase();
+        const targetClean = cleanBelongsToName(target);
 
         // Validate table prefix against item type
         if (prefLower === 'armor' && !(itemTypeLower.includes('armor') || itemTypeLower === 'armor')) return false;
@@ -197,30 +206,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         }
         if (prefLower === 'kit' && !itemTypeLower.includes('kit')) return false;
 
-        return targetLower === itemNameClean;
-      });
-    },
-    []
-  );
-
-  // Check if a mod is inherently {Free} for a specific host item
-  const isModFreeForHost = useCallback(
-    (
-      mod: { belongs_to?: string | null },
-      item: { name: string; item_type?: string; category?: string }
-    ): boolean => {
-      if (!mod.belongs_to || !item.name) return false;
-      const itemNameClean = item.name.trim().toLowerCase();
-      const parts = mod.belongs_to.split(',');
-      return parts.some((p) => {
-        const trimmed = p.trim();
-        if (!/\{free\}/i.test(trimmed)) return false;
-        const withoutFree = trimmed.replace(/\{free\}/gi, '').trim();
-        if (withoutFree.includes(':')) {
-          const target = withoutFree.split(':', 2)[1].trim().toLowerCase();
-          return target === itemNameClean;
-        }
-        return withoutFree.toLowerCase() === itemNameClean;
+        return targetClean === itemNameClean;
       });
     },
     []
@@ -308,41 +294,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
   // Helper to find all direct functions belonging to a gear item
   const getFunctionsForGearItem = useCallback(
-    (itemName: string): FunctionItem[] => {
-      const cleanItem = cleanBelongsToName(itemName);
-      const cleanStripped = cleanItem.replace(/\(mso\)/gi, '').trim();
-      return functionsCatalog.filter((fn) => {
-        if (!fn.belongs_to) return false;
-        const parts = fn.belongs_to.split(',');
-        return parts.some((p) => {
-          const trimmed = p.trim();
-          if (/^Mod:\s*/i.test(trimmed)) return false;
-          const cleaned = cleanBelongsToName(trimmed);
-          const stripped = cleaned.replace(/\(mso\)/gi, '').trim();
-          return cleaned === cleanItem || stripped === cleanStripped || cleaned === cleanStripped || stripped === cleanItem;
-        });
-      });
-    },
+    (itemName: string): FunctionItem[] => getFunctionsForGearItemSync(itemName, functionsCatalog),
     [functionsCatalog]
   );
 
   // Helper to find all functions belonging to an installed mod
   const getFunctionsForMod = useCallback(
-    (modName: string): FunctionItem[] => {
-      const cleanMod = cleanBelongsToName(modName);
-      const cleanStripped = cleanMod.replace(/\(mso\)/gi, '').trim();
-      return functionsCatalog.filter((fn) => {
-        if (!fn.belongs_to) return false;
-        const parts = fn.belongs_to.split(',');
-        return parts.some((p) => {
-          const trimmed = p.trim();
-          if (!/^Mod:\s*/i.test(trimmed)) return false;
-          const cleaned = cleanBelongsToName(trimmed);
-          const stripped = cleaned.replace(/\(mso\)/gi, '').trim();
-          return cleaned === cleanMod || stripped === cleanStripped || cleaned === cleanStripped || stripped === cleanMod;
-        });
-      });
-    },
+    (modName: string): FunctionItem[] => getFunctionsForModSync(modName, functionsCatalog),
     [functionsCatalog]
   );
 
@@ -780,7 +738,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
     // Auto-install inherent {Free} mods for this equipped item
     const freeModsForThisItem = modsCatalog.filter((m: any) =>
-      isModFreeForHost(m, { name: itemName, item_type: itemType, category: defaultCategory })
+      isModFreeForHost(m, itemName)
     );
 
     const freeModGearItems: SimpleGearItem[] = freeModsForThisItem.map((fm: any) => ({
@@ -823,7 +781,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   };
 
   // Purchase Optional Component / Mod on Owned Item
-  const handlePurchaseOptionalMod = (modItem: any, parentItemName: string) => {
+  const handlePurchaseOptionalMod = (modItem: any, parentItemName: string, parentCategory?: string) => {
     const modName = modItem.name;
     const costStr = modItem.cost || '0s';
     const costInSilver = parseCostToSilver(costStr);
@@ -834,8 +792,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       return;
     }
 
-    const deduction = deductFundsWithChange(gold, silver, costInSilver);
-
     const newModGearItem: SimpleGearItem = {
       id: `mod_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       name: `${modName} (${parentItemName})`,
@@ -844,7 +800,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       qty: 1,
       notes: modItem.notes || `Installed modification on ${parentItemName}`,
       item_type: 'gear',
-      belongs_to: `Supplies: ${parentItemName}`,
+      belongs_to: `${parentCategory || 'Gear'}: ${parentItemName}`,
     };
 
     const modFunctions = getFunctionsForMod(modName).map((fn) =>
@@ -852,17 +808,25 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     );
 
     updateActiveSheetData((prev) => {
+      const currentGold = prev.gold ?? 0;
+      const currentSilver = prev.silver ?? 0;
+      const deduction = deductFundsWithChange(currentGold, currentSilver, costInSilver);
+      if (!deduction.success) return prev;
+
       const currentVault = prev.character_vault || [];
       const fnsToAdd = modFunctions.filter(
         (mf) => !currentVault.some((v: any) => cleanBelongsToName(v.name) === cleanBelongsToName(mf.name))
       );
-      return {
+      const intermediateSheet = {
         ...prev,
         simple_gear: [...(prev.simple_gear || []), newModGearItem],
         character_vault: [...currentVault, ...fnsToAdd],
         gold: deduction.newGold,
         silver: deduction.newSilver,
       };
+
+      // Ensure all vault links are cleanly reconciled
+      return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog, modsCatalog).updatedSheet;
     });
     saveActiveCharacter();
 
@@ -1094,7 +1058,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                         isModCompatibleWithItem(m, item)
                       );
                       const installedModsCount = compatibleMods.filter(
-                        (m: any) => isModFreeForHost(m, item) || gearList.some((g) => g.name.includes(m.name))
+                        (m: any) => isModFreeForHost(m, item.name) || gearList.some((g) => g.name.includes(m.name))
                       ).length;
                       const availableModsCount = compatibleMods.length - installedModsCount;
                       const isModsOpen = expandedEquippedModIds.has(item.id);
@@ -1198,7 +1162,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                               {isModsOpen && (
                                 <div className="flex flex-col gap-1 bg-slate-950/60 p-2 rounded-lg border border-slate-800/60">
                                   {compatibleMods.map((m: any) => {
-                                    const isFree = isModFreeForHost(m, item);
+                                    const isFree = isModFreeForHost(m, item.name);
                                     const isInstalled = isFree || gearList.some((g) => g.name.includes(m.name));
 
                                     if (isInstalled) {
@@ -1209,7 +1173,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                             <ItemNotesPopover notes={m.notes || ''} itemName={m.name} inline />
                                           </span>
                                           <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shrink-0">
-                                            {isFree ? 'Installed {Free}' : 'Installed'}
+                                            Installed
                                           </span>
                                         </div>
                                       );
@@ -1218,10 +1182,19 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                     const modCostSilver = parseCostToSilver(m.cost);
                                     const canAffordMod = modCostSilver <= totalAvailableSilver;
                                     const modKey = String(m.id || m.name);
+                                    const isMsoMod = isGsUnlocked && isMsoEntry(m.name);
+                                    const modRowTextColor = isMsoMod ? 'text-purple-300' : 'text-indigo-300';
+                                    const formattedCost = (m.cost || '').toLowerCase() === 'artifact' ? 'Artifact' : formatCostAbbreviated(m.cost || '0s');
+
+                                    const modButtonClass = !canAffordMod
+                                      ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-500 border-slate-700/80 opacity-60 cursor-not-allowed'
+                                      : isMsoMod
+                                      ? 'bg-purple-950/80 hover:bg-purple-900 border-purple-500/40 text-purple-200 cursor-pointer shadow-sm'
+                                      : 'bg-indigo-950/80 hover:bg-indigo-900 border-indigo-500/40 text-indigo-200 cursor-pointer shadow-sm';
 
                                     return (
                                       <div key={modKey} className="flex items-center justify-between py-1 border-t border-slate-800/40 text-[10px] gap-2">
-                                        <span className="text-indigo-300 font-semibold inline-flex items-center align-baseline truncate">
+                                        <span className={`${modRowTextColor} font-semibold inline-flex items-center align-baseline truncate`}>
                                           <span>🔌 {m.name} ({m.cost || '0s'})</span>
                                           <ItemNotesPopover notes={m.notes || ''} itemName={m.name} inline />
                                         </span>
@@ -1237,21 +1210,17 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                               if (!canAffordMod) {
                                                 triggerNotEnoughMoney(modKey, m.name, m.cost || '0s', modCostSilver);
                                               } else {
-                                                handlePurchaseOptionalMod(m, item.name);
+                                                handlePurchaseOptionalMod(m, item.name, item.category || item.item_type || 'Gear');
                                               }
                                             }}
-                                            className={`px-2 py-0.5 rounded font-bold transition text-[9px] border ${
-                                              !canAffordMod
-                                                ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-500 border-slate-700/80 opacity-60 cursor-not-allowed'
-                                                : 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-300 cursor-pointer'
-                                            }`}
+                                            className={`px-2 py-0.5 rounded font-bold transition text-[9px] border ${modButtonClass}`}
                                             title={
                                               canAffordMod
                                                 ? `Install ${m.name} for ${m.cost || '0s'}`
                                                 : `Not Enough Money (Costs ${m.cost || '0s'}, you have ${gold}g ${silver}s)`
                                             }
                                           >
-                                            + Install Mod
+                                            +Mod [{formattedCost}]
                                           </button>
                                         </div>
                                       </div>
@@ -1644,11 +1613,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                 <span>🔌 Compatible Modifications ({availableMods.length}):</span>
                               </span>
                               {availableMods.map((mod: any) => {
-                                const isModFree = isModFreeForHost(mod, {
-                                  name: catalogItem.name,
-                                  item_type: itemTypeKey,
-                                  category: catalogItem.category,
-                                });
+                                const isModFree = isModFreeForHost(mod, catalogItem.name);
                                 return (
                                   <div
                                     key={mod.id || mod.name}

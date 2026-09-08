@@ -4,6 +4,7 @@ import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
+import { reconcileCharacterVaultWithGear } from '../utils/gearFunctionSync';
 
 const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
   if (typeof window !== 'undefined') {
@@ -245,9 +246,14 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       const currentActive = get().activeCharacter;
       let selectedChar: Character | null = null;
 
+      const reconcileSheet = (rawSheet: CharacterSheetData): CharacterSheetData => {
+        const migrated = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(rawSheet));
+        return reconcileCharacterVaultWithGear(migrated, functionsData || [], modsData || []).updatedSheet;
+      };
+
       if (currentActive && myHeroes.some((c) => c.id === currentActive.id)) {
         const freshChar = myHeroes.find((c) => c.id === currentActive.id)!;
-        const migratedSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(freshChar.sheet_data));
+        const migratedSheet = reconcileSheet(freshChar.sheet_data);
         // Preserve active character object and unsaved local edits if present
         selectedChar = {
           ...freshChar,
@@ -260,12 +266,12 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         if (lastActiveChar) {
           selectedChar = {
             ...lastActiveChar,
-            sheet_data: migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(lastActiveChar.sheet_data)),
+            sheet_data: reconcileSheet(lastActiveChar.sheet_data),
           };
         } else if (myHeroes.length > 0) {
           selectedChar = {
             ...myHeroes[0],
-            sheet_data: migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(myHeroes[0].sheet_data)),
+            sheet_data: reconcileSheet(myHeroes[0].sheet_data),
           };
         }
       }
@@ -295,16 +301,23 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
   selectCharacter: async (id: number) => {
     sessionStorage.setItem('supaflex_last_active_char_id', String(id));
+    const functionsCatalog = get().functionsCatalog;
+    const modsCatalog = get().modsCatalog;
+    const reconcileSheet = (rawSheet: CharacterSheetData): CharacterSheetData => {
+      const migrated = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(rawSheet));
+      return reconcileCharacterVaultWithGear(migrated, functionsCatalog, modsCatalog).updatedSheet;
+    };
+
     const found = get().characters.find((c) => c.id === id);
     if (found) {
-      const migratedFoundSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(found.sheet_data));
+      const migratedFoundSheet = reconcileSheet(found.sheet_data);
       const migratedFound = { ...found, sheet_data: migratedFoundSheet };
       set({ activeCharacter: migratedFound });
     }
     try {
       const updated = await gameApi.getCharacterById(id);
       if (updated) {
-        const migratedSheet = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(updated.sheet_data));
+        const migratedSheet = reconcileSheet(updated.sheet_data);
         const migratedChar = { ...updated, sheet_data: migratedSheet };
         set((state) => ({
           activeCharacter: migratedChar,
