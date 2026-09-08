@@ -8,18 +8,11 @@ import {
   Trash2,
   Zap,
   Flame,
-  Search,
-  Loader2,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
-import { gameApi } from '../../services/api';
-import {
-  ChaosGemSlot,
-  ChaosGemItem,
-  SupabaseChaosGem,
-} from '../../types/game';
+import { ChaosGemSlot } from '../../types/game';
 
 // Standard 1-to-6 slot metadata mapping
 const SLOT_METADATA = [
@@ -34,12 +27,8 @@ const SLOT_METADATA = [
 export const ChaosGauntletCard: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
 
-  // Modal State & Catalog
+  // Modal State
   const [showManageModal, setShowManageModal] = useState(false);
-  const [chaosGemsCatalog, setChaosGemsCatalog] = useState<SupabaseChaosGem[]>([]);
-  const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
-  const [selectedSlotId, setSelectedSlotId] = useState<string>('finger_1');
-  const [searchQuery, setSearchQuery] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Normalize 6 ordered slots (Slots 1 to 6)
@@ -85,26 +74,9 @@ export const ChaosGauntletCard: React.FC = () => {
     return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
   }, []);
 
-  // Fetch catalog on modal open
-  useEffect(() => {
-    if (showManageModal) {
-      setIsLoadingCatalog(true);
-      gameApi
-        .getChaosGems()
-        .then(setChaosGemsCatalog)
-        .catch(console.error)
-        .finally(() => setIsLoadingCatalog(false));
-
-      // Auto-focus first empty slot
-      const firstEmpty = gauntletSlots.find((s) => !s.gem || !s.gem.name);
-      if (firstEmpty) {
-        setSelectedSlotId(firstEmpty.slot_id);
-      }
-    }
-  }, [showManageModal]);
-
   const handleCloseManageModal = () => {
     setShowManageModal(false);
+    setConfirmRemovalSlotId(null);
     window.dispatchEvent(new CustomEvent('supaflex:close-manager'));
   };
 
@@ -119,19 +91,6 @@ export const ChaosGauntletCard: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showManageModal]);
 
-  // Filtered Catalog
-  const filteredCatalogGems = useMemo(() => {
-    return chaosGemsCatalog.filter((gem) => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesName = gem.name.toLowerCase().includes(q);
-        const matchesEffect = (gem.effect || '').toLowerCase().includes(q);
-        if (!matchesName && !matchesEffect) return false;
-      }
-      return true;
-    });
-  }, [chaosGemsCatalog, searchQuery]);
-
   // Confirmation Modal State for Destroying on Removal
   const [confirmRemovalSlotId, setConfirmRemovalSlotId] = useState<string | null>(null);
 
@@ -142,39 +101,6 @@ export const ChaosGauntletCard: React.FC = () => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 4000);
   }, []);
-
-  // Socket a Gem into Conduit
-  const handleSocketGemToConduit = async (gemToSocket: SupabaseChaosGem | Partial<SupabaseChaosGem>, targetSlotId?: string) => {
-    const destSlotId = targetSlotId || selectedSlotId;
-    const targetMeta = SLOT_METADATA.find((m) => m.slot_id === destSlotId);
-    const uses = typeof gemToSocket.usage === 'number' ? gemToSocket.usage : parseInt(String(gemToSocket.usage || '3'), 10) || 3;
-
-    const newGem: ChaosGemItem = {
-      id: typeof gemToSocket.id === 'number' ? gemToSocket.id : undefined,
-      name: gemToSocket.name || 'Chaos Gem',
-      action: gemToSocket.action || 'F',
-      usage: uses,
-      max_usage: 3,
-      effect: gemToSocket.effect || '',
-      genres: (gemToSocket.genres as any) || ['Medieval', 'Modern', 'SciFi'],
-      checked: [false, false, false],
-    };
-
-    updateActiveSheetData((prev) => {
-      const currentSlots = gauntletSlots.map((s) => ({ ...s }));
-      const targetIdx = currentSlots.findIndex((s) => s.slot_id === destSlotId);
-      if (targetIdx !== -1) {
-        currentSlots[targetIdx] = {
-          ...currentSlots[targetIdx],
-          gem: newGem,
-        };
-      }
-      return { ...prev, chaos_gauntlet_slots: currentSlots };
-    });
-
-    await saveActiveCharacter();
-    showToast(`💎 Socketed '${newGem.name}' into ${targetMeta?.label || 'Conduit'}!`, 'success');
-  };
 
   // Handle Toggle Checkbox on a Socketed Gem (Auto-Shatter on 3rd Checked Box)
   const handleToggleCheckbox = (slotId: string, checkIndex: number) => {
@@ -277,7 +203,6 @@ export const ChaosGauntletCard: React.FC = () => {
   const currentCharges = activeCharacter?.sheet_data?.charges ?? activeCharacter?.sheet_data?.sparks ?? 0;
   const isSparkReady = currentCharges >= 5 || Boolean(activeCharacter?.sheet_data?.is_sparked);
   const pendingRemovalSlot = gauntletSlots.find((s) => s.slot_id === confirmRemovalSlotId);
-  const selectedSlotMeta = SLOT_METADATA.find((m) => m.slot_id === selectedSlotId);
 
   return (
     <div className="bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-3.5 flex flex-col gap-2.5 transition-all shadow-lg shadow-purple-950/20">
@@ -320,7 +245,7 @@ export const ChaosGauntletCard: React.FC = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
             <div
               ref={modalRef}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden"
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden relative"
             >
               {/* Modal Top Bar */}
               <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
@@ -331,7 +256,7 @@ export const ChaosGauntletCard: React.FC = () => {
                       Chaos Gauntlet Manager
                     </h3>
                     <p className="text-xs text-slate-400 hidden sm:block">
-                      Socket volatile chaos gems into gauntlet conduits from the stock catalog.
+                      Conduit review and volatile matrix management.
                     </p>
                   </div>
                 </div>
@@ -356,17 +281,18 @@ export const ChaosGauntletCard: React.FC = () => {
               {/* Modal Body: 2-Column Split Pane */}
               <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-slate-800 overflow-hidden">
                 {/* LEFT COLUMN: 6 Gauntlet Conduit Sockets */}
-                <div className="md:col-span-5 flex flex-col min-h-0 bg-slate-950/40 p-3.5 gap-3 overflow-hidden">
+                <div className="md:col-span-6 flex flex-col min-h-0 bg-slate-950/40 p-4 gap-3 overflow-hidden">
                   <div className="flex items-center justify-between shrink-0">
                     <span className="font-outfit font-bold text-xs text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                       <span>⚡ Conduits ({equippedGemsCount}/6 Active)</span>
                     </span>
-                    <span className="text-[10px] text-slate-500 italic">Click row to set target</span>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {6 - equippedGemsCount} Available
+                    </span>
                   </div>
 
-                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 no-scrollbar">
+                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1 no-scrollbar">
                     {gauntletSlots.map((slot) => {
-                      const isSelected = selectedSlotId === slot.slot_id;
                       const isWrist = slot.slot_type === 'wrist';
                       const meta = SLOT_METADATA.find((m) => m.slot_id === slot.slot_id);
                       const hasGem = Boolean(slot.gem && slot.gem.name);
@@ -374,27 +300,26 @@ export const ChaosGauntletCard: React.FC = () => {
                       return (
                         <div
                           key={slot.slot_id}
-                          onClick={() => setSelectedSlotId(slot.slot_id)}
-                          className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
-                            isSelected
-                              ? 'bg-purple-950/50 border-purple-400 shadow-md shadow-purple-950/40 ring-1 ring-purple-400/50'
-                              : hasGem
-                              ? 'bg-slate-900/90 border-slate-700/70 hover:border-slate-600'
-                              : 'bg-slate-950/50 border-dashed border-slate-800 hover:border-slate-700'
+                          className={`p-3 rounded-xl border transition-all flex flex-col gap-2 ${
+                            hasGem
+                              ? isWrist
+                                ? 'bg-slate-900/90 border-amber-500/40 shadow-sm shadow-amber-950/20'
+                                : 'bg-slate-900/90 border-slate-700/80 shadow-sm'
+                              : 'bg-slate-950/40 border-dashed border-slate-800/80'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
                                 isWrist
                                   ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
                                   : 'bg-slate-950 text-slate-300 border-slate-800'
                               }`}>
                                 {meta?.shortLabel || `Slot ${slot.slot_number}`}
                               </span>
-                              {isSelected && (
-                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-600 text-white animate-pulse">
-                                  Target Conduit
+                              {hasGem && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950/70 text-purple-300 border border-purple-500/30">
+                                  {slot.gem!.action || 'F'} • {slot.gem!.usage ?? 3} Uses
                                 </span>
                               )}
                             </div>
@@ -402,12 +327,9 @@ export const ChaosGauntletCard: React.FC = () => {
                             {hasGem && (
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setConfirmRemovalSlotId(slot.slot_id);
-                                }}
-                                className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded transition cursor-pointer"
-                                title="Shatter & remove socketed gem"
+                                onClick={() => setConfirmRemovalSlotId(slot.slot_id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-rose-500/30"
+                                title="Shatter & destroy socketed gem"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -415,19 +337,20 @@ export const ChaosGauntletCard: React.FC = () => {
                           </div>
 
                           {hasGem ? (
-                            <div>
-                              <div className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1">
+                            <div className="flex flex-col gap-1">
+                              <div className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1.5">
                                 <span className="text-purple-400">💎</span>
-                                <span>{slot.gem!.name}</span>
+                                <span className="text-slate-100">{slot.gem!.name}</span>
                                 <ItemNotesPopover notes={(slot.gem as any).notes} itemName={slot.gem!.name} inline />
                               </div>
-                              <p className="text-[10px] text-slate-400 line-clamp-2 mt-0.5 leading-tight">
+                              <p className="text-[11px] text-slate-300 leading-snug">
                                 {slot.gem!.effect}
                               </p>
                             </div>
                           ) : (
-                            <div className="text-[11px] text-slate-500 italic py-1">
-                              Empty Conduit — Ready for Chaos Gem
+                            <div className="text-[11px] text-slate-500 italic py-1 flex items-center gap-1.5">
+                              <Sparkles className="w-3 h-3 text-slate-600" />
+                              <span>Empty Conduit — Fused via Loot drops</span>
                             </div>
                           )}
                         </div>
@@ -436,82 +359,68 @@ export const ChaosGauntletCard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN: Stock Catalog */}
-                <div className="md:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-3.5 gap-3 overflow-hidden">
-                  {/* Header */}
-                  <div className="flex items-center justify-between gap-2 shrink-0">
-                    <span className="font-outfit font-bold text-xs text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <span>💎 Stock Chaos Gems ({filteredCatalogGems.length})</span>
+                {/* RIGHT COLUMN: Loot Guidance & Generator Launcher */}
+                <div className="md:col-span-6 flex flex-col min-h-0 bg-slate-900/60 p-4 gap-3.5 overflow-y-auto no-scrollbar">
+                  {/* Section Title */}
+                  <div className="flex items-center justify-between gap-2 shrink-0 border-b border-slate-800 pb-2.5">
+                    <span className="font-outfit font-bold text-xs text-purple-200 uppercase tracking-wider flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-400 shrink-0" />
+                      <span>Chaos Gem Acquisition Rules</span>
                     </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-500/30">
+                      Loot Only
+                    </span>
+                  </div>
 
-                    <div className="text-[11px] text-slate-400 font-mono">
-                      Target: <strong className="text-purple-300">{selectedSlotMeta?.label || 'Conduit'}</strong>
+                  {/* Informational Guidance Cards */}
+                  <div className="flex flex-col gap-3 text-xs leading-relaxed text-slate-300">
+                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 flex flex-col gap-1.5 shadow-sm">
+                      <div className="font-outfit font-bold text-slate-200 flex items-center gap-1.5">
+                        <span>🎲</span>
+                        <span>Discovered Exclusively Through Loot</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Chaos Gems are volatile, attuned crystallizations that <strong className="text-slate-200">cannot be purchased from merchants</strong> or forged on demand. They are discovered exclusively as rare encounter loot drops or awarded directly by the GM.
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 flex flex-col gap-1.5 shadow-sm">
+                      <div className="font-outfit font-bold text-slate-200 flex items-center gap-1.5">
+                        <span>⚡</span>
+                        <span>Irrevocable Conduit Fusion</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Chaos Gems cannot be carried loosely in pouches or backpacks. When discovered, they form an instant metaphysical bond and must be fused directly into an available gauntlet conduit.
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 flex flex-col gap-1.5 shadow-sm">
+                      <div className="font-outfit font-bold text-slate-200 flex items-center gap-1.5">
+                        <span>💥</span>
+                        <span>3-Use Lifespan & Shattering</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Each gem begins with 3 durability uses. Expending the final use collapses its energy matrix and destroys it permanently. To free a conduit early for a new gem, click the <strong className="text-rose-300">trashcan icon (🗑️)</strong> on any conduit to deliberately shatter it.
+                      </p>
                     </div>
                   </div>
 
-                  <div className="flex-1 min-h-0 flex flex-col gap-2.5 overflow-hidden">
-                    {/* Search Bar */}
-                    <div className="relative shrink-0">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
-                        type="text"
-                        placeholder="Search stock chaos gems..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
-                      />
-                    </div>
-
-                    {/* Gems List */}
-                    <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 no-scrollbar">
-                      {isLoadingCatalog ? (
-                        <div className="flex items-center justify-center py-12 text-slate-500 gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                          <span>Loading Chaos Gems...</span>
-                        </div>
-                      ) : filteredCatalogGems.length === 0 ? (
-                        <div className="p-8 text-center text-xs text-slate-500 italic bg-slate-950/40 rounded-xl border border-slate-800">
-                          {searchQuery ? `No chaos gems found matching '${searchQuery}'.` : 'No chaos gems in catalog.'}
-                        </div>
-                      ) : (
-                        filteredCatalogGems.map((gem) => (
-                          <div
-                            key={gem.id}
-                            className="p-3 bg-slate-950/70 hover:bg-slate-950/90 border border-slate-800 hover:border-purple-500/40 rounded-xl flex items-start justify-between gap-3 transition-all"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-outfit font-bold text-xs text-slate-100 inline-flex items-center align-baseline gap-1">
-                                  <span className="text-purple-400">💎</span>
-                                  <span>{gem.name}</span>
-                                  <ItemNotesPopover notes={(gem as any).notes} itemName={gem.name} inline />
-                                </span>
-                                {gem.action && (
-                                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/30">
-                                    {gem.action}
-                                  </span>
-                                )}
-                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-800">
-                                  {gem.usage || 3} Uses
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
-                                {gem.effect}
-                              </p>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => handleSocketGemToConduit(gem)}
-                              className="shrink-0 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white text-xs font-bold rounded-lg transition shadow-sm cursor-pointer flex items-center gap-1.5"
-                              title={`Socket into ${selectedSlotMeta?.label || 'selected conduit'}`}
-                            >
-                              <span>💎 Socket</span>
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                  {/* Loot Generator Action Launcher */}
+                  <div className="mt-auto pt-3 border-t border-slate-800/80 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleCloseManageModal();
+                        window.dispatchEvent(new CustomEvent('supaflex:open-loot-generator'));
+                      }}
+                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 active:from-purple-700 active:to-indigo-700 text-white font-outfit font-bold text-xs tracking-wide transition-all shadow-md shadow-purple-950/50 flex items-center justify-center gap-2 cursor-pointer border border-purple-400/40"
+                    >
+                      <Sparkles className="w-4 h-4 text-purple-200" />
+                      <span>🎲 Open Loot Generator</span>
+                    </button>
+                    <p className="text-[10px] text-slate-500 text-center italic">
+                      Roll for encounter treasure, credits, and rare Chaos Gem drops.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -526,6 +435,46 @@ export const ChaosGauntletCard: React.FC = () => {
                   Done
                 </button>
               </div>
+
+              {/* Modal-Internal Shatter Confirmation Overlay */}
+              {confirmRemovalSlotId && pendingRemovalSlot && (
+                <div className="absolute inset-0 z-[60] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+                  <div className="bg-slate-900 border border-rose-500/60 rounded-2xl p-5 max-w-md w-full flex flex-col gap-3 shadow-2xl shadow-rose-950/50 animate-scaleIn">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-400">
+                        <Flame className="w-5 h-5 animate-pulse" />
+                      </div>
+                      <div>
+                        <h4 className="font-outfit font-bold text-sm text-slate-100">
+                          Shatter '{pendingRemovalSlot.gem?.name}'?
+                        </h4>
+                        <span className="text-[11px] font-mono text-rose-300">
+                          Conduit: {SLOT_METADATA.find((m) => m.slot_id === pendingRemovalSlot.slot_id)?.label}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Removing a socketed Chaos Gem permanently destroys it forever. It cannot be recovered or returned to inventory.
+                    </p>
+                    <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmRemovalSlotId(null)}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirmRemove}
+                        className="px-4 py-1.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition shadow-md shadow-rose-950/40 cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>💥 Confirm Shatter</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -561,46 +510,6 @@ export const ChaosGauntletCard: React.FC = () => {
         </div>
       )}
 
-      {/* Inline Shatter Confirmation Modal */}
-      {confirmRemovalSlotId && pendingRemovalSlot && (
-        <div className="bg-rose-950/50 border border-rose-500/50 rounded-xl p-3 flex flex-col gap-2 animate-fadeIn shadow-lg">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-rose-400 shrink-0 animate-pulse" />
-              <span className="font-outfit font-bold text-xs text-rose-200">
-                Shatter '{pendingRemovalSlot.gem?.name}'?
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setConfirmRemovalSlotId(null)}
-              className="text-slate-400 hover:text-slate-200 p-0.5"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <p className="text-[11px] text-rose-300/90 leading-tight">
-            Removing a socketed Chaos Gem permanently destroys it forever. It cannot be recovered.
-          </p>
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => setConfirmRemovalSlotId(null)}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 transition cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmRemove}
-              className="px-3 py-1 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition shadow-sm cursor-pointer"
-            >
-              💥 Confirm Shatter
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* --- TABLE-LIKE SLOTS CONTAINER (OCCUPIED SLOTS) --- */}
       {occupiedSlots.length > 0 ? (
         <div className="flex flex-col gap-1">
@@ -612,7 +521,7 @@ export const ChaosGauntletCard: React.FC = () => {
             return (
               <div
                 key={slot.slot_id}
-                className={`px-2.5 py-1 min-h-[34px] rounded-xl border flex items-center justify-between gap-2.5 transition-all text-xs ${
+                className={`px-2.5 py-1.5 min-h-[34px] rounded-xl border flex items-center justify-between gap-2.5 transition-all text-xs ${
                   isWrist
                     ? 'bg-gradient-to-r from-amber-950/40 via-violet-950/20 to-slate-950/90 border-amber-500/50 shadow-sm shadow-amber-950/20 hover:border-amber-400'
                     : 'bg-slate-950/70 hover:bg-slate-950/90 border-slate-800/80 hover:border-slate-700 shadow-sm'
@@ -631,17 +540,17 @@ export const ChaosGauntletCard: React.FC = () => {
                   )}
                 </div>
 
-                {/* 2. Gem Name */}
-                <div className="w-28 sm:w-36 shrink-0 truncate">
-                  <span className="font-outfit font-bold text-xs text-slate-100 inline-flex items-center align-baseline gap-1">
-                    <span className="text-[11px] leading-none">💎</span>
-                    <span className="truncate" title={gem.name}>{gem.name}</span>
+                {/* 2. Gem Name (Truncates, Hover tooltip displays effect) */}
+                <div className="flex-1 min-w-0 truncate" title={gem.effect ? `${gem.name}: ${gem.effect}` : gem.name}>
+                  <span className="font-outfit font-bold text-xs text-slate-100 inline-flex items-center align-baseline gap-1 truncate max-w-full">
+                    <span className="text-[11px] leading-none shrink-0">💎</span>
+                    <span className="truncate">{gem.name}</span>
                     <ItemNotesPopover notes={(gem as any).notes} itemName={gem.name} inline />
                   </span>
                 </div>
 
                 {/* 3. Three Clickable Usage Checkboxes (ALWAYS 3) */}
-                <div className="w-16 shrink-0 flex items-center gap-1 justify-center">
+                <div className="shrink-0 flex items-center gap-1 justify-center px-1">
                   {[0, 1, 2].map((bIdx) => {
                     const isChecked = !!(gem.checked && gem.checked[bIdx]);
                     return (
@@ -661,19 +570,9 @@ export const ChaosGauntletCard: React.FC = () => {
                   })}
                 </div>
 
-                {/* 4. Wrappable Effect Description */}
-                <div className="flex-1 min-w-0 pr-1">
-                  <p
-                    className="text-[11px] text-slate-300 leading-snug whitespace-normal break-words font-sans"
-                    title={gem.effect}
-                  >
-                    {gem.effect}
-                  </p>
-                </div>
-
-                {/* 5. Actions: Spark (Mega Slot) & Inline Shatter (Trash) */}
-                <div className="shrink-0 flex items-center gap-1">
-                  {isWrist && (
+                {/* 4. Action: Spark (Mega Slot Only) */}
+                {isWrist && (
+                  <div className="shrink-0 flex items-center">
                     <button
                       type="button"
                       onClick={() => handleSparkActivation(slot.slot_id)}
@@ -692,17 +591,8 @@ export const ChaosGauntletCard: React.FC = () => {
                       <Zap className={`w-3 h-3 ${isSparkReady ? 'text-slate-950 fill-slate-950' : 'text-amber-500/40'}`} />
                       <span>Spark</span>
                     </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setConfirmRemovalSlotId(slot.slot_id)}
-                    className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded transition cursor-pointer"
-                    title={`Shatter and destroy '${gem.name}' to free this conduit`}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
             );
           })}

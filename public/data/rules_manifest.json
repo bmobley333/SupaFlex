@@ -108,5 +108,10 @@
     "title": "Focus Die Rules",
     "summary": "Focus Roll:\n• Spend Timing — Once per roll, after seeing the initial roll result, roll your current Focus Die and add the result directly to your total.\n• Explosion Type — Comparison rolls (Skill, Attack, Defense) explode freely on max face; Single-die rolls (Damage, Armor) single-explode capped.\n• Step-Down Rule — Spending your Focus Die steps it down one size on the ladder (d12 ➔ d10 ➔ d8 ➔ d6 ➔ d4 ➔ Exhausted).\n\nRequirement:\n• Eligible Rolls — Any ability roll, Damage, AR, and other checks as GM allows.\n• Usage Limit — Limit 1 Focus spend per roll.\n• Strict Exclusivity — A roll may use Focus OR Luck, but NEVER BOTH.\n\nRefilling Focus (The Flood):\n• Start of Combat — Step up +1 at the beginning of an encounter.\n• End of Combat — Step up +1 upon resolving an encounter.\n• Short Rest — Step up +1 when taking a short rest opportunity between combats.\n• Full Round Action — Spend an entire combat round taking no other actions to \"Flood\" (+1 step up).\n• Full Rest — A full night's sleep completely restores your Focus Die to its maximum ceiling size.",
     "anchor": "#focus-die"
+  },
+  "chaos_gauntlet.basics": {
+    "title": "Chaos Gauntlet & Chaos Gems",
+    "summary": "Core Mechanics:\n• Gauntlet Slots — 6 Conduits: 1 Wrist Mega Slot (👑) + 5 Finger Conduits (🖐️).\n• Attuned Crystallization — Volatile crystallizations that cannot be carried loosely in bags or pouches; only exist when socketed in a gauntlet.\n• Irrevocable Fusion — Removing a gem from a gauntlet conduit immediately shatters and destroys it.\n• 3 Durability Uses — Gems start with 3 uses; when a gem reaches 0 uses, its energy matrix collapses and it is permanently destroyed.\n• Free Action (F) — Activating a Chaos Gem is a Free Action (F). Limit 1 Chaos Gem per combat round.\n• Mega Slot Spark Synergy — The Wrist Mega Slot can also be activated by spending a Full Spark (⚡) without consuming gem durability.\n• Loot-Only Acquisition — Chaos Gems are discovered exclusively through the Loot Generator or active adventure drops.",
+    "anchor": "#chaos-gauntlet-chaos-gems"
   }
 }
