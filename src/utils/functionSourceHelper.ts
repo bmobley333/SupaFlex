@@ -1,7 +1,9 @@
 // src/utils/functionSourceHelper.ts
 // Universal resolution engine to determine host Equipment & composite name for Functions
 
-import { AbilitySlot, MagicItem, FunctionItem, ModItem, Character } from '../types/game';
+import { AbilitySlot, MagicItem, FunctionItem, ModItem, Character, parseAbilityVersion } from '../types/game';
+import { compareMsoOptions } from './kitUtils';
+import { getItemSlotWeight } from './loadoutCapacitySchedule';
 
 export interface FunctionSourceResult {
   gearName: string;
@@ -277,4 +279,199 @@ export const matchFunctionSourceSearch = (
     source.gearName.toLowerCase().includes(q) ||
     (source.modName ? source.modName.toLowerCase().includes(q) : false)
   );
+};
+
+/**
+ * Resolves an appropriate icon for the parent gear (Armor, Shield, Weapon, or Tech).
+ */
+export const getGearIcon = (gearName?: string | null, activeCharacter?: Character | null): string => {
+  if (!gearName) return '⚙️';
+  const norm = gearName.toLowerCase().trim();
+  const sheetData = activeCharacter?.sheet_data;
+  if (sheetData) {
+    if (sheetData.armor_slot?.name?.toLowerCase().includes(norm)) return '🛡️';
+    if (sheetData.shield_slot?.name?.toLowerCase().includes(norm)) return '🛡️';
+    if ((sheetData.weapons || []).some((w: any) => w?.name?.toLowerCase().includes(norm))) return '⚔️';
+  }
+  if (norm.includes('armor') || norm.includes('suit') || norm.includes('plate') || norm.includes('vest') || norm.includes('helm') || norm.includes('exoskeleton')) {
+    return '🛡️';
+  }
+  if (norm.includes('shield')) {
+    return '🛡️';
+  }
+  if (norm.includes('blade') || norm.includes('sword') || norm.includes('rifle') || norm.includes('cannon') || norm.includes('pistol') || norm.includes('bow') || norm.includes('gun') || norm.includes('axe') || norm.includes('dagger')) {
+    return '⚔️';
+  }
+  return '⚙️';
+};
+
+export interface FunctionItemInfo<T = any> {
+  item: T;
+  cleanFnName: string;
+  gearName: string | null;
+  gearIcon: string;
+  version: number;
+  baseName: string;
+  compositeName: string;
+}
+
+export interface FunctionGroupSection<T = any> {
+  key: string;
+  isGroup: boolean;
+  gearName?: string;
+  gearIcon?: string;
+  items: FunctionItemInfo<T>[];
+  totalSlots: number;
+  otherPaneCount: number;
+}
+
+/**
+ * Resolves a function item's parent gear and clean display name.
+ */
+export const resolveFunctionItemInfo = <T extends { name?: string; effect?: string | null; [key: string]: any }>(
+  item: T,
+  functionsCatalog: FunctionItem[] = [],
+  modsCatalog: ModItem[] = [],
+  activeCharacter?: Character | null
+): FunctionItemInfo<T> => {
+  const source = resolveFunctionSource(item as any, functionsCatalog, modsCatalog, activeCharacter);
+  const compositeName = formatCompositeFunctionName(item as any, functionsCatalog, modsCatalog, activeCharacter, ' • ');
+
+  let gearName: string | null = null;
+  if (source?.gearName) {
+    gearName = cleanGearTextKeepMso(source.gearName);
+  } else if (compositeName.includes(' • ')) {
+    gearName = compositeName.split(' • ')[0].trim();
+  }
+
+  let cleanFnName = compositeName;
+  if (gearName) {
+    const escaped = gearName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    cleanFnName = cleanFnName.replace(new RegExp(`^${escaped}\\s*•\\s*`, 'i'), '').trim();
+    if (!cleanFnName || cleanFnName.toLowerCase() === gearName.toLowerCase()) {
+      cleanFnName = cleanSourceText(item.name || '');
+    }
+  }
+
+  const parsed = parseAbilityVersion(cleanFnName);
+  const gearIcon = gearName ? getGearIcon(gearName, activeCharacter) : '⚙️';
+
+  return {
+    item,
+    cleanFnName: parsed.baseName || cleanFnName,
+    gearName,
+    gearIcon,
+    version: parsed.version || 1,
+    baseName: parsed.baseName || cleanFnName,
+    compositeName,
+  };
+};
+
+/**
+ * Groups active or vault functions by parent gear under Option A (Threshold 2+):
+ * - If 2+ functions share the same host gear, groups them into a collapsible parent container.
+ * - If only 1 function belongs to the host gear, emits as a single item with a subtle host badge.
+ * - Standalone functions (no host gear) are emitted as standard items.
+ */
+export const groupFunctionsByParent = <T extends { name?: string; effect?: string | null; [key: string]: any }>(
+  items: T[],
+  functionsCatalog: FunctionItem[] = [],
+  modsCatalog: ModItem[] = [],
+  activeCharacter?: Character | null,
+  otherPaneItems: any[] = [],
+  isGsUnlocked: boolean = false
+): FunctionGroupSection<T>[] => {
+  // 1. Resolve item info for every item in list
+  const itemInfos: FunctionItemInfo<T>[] = items.map((item) =>
+    resolveFunctionItemInfo(item, functionsCatalog, modsCatalog, activeCharacter)
+  );
+
+  // 2. Group by gearName (if present) or standalone
+  const gearMap = new Map<string, FunctionItemInfo<T>[]>();
+  const standaloneItems: FunctionItemInfo<T>[] = [];
+
+  for (const info of itemInfos) {
+    if (info.gearName) {
+      const key = info.gearName.trim();
+      const existing = gearMap.get(key) || [];
+      existing.push(info);
+      gearMap.set(key, existing);
+    } else {
+      standaloneItems.push(info);
+    }
+  }
+
+  // 3. Build sections
+  const sections: FunctionGroupSection<T>[] = [];
+
+  // Handle gear groups
+  for (const [gearName, gearItems] of gearMap.entries()) {
+    // Count how many items for this gearName exist in otherPaneItems
+    let otherPaneCount = 0;
+    if (otherPaneItems && otherPaneItems.length > 0) {
+      const gNorm = gearName.toLowerCase().trim();
+      otherPaneCount = otherPaneItems.filter((other) => {
+        const otherInfo = resolveFunctionItemInfo(other, functionsCatalog, modsCatalog, activeCharacter);
+        return otherInfo.gearName && otherInfo.gearName.toLowerCase().trim() === gNorm;
+      }).length;
+    }
+
+    if (gearItems.length >= 2) {
+      // Threshold 2+: Create Parent Group Section
+      const totalSlots = gearItems.reduce((sum, i) => {
+        return sum + getItemSlotWeight(i.item);
+      }, 0);
+
+      // Sort items inside group alphabetically by cleanFnName
+      const sortedChildItems = [...gearItems].sort((a, b) => {
+        return compareMsoOptions(a.cleanFnName, b.cleanFnName, isGsUnlocked);
+      });
+
+      sections.push({
+        key: `group:${gearName}`,
+        isGroup: true,
+        gearName,
+        gearIcon: gearItems[0].gearIcon,
+        items: sortedChildItems,
+        totalSlots,
+        otherPaneCount,
+      });
+    } else {
+      // Threshold not met (only 1 function for this gear in this pane):
+      // Emit as single item with host badge
+      const single = gearItems[0];
+      const totalSlots = getItemSlotWeight(single.item);
+      sections.push({
+        key: `single:${gearName}:${single.cleanFnName}`,
+        isGroup: false,
+        gearName,
+        gearIcon: single.gearIcon,
+        items: [single],
+        totalSlots,
+        otherPaneCount,
+      });
+    }
+  }
+
+  // Handle standalone items (no gearName)
+  for (let i = 0; i < standaloneItems.length; i++) {
+    const single = standaloneItems[i];
+    const totalSlots = getItemSlotWeight(single.item);
+    sections.push({
+      key: `standalone:${single.cleanFnName}:${i}`,
+      isGroup: false,
+      items: [single],
+      totalSlots,
+      otherPaneCount: 0,
+    });
+  }
+
+  // 4. Sort top-level sections alphabetically
+  sections.sort((a, b) => {
+    const titleA = a.isGroup ? (a.gearName || '') : (a.items[0]?.cleanFnName || '');
+    const titleB = b.isGroup ? (b.gearName || '') : (b.items[0]?.cleanFnName || '');
+    return compareMsoOptions(titleA, titleB, isGsUnlocked);
+  });
+
+  return sections;
 };

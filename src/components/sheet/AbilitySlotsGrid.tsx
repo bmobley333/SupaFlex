@@ -26,7 +26,11 @@ import {
   ApCostCategory,
   ApEvaluationResult,
 } from '../../utils/pathApUtils';
-import { formatCompositeFunctionName, matchFunctionSourceSearch } from '../../utils/functionSourceHelper';
+import {
+  formatCompositeFunctionName,
+  matchFunctionSourceSearch,
+  groupFunctionsByParent,
+} from '../../utils/functionSourceHelper';
 import { reconcileCharacterVaultWithGear } from '../../utils/gearFunctionSync';
 
 const POWER_DISCIPLINES = [
@@ -348,6 +352,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   // Search Filters for Left and Right Panes
   const [leftSearchQuery, setLeftSearchQuery] = useState('');
   const [rightSearchQuery, setRightSearchQuery] = useState('');
+  const [collapsedGearGroups, setCollapsedGearGroups] = useState<Set<string>>(new Set());
+
+  const toggleGearGroup = (groupKey: string) => {
+    setCollapsedGearGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
+      return next;
+    });
+  };
   
   // Right Pane Active View: 'VAULT' | 'CODEX' | 'CATALOG' | 'SLOTS' | 'EDITOR'
   const [activeRightTab, setActiveRightTab] = useState<'VAULT' | 'CODEX' | 'CATALOG' | 'SLOTS' | 'EDITOR'>(
@@ -1237,6 +1251,20 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     });
   }, [type, activeDisplaySlots, slots, leftSearchQuery, catalogReadyFilter, functionsCatalog, modsCatalog, activeCharacter]);
 
+  // Grouped active functions by parent gear (Option A: 2+ threshold)
+  const groupedActiveSections = useMemo(() => {
+    if (type !== 'spells') return [];
+    const vaultList: MagicItem[] = Array.isArray(sheetData.character_vault) ? sheetData.character_vault : [];
+    return groupFunctionsByParent(
+      filteredRoster,
+      functionsCatalog,
+      modsCatalog,
+      activeCharacter,
+      vaultList,
+      isGsUnlocked
+    );
+  }, [type, filteredRoster, functionsCatalog, modsCatalog, activeCharacter, sheetData.character_vault, isGsUnlocked]);
+
   const sectionIcon = type === 'powers' ? '🔥' : '🧿';
   const displayTitle = title || (type === 'powers' ? 'POWERS' : 'FUNCTIONS');
 
@@ -1579,16 +1607,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             </span>
                           )}
                         </div>
-                      ) : (
+                      ) : type === 'powers' ? (
                         filteredRoster.map((item, idx) => {
                           const cleaned = cleanName(item.name);
                           const { baseName, version } = parseAbilityVersion(cleaned);
                           const cat = type === 'powers' ? getPowerReadyCategory(item) : null;
                           const actionUpper = (item.action || '').toUpperCase();
                           const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
-                          const displayName = type === 'spells'
-                            ? formatCompositeFunctionName(item, functionsCatalog, modsCatalog, activeCharacter, ' • ')
-                            : baseName;
 
                           return (
                             <div
@@ -1599,7 +1624,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
-                                      <span>{displayName}</span>
+                                      <span>{baseName}</span>
                                       {(() => {
                                         const resolvedNotes =
                                           (item as any).notes ||
@@ -1608,7 +1633,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                               c.name.toLowerCase() === baseName.toLowerCase() ||
                                               c.name.toLowerCase() === cleanName(item.name).toLowerCase()
                                           ) as any)?.notes;
-                                        return <ItemNotesPopover notes={resolvedNotes} itemName={displayName} inline />;
+                                        return <ItemNotesPopover notes={resolvedNotes} itemName={baseName} inline />;
                                       })()}
                                     </span>
                                     {version > 1 && (
@@ -1616,7 +1641,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                         v{version}
                                       </span>
                                     )}
-                                    {type === 'powers' && cat && (
+                                    {cat && (
                                       <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${
                                         cat === 'primary_arsenal'
                                           ? 'bg-rose-950/80 text-rose-300 border-rose-500/40'
@@ -1628,19 +1653,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       </span>
                                     )}
                                   </div>
-                                  {type === 'spells' && (() => {
-                                    const badge = getMagicItemTierBadge(item, fullCatalog);
-                                    if (!badge) return null;
-                                    return (
-                                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                                          <span>{badge.icon}</span>
-                                          <span>{badge.label}</span>
-                                          <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                                        </span>
-                                      </div>
-                                    );
-                                  })()}
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
@@ -1679,27 +1691,265 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
 
-                                  {type === 'powers' ? (
-                                    <div className="flex items-center gap-1">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleForgetAbility(item.name)}
-                                        className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
-                                        title="Forget Power permanently"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  ) : (
+                                  <div className="flex items-center gap-1">
                                     <button
                                       type="button"
                                       onClick={() => handleForgetAbility(item.name)}
-                                      className="px-2 py-1 bg-pink-950/60 text-pink-300 border border-pink-500/40 hover:bg-pink-900/80 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer"
-                                      title="Send item back to Character Vault"
+                                      className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+                                      title="Forget Power permanently"
                                     >
-                                      <span>➡️ Send to Vault</span>
+                                      <Trash2 className="w-3.5 h-3.5" />
                                     </button>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="text-xs pt-1">
+                                <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                                  {item.effect || 'No description'}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        groupedActiveSections.map((section) => {
+                          const isSearchActive = !!leftSearchQuery.trim();
+                          const isExpanded = isSearchActive || !collapsedGearGroups.has(section.key);
+
+                          if (section.isGroup) {
+                            const telemetryText = `${section.items.length} Active • ${section.totalSlots} Slot${
+                              section.totalSlots > 1 ? 's' : ''
+                            }${section.otherPaneCount > 0 ? ` (${section.otherPaneCount} in Vault)` : ''}`;
+
+                            return (
+                              <div
+                                key={section.key}
+                                className="bg-slate-950/70 rounded-xl border border-slate-800/90 p-2 flex flex-col gap-2 transition-all shrink-0"
+                              >
+                                {/* Parent Gear Header */}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleGearGroup(section.key)}
+                                  className="w-full flex items-center justify-between p-2 rounded-lg bg-slate-900/90 hover:bg-slate-850 border border-slate-800 transition text-left cursor-pointer group select-none"
+                                >
+                                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                    <span className="text-base leading-none">{section.gearIcon || '🛡️'}</span>
+                                    <span className="font-outfit font-bold text-sm text-slate-100 group-hover:text-cyan-300 transition-colors truncate">
+                                      {section.gearName}
+                                    </span>
+                                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-950 text-cyan-300 border border-cyan-500/30 shrink-0">
+                                      {telemetryText}
+                                    </span>
+                                  </div>
+                                  <ChevronDown
+                                    className={`w-4 h-4 text-slate-400 group-hover:text-white transition-transform shrink-0 ${
+                                      isExpanded ? 'rotate-180' : ''
+                                    }`}
+                                  />
+                                </button>
+
+                                {/* Child Functions */}
+                                {isExpanded && (
+                                  <div className="flex flex-col gap-2 pl-2 border-l-2 border-slate-800/70 ml-1">
+                                    {section.items.map((entry, idx) => {
+                                      const item = entry.item;
+                                      const actionUpper = (item.action || '').toUpperCase();
+                                      const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+                                      const badge = getMagicItemTierBadge(item, fullCatalog);
+                                      const resolvedNotes =
+                                        (item as any).notes ||
+                                        (fullCatalog.find(
+                                          (c) =>
+                                            c.name.toLowerCase() === entry.baseName.toLowerCase() ||
+                                            c.name.toLowerCase() === cleanName(item.name).toLowerCase()
+                                        ) as any)?.notes;
+
+                                      return (
+                                        <div
+                                          key={(item as any).id || `${item.name}_${idx}`}
+                                          className="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 flex flex-col gap-1.5 transition-all shrink-0 hover:border-slate-700"
+                                        >
+                                          <div className="flex items-start justify-between border-b border-slate-800/80 pb-1.5 gap-2">
+                                            <div className="flex flex-col gap-0.5">
+                                              <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
+                                                  <span>{entry.cleanFnName}</span>
+                                                  <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
+                                                </span>
+                                                {entry.version > 1 && (
+                                                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
+                                                    v{entry.version}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              {badge && (
+                                                <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
+                                                    <span>{badge.icon}</span>
+                                                    <span>{badge.label}</span>
+                                                    <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                                                  </span>
+                                                </div>
+                                              )}
+                                            </div>
+
+                                            <div className="flex items-center gap-2 shrink-0">
+                                              <div className="flex items-center gap-1">
+                                                {actionUpper && (
+                                                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
+                                                    {actionUpper}
+                                                  </span>
+                                                )}
+                                                {item.usage && (
+                                                  <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
+                                                    {item.usage}
+                                                  </span>
+                                                )}
+                                              </div>
+
+                                              <button
+                                                type="button"
+                                                onClick={() => handleToggleStarItem(item)}
+                                                className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                                  isItemStarred(item)
+                                                    ? 'text-amber-400'
+                                                    : 'text-slate-600 hover:text-amber-400'
+                                                }`}
+                                                title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                              >
+                                                <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                              </button>
+
+                                              <button
+                                                type="button"
+                                                onClick={() => handleLaunchVersionEditor(item)}
+                                                className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 transition-colors shrink-0"
+                                                title={`Version edit ${entry.baseName}`}
+                                              >
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                              </button>
+
+                                              <button
+                                                type="button"
+                                                onClick={() => handleForgetAbility(item.name)}
+                                                className="px-2 py-1 bg-pink-950/60 text-pink-300 border border-pink-500/40 hover:bg-pink-900/80 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+                                                title="Send item back to Character Vault"
+                                              >
+                                                <span>➡️ Send to Vault</span>
+                                              </button>
+                                            </div>
+                                          </div>
+
+                                          <div className="text-xs pt-1">
+                                            <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                                              {item.effect || 'No description'}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          // Single item section (either 1 function from gear, or standalone)
+                          const entry = section.items[0];
+                          const item = entry.item;
+                          const actionUpper = (item.action || '').toUpperCase();
+                          const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+                          const badge = getMagicItemTierBadge(item, fullCatalog);
+                          const resolvedNotes =
+                            (item as any).notes ||
+                            (fullCatalog.find(
+                              (c) =>
+                                c.name.toLowerCase() === entry.baseName.toLowerCase() ||
+                                c.name.toLowerCase() === cleanName(item.name).toLowerCase()
+                            ) as any)?.notes;
+
+                          return (
+                            <div
+                              key={section.key}
+                              className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
+                            >
+                              <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
+                                <div className="flex flex-col gap-1">
+                                  {section.gearName && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 w-fit">
+                                        <span>{section.gearIcon || '🛡️'}</span>
+                                        <span className="truncate max-w-[220px]">{section.gearName}</span>
+                                      </span>
+                                    </div>
                                   )}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
+                                      <span>{entry.cleanFnName}</span>
+                                      <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
+                                    </span>
+                                    {entry.version > 1 && (
+                                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
+                                        v{entry.version}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {badge && (
+                                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
+                                        <span>{badge.icon}</span>
+                                        <span>{badge.label}</span>
+                                        <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <div className="flex items-center gap-1">
+                                    {actionUpper && (
+                                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
+                                        {actionUpper}
+                                      </span>
+                                    )}
+                                    {item.usage && (
+                                      <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
+                                        {item.usage}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleStarItem(item)}
+                                    className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                      isItemStarred(item)
+                                        ? 'text-amber-400'
+                                        : 'text-slate-600 hover:text-amber-400'
+                                    }`}
+                                    title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                  >
+                                    <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleLaunchVersionEditor(item)}
+                                    className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 transition-colors shrink-0"
+                                    title={`Version edit ${entry.baseName}`}
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleForgetAbility(item.name)}
+                                    className="px-2 py-1 bg-pink-950/60 text-pink-300 border border-pink-500/40 hover:bg-pink-900/80 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+                                    title="Send item back to Character Vault"
+                                  >
+                                    <span>➡️ Send to Vault</span>
+                                  </button>
                                 </div>
                               </div>
 
@@ -1889,19 +2139,23 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     {/* TAB 1: CHARACTER VAULT VIEW (spells mode) */}
                     {activeRightTab === 'VAULT' && type === 'spells' && (() => {
                       const vaultList: MagicItem[] = Array.isArray(sheetData.character_vault) ? sheetData.character_vault : [];
-                      const filteredVault = (rightSearchQuery.trim()
+                      const filteredVault = rightSearchQuery.trim()
                         ? vaultList.filter((v) => {
                             const q = rightSearchQuery.toLowerCase().trim();
                             const textMatch = (v.name || '').toLowerCase().includes(q) || (v.effect || '').toLowerCase().includes(q);
                             if (textMatch) return true;
                             return matchFunctionSourceSearch(q, v, functionsCatalog, modsCatalog, activeCharacter);
                           })
-                        : vaultList
-                      ).slice().sort((a, b) => {
-                        const nameA = formatCompositeFunctionName(a, functionsCatalog, modsCatalog, activeCharacter, ' • ');
-                        const nameB = formatCompositeFunctionName(b, functionsCatalog, modsCatalog, activeCharacter, ' • ');
-                        return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
-                      });
+                        : vaultList;
+
+                      const groupedVaultSections = groupFunctionsByParent(
+                        filteredVault,
+                        functionsCatalog,
+                        modsCatalog,
+                        activeCharacter,
+                        slots,
+                        isGsUnlocked
+                      );
 
                       return (
                         <div className="flex flex-col gap-2.5 flex-1 min-h-0 mt-2.5">
@@ -1929,30 +2183,176 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 )}
                               </div>
                             ) : (
-                              filteredVault.map((item, idx) => {
+                              groupedVaultSections.map((section) => {
+                                const isSearchActive = !!rightSearchQuery.trim();
+                                const isExpanded = isSearchActive || !collapsedGearGroups.has(section.key);
+
+                                if (section.isGroup) {
+                                  const telemetryText = `${section.items.length} in Vault • ${section.totalSlots} Slot${
+                                    section.totalSlots > 1 ? 's' : ''
+                                  }${section.otherPaneCount > 0 ? ` (${section.otherPaneCount} Active)` : ''}`;
+
+                                  return (
+                                    <div
+                                      key={section.key}
+                                      className="bg-slate-950/70 rounded-xl border border-slate-800/90 p-2 flex flex-col gap-2 transition-all shrink-0"
+                                    >
+                                      {/* Parent Gear Header */}
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleGearGroup(section.key)}
+                                        className="w-full flex items-center justify-between p-2 rounded-lg bg-slate-900/90 hover:bg-slate-850 border border-slate-800 transition text-left cursor-pointer group select-none"
+                                      >
+                                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                          <span className="text-base leading-none">{section.gearIcon || '🛡️'}</span>
+                                          <span className="font-outfit font-bold text-sm text-slate-100 group-hover:text-cyan-300 transition-colors truncate">
+                                            {section.gearName}
+                                          </span>
+                                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-950 text-cyan-300 border border-cyan-500/30 shrink-0">
+                                            {telemetryText}
+                                          </span>
+                                        </div>
+                                        <ChevronDown
+                                          className={`w-4 h-4 text-slate-400 group-hover:text-white transition-transform shrink-0 ${
+                                            isExpanded ? 'rotate-180' : ''
+                                          }`}
+                                        />
+                                      </button>
+
+                                      {/* Child Functions */}
+                                      {isExpanded && (
+                                        <div className="flex flex-col gap-2 pl-2 border-l-2 border-slate-800/70 ml-1">
+                                          {section.items.map((entry, idx) => {
+                                            const item = entry.item as MagicItem;
+                                            const weight = getItemSlotWeight(item);
+                                            const badge = getMagicItemTierBadge(item, fullCatalog);
+                                            const matchedCatalogFn = functionsCatalog.find(
+                                              (f) => f.name.toLowerCase() === (item.name ? cleanName(item.name) : '').toLowerCase()
+                                            );
+                                            const rawAction = item.action || matchedCatalogFn?.action || '';
+                                            const actionUpper = rawAction.toUpperCase();
+                                            const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+                                            const resolvedUsage = item.usage || matchedCatalogFn?.usage || '';
+                                            const resolvedNotes =
+                                              (item as any).notes ||
+                                              (fullCatalog.find(
+                                                (c) =>
+                                                  c.name.toLowerCase() === entry.baseName.toLowerCase() ||
+                                                  c.name.toLowerCase() === (item.name ? cleanName(item.name) : '').toLowerCase()
+                                              ) as any)?.notes;
+
+                                            return (
+                                              <div
+                                                key={(item as any).id || `${item.name}_${idx}`}
+                                                className="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 flex flex-col gap-1.5 transition-all shrink-0 hover:border-slate-700"
+                                              >
+                                                <div className="flex items-start justify-between border-b border-slate-800/80 pb-1.5 gap-2">
+                                                  <div className="flex flex-col gap-0.5">
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                      <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
+                                                        <span>{entry.cleanFnName}</span>
+                                                        <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
+                                                      </span>
+                                                      {entry.version > 1 && (
+                                                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
+                                                          v{entry.version}
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                    {badge && (
+                                                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
+                                                          <span>{badge.icon}</span>
+                                                          <span>{badge.label}</span>
+                                                          <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                                                        </span>
+                                                      </div>
+                                                    )}
+                                                  </div>
+
+                                                  <div className="flex items-center gap-2 shrink-0">
+                                                    <div className="flex items-center gap-1">
+                                                      {actionUpper && (
+                                                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
+                                                          {actionUpper}
+                                                        </span>
+                                                      )}
+                                                      {resolvedUsage && (
+                                                        <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
+                                                          {resolvedUsage}
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleEquipVaultItem(item)}
+                                                      className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
+                                                    >
+                                                      <Plus className="w-3.5 h-3.5" />
+                                                      Activate ({weight} Slot{weight > 1 ? 's' : ''})
+                                                    </button>
+                                                  </div>
+                                                </div>
+
+                                                <div className="text-xs pt-1">
+                                                  <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                                                    {item.effect || 'No description'}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
+                                // Single item section (either 1 function from gear, or standalone)
+                                const entry = section.items[0];
+                                const item = entry.item as MagicItem;
                                 const weight = getItemSlotWeight(item);
                                 const badge = getMagicItemTierBadge(item, fullCatalog);
-                                const displayName = formatCompositeFunctionName(item, functionsCatalog, modsCatalog, activeCharacter, ' • ');
                                 const matchedCatalogFn = functionsCatalog.find(
-                                  (f) => f.name.toLowerCase() === cleanName(item.name).toLowerCase()
+                                  (f) => f.name.toLowerCase() === (item.name ? cleanName(item.name) : '').toLowerCase()
                                 );
                                 const rawAction = item.action || matchedCatalogFn?.action || '';
                                 const actionUpper = rawAction.toUpperCase();
                                 const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
                                 const resolvedUsage = item.usage || matchedCatalogFn?.usage || '';
+                                const resolvedNotes =
+                                  (item as any).notes ||
+                                  (fullCatalog.find(
+                                    (c) =>
+                                      c.name.toLowerCase() === entry.baseName.toLowerCase() ||
+                                      c.name.toLowerCase() === (item.name ? cleanName(item.name) : '').toLowerCase()
+                                  ) as any)?.notes;
 
                                 return (
                                   <div
-                                    key={item.id || item.name + idx}
+                                    key={section.key}
                                     className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
                                   >
                                     <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
                                       <div className="flex flex-col gap-1">
+                                        {section.gearName && (
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 w-fit">
+                                              <span>{section.gearIcon || '🛡️'}</span>
+                                              <span className="truncate max-w-[220px]">{section.gearName}</span>
+                                            </span>
+                                          </div>
+                                        )}
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                           <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
-                                            <span>{displayName}</span>
-                                            <ItemNotesPopover notes={(item as any).notes || (fullCatalog.find((c) => c.name.toLowerCase() === cleanName(item.name).toLowerCase()) as any)?.notes} itemName={displayName} inline />
+                                            <span>{entry.cleanFnName}</span>
+                                            <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
                                           </span>
+                                          {entry.version > 1 && (
+                                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
+                                              v{entry.version}
+                                            </span>
+                                          )}
                                         </div>
                                         {badge && (
                                           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
@@ -1964,6 +2364,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           </div>
                                         )}
                                       </div>
+
                                       <div className="flex items-center gap-2 shrink-0">
                                         <div className="flex items-center gap-1">
                                           {actionUpper && (
@@ -1987,6 +2388,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                         </button>
                                       </div>
                                     </div>
+
                                     <div className="text-xs pt-1">
                                       <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
                                         {item.effect || 'No description'}
