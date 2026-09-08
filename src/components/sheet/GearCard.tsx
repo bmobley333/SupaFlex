@@ -97,6 +97,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [gearCatalogFeedback, setGearCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [expandedCatalogModId, setExpandedCatalogModId] = useState<string | null>(null);
+  const [expandedEquippedModIds, setExpandedEquippedModIds] = useState<Set<string>>(new Set());
 
   // Character Currency & Wallet Funds
   const gold = sheet?.gold ?? 0;
@@ -164,6 +165,66 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       .trim()
       .toLowerCase();
   };
+
+  // Strict Table- and MSO-aware matcher for mod compatibility
+  const isModCompatibleWithItem = useCallback(
+    (
+      mod: { belongs_to?: string | null },
+      item: { name: string; item_type?: string; category?: string }
+    ): boolean => {
+      if (!mod.belongs_to || !item.name) return false;
+      const itemNameClean = item.name.trim().toLowerCase();
+      const itemTypeLower = (item.item_type || item.category || '').toLowerCase();
+
+      const parts = mod.belongs_to.split(',');
+      return parts.some((p) => {
+        const trimmed = p.trim();
+        if (!trimmed) return false;
+        const withoutFree = trimmed.replace(/\{free\}/gi, '').trim();
+        if (!withoutFree.includes(':')) {
+          return withoutFree.toLowerCase() === itemNameClean;
+        }
+        const [prefix, target] = withoutFree.split(':', 2);
+        const prefLower = prefix.trim().toLowerCase();
+        const targetLower = target.trim().toLowerCase();
+
+        // Validate table prefix against item type
+        if (prefLower === 'armor' && !(itemTypeLower.includes('armor') || itemTypeLower === 'armor')) return false;
+        if ((prefLower === 'weapons' || prefLower === 'weapon') && !(itemTypeLower.includes('weapon') || itemTypeLower === 'weapon')) return false;
+        if ((prefLower === 'shields' || prefLower === 'shield') && !(itemTypeLower.includes('shield') || itemTypeLower === 'shield')) return false;
+        if (prefLower === 'supplies') {
+          if (itemTypeLower.includes('armor') || itemTypeLower.includes('weapon') || itemTypeLower.includes('shield') || itemTypeLower.includes('kit')) return false;
+        }
+        if (prefLower === 'kit' && !itemTypeLower.includes('kit')) return false;
+
+        return targetLower === itemNameClean;
+      });
+    },
+    []
+  );
+
+  // Check if a mod is inherently {Free} for a specific host item
+  const isModFreeForHost = useCallback(
+    (
+      mod: { belongs_to?: string | null },
+      item: { name: string; item_type?: string; category?: string }
+    ): boolean => {
+      if (!mod.belongs_to || !item.name) return false;
+      const itemNameClean = item.name.trim().toLowerCase();
+      const parts = mod.belongs_to.split(',');
+      return parts.some((p) => {
+        const trimmed = p.trim();
+        if (!/\{free\}/i.test(trimmed)) return false;
+        const withoutFree = trimmed.replace(/\{free\}/gi, '').trim();
+        if (withoutFree.includes(':')) {
+          const target = withoutFree.split(':', 2)[1].trim().toLowerCase();
+          return target === itemNameClean;
+        }
+        return withoutFree.toLowerCase() === itemNameClean;
+      });
+    },
+    []
+  );
 
   // Mods that have at least one function in functionsCatalog
   const modsWithFunctions = useMemo(() => {
@@ -717,15 +778,37 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
     const linkedFns = getFunctionsForGearItem(itemName).map((fn) => mapFunctionToVaultItem(fn, itemName));
 
+    // Auto-install inherent {Free} mods for this equipped item
+    const freeModsForThisItem = modsCatalog.filter((m: any) =>
+      isModFreeForHost(m, { name: itemName, item_type: itemType, category: defaultCategory })
+    );
+
+    const freeModGearItems: SimpleGearItem[] = freeModsForThisItem.map((fm: any) => ({
+      id: `mod_free_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      name: `${fm.name} (${itemName})`,
+      category: '🔌 Mod',
+      cost: '0s',
+      qty: 1,
+      notes: fm.notes || `Inherent modification on ${itemName}`,
+      item_type: 'gear' as const,
+      belongs_to: `${defaultCategory}: ${itemName} {Free}`,
+    }));
+
+    const freeModFunctions: MagicItem[] = freeModsForThisItem.flatMap((fm: any) =>
+      getFunctionsForMod(fm.name).map((fn) => mapFunctionToVaultItem(fn, itemName, fm.name))
+    );
+
+    const allLinkedFns = [...linkedFns, ...freeModFunctions];
+
     updateActiveSheetData((prev) => {
       const currentGear = prev.simple_gear || [];
       const currentVault = prev.character_vault || [];
-      const fnsToAdd = linkedFns.filter(
+      const fnsToAdd = allLinkedFns.filter(
         (lf) => !currentVault.some((v: any) => cleanBelongsToName(v.name) === cleanBelongsToName(lf.name))
       );
       return {
         ...prev,
-        simple_gear: [...currentGear, newGearItem],
+        simple_gear: [...currentGear, newGearItem, ...freeModGearItems],
         character_vault: [...currentVault, ...fnsToAdd],
         gold: deduction.newGold,
         silver: deduction.newSilver,
@@ -831,13 +914,32 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     // Find any direct functions or mod functions belonging to this dropped item
     const directFns = getFunctionsForGearItem(droppedItem.name);
     const modFns = getFunctionsForMod(droppedItem.name);
+
+    // Also collect functions of any installed child mods referencing this item
+    const droppedMods = gearList.filter(
+      (g) =>
+        (g.name && g.name.endsWith(`(${droppedItem.name})`)) ||
+        (g.belongs_to && g.belongs_to.includes(droppedItem.name))
+    );
+    const droppedModFns = droppedMods.flatMap((dm) => {
+      const baseModName = dm.name.replace(/\s*\([^)]+\)$/, '').trim();
+      return getFunctionsForMod(baseModName);
+    });
+
     const allFnNames = new Set([
       ...directFns.map((fn) => cleanBelongsToName(fn.name)),
       ...modFns.map((fn) => cleanBelongsToName(fn.name)),
+      ...droppedModFns.map((fn) => cleanBelongsToName(fn.name)),
     ]);
 
     updateActiveSheetData((prev) => {
-      const remainingGear = (prev.simple_gear || []).filter((g) => g.id !== itemId);
+      const remainingGear = (prev.simple_gear || []).filter((g) => {
+        if (g.id === itemId) return false;
+        // Drop installed child mods that belong to this item
+        if (g.name && g.name.endsWith(`(${droppedItem.name})`)) return false;
+        if (g.belongs_to && g.belongs_to.includes(droppedItem.name)) return false;
+        return true;
+      });
       const stillHasSameGear = remainingGear.some(
         (g) => cleanBelongsToName(g.name) === cleanBelongsToName(droppedItem.name)
       );
@@ -987,127 +1089,181 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       <span>No gear items in inventory. Select items from the catalog on the right.</span>
                     </div>
                   ) : (
-                    filteredGearInventory.map((item) => (
-                      <div
-                        key={item.id}
-                        className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between gap-2 shadow-sm"
-                      >
-                        <div className="flex flex-col min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline ${
-                              isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300' : 'text-slate-100'
-                            }`}>
-                              <span className="truncate">{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
-                              <ItemNotesPopover notes={item.notes || ''} itemName={item.name} inline />
-                            </span>
-                            <span
-                              className={`text-[9px] font-mono px-1.5 py-0.2 border rounded ${getCategoryBadgeClass(
-                                item.category,
-                                item.item_type
-                              )}`}
-                            >
-                              {getCategoryDisplayLabel(item.category, item.item_type)}
-                            </span>
-                            {item.belongs_to && (
-                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/30 truncate max-w-[130px]" title={item.belongs_to}>
-                                🎒 {item.belongs_to.replace(/\{Free\}/g, '').trim()}
+                    filteredGearInventory.map((item) => {
+                      const compatibleMods = modsCatalog.filter((m: any) =>
+                        isModCompatibleWithItem(m, item)
+                      );
+                      const installedModsCount = compatibleMods.filter(
+                        (m: any) => isModFreeForHost(m, item) || gearList.some((g) => g.name.includes(m.name))
+                      ).length;
+                      const availableModsCount = compatibleMods.length - installedModsCount;
+                      const isModsOpen = expandedEquippedModIds.has(item.id);
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 shadow-sm"
+                        >
+                          {/* Top Row: Item Details (Left) and Quantity + Drop (Right) */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline ${
+                                  isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300' : 'text-slate-100'
+                                }`}>
+                                  <span className="truncate">{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
+                                  <ItemNotesPopover notes={item.notes || ''} itemName={item.name} inline />
+                                </span>
+                                <span
+                                  className={`text-[9px] font-mono px-1.5 py-0.2 border rounded ${getCategoryBadgeClass(
+                                    item.category,
+                                    item.item_type
+                                  )}`}
+                                >
+                                  {getCategoryDisplayLabel(item.category, item.item_type)}
+                                </span>
+                                {item.belongs_to && (
+                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/30 truncate max-w-[130px]" title={item.belongs_to}>
+                                    🎒 {item.belongs_to.replace(/\{Free\}/g, '').trim()}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[11px] font-mono text-teal-300/80 font-semibold">
+                                Cost: {formatCostAbbreviated(item.cost)}
                               </span>
-                            )}
+                            </div>
+
+                            {/* Qty & Actions - Permanently locked to the Top Header Row */}
+                            <div className="flex items-center gap-1.5 shrink-0 self-start">
+                              <div className="flex items-center bg-slate-950 border border-slate-700 rounded-lg px-1 py-0.5 text-xs font-mono font-bold">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateGearQty(item.id, -1)}
+                                  className="px-1 hover:text-teal-400 text-slate-400 cursor-pointer"
+                                  title="Decrease quantity"
+                                >
+                                  -
+                                </button>
+                                <span className="px-1 text-white">{item.qty || 1}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateGearQty(item.id, 1)}
+                                  className="px-1 hover:text-teal-400 text-slate-400 cursor-pointer"
+                                  title="Increase quantity"
+                                >
+                                  +
+                                </button>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDropGear(item.id)}
+                                className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+                                title="Drop gear item"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
-                          <span className="text-[11px] font-mono text-teal-300/80 font-semibold">
-                            Cost: {formatCostAbbreviated(item.cost)}
-                          </span>
 
-                          {/* Optional Mods on Owned Exotics/Artifacts */}
-                          {modsCatalog
-                            .filter((m: any) => m.belongs_to && m.belongs_to.includes(item.name))
-                            .map((m: any) => {
-                              const isInstalled = gearList.some((g) => g.name.includes(m.name));
-                              if (isInstalled) {
-                                return (
-                                  <span key={m.id || m.name} className="text-[9px] font-mono text-emerald-400 inline-flex items-center align-baseline gap-1 mt-0.5">
-                                    <span>✓ Installed: {m.name}</span>
-                                    <ItemNotesPopover notes={m.notes || ''} itemName={m.name} inline />
-                                  </span>
-                                );
-                              }
-                              const modCostSilver = parseCostToSilver(m.cost);
-                              const canAffordMod = modCostSilver <= totalAvailableSilver;
-                              const modKey = String(m.id || m.name);
-
-                              return (
-                                <div key={modKey} className="flex items-center justify-between mt-1 pt-1 border-t border-slate-800/60 text-[10px] gap-2">
-                                  <span className="text-indigo-300 font-semibold inline-flex items-center align-baseline truncate">
-                                    <span>🔌 {m.name} ({m.cost || 'Free'})</span>
-                                    <ItemNotesPopover notes={m.notes || ''} itemName={m.name} inline />
-                                  </span>
-                                  <div className="relative flex items-center shrink-0">
-                                    {notEnoughMoneyTarget?.id === modKey && (
-                                      <div className="absolute bottom-full right-0 mb-1 z-30 px-2 py-0.5 bg-rose-950 border border-rose-500 rounded-lg shadow-xl text-[9px] font-bold text-rose-200 whitespace-nowrap animate-fadeIn flex items-center gap-1 pointer-events-none">
-                                        <span>❌ Not Enough Money</span>
-                                      </div>
-                                    )}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (!canAffordMod) {
-                                          triggerNotEnoughMoney(modKey, m.name, m.cost || '0s', modCostSilver);
-                                        } else {
-                                          handlePurchaseOptionalMod(m, item.name);
-                                        }
-                                      }}
-                                      className={`px-2 py-0.5 rounded font-bold transition text-[9px] border ${
-                                        !canAffordMod
-                                          ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-500 border-slate-700/80 opacity-60 cursor-not-allowed'
-                                          : 'bg-indigo-600/90 hover:bg-indigo-500 text-white border-transparent cursor-pointer'
-                                      }`}
-                                      title={
-                                        canAffordMod
-                                          ? `Install ${m.name} for ${m.cost || 'Free'}`
-                                          : `Not Enough Money (Costs ${m.cost || '0s'}, you have ${gold}g ${silver}s)`
-                                      }
-                                    >
-                                      + Install Mod
-                                    </button>
-                                  </div>
+                          {/* Collapsible Compatible Mods Disclosure */}
+                          {compatibleMods.length > 0 && (
+                            <div className="pt-1 border-t border-slate-800/60 flex flex-col gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setExpandedEquippedModIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(item.id)) next.delete(item.id);
+                                    else next.add(item.id);
+                                    return next;
+                                  });
+                                }}
+                                className="flex items-center justify-between w-full px-2 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-950 border border-slate-800/80 text-[10px] font-mono transition text-slate-300 hover:text-white cursor-pointer"
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span>🔌</span>
+                                  <span className="font-bold text-slate-200">Compatible Mods:</span>
+                                  <span className="text-emerald-400 font-semibold">{installedModsCount} Installed</span>
+                                  {availableModsCount > 0 && (
+                                    <>
+                                      <span className="text-slate-600">•</span>
+                                      <span className="text-indigo-300 font-semibold">{availableModsCount} Available</span>
+                                    </>
+                                  )}
                                 </div>
-                              );
-                            })}
-                        </div>
+                                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isModsOpen ? 'rotate-180' : ''}`} />
+                              </button>
 
-                        {/* Qty & Actions */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <div className="flex items-center bg-slate-950 border border-slate-700 rounded-lg px-1 py-0.5 text-xs font-mono font-bold">
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateGearQty(item.id, -1)}
-                              className="px-1 hover:text-teal-400 text-slate-400 cursor-pointer"
-                              title="Decrease quantity"
-                            >
-                              -
-                            </button>
-                            <span className="px-1 text-white">{item.qty || 1}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateGearQty(item.id, 1)}
-                              className="px-1 hover:text-teal-400 text-slate-400 cursor-pointer"
-                              title="Increase quantity"
-                            >
-                              +
-                            </button>
-                          </div>
+                              {isModsOpen && (
+                                <div className="flex flex-col gap-1 bg-slate-950/60 p-2 rounded-lg border border-slate-800/60">
+                                  {compatibleMods.map((m: any) => {
+                                    const isFree = isModFreeForHost(m, item);
+                                    const isInstalled = isFree || gearList.some((g) => g.name.includes(m.name));
 
-                          <button
-                            type="button"
-                            onClick={() => handleDropGear(item.id)}
-                            className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
-                            title="Drop gear item"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                                    if (isInstalled) {
+                                      return (
+                                        <div key={m.id || m.name} className="flex items-center justify-between py-0.5 text-[10px] text-emerald-400">
+                                          <span className="inline-flex items-center align-baseline gap-1 font-mono truncate">
+                                            <span>✓ {m.name}</span>
+                                            <ItemNotesPopover notes={m.notes || ''} itemName={m.name} inline />
+                                          </span>
+                                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shrink-0">
+                                            {isFree ? 'Installed {Free}' : 'Installed'}
+                                          </span>
+                                        </div>
+                                      );
+                                    }
+
+                                    const modCostSilver = parseCostToSilver(m.cost);
+                                    const canAffordMod = modCostSilver <= totalAvailableSilver;
+                                    const modKey = String(m.id || m.name);
+
+                                    return (
+                                      <div key={modKey} className="flex items-center justify-between py-1 border-t border-slate-800/40 text-[10px] gap-2">
+                                        <span className="text-indigo-300 font-semibold inline-flex items-center align-baseline truncate">
+                                          <span>🔌 {m.name} ({m.cost || '0s'})</span>
+                                          <ItemNotesPopover notes={m.notes || ''} itemName={m.name} inline />
+                                        </span>
+                                        <div className="relative flex items-center shrink-0">
+                                          {notEnoughMoneyTarget?.id === modKey && (
+                                            <div className="absolute bottom-full right-0 mb-1 z-30 px-2 py-0.5 bg-rose-950 border border-rose-500 rounded-lg shadow-xl text-[9px] font-bold text-rose-200 whitespace-nowrap animate-fadeIn flex items-center gap-1 pointer-events-none">
+                                              <span>❌ Not Enough Money</span>
+                                            </div>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              if (!canAffordMod) {
+                                                triggerNotEnoughMoney(modKey, m.name, m.cost || '0s', modCostSilver);
+                                              } else {
+                                                handlePurchaseOptionalMod(m, item.name);
+                                              }
+                                            }}
+                                            className={`px-2 py-0.5 rounded font-bold transition text-[9px] border ${
+                                              !canAffordMod
+                                                ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-500 border-slate-700/80 opacity-60 cursor-not-allowed'
+                                                : 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-300 cursor-pointer'
+                                            }`}
+                                            title={
+                                              canAffordMod
+                                                ? `Install ${m.name} for ${m.cost || '0s'}`
+                                                : `Not Enough Money (Costs ${m.cost || '0s'}, you have ${gold}g ${silver}s)`
+                                            }
+                                          >
+                                            + Install Mod
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -1389,20 +1545,15 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                         itemSubtext = ['🎒 Supplies', catalogItem.category || itemDomain].filter(Boolean).join(' • ') || 'Supplies';
                       }
 
-                      const buyButtonLabel = isKit
-                        ? '+ Buy Kit'
-                        : isExoticItem
-                        ? '+ Buy Exotic'
-                        : isWeapon || isArmor || isShield
-                        ? '+ Equip'
-                        : '+ Buy';
-
                       const itemKey = `${catalogItem.item_type || activeCategoryTab}_${catalogItem.id || 'x'}_${catalogItem.name}`;
                       const isModsExpanded = expandedCatalogModId === itemKey;
-                      const availableMods = modsCatalog.filter((m: any) => {
-                        if (!m.belongs_to || !catalogItem.name) return false;
-                        return m.belongs_to.toLowerCase().includes(catalogItem.name.toLowerCase());
-                      });
+                      const availableMods = modsCatalog.filter((m: any) =>
+                        isModCompatibleWithItem(m, {
+                          name: catalogItem.name,
+                          item_type: itemTypeKey,
+                          category: catalogItem.category,
+                        })
+                      );
 
                       return (
                         <div
@@ -1472,10 +1623,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                   className={`px-2.5 py-1 text-xs font-bold rounded-lg transition shrink-0 shadow-sm border ${
                                     !canAfford
                                       ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-500 border-slate-700/80 opacity-60 cursor-not-allowed'
-                                      : itemTypeKey === 'kit'
-                                      ? 'bg-purple-950/80 hover:bg-purple-900 border-purple-500/40 text-purple-300 cursor-pointer'
-                                      : itemTypeKey === 'exotic'
-                                      ? 'bg-indigo-950/80 hover:bg-indigo-900 border-indigo-500/40 text-indigo-300 cursor-pointer'
                                       : 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-300 cursor-pointer'
                                   }`}
                                   title={
@@ -1484,7 +1631,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                       : `Not Enough Money (Costs ${costStr}, you have ${gold}g ${silver}s)`
                                   }
                                 >
-                                  {buyButtonLabel}
+                                  + Buy
                                 </button>
                               </div>
                             </div>
@@ -1496,23 +1643,34 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                               <span className="text-[10px] font-mono font-bold text-indigo-300 uppercase tracking-wide flex items-center gap-1">
                                 <span>🔌 Compatible Modifications ({availableMods.length}):</span>
                               </span>
-                              {availableMods.map((mod: any) => (
-                                <div
-                                  key={mod.id || mod.name}
-                                  className="flex items-center justify-between gap-2 text-[10px] bg-slate-900/80 p-1.5 rounded border border-slate-800/80"
-                                >
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="text-slate-200 font-semibold inline-flex items-center align-baseline truncate">
-                                      <span>🔌 {mod.name}</span>
-                                      <ItemNotesPopover notes={mod.notes || ''} itemName={mod.name} inline />
-                                    </span>
-                                    <span className="font-mono text-teal-300 font-bold">({formatCostAbbreviated(mod.cost || '0s')})</span>
+                              {availableMods.map((mod: any) => {
+                                const isModFree = isModFreeForHost(mod, {
+                                  name: catalogItem.name,
+                                  item_type: itemTypeKey,
+                                  category: catalogItem.category,
+                                });
+                                return (
+                                  <div
+                                    key={mod.id || mod.name}
+                                    className="flex items-center justify-between gap-2 text-[10px] bg-slate-900/80 p-1.5 rounded border border-slate-800/80"
+                                  >
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <span className="text-slate-200 font-semibold inline-flex items-center align-baseline truncate">
+                                        <span>🔌 {mod.name}</span>
+                                        <ItemNotesPopover notes={mod.notes || ''} itemName={mod.name} inline />
+                                      </span>
+                                      <span className="font-mono text-teal-300 font-bold">
+                                        ({isModFree ? 'Free' : formatCostAbbreviated(mod.cost || '0s')})
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <span className="text-[9px] text-slate-400 italic">
+                                        {isModFree ? 'Inherent to gear' : 'Install once owned'}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <span className="text-[9px] text-slate-400 italic">Install once owned</span>
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                         </div>
