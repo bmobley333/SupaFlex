@@ -261,11 +261,42 @@ export const reconcileCharacterVaultWithGear = (
   for (const expFn of expectedFunctions) {
     const cleanExp = cleanBelongsToName(expFn.name);
     const inVault = nextVault.some((v) => cleanBelongsToName(v.name) === cleanExp);
-    const inSlots = currentSlots.some((s) => cleanBelongsToName(s.name) === cleanExp);
 
-    if (!inVault && !inSlots) {
+    if (!inVault) {
       nextVault.push(expFn);
       addedFunctions.push(expFn.name);
+    }
+  }
+
+  // Ensure any abilities currently equipped in Stance Alpha or Beta are also in the Vault library
+  const betaSlots: AbilitySlot[] = Array.isArray(sheetData.stance_beta_slots)
+    ? sheetData.stance_beta_slots
+    : [];
+  const allActiveSlots = [...currentSlots, ...betaSlots];
+
+  for (const slot of allActiveSlots) {
+    if (!slot || !slot.name) continue;
+    const cleanSlotName = cleanBelongsToName(slot.name);
+    const inVault = nextVault.some((v) => cleanBelongsToName(v.name) === cleanSlotName);
+    if (!inVault) {
+      nextVault.push({
+        id: (slot as any).id || Date.now() + Math.floor(Math.random() * 1000),
+        name: slot.name,
+        base_name: slot.base_name,
+        version: slot.version || 1,
+        action: slot.action,
+        usage: slot.usage,
+        effect: slot.effect,
+        notes: slot.notes,
+        source: (slot as any).source || 'Installed Gear Function',
+        source_gear: (slot as any).source_gear,
+        source_mod: (slot as any).source_mod,
+        created_at: new Date().toISOString(),
+        category: (slot as any).category || null,
+        slot_weight: (slot as any).slot_weight ?? 1,
+        checked_state: slot.checked || [false, false, false],
+        is_hardware: true,
+      });
     }
   }
 

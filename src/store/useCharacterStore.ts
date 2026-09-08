@@ -732,28 +732,6 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
     currentSlots[slotIdx] = newSlot;
 
-    const newVault = currentVault.filter((_, idx) => idx !== vaultIdx);
-
-    const outgoingVaultItem: any = {
-      id: Date.now() + Math.floor(Math.random() * 1000),
-      name: outgoingSlot.name,
-      base_name: outgoingSlot.base_name,
-      version: outgoingSlot.version || 1,
-      action: outgoingSlot.action,
-      usage: outgoingSlot.usage,
-      effect: outgoingSlot.effect,
-      notes: outgoingSlot.notes,
-      source: (outgoingSlot as any).source || 'Shunted to Cold Storage',
-      source_gear: (outgoingSlot as any).source_gear,
-      source_mod: (outgoingSlot as any).source_mod,
-      created_at: new Date().toISOString(),
-      category: (outgoingSlot as any).category || null,
-      slot_weight: (outgoingSlot as any).slot_weight ?? 1,
-      checked_state: outgoingSlot.checked || [false, false, false],
-      cold_storage: true,
-    };
-    newVault.push(outgoingVaultItem);
-
     const coldStorage = Array.isArray(sheet.cold_storage_functions) ? [...sheet.cold_storage_functions] : [];
     if (!coldStorage.includes(outgoingSlot.name)) {
       coldStorage.push(outgoingSlot.name);
@@ -765,7 +743,6 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     get().updateActiveSheetData((prev) => ({
       ...prev,
       spell_slots: currentSlots,
-      character_vault: newVault,
       cold_storage_functions: coldStorage,
       charges: nextCharges,
       sparks: nextCharges,

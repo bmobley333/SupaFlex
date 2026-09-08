@@ -37,11 +37,13 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
 
   const vault: MagicItem[] = Array.isArray(sheet?.character_vault) ? sheet.character_vault : [];
 
-  // Available vault functions (excluding cold storage items)
+  // Available vault functions (excluding cold storage items and currently active slots)
   const availableVaultItems = useMemo(() => {
+    const activeNames = new Set(activeSlots.map((s) => s.name.trim().toLowerCase()));
     return vault.filter((item) => {
       if (!item || !item.name) return false;
       if (coldStorage.includes(item.name)) return false;
+      if (activeNames.has(item.name.trim().toLowerCase())) return false;
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
@@ -49,7 +51,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
         (typeof item.effect === 'string' && item.effect.toLowerCase().includes(q))
       );
     });
-  }, [vault, coldStorage, searchQuery]);
+  }, [vault, coldStorage, activeSlots, searchQuery]);
 
   if (!isOpen || !activeCharacter || !activeCharacter.sheet_data) return null;
 

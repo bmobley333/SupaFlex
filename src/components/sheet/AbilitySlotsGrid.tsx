@@ -876,28 +876,34 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
         if (targetSlot) {
           const currentVault = Array.isArray(prev.character_vault) ? prev.character_vault : [];
-          // Recover tier metadata from catalog for round-trip preservation
-          const catalogMatch = fullCatalog.find((c) => {
-            const cBase = parseAbilityVersion(cleanName(c.name || '')).baseName.toLowerCase();
-            const tBase = parseAbilityVersion(cleanName(targetSlot.name)).baseName.toLowerCase();
-            return cBase === tBase || cleanName(c.name || '').toLowerCase().includes(tBase);
-          });
-          const vaultItem: MagicItem = {
-            id: Date.now() + Math.floor(Math.random() * 1000),
-            name: targetSlot.name,
-            usage: targetSlot.usage,
-            action: targetSlot.action,
-            effect: targetSlot.effect,
-            notes: targetSlot.notes,
-            source: (targetSlot as any).source || 'Unequipped from Loadout',
-            source_gear: (targetSlot as any).source_gear,
-            source_mod: (targetSlot as any).source_mod,
-            created_at: new Date().toISOString(),
-            category: catalogMatch?.category || (targetSlot as any).category || null,
-            slot_weight: (getItemSlotWeight(targetSlot) as 0 | 1 | 2 | 3 | 4),
-            checked_state: targetSlot.checked || [false, false, false],
-          };
-          return { ...prev, [slotKey]: updated, character_vault: [...currentVault, vaultItem] };
+          const inVault = currentVault.some(
+            (v) => parseAbilityVersion(v.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
+          );
+          if (!inVault) {
+            // Recover tier metadata from catalog for round-trip preservation
+            const catalogMatch = fullCatalog.find((c) => {
+              const cBase = parseAbilityVersion(cleanName(c.name || '')).baseName.toLowerCase();
+              const tBase = parseAbilityVersion(cleanName(targetSlot.name)).baseName.toLowerCase();
+              return cBase === tBase || cleanName(c.name || '').toLowerCase().includes(tBase);
+            });
+            const vaultItem: MagicItem = {
+              id: Date.now() + Math.floor(Math.random() * 1000),
+              name: targetSlot.name,
+              usage: targetSlot.usage,
+              action: targetSlot.action,
+              effect: targetSlot.effect,
+              notes: targetSlot.notes,
+              source: (targetSlot as any).source || 'Unequipped from Loadout',
+              source_gear: (targetSlot as any).source_gear,
+              source_mod: (targetSlot as any).source_mod,
+              created_at: new Date().toISOString(),
+              category: catalogMatch?.category || (targetSlot as any).category || null,
+              slot_weight: (getItemSlotWeight(targetSlot) as 0 | 1 | 2 | 3 | 4),
+              checked_state: targetSlot.checked || [false, false, false],
+            };
+            return { ...prev, [slotKey]: updated, character_vault: [...currentVault, vaultItem] };
+          }
+          return { ...prev, [slotKey]: updated };
         }
         return { ...prev, [slotKey]: updated };
       }
@@ -910,6 +916,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     const currentSlots = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
     const activeSlotsUsed = calculateTotalLoadoutSlotsUsed(currentSlots);
 
+    const cleanTarget = cleanName(vaultItem.base_name || vaultItem.name).toLowerCase();
+    if (currentSlots.some((s: any) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === cleanTarget)) {
+      alert(`⚠️ "${cleanName(vaultItem.name)}" is already equipped in this Stance.`);
+      return;
+    }
+
     if (weight > 0 && activeSlotsUsed + weight > totalLoadoutCapacity) {
       alert(`❌ Insufficient Loadout Capacity! Active loadout is ${activeSlotsUsed}/${totalLoadoutCapacity} slots. Item requires ${weight} slots. Unlock +2 Loadout Slots in the Buy Slots tab or header button.`);
       return;
@@ -919,7 +931,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       const currentVault = Array.isArray(prev.character_vault) ? prev.character_vault : [];
       const currentSlots = Array.isArray(prev.spell_slots) ? prev.spell_slots : [];
 
-      const newVault = currentVault.filter((v) => v.id !== vaultItem.id && v.name !== vaultItem.name);
+      let initialChecked = vaultItem.checked_state || [false, false, false];
+      const standbySlots = Array.isArray(prev.stance_beta_slots) ? prev.stance_beta_slots : [];
+      const matchingStandby = standbySlots.find(
+        (s) => cleanName(s.base_name || s.name).toLowerCase() === cleanTarget
+      );
+      if (matchingStandby && Array.isArray(matchingStandby.checked)) {
+        initialChecked = matchingStandby.checked;
+      }
+
       const newSlot: any = {
         select: true,
         name: vaultItem.name,
@@ -928,19 +948,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         action: (vaultItem.action?.toUpperCase() as any) || 'P',
         usage: vaultItem.usage || '1-Enc',
         effect: vaultItem.effect || '',
-        checked: vaultItem.checked_state || [false, false, false],
+        checked: initialChecked,
         notes: vaultItem.notes,
         source: vaultItem.source,
         source_gear: (vaultItem as any).source_gear,
         source_mod: (vaultItem as any).source_mod,
-        // Preserve tier metadata for round-trip slot weight resolution
         category: vaultItem.category || null,
         slot_weight: weight,
       };
 
+      const inVault = currentVault.some((v) => cleanName(v.base_name || v.name).toLowerCase() === cleanTarget);
+      const updatedVault = inVault ? currentVault : [...currentVault, vaultItem];
+
       return {
         ...prev,
-        character_vault: newVault,
+        character_vault: updatedVault,
         spell_slots: [...currentSlots, newSlot],
       };
     });
@@ -1496,72 +1518,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
             <span className="font-outfit text-[11px] font-bold">Clear Uses</span>
           </button>
-
-          {/* KISS Multi-Option Stance Switcher (Functions Mode) */}
-          {type === 'spells' && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md">
-                <button
-                  type="button"
-                  onClick={() => handleSwitchStance('alpha')}
-                  className={`py-1 px-2.5 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    activeStance === 'alpha'
-                      ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                  }`}
-                  title="Active Mode: Stance Alpha"
-                >
-                  <span>🅰️</span>
-                  <span className="hidden sm:inline">Stance A</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSwitchStance('beta')}
-                  className={`py-1 px-2.5 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    activeStance === 'beta'
-                      ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                  }`}
-                  title="Active Mode: Stance Beta"
-                >
-                  <span>🅱️</span>
-                  <span className="hidden sm:inline">Stance B</span>
-                </button>
-              </div>
-
-              {/* In-Combat Cost Indicator Badge */}
-              <span
-                className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-extrabold border hidden md:inline-flex items-center gap-0.5 ${
-                  stanceSwitchCount === 0
-                    ? 'bg-emerald-950/60 border-emerald-500/30 text-emerald-300'
-                    : 'bg-rose-950/60 border-rose-500/30 text-rose-300'
-                }`}
-                title={
-                  stanceSwitchCount === 0
-                    ? 'First in-combat Stance switch costs 1 Move Action [M]'
-                    : 'Subsequent in-combat Stance switch costs Attack + Move [AM]'
-                }
-              >
-                Next: {nextSwitchCost}
-              </span>
-            </div>
-          )}
         </div>
 
         <div className="flex items-center justify-end gap-2 shrink-0">
-          {/* Emergency Hardware Shunt Trigger (Functions Mode) */}
-          {type === 'spells' && (
-            <button
-              type="button"
-              onClick={() => setShowShuntModal(true)}
-              className="p-1.5 px-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1 shadow-sm cursor-pointer bg-cyan-950/60 hover:bg-cyan-900/60 border-cyan-500/40 text-cyan-300 hover:text-white shrink-0"
-              title="Emergency Hardware Shunt: Spend 1 Spark or 1 Focus step to hot-swap a Vault function"
-            >
-              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="font-outfit text-[11px] font-bold hidden sm:inline">Shunt</span>
-            </button>
-          )}
-
           <div className="relative">
             <button
               type="button"
@@ -2382,6 +2341,17 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                   c.name.toLowerCase() === (item.name ? cleanName(item.name) : '').toLowerCase()
                                               ) as any)?.notes;
 
+                                            const itemCleanName = cleanName(item.base_name || item.name).toLowerCase();
+                                            const alphaSlots: AbilitySlot[] = (sheetData.active_stance === 'beta' ? sheetData.stance_beta_slots : sheetData.spell_slots) || [];
+                                            const betaSlots: AbilitySlot[] = (sheetData.active_stance === 'beta' ? sheetData.spell_slots : sheetData.stance_beta_slots) || [];
+                                            const inStanceAlpha = Array.isArray(alphaSlots) && alphaSlots.some(
+                                              (s) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === itemCleanName
+                                            );
+                                            const inStanceBeta = Array.isArray(betaSlots) && betaSlots.some(
+                                              (s) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === itemCleanName
+                                            );
+                                            const inCurrentStance = activeStance === 'alpha' ? inStanceAlpha : inStanceBeta;
+
                                             return (
                                               <div
                                                 key={(item as any).id || `${item.name}_${idx}`}
@@ -2400,15 +2370,25 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                         </span>
                                                       )}
                                                     </div>
-                                                    {badge && (
-                                                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                                      {badge && (
                                                         <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
                                                           <span>{badge.icon}</span>
                                                           <span>{badge.label}</span>
                                                           <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
                                                         </span>
-                                                      </div>
-                                                    )}
+                                                      )}
+                                                      {inStanceAlpha && (
+                                                        <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40" title="Equipped in Stance Alpha">
+                                                          🅰️ In Stance A
+                                                        </span>
+                                                      )}
+                                                      {inStanceBeta && (
+                                                        <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/40" title="Equipped in Stance Beta">
+                                                          🅱️ In Stance B
+                                                        </span>
+                                                      )}
+                                                    </div>
                                                   </div>
 
                                                   <div className="flex items-center gap-2 shrink-0">
@@ -2424,14 +2404,27 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                         </span>
                                                       )}
                                                     </div>
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleEquipVaultItem(item)}
-                                                      className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                                    >
-                                                      <Plus className="w-3.5 h-3.5" />
-                                                      Activate ({weight} Slot{weight > 1 ? 's' : ''})
-                                                    </button>
+                                                    {inCurrentStance ? (
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleForgetAbility(item.name)}
+                                                        className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white shadow-sm transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
+                                                        title={`Unequip from ${activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'}`}
+                                                      >
+                                                        <X className="w-3.5 h-3.5" />
+                                                        Unequip ({activeStance === 'alpha' ? 'A' : 'B'})
+                                                      </button>
+                                                    ) : (
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleEquipVaultItem(item)}
+                                                        className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
+                                                        title={`Equip into ${activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'}`}
+                                                      >
+                                                        <Plus className="w-3.5 h-3.5" />
+                                                        Equip to {activeStance === 'alpha' ? 'A' : 'B'} ({weight === 0 ? '0 ⚙️' : `${weight} 🧿`})
+                                                      </button>
+                                                    )}
                                                   </div>
                                                 </div>
 
@@ -2469,6 +2462,17 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       c.name.toLowerCase() === (item.name ? cleanName(item.name) : '').toLowerCase()
                                   ) as any)?.notes;
 
+                                const itemCleanName = cleanName(item.base_name || item.name).toLowerCase();
+                                const alphaSlots: AbilitySlot[] = (sheetData.active_stance === 'beta' ? sheetData.stance_beta_slots : sheetData.spell_slots) || [];
+                                const betaSlots: AbilitySlot[] = (sheetData.active_stance === 'beta' ? sheetData.spell_slots : sheetData.stance_beta_slots) || [];
+                                const inStanceAlpha = Array.isArray(alphaSlots) && alphaSlots.some(
+                                  (s) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === itemCleanName
+                                );
+                                const inStanceBeta = Array.isArray(betaSlots) && betaSlots.some(
+                                  (s) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === itemCleanName
+                                );
+                                const inCurrentStance = activeStance === 'alpha' ? inStanceAlpha : inStanceBeta;
+
                                 return (
                                   <div
                                     key={section.key}
@@ -2495,15 +2499,25 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             </span>
                                           )}
                                         </div>
-                                        {badge && (
-                                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                          {badge && (
                                             <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
                                               <span>{badge.icon}</span>
                                               <span>{badge.label}</span>
                                               <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
                                             </span>
-                                          </div>
-                                        )}
+                                          )}
+                                          {inStanceAlpha && (
+                                            <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40" title="Equipped in Stance Alpha">
+                                              🅰️ In Stance A
+                                            </span>
+                                          )}
+                                          {inStanceBeta && (
+                                            <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/40" title="Equipped in Stance Beta">
+                                              🅱️ In Stance B
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
 
                                       <div className="flex items-center gap-2 shrink-0">
@@ -2519,14 +2533,27 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             </span>
                                           )}
                                         </div>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleEquipVaultItem(item)}
-                                          className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                        >
-                                          <Plus className="w-3.5 h-3.5" />
-                                          Activate ({weight} Slot{weight > 1 ? 's' : ''})
-                                        </button>
+                                        {inCurrentStance ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleForgetAbility(item.name)}
+                                            className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white shadow-sm transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
+                                            title={`Unequip from ${activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'}`}
+                                          >
+                                            <X className="w-3.5 h-3.5" />
+                                            Unequip ({activeStance === 'alpha' ? 'A' : 'B'})
+                                          </button>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleEquipVaultItem(item)}
+                                            className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
+                                            title={`Equip into ${activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'}`}
+                                          >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            Equip to {activeStance === 'alpha' ? 'A' : 'B'} ({weight === 0 ? '0 ⚙️' : `${weight} 🧿`})
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
 
@@ -3360,6 +3387,91 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           </div>
         </div>
       </div>
+
+      {/* Title Row 2: Stance Sub-Header Bar (Functions Mode) */}
+      {type === 'spells' && (
+        <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-1.5 flex items-center justify-between gap-2 shadow-inner backdrop-blur-md flex-wrap sm:flex-nowrap">
+          {/* Left: Stance Switcher, Next Cost Badge, & Emergency Shunt */}
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {/* KISS Multi-Option Stance Switcher */}
+            <div className="bg-slate-950/90 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner">
+              <button
+                type="button"
+                onClick={() => handleSwitchStance('alpha')}
+                className={`py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeStance === 'alpha'
+                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+                title="Active Mode: Stance Alpha"
+              >
+                <span>🅰️</span>
+                <span>Stance A</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchStance('beta')}
+                className={`py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeStance === 'beta'
+                    ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+                title="Active Mode: Stance Beta"
+              >
+                <span>🅱️</span>
+                <span>Stance B</span>
+              </button>
+            </div>
+
+            {/* In-Combat Cost Indicator Badge */}
+            <span
+              className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-extrabold border flex items-center gap-1 ${
+                stanceSwitchCount === 0
+                  ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300'
+                  : 'bg-rose-950/70 border-rose-500/40 text-rose-300'
+              }`}
+              title={
+                stanceSwitchCount === 0
+                  ? 'First in-combat Stance switch costs 1 Move Action [M]'
+                  : 'Subsequent in-combat Stance switch costs Attack + Move [AM]'
+              }
+            >
+              Next: {nextSwitchCost}
+            </span>
+
+            {/* Emergency Hardware Shunt Trigger */}
+            <button
+              type="button"
+              onClick={() => setShowShuntModal(true)}
+              className="py-1 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm cursor-pointer bg-cyan-950/70 hover:bg-cyan-900/70 border-cyan-500/50 text-cyan-300 hover:text-white"
+              title="Emergency Hardware Shunt: Spend 1 Spark or 1 Focus step to hot-swap a Vault function"
+            >
+              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="font-outfit text-xs font-bold">Shunt</span>
+            </button>
+          </div>
+
+          {/* Right: Live Stance Capacity Meter */}
+          <div className="flex items-center gap-2 shrink-0 font-mono text-xs">
+            <span className="text-slate-400 font-sans text-[11px] hidden sm:inline">
+              {activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'} Loadout:
+            </span>
+            <span
+              className={`px-2 py-0.5 rounded-lg border font-extrabold flex items-center gap-1 ${
+                totalUsedLoadoutSlots > totalLoadoutCapacity
+                  ? 'bg-rose-950/70 border-rose-500/50 text-rose-300'
+                  : 'bg-slate-900 border-slate-800 text-cyan-300'
+              }`}
+              title={`Using ${totalUsedLoadoutSlots} of ${totalLoadoutCapacity} available capacity slots in ${
+                activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'
+              }`}
+            >
+              <span>⚡</span>
+              <span>{totalUsedLoadoutSlots}/{totalLoadoutCapacity} Slots</span>
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Main Character Sheet Card View */}
       <div className="flex flex-col gap-2 min-h-[260px]">
