@@ -261,7 +261,7 @@ export const ChaosGauntletCard: React.FC = () => {
                       <CardHelpButton ruleKey="chaos_gauntlet.basics" />
                     </div>
                     <p className="text-xs text-slate-400 hidden sm:block">
-                      Review socketed chaos gems and shatter matrices to free conduits.
+                      Review socketed chaos gems and shatter matrices to free gem slots.
                     </p>
                   </div>
                 </div>
@@ -286,84 +286,86 @@ export const ChaosGauntletCard: React.FC = () => {
 
               {/* Modal Body: Classic Two-Pane Master Modal Architecture */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 p-6 bg-slate-900/40 flex-1 overflow-hidden min-h-0">
-                {/* Left Pane (md:col-span-7): 6 Conduit Sockets */}
+                {/* Left Pane (md:col-span-7): 6 Gem Slots in 2-Column Matrix */}
                 <div className="md:col-span-7 md:border-r border-slate-800/80 md:pr-6 flex flex-col gap-3 min-h-0 overflow-hidden">
                   <div className="flex items-center justify-between shrink-0">
                     <h4 className="text-xs font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-2">
-                      <span>⚡</span> CONDUITS ({equippedGemsCount}/6 ACTIVE)
+                      <span>⚡</span> GEM SLOTS ({equippedGemsCount}/6 ACTIVE)
                     </h4>
                     <span className="text-[11px] font-mono text-slate-500">
                       {6 - equippedGemsCount} Available
                     </span>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 no-scrollbar min-h-0">
-                    {gauntletSlots.map((slot) => {
-                      const isWrist = slot.slot_type === 'wrist';
-                      const meta = SLOT_METADATA.find((m) => m.slot_id === slot.slot_id);
-                      const hasGem = Boolean(slot.gem && slot.gem.name);
+                  <div className="flex-1 overflow-y-auto min-h-0 pr-1 no-scrollbar">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {gauntletSlots.map((slot) => {
+                        const isWrist = slot.slot_type === 'wrist';
+                        const meta = SLOT_METADATA.find((m) => m.slot_id === slot.slot_id);
+                        const hasGem = Boolean(slot.gem && slot.gem.name);
 
-                      return (
-                        <div
-                          key={slot.slot_id}
-                          className={`p-3 rounded-xl border transition-all flex flex-col gap-2 ${
-                            hasGem
-                              ? isWrist
-                                ? 'bg-slate-900/90 border-amber-500/40 shadow-sm shadow-amber-950/20'
-                                : 'bg-slate-900/90 border-slate-700/80 shadow-sm'
-                              : 'bg-slate-950/40 border-dashed border-slate-800/80'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
-                                isWrist
-                                  ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
-                                  : 'bg-slate-950 text-slate-300 border-slate-800'
-                              }`}>
-                                {meta?.shortLabel || `Slot ${slot.slot_number}`}
-                              </span>
-                              {hasGem && (
-                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950/70 text-purple-300 border border-purple-500/30">
-                                  {slot.gem!.action || 'F'} • {slot.gem!.usage ?? 3} Uses
+                        return (
+                          <div
+                            key={slot.slot_id}
+                            className={`p-2.5 rounded-xl border transition-all flex flex-col justify-between gap-1.5 ${
+                              hasGem
+                                ? isWrist
+                                  ? 'bg-slate-900/90 border-amber-500/40 shadow-sm shadow-amber-950/20'
+                                  : 'bg-slate-900/90 border-slate-700/80 shadow-sm'
+                                : 'bg-slate-950/40 border-dashed border-slate-800/80'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                                  isWrist
+                                    ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800'
+                                }`}>
+                                  {meta?.shortLabel || `Slot ${slot.slot_number}`}
                                 </span>
+                                {hasGem && (
+                                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950/70 text-purple-300 border border-purple-500/30">
+                                    {slot.gem!.action || 'F'} • {slot.gem!.usage ?? 3} Uses
+                                  </span>
+                                )}
+                              </div>
+
+                              {hasGem && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setConfirmRemovalSlotId(slot.slot_id);
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-rose-500/30"
+                                  title="Shatter & destroy socketed gem"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               )}
                             </div>
 
-                            {hasGem && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setConfirmRemovalSlotId(slot.slot_id);
-                                }}
-                                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-rose-500/30"
-                                title="Shatter & destroy socketed gem"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                            {hasGem ? (
+                              <div className="flex flex-col gap-0.5">
+                                <div className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1.5">
+                                  <span className="text-purple-400 text-xs">💎</span>
+                                  <span className="text-slate-100 truncate">{slot.gem!.name}</span>
+                                  <ItemNotesPopover notes={(slot.gem as any).notes} itemName={slot.gem!.name} inline />
+                                </div>
+                                <p className="text-[11px] text-slate-300 leading-snug font-sans break-words">
+                                  {slot.gem!.effect}
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-slate-500 italic py-1 flex items-center gap-1.5">
+                                <Sparkles className="w-3 h-3 text-slate-600 shrink-0" />
+                                <span className="truncate">Empty Slot — Fused via Loot</span>
+                              </div>
                             )}
                           </div>
-
-                          {hasGem ? (
-                            <div className="flex flex-col gap-1">
-                              <div className="font-outfit font-bold text-xs text-slate-100 flex items-center gap-1.5">
-                                <span className="text-purple-400">💎</span>
-                                <span className="text-slate-100">{slot.gem!.name}</span>
-                                <ItemNotesPopover notes={(slot.gem as any).notes} itemName={slot.gem!.name} inline />
-                              </div>
-                              <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                                {slot.gem!.effect}
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="text-[11px] text-slate-500 italic py-1 flex items-center gap-1.5">
-                              <Sparkles className="w-3 h-3 text-slate-600" />
-                              <span>Empty Conduit — Fused via Loot drops</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
@@ -388,7 +390,7 @@ export const ChaosGauntletCard: React.FC = () => {
                       Chaos Gems are unpredictable, highly volatile crystal matrices discovered exclusively as encounter loot drops and ancient vault rewards.
                     </p>
                     <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                      They cannot be purchased from merchants or forged in workshops. When acquired from loot, they immediately bond into any available conduit socket on your Chaos Gauntlet.
+                      They cannot be purchased from merchants or forged in workshops. When acquired from loot, they immediately bond into any available gem slot on your Chaos Gauntlet.
                     </p>
                   </div>
 
@@ -425,7 +427,7 @@ export const ChaosGauntletCard: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span>Hero: <strong className="text-slate-200">{activeCharacter?.name || 'Character'}</strong></span>
                   <span>•</span>
-                  <span>Conduits: <strong className="text-purple-300">{equippedGemsCount}/6 Active</strong></span>
+                  <span>Gem Slots: <strong className="text-purple-300">{equippedGemsCount}/6 Active</strong></span>
                 </div>
 
                 <button
@@ -450,7 +452,7 @@ export const ChaosGauntletCard: React.FC = () => {
                           Shatter '{pendingRemovalSlot.gem?.name}'?
                         </h4>
                         <span className="text-[11px] font-mono text-rose-300">
-                          Conduit: {SLOT_METADATA.find((m) => m.slot_id === pendingRemovalSlot.slot_id)?.label}
+                          Gem Slot: {SLOT_METADATA.find((m) => m.slot_id === pendingRemovalSlot.slot_id)?.label}
                         </span>
                       </div>
                     </div>
