@@ -33,12 +33,12 @@ export function calculateSpentApOnLoadoutExpansions(expansionsPurchased: number 
 }
 
 /**
- * Returns slot weight for a given item (1, 2, 3, or 4 slots).
+ * Returns slot weight for a given item (0, 1, 2, 3, or 4 slots).
  */
-export function getItemSlotWeight(item: any): 1 | 2 | 3 | 4 {
+export function getItemSlotWeight(item: any): 0 | 1 | 2 | 3 | 4 {
   if (!item) return 1;
-  if (item.slot_weight) return item.slot_weight as 1 | 2 | 3 | 4;
-  return getCategorySlotWeight(item.category || item.rarity);
+  if (typeof item.slot_weight === 'number') return item.slot_weight as 0 | 1 | 2 | 3 | 4;
+  return getCategorySlotWeight(item.category || item.rarity || item.tier);
 }
 
 /**

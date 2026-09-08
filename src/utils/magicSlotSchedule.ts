@@ -35,7 +35,7 @@ export const getItemSlotWeight = (item: MagicItemLike, catalog?: MagicItemLike[]
   if (!item) return 1;
 
   let itemSub = `${item.rarity || ''} ${item.category || ''}`.trim();
-  let explicitWeight = typeof item.slot_weight === 'number' && item.slot_weight >= 1 && item.slot_weight <= 4 ? item.slot_weight : null;
+  let explicitWeight = typeof item.slot_weight === 'number' && item.slot_weight >= 0 && item.slot_weight <= 4 ? item.slot_weight : null;
 
   if (catalog && catalog.length > 0) {
     const rawName = item.name || item.title || '';
@@ -50,7 +50,7 @@ export const getItemSlotWeight = (item: MagicItemLike, catalog?: MagicItemLike[]
     });
 
     if (found) {
-      if (typeof found.slot_weight === 'number' && found.slot_weight >= 1 && found.slot_weight <= 4) {
+      if (typeof found.slot_weight === 'number' && found.slot_weight >= 0 && found.slot_weight <= 4) {
         explicitWeight = found.slot_weight;
       }
       const foundSub = `${found.rarity || ''} ${found.category || ''}`.trim();
@@ -60,6 +60,9 @@ export const getItemSlotWeight = (item: MagicItemLike, catalog?: MagicItemLike[]
 
   const fullStr = `${itemSub} ${item.name || item.title || ''}`.toLowerCase();
 
+  if (fullStr.includes('mundane') || fullStr.includes('utility') || fullStr.includes('0-slot') || fullStr.includes('zero')) {
+    return 0;
+  }
   if (fullStr.includes('relic') || fullStr.includes('epic') || fullStr.includes('artifact')) {
     return 4;
   }

@@ -88,10 +88,11 @@ export type BundleCategory = KitCategory;
 export type SupabaseBundle = SupabaseKit;
 
 /**
- * Universal helper to calculate Loadout Slot cost (1, 2, 3, 4) from canonical category string.
+ * Universal helper to calculate Loadout Slot cost (0, 1, 2, 3, 4) from canonical category string.
  */
-export function getCategorySlotWeight(category?: string): 1 | 2 | 3 | 4 {
+export function getCategorySlotWeight(category?: string): 0 | 1 | 2 | 3 | 4 {
   if (!category) return 1;
+  if (/mundane|utility|0-slot|zero/i.test(category)) return 0;
   if (category.includes('Minor')) return 1;
   if (category.includes('Lesser')) return 2;
   if (category.includes('Greater')) return 3;
@@ -669,7 +670,11 @@ export interface CharacterSheetData {
   power_slots: AbilitySlot[];
   character_power_codex?: AbilitySlot[]; // Unlimited storage codex for un-readied powers (matching character_vault)
   tactical_pivot_used_in_encounter?: boolean; // True if player has executed their 1-per-encounter Tactical Pivot
-  spell_slots: AbilitySlot[];
+  spell_slots: AbilitySlot[]; // Active Stance (Stance Alpha by default)
+  stance_beta_slots?: AbilitySlot[]; // Standby Stance (Stance Beta)
+  active_stance?: 'alpha' | 'beta'; // Active Stance mode (defaults to 'alpha')
+  stance_switch_count?: number; // In-encounter Stance switches (0 = next is [M], >=1 = next is [AM])
+  cold_storage_functions?: string[]; // Function names locked out via Emergency Hardware Shunt
   gear_slots: EquipmentSlot[];
   weapons?: WeaponSlot[];
   armor_slot?: ArmorData;
@@ -998,8 +1003,9 @@ export interface MagicItem {
   source?: string;
   version?: number;
   base_name?: string;
-  slot_weight?: 1 | 2 | 3 | 4;
-  rarity?: 'Minor' | 'Lesser' | 'Greater' | 'Relic' | 'Epic';
+  slot_weight?: 0 | 1 | 2 | 3 | 4;
+  rarity?: 'Mundane' | 'Utility' | 'Minor' | 'Lesser' | 'Greater' | 'Relic' | 'Epic';
+  checked_state?: boolean[];
   cost?: string; // Optional cost for Hardware items
   is_hardware?: boolean; // True if purchased hardware item
   source_gear?: string;

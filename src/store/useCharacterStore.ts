@@ -5,6 +5,7 @@ import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { reconcileCharacterVaultWithGear } from '../utils/gearFunctionSync';
+import { stepDownDie } from '../lib/dice';
 
 const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
   if (typeof window !== 'undefined') {
@@ -63,6 +64,9 @@ interface CharacterStore {
   toggleReadyPower: (powerName: string) => { success: boolean; error?: string };
   executeTacticalPivot: (unreadyPowerName: string, readyPowerName: string) => { success: boolean; error?: string };
   resetTacticalPivot: () => void;
+  switchFunctionStance: (targetStance: 'alpha' | 'beta') => { success: boolean; cost: 'M' | 'AM'; error?: string };
+  executeHardwareShunt: (vaultItemName: string, activeSlotName: string, costType: 'spark' | 'focus') => { success: boolean; error?: string };
+  resetStanceSwitches: () => void;
   setPlayerEmail: (email: string) => void;
   setPlayerName: (name: string) => void;
   setFilterMode: (mode: 'my_heroes' | 'all_heroes') => void;
@@ -631,6 +635,153 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     get().updateActiveSheetData((prev) => ({
       ...prev,
       tactical_pivot_used_in_encounter: false,
+    }));
+  },
+
+  switchFunctionStance: (targetStance: 'alpha' | 'beta') => {
+    const active = get().activeCharacter;
+    if (!active || !active.sheet_data) return { success: false, cost: 'M', error: 'No active character.' };
+
+    const sheet = active.sheet_data;
+    const currentStance = sheet.active_stance === 'beta' ? 'beta' : 'alpha';
+    if (currentStance === targetStance) {
+      return { success: true, cost: 'M' };
+    }
+
+    const switchCount = typeof sheet.stance_switch_count === 'number' ? sheet.stance_switch_count : 0;
+    const cost: 'M' | 'AM' = switchCount === 0 ? 'M' : 'AM';
+
+    const activeSlots = Array.isArray(sheet.spell_slots) ? sheet.spell_slots : [];
+    const standbySlots = Array.isArray(sheet.stance_beta_slots) ? sheet.stance_beta_slots : [];
+
+    // Mirror usage checkboxes between matching abilities across both stances
+    const activeCheckedMap = new Map<string, boolean[]>();
+    activeSlots.forEach((slot) => {
+      if (slot && slot.name) {
+        const cleanKey = (slot.base_name || slot.name).replace(/\s*\[[A-Z]+\]$/i, '').trim().toLowerCase();
+        activeCheckedMap.set(cleanKey, slot.checked || [false, false, false]);
+      }
+    });
+
+    const updatedStandby = standbySlots.map((slot) => {
+      if (!slot || !slot.name) return slot;
+      const cleanKey = (slot.base_name || slot.name).replace(/\s*\[[A-Z]+\]$/i, '').trim().toLowerCase();
+      if (activeCheckedMap.has(cleanKey)) {
+        return { ...slot, checked: activeCheckedMap.get(cleanKey)! };
+      }
+      return slot;
+    });
+
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      spell_slots: updatedStandby,
+      stance_beta_slots: activeSlots,
+      active_stance: targetStance,
+      stance_switch_count: switchCount + 1,
+    }));
+
+    return { success: true, cost };
+  },
+
+  executeHardwareShunt: (vaultItemName: string, activeSlotName: string, costType: 'spark' | 'focus') => {
+    const active = get().activeCharacter;
+    if (!active || !active.sheet_data) return { success: false, error: 'No active character.' };
+
+    const sheet = active.sheet_data;
+    const charges = typeof sheet.charges === 'number' ? sheet.charges : (sheet.sparks || 0);
+
+    if (costType === 'spark') {
+      const isSparked = sheet.is_sparked || charges >= 5;
+      if (!isSparked && charges < 5) {
+        return { success: false, error: 'Emergency Hardware Shunt requires 1 Full Spark (5 Charges).' };
+      }
+    }
+
+    const currentSlots = Array.isArray(sheet.spell_slots) ? [...sheet.spell_slots] : [];
+    const currentVault = Array.isArray(sheet.character_vault) ? [...sheet.character_vault] : [];
+
+    const slotIdx = currentSlots.findIndex(
+      (s) => s && s.name && s.name.trim().toLowerCase() === activeSlotName.trim().toLowerCase()
+    );
+    const vaultIdx = currentVault.findIndex(
+      (v) => v && v.name && v.name.trim().toLowerCase() === vaultItemName.trim().toLowerCase()
+    );
+
+    if (slotIdx < 0) return { success: false, error: `Active slot "${activeSlotName}" not found.` };
+    if (vaultIdx < 0) return { success: false, error: `Vault item "${vaultItemName}" not found.` };
+
+    const outgoingSlot = currentSlots[slotIdx];
+    const incomingVault = currentVault[vaultIdx];
+
+    const newSlot: any = {
+      select: true,
+      name: incomingVault.name,
+      base_name: incomingVault.base_name || incomingVault.name.replace(/\s*\[[A-Z]+\]$/i, '').trim(),
+      version: incomingVault.version || 1,
+      action: (incomingVault.action?.toUpperCase() as any) || 'P',
+      usage: incomingVault.usage || '1-Enc',
+      effect: incomingVault.effect || '',
+      checked: incomingVault.checked_state || [false, false, false],
+      notes: incomingVault.notes,
+      source: incomingVault.source,
+      source_gear: (incomingVault as any).source_gear,
+      source_mod: (incomingVault as any).source_mod,
+      category: incomingVault.category || null,
+      slot_weight: incomingVault.slot_weight ?? 1,
+    };
+
+    currentSlots[slotIdx] = newSlot;
+
+    const newVault = currentVault.filter((_, idx) => idx !== vaultIdx);
+
+    const outgoingVaultItem: any = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      name: outgoingSlot.name,
+      base_name: outgoingSlot.base_name,
+      version: outgoingSlot.version || 1,
+      action: outgoingSlot.action,
+      usage: outgoingSlot.usage,
+      effect: outgoingSlot.effect,
+      notes: outgoingSlot.notes,
+      source: (outgoingSlot as any).source || 'Shunted to Cold Storage',
+      source_gear: (outgoingSlot as any).source_gear,
+      source_mod: (outgoingSlot as any).source_mod,
+      created_at: new Date().toISOString(),
+      category: (outgoingSlot as any).category || null,
+      slot_weight: (outgoingSlot as any).slot_weight ?? 1,
+      checked_state: outgoingSlot.checked || [false, false, false],
+      cold_storage: true,
+    };
+    newVault.push(outgoingVaultItem);
+
+    const coldStorage = Array.isArray(sheet.cold_storage_functions) ? [...sheet.cold_storage_functions] : [];
+    if (!coldStorage.includes(outgoingSlot.name)) {
+      coldStorage.push(outgoingSlot.name);
+    }
+
+    const nextCharges = costType === 'spark' ? Math.max(0, charges - 5) : charges;
+    const nextFocus = costType === 'focus' ? stepDownDie(sheet.focus_die_current || 'd4') : (sheet.focus_die_current || 'd4');
+
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      spell_slots: currentSlots,
+      character_vault: newVault,
+      cold_storage_functions: coldStorage,
+      charges: nextCharges,
+      sparks: nextCharges,
+      is_sparked: nextCharges >= 5,
+      is_charged: nextCharges >= 5,
+      focus_die_current: nextFocus,
+    }));
+
+    return { success: true };
+  },
+
+  resetStanceSwitches: () => {
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      stance_switch_count: 0,
+      cold_storage_functions: [],
     }));
   },
 

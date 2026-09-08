@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, Trash2, AlertCircle, Check, ArrowUpDown } from 'lucide-react';
+import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, Trash2, AlertCircle, Check, ArrowUpDown, Cpu } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -32,6 +32,7 @@ import {
   groupFunctionsByParent,
 } from '../../utils/functionSourceHelper';
 import { reconcileCharacterVaultWithGear } from '../../utils/gearFunctionSync';
+import { EmergencyHardwareShuntModal } from '../modals/EmergencyHardwareShuntModal';
 
 const POWER_DISCIPLINES = [
   'BioTech',
@@ -186,9 +187,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setAbilitySortMode,
     setAbilityActionFilter,
     isGuildSpaceUnlocked: isGsUnlocked,
+    switchFunctionStance,
   } = useCharacterStore();
   const sheetData: any = activeCharacter?.sheet_data || {};
   const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
+
+  const [showShuntModal, setShowShuntModal] = useState(false);
+  const activeStance: 'alpha' | 'beta' = sheetData.active_stance === 'beta' ? 'beta' : 'alpha';
+  const stanceSwitchCount: number = typeof sheetData.stance_switch_count === 'number' ? sheetData.stance_switch_count : 0;
+  const nextSwitchCost: 'M' | 'AM' = stanceSwitchCount === 0 ? 'M' : 'AM';
+
+  const handleSwitchStance = (targetStance: 'alpha' | 'beta') => {
+    switchFunctionStance(targetStance);
+    saveActiveCharacter();
+  };
+
   const rawSlots: AbilitySlot[] = (activeCharacter?.sheet_data?.[slotKey as keyof typeof activeCharacter.sheet_data] as AbilitySlot[]) || [];
   const slots: AbilitySlot[] = useMemo(() => {
     return rawSlots.filter((s) => s && s.name && s.name.trim() !== '');
@@ -476,7 +489,26 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       newChecked[checkIndex] = !newChecked[checkIndex];
       slotToUpdate.checked = newChecked;
       updatedSlots[realIndex] = slotToUpdate;
-      return { ...prev, [slotKey]: updatedSlots };
+
+      // Cross-Stance Synchronization for Functions
+      let updatedBeta = prev.stance_beta_slots;
+      if (slotKey === 'spell_slots' && Array.isArray(prev.stance_beta_slots)) {
+        const targetClean = cleanName(targetSlot.base_name || targetSlot.name).toLowerCase();
+        updatedBeta = prev.stance_beta_slots.map((bSlot) => {
+          if (!bSlot || !bSlot.name) return bSlot;
+          const bClean = cleanName(bSlot.base_name || bSlot.name).toLowerCase();
+          if (bClean === targetClean) {
+            return { ...bSlot, checked: newChecked };
+          }
+          return bSlot;
+        });
+      }
+
+      return {
+        ...prev,
+        [slotKey]: updatedSlots,
+        ...(slotKey === 'spell_slots' && updatedBeta ? { stance_beta_slots: updatedBeta } : {}),
+      };
     });
     saveActiveCharacter();
   };
@@ -484,16 +516,29 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const handleClearAllUses = () => {
     updateActiveSheetData((prev) => {
       const currentSlots = prev[slotKey] || [];
-      if (currentSlots.length === 0) return prev;
-
       const clearedSlots = currentSlots.map((slot: any) => ({
         ...slot,
         checked: [false, false, false],
       }));
 
+      let clearedBeta = prev.stance_beta_slots;
+      if (slotKey === 'spell_slots' && Array.isArray(prev.stance_beta_slots)) {
+        clearedBeta = prev.stance_beta_slots.map((bSlot) => ({
+          ...bSlot,
+          checked: [false, false, false],
+        }));
+      }
+
       return {
         ...prev,
         [slotKey]: clearedSlots,
+        ...(slotKey === 'spell_slots'
+          ? {
+              stance_beta_slots: clearedBeta,
+              stance_switch_count: 0,
+              cold_storage_functions: [],
+            }
+          : {}),
       };
     });
     saveActiveCharacter();
@@ -849,7 +894,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             source_mod: (targetSlot as any).source_mod,
             created_at: new Date().toISOString(),
             category: catalogMatch?.category || (targetSlot as any).category || null,
-            slot_weight: (getItemSlotWeight(targetSlot) as 1 | 2 | 3 | 4),
+            slot_weight: (getItemSlotWeight(targetSlot) as 0 | 1 | 2 | 3 | 4),
+            checked_state: targetSlot.checked || [false, false, false],
           };
           return { ...prev, [slotKey]: updated, character_vault: [...currentVault, vaultItem] };
         }
@@ -860,11 +906,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   };
 
   const handleEquipVaultItem = (vaultItem: MagicItem) => {
-    const weight = vaultItem.slot_weight || getCategorySlotWeight(vaultItem.category || vaultItem.rarity);
+    const weight = typeof vaultItem.slot_weight === 'number' ? vaultItem.slot_weight : getCategorySlotWeight(vaultItem.category || vaultItem.rarity);
     const currentSlots = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
     const activeSlotsUsed = calculateTotalLoadoutSlotsUsed(currentSlots);
 
-    if (activeSlotsUsed + weight > totalLoadoutCapacity) {
+    if (weight > 0 && activeSlotsUsed + weight > totalLoadoutCapacity) {
       alert(`❌ Insufficient Loadout Capacity! Active loadout is ${activeSlotsUsed}/${totalLoadoutCapacity} slots. Item requires ${weight} slots. Unlock +2 Loadout Slots in the Buy Slots tab or header button.`);
       return;
     }
@@ -882,7 +928,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         action: (vaultItem.action?.toUpperCase() as any) || 'P',
         usage: vaultItem.usage || '1-Enc',
         effect: vaultItem.effect || '',
-        checked: [false, false, false],
+        checked: vaultItem.checked_state || [false, false, false],
         notes: vaultItem.notes,
         source: vaultItem.source,
         source_gear: (vaultItem as any).source_gear,
@@ -1450,9 +1496,72 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
             <span className="font-outfit text-[11px] font-bold">Clear Uses</span>
           </button>
+
+          {/* KISS Multi-Option Stance Switcher (Functions Mode) */}
+          {type === 'spells' && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchStance('alpha')}
+                  className={`py-1 px-2.5 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeStance === 'alpha'
+                      ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                  title="Active Mode: Stance Alpha"
+                >
+                  <span>🅰️</span>
+                  <span className="hidden sm:inline">Stance A</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchStance('beta')}
+                  className={`py-1 px-2.5 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeStance === 'beta'
+                      ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                  title="Active Mode: Stance Beta"
+                >
+                  <span>🅱️</span>
+                  <span className="hidden sm:inline">Stance B</span>
+                </button>
+              </div>
+
+              {/* In-Combat Cost Indicator Badge */}
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-extrabold border hidden md:inline-flex items-center gap-0.5 ${
+                  stanceSwitchCount === 0
+                    ? 'bg-emerald-950/60 border-emerald-500/30 text-emerald-300'
+                    : 'bg-rose-950/60 border-rose-500/30 text-rose-300'
+                }`}
+                title={
+                  stanceSwitchCount === 0
+                    ? 'First in-combat Stance switch costs 1 Move Action [M]'
+                    : 'Subsequent in-combat Stance switch costs Attack + Move [AM]'
+                }
+              >
+                Next: {nextSwitchCost}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-2 shrink-0">
+          {/* Emergency Hardware Shunt Trigger (Functions Mode) */}
+          {type === 'spells' && (
+            <button
+              type="button"
+              onClick={() => setShowShuntModal(true)}
+              className="p-1.5 px-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1 shadow-sm cursor-pointer bg-cyan-950/60 hover:bg-cyan-900/60 border-cyan-500/40 text-cyan-300 hover:text-white shrink-0"
+              title="Emergency Hardware Shunt: Spend 1 Spark or 1 Focus step to hot-swap a Vault function"
+            >
+              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="font-outfit text-[11px] font-bold hidden sm:inline">Shunt</span>
+            </button>
+          )}
+
           <div className="relative">
             <button
               type="button"
@@ -1538,6 +1647,38 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
                           {type === 'powers' ? activeDisplaySlots.length : slots.length}
                         </span>
+
+                        {/* Stance Switcher for Functions in Modal */}
+                        {type === 'spells' && (
+                          <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner">
+                            <button
+                              type="button"
+                              onClick={() => handleSwitchStance('alpha')}
+                              className={`py-0.5 px-2 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                                activeStance === 'alpha'
+                                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                              title="Configure Stance Alpha"
+                            >
+                              <span>🅰️</span>
+                              <span>Stance A</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSwitchStance('beta')}
+                              className={`py-0.5 px-2 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                                activeStance === 'beta'
+                                  ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                              title="Configure Stance Beta"
+                            >
+                              <span>🅱️</span>
+                              <span>Stance B</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Roster Search Filter */}
@@ -3336,6 +3477,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           </div>
         )}
       </div>
+
+      {type === 'spells' && (
+        <EmergencyHardwareShuntModal
+          isOpen={showShuntModal}
+          onClose={() => setShowShuntModal(false)}
+        />
+      )}
     </div>
   );
 };
