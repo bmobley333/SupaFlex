@@ -26,7 +26,7 @@ import {
   ApCostCategory,
   ApEvaluationResult,
 } from '../../utils/pathApUtils';
-import { resolveFunctionSource, matchFunctionSourceSearch } from '../../utils/functionSourceHelper';
+import { formatCompositeFunctionName, matchFunctionSourceSearch } from '../../utils/functionSourceHelper';
 
 const POWER_DISCIPLINES = [
   'BioTech',
@@ -1233,15 +1233,22 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       list = list.filter((s) => (s.action || '').toUpperCase() === abilityActionFilter);
     }
     return [...list].sort((a, b) => {
+      const nameA = type === 'spells'
+        ? formatCompositeFunctionName(a, functionsCatalog, modsCatalog, activeCharacter, ' • ')
+        : (a.name || '');
+      const nameB = type === 'spells'
+        ? formatCompositeFunctionName(b, functionsCatalog, modsCatalog, activeCharacter, ' • ')
+        : (b.name || '');
+
       if (abilitySortMode === 'name') {
-        return compareMsoItems(a, b, isGsUnlocked);
+        return compareMsoOptions(nameA, nameB, isGsUnlocked);
       }
       const orderA = ACTION_ORDER[a.action?.toUpperCase() || ''] ?? 99;
       const orderB = ACTION_ORDER[b.action?.toUpperCase() || ''] ?? 99;
       if (orderA !== orderB) return orderA - orderB;
-      return compareMsoItems(a, b, isGsUnlocked);
+      return compareMsoOptions(nameA, nameB, isGsUnlocked);
     });
-  }, [activeDisplaySlots, slots, type, abilitySortMode, abilityActionFilter, isGsUnlocked]);
+  }, [activeDisplaySlots, slots, type, abilitySortMode, abilityActionFilter, isGsUnlocked, functionsCatalog, modsCatalog, activeCharacter]);
 
   return (
     <div
@@ -1565,6 +1572,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           const cat = type === 'powers' ? getPowerReadyCategory(item) : null;
                           const actionUpper = (item.action || '').toUpperCase();
                           const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
+                          const displayName = type === 'spells'
+                            ? formatCompositeFunctionName(item, functionsCatalog, modsCatalog, activeCharacter, ' • ')
+                            : baseName;
 
                           return (
                             <div
@@ -1575,7 +1585,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
-                                      <span>{baseName}</span>
+                                      <span>{displayName}</span>
                                       {(() => {
                                         const resolvedNotes =
                                           (item as any).notes ||
@@ -1584,7 +1594,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                               c.name.toLowerCase() === baseName.toLowerCase() ||
                                               c.name.toLowerCase() === cleanName(item.name).toLowerCase()
                                           ) as any)?.notes;
-                                        return <ItemNotesPopover notes={resolvedNotes} itemName={baseName} inline />;
+                                        return <ItemNotesPopover notes={resolvedNotes} itemName={displayName} inline />;
                                       })()}
                                     </span>
                                     {version > 1 && (
@@ -1606,24 +1616,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   </div>
                                   {type === 'spells' && (() => {
                                     const badge = getMagicItemTierBadge(item, fullCatalog);
-                                    const sourceBadge = resolveFunctionSource(item, functionsCatalog, modsCatalog, activeCharacter);
+                                    if (!badge) return null;
                                     return (
                                       <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                        {badge && (
-                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                                            <span>{badge.icon}</span>
-                                            <span>{badge.label}</span>
-                                            <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                                          </span>
-                                        )}
-                                        {sourceBadge && (
-                                          <span
-                                            className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded border bg-slate-900/90 text-cyan-300 border-cyan-500/30 w-fit flex items-center gap-1 truncate max-w-full"
-                                            title={sourceBadge.badgeText}
-                                          >
-                                            <span className="truncate">{sourceBadge.badgeText}</span>
-                                          </span>
-                                        )}
+                                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
+                                          <span>{badge.icon}</span>
+                                          <span>{badge.label}</span>
+                                          <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                                        </span>
                                       </div>
                                     );
                                   })()}
@@ -1913,6 +1913,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               filteredVault.map((item, idx) => {
                                 const weight = getItemSlotWeight(item);
                                 const badge = getMagicItemTierBadge(item, fullCatalog);
+                                const displayName = formatCompositeFunctionName(item, functionsCatalog, modsCatalog, activeCharacter, ' • ');
                                 return (
                                   <div
                                     key={item.id || item.name + idx}
@@ -1922,32 +1923,19 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       <div className="flex flex-col gap-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                           <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
-                                            <span>{item.name}</span>
-                                            <ItemNotesPopover notes={(item as any).notes || (fullCatalog.find((c) => c.name.toLowerCase() === cleanName(item.name).toLowerCase()) as any)?.notes} itemName={item.name} inline />
+                                            <span>{displayName}</span>
+                                            <ItemNotesPopover notes={(item as any).notes || (fullCatalog.find((c) => c.name.toLowerCase() === cleanName(item.name).toLowerCase()) as any)?.notes} itemName={displayName} inline />
                                           </span>
                                         </div>
-                                        {(() => {
-                                          const sourceBadge = resolveFunctionSource(item, functionsCatalog, modsCatalog, activeCharacter);
-                                          return (
-                                            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                              {badge && (
-                                                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                                                  <span>{badge.icon}</span>
-                                                  <span>{badge.label}</span>
-                                                  <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                                                </span>
-                                              )}
-                                              {sourceBadge && (
-                                                <span
-                                                  className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded border bg-slate-900/90 text-cyan-300 border-cyan-500/30 w-fit flex items-center gap-1 truncate max-w-full"
-                                                  title={sourceBadge.badgeText}
-                                                >
-                                                  <span className="truncate">{sourceBadge.badgeText}</span>
-                                                </span>
-                                              )}
-                                            </div>
-                                          );
-                                        })()}
+                                        {badge && (
+                                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
+                                              <span>{badge.icon}</span>
+                                              <span>{badge.label}</span>
+                                              <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                                            </span>
+                                          </div>
+                                        )}
                                       </div>
                                       <button
                                         type="button"
@@ -2816,12 +2804,24 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 {/* 1. Name Column with Version Badge */}
                 <div className="w-40 sm:w-52 shrink-0 flex flex-col gap-0.5">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline flex-wrap leading-tight ${
-                      isGsUnlocked && isMsoEntry(baseName) ? 'text-purple-300' : 'text-slate-100'
-                    }`}>
-                      <span className="break-words">{isGsUnlocked && isMsoEntry(baseName) ? `🌌 ${baseName}` : baseName}</span>
-                      <ItemNotesPopover notes={slot.notes || (fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase()) as any)?.notes} itemName={baseName} inline />
-                    </span>
+                    {(() => {
+                      const displayName = type === 'spells'
+                        ? formatCompositeFunctionName(slot, functionsCatalog, modsCatalog, activeCharacter, ' • ')
+                        : baseName;
+                      const isMso = isMsoEntry(displayName);
+                      return (
+                        <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline flex-wrap leading-tight ${
+                          isGsUnlocked && isMso ? 'text-purple-300' : 'text-slate-100'
+                        }`}>
+                          <span className="break-words">{isGsUnlocked && isMso ? `🌌 ${displayName}` : displayName}</span>
+                          <ItemNotesPopover
+                            notes={slot.notes || (fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase() || c.name.toLowerCase() === cleanName(slot.name).toLowerCase()) as any)?.notes}
+                            itemName={displayName}
+                            inline
+                          />
+                        </span>
+                      );
+                    })()}
                   </div>
                   {version > 1 && (
                     <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
@@ -2831,24 +2831,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   )}
                   {type === 'spells' && (() => {
                     const badge = getMagicItemTierBadge(slot, fullCatalog);
-                    const sourceBadge = resolveFunctionSource(slot, functionsCatalog, modsCatalog, activeCharacter);
+                    if (!badge) return null;
                     return (
                       <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                        {badge && (
-                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                            <span>{badge.icon}</span>
-                            <span>{badge.label}</span>
-                            <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                          </span>
-                        )}
-                        {sourceBadge && (
-                          <span
-                            className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded border bg-slate-900/90 text-cyan-300 border-cyan-500/30 w-fit flex items-center gap-1 truncate max-w-full"
-                            title={sourceBadge.badgeText}
-                          >
-                            <span className="truncate">{sourceBadge.badgeText}</span>
-                          </span>
-                        )}
+                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
+                          <span>{badge.icon}</span>
+                          <span>{badge.label}</span>
+                          <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
+                        </span>
                       </div>
                     );
                   })()}
