@@ -19,7 +19,7 @@ import {
   calculateAvailableAp,
 } from '../../types/game';
 import { cleanKitName, isMsoEntry, compareMsoItems, compareMsoOptions } from '../../utils/kitUtils';
-import { getCharacterKnownPaths, isItemInPath } from '../../utils/pathApUtils';
+import { getCharacterKnownPaths, isItemInPath, parseItemPaths } from '../../utils/pathApUtils';
 
 interface ManageTraitsModalProps {
   isOpen: boolean;
@@ -49,7 +49,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [localDomainFilter, setLocalDomainFilter] = useState<string>('ALL');
   const [traitTypeFilter, setTraitTypeFilter] = useState<'ALL' | 'STARRED'>('ALL');
-  const [traitCategoryFilter, setTraitCategoryFilter] = useState<'all' | 'in_path' | 'out_of_path'>('all');
+  const [traitCategoryFilter, setTraitCategoryFilter] = useState<'all' | 'in_path' | 'universal' | 'out_of_path'>('all');
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
 
   // Sync genre filter when modal opens
@@ -67,7 +67,13 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
   const isTraitInherent = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
     const kitStr = (rule.kit || rule.table_group || (rule as any).source || '').toLowerCase();
-    return kitStr.includes('{perk}') || kitStr.includes('{trait}') || kitStr.includes('perk') || kitStr.includes('trait');
+    return kitStr.includes('{free}') || kitStr.includes('{perk}') || kitStr.includes('{trait}') || kitStr.includes('perk') || kitStr.includes('trait');
+  }, []);
+
+  const isTraitUniversal = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
+    const pathVal = rule.path || rule.kit || rule.table_group || (rule as any).discipline || '';
+    const paths = parseItemPaths(pathVal);
+    return paths.some((p) => p.toLowerCase() === 'universal');
   }, []);
 
   const isTraitInPath = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
@@ -160,11 +166,16 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
           if (!isRuleStarred(r.id || r.name)) return false;
         }
 
-        // 4. Category Switch (All, In-Path, Out-of-Path)
+        // 4. Category Switch (All, In-Path, Universal, Out-of-Path)
+        const isUni = isTraitUniversal(r);
+        const inPath = isTraitInPath(r);
+
         if (traitCategoryFilter === 'in_path') {
-          if (!isTraitInPath(r)) return false;
+          if (!inPath || isUni) return false;
+        } else if (traitCategoryFilter === 'universal') {
+          if (!isUni) return false;
         } else if (traitCategoryFilter === 'out_of_path') {
-          if (isTraitInPath(r)) return false;
+          if (inPath || isUni) return false;
         }
 
         // 5. Search Query
@@ -182,15 +193,16 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
         return true;
       })
       .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
-  }, [stockRulesCatalog, localGenreFilter, localDomainFilter, traitTypeFilter, traitCategoryFilter, catalogSearchQuery, isTraitInherent, isTraitInPath, isRuleStarred, isGsUnlocked]);
+  }, [stockRulesCatalog, localGenreFilter, localDomainFilter, traitTypeFilter, traitCategoryFilter, catalogSearchQuery, isTraitInherent, isTraitUniversal, isTraitInPath, isRuleStarred, isGsUnlocked]);
 
   const handleEquipStockRule = (rule: SupabaseTrait) => {
     if (isRuleEquipped(rule.name)) return;
     const inPath = isTraitInPath(rule);
     const inherent = isTraitInherent(rule);
+    const isUni = isTraitUniversal(rule);
     const cost = inherent ? 0 : inPath ? 1 : 3;
 
-    if (!inPath && !inherent && activeRole !== 'gm') {
+    if (!inPath && !inherent && !isUni && activeRole !== 'gm') {
       const confirmed = window.confirm(
         `⚠️ Out-of-Path Trait: "${rule.name}" is outside your character's known paths.\n\nLearning it costs 3 AP and requires GM approval. Proceed?`
       );
@@ -211,7 +223,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     };
     addTraitQuirk(item);
     if (cost > 0) {
-      recordApExpenditure(cost, 'Skills', `Learned Trait: ${rule.name} (${cost} AP)`, 1, 'Manage Traits');
+      recordApExpenditure(cost, 'Skills', `${isUni ? 'Universal' : 'Learned'} Trait: ${rule.name} (${cost} AP)`, 1, 'Manage Traits');
     }
   };
 
@@ -469,7 +481,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               <button
                 type="button"
                 onClick={() => setTraitCategoryFilter('all')}
-                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   traitCategoryFilter === 'all'
                     ? 'bg-purple-600 text-white shadow-sm font-extrabold'
                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -480,7 +492,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               <button
                 type="button"
                 onClick={() => setTraitCategoryFilter('in_path')}
-                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   traitCategoryFilter === 'in_path'
                     ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -490,8 +502,19 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               </button>
               <button
                 type="button"
+                onClick={() => setTraitCategoryFilter('universal')}
+                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  traitCategoryFilter === 'universal'
+                    ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                ✨ 3 AP (Universal)
+              </button>
+              <button
+                type="button"
                 onClick={() => setTraitCategoryFilter('out_of_path')}
-                className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   traitCategoryFilter === 'out_of_path'
                     ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -500,6 +523,16 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                 👑 Out-of-Path (3 AP)
               </button>
             </div>
+
+            {/* Universal Notice Banner */}
+            {traitCategoryFilter === 'universal' && (
+              <div className="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/40 flex items-center gap-2 text-xs text-cyan-200 shrink-0">
+                <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span className="leading-tight">
+                  <strong>✨ Universal Acquisitions:</strong> 3 AP Self-Service • No GM Approval Needed.
+                </span>
+              </div>
+            )}
 
             {/* Out-of-Path GM Notice Banner */}
             {traitCategoryFilter === 'out_of_path' && (

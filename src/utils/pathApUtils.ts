@@ -5,7 +5,7 @@
 import { Character } from '../types/game';
 import { cleanPathName } from './kitUtils';
 
-export type ApCostCategory = 'all' | '1AP' | '2AP' | '3AP' | '4AP';
+export type ApCostCategory = 'all' | '1AP' | '2AP' | '3AP' | '3AP_Universal' | '4AP';
 
 export interface ApEvaluationResult {
   inPath: boolean;
@@ -14,6 +14,7 @@ export interface ApEvaluationResult {
   apCost: number;
   requiresGmApproval: boolean;
   statDownscaled: boolean;
+  isUniversal?: boolean;
 }
 
 /**
@@ -227,6 +228,7 @@ export const evaluateItemAp = (
       apCost: 3,
       requiresGmApproval: !isUniversal,
       statDownscaled: false,
+      isUniversal,
     };
   }
 
@@ -238,16 +240,23 @@ export const evaluateItemAp = (
     apCost: 4,
     requiresGmApproval: !isUniversal,
     statDownscaled: true,
+    isUniversal,
   };
 };
 
 /**
- * Filters an item by the selected AP cost category tab ('all', '1AP', '2AP', '3AP', '4AP').
+ * Filters an item by the selected AP cost category tab ('all', '1AP', '2AP', '3AP', '3AP_Universal', '4AP').
  */
 export const matchesApCategoryFilter = (
   targetCategory: ApCostCategory,
   evalResult: ApEvaluationResult
 ): boolean => {
   if (targetCategory === 'all') return true;
+  if (targetCategory === '3AP_Universal') {
+    return !!evalResult.isUniversal;
+  }
+  if (targetCategory === '3AP') {
+    return evalResult.category === '3AP' && !evalResult.isUniversal;
+  }
   return evalResult.category === targetCategory;
 };

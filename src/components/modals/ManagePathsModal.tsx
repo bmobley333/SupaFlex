@@ -70,10 +70,12 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Dynamic available path categories from database
+  // Dynamic available path categories from database (excluding innate and non-purchasable universal)
   const availableCategories = useMemo(() => {
     const cats = new Set<string>();
     resolvedPathsCatalog.forEach((k) => {
+      const lower = (k.name || '').toLowerCase().trim();
+      if (lower === 'base' || lower === 'universal') return;
       if (k.category && (k.category as string) !== '?') cats.add(k.category);
     });
     return ['All', ...Array.from(cats).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))];
@@ -133,20 +135,26 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     return Array.from(pathSet);
   }, [resolvedPathsCatalog, stockPathsCatalog, stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
 
-  // Extra learned paths (excluding active starting base, race, and class)
+  // Extra learned paths (excluding active starting base, universal, race, and class)
   const extraLearnedPaths: string[] = useMemo(() => {
     const fromSheet: string[] = activeCharacter?.sheet_data?.favorite_trait_kits || [];
-    return fromSheet.filter((k) => k !== 'Base' && k !== activeRace && k !== activeClass);
+    return fromSheet.filter((k) => {
+      const lower = (k || '').toLowerCase().trim();
+      return lower !== 'base' && lower !== 'universal' && k !== activeRace && k !== activeClass;
+    });
   }, [activeRace, activeClass, activeCharacter?.sheet_data?.favorite_trait_kits]);
 
   const sortedExtraLearnedPaths = useMemo(() => {
     return [...extraLearnedPaths].sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
   }, [extraLearnedPaths, isGsUnlocked]);
 
-  // Filtered paths available to buy / learn based on category selection
+  // Filtered paths available to buy / learn based on category selection (Universal & Base are excluded from purchase)
   const filteredPathsToBuy = useMemo(() => {
     return allDiscoveredPaths
-      .filter((k) => k !== 'Base' && !learnedPaths.includes(k))
+      .filter((k) => {
+        const lower = (k || '').toLowerCase().trim();
+        return lower !== 'base' && lower !== 'universal' && !learnedPaths.includes(k);
+      })
       .filter((k) => {
         if (selectedPathCategory === 'All') return true;
         const match =
@@ -306,15 +314,42 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                   </span>
                 </div>
                 <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-purple-950/90 text-purple-300 border border-purple-500/40">
-                  {learnedPaths.length} Active
+                  {4 + sortedExtraLearnedPaths.length} Active
                 </span>
               </div>
 
-              {/* Foundational Paths: Race & Class */}
+              {/* Foundational Paths: Base, Race, Class & Universal */}
               <div className="space-y-2.5">
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
                   Foundational Hero Paths
                 </span>
+
+                {/* Base Foundation */}
+                <div className="p-2.5 rounded-xl bg-slate-950/90 border border-purple-500/30 shadow-inner space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🥋</span>
+                      <span>Base Path</span>
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/30">
+                      Innate
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-0.5">
+                    <span className="text-xs font-black inline-flex items-center align-baseline gap-1 text-slate-100">
+                      <span>Base</span>
+                      <ItemNotesPopover
+                        notes={
+                          resolvedPathsCatalog.find((p) => p.name.toLowerCase() === 'base')?.description ||
+                          'Baseline universal physical capabilities and natural weapon/unarmored proficiencies common to all characters.'
+                        }
+                        itemName="Base Path"
+                        inline
+                      />
+                    </span>
+                    <span className="text-[10px] font-mono text-purple-400">0 AP Inherent • 1 AP Proficiencies</span>
+                  </div>
+                </div>
 
                 {/* Race Foundation */}
                 <div className="p-2.5 rounded-xl bg-slate-950/90 border border-purple-500/30 shadow-inner space-y-1">
@@ -390,6 +425,33 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                       <span className="text-[10px] font-mono text-purple-400">In-Path Pricing</span>
                     </div>
                   )}
+                </div>
+
+                {/* Universal Foundation */}
+                <div className="p-2.5 rounded-xl bg-slate-950/90 border border-cyan-500/30 shadow-inner space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🌐</span>
+                      <span>Universal Path</span>
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
+                      Universal
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-0.5">
+                    <span className="text-xs font-black inline-flex items-center align-baseline gap-1 text-cyan-100">
+                      <span>Universal</span>
+                      <ItemNotesPopover
+                        notes={
+                          resolvedPathsCatalog.find((p) => p.name.toLowerCase() === 'universal')?.description ||
+                          'Heroic stunts, clutch fortune, and general utility abilities accessible to all adventurers.'
+                        }
+                        itemName="Universal Path"
+                        inline
+                      />
+                    </span>
+                    <span className="text-[10px] font-mono text-cyan-400">3 AP Self-Service • No GM Approval</span>
+                  </div>
                 </div>
               </div>
 

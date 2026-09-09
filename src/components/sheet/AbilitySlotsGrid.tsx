@@ -2833,6 +2833,17 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 </button>
                                 <button
                                   type="button"
+                                  onClick={() => setActivePowerApCategory('3AP_Universal')}
+                                  className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                    activePowerApCategory === '3AP_Universal'
+                                      ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                  }`}
+                                >
+                                  ✨ 3 AP (Universal)
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => setActivePowerApCategory('3AP')}
                                   className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                                     activePowerApCategory === '3AP'
@@ -2844,9 +2855,19 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 </button>
                               </div>
 
+                              {/* Universal Notice Banner */}
+                              {activePowerApCategory === '3AP_Universal' && (
+                                <div className="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/40 flex items-center gap-2 text-xs text-cyan-200 shrink-0 mb-1">
+                                  <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+                                  <span className="leading-tight">
+                                    <strong>✨ Universal Powers:</strong> 3 AP Self-Service • No GM Approval Needed.
+                                  </span>
+                                </div>
+                              )}
+
                               {/* Out-of-Path GM Notice Banner */}
                               {activePowerApCategory === '3AP' && (
-                                <div className="p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center gap-2 text-xs text-amber-200 shrink-0">
+                                <div className="p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center gap-2 text-xs text-amber-200 shrink-0 mb-1">
                                   <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
                                   <span className="leading-tight">
                                     <strong>👑 Out-of-Path Acquisitions:</strong> cost more AP AND require GM Approval.
@@ -2879,7 +2900,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   0 powers match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
                                   {powerDomainFilter !== 'ALL' ? ` • ${powerDomainFilter}` : ''}
                                   {powerDisciplineFilter !== 'ALL' ? ` • ${powerDisciplineFilter}` : ''}
-                                  {activePowerApCategory !== 'all' ? ` • ${activePowerApCategory}` : ''})
+                                  {activePowerApCategory !== 'all' ? ` • ${activePowerApCategory === '3AP_Universal' ? '3 AP (Universal)' : activePowerApCategory}` : ''})
                                 </span>
                                 <button
                                   type="button"
