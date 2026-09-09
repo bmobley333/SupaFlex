@@ -193,19 +193,19 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
       setSlots([
         {
           slotType: 'artifact',
-          slotTitle: '🔮 Arcane Artifact',
+          slotTitle: 'Rnd Artifact 1',
           slotBadge: `${draftTier} Rarity`,
           item: slot1Item,
         },
         {
           slotType: 'artifact',
-          slotTitle: '✨ Mystic Artifact',
+          slotTitle: 'Rnd Artifact 2',
           slotBadge: `${draftTier} Rarity`,
           item: slot2Item,
         },
         {
           slotType: 'treasure',
-          slotTitle: '💎 Treasure Cache',
+          slotTitle: 'Treasure Cache',
           slotBadge: draftTier === 'Minor' ? 'Best of 2 Coins' : `Best of ${draftTier === 'Epic' ? 3 : draftTier === 'Greater' ? 2 : 1} Art/Gem`,
           item: slot3Item,
         },
@@ -275,9 +275,9 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
                   <div>
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
                       <span className="font-outfit font-bold text-xs text-amber-400 flex items-center gap-1.5">
-                        {idx === 0 && <Sparkles className="w-3.5 h-3.5 text-purple-400" />}
-                        {idx === 1 && <Sparkles className="w-3.5 h-3.5 text-cyan-400" />}
-                        {idx === 2 && <Gem className="w-3.5 h-3.5 text-emerald-400" />}
+                        {idx === 0 && <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />}
+                        {idx === 1 && <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                        {idx === 2 && <Gem className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
                         {s.slotTitle}
                       </span>
                       <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
