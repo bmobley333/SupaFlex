@@ -99,10 +99,10 @@ export const CATEGORY_OPTIONS = [
   { key: 'coins', label: '🪙 Coins (s/g)' },
   { key: 'chaos_gems', label: '💎 Chaos Gem (Volatile)' },
   { key: 'hardware', label: '⚙️ Hardware Device' },
-  { key: 'magic_Minor', label: '🍺 Minor Relic' },
-  { key: 'magic_Lesser', label: '🪄 Lesser Relic' },
-  { key: 'magic_Greater', label: '✨ Greater Relic' },
-  { key: 'magic_Epic', label: '💫 Epic Relic' },
+  { key: 'magic_Minor', label: '🍺 Minor Artifact' },
+  { key: 'magic_Lesser', label: '🪄 Lesser Artifact' },
+  { key: 'magic_Greater', label: '✨ Greater Artifact' },
+  { key: 'magic_Epic', label: '💫 Epic Artifact' },
   { key: 'gear_quality', label: '🧰 Gear Quality + Item' },
   { key: 'art_gems', label: '🎨 Art & Gems' },
   { key: 'curios', label: '📜 Curios & Documents' },
@@ -152,7 +152,6 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const [isLoadingSpecificCatalog, setIsLoadingSpecificCatalog] = useState(false);
 
   const essenceCore = activeCharacter?.sheet_data?.essence_core || 0;
-  const starredItemIds = activeCharacter?.sheet_data?.starred_magic_items || [];
 
   // Load specific catalog on category change
   useEffect(() => {
@@ -412,7 +411,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           resList.push({
             id: `res-${Date.now()}`,
             tableKey: 'loot_main',
-            tableName: `${iconStr} ${rarity} Relic`,
+            tableName: `${iconStr} ${rarity} Artifact`,
             rollVal: d100,
             title: `${item.name}`,
             description: item.description || item.notes || `Mystical ${item.category} item.`,
@@ -469,10 +468,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             resList.push({
               id: `res-${Date.now()}-2`,
               tableKey: 'loot_main',
-              tableName: '🪄 Double Roll Relic',
+              tableName: '🪄 Double Roll Artifact',
               rollVal: d100,
               title: `${r2.name}`,
-              description: r2.description || `Enchanted relic.`,
+              description: r2.description || `Enchanted artifact.`,
               type: 'magic_item',
               magicItem: r2
             });
@@ -482,7 +481,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             resList.push({
               id: `res-${Date.now()}-epic1`,
               tableKey: 'loot_main',
-              tableName: '💫 Epic Relic',
+              tableName: '💫 Epic Artifact',
               rollVal: 100,
               title: `${artItem.name}`,
               description: artItem.description || 'Legendary epic item of massive power.',
@@ -550,14 +549,14 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         const rawRarity = tableKey.replace('magic_', '');
         const rarity = (rawRarity.toLowerCase() === 'artifact' || rawRarity.toLowerCase() === 'epic') ? 'Epic' : rawRarity;
         const item = await fetchRandomMagicItem(rarity);
-        const badgeLabel = rarity === 'Minor' ? '🍺 Minor Relic' : rarity === 'Lesser' ? '🪄 Lesser Relic' : rarity === 'Greater' ? '✨ Greater Relic' : '💫 Epic Relic';
+        const badgeLabel = rarity === 'Minor' ? '🍺 Minor Artifact' : rarity === 'Lesser' ? '🪄 Lesser Artifact' : rarity === 'Greater' ? '✨ Greater Artifact' : '💫 Epic Artifact';
         const resObj: RollResult = {
           id: `res-${Date.now()}`,
           tableKey,
           tableName: badgeLabel,
           rollVal: 1,
           title: `${item.name}`,
-          description: item.description || `Mystical ${rarity.toLowerCase()} relic.`,
+          description: item.description || `Mystical ${rarity.toLowerCase()} artifact.`,
           type: 'magic_item',
           magicItem: item
         };
@@ -1223,7 +1222,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                               ? 'border-amber-400 shadow-amber-500/50 animate-pulse cursor-pointer'
                               : 'border-slate-700'
                           }`}
-                          title={qualifiedTier ? `Click to draft a ${qualifiedTier.name} relic!` : 'Disenchant loot drops to fill Essence Flask'}
+                          title={qualifiedTier ? `Click to draft a ${qualifiedTier.name} artifact!` : 'Disenchant loot drops to fill Essence Flask'}
                         >
                           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3.5 h-1.5 bg-slate-800 border-b border-slate-700 z-10"></div>
                           <div
@@ -1385,7 +1384,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                 <div className="flex flex-wrap gap-1 shrink-0">
                   {[
                     { key: 'coins', label: '🪙 Coins/Val' },
-                    { key: 'relics', label: '🪄 Relic' },
+                    { key: 'relics', label: '🔮 Artifact' },
                     { key: 'weapons', label: '⚔️ Weapon' },
                     { key: 'armor', label: '🧥 Armor' },
                     { key: 'shields', label: '🛡️ Shield' },
@@ -1804,7 +1803,6 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         onClose={() => setIsDraftOpen(false)}
         characterName={characterName}
         draftTier={lastDraftTier}
-        starredItemIds={starredItemIds}
         stockMagicItems={magicItems}
         onSelectReward={handleSelectDraftReward}
         onDeconstructDraft={handleDeconstructDraft}

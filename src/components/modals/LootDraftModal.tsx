@@ -4,21 +4,20 @@
 import React, { useState, useEffect } from 'react';
 import { MagicItem } from '../../types/game';
 import { supabase } from '../../lib/supabase';
-import { Sparkles, Star, Gem, RefreshCw } from 'lucide-react';
+import { Sparkles, Gem, RefreshCw } from 'lucide-react';
 
 interface LootDraftModalProps {
   isOpen: boolean;
   onClose: () => void;
   characterName: string;
   draftTier?: 'Minor' | 'Lesser' | 'Greater' | 'Epic';
-  starredItemIds: (number | string)[];
   stockMagicItems: MagicItem[];
   onSelectReward: (reward: { type: 'magic_item' | 'treasure'; data: any }) => Promise<boolean>;
   onDeconstructDraft: () => void;
 }
 
 interface DraftSlot {
-  slotType: 'wishlist' | 'pool' | 'treasure';
+  slotType: 'artifact' | 'treasure';
   slotTitle: string;
   slotBadge: string;
   item: any;
@@ -29,7 +28,6 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
   onClose,
   characterName,
   draftTier = 'Lesser',
-  starredItemIds,
   stockMagicItems,
   onSelectReward,
   onDeconstructDraft,
@@ -50,40 +48,30 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
     setIsLoading(true);
 
     try {
-      // 1. SLOT 1: WISHLIST (Pulls from Starred Magic Items regardless of star intensity)
-      let slot1Item: any = null;
-
-      // Filter stockMagicItems by starredItemIds
-      const starredPool = stockMagicItems.filter(
-        (m) => starredItemIds.includes(m.id || '') || starredItemIds.includes(m.name)
-      );
-
-      if (starredPool.length > 0) {
-        slot1Item = starredPool[Math.floor(Math.random() * starredPool.length)];
-      } else {
-        // Fallback: Random item from current tier or general pool
-        const matchingTier = stockMagicItems.filter((m) =>
-          ((m as any).category || m.name || '').toLowerCase().includes(draftTier.toLowerCase())
-        );
-        const fallbackPool = matchingTier.length > 0 ? matchingTier : stockMagicItems;
-        if (fallbackPool.length > 0) {
-          slot1Item = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
-        } else {
-          slot1Item = {
-            name: `${draftTier} Focus Ring`,
-            category: draftTier,
-            effect: 'Grants +1 to all action rolls while focused.',
-          };
-        }
-      }
-
-      // 2. SLOT 2: MAGIC ITEM POOL (Random pull from matching tier)
-      let slot2Item: any = null;
+      // 1. Filter matching tier items
       const tierItems = stockMagicItems.filter((m) =>
         ((m as any).category || m.name || '').toLowerCase().includes(draftTier.toLowerCase())
       );
+      const pool = tierItems.length > 0 ? tierItems : stockMagicItems;
 
-      const pool2 = tierItems.length > 0 ? tierItems : stockMagicItems;
+      // 2. SLOT 1: PRIMARY ARTIFACT (Arcane Artifact)
+      let slot1Item: any = null;
+      if (pool.length > 0) {
+        slot1Item = pool[Math.floor(Math.random() * pool.length)];
+      } else {
+        slot1Item = {
+          name: `${draftTier} Focus Ring`,
+          category: draftTier,
+          effect: 'Grants +1 to all action rolls while focused.',
+        };
+      }
+
+      // 3. SLOT 2: SECONDARY ARTIFACT (Mystic Artifact - distinct from Slot 1 if pool allows)
+      let slot2Item: any = null;
+      const pool2Candidates = pool.filter((m) =>
+        slot1Item && (m.id ? m.id !== slot1Item.id : m.name !== slot1Item.name)
+      );
+      const pool2 = pool2Candidates.length > 0 ? pool2Candidates : pool;
       if (pool2.length > 0) {
         slot2Item = pool2[Math.floor(Math.random() * pool2.length)];
       } else {
@@ -168,7 +156,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
             category: '🎨 Art & Gems',
             type: 'valuable',
             value: '15g',
-            description: 'Rare gemstone and relic.',
+            description: 'Rare gemstone and heirloom.',
           };
         }
       } else {
@@ -181,11 +169,11 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
           if (data && data.length > 0) {
             const e1 = data[Math.floor(Math.random() * data.length)];
             slot3Item = {
-              name: `Royal Relic: ${e1.result_name}`,
+              name: `Royal Treasure: ${e1.result_name}`,
               category: '💫 Master Art & Gem (Best of 3)',
               type: 'valuable',
               value: '50g',
-              description: `Priceless historical relic: ${e1.result_name}.`,
+              description: `Priceless historical heirloom: ${e1.result_name}.`,
             };
           }
         } catch {
@@ -204,14 +192,14 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
 
       setSlots([
         {
-          slotType: 'wishlist',
-          slotTitle: '⭐️ Wishlist Match',
-          slotBadge: starredPool.length > 0 ? 'Starred Favorites' : 'Random Fallback',
+          slotType: 'artifact',
+          slotTitle: '🔮 Arcane Artifact',
+          slotBadge: `${draftTier} Rarity`,
           item: slot1Item,
         },
         {
-          slotType: 'pool',
-          slotTitle: '🎲 Relic Pool',
+          slotType: 'artifact',
+          slotTitle: '✨ Mystic Artifact',
           slotBadge: `${draftTier} Rarity`,
           item: slot2Item,
         },
@@ -287,9 +275,9 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
                   <div>
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
                       <span className="font-outfit font-bold text-xs text-amber-400 flex items-center gap-1.5">
-                        {s.slotType === 'wishlist' && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />}
-                        {s.slotType === 'pool' && <Sparkles className="w-3.5 h-3.5 text-cyan-400" />}
-                        {s.slotType === 'treasure' && <Gem className="w-3.5 h-3.5 text-emerald-400" />}
+                        {idx === 0 && <Sparkles className="w-3.5 h-3.5 text-purple-400" />}
+                        {idx === 1 && <Sparkles className="w-3.5 h-3.5 text-cyan-400" />}
+                        {idx === 2 && <Gem className="w-3.5 h-3.5 text-emerald-400" />}
                         {s.slotTitle}
                       </span>
                       <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
