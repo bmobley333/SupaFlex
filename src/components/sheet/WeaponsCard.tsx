@@ -761,18 +761,6 @@ export const WeaponsCard: React.FC = () => {
 
                                   <button
                                     type="button"
-                                    onClick={() => handleToggleStarItem({ name: group.baseName })}
-                                    className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                      isItemStarred({ name: group.baseName })
-                                        ? 'text-amber-400'
-                                        : 'text-slate-600 hover:text-amber-400'
-                                    }`}
-                                    title={isItemStarred({ name: group.baseName }) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                  >
-                                    <Star className={`w-3.5 h-3.5 ${isItemStarred({ name: group.baseName }) ? 'fill-amber-400' : ''}`} />
-                                  </button>
-                                  <button
-                                    type="button"
                                     onClick={() => handleDropWeapon(group.baseName)}
                                     className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
                                     title="Forget weapon proficiency"
@@ -900,7 +888,7 @@ export const WeaponsCard: React.FC = () => {
                             }`}
                           >
                             <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
-                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredWeaponsCount > 0 ? `(${starredWeaponsCount})` : ''}</option>
+                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred ({starredWeaponsCount})</option>
                             <option value="Unarmed" className="bg-slate-900 text-slate-200">🥊 Unarmed</option>
                             <option value="Hurled" className="bg-slate-900 text-slate-200">🪓 Hurled</option>
                             <option value="Melee" className="bg-slate-900 text-slate-200">🗡️ Melee</option>
@@ -1040,9 +1028,21 @@ export const WeaponsCard: React.FC = () => {
                                 key={weapon.id || idx}
                                 className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-rose-500/40 transition-all shrink-0"
                               >
-                                {/* Card Header Row: Name, Type Badges, Cost, SINGLE + Equip Button */}
-                                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
+                                {/* Card Header Row: Leading Star, Name, Type Badges, Cost, SINGLE + Equip Button */}
+                                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2 gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStarItem(weapon)}
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
+                                        isItemStarred(weapon)
+                                          ? 'text-amber-400'
+                                          : 'text-slate-600 hover:text-amber-400'
+                                      }`}
+                                      title={isItemStarred(weapon) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                    >
+                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(weapon) ? 'fill-amber-400' : ''}`} />
+                                    </button>
                                     <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(weapon.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
                                       <span>{isGsUnlocked && isMsoEntry(weapon.name) ? `🌌 ${weapon.name}` : weapon.name}</span>
                                       <ItemNotesPopover notes={weapon.notes} itemName={weapon.name} inline />
@@ -1062,18 +1062,6 @@ export const WeaponsCard: React.FC = () => {
                                   </div>
 
                                   <div className="flex items-center gap-2 shrink-0">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleStarItem(weapon)}
-                                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                        isItemStarred(weapon)
-                                          ? 'text-amber-400'
-                                          : 'text-slate-600 hover:text-amber-400'
-                                      }`}
-                                      title={isItemStarred(weapon) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                    >
-                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(weapon) ? 'fill-amber-400' : ''}`} />
-                                    </button>
                                     <button
                                       onClick={() => handleEquipWeapon(weapon, variants)}
                                       className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${

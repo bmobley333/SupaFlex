@@ -646,18 +646,6 @@ export const ShieldCard: React.FC = () => {
 
                                 <button
                                   type="button"
-                                  onClick={() => handleToggleStarItem(item)}
-                                  className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                    isItemStarred(item)
-                                      ? 'text-amber-400'
-                                      : 'text-slate-600 hover:text-amber-400'
-                                  }`}
-                                  title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                >
-                                  <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
-                                </button>
-                                <button
-                                  type="button"
                                   onClick={() => handleDropFromArmory(item.name)}
                                   className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
                                   title="Forget shield proficiency"
@@ -749,7 +737,7 @@ export const ShieldCard: React.FC = () => {
                           }`}
                         >
                           <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
-                          <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredShieldsCount > 0 ? `(${starredShieldsCount})` : ''}</option>
+                          <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred ({starredShieldsCount})</option>
                           <option value="4" className="bg-slate-900 text-slate-200">🛡️ Blk 4</option>
                           <option value="6" className="bg-slate-900 text-slate-200">🛡️ Blk 6</option>
                           <option value="8" className="bg-slate-900 text-slate-200">🛡️ Blk 8</option>
@@ -888,17 +876,10 @@ export const ShieldCard: React.FC = () => {
                             >
                               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
-                                    <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
-                                    <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-2 shrink-0">
                                   <button
                                     type="button"
                                     onClick={() => handleToggleStarItem(item)}
-                                    className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                    className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
                                       isItemStarred(item)
                                         ? 'text-amber-400'
                                         : 'text-slate-600 hover:text-amber-400'
@@ -907,6 +888,13 @@ export const ShieldCard: React.FC = () => {
                                   >
                                     <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
                                   </button>
+                                  <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                    <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
+                                    <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
                                   <button
                                     onClick={() => handleAddToArmory(item)}
                                     className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${

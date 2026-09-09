@@ -602,18 +602,6 @@ export const ArmorCard: React.FC = () => {
 
                                 <button
                                   type="button"
-                                  onClick={() => handleToggleStarItem(item)}
-                                  className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                    isItemStarred(item)
-                                      ? 'text-amber-400'
-                                      : 'text-slate-600 hover:text-amber-400'
-                                  }`}
-                                  title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                >
-                                  <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
-                                </button>
-                                <button
-                                  type="button"
                                   onClick={() => handleDropFromWardrobe(item.name)}
                                   className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
                                   title="Forget armor proficiency"
@@ -704,7 +692,7 @@ export const ArmorCard: React.FC = () => {
                             }`}
                           >
                             <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
-                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredArmorCount > 0 ? `(${starredArmorCount})` : ''}</option>
+                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred ({starredArmorCount})</option>
                             <option value="4" className="bg-slate-900 text-slate-200">🧥 AR 4</option>
                             <option value="6" className="bg-slate-900 text-slate-200">🧥 AR 6</option>
                             <option value="8" className="bg-slate-900 text-slate-200">🧥 AR 8</option>
@@ -840,18 +828,12 @@ export const ArmorCard: React.FC = () => {
                                 key={item.id || idx}
                                 className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2 hover:border-amber-500/40 transition-all shrink-0"
                               >
-                                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
-                                      <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
-                                      <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2 shrink-0">
+                                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2 gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
                                     <button
                                       type="button"
                                       onClick={() => handleToggleStarItem(item)}
-                                      className={`p-1 rounded hover:bg-slate-800 transition-colors ${
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
                                         isItemStarred(item)
                                           ? 'text-amber-400'
                                           : 'text-slate-600 hover:text-amber-400'
@@ -860,6 +842,12 @@ export const ArmorCard: React.FC = () => {
                                     >
                                       <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
                                     </button>
+                                    <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
+                                      <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
+                                      <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
                                     <button
                                       onClick={() => handleAddToWardrobe(item)}
                                       className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${

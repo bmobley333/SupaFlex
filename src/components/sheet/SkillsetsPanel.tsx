@@ -929,6 +929,18 @@ export const SkillsetsPanel: React.FC = () => {
                               >
                                 <div className="flex flex-col gap-1 flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 flex-wrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStarSkillset(ks.name)}
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
+                                        isSkillsetStarred(ks.name)
+                                          ? 'text-amber-400'
+                                          : 'text-slate-600 hover:text-amber-400'
+                                      }`}
+                                      title={isSkillsetStarred(ks.name) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                    >
+                                      <Star className={`w-3.5 h-3.5 ${isSkillsetStarred(ks.name) ? 'fill-amber-400' : ''}`} />
+                                    </button>
                                     <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
                                       <span className="truncate">{isMso ? `🌌 ${ks.name}` : ks.name}</span>
                                       <ItemNotesPopover notes={ks.notes || effectiveSkillsets.find((s) => s.name.toLowerCase() === ks.name.toLowerCase())?.notes} itemName={ks.name} inline />
@@ -950,18 +962,6 @@ export const SkillsetsPanel: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleStarSkillset(ks.name)}
-                                    className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                      isSkillsetStarred(ks.name)
-                                        ? 'text-amber-400'
-                                        : 'text-slate-600 hover:text-amber-400'
-                                    }`}
-                                    title={isSkillsetStarred(ks.name) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                  >
-                                    <Star className={`w-3.5 h-3.5 ${isSkillsetStarred(ks.name) ? 'fill-amber-400' : ''}`} />
-                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => handleToggleSkillset(ks.name)}
@@ -1005,7 +1005,20 @@ export const SkillsetsPanel: React.FC = () => {
                                     : 'bg-slate-900/90 border-slate-800 text-slate-300 hover:border-indigo-500/40'
                                 }`}
                               >
-                                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleStarSkill(sk.name)}
+                                    className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
+                                      isSkillStarred(sk.name)
+                                        ? 'text-amber-400'
+                                        : 'text-slate-600 hover:text-amber-400'
+                                    }`}
+                                    title={isSkillStarred(sk.name) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                  >
+                                    <Star className={`w-3.5 h-3.5 ${isSkillStarred(sk.name) ? 'fill-amber-400' : ''}`} />
+                                  </button>
+
                                   {/* Attribute Icon Badge */}
                                   <span
                                     className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center font-bold border shrink-0 ${
@@ -1053,18 +1066,6 @@ export const SkillsetsPanel: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleStarSkill(sk.name)}
-                                    className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                      isSkillStarred(sk.name)
-                                        ? 'text-amber-400'
-                                        : 'text-slate-600 hover:text-amber-400'
-                                    }`}
-                                    title={isSkillStarred(sk.name) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                  >
-                                    <Star className={`w-3.5 h-3.5 ${isSkillStarred(sk.name) ? 'fill-amber-400' : ''}`} />
-                                  </button>
                                   {isSkillsetDerived ? (
                                     <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-indigo-950 text-indigo-300 rounded border border-indigo-500/30 shrink-0">
                                       🎓 From Skillset

@@ -1066,6 +1066,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [hardwareTierFilter, setHardwareTierFilter] = useState<'ALL' | 'Minor' | 'Lesser' | 'Greater' | 'Epic'>('ALL');
   const [powerDomainFilter, setPowerDomainFilter] = useState<string>('ALL');
   const [powerDisciplineFilter, setPowerDisciplineFilter] = useState<string>('ALL');
+  const [vaultFilter, setVaultFilter] = useState<'ALL' | 'STARRED'>('ALL');
   const [activePowerApCategory, setActivePowerApCategory] = useState<ApCostCategory>('all');
 
   const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
@@ -1723,6 +1724,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-1.5 flex-wrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStarItem(item)}
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
+                                        isItemStarred(item)
+                                          ? 'text-amber-400'
+                                          : 'text-slate-600 hover:text-amber-400'
+                                      }`}
+                                      title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                    >
+                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                    </button>
                                     <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
                                       <span>{baseName}</span>
                                       {(() => {
@@ -1768,19 +1781,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       </span>
                                     )}
                                   </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleStarItem(item)}
-                                    className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                      isItemStarred(item)
-                                        ? 'text-amber-400'
-                                        : 'text-slate-600 hover:text-amber-400'
-                                    }`}
-                                    title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                  >
-                                    <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
-                                  </button>
 
                                   <button
                                     type="button"
@@ -1873,6 +1873,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           <div className="flex items-start justify-between border-b border-slate-800/80 pb-1.5 gap-2">
                                             <div className="flex flex-col gap-0.5">
                                               <div className="flex items-center gap-1.5 flex-wrap">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleToggleStarItem(item)}
+                                                  className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
+                                                    isItemStarred(item)
+                                                      ? 'text-amber-400'
+                                                      : 'text-slate-600 hover:text-amber-400'
+                                                  }`}
+                                                  title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                                >
+                                                  <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                                </button>
                                                 <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
                                                   <span>{entry.cleanFnName}</span>
                                                   <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
@@ -1907,19 +1919,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                   </span>
                                                 )}
                                               </div>
-
-                                              <button
-                                                type="button"
-                                                onClick={() => handleToggleStarItem(item)}
-                                                className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                                  isItemStarred(item)
-                                                    ? 'text-amber-400'
-                                                    : 'text-slate-600 hover:text-amber-400'
-                                                }`}
-                                                title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                              >
-                                                <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
-                                              </button>
 
                                               <button
                                                 type="button"
@@ -1985,6 +1984,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     </div>
                                   )}
                                   <div className="flex items-center gap-1.5 flex-wrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStarItem(item)}
+                                      className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
+                                        isItemStarred(item)
+                                          ? 'text-amber-400'
+                                          : 'text-slate-600 hover:text-amber-400'
+                                      }`}
+                                      title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                    >
+                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                    </button>
                                     <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
                                       <span>{entry.cleanFnName}</span>
                                       <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
@@ -2019,19 +2030,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                       </span>
                                     )}
                                   </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleStarItem(item)}
-                                    className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                      isItemStarred(item)
-                                        ? 'text-amber-400'
-                                        : 'text-slate-600 hover:text-amber-400'
-                                    }`}
-                                    title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                  >
-                                    <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
-                                  </button>
 
                                   <button
                                     type="button"
@@ -2239,14 +2237,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                     {/* TAB 1: CHARACTER VAULT VIEW (spells mode) */}
                     {activeRightTab === 'VAULT' && type === 'spells' && (() => {
                       const vaultList: MagicItem[] = Array.isArray(sheetData.character_vault) ? sheetData.character_vault : [];
-                      const filteredVault = rightSearchQuery.trim()
-                        ? vaultList.filter((v) => {
-                            const q = rightSearchQuery.toLowerCase().trim();
-                            const textMatch = (v.name || '').toLowerCase().includes(q) || (v.effect || '').toLowerCase().includes(q);
-                            if (textMatch) return true;
-                            return matchFunctionSourceSearch(q, v, functionsCatalog, modsCatalog, activeCharacter);
-                          })
-                        : vaultList;
+                      const vaultStarredCount = vaultList.filter((v) => isItemStarred(v)).length;
+                      const filteredVault = vaultList.filter((v) => {
+                        if (vaultFilter === 'STARRED' && !isItemStarred(v)) return false;
+                        if (!rightSearchQuery.trim()) return true;
+                        const q = rightSearchQuery.toLowerCase().trim();
+                        const textMatch = (v.name || '').toLowerCase().includes(q) || (v.effect || '').toLowerCase().includes(q);
+                        if (textMatch) return true;
+                        return matchFunctionSourceSearch(q, v, functionsCatalog, modsCatalog, activeCharacter);
+                      });
 
                       const groupedVaultSections = groupFunctionsByParent(
                         filteredVault,
@@ -2259,16 +2258,36 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
                       return (
                         <div className="flex flex-col gap-2.5 flex-1 min-h-0 mt-2.5">
-                          {/* Search Bar for Vault */}
-                          <div className="shrink-0">
-                            <div className="relative">
+                          {/* Search & Filter Bar for Vault */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="relative flex-1">
                               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                               <input
                                 type="text"
+                                placeholder="Search Vault functions..."
                                 value={rightSearchQuery}
                                 onChange={(e) => setRightSearchQuery(e.target.value)}
-                                className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1 rounded-lg border border-slate-700 outline-none focus:border-pink-500 w-full"
+                                className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 w-full"
                               />
+                            </div>
+                            <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 shrink-0">
+                              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase shrink-0">
+                                Filter
+                              </span>
+                              <select
+                                value={vaultFilter}
+                                onChange={(e) => setVaultFilter(e.target.value as any)}
+                                className={`text-xs font-bold px-1.5 py-0.5 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                                  vaultFilter !== 'ALL'
+                                    ? 'bg-yellow-950/90 border-yellow-400 text-yellow-100 ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] font-extrabold'
+                                    : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-cyan-500'
+                                }`}
+                              >
+                                <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                                <option value="STARRED" className="bg-slate-900 text-slate-200">
+                                  ⭐ Starred ({vaultStarredCount})
+                                </option>
+                              </select>
                             </div>
                           </div>
 
@@ -2360,6 +2379,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                 <div className="flex items-start justify-between border-b border-slate-800/80 pb-1.5 gap-2">
                                                   <div className="flex flex-col gap-0.5">
                                                     <div className="flex items-center gap-1.5 flex-wrap">
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleToggleStarItem(item)}
+                                                        className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
+                                                          isItemStarred(item)
+                                                            ? 'text-amber-400'
+                                                            : 'text-slate-600 hover:text-amber-400'
+                                                        }`}
+                                                        title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                                      >
+                                                        <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                                      </button>
                                                       <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
                                                         <span>{entry.cleanFnName}</span>
                                                         <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
@@ -2489,6 +2520,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           </div>
                                         )}
                                         <div className="flex items-center gap-1.5 flex-wrap">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleToggleStarItem(item)}
+                                            className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
+                                              isItemStarred(item)
+                                                ? 'text-amber-400'
+                                                : 'text-slate-600 hover:text-amber-400'
+                                            }`}
+                                            title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                          >
+                                            <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                          </button>
                                           <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
                                             <span>{entry.cleanFnName}</span>
                                             <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
@@ -2755,7 +2798,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   >
                                     <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
                                     <option value="STARRED" className="bg-slate-900 text-slate-200">
-                                      ⭐ Starred {starredCatalogItems.length > 0 ? `(${starredCatalogItems.length})` : ''}
+                                      ⭐ Starred ({starredCatalogItems.length})
                                     </option>
                                     {POWER_DISCIPLINES.map((disc) => (
                                       <option key={disc} value={disc} className="bg-slate-900 text-slate-200">
@@ -2906,6 +2949,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     >
                                       <div className="flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-1.5 flex-wrap">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleToggleStarItem(item)}
+                                            className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
+                                              isItemStarred(item)
+                                                ? 'text-amber-400'
+                                                : 'text-slate-600 hover:text-amber-400'
+                                            }`}
+                                            title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                          >
+                                            <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
+                                          </button>
                                           <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(baseName) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
                                             <span>{isGsUnlocked && isMsoEntry(baseName) ? `🌌 ${baseName}` : baseName}</span>
                                             <ItemNotesPopover notes={(item as any).notes} itemName={baseName} inline />
@@ -2949,19 +3004,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                               </span>
                                             )}
                                           </div>
-
-                                          <button
-                                            type="button"
-                                            onClick={() => handleToggleStarItem(item)}
-                                            className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                              isItemStarred(item)
-                                                ? 'text-amber-400'
-                                                : 'text-slate-600 hover:text-amber-400'
-                                            }`}
-                                            title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                          >
-                                            <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400' : ''}`} />
-                                          </button>
 
                                           <button
                                             type="button"
@@ -3160,6 +3202,24 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             >
                                               <div className="flex items-center justify-between gap-2">
                                                 <div className="flex items-center gap-1.5 flex-wrap">
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleToggleStarItem(item)}
+                                                    className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
+                                                      isItemStarred(item)
+                                                        ? 'text-amber-400'
+                                                        : 'text-slate-600 hover:text-amber-400'
+                                                    }`}
+                                                    title={
+                                                      isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'
+                                                    }
+                                                  >
+                                                    <Star
+                                                      className={`w-3.5 h-3.5 ${
+                                                        isItemStarred(item) ? 'fill-amber-400' : ''
+                                                      }`}
+                                                    />
+                                                  </button>
                                                   <span className={`font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(baseName) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
                                                     <span>{isGsUnlocked && isMsoEntry(baseName) ? `🌌 ${baseName}` : baseName}</span>
                                                     <ItemNotesPopover notes={(item as any).notes} itemName={baseName} inline />
@@ -3186,25 +3246,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                       </span>
                                                     )}
                                                   </div>
-
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => handleToggleStarItem(item)}
-                                                    className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                                                      isItemStarred(item)
-                                                        ? 'text-amber-400'
-                                                        : 'text-slate-600 hover:text-amber-400'
-                                                    }`}
-                                                    title={
-                                                      isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'
-                                                    }
-                                                  >
-                                                    <Star
-                                                      className={`w-3.5 h-3.5 ${
-                                                        isItemStarred(item) ? 'fill-amber-400' : ''
-                                                      }`}
-                                                    />
-                                                  </button>
 
                                                   <button
                                                     type="button"

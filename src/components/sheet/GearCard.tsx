@@ -1369,7 +1369,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       }`}
                     >
                       <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
-                      <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred {starredCount > 0 ? `(${starredCount})` : ''}</option>
+                      <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred ({starredCount})</option>
                     </select>
                   </div>
                 </div>
