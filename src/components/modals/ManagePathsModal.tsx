@@ -325,18 +325,18 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                 </span>
 
                 {/* Base Foundation */}
-                <div className="p-2.5 rounded-xl bg-slate-950/90 border border-purple-500/30 shadow-inner space-y-1">
+                <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-700/70 shadow-inner space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                       <span>🥋</span>
                       <span>Base Path</span>
                     </span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/30">
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700">
                       Innate
                     </span>
                   </div>
                   <div className="flex items-center justify-between pt-0.5">
-                    <span className="text-xs font-black inline-flex items-center align-baseline gap-1 text-slate-100">
+                    <span className="text-xs font-black inline-flex items-center align-baseline gap-1 text-slate-200">
                       <span>Base</span>
                       <ItemNotesPopover
                         notes={
@@ -347,18 +347,18 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                         inline
                       />
                     </span>
-                    <span className="text-[10px] font-mono text-purple-400">0 AP Inherent • 1 AP Proficiencies</span>
+                    <span className="text-[10px] font-mono text-slate-400">0 AP Inherent • 1 AP Proficiencies</span>
                   </div>
                 </div>
 
                 {/* Race Foundation */}
-                <div className="p-2.5 rounded-xl bg-slate-950/90 border border-purple-500/30 shadow-inner space-y-1">
+                <div className="p-2.5 rounded-xl bg-gradient-to-r from-rose-950/30 to-slate-950/90 border border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.12)] space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-rose-300 uppercase tracking-wider flex items-center gap-1.5">
                       <span>🧬</span>
                       <span>Race Path</span>
                     </span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/30">
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-500/40">
                       Race
                     </span>
                   </div>
@@ -366,13 +366,13 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                     <select
                       value={activeRace}
                       onChange={(e) => handleSelectRacePath(e.target.value)}
-                      className="w-full mt-1 bg-slate-900 border border-purple-500/40 rounded-lg px-2.5 py-1 text-xs text-slate-100 font-bold focus:outline-none focus:border-purple-400 cursor-pointer"
+                      className="w-full mt-1 bg-slate-900 border border-rose-500/40 rounded-lg px-2.5 py-1 text-xs text-rose-100 font-bold focus:outline-none focus:border-rose-400 cursor-pointer"
                     >
                       {racePaths.map((r) => (
                         <option
                           key={r}
                           value={r}
-                          className={isMsoEntry(r) ? 'font-bold text-purple-300 bg-slate-900' : 'text-slate-100 bg-slate-950'}
+                          className={isMsoEntry(r) ? 'font-bold text-rose-300 bg-slate-900' : 'text-slate-100 bg-slate-950'}
                         >
                           {isMsoEntry(r) ? `🌌 ${r}` : r}
                         </option>
@@ -380,23 +380,23 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                     </select>
                   ) : (
                     <div className="flex items-center justify-between pt-0.5">
-                      <span className={`text-xs font-black inline-flex items-center align-baseline gap-1 ${isMsoEntry(activeRace) ? 'text-purple-300' : 'text-slate-100'}`}>
+                      <span className={`text-xs font-black inline-flex items-center align-baseline gap-1 ${isMsoEntry(activeRace) ? 'text-rose-300' : 'text-rose-100'}`}>
                         <span>{isMsoEntry(activeRace) ? `🌌 ${activeRace}` : activeRace}</span>
                         <ItemNotesPopover notes={resolvedPathsCatalog.find((p) => p.name === activeRace)?.description || (resolvedPathsCatalog.find((p) => p.name === activeRace) as any)?.notes} itemName={activeRace} inline />
                       </span>
-                      <span className="text-[10px] font-mono text-purple-400">0 AP Auto-Grant</span>
+                      <span className="text-[10px] font-mono text-rose-400 font-semibold">0 AP Auto-Grant</span>
                     </div>
                   )}
                 </div>
 
                 {/* Class Foundation */}
-                <div className="p-2.5 rounded-xl bg-slate-950/90 border border-purple-500/30 shadow-inner space-y-1">
+                <div className="p-2.5 rounded-xl bg-gradient-to-r from-purple-950/40 to-slate-950/90 border border-purple-500/50 shadow-[0_0_14px_rgba(168,85,247,0.18)] space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
                       <span>⚔️</span>
                       <span>Class Path</span>
                     </span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/30">
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-200 border border-purple-500/50">
                       Class
                     </span>
                   </div>
@@ -404,7 +404,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                     <select
                       value={activeClass}
                       onChange={(e) => handleSelectClassPath(e.target.value)}
-                      className="w-full mt-1 bg-slate-900 border border-purple-500/40 rounded-lg px-2.5 py-1 text-xs text-slate-100 font-bold focus:outline-none focus:border-purple-400 cursor-pointer"
+                      className="w-full mt-1 bg-slate-900 border border-purple-500/40 rounded-lg px-2.5 py-1 text-xs text-purple-100 font-bold focus:outline-none focus:border-purple-400 cursor-pointer"
                     >
                       {classPaths.map((c) => (
                         <option
@@ -418,23 +418,23 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                     </select>
                   ) : (
                     <div className="flex items-center justify-between pt-0.5">
-                      <span className={`text-xs font-black inline-flex items-center align-baseline gap-1 ${isMsoEntry(activeClass) ? 'text-purple-300' : 'text-slate-100'}`}>
+                      <span className={`text-xs font-black inline-flex items-center align-baseline gap-1 ${isMsoEntry(activeClass) ? 'text-purple-300' : 'text-purple-100'}`}>
                         <span>{isMsoEntry(activeClass) ? `🌌 ${activeClass}` : activeClass}</span>
                         <ItemNotesPopover notes={resolvedPathsCatalog.find((p) => p.name === activeClass)?.description || (resolvedPathsCatalog.find((p) => p.name === activeClass) as any)?.notes} itemName={activeClass} inline />
                       </span>
-                      <span className="text-[10px] font-mono text-purple-400">In-Path Pricing</span>
+                      <span className="text-[10px] font-mono text-purple-300 font-semibold">In-Path Pricing</span>
                     </div>
                   )}
                 </div>
 
                 {/* Universal Foundation */}
-                <div className="p-2.5 rounded-xl bg-slate-950/90 border border-cyan-500/30 shadow-inner space-y-1">
+                <div className="p-2.5 rounded-xl bg-gradient-to-r from-cyan-950/30 to-slate-950/90 border border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.12)] space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
                       <span>🌐</span>
                       <span>Universal Path</span>
                     </span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40">
                       Universal
                     </span>
                   </div>
@@ -450,7 +450,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                         inline
                       />
                     </span>
-                    <span className="text-[10px] font-mono text-cyan-400">3 AP Self-Service • No GM Approval</span>
+                    <span className="text-[10px] font-mono text-cyan-400 font-semibold">3 AP Self-Service • No GM Approval</span>
                   </div>
                 </div>
               </div>
