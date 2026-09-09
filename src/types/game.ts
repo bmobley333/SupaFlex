@@ -11,7 +11,7 @@ export type PowerReadyType = 'primary_arsenal' | 'mobility_defense' | 'support_p
 export type PowerDiscipline = 'Void Magic' | 'Psionics' | 'Somatics' | 'Martial' | 'Universal';
 export type TechDiscipline = 'Archaic' | 'Tech' | 'BioTech' | 'CyberTech';
 export type EquipmentDomain = 'Archaic' | 'BioTech' | 'CyberTech' | 'Tech' | 'Psionics' | 'Somatics' | 'Void Magic';
-export type ExoticTier = 'Minor' | 'Lesser' | 'Greater' | 'Epic';
+export type ExoticTier = 'Free' | 'Minor' | 'Lesser' | 'Greater' | 'Epic';
 export type HardwareTier = ExoticTier;
 export type PowerTableCategory = 'Race' | 'Class' | 'Discipline' | 'Combat Style' | 'Handicap' | 'Luck' | 'Custom';
 
@@ -92,7 +92,7 @@ export type SupabaseBundle = SupabaseKit;
  */
 export function getCategorySlotWeight(category?: string): 0 | 1 | 2 | 3 | 4 {
   if (!category) return 1;
-  if (/mundane|utility|0-slot|zero/i.test(category)) return 0;
+  if (/free|⭕|mundane|utility|0-slot|zero/i.test(category)) return 0;
   if (category.includes('Minor')) return 1;
   if (category.includes('Lesser')) return 2;
   if (category.includes('Greater')) return 3;
@@ -1042,10 +1042,11 @@ export interface FunctionItem {
   created_at?: string;
 }
 
-/** Canonical helper to derive numeric slot weight (1-4) from tier or rarity string */
-export const getTierSlotWeight = (tier: string | number | undefined | null): 1 | 2 | 3 | 4 => {
-  if (typeof tier === 'number' && tier >= 1 && tier <= 4) return tier as 1 | 2 | 3 | 4;
+/** Canonical helper to derive numeric slot weight (0-4) from tier or rarity string */
+export const getTierSlotWeight = (tier: string | number | undefined | null): 0 | 1 | 2 | 3 | 4 => {
+  if (typeof tier === 'number' && tier >= 0 && tier <= 4) return tier as 0 | 1 | 2 | 3 | 4;
   const t = String(tier || '').toLowerCase();
+  if (t.includes('free') || t.includes('⭕') || t.includes('0')) return 0;
   if (t.includes('relic') || t.includes('epic') || t.includes('4')) return 4;
   if (t.includes('greater') || t.includes('3')) return 3;
   if (t.includes('lesser') || t.includes('2')) return 2;

@@ -124,6 +124,9 @@ const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; 
 
   const str = `${itemObj.rarity || ''} ${subStr} ${itemObj.name || itemObj.title || ''}`.toLowerCase();
 
+  if (str.includes('free') || str.includes('⭕') || str.includes('0 slot')) {
+    return { label: 'Free', icon: '⭕', style: 'bg-slate-900/80 text-slate-300 border-slate-700/50', slotsText: '0 Slots' };
+  }
   if (str.includes('relic') || str.includes('epic') || str.includes('artifact') || str.includes('💫')) {
     return { label: 'Epic', icon: '💫', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40', slotsText: '4 Slots' };
   }
@@ -142,6 +145,7 @@ const formatTableNameDisplay = (tblName: string): string => {
     .replace(/Artifact🌀/g, 'Epic💫')
     .replace(/Artifact/g, 'Epic')
     .replace(/🌀/g, '💫');
+  if (clean === 'Free' || clean.toLowerCase() === 'free') return '⭕ Free (0 Slots)';
   if (clean === 'Minor' || clean.toLowerCase() === 'minor') return '🍺 Minor (1 Slot)';
   if (clean === 'Lesser' || clean.toLowerCase() === 'lesser') return '🪄 Lesser (2 Slots)';
   if (clean === 'Greater' || clean.toLowerCase() === 'greater') return '🪬 Greater (3 Slots)';
@@ -1061,7 +1065,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   };
 
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
-  const [hardwareTierFilter, setHardwareTierFilter] = useState<'ALL' | 'Minor' | 'Lesser' | 'Greater' | 'Epic'>('ALL');
+  const [hardwareTierFilter, setHardwareTierFilter] = useState<'ALL' | 'Free' | 'Minor' | 'Lesser' | 'Greater' | 'Epic'>('ALL');
   const [powerDomainFilter, setPowerDomainFilter] = useState<string>('ALL');
   const [powerDisciplineFilter, setPowerDisciplineFilter] = useState<string>('ALL');
   const [vaultFilter, setVaultFilter] = useState<'ALL' | 'STARRED'>('ALL');
@@ -3092,6 +3096,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   <option value="Greater">🥇 Greater (3 Slots)</option>
                                   <option value="Lesser">🥈 Lesser (2 Slots)</option>
                                   <option value="Minor">🥉 Minor (1 Slot)</option>
+                                  <option value="Free">⭕ Free (0 Slots)</option>
                                 </select>
                               </div>
 

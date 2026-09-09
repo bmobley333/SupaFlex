@@ -158,7 +158,7 @@ export const mapFunctionToVaultItem = (
     source_mod: finalMod,
     created_at: new Date().toISOString(),
     category: fn.tier || (fn as any).category || 'Minor',
-    slot_weight: (getCategorySlotWeight(fn.tier || (fn as any).category) || 1) as 1 | 2 | 3 | 4,
+    slot_weight: (getCategorySlotWeight(fn.tier || (fn as any).category) ?? 1) as 0 | 1 | 2 | 3 | 4,
     is_hardware: true,
   };
 };
