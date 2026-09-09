@@ -107,10 +107,10 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
   const activeRace = activeCharacter?.race || 'Human';
   const activeClass = activeCharacter?.class || classPaths[0] || 'Warrior';
 
-  // Learned Paths list (Starting Race + Class + any learned extra paths)
+  // Learned Paths list (Starting Base + Race + Class + any learned extra paths)
   const learnedPaths: string[] = useMemo(() => {
     const fromSheet: string[] = activeCharacter?.sheet_data?.favorite_trait_kits || [];
-    const base = [activeRace, activeClass];
+    const base = ['Base', activeRace, activeClass];
     const combined = Array.from(new Set([...base, ...fromSheet])).filter(Boolean);
     return combined;
   }, [activeRace, activeClass, activeCharacter?.sheet_data?.favorite_trait_kits]);
@@ -133,10 +133,10 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     return Array.from(pathSet);
   }, [resolvedPathsCatalog, stockPathsCatalog, stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
 
-  // Extra learned paths (excluding active starting race and class)
+  // Extra learned paths (excluding active starting base, race, and class)
   const extraLearnedPaths: string[] = useMemo(() => {
     const fromSheet: string[] = activeCharacter?.sheet_data?.favorite_trait_kits || [];
-    return fromSheet.filter((k) => k !== activeRace && k !== activeClass);
+    return fromSheet.filter((k) => k !== 'Base' && k !== activeRace && k !== activeClass);
   }, [activeRace, activeClass, activeCharacter?.sheet_data?.favorite_trait_kits]);
 
   const sortedExtraLearnedPaths = useMemo(() => {
@@ -146,7 +146,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
   // Filtered paths available to buy / learn based on category selection
   const filteredPathsToBuy = useMemo(() => {
     return allDiscoveredPaths
-      .filter((k) => !learnedPaths.includes(k))
+      .filter((k) => k !== 'Base' && !learnedPaths.includes(k))
       .filter((k) => {
         if (selectedPathCategory === 'All') return true;
         const match =

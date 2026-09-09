@@ -24,6 +24,9 @@ export const getCharacterKnownPaths = (character: Character | null | undefined):
   const set = new Set<string>();
   if (!character) return set;
 
+  // 0. Base Path (Innate for all characters)
+  set.add('base');
+
   // 1. Race Path
   if (character.race) {
     const cleanRace = cleanPathName(character.race).toLowerCase().trim();
@@ -88,13 +91,13 @@ export const isItemInPath = (
 ): boolean => {
   const paths = parseItemPaths(rawPath);
 
-  // If item has no path constraints or is tagged General/Universal, it is available In-Path for all
+  // If item has no path constraints or is tagged General, it is available In-Path for all
   if (paths.length === 0) {
     return true;
   }
 
-  // Check if any path is General / Universal
-  if (paths.some((p) => p.toLowerCase() === 'general' || p.toLowerCase() === 'universal')) {
+  // Check if any path is General (universal basic adventuring)
+  if (paths.some((p) => p.toLowerCase() === 'general')) {
     return true;
   }
 
@@ -213,13 +216,16 @@ export const evaluateItemAp = (
     };
   }
 
+  const paths = parseItemPaths(rawPath);
+  const isUniversal = paths.some((p) => p.toLowerCase() === 'universal');
+
   if (!inPath && meetsReq) {
     return {
       inPath: false,
       meetsReq: true,
       category: '3AP',
       apCost: 3,
-      requiresGmApproval: true,
+      requiresGmApproval: !isUniversal,
       statDownscaled: false,
     };
   }
@@ -230,7 +236,7 @@ export const evaluateItemAp = (
     meetsReq: false,
     category: '4AP',
     apCost: 4,
-    requiresGmApproval: true,
+    requiresGmApproval: !isUniversal,
     statDownscaled: true,
   };
 };

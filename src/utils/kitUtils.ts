@@ -102,7 +102,7 @@ export const formatKitWithLevel = (
 ): string => {
   const clean = cleanKitName(baseKit);
   if (isTrait) {
-    return minLevel > 1 ? `${clean} {Perk${minLevel}}` : `${clean} {Perk}`;
+    return minLevel > 1 ? `${clean} {Free${minLevel}}` : `${clean} {Free}`;
   }
   return minLevel > 1 ? `${clean} {${minLevel}}` : clean;
 };

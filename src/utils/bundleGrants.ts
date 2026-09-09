@@ -90,10 +90,10 @@ export const applyKitTraitGrantsToSheet = (
         usage: gp.usage || '',
         effect: gp.effect || '',
         checked: [false, false, false, false, false],
-        kit: gp.kit || gp.table_group || `${kitLabel} {Perk}`,
-        table_group: gp.kit || gp.table_group || `${kitLabel} {Perk}`,
+        kit: gp.kit || gp.table_group || `${kitLabel} {Free}`,
+        table_group: gp.kit || gp.table_group || `${kitLabel} {Free}`,
         discipline: gp.discipline,
-        source: `${kitLabel} {Perk}`,
+        source: `${kitLabel} {Free}`,
       }));
 
     if (newPowerSlots.length > 0) {
@@ -122,9 +122,9 @@ export const applyKitTraitGrantsToSheet = (
         effect: gt.effect || '',
         notes: gt.notes || '',
         stat_hook: gt.stat_hook,
-        kit: gt.kit || gt.table_group || `${kitLabel} {Perk}`,
-        table_group: gt.kit || gt.table_group || `${kitLabel} {Perk}`,
-        source: `${kitLabel} {Perk}`,
+        kit: gt.kit || gt.table_group || `${kitLabel} {Free}`,
+        table_group: gt.kit || gt.table_group || `${kitLabel} {Free}`,
+        source: `${kitLabel} {Free}`,
       }));
 
     if (newTraits.length > 0) {
