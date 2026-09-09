@@ -19,11 +19,35 @@ export const ItemNameWithNotes: React.FC<ItemNameWithNotesProps> = ({
   suffix,
   truncate = false,
 }) => {
+  const hasNotes = Boolean(notes && notes.trim());
+
+  if (truncate) {
+    return (
+      <span className={`inline-flex items-center align-baseline max-w-full ${className}`}>
+        {prefix && <span className="mr-1 shrink-0">{prefix}</span>}
+        <span className="truncate">{name}</span>
+        {hasNotes && <ItemNotesPopover notes={notes} itemName={name} inline />}
+        {suffix && <span className="ml-1 shrink-0">{suffix}</span>}
+      </span>
+    );
+  }
+
+  const lastSpaceIdx = name.lastIndexOf(' ');
+  const prefixText = lastSpaceIdx !== -1 ? name.slice(0, lastSpaceIdx + 1) : '';
+  const lastWord = lastSpaceIdx !== -1 ? name.slice(lastSpaceIdx + 1) : name;
+
   return (
-    <span className={`inline-flex items-center align-baseline flex-wrap max-w-full ${className}`}>
+    <span className={`align-baseline leading-tight ${className}`}>
       {prefix && <span className="mr-1 shrink-0">{prefix}</span>}
-      <span className={truncate ? 'truncate' : 'break-words'}>{name}</span>
-      <ItemNotesPopover notes={notes} itemName={name} inline />
+      {prefixText}
+      {hasNotes ? (
+        <span className="inline-block whitespace-nowrap">
+          {lastWord}
+          <ItemNotesPopover notes={notes} itemName={name} inline />
+        </span>
+      ) : (
+        <span>{lastWord}</span>
+      )}
       {suffix && <span className="ml-1 shrink-0">{suffix}</span>}
     </span>
   );

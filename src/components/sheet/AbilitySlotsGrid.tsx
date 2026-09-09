@@ -3473,26 +3473,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
               <span className="font-outfit text-xs font-bold">Shunt</span>
             </button>
           </div>
-
-          {/* Right: Live Stance Capacity Meter */}
-          <div className="flex items-center gap-2 shrink-0 font-mono text-xs">
-            <span className="text-slate-400 font-sans text-[11px] hidden sm:inline">
-              {activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'} Loadout:
-            </span>
-            <span
-              className={`px-2 py-0.5 rounded-lg border font-extrabold flex items-center gap-1 ${
-                totalUsedLoadoutSlots > totalLoadoutCapacity
-                  ? 'bg-rose-950/70 border-rose-500/50 text-rose-300'
-                  : 'bg-slate-900 border-slate-800 text-cyan-300'
-              }`}
-              title={`Using ${totalUsedLoadoutSlots} of ${totalLoadoutCapacity} available capacity slots in ${
-                activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'
-              }`}
-            >
-              <span>⚡</span>
-              <span>{totalUsedLoadoutSlots}/{totalLoadoutCapacity} Slots</span>
-            </span>
-          </div>
         </div>
       )}
 
@@ -3521,23 +3501,42 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 }`}
               >
                 {/* 1. Name Column with Version Badge */}
-                <div className="w-40 sm:w-52 shrink-0 flex flex-col gap-0.5">
+                <div className="w-56 sm:w-64 md:w-80 shrink-0 flex flex-col gap-0.5">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {(() => {
                       const displayName = type === 'spells'
                         ? formatCompositeFunctionName(slot, functionsCatalog, modsCatalog, activeCharacter, ' • ')
                         : baseName;
                       const isMso = isMsoEntry(displayName);
+                      const fullName = isGsUnlocked && isMso ? `🌌 ${displayName}` : displayName;
+                      const resolvedNotes =
+                        slot.notes ||
+                        (fullCatalog.find(
+                          (c) =>
+                            c.name.toLowerCase() === baseName.toLowerCase() ||
+                            c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
+                        ) as any)?.notes;
+                      const hasNotes = Boolean(resolvedNotes && resolvedNotes.trim());
+
+                      const lastSpaceIdx = fullName.lastIndexOf(' ');
+                      const prefixText = lastSpaceIdx !== -1 ? fullName.slice(0, lastSpaceIdx + 1) : '';
+                      const lastWord = lastSpaceIdx !== -1 ? fullName.slice(lastSpaceIdx + 1) : fullName;
+
                       return (
-                        <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline flex-wrap leading-tight ${
-                          isGsUnlocked && isMso ? 'text-purple-300' : 'text-slate-100'
-                        }`}>
-                          <span className="break-words">{isGsUnlocked && isMso ? `🌌 ${displayName}` : displayName}</span>
-                          <ItemNotesPopover
-                            notes={slot.notes || (fullCatalog.find((c) => c.name.toLowerCase() === baseName.toLowerCase() || c.name.toLowerCase() === cleanName(slot.name).toLowerCase()) as any)?.notes}
-                            itemName={displayName}
-                            inline
-                          />
+                        <span
+                          className={`font-outfit font-bold text-xs leading-tight ${
+                            isGsUnlocked && isMso ? 'text-purple-300' : 'text-slate-100'
+                          }`}
+                        >
+                          {prefixText}
+                          {hasNotes ? (
+                            <span className="inline-block whitespace-nowrap">
+                              {lastWord}
+                              <ItemNotesPopover notes={resolvedNotes} itemName={displayName} inline />
+                            </span>
+                          ) : (
+                            <span>{lastWord}</span>
+                          )}
                         </span>
                       );
                     })()}
