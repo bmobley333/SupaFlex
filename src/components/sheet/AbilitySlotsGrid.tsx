@@ -194,8 +194,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const [showShuntModal, setShowShuntModal] = useState(false);
   const activeStance: 'alpha' | 'beta' = sheetData.active_stance === 'beta' ? 'beta' : 'alpha';
-  const stanceSwitchCount: number = typeof sheetData.stance_switch_count === 'number' ? sheetData.stance_switch_count : 0;
-  const nextSwitchCost: 'M' | 'AM' = stanceSwitchCount === 0 ? 'M' : 'AM';
 
   const handleSwitchStance = (targetStance: 'alpha' | 'beta') => {
     switchFunctionStance(targetStance);
@@ -3464,28 +3462,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
               </button>
             </div>
 
-            {/* In-Combat Cost Indicator Badge */}
-            <span
-              className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-extrabold border flex items-center gap-1 ${
-                stanceSwitchCount === 0
-                  ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300'
-                  : 'bg-rose-950/70 border-rose-500/40 text-rose-300'
-              }`}
-              title={
-                stanceSwitchCount === 0
-                  ? 'First in-combat Stance switch costs 1 Move Action [M]'
-                  : 'Subsequent in-combat Stance switch costs Attack + Move [AM]'
-              }
-            >
-              Next: {nextSwitchCost}
-            </span>
-
             {/* Emergency Hardware Shunt Trigger */}
             <button
               type="button"
               onClick={() => setShowShuntModal(true)}
               className="py-1 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm cursor-pointer bg-cyan-950/70 hover:bg-cyan-900/70 border-cyan-500/50 text-cyan-300 hover:text-white"
-              title="Emergency Hardware Shunt: Spend 1 Spark or 1 Focus step to hot-swap a Vault function"
+              title="Emergency Hardware Shunt: Spend 1 Move Action [M] and 1 Luck Chit (🍀) to hot-swap Vault functions"
             >
               <Cpu className="w-3.5 h-3.5 text-cyan-400" />
               <span className="font-outfit text-xs font-bold">Shunt</span>

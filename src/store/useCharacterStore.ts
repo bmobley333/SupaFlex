@@ -1,11 +1,10 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, ModItem } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, ModItem } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { reconcileCharacterVaultWithGear } from '../utils/gearFunctionSync';
-import { stepDownDie } from '../lib/dice';
 
 const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
   if (typeof window !== 'undefined') {
@@ -65,7 +64,7 @@ interface CharacterStore {
   executeTacticalPivot: (unreadyPowerName: string, readyPowerName: string) => { success: boolean; error?: string };
   resetTacticalPivot: () => void;
   switchFunctionStance: (targetStance: 'alpha' | 'beta') => { success: boolean; cost: 'M' | 'AM'; error?: string };
-  executeHardwareShunt: (vaultItemName: string, activeSlotName: string, costType: 'spark' | 'focus') => { success: boolean; error?: string };
+  executeHardwareShunt: (vaultItemName: string, outgoingSlotNames: string[]) => { success: boolean; error?: string };
   resetStanceSwitches: () => void;
   setPlayerEmail: (email: string) => void;
   setPlayerName: (name: string) => void;
@@ -683,36 +682,35 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     return { success: true, cost };
   },
 
-  executeHardwareShunt: (vaultItemName: string, activeSlotName: string, costType: 'spark' | 'focus') => {
+  executeHardwareShunt: (vaultItemName: string, outgoingSlotNames: string[]) => {
     const active = get().activeCharacter;
     if (!active || !active.sheet_data) return { success: false, error: 'No active character.' };
 
     const sheet = active.sheet_data;
-    const charges = typeof sheet.charges === 'number' ? sheet.charges : (sheet.sparks || 0);
-
-    if (costType === 'spark') {
-      const isSparked = sheet.is_sparked || charges >= 5;
-      if (!isSparked && charges < 5) {
-        return { success: false, error: 'Emergency Hardware Shunt requires 1 Full Spark (5 Charges).' };
-      }
+    const currentLuck = typeof sheet.luck === 'number' ? sheet.luck : 3;
+    if (currentLuck < 1) {
+      return { success: false, error: 'Emergency Hardware Shunt requires 1 Luck Chit (🍀).' };
     }
 
-    const currentSlots = Array.isArray(sheet.spell_slots) ? [...sheet.spell_slots] : [];
-    const currentVault = Array.isArray(sheet.character_vault) ? [...sheet.character_vault] : [];
+    const activeStance = sheet.active_stance === 'beta' ? 'beta' : 'alpha';
+    const slotKey = activeStance === 'beta' ? 'stance_beta_slots' : 'spell_slots';
+    const currentSlots: AbilitySlot[] = Array.isArray(sheet[slotKey]) ? [...(sheet[slotKey] as AbilitySlot[])] : [];
+    const currentVault: MagicItem[] = Array.isArray(sheet.character_vault) ? [...sheet.character_vault] : [];
 
-    const slotIdx = currentSlots.findIndex(
-      (s) => s && s.name && s.name.trim().toLowerCase() === activeSlotName.trim().toLowerCase()
-    );
     const vaultIdx = currentVault.findIndex(
       (v) => v && v.name && v.name.trim().toLowerCase() === vaultItemName.trim().toLowerCase()
     );
-
-    if (slotIdx < 0) return { success: false, error: `Active slot "${activeSlotName}" not found.` };
     if (vaultIdx < 0) return { success: false, error: `Vault item "${vaultItemName}" not found.` };
 
-    const outgoingSlot = currentSlots[slotIdx];
     const incomingVault = currentVault[vaultIdx];
 
+    // Remove outgoing slots
+    const outgoingSet = new Set(outgoingSlotNames.map((n) => n.trim().toLowerCase()));
+    const filteredSlots = currentSlots.filter(
+      (s) => s && s.name && !outgoingSet.has(s.name.trim().toLowerCase())
+    );
+
+    // Create incoming slot
     const newSlot: any = {
       select: true,
       name: incomingVault.name,
@@ -729,27 +727,25 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       category: incomingVault.category || null,
       slot_weight: incomingVault.slot_weight ?? 1,
     };
+    filteredSlots.push(newSlot);
 
-    currentSlots[slotIdx] = newSlot;
-
+    // Update Cold Storage with all removed functions
     const coldStorage = Array.isArray(sheet.cold_storage_functions) ? [...sheet.cold_storage_functions] : [];
-    if (!coldStorage.includes(outgoingSlot.name)) {
-      coldStorage.push(outgoingSlot.name);
-    }
+    outgoingSlotNames.forEach((name) => {
+      if (name && !coldStorage.includes(name)) {
+        coldStorage.push(name);
+      }
+    });
 
-    const nextCharges = costType === 'spark' ? Math.max(0, charges - 5) : charges;
-    const nextFocus = costType === 'focus' ? stepDownDie(sheet.focus_die_current || 'd4') : (sheet.focus_die_current || 'd4');
+    const nextLuck = Math.max(0, currentLuck - 1);
 
     get().updateActiveSheetData((prev) => ({
       ...prev,
-      spell_slots: currentSlots,
+      [slotKey]: filteredSlots,
       cold_storage_functions: coldStorage,
-      charges: nextCharges,
-      sparks: nextCharges,
-      is_sparked: nextCharges >= 5,
-      is_charged: nextCharges >= 5,
-      focus_die_current: nextFocus,
+      luck: nextLuck,
     }));
+    get().saveActiveCharacter();
 
     return { success: true };
   },
