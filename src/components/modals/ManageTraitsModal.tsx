@@ -578,14 +578,14 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                         <button
                           type="button"
                           onClick={() => toggleStarTrait(rule.id)}
-                          className={`p-1 rounded hover:bg-slate-800 transition-colors shrink-0 cursor-pointer ${
+                          className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
                             starred
-                              ? 'text-amber-400'
-                              : 'text-slate-600 hover:text-amber-400'
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
                           }`}
                           title={starred ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
                         >
-                          <Star className={`w-3.5 h-3.5 ${starred ? 'fill-amber-400' : ''}`} />
+                          <Star className={`w-3.5 h-3.5 ${starred ? 'fill-amber-400 text-amber-400' : ''}`} />
                         </button>
 
                         <span className={`text-xs font-outfit font-black inline-flex items-center align-baseline gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>

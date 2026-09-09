@@ -1569,45 +1569,45 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                           className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 hover:border-teal-500/40 transition flex flex-col gap-2 shadow-sm"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <button
-                                type="button"
-                                onClick={() => handleToggleStarItem(catalogItem)}
-                                className={`p-1 rounded hover:bg-slate-800 transition cursor-pointer ${
-                                  starred ? 'text-amber-400' : 'text-slate-600 hover:text-slate-400'
-                                }`}
-                                title={starred ? 'Unstar item' : 'Star item'}
-                              >
-                                <Star className="w-3.5 h-3.5 fill-current" />
-                              </button>
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStarItem(catalogItem)}
+                                  className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
+                                    starred
+                                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                      : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
+                                  }`}
+                                  title={starred ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                >
+                                  <Star className={`w-3.5 h-3.5 ${starred ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                </button>
 
-                              <div className="flex flex-col min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline ${
-                                    isGsUnlocked && isMsoEntry(catalogItem.name) ? 'text-purple-300' : 'text-slate-100'
-                                  }`}>
-                                    <span className="truncate">{isGsUnlocked && isMsoEntry(catalogItem.name) ? `🌌 ${catalogItem.name}` : catalogItem.name}</span>
-                                    <ItemNotesPopover notes={catalogItem.notes || ''} itemName={catalogItem.name} inline />
-                                  </span>
-                                  {availableMods.length > 0 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => setExpandedCatalogModId(isModsExpanded ? null : itemKey)}
-                                      className="px-1.5 py-0.5 rounded bg-indigo-950/80 hover:bg-indigo-900/90 text-indigo-300 border border-indigo-500/30 text-[9px] font-mono flex items-center gap-1 cursor-pointer transition shrink-0"
-                                      title="Toggle compatible modifications"
-                                    >
-                                      <span>🔌 {availableMods.length} {availableMods.length === 1 ? 'Mod' : 'Mods'}</span>
-                                      <ChevronDown className={`w-2.5 h-2.5 transition-transform ${isModsExpanded ? 'rotate-180' : ''}`} />
-                                    </button>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                                  <span className="font-mono text-teal-300 font-bold">
-                                    {formatCostAbbreviated(costStr)}
-                                  </span>
-                                  <span>•</span>
-                                  <span className="truncate">{itemSubtext}</span>
-                                </div>
+                                <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline ${
+                                  isGsUnlocked && isMsoEntry(catalogItem.name) ? 'text-purple-300' : 'text-slate-100'
+                                }`}>
+                                  <span className="truncate">{isGsUnlocked && isMsoEntry(catalogItem.name) ? `🌌 ${catalogItem.name}` : catalogItem.name}</span>
+                                  <ItemNotesPopover notes={catalogItem.notes || ''} itemName={catalogItem.name} inline />
+                                </span>
+                                {availableMods.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedCatalogModId(isModsExpanded ? null : itemKey)}
+                                    className="px-1.5 py-0.5 rounded bg-indigo-950/80 hover:bg-indigo-900/90 text-indigo-300 border border-indigo-500/30 text-[9px] font-mono flex items-center gap-1 cursor-pointer transition shrink-0"
+                                    title="Toggle compatible modifications"
+                                  >
+                                    <span>🔌 {availableMods.length} {availableMods.length === 1 ? 'Mod' : 'Mods'}</span>
+                                    <ChevronDown className={`w-2.5 h-2.5 transition-transform ${isModsExpanded ? 'rotate-180' : ''}`} />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                                <span className="font-mono text-teal-300 font-bold">
+                                  {formatCostAbbreviated(costStr)}
+                                </span>
+                                <span>•</span>
+                                <span className="truncate">{itemSubtext}</span>
                               </div>
                             </div>
 
