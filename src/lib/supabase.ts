@@ -36,6 +36,12 @@ export const supabaseKey =
     ? rawKey
     : V2_SUPABASE_ANON_KEY;
 
+if (typeof window !== 'undefined' && rawKey && rawKey !== supabaseKey) {
+  console.warn(
+    `[SupaFlex Auth Guard]: Environment key ref (${rawKeyRef || 'invalid'}) did not match target DB (${supabaseUrl}). Automatically fell back to canonical V2 key.`
+  );
+}
+
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
