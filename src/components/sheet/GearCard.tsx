@@ -10,6 +10,7 @@ import {
   Package,
   Star,
   Loader2,
+  ShoppingCart,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
@@ -35,7 +36,9 @@ import {
 } from '../../utils/gearFunctionSync';
 
 export type EquipmentCategoryTab = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields' | 'kits';
+export type InventoryCategoryTab = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields';
 export type GearTierFilter = 'ALL' | 'STANDARD' | 'EXOTIC';
+export type InventoryTierFilter = 'ALL' | 'STANDARD' | 'EXOTIC' | 'ARTIFACT';
 export type GearDomainFilter =
   | 'ALL'
   | 'Archaic'
@@ -112,8 +115,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [functionsCatalog, setFunctionsCatalog] = useState<FunctionItem[]>([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
 
-  // Search & Filter State
+  // Search & Filter State - Left Column ("My Gear")
   const [gearInventorySearchQuery, setGearInventorySearchQuery] = useState<string>('');
+  const [inventoryCategoryTab, setInventoryCategoryTab] = useState<InventoryCategoryTab>('all');
+  const [inventoryTierFilter, setInventoryTierFilter] = useState<InventoryTierFilter>('ALL');
+  const [inventoryDomainFilter, setInventoryDomainFilter] = useState<GearDomainFilter>('ALL');
+
+  // Search & Filter State - Right Column ("Buy Gear")
   const [gearCatalogSearchQuery, setGearCatalogSearchQuery] = useState<string>('');
   const [gearTierFilter, setGearTierFilter] = useState<GearTierFilter>('ALL');
   const [gearDomainFilter, setGearDomainFilter] = useState<GearDomainFilter>('ALL');
@@ -308,6 +316,80 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     [functionHostNames, modFunctionHostNames]
   );
 
+  // Canonical Artifact Detection across inventory and catalogs
+  const isItemArtifact = useCallback(
+    (item: any): boolean => {
+      if (!item) return false;
+      const cat = (item.category || '').toLowerCase();
+      const costLower = (item.cost || '').toLowerCase().trim();
+      const itemType = (item.item_type || '').toLowerCase();
+      if (cat.includes('artifact') || costLower === 'artifact' || itemType === 'artifact') return true;
+
+      const rawName = cleanBelongsToName(item.name || '').toLowerCase();
+      const strippedName = rawName.replace(/\(mso\)/gi, '').trim();
+      const found =
+        gearCatalog.find((c) => cleanBelongsToName(c.name).toLowerCase() === rawName || cleanBelongsToName(c.name).toLowerCase() === strippedName) ||
+        weaponsCatalog.find((c) => cleanBelongsToName(c.name).toLowerCase() === rawName || cleanBelongsToName(c.name).toLowerCase() === strippedName) ||
+        armorCatalog.find((c) => cleanBelongsToName(c.name).toLowerCase() === rawName || cleanBelongsToName(c.name).toLowerCase() === strippedName) ||
+        shieldsCatalog.find((c) => cleanBelongsToName(c.name).toLowerCase() === rawName || cleanBelongsToName(c.name).toLowerCase() === strippedName);
+
+      if (found) {
+        const fCost = ((found as any).cost || '').toLowerCase().trim();
+        const fCat = ((found as any).category || '').toLowerCase();
+        if (fCost === 'artifact' || fCat.includes('artifact')) return true;
+      }
+      return false;
+    },
+    [gearCatalog, weaponsCatalog, armorCatalog, shieldsCatalog]
+  );
+
+  // Helper to resolve an item's domain from either its own field or catalogs
+  const resolveItemDomain = useCallback(
+    (item: any): string => {
+      if (item.domain) return String(item.domain).trim();
+      if (item.discipline) return String(item.discipline).trim();
+      const rawName = cleanBelongsToName(item.name || '').toLowerCase();
+      const strippedName = rawName.replace(/\(mso\)/gi, '').trim();
+
+      const found =
+        gearCatalog.find((c) => cleanBelongsToName(c.name).toLowerCase() === rawName || cleanBelongsToName(c.name).toLowerCase() === strippedName) ||
+        weaponsCatalog.find((c) => cleanBelongsToName(c.name).toLowerCase() === rawName || cleanBelongsToName(c.name).toLowerCase() === strippedName) ||
+        armorCatalog.find((c) => cleanBelongsToName(c.name).toLowerCase() === rawName || cleanBelongsToName(c.name).toLowerCase() === strippedName) ||
+        shieldsCatalog.find((c) => cleanBelongsToName(c.name).toLowerCase() === rawName || cleanBelongsToName(c.name).toLowerCase() === strippedName);
+
+      if (found) {
+        return String((found as any).domain || (found as any).discipline || '').trim();
+      }
+      return '';
+    },
+    [gearCatalog, weaponsCatalog, armorCatalog, shieldsCatalog]
+  );
+
+  // Category matcher for My Gear inventory tabs
+  const matchesInventoryCategory = useCallback((item: SimpleGearItem, tab: InventoryCategoryTab): boolean => {
+    if (tab === 'all') return true;
+    const itemType = (item.item_type || '').toLowerCase();
+    const cat = (item.category || '').toLowerCase();
+
+    if (tab === 'weapons') {
+      return itemType === 'weapon' || cat.includes('weapon');
+    }
+    if (tab === 'armor') {
+      return itemType === 'armor' || cat.includes('armor');
+    }
+    if (tab === 'shields') {
+      return itemType === 'shield' || cat.includes('shield');
+    }
+    if (tab === 'supplies') {
+      const isWpn = itemType === 'weapon' || cat.includes('weapon');
+      const isArm = itemType === 'armor' || cat.includes('armor');
+      const isShd = itemType === 'shield' || cat.includes('shield');
+      const isKit = itemType === 'kit' || cat.includes('kit');
+      return !isWpn && !isArm && !isShd && !isKit;
+    }
+    return true;
+  }, []);
+
 
   // Current Raw Catalog for Active Shelf Tab
   const currentRawCatalog = useMemo(() => {
@@ -495,20 +577,53 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     isGsUnlocked,
   ]);
 
-  // Filtered Equipped Inventory
+  // Filtered Equipped Inventory ("My Gear")
   const filteredGearInventory = useMemo(() => {
-    let list = gearList;
-    if (gearInventorySearchQuery.trim()) {
-      const query = gearInventorySearchQuery.toLowerCase();
-      list = gearList.filter(
-        (item) =>
-          item.name.toLowerCase().includes(query) ||
-          (item.category && item.category.toLowerCase().includes(query)) ||
-          (item.notes && item.notes.toLowerCase().includes(query))
-      );
+    // 1. Category tab filter
+    let list = gearList.filter((item) => matchesInventoryCategory(item, inventoryCategoryTab));
+
+    // 2. Exotic / Tier / Artifact filter
+    if (inventoryTierFilter === 'STANDARD') {
+      list = list.filter((item) => !isItemExotic(item) && !isItemArtifact(item));
+    } else if (inventoryTierFilter === 'EXOTIC') {
+      list = list.filter((item) => isItemExotic(item) && !isItemArtifact(item));
+    } else if (inventoryTierFilter === 'ARTIFACT') {
+      list = list.filter((item) => isItemArtifact(item));
     }
+
+    // 3. Domain filter
+    if (inventoryDomainFilter !== 'ALL') {
+      list = list.filter((item) => {
+        const itemDomain = resolveItemDomain(item).toLowerCase();
+        return itemDomain === inventoryDomainFilter.toLowerCase();
+      });
+    }
+
+    // 4. Keyword search filter
+    if (gearInventorySearchQuery.trim()) {
+      const query = gearInventorySearchQuery.toLowerCase().trim();
+      list = list.filter((item) => {
+        const nameMatch = (item.name || '').toLowerCase().includes(query);
+        const catMatch = (item.category || '').toLowerCase().includes(query);
+        const noteMatch = (item.notes || '').toLowerCase().includes(query);
+        const domainMatch = resolveItemDomain(item).toLowerCase().includes(query);
+        return nameMatch || catMatch || noteMatch || domainMatch;
+      });
+    }
+
     return [...list].sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
-  }, [gearList, gearInventorySearchQuery, isGsUnlocked]);
+  }, [
+    gearList,
+    inventoryCategoryTab,
+    inventoryTierFilter,
+    inventoryDomainFilter,
+    gearInventorySearchQuery,
+    matchesInventoryCategory,
+    isItemExotic,
+    isItemArtifact,
+    resolveItemDomain,
+    isGsUnlocked,
+  ]);
 
   // Equip / Purchase Handler
   const handleEquipItem = (
@@ -762,9 +877,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   };
 
   // Helper for Category Badges
-  const getCategoryBadgeClass = (category?: string, itemType?: string) => {
+  const getCategoryBadgeClass = (category?: string, itemType?: string, cost?: string) => {
     const cat = (category || '').toLowerCase();
     const type = (itemType || '').toLowerCase();
+    const costLower = (cost || '').toLowerCase();
+    if (type === 'artifact' || cat.includes('artifact') || costLower === 'artifact') {
+      return 'bg-fuchsia-950/80 text-fuchsia-300 border-fuchsia-800/80';
+    }
     if (type === 'weapon' || cat.includes('weapon')) {
       return 'bg-rose-950/80 text-rose-300 border-rose-800/80';
     }
@@ -956,35 +1075,175 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
             {/* 2-Column Split-Pane Body */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
-              {/* Left Column: Equipped Gear Inventory */}
+              {/* Left Column: Equipped Gear Inventory ("My Gear") */}
               <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
+                {/* Header: My Gear */}
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80 shrink-0">
                   <div className="flex items-center gap-1.5">
                     <Package className="w-4 h-4 text-teal-400" />
                     <span className="text-xs font-outfit font-bold uppercase tracking-wider text-teal-300">
-                      Equipped Gear ({gearList.length})
+                      My Gear ({gearList.length})
                     </span>
-                  </div>
-
-                  <div className="relative">
-                    <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Search..."
-                      value={gearInventorySearchQuery}
-                      onChange={(e) => setGearInventorySearchQuery(e.target.value)}
-                      className="bg-slate-900 text-slate-200 text-[11px] pl-6 pr-2 py-0.5 rounded border border-slate-700 outline-none focus:border-teal-500 w-24 sm:w-32"
-                    />
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto pr-1 mt-2.5 flex flex-col gap-2 min-h-0">
-                  {filteredGearInventory.length === 0 ? (
+                {/* 1. 2-Dropdown Filter Strip (Domain, Exotic with Artifacts) */}
+                <div className="grid grid-cols-2 gap-1.5 mb-2 shrink-0">
+                  {/* 1. Domain Filter */}
+                  <div className="flex flex-col min-w-0">
+                    <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                      inventoryDomainFilter !== 'ALL' ? 'text-cyan-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                    }`}>
+                      {inventoryDomainFilter !== 'ALL' && <span className="text-[7px]">●</span>} Domain
+                    </span>
+                    <select
+                      value={inventoryDomainFilter}
+                      onChange={(e) => setInventoryDomainFilter(e.target.value as any)}
+                      className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                        inventoryDomainFilter !== 'ALL'
+                          ? 'bg-cyan-950/90 border-cyan-400 text-cyan-100 ring-1 ring-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.3)] font-extrabold'
+                          : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-teal-500'
+                      }`}
+                    >
+                      <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                      <option value="Archaic" className="bg-slate-900 text-slate-200">🗡️ Archaic</option>
+                      <option value="BioTech" className="bg-slate-900 text-slate-200">🧬 BioTech</option>
+                      <option value="CyberTech" className="bg-slate-900 text-slate-200">🦾 CyberTech</option>
+                      <option value="Tech" className="bg-slate-900 text-slate-200">⚡ Tech</option>
+                      <option value="Psionics" className="bg-slate-900 text-slate-200">🧠 Psionics</option>
+                      <option value="Somatics" className="bg-slate-900 text-slate-200">🌀 Somatics</option>
+                      <option value="Void Magic" className="bg-slate-900 text-slate-200">🌌 Void Magic</option>
+                    </select>
+                  </div>
+
+                  {/* 2. Exotic / Tier Filter (with Artifacts) */}
+                  <div className="flex flex-col min-w-0">
+                    <span className={`text-[9px] uppercase tracking-wider mb-0.5 px-0.5 truncate transition-colors ${
+                      inventoryTierFilter !== 'ALL' ? 'text-indigo-400 font-black flex items-center gap-0.5' : 'text-slate-400 font-bold'
+                    }`}>
+                      {inventoryTierFilter !== 'ALL' && <span className="text-[7px]">●</span>} Exotic
+                    </span>
+                    <select
+                      value={inventoryTierFilter}
+                      onChange={(e) => setInventoryTierFilter(e.target.value as any)}
+                      className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer truncate transition-all ${
+                        inventoryTierFilter !== 'ALL'
+                          ? 'bg-indigo-950/90 border-indigo-400 text-indigo-100 ring-1 ring-indigo-400/50 shadow-[0_0_12px_rgba(99,102,241,0.3)] font-extrabold'
+                          : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-teal-500'
+                      }`}
+                    >
+                      <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
+                      <option value="STANDARD" className="bg-slate-900 text-slate-200">⚙️ Standard</option>
+                      <option value="EXOTIC" className="bg-slate-900 text-slate-200">🧿 Exotics</option>
+                      <option value="ARTIFACT" className="bg-slate-900 text-slate-200">🔮 Artifacts</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 2. Category Multi-Option Pill Switch (5 Tabs: All, Supplies, Weapons, Armor, Shields) */}
+                <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md mb-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setInventoryCategoryTab('all')}
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      inventoryCategoryTab === 'all'
+                        ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🌐 All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInventoryCategoryTab('supplies')}
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      inventoryCategoryTab === 'supplies'
+                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🎒 Supplies
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInventoryCategoryTab('weapons')}
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      inventoryCategoryTab === 'weapons'
+                        ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    ⚔️ Weapons
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInventoryCategoryTab('armor')}
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      inventoryCategoryTab === 'armor'
+                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🥋 Armor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInventoryCategoryTab('shields')}
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      inventoryCategoryTab === 'shields'
+                        ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🛡️ Shields
+                  </button>
+                </div>
+
+                {/* 3. Search Bar + Dynamic Result Breadcrumb */}
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-800/80 shrink-0">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder={`Search ${inventoryCategoryTab === 'all' ? 'my gear' : inventoryCategoryTab}, categories, notes...`}
+                      value={gearInventorySearchQuery}
+                      onChange={(e) => setGearInventorySearchQuery(e.target.value)}
+                      className="w-full bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono font-bold text-slate-300 shrink-0">
+                    {filteredGearInventory.length} {filteredGearInventory.length === 1 ? 'item' : 'items'}
+                  </div>
+                </div>
+
+                {/* Zero Matches Feedback & 1-Click Reset */}
+                {filteredGearInventory.length === 0 && gearList.length > 0 && (
+                  <div className="p-3.5 bg-slate-950/60 rounded-xl border border-teal-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
+                    <span className="text-teal-300 font-semibold">
+                      0 items match active filters
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInventoryCategoryTab('all');
+                        setInventoryTierFilter('ALL');
+                        setInventoryDomainFilter('ALL');
+                        setGearInventorySearchQuery('');
+                      }}
+                      className="px-3 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
+                    >
+                      Reset All Filters
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex-1 overflow-y-auto pr-1 mt-2 flex flex-col gap-2 min-h-0">
+                  {gearList.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
                       <Package className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
                       <span>No gear items in inventory. Select items from the catalog on the right.</span>
                     </div>
-                  ) : (
+                  ) : filteredGearInventory.length === 0 ? null : (
                     filteredGearInventory.map((item) => {
                       return (
                         <div
@@ -1004,10 +1263,11 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                 <span
                                   className={`text-[9px] font-mono px-1.5 py-0.2 border rounded ${getCategoryBadgeClass(
                                     item.category,
-                                    item.item_type
+                                    item.item_type,
+                                    item.cost
                                   )}`}
                                 >
-                                  {getCategoryDisplayLabel(item.category, item.item_type)}
+                                  {getCategoryDisplayLabel(item.category, item.item_type, item.cost)}
                                 </span>
                                 {item.belongs_to && (
                                   <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/30 truncate max-w-[130px]" title={item.belongs_to}>
@@ -1073,8 +1333,18 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                 </div>
               </div>
 
-              {/* Right Column: Supabase Stock Multi-Category Catalog */}
+              {/* Right Column: Supabase Stock Multi-Category Catalog ("Buy Gear") */}
               <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
+                {/* Header: Buy Gear */}
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <ShoppingCart className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-outfit font-bold uppercase tracking-wider text-emerald-300">
+                      Buy Gear
+                    </span>
+                  </div>
+                </div>
+
                 {/* 1. 4-Dropdown Filter Strip (Genre, Domain, Exotic, Filter) */}
                 <div className="grid grid-cols-4 gap-1.5 mb-2 shrink-0">
                   {/* 1. Genre Filter */}
