@@ -196,6 +196,9 @@ export interface WeaponSlot {
   effect?: string;
   notes?: string;
   ap_cost?: number;
+  path?: string;
+  requirement?: string;
+  variantType?: 'Melee' | 'Hurled' | 'Shot';
 }
 
 export interface ArmorData {
@@ -211,6 +214,7 @@ export interface ArmorData {
   effect?: string;
   notes?: string;
   ap_cost?: number;
+  path?: string;
 }
 
 export interface SupabaseArmor {
@@ -541,6 +545,7 @@ export interface ShieldData {
   mr_adjustment?: string;
   notes?: string;
   ap_cost?: number;
+  path?: string;
 }
 
 export interface MovementRateData {

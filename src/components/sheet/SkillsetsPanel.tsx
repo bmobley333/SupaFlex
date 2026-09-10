@@ -7,6 +7,7 @@ import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp 
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { isTraitItem, isMsoEntry, compareMsoOptions, compareMsoItems } from '../../utils/kitUtils';
+import { reconcileSkillsOnSkillsetAdded } from '../../utils/pathReconciliationUtils';
 
 interface DerivedSkill {
   name: string;
@@ -195,19 +196,64 @@ export const SkillsetsPanel: React.FC = () => {
     const uniqueCurrent = Array.from(new Set(knownSkillsetNames));
     const isLearning = !uniqueCurrent.includes(name);
 
-    updateActiveSheetData((prev) => {
-      const current = prev.known_skillsets || [];
-      const updated = current.includes(name)
-        ? current.filter((s) => s !== name)
-        : [...current, name];
-      return { ...prev, known_skillsets: updated };
-    });
-
     if (isLearning) {
+      const targetSet = effectiveSkillsets.find((ks) => ks.name.toLowerCase() === name.toLowerCase());
+      const skillsInNewSet = targetSet && Array.isArray(targetSet.skills) ? targetSet.skills : [];
+
+      const otherKnownSkillsetsSkills = new Set<string>();
+      uniqueCurrent.forEach((ksName) => {
+        if (ksName.toLowerCase() !== name.toLowerCase()) {
+          const otherSet = effectiveSkillsets.find((ks) => ks.name.toLowerCase() === ksName.toLowerCase());
+          if (otherSet && Array.isArray(otherSet.skills)) {
+            otherSet.skills.forEach((s) => otherKnownSkillsetsSkills.add(s.toLowerCase().trim()));
+          }
+        }
+      });
+
+      let totalRefund = 0;
+      let refundedSkills: string[] = [];
+
+      updateActiveSheetData((prev) => {
+        const current = prev.known_skillsets || [];
+        const updatedSkillsets = current.includes(name) ? current : [...current, name];
+
+        const reconciliation = reconcileSkillsOnSkillsetAdded(
+          prev,
+          skillsInNewSet,
+          otherKnownSkillsetsSkills
+        );
+
+        totalRefund = reconciliation.totalRefund;
+        refundedSkills = reconciliation.refundedSkills;
+
+        return {
+          ...prev,
+          known_skillsets: updatedSkillsets,
+          known_individual_skills: reconciliation.updatedIndividualSkills,
+        };
+      });
+
       recordApExpenditure(2, 'Skills', `Learned Skill Set: ${name} (2 AP)`, 1, 'Manage Skills');
+
+      if (totalRefund > 0) {
+        recordApExpenditure(
+          -totalRefund,
+          'Skills',
+          `SkillSet Bundle Auto-Credit: ${name} (Refunded ${totalRefund} AP: ${refundedSkills.join(', ')})`,
+          1,
+          'Manage Skills'
+        );
+      }
     } else {
+      updateActiveSheetData((prev) => {
+        const current = prev.known_skillsets || [];
+        const updated = current.filter((s) => s !== name);
+        return { ...prev, known_skillsets: updated };
+      });
+
       recordApExpenditure(-2, 'Skills', `Unlearned Skill Set: ${name} (-2 AP Refunded)`, 1, 'Manage Skills');
     }
+
     saveActiveCharacter();
   };
 

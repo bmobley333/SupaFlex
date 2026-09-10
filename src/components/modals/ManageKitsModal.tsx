@@ -16,9 +16,11 @@ import {
   AbilitySlot,
   TraitQuirkItem,
   calculateAvailableAp,
+  Character,
 } from '../../types/game';
 import { cleanKitName, matchesKitFilter } from '../../utils/kitUtils';
 import { collectKitTraitGrants, applyKitTraitGrantsToSheet } from '../../utils/bundleGrants';
+import { reconcileAbilitiesOnPathAdded } from '../../utils/pathReconciliationUtils';
 
 interface ManageKitsModalProps {
   isOpen: boolean;
@@ -305,7 +307,23 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       stockSkillsCatalog,
       stockRulesCatalog
     );
-    updateActiveSheetData((prev) => applyKitTraitGrantsToSheet(prev, grants));
+    updateActiveSheetData((prev) => {
+      const sheetWithGrants = applyKitTraitGrantsToSheet(prev, grants);
+      const charWithNewRace: Character | null = activeCharacter
+        ? { ...activeCharacter, race: newRace }
+        : null;
+      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, newRace, charWithNewRace);
+      if (reconciliation.totalRefund > 0) {
+        recordApExpenditure(
+          -reconciliation.totalRefund,
+          'GM Bonus',
+          `Path Mastery Auto-Credit: Selected Race ${newRace} (Refunded ${reconciliation.totalRefund} AP: ${reconciliation.refundLogDetails.join(', ')})`,
+          1,
+          'Kits Hub'
+        );
+      }
+      return reconciliation.updatedSheetData;
+    });
     saveActiveCharacter();
     setFeedbackMsg(`✓ Race Kit updated to ${newRace}. Starting traits bundled!`);
     setTimeout(() => setFeedbackMsg(null), 3000);
@@ -322,7 +340,23 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       stockSkillsCatalog,
       stockRulesCatalog
     );
-    updateActiveSheetData((prev) => applyKitTraitGrantsToSheet(prev, grants));
+    updateActiveSheetData((prev) => {
+      const sheetWithGrants = applyKitTraitGrantsToSheet(prev, grants);
+      const charWithNewClass: Character | null = activeCharacter
+        ? { ...activeCharacter, class: newClass }
+        : null;
+      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, newClass, charWithNewClass);
+      if (reconciliation.totalRefund > 0) {
+        recordApExpenditure(
+          -reconciliation.totalRefund,
+          'GM Bonus',
+          `Path Mastery Auto-Credit: Selected Class ${newClass} (Refunded ${reconciliation.totalRefund} AP: ${reconciliation.refundLogDetails.join(', ')})`,
+          1,
+          'Kits Hub'
+        );
+      }
+      return reconciliation.updatedSheetData;
+    });
     saveActiveCharacter();
     setFeedbackMsg(`✓ Class Kit updated to ${newClass}. In-kit elements unlocked!`);
     setTimeout(() => setFeedbackMsg(null), 3000);
@@ -350,25 +384,51 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       recordApExpenditure(0, 'GM Bonus', `Learned Free Kit: ${clean}`, 'Creation', 'Kits Hub');
     }
 
-    // Update favorite/learned kits array
+    // Update favorite/learned kits array, apply grants, and reconcile abilities
     updateActiveSheetData((prev) => {
       const current = prev.favorite_trait_kits || [];
-      if (current.includes(clean)) return prev;
-      return {
+      const updatedKits = current.includes(clean) ? current : [...current, clean];
+      const intermediateSheet = {
         ...prev,
-        favorite_trait_kits: [...current, clean],
+        favorite_trait_kits: updatedKits,
       };
+
+      // Apply any 0 AP trait grants in the kit
+      const grants = collectKitTraitGrants(
+        clean,
+        activeCharacter?.sheet_data?.level || 1,
+        stockPowersCatalog,
+        stockSkillsCatalog,
+        stockRulesCatalog
+      );
+      const sheetWithGrants = applyKitTraitGrantsToSheet(intermediateSheet, grants);
+
+      // Reconcile out-of-path abilities that now match this new Path
+      const charWithNewKit: Character | null = activeCharacter
+        ? {
+            ...activeCharacter,
+            sheet_data: {
+              ...activeCharacter.sheet_data,
+              favorite_trait_kits: updatedKits,
+            },
+          }
+        : null;
+
+      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, clean, charWithNewKit);
+
+      if (reconciliation.totalRefund > 0) {
+        recordApExpenditure(
+          -reconciliation.totalRefund,
+          'GM Bonus',
+          `Path Mastery Auto-Credit: Learned Path ${clean} (Refunded ${reconciliation.totalRefund} AP: ${reconciliation.refundLogDetails.join(', ')})`,
+          1,
+          'Kits Hub'
+        );
+      }
+
+      return reconciliation.updatedSheetData;
     });
 
-    // Apply any 0 AP trait grants in the kit
-    const grants = collectKitTraitGrants(
-      clean,
-      activeCharacter?.sheet_data?.level || 1,
-      stockPowersCatalog,
-      stockSkillsCatalog,
-      stockRulesCatalog
-    );
-    updateActiveSheetData((prev) => applyKitTraitGrantsToSheet(prev, grants));
     saveActiveCharacter();
 
     setSelectedExtraKitToBuy('');
