@@ -392,7 +392,11 @@ export const reconcileCharacterVaultWithGear = (
   }
 
   // Helper to check if any item is a hardware function
-  const isHardwareFunction = (item: { name?: string; is_hardware?: boolean; source_gear?: string | null; source?: string | null }): boolean => {
+  const isHardwareFunction = (item: { name?: string; is_hardware?: boolean; source_gear?: string | null; source?: string | null; category?: string | null }): boolean => {
+    // Pure Artifacts are standalone magical relics, not hardware chassis mods
+    if (item.category && item.category.includes('Artifact')) return false;
+    if (item.is_hardware === false) return false;
+
     if (item.is_hardware === true) return true;
     if (item.source_gear && item.source_gear.trim() !== '') return true;
     const cName = cleanBelongsToName(item.name);
