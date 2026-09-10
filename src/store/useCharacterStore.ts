@@ -156,7 +156,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     return sessionStorage.getItem('supaflex_player_name') || '';
   })(),
   filterMode: 'my_heroes',
-  activeRole: 'player',
+  activeRole: (() => {
+    if (typeof window === 'undefined') return 'player';
+    return (sessionStorage.getItem('supaflex_active_role') as 'player' | 'gm') || 'player';
+  })(),
   activePartyId: (() => {
     if (typeof window === 'undefined') return null;
     return sessionStorage.getItem('supaflex_active_party_id') || null;

@@ -702,12 +702,25 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                                     )}
                                   </div>
 
-                                {/* Row 2: Lower-Right Edit / Delete Action Buttons */}
+                                {/* Row 2: Lower-Right Launch, Edit / Delete Action Buttons */}
                                 <div
-                                  className="flex items-center gap-1 shrink-0"
+                                  className="flex items-center gap-1.5 shrink-0"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <button
+                                    type="button"
+                                    onClick={() => {
+                                      onSelectCharacter(char.id);
+                                      onClose();
+                                    }}
+                                    className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] rounded-lg transition cursor-pointer shadow-sm flex items-center gap-1"
+                                    title="Launch this character sheet"
+                                  >
+                                    <span>▶️</span> Launch
+                                  </button>
+
+                                  <button
+                                    type="button"
                                     onClick={() => handleStartEdit(char)}
                                     className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs cursor-pointer shadow-sm"
                                     title="Edit Character Identity"
@@ -716,6 +729,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                                   </button>
 
                                   <button
+                                    type="button"
                                     onClick={() => {
                                       setDeleteTargetChar(char);
                                       setDeleteConfirmInput('');

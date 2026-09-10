@@ -929,9 +929,13 @@ export default function App() {
             sessionStorage.removeItem('supaflex_player_name');
             sessionStorage.removeItem('supaflex_active_party_id');
             sessionStorage.removeItem('supaflex_last_active_char_id');
+            sessionStorage.removeItem('supaflex_active_role');
             sessionStorage.removeItem('supaflex_auth_token');
             sessionStorage.removeItem('supaflex_tab_jwt');
-            useCharacterStore.setState({ activeCharacter: null, activePartyId: null, playerLinks: [] });
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem(`supaflex_auth_${tabSessionId}`);
+            }
+            useCharacterStore.setState({ activeRole: 'player', activeCharacter: null, activePartyId: null, playerLinks: [] });
             setLaunchHubInitialTab('account');
             setShowUnifiedLaunchHubModal(true);
           }}

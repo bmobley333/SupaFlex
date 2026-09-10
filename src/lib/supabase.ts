@@ -2,6 +2,7 @@
 // Supabase Client Initialization with env fallback support
 
 import { createClient } from '@supabase/supabase-js';
+import { getTabAuthStorageKey } from '../utils/tabSession';
 
 // Supabase Version 2.0 (Target: zipebnjazayhfjstykwl)
 export const V2_SUPABASE_URL = 'https://zipebnjazayhfjstykwl.supabase.co';
@@ -42,12 +43,26 @@ if (typeof window !== 'undefined' && rawKey && rawKey !== supabaseKey) {
   );
 }
 
+// Purge legacy origin-wide auth keys from localStorage to prevent cross-tab leaks
+if (typeof window !== 'undefined') {
+  try {
+    window.localStorage.removeItem('supaflex_auth_token');
+    window.localStorage.removeItem('sb-zipebnjazayhfjstykwl-auth-token');
+    window.localStorage.removeItem('sb-ddibmiifxwqlnlpaekui-auth-token');
+  } catch {
+    // Ignore restricted iframe / storage disabled environments
+  }
+}
+
+const tabAuthStorageKey = typeof window !== 'undefined' ? getTabAuthStorageKey() : 'supaflex_auth';
+
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    storageKey: 'supaflex_auth_token',
+    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+    storageKey: tabAuthStorageKey,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
   },
 });
 
