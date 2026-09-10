@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowUpDown, StickyNote, Rocket } from 'lucide-react';
 import { gameApi } from '../../services/api';
+import { supabase } from '../../lib/supabase';
 import { Party, PartySessionMember, CharacterSheetData } from '../../types/game';
 import { parseMonsterLine, ParsedMonster, sortMonstersByPreset, MonsterSortPreset } from '../../utils/monsterStatParser';
 import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
@@ -207,20 +208,18 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
   // Load GM Parties on Mount
   useEffect(() => {
-    if (currentEmail) {
-      loadParties();
-    }
+    loadParties();
   }, [currentEmail]);
 
   const loadParties = async () => {
-    if (!currentEmail) return;
+    const effectiveEmail = (currentEmail || 'gm-guest@supaflex.internal').trim().toLowerCase();
     try {
-      const data = await gameApi.getPartiesForUser(currentEmail);
+      const data = await gameApi.getPartiesForUser(effectiveEmail);
       let gmParties = (data as Party[]).filter(
-        (p) => (p.gm_email || '').toLowerCase() === currentEmail.toLowerCase()
+        (p) => (p.gm_email || '').toLowerCase() === effectiveEmail
       );
       if (gmParties.length === 0) {
-        const created = await gameApi.createParty('GM Screen Party', currentEmail, []);
+        const created = await gameApi.createParty('GM Screen Party', effectiveEmail, []);
         gmParties = [created as Party];
       }
       if (!selectedParty) {
@@ -252,6 +251,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         if (onRoomCodeReady) onRoomCodeReady(roomCode);
       } catch (err) {
         console.error('Failed to checkout room code:', err);
+        const fallback = selectedParty.room_code || selectedParty.party_code;
+        if (fallback && onRoomCodeReady) {
+          onRoomCodeReady(fallback);
+        }
       }
 
       heartbeatInterval = setInterval(() => {
@@ -274,10 +277,53 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     };
   }, [selectedParty?.id]);
 
-  // Load Session Members on Selected Party Change
+  // Load Session Members on Selected Party Change & Subscribe to Realtime Updates
   useEffect(() => {
-    if (!selectedParty) return;
-    loadSessionMembers(selectedParty.id, false);
+    if (!selectedParty?.id) return;
+    const partyId = selectedParty.id;
+
+    loadSessionMembers(partyId, false);
+
+    // 1. Postgres CDC channel for new players / heartbeats / leaves
+    const cdcChannel = supabase.channel(`gm_roster_cdc_${partyId}`);
+    cdcChannel
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'party_session_members',
+        },
+        () => {
+          loadSessionMembers(partyId, true);
+        }
+      )
+      .subscribe();
+
+    // 2. Broadcast channel for instantaneous player arrival
+    const broadcastChannel = supabase.channel(`party:${partyId}`);
+    broadcastChannel
+      .on('broadcast', { event: 'party_members_updated' }, () => {
+        loadSessionMembers(partyId, true);
+      })
+      .on('broadcast', { event: 'party.joined' }, () => {
+        loadSessionMembers(partyId, true);
+      })
+      .on('broadcast', { event: 'party.left' }, () => {
+        loadSessionMembers(partyId, true);
+      })
+      .subscribe();
+
+    // 3. Periodic polling fallback every 10 seconds to catch any missed socket events
+    const pollInterval = setInterval(() => {
+      loadSessionMembers(partyId, true);
+    }, 10000);
+
+    return () => {
+      supabase.removeChannel(cdcChannel);
+      supabase.removeChannel(broadcastChannel);
+      clearInterval(pollInterval);
+    };
   }, [selectedParty?.id]);
 
   const loadSessionMembers = async (partyId: string, isSilent = false) => {

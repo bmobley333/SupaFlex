@@ -280,6 +280,12 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
         .on('broadcast', { event: 'party_members_updated' }, () => {
           loadSessionMembers(selectedParty.id);
         })
+        .on('broadcast', { event: 'party.joined' }, () => {
+          loadSessionMembers(selectedParty.id);
+        })
+        .on('broadcast', { event: 'party.left' }, () => {
+          loadSessionMembers(selectedParty.id);
+        })
         .subscribe();
     } catch (err) {
       console.error('[UnifiedLaunchHubModal] Realtime subscription error:', err);

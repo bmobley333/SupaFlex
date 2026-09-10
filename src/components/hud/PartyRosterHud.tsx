@@ -41,9 +41,10 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
         if (activePartyId.length === 4) {
           setDisplayRoomCode(activePartyId.toUpperCase());
         } else {
-          const { data: p } = await supabase.from('parties').select('room_code').eq('id', activePartyId).maybeSingle();
-          if (p?.room_code) {
-            setDisplayRoomCode(p.room_code.toUpperCase());
+          const { data: p } = await supabase.from('parties').select('room_code, party_code').eq('id', activePartyId).maybeSingle();
+          const code = p?.room_code || p?.party_code;
+          if (code) {
+            setDisplayRoomCode(code.toUpperCase());
           }
         }
 
@@ -76,7 +77,6 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
           event: '*',
           schema: 'public',
           table: 'party_session_members',
-          filter: `party_id=eq.${activePartyId}`,
         },
         () => {
           loadMembers();
@@ -89,11 +89,22 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
       .on('broadcast', { event: 'party_members_updated' }, () => {
         loadMembers();
       })
+      .on('broadcast', { event: 'party.joined' }, () => {
+        loadMembers();
+      })
+      .on('broadcast', { event: 'party.left' }, () => {
+        loadMembers();
+      })
       .subscribe();
+
+    const pollInterval = setInterval(() => {
+      loadMembers();
+    }, 10000);
 
     return () => {
       supabase.removeChannel(cdcChannel);
       supabase.removeChannel(broadcastChannel);
+      clearInterval(pollInterval);
     };
   }, [activePartyId, tabSessionId]);
 

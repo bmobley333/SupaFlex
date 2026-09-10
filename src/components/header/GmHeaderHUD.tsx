@@ -44,8 +44,10 @@ export const GmHeaderHUD: React.FC<GmHeaderHUDProps> = ({
         <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-wider font-outfit whitespace-nowrap">
           Party ID:
         </span>
-        <span className="font-mono text-xs font-black tracking-widest text-amber-300 bg-slate-900 px-2 py-0.5 rounded-md border border-amber-500/40 shadow-sm">
-          {activeRoomCode || '....'}
+        <span className="font-mono text-xs font-black tracking-widest text-amber-300 bg-slate-900 px-2 py-0.5 rounded-md border border-amber-500/40 shadow-sm min-w-[36px] text-center inline-block">
+          {activeRoomCode || (
+            <span className="animate-pulse text-amber-500/70">....</span>
+          )}
         </span>
 
         <button

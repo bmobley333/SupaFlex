@@ -76,16 +76,53 @@ export const GmMonsterTrackerHud: React.FC = () => {
 
     loadMonsters();
 
-    // Set up Realtime Broadcast channel when joined to a party
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    // Set up Realtime Broadcast channels & Postgres CDC when joined to a party
+    let broadcastChannel1: ReturnType<typeof supabase.channel> | null = null;
+    let broadcastChannel2: ReturnType<typeof supabase.channel> | null = null;
+    let cdcChannel: ReturnType<typeof supabase.channel> | null = null;
+
     if (activeRole === 'player' && activePartyId) {
-      channel = supabase.channel(`party_monsters_hud_${activePartyId}`);
-      channel
+      // 1. Primary broadcast channel (aligned with api.ts party:${partyId})
+      broadcastChannel1 = supabase.channel(`party:${activePartyId}`);
+      broadcastChannel1
         .on('broadcast', { event: 'monster_roster_updated' }, (payload) => {
           if (isMounted && payload?.payload?.monsters) {
             setMonsters(payload.payload.monsters);
           }
         })
+        .subscribe();
+
+      // 2. Secondary broadcast channel (legacy compatibility)
+      broadcastChannel2 = supabase.channel(`party_monsters_hud_${activePartyId}`);
+      broadcastChannel2
+        .on('broadcast', { event: 'monster_roster_updated' }, (payload) => {
+          if (isMounted && payload?.payload?.monsters) {
+            setMonsters(payload.payload.monsters);
+          }
+        })
+        .subscribe();
+
+      // 3. Direct Postgres CDC table listener for active_monsters updates
+      cdcChannel = supabase.channel(`party_monsters_cdc_${activePartyId}`);
+      cdcChannel
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'parties',
+          },
+          (payload: any) => {
+            if (
+              isMounted &&
+              payload?.new &&
+              (payload.new.id === activePartyId || payload.new.room_code === activePartyId || payload.new.party_code === activePartyId) &&
+              payload.new.active_monsters
+            ) {
+              setMonsters(payload.new.active_monsters);
+            }
+          }
+        )
         .subscribe();
     }
 
@@ -107,9 +144,9 @@ export const GmMonsterTrackerHud: React.FC = () => {
 
     return () => {
       isMounted = false;
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      if (broadcastChannel1) supabase.removeChannel(broadcastChannel1);
+      if (broadcastChannel2) supabase.removeChannel(broadcastChannel2);
+      if (cdcChannel) supabase.removeChannel(cdcChannel);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, [activeRole, activePartyId]);

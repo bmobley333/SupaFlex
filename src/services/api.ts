@@ -991,14 +991,19 @@ export const gameApi = {
   },
 
   async createParty(name: string, gmEmail: string, _invitedEmails: string[] = []) {
-    const cleanGm = gmEmail.trim().toLowerCase();
+    const cleanGm = (gmEmail || 'gm-guest@supaflex.internal').trim().toLowerCase();
     const partyName = (name || 'GM Campaign').trim();
+    const code = generateRoomId();
 
     const { data, error } = await supabase
       .from('parties')
       .insert({
         gm_email: cleanGm,
         name: partyName,
+        party_code: code,
+        room_code: code,
+        status: 'active',
+        is_active: true,
       })
       .select()
       .single();
@@ -1071,6 +1076,11 @@ export const gameApi = {
       const channelUuid = supabase.channel(`party:${partyUuid}`);
       await channelUuid.send({
         type: 'broadcast',
+        event: 'party_members_updated',
+        payload: { partyId: partyUuid, character_id: characterId, tab_session_id: tabSessionId, timestamp: new Date().toISOString() },
+      });
+      await channelUuid.send({
+        type: 'broadcast',
         event: 'party.joined',
         payload: { partyId: partyUuid, character_id: characterId, tab_session_id: tabSessionId, timestamp: new Date().toISOString() },
       });
@@ -1102,6 +1112,11 @@ export const gameApi = {
     } else if (targetPartyId) {
       try {
         const channel = supabase.channel(`party:${targetPartyId}`);
+        await channel.send({
+          type: 'broadcast',
+          event: 'party_members_updated',
+          payload: { partyId: targetPartyId, tab_session_id: tabSessionId, timestamp: new Date().toISOString() },
+        });
         await channel.send({
           type: 'broadcast',
           event: 'party.left',
@@ -1156,12 +1171,21 @@ export const gameApi = {
 
     // 12-hour staleness threshold for tabletop playtest session members
     const activeCutoff = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
-    const { data, error } = await supabase
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetPartyUuid);
+
+    let query = supabase
       .from('party_session_members')
       .select('*, character:characters(*)')
-      .eq('party_id', targetPartyUuid)
       .gte('last_seen', activeCutoff)
       .order('character_id', { ascending: true });
+
+    if (isUuid) {
+      query = query.eq('party_id', targetPartyUuid);
+    } else {
+      query = query.eq('party_code', targetPartyUuid.toUpperCase());
+    }
+
+    const { data, error } = await query;
 
     // Asynchronously prune dead ghost sessions from DB (> 12h inactive)
     const deadCutoff = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
@@ -1313,6 +1337,8 @@ export const gameApi = {
       .from('parties')
       .update({
         room_code: candidate,
+        party_code: candidate,
+        status: 'active',
         is_active: true,
         last_active_at: nowStr,
       })
@@ -1322,7 +1348,7 @@ export const gameApi = {
 
     if (error) {
       console.warn('[gameApi] Local room code checkout fallback due to DB update:', error.message);
-      return { party: { id: partyId, room_code: candidate, is_active: true }, roomCode: candidate };
+      return { party: { id: partyId, room_code: candidate, party_code: candidate, is_active: true }, roomCode: candidate };
     }
 
     return { party: data, roomCode: candidate };
@@ -1374,8 +1400,10 @@ export const gameApi = {
     const { data, error } = await supabase
       .from('parties')
       .select('*')
-      .eq('room_code', sanitized)
-      .eq('is_active', true)
+      .or(`room_code.eq.${sanitized},party_code.eq.${sanitized}`)
+      .neq('status', 'expired')
+      .order('last_active_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (error) {
@@ -1418,10 +1446,16 @@ export const gameApi = {
 
   async getPartyMonsters(partyId: string) {
     try {
+      let targetUuid = partyId;
+      if (partyId && partyId.length === 4) {
+        const p = await this.findActivePartyByRoomCode(partyId);
+        if (p) targetUuid = p.id;
+      }
+
       const { data, error } = await supabase
         .from('parties')
         .select('active_monsters')
-        .eq('id', partyId)
+        .eq('id', targetUuid)
         .single();
 
       if (error) {
@@ -1439,25 +1473,42 @@ export const gameApi = {
 
   async savePartyMonsters(partyId: string, monsters: any[]) {
     try {
+      let targetUuid = partyId;
+      if (partyId && partyId.length === 4) {
+        const p = await this.findActivePartyByRoomCode(partyId);
+        if (p) targetUuid = p.id;
+      }
+
       localStorage.setItem(`supaflex_gm_monsters_${partyId}`, JSON.stringify(monsters));
+      localStorage.setItem(`supaflex_gm_monsters_${targetUuid}`, JSON.stringify(monsters));
       localStorage.setItem('supaflex_gm_monster_stats', JSON.stringify(monsters));
 
       const { error } = await supabase
         .from('parties')
         .update({ active_monsters: monsters })
-        .eq('id', partyId);
+        .eq('id', targetUuid);
 
       if (error) {
         console.warn('[gameApi] Supabase active_monsters update warning:', error.message);
       }
 
-      // Send Realtime Broadcast event to all party members
-      const channel = supabase.channel(`party:${partyId}`);
-      await channel.send({
-        type: 'broadcast',
-        event: 'monster_roster_updated',
-        payload: { monsters },
-      });
+      // Send Realtime Broadcast event to all party members across all channel aliases
+      const channelsToNotify = new Set<string>();
+      channelsToNotify.add(`party:${targetUuid}`);
+      channelsToNotify.add(`party:${partyId}`);
+      channelsToNotify.add(`party_monsters_hud_${targetUuid}`);
+      channelsToNotify.add(`party_monsters_hud_${partyId}`);
+
+      for (const ch of channelsToNotify) {
+        try {
+          const channel = supabase.channel(ch);
+          await channel.send({
+            type: 'broadcast',
+            event: 'monster_roster_updated',
+            payload: { monsters },
+          });
+        } catch {}
+      }
     } catch (e) {
       console.error('[gameApi] Error saving party monsters:', e);
     }

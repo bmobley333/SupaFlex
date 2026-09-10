@@ -93,6 +93,16 @@ export default function App() {
   // GM Screen Active Room Code State
   const [activeRoomCode, setActiveRoomCode] = useState<string | null>(null);
 
+  const handleResetRoomCode = async () => {
+    try {
+      const email = useCharacterStore.getState().playerEmail || 'gm-guest@supaflex.internal';
+      const result = await gameApi.checkoutPartyRoomCodeForGmEmail(email);
+      setActiveRoomCode(result.roomCode);
+    } catch (e) {
+      console.error('Failed to reset room code:', e);
+    }
+  };
+
   const tabSessionId = useCharacterStore((state) => state.tabSessionId);
 
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -528,7 +538,10 @@ export default function App() {
           {/* Center Zone: S-Tier Glassmorphic GM Screen (GM Mode) vs Prominent Hero Title (Player Mode) */}
           {activeRole === 'gm' ? (
             <div className="flex-1 flex justify-center min-w-[280px]">
-              <GmHeaderHUD activeRoomCode={activeRoomCode} />
+              <GmHeaderHUD
+                activeRoomCode={activeRoomCode}
+                onResetRoomCode={handleResetRoomCode}
+              />
             </div>
           ) : (
             activeCharacter && (

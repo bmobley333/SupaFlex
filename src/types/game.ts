@@ -1117,6 +1117,8 @@ export interface Party {
   gm_email: string;
   invited_emails: string[];
   room_code?: string | null;
+  party_code?: string | null;
+  status?: string;
   is_active?: boolean;
   is_gm_swap_window_active?: boolean; // GM toggle for Character Vault swapping
   last_active_at?: string | null;
