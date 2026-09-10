@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { Database, BookOpen, Loader2, ChevronDown, ChevronUp, Crown } from 'lucide-react';
-import { supabase } from './lib/supabase';
+import { supabase, supabaseUrl, supabaseKey } from './lib/supabase';
 import { gameApi } from './services/api';
 import { Character, TreasureItem, SimpleGearItem, MagicItem } from './types/game';
 import { getItemSlotWeight } from './utils/magicSlotSchedule';
@@ -251,10 +251,10 @@ export default function App() {
     const handleBeforeUnload = () => {
       gameApi.leavePartySession(tabSessionId, activePartyId).catch(console.error);
       try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        if (supabaseUrl && anonKey && tabSessionId) {
-          fetch(`${supabaseUrl}/rest/v1/party_session_members?tab_session_id=eq.${encodeURIComponent(tabSessionId)}`, {
+        const targetUrl = supabaseUrl;
+        const anonKey = supabaseKey;
+        if (targetUrl && anonKey && tabSessionId) {
+          fetch(`${targetUrl}/rest/v1/party_session_members?tab_session_id=eq.${encodeURIComponent(tabSessionId)}`, {
             method: 'DELETE',
             headers: {
               'apikey': anonKey,
