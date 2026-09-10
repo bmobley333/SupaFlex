@@ -161,11 +161,20 @@ export default function App() {
 
     const handleAuthUser = async (userEmail: string, googleName: string) => {
       setPlayerEmail(userEmail);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('supaflex_player_email', userEmail);
+      }
       const profile = await gameApi.getUserProfile(userEmail, googleName);
       if (profile.player_name) {
         setPlayerName(profile.player_name);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('supaflex_player_name', profile.player_name);
+        }
       } else if (googleName) {
         setPlayerName(googleName);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('supaflex_player_name', googleName);
+        }
       }
 
       const { tabSessionId, activePartyId, activeCharacter } = useCharacterStore.getState();

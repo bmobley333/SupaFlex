@@ -2,7 +2,6 @@
 // Supabase Client Initialization with env fallback support
 
 import { createClient } from '@supabase/supabase-js';
-import { getTabSessionId } from '../utils/tabSession';
 
 // Supabase Version 2.0 (Target: zipebnjazayhfjstykwl)
 export const V2_SUPABASE_URL = 'https://zipebnjazayhfjstykwl.supabase.co';
@@ -16,12 +15,10 @@ export const supabaseUrl = (rawUrl && !rawUrl.includes('ddibmiifxwqlnlpaekui')) 
 const rawKey = import.meta.env.VITE_SUPABASE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabaseKey = (rawKey && !rawKey.includes('ddibmiifxwqlnlpaekui')) ? rawKey : V2_SUPABASE_ANON_KEY;
 
-const tabId = getTabSessionId();
-
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
-    storageKey: `supaflex_auth_token_${tabId}`,
+    storageKey: 'supaflex_auth_token',
     persistSession: true,
     autoRefreshToken: true,
   },

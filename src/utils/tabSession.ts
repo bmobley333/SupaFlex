@@ -8,12 +8,15 @@ export function getTabSessionId(): string {
     const windowKey = window.name;
     const storedTabId = sessionStorage.getItem('supaflex_tab_session_id');
 
-    // If window.name matches storedTabId, this is an existing tab refresh or full-page OAuth redirect
-    if (windowKey && storedTabId && windowKey === `supaflex_win_${storedTabId}`) {
+    // If sessionStorage already has an assigned tabId, preserve it across tab reloads and cross-origin OAuth redirects
+    if (storedTabId) {
+      if (!windowKey || windowKey !== `supaflex_win_${storedTabId}`) {
+        window.name = `supaflex_win_${storedTabId}`;
+      }
       return storedTabId;
     }
 
-    // Otherwise, this is a NEW tab, fresh window, or DUPLICATED tab (Ctrl+Shift+D / middle-click)
+    // Otherwise, this is a completely fresh tab
     const newTabId =
       typeof crypto !== 'undefined' && crypto.randomUUID
         ? crypto.randomUUID()
@@ -21,12 +24,6 @@ export function getTabSessionId(): string {
 
     window.name = `supaflex_win_${newTabId}`;
     sessionStorage.setItem('supaflex_tab_session_id', newTabId);
-
-    // Purge copied sessionStorage credentials so duplicated tabs start in a clean sandbox
-    sessionStorage.removeItem('supaflex_player_email');
-    sessionStorage.removeItem('supaflex_player_name');
-    sessionStorage.removeItem('supaflex_active_party_id');
-    sessionStorage.removeItem('supaflex_last_active_char_id');
 
     return newTabId;
   } catch (e) {
