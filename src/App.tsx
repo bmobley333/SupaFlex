@@ -184,10 +184,10 @@ export default function App() {
     };
 
     // Restore existing Supabase Auth Session on mount (e.g., after Google OAuth redirect)
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.email) {
-        const userEmail = user.email.trim().toLowerCase();
-        const userName = resolveGoogleName(user);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) {
+        const userEmail = session.user.email.trim().toLowerCase();
+        const userName = resolveGoogleName(session.user);
         handleAuthUser(userEmail, userName);
       } else {
         // Unauthenticated session: ensure modal is active and character is null
@@ -213,16 +213,18 @@ export default function App() {
         if (currentEmail !== userEmail || event === 'SIGNED_IN') {
           fetchInitialData({ silent: true });
         }
+
+        // Clean URL hash safely only AFTER session is established
+        if (typeof window !== 'undefined' && window.location.hash && window.location.hash.includes('access_token')) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
       }
 
       if (event === 'PASSWORD_RECOVERY') {
         setShowUpdatePasswordModal(true);
-      }
-      if (typeof window !== 'undefined' && window.location.hash && window.location.hash.includes('access_token')) {
-        if (event === 'PASSWORD_RECOVERY' || window.location.hash.includes('type=recovery')) {
-          setShowUpdatePasswordModal(true);
+        if (typeof window !== 'undefined' && window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
         }
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
       }
     });
 

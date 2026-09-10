@@ -17,7 +17,7 @@ export const supabaseKey = (rawKey && !rawKey.includes('ddibmiifxwqlnlpaekui')) 
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     storageKey: 'supaflex_auth_token',
     persistSession: true,
     autoRefreshToken: true,
