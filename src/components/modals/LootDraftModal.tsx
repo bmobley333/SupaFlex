@@ -37,6 +37,8 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
 }) => {
   const functionsCatalog = useCharacterStore((state) => state.functionsCatalog);
   const modsCatalog = useCharacterStore((state) => state.modsCatalog);
+  const getArtifactsByTier = useCharacterStore((state) => state.getArtifactsByTier);
+  const artifactsCatalog = useCharacterStore((state) => state.artifactsCatalog);
   const [slots, setSlots] = useState<DraftSlot[]>([]);
   const [expandedSlots, setExpandedSlots] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -63,25 +65,33 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
     setIsLoading(true);
 
     try {
-      // 1. Filter matching tier items
-      const tierItems = stockMagicItems.filter((m) =>
-        ((m as any).category || m.name || '').toLowerCase().includes(draftTier.toLowerCase())
-      );
-      const pool = tierItems.length > 0 ? tierItems : stockMagicItems;
+      // 1. Resolve true Artifact pool strictly matching the draftTier
+      let pool: any[] = getArtifactsByTier ? getArtifactsByTier(draftTier) : [];
+      if (pool.length === 0 && artifactsCatalog && artifactsCatalog.length > 0) {
+        pool = artifactsCatalog.filter((a) => a.artifact_tier === draftTier);
+      }
+      if (pool.length === 0 && stockMagicItems && stockMagicItems.length > 0) {
+        pool = stockMagicItems.filter((m: any) =>
+          m.artifact_tier === draftTier ||
+          (m.category || '').toLowerCase().includes(draftTier.toLowerCase()) ||
+          (m.rarity || '').toLowerCase() === draftTier.toLowerCase()
+        );
+      }
 
-      // 2. SLOT 1: PRIMARY ARTIFACT (Arcane Artifact)
+      // 2. SLOT 1: Rnd Artifact 1
       let slot1Item: any = null;
       if (pool.length > 0) {
         slot1Item = pool[Math.floor(Math.random() * pool.length)];
       } else {
         slot1Item = {
           name: `${draftTier} Focus Ring`,
-          category: draftTier,
+          category: `${draftTier} Artifact`,
+          artifact_tier: draftTier,
           effect: 'Grants +1 to all action rolls while focused.',
         };
       }
 
-      // 3. SLOT 2: SECONDARY ARTIFACT (Mystic Artifact - distinct from Slot 1 if pool allows)
+      // 3. SLOT 2: Rnd Artifact 2 (distinct from Slot 1 if pool allows)
       let slot2Item: any = null;
       const pool2Candidates = pool.filter((m) =>
         slot1Item && (m.id ? m.id !== slot1Item.id : m.name !== slot1Item.name)
@@ -92,7 +102,8 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
       } else {
         slot2Item = {
           name: `${draftTier} Amulet of Power`,
-          category: draftTier,
+          category: `${draftTier} Artifact`,
+          artifact_tier: draftTier,
           effect: 'Adds d6 Bonus damage to elemental spells.',
         };
       }

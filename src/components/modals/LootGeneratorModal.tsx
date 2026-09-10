@@ -122,7 +122,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
-  const magicItems = useCharacterStore((state) => state.magicItems);
+  const artifactsCatalog = useCharacterStore((state) => state.artifactsCatalog);
+  const getArtifactsByTier = useCharacterStore((state) => state.getArtifactsByTier);
   const functionsCatalog = useCharacterStore((state) => state.functionsCatalog);
   const modsCatalog = useCharacterStore((state) => state.modsCatalog);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
@@ -247,51 +248,65 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   // Fetch random magic item
   const fetchRandomMagicItem = async (rarity: string) => {
     const isEpicTier = rarity.toLowerCase() === 'epic' || rarity.toLowerCase() === 'artifact';
-    const cleanRarity = isEpicTier ? 'Epic' : rarity;
+    const cleanRarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' = isEpicTier
+      ? 'Epic'
+      : rarity.toLowerCase().includes('great')
+      ? 'Greater'
+      : rarity.toLowerCase().includes('less')
+      ? 'Lesser'
+      : 'Minor';
     
     try {
-      let data: any[] | null = null;
-      if (isEpicTier) {
-        const { data: epicData } = await supabase
-          .from('supplies')
-          .select('*')
-          .or('category.ilike.%Epic%,category.ilike.%Artifact%,cost.ilike.%Artifact%');
-        data = epicData;
-      } else {
-        const { data: tierData } = await supabase
-          .from('supplies')
-          .select('*')
-          .or('category.ilike.Artifact,cost.ilike.Artifact')
-          .ilike('category', `%${rarity}%`);
-        data = tierData;
+      // 1. Authoritative cross-table resolved artifacts catalog
+      const tierArtifacts = getArtifactsByTier ? getArtifactsByTier(cleanRarity) : [];
+      if (tierArtifacts && tierArtifacts.length > 0) {
+        const picked = tierArtifacts[Math.floor(Math.random() * tierArtifacts.length)];
+        return {
+          ...picked,
+          description: picked.effect || (picked as any).notes || picked.description || `Enchanted ${cleanRarity.toLowerCase()} artifact.`,
+        };
       }
 
-      if (!data || data.length === 0) {
-        // In-memory catalog fallback from Zustand store
-        const catalogPool = (magicItems || []).filter((m: any) => {
-          const mSub = (m.category || '').toLowerCase();
-          return isEpicTier
-            ? mSub.includes('epic') || mSub.includes('artifact')
-            : mSub.includes(rarity.toLowerCase());
-        });
-
-        if (catalogPool.length > 0) {
-          const picked = catalogPool[Math.floor(Math.random() * catalogPool.length)];
+      // 2. Secondary fallback: artifactsCatalog array filter
+      if (artifactsCatalog && artifactsCatalog.length > 0) {
+        const fallbackPool = artifactsCatalog.filter((a) => a.artifact_tier === cleanRarity);
+        if (fallbackPool.length > 0) {
+          const picked = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
           return {
             ...picked,
-            description: picked.effect || (picked as any).notes || (picked as any).description || `Enchanted ${cleanRarity} artifact.`
+            description: picked.effect || (picked as any).notes || picked.description || `Enchanted ${cleanRarity.toLowerCase()} artifact.`,
           };
         }
-        return { name: `${cleanRarity} Artifact`, category: cleanRarity, description: `Mystical ${cleanRarity.toLowerCase()} artifact of power.` };
       }
 
-      const picked = data[Math.floor(Math.random() * data.length)];
+      // 3. Direct supabase fallback
+      const { data } = await supabase
+        .from('supplies')
+        .select('*')
+        .or('category.ilike.Artifact,cost.ilike.Artifact');
+      if (data && data.length > 0) {
+        const picked = data[Math.floor(Math.random() * data.length)];
+        return {
+          ...picked,
+          category: `${cleanRarity} Artifact`,
+          artifact_tier: cleanRarity,
+          description: picked.effect || picked.notes || picked.description || `Enchanted ${cleanRarity.toLowerCase()} artifact.`,
+        };
+      }
+
       return {
-        ...picked,
-        description: picked.effect || (picked as any).notes || (picked as any).description || `Enchanted ${cleanRarity} artifact.`
+        name: `${cleanRarity} Artifact`,
+        category: `${cleanRarity} Artifact`,
+        artifact_tier: cleanRarity,
+        description: `Mystical ${cleanRarity.toLowerCase()} artifact of power.`,
       };
     } catch {
-      return { name: `${cleanRarity} Artifact Focus`, sub: cleanRarity, description: `Enchanted ${cleanRarity.toLowerCase()} artifact focus.` };
+      return {
+        name: `${cleanRarity} Artifact Focus`,
+        category: `${cleanRarity} Artifact`,
+        artifact_tier: cleanRarity,
+        description: `Enchanted ${cleanRarity.toLowerCase()} artifact focus.`,
+      };
     }
   };
 
@@ -1969,7 +1984,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         onClose={() => setIsDraftOpen(false)}
         characterName={characterName}
         draftTier={lastDraftTier}
-        stockMagicItems={magicItems}
+        stockMagicItems={artifactsCatalog}
         onSelectReward={handleSelectDraftReward}
         onDeconstructDraft={handleDeconstructDraft}
       />

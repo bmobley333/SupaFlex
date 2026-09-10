@@ -5,6 +5,7 @@ import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { reconcileCharacterVaultWithGear } from '../utils/gearFunctionSync';
+import { CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 
 const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
   if (typeof window !== 'undefined') {
@@ -24,6 +25,7 @@ interface CharacterStore {
   activeCharacter: Character | null;
   powers: Power[];
   magicItems: MagicItem[];
+  artifactsCatalog: CatalogArtifact[];
   skills: SupabaseSkill[];
   traits: SupabaseTrait[];
   paths: SupabasePath[];
@@ -37,6 +39,9 @@ interface CharacterStore {
   dbConnected: boolean;
   isGuildSpaceUnlocked: boolean;
   error: string | null;
+
+  // Artifact Selector Helper
+  getArtifactsByTier: (tier: ArtifactTier) => CatalogArtifact[];
 
   // Player Login & Filtering State
   playerEmail: string;
@@ -120,6 +125,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   activeCharacter: null,
   powers: [],
   magicItems: [],
+  artifactsCatalog: [],
   skills: [],
   traits: [],
   paths: [],
@@ -178,6 +184,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   })(),
   playerLinks: getInitialPlayerLinks(),
 
+  getArtifactsByTier: (tier: ArtifactTier) => {
+    return (get().artifactsCatalog || []).filter((a) => a.artifact_tier === tier);
+  },
+
   fetchInitialData: async (options?: { silent?: boolean }) => {
     const isSilent = options?.silent || get().characters.length > 0;
     if (!isSilent) {
@@ -211,7 +221,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return;
       }
 
-      const [chars, powers, items, skills, traits, pathsData, bundlesData, functionsData, modsData] = await Promise.all([
+      const [chars, powers, items, skills, traits, pathsData, bundlesData, functionsData, modsData, artifactsData] = await Promise.all([
         gameApi.getCharacters(),
         gameApi.getPowers(),
         gameApi.getMagicItems(),
@@ -221,6 +231,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         gameApi.getBundles(),
         gameApi.getFunctions(),
         gameApi.getMods(),
+        gameApi.getArtifacts(),
       ]);
 
       const email = (get().playerEmail || '').trim().toLowerCase();
@@ -232,6 +243,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           activeCharacter: null,
           powers,
           magicItems: items,
+          artifactsCatalog: artifactsData || [],
           skills,
           traits,
           paths: pathsData,
@@ -284,6 +296,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         activeCharacter: selectedChar,
         powers,
         magicItems: items,
+        artifactsCatalog: artifactsData || [],
         skills,
         traits,
         paths: pathsData,
