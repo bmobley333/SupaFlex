@@ -565,10 +565,11 @@ export interface SimpleGearItem {
   cost?: string;
   domain?: EquipmentDomain | string;
   notes?: string;
-  item_type?: 'gear' | 'weapon' | 'armor' | 'shield' | 'exotic' | 'kit';
+  item_type?: 'gear' | 'weapon' | 'armor' | 'shield' | 'exotic' | 'kit' | 'artifact';
   belongs_to?: string;
   genres?: string[];
   pic?: string | null;
+  is_exotic?: boolean;
 }
 
 export interface ApLogEntry {
@@ -1008,6 +1009,7 @@ export interface MagicItem {
   checked_state?: boolean[];
   cost?: string; // Optional cost for Hardware items
   is_hardware?: boolean; // True if purchased hardware item
+  is_exotic?: boolean; // True if exotic/hardware item
   source_gear?: string;
   source_mod?: string;
 }

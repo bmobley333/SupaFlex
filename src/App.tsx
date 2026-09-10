@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase';
 import { gameApi } from './services/api';
 import { Character, TreasureItem, SimpleGearItem, MagicItem } from './types/game';
 import { getItemSlotWeight } from './utils/magicSlotSchedule';
+import { reconcileCharacterVaultWithGear } from './utils/gearFunctionSync';
 import { useCharacterStore } from './store/useCharacterStore';
 import { useAdventureStore } from './store/useAdventureStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
@@ -123,6 +124,8 @@ export default function App() {
     updatePlayerLink,
     deletePlayerLink,
     reorderPlayerLinkByIndex,
+    functionsCatalog,
+    modsCatalog,
   } = useCharacterStore();
 
   const gmLinks = useAdventureStore((state) => state.gmLinks);
@@ -363,31 +366,11 @@ export default function App() {
 
     try {
       const category = itemPayload.categoryKey || '';
+      const isCoins = category === 'coins' || !!itemPayload.coinsSilver || !!itemPayload.coinsGold;
+      const isArtGems = category === 'art_gems' || itemPayload.type === 'art_gem' || itemPayload.type === 'valuable';
       const isMagic = category.startsWith('magic_') || itemPayload.type === 'magic_item' || !!itemPayload.magicItem;
-      const isArtGems = category === 'art_gems' || itemPayload.type === 'art_gem';
 
-      if (isMagic) {
-        const m = itemPayload.magicItem || {};
-        const isHw = !!(m.is_hardware || category === 'hardware');
-        const magicItemObj: MagicItem = {
-          id: Date.now() + Math.floor(Math.random() * 1000),
-          name: m.name || itemPayload.title || (isHw ? 'Hardware Device' : 'Relic'),
-          usage: m.usage || '1-Enc',
-          action: m.action || 'P',
-          effect: m.effect || m.description || itemPayload.description || '',
-          source: m.source || (isHw ? 'Hardware Loot' : 'Loot Claim'),
-          created_at: new Date().toISOString(),
-          category: m.category || (isHw ? '⚙️ Hardware' : category) || 'Relic',
-          slot_weight: (getItemSlotWeight({ ...m, name: itemPayload.title, category }) as 1 | 2 | 3 | 4),
-          is_hardware: isHw,
-          cost: m.cost,
-        };
-
-        updateActiveSheetData((prev) => ({
-          ...prev,
-          character_vault: [...(prev.character_vault || []), magicItemObj],
-        }));
-      } else if (category === 'coins' || itemPayload.coinsSilver || itemPayload.coinsGold) {
+      if (isCoins) {
         const s = itemPayload.coinsSilver || 0;
         const g = itemPayload.coinsGold || 0;
         updateActiveSheetData((prev) => ({
@@ -411,19 +394,93 @@ export default function App() {
           ...prev,
           other_treasure: [...(prev.other_treasure || []), treasureItem],
         }));
+      } else if (isMagic) {
+        const m = itemPayload.magicItem || {};
+        const isHw = !!(m.is_hardware || m.is_exotic || category === 'hardware');
+        const itemName = m.name || itemPayload.title || (isHw ? 'Exotic Device' : 'Artifact');
+        const itemCategory = m.category || (isHw ? '🧿 Exotic' : '🔮 Artifact');
+        const itemEffect = m.effect || m.description || itemPayload.description || '';
+
+        const magicItemObj: MagicItem = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          name: itemName,
+          usage: m.usage || '1-Enc',
+          action: m.action || 'P',
+          effect: itemEffect,
+          source: m.source || (isHw ? 'Exotic Loot' : 'Loot Claim'),
+          created_at: new Date().toISOString(),
+          category: itemCategory,
+          slot_weight: (getItemSlotWeight({ ...m, name: itemName, category: itemCategory }) as 1 | 2 | 3 | 4),
+          is_hardware: isHw,
+          is_exotic: isHw,
+          cost: m.cost || (isHw ? 'Exotic' : 'Artifact'),
+        };
+
+        // Also add physical item to simple_gear for physical custody in Gear Card
+        const gearItem: SimpleGearItem = {
+          id: `gear-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+          name: itemName,
+          qty: 1,
+          category: isHw ? '🧿 Exotic' : '🔮 Artifact',
+          item_type: isHw ? 'exotic' : 'artifact',
+          is_exotic: isHw ? true : undefined,
+          cost: m.cost || (isHw ? 'Exotic' : 'Artifact'),
+          notes: itemEffect,
+        };
+
+        updateActiveSheetData((prev) => {
+          const currentVault = prev.character_vault || [];
+          const currentGear = prev.simple_gear || [];
+          const intermediateSheet = {
+            ...prev,
+            character_vault: [...currentVault, magicItemObj],
+            simple_gear: [...currentGear, gearItem],
+          };
+          // Reconcile functions in case exotic or artifact has linked functions in catalog
+          return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog, modsCatalog).updatedSheet;
+        });
       } else {
-        const gearCat = category === 'gear_quality' ? 'Quality Gear' : category === 'curios' ? 'Curios & Documents' : 'Junk';
+        // Standard physical gear / quality gear / curios / junk / weapons / armor / shields
+        let gearCat = '🎒 Supplies';
+        let itemType: 'gear' | 'weapon' | 'armor' | 'shield' = 'gear';
+
+        const catLower = category.toLowerCase();
+        const typeLower = (itemPayload.type || '').toLowerCase();
+
+        if (catLower.includes('weapon') || typeLower.includes('weapon')) {
+          gearCat = '⚔️ Weapons';
+          itemType = 'weapon';
+        } else if (catLower.includes('armor') || typeLower.includes('armor')) {
+          gearCat = '🥋 Armor';
+          itemType = 'armor';
+        } else if (catLower.includes('shield') || typeLower.includes('shield')) {
+          gearCat = '🛡️ Shields';
+          itemType = 'shield';
+        } else if (catLower === 'gear_quality' || catLower.includes('quality')) {
+          gearCat = 'Quality Gear';
+        } else if (catLower === 'curios' || catLower.includes('curio') || catLower.includes('document')) {
+          gearCat = 'Curios & Documents';
+        } else if (catLower === 'junk' || catLower.includes('junk')) {
+          gearCat = 'Junk & Curios';
+        }
+
         const gearItem: SimpleGearItem = {
           id: `gear-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
           name: itemPayload.title || 'Adventure Item',
           qty: 1,
           category: gearCat,
+          item_type: itemType,
+          notes: itemPayload.description || '',
         };
 
-        updateActiveSheetData((prev) => ({
-          ...prev,
-          simple_gear: [...(prev.simple_gear || []), gearItem],
-        }));
+        updateActiveSheetData((prev) => {
+          const currentGear = prev.simple_gear || [];
+          const intermediateSheet = {
+            ...prev,
+            simple_gear: [...currentGear, gearItem],
+          };
+          return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog, modsCatalog).updatedSheet;
+        });
       }
 
       await saveActiveCharacter();

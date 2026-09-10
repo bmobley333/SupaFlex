@@ -98,7 +98,7 @@ export const parseAndEvaluateFormula = (formula: string): { value: number; curre
 export const CATEGORY_OPTIONS = [
   { key: 'coins', label: '🪙 Coins (s/g)' },
   { key: 'chaos_gems', label: '💎 Chaos Gem (Volatile)' },
-  { key: 'hardware', label: '⚙️ Hardware Device' },
+  { key: 'hardware', label: '🧿 Exotics' },
   { key: 'magic_Minor', label: '🍺 Minor Artifact' },
   { key: 'magic_Lesser', label: '🪄 Lesser Artifact' },
   { key: 'magic_Greater', label: '✨ Greater Artifact' },
@@ -160,16 +160,16 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     const loadCat = async () => {
       setIsLoadingSpecificCatalog(true);
       try {
-        let tableName = 'gear';
-        if (specificCategory === 'weapons') tableName = 'weapons';
-        else if (specificCategory === 'armor') tableName = 'armor';
-        else if (specificCategory === 'shields') tableName = 'shields';
-        else if (specificCategory === 'relics') tableName = 'relics';
-        else if (specificCategory === 'hardware') tableName = 'hardware';
-        else if (specificCategory === 'chaos_gems') tableName = 'chaos_gems';
+        let items: any[] = [];
+        if (specificCategory === 'weapons') items = await gameApi.getWeapons();
+        else if (specificCategory === 'armor') items = await gameApi.getArmor();
+        else if (specificCategory === 'shields') items = await gameApi.getShields();
+        else if (specificCategory === 'relics') items = await gameApi.getArtifacts();
+        else if (specificCategory === 'hardware') items = await gameApi.getExotics();
+        else if (specificCategory === 'gear') items = await gameApi.getSupplies();
+        else if (specificCategory === 'chaos_gems') items = await gameApi.getChaosGems();
 
-        const { data } = await supabase.from(tableName).select('*');
-        setSpecificCatalog(data || []);
+        setSpecificCatalog(items || []);
       } catch {
         setSpecificCatalog([]);
       } finally {
@@ -266,19 +266,19 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           const picked = catalogPool[Math.floor(Math.random() * catalogPool.length)];
           return {
             ...picked,
-            description: picked.effect || (picked as any).notes || (picked as any).description || `Enchanted ${cleanRarity} relic.`
+            description: picked.effect || (picked as any).notes || (picked as any).description || `Enchanted ${cleanRarity} artifact.`
           };
         }
-        return { name: `${cleanRarity} Relic`, category: cleanRarity, description: `Mystical ${cleanRarity.toLowerCase()} relic of power.` };
+        return { name: `${cleanRarity} Artifact`, category: cleanRarity, description: `Mystical ${cleanRarity.toLowerCase()} artifact of power.` };
       }
 
       const picked = data[Math.floor(Math.random() * data.length)];
       return {
         ...picked,
-        description: picked.effect || (picked as any).notes || (picked as any).description || `Enchanted ${cleanRarity} relic.`
+        description: picked.effect || (picked as any).notes || (picked as any).description || `Enchanted ${cleanRarity} artifact.`
       };
     } catch {
-      return { name: `${cleanRarity} Relic Focus`, sub: cleanRarity, description: `Enchanted ${cleanRarity.toLowerCase()} relic focus.` };
+      return { name: `${cleanRarity} Artifact Focus`, sub: cleanRarity, description: `Enchanted ${cleanRarity.toLowerCase()} artifact focus.` };
     }
   };
 
@@ -396,10 +396,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             id: `res-${Date.now()}`,
             tableKey: 'loot_main',
             categoryKey: 'hardware',
-            tableName: '⚙️ Hardware Device',
+            tableName: '🧿 Exotics',
             rollVal: d100,
             title: hw.name,
-            description: hw.description || hw.effect || 'Advanced technological hardware item.',
+            description: hw.description || hw.effect || 'Advanced technological exotic item.',
             type: 'magic_item',
             magicItem: hw
           });
@@ -568,10 +568,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           id: `res-${Date.now()}`,
           tableKey: 'hardware',
           categoryKey: 'hardware',
-          tableName: '⚙️ Hardware Device',
+          tableName: '🧿 Exotics',
           rollVal: 1,
           title: hw.name,
-          description: hw.description || hw.effect || 'Advanced technological hardware item.',
+          description: hw.description || hw.effect || 'Advanced technological exotic item.',
           type: 'magic_item',
           magicItem: hw
         };
@@ -866,6 +866,34 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   };
 
   const handleClaimVaultItem = async (item: VaultItem): Promise<boolean> => {
+    if (item.type === 'chaos_gem' || item.chaosGem) {
+      let gem = item.chaosGem;
+      if (!gem) {
+        gem = await gameApi.getRandomChaosGem(activeGenre);
+      }
+      if (gem) {
+        setSocketingItem({
+          res: {
+            id: item.id,
+            tableKey: 'chaos_gems',
+            tableName: '💎 Chaos Gem',
+            rollVal: 1,
+            title: item.title,
+            description: item.description,
+            type: 'chaos_gem',
+            chaosGem: gem,
+          },
+          gem,
+        });
+        const partyId = activePartyId || 'default';
+        const storageKey = `supaflex_party_echo_vault_${partyId}`;
+        const updated = partyVault.filter((v) => v.id !== item.id);
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        setPartyVault(updated);
+        return true;
+      }
+    }
+
     let categoryKey = 'gear_quality';
     if (item.type === 'coins' || item.coinsSilver || item.coinsGold) categoryKey = 'coins';
     else if (item.magicItem) categoryKey = `magic_${item.rarity}`;
@@ -1389,7 +1417,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                     { key: 'armor', label: '🧥 Armor' },
                     { key: 'shields', label: '🛡️ Shield' },
                     { key: 'gear', label: '🎒 Gear' },
-                    { key: 'hardware', label: '⚙️ Hardw' },
+                    { key: 'hardware', label: '🧿 Exotic' },
                     { key: 'chaos_gems', label: '💎 Gem' },
                   ].map((cat) => (
                     <button
