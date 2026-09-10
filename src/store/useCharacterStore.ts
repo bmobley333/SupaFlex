@@ -674,31 +674,46 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const switchCount = typeof sheet.stance_switch_count === 'number' ? sheet.stance_switch_count : 0;
     const cost: 'M' | 'AM' = switchCount === 0 ? 'M' : 'AM';
 
-    const activeSlots = Array.isArray(sheet.spell_slots) ? sheet.spell_slots : [];
-    const standbySlots = Array.isArray(sheet.stance_beta_slots) ? sheet.stance_beta_slots : [];
+    const slotsAlpha = Array.isArray(sheet.spell_slots) ? sheet.spell_slots : [];
+    const slotsBeta = Array.isArray(sheet.stance_beta_slots) ? sheet.stance_beta_slots : [];
 
-    // Mirror usage checkboxes between matching abilities across both stances
+    // Mirror usage checkboxes bi-directionally between matching abilities across both stances
+    // Source of truth for checked state comes from current active stance
+    const currentActiveSlots = currentStance === 'beta' ? slotsBeta : slotsAlpha;
     const activeCheckedMap = new Map<string, boolean[]>();
-    activeSlots.forEach((slot) => {
+    currentActiveSlots.forEach((slot) => {
       if (slot && slot.name) {
         const cleanKey = (slot.base_name || slot.name).replace(/\s*\[[A-Z]+\]$/i, '').trim().toLowerCase();
         activeCheckedMap.set(cleanKey, slot.checked || [false, false, false]);
       }
     });
 
-    const updatedStandby = standbySlots.map((slot) => {
-      if (!slot || !slot.name) return slot;
-      const cleanKey = (slot.base_name || slot.name).replace(/\s*\[[A-Z]+\]$/i, '').trim().toLowerCase();
-      if (activeCheckedMap.has(cleanKey)) {
-        return { ...slot, checked: activeCheckedMap.get(cleanKey)! };
-      }
-      return slot;
-    });
+    const updatedAlpha = currentStance === 'beta'
+      ? slotsAlpha.map((slot) => {
+          if (!slot || !slot.name) return slot;
+          const cleanKey = (slot.base_name || slot.name).replace(/\s*\[[A-Z]+\]$/i, '').trim().toLowerCase();
+          if (activeCheckedMap.has(cleanKey)) {
+            return { ...slot, checked: activeCheckedMap.get(cleanKey)! };
+          }
+          return slot;
+        })
+      : slotsAlpha;
+
+    const updatedBeta = currentStance === 'alpha'
+      ? slotsBeta.map((slot) => {
+          if (!slot || !slot.name) return slot;
+          const cleanKey = (slot.base_name || slot.name).replace(/\s*\[[A-Z]+\]$/i, '').trim().toLowerCase();
+          if (activeCheckedMap.has(cleanKey)) {
+            return { ...slot, checked: activeCheckedMap.get(cleanKey)! };
+          }
+          return slot;
+        })
+      : slotsBeta;
 
     get().updateActiveSheetData((prev) => ({
       ...prev,
-      spell_slots: updatedStandby,
-      stance_beta_slots: activeSlots,
+      spell_slots: updatedAlpha,
+      stance_beta_slots: updatedBeta,
       active_stance: targetStance,
       stance_switch_count: switchCount + 1,
     }));

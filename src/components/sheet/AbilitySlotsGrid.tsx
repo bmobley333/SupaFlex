@@ -194,10 +194,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     switchFunctionStance,
   } = useCharacterStore();
   const sheetData: any = activeCharacter?.sheet_data || {};
-  const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
+  const activeStance: 'alpha' | 'beta' = sheetData.active_stance === 'beta' ? 'beta' : 'alpha';
+  const slotKey = type === 'powers' ? 'power_slots' : (activeStance === 'beta' ? 'stance_beta_slots' : 'spell_slots');
+  const standbySlotKey = type === 'powers' ? null : (activeStance === 'beta' ? 'spell_slots' : 'stance_beta_slots');
 
   const [showShuntModal, setShowShuntModal] = useState(false);
-  const activeStance: 'alpha' | 'beta' = sheetData.active_stance === 'beta' ? 'beta' : 'alpha';
 
   const handleSwitchStance = (targetStance: 'alpha' | 'beta') => {
     switchFunctionStance(targetStance);
@@ -493,24 +494,24 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       slotToUpdate.checked = newChecked;
       updatedSlots[realIndex] = slotToUpdate;
 
-      // Cross-Stance Synchronization for Functions
-      let updatedBeta = prev.stance_beta_slots;
-      if (slotKey === 'spell_slots' && Array.isArray(prev.stance_beta_slots)) {
+      // Cross-Stance Synchronization for Functions (both ways: Alpha <-> Beta)
+      let updatedStandby = standbySlotKey ? prev[standbySlotKey] : undefined;
+      if (standbySlotKey && Array.isArray(prev[standbySlotKey])) {
         const targetClean = cleanName(targetSlot.base_name || targetSlot.name).toLowerCase();
-        updatedBeta = prev.stance_beta_slots.map((bSlot) => {
-          if (!bSlot || !bSlot.name) return bSlot;
-          const bClean = cleanName(bSlot.base_name || bSlot.name).toLowerCase();
-          if (bClean === targetClean) {
-            return { ...bSlot, checked: newChecked };
+        updatedStandby = prev[standbySlotKey].map((sSlot) => {
+          if (!sSlot || !sSlot.name) return sSlot;
+          const sClean = cleanName(sSlot.base_name || sSlot.name).toLowerCase();
+          if (sClean === targetClean) {
+            return { ...sSlot, checked: newChecked };
           }
-          return bSlot;
+          return sSlot;
         });
       }
 
       return {
         ...prev,
         [slotKey]: updatedSlots,
-        ...(slotKey === 'spell_slots' && updatedBeta ? { stance_beta_slots: updatedBeta } : {}),
+        ...(standbySlotKey && updatedStandby ? { [standbySlotKey]: updatedStandby } : {}),
       };
     });
     saveActiveCharacter();
@@ -518,30 +519,37 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const handleClearAllUses = () => {
     updateActiveSheetData((prev) => {
-      const currentSlots = prev[slotKey] || [];
-      const clearedSlots = currentSlots.map((slot: any) => ({
+      if (type === 'powers') {
+        const currentSlots = prev.power_slots || [];
+        const clearedSlots = currentSlots.map((slot: any) => ({
+          ...slot,
+          checked: [false, false, false],
+        }));
+        return {
+          ...prev,
+          power_slots: clearedSlots,
+        };
+      }
+
+      // Functions mode: clear uses in BOTH Stance Alpha (spell_slots) AND Stance Beta (stance_beta_slots)
+      const currentAlpha = Array.isArray(prev.spell_slots) ? prev.spell_slots : [];
+      const currentBeta = Array.isArray(prev.stance_beta_slots) ? prev.stance_beta_slots : [];
+
+      const clearedAlpha = currentAlpha.map((slot: any) => ({
+        ...slot,
+        checked: [false, false, false],
+      }));
+      const clearedBeta = currentBeta.map((slot: any) => ({
         ...slot,
         checked: [false, false, false],
       }));
 
-      let clearedBeta = prev.stance_beta_slots;
-      if (slotKey === 'spell_slots' && Array.isArray(prev.stance_beta_slots)) {
-        clearedBeta = prev.stance_beta_slots.map((bSlot) => ({
-          ...bSlot,
-          checked: [false, false, false],
-        }));
-      }
-
       return {
         ...prev,
-        [slotKey]: clearedSlots,
-        ...(slotKey === 'spell_slots'
-          ? {
-              stance_beta_slots: clearedBeta,
-              stance_switch_count: 0,
-              cold_storage_functions: [],
-            }
-          : {}),
+        spell_slots: clearedAlpha,
+        stance_beta_slots: clearedBeta,
+        stance_switch_count: 0,
+        cold_storage_functions: [],
       };
     });
     saveActiveCharacter();
@@ -917,7 +925,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const handleEquipVaultItem = (vaultItem: MagicItem) => {
     const weight = typeof vaultItem.slot_weight === 'number' ? vaultItem.slot_weight : getCategorySlotWeight(vaultItem.category || vaultItem.rarity);
-    const currentSlots = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
+    const targetSlotKey = (slotKey === 'stance_beta_slots' ? 'stance_beta_slots' : 'spell_slots') as 'spell_slots' | 'stance_beta_slots';
+    const otherSlotKey = (targetSlotKey === 'stance_beta_slots' ? 'spell_slots' : 'stance_beta_slots') as 'spell_slots' | 'stance_beta_slots';
+    const currentSlots: AbilitySlot[] = Array.isArray(sheetData[targetSlotKey]) ? sheetData[targetSlotKey] : [];
     const activeSlotsUsed = calculateTotalLoadoutSlotsUsed(currentSlots);
 
     const cleanTarget = cleanName(vaultItem.base_name || vaultItem.name).toLowerCase();
@@ -933,10 +943,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
     updateActiveSheetData((prev) => {
       const currentVault = Array.isArray(prev.character_vault) ? prev.character_vault : [];
-      const currentSlots = Array.isArray(prev.spell_slots) ? prev.spell_slots : [];
+      const currentTargetSlots = Array.isArray(prev[targetSlotKey]) ? prev[targetSlotKey] : [];
 
       let initialChecked = vaultItem.checked_state || [false, false, false];
-      const standbySlots = Array.isArray(prev.stance_beta_slots) ? prev.stance_beta_slots : [];
+      const standbySlots = Array.isArray(prev[otherSlotKey]) ? prev[otherSlotKey] : [];
       const matchingStandby = standbySlots.find(
         (s) => cleanName(s.base_name || s.name).toLowerCase() === cleanTarget
       );
@@ -967,7 +977,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       return {
         ...prev,
         character_vault: updatedVault,
-        spell_slots: [...currentSlots, newSlot],
+        [targetSlotKey]: [...currentTargetSlots, newSlot],
       };
     });
     saveActiveCharacter();
@@ -2365,8 +2375,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                               ) as any)?.notes;
 
                                             const itemCleanName = cleanName(item.base_name || item.name).toLowerCase();
-                                            const alphaSlots: AbilitySlot[] = (sheetData.active_stance === 'beta' ? sheetData.stance_beta_slots : sheetData.spell_slots) || [];
-                                            const betaSlots: AbilitySlot[] = (sheetData.active_stance === 'beta' ? sheetData.spell_slots : sheetData.stance_beta_slots) || [];
+                                            const alphaSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
+                                            const betaSlots: AbilitySlot[] = Array.isArray(sheetData.stance_beta_slots) ? sheetData.stance_beta_slots : [];
                                             const inStanceAlpha = Array.isArray(alphaSlots) && alphaSlots.some(
                                               (s) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === itemCleanName
                                             );
@@ -2498,8 +2508,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   ) as any)?.notes;
 
                                 const itemCleanName = cleanName(item.base_name || item.name).toLowerCase();
-                                const alphaSlots: AbilitySlot[] = (sheetData.active_stance === 'beta' ? sheetData.stance_beta_slots : sheetData.spell_slots) || [];
-                                const betaSlots: AbilitySlot[] = (sheetData.active_stance === 'beta' ? sheetData.spell_slots : sheetData.stance_beta_slots) || [];
+                                const alphaSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
+                                const betaSlots: AbilitySlot[] = Array.isArray(sheetData.stance_beta_slots) ? sheetData.stance_beta_slots : [];
                                 const inStanceAlpha = Array.isArray(alphaSlots) && alphaSlots.some(
                                   (s) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === itemCleanName
                                 );
