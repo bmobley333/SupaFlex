@@ -338,6 +338,19 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     }
   };
 
+  const handleDismissMember = async (member: PartySessionMember) => {
+    if (!selectedParty?.id || !member.character_id) return;
+    const charName = resolveCharFirstName(member.character?.name || `Hero #${member.character_id}`);
+    const confirmed = window.confirm(`Remove "${charName}" from the live party?`);
+    if (!confirmed) return;
+    try {
+      await gameApi.dismissPartyMember(selectedParty.id, member.character_id);
+      setSessionMembers((prev) => prev.filter((m) => m.character_id !== member.character_id));
+    } catch (err) {
+      console.error('Failed to dismiss member:', err);
+    }
+  };
+
   const mapToMonsterData = (m: ParsedMonster): MonsterData => {
     const raw = m.fullText || m.nameWithEquip || 'Monster';
     const parsed = parseMonsterLine(raw);
@@ -490,6 +503,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     onNudgeDown={() => nudgePartyItem(idx, 'down')}
                     canNudgeUp={idx > 0}
                     canNudgeDown={idx < orderedSessionMembers.length - 1}
+                    onDismiss={() => handleDismissMember(member)}
                   />
                 ))}
               </div>

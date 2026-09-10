@@ -1127,6 +1127,43 @@ export const gameApi = {
       }
     }
   },
+
+  async dismissPartyMember(partyId: string, characterId: number) {
+    if (!partyId || !characterId) return;
+
+    let targetUuid = partyId;
+    if (partyId.length === 4) {
+      const p = await this.findActivePartyByRoomCode(partyId);
+      if (p) targetUuid = p.id;
+    }
+
+    const { error } = await supabase
+      .from('party_session_members')
+      .delete()
+      .eq('character_id', characterId);
+
+    if (error) {
+      console.error('[gameApi] Error dismissing party member:', error);
+      throw error;
+    }
+
+    try {
+      const channel = supabase.channel(`party:${targetUuid}`);
+      await channel.send({
+        type: 'broadcast',
+        event: 'party_members_updated',
+        payload: { partyId: targetUuid, character_id: characterId, timestamp: new Date().toISOString() },
+      });
+      await channel.send({
+        type: 'broadcast',
+        event: 'party.left',
+        payload: { partyId: targetUuid, character_id: characterId, timestamp: new Date().toISOString() },
+      });
+    } catch (e) {
+      console.warn('[gameApi] Notice broadcasting dismiss:', e);
+    }
+  },
+
   async ensureTabPartySession(partyIdOrCode: string, tabSessionId: string, characterId: number, playerEmail: string) {
     if (!partyIdOrCode || !tabSessionId || !characterId) return;
 
@@ -1169,8 +1206,8 @@ export const gameApi = {
       }
     }
 
-    // 12-hour staleness threshold for tabletop playtest session members
-    const activeCutoff = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
+    // 60-second staleness threshold for tabletop playtest session members (heartbeats fire every 15s)
+    const activeCutoff = new Date(Date.now() - 60 * 1000).toISOString();
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetPartyUuid);
 
     let query = supabase
@@ -1187,8 +1224,8 @@ export const gameApi = {
 
     const { data, error } = await query;
 
-    // Asynchronously prune dead ghost sessions from DB (> 12h inactive)
-    const deadCutoff = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
+    // Asynchronously prune dead ghost sessions from DB (> 90s inactive)
+    const deadCutoff = new Date(Date.now() - 90 * 1000).toISOString();
     Promise.resolve(
       supabase
         .from('party_session_members')

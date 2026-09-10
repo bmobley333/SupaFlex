@@ -27,6 +27,7 @@ import { AttributeManagerModal } from './components/modals/AttributeManagerModal
 import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
 import { FocusManagerModal } from './components/modals/FocusManagerModal';
 import { UnifiedLaunchHubModal } from './components/modals/UnifiedLaunchHubModal';
+import { CharacterPartyModal } from './components/modals/CharacterPartyModal';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
 import { FireworksModal } from './components/common/FireworksModal';
@@ -87,7 +88,8 @@ export default function App() {
   const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(
     typeof window !== 'undefined' ? !sessionStorage.getItem('supaflex_player_email') : true
   );
-  const [launchHubInitialTab, setLaunchHubInitialTab] = useState<'account' | 'inspect' | 'party'>('account');
+  const [launchHubInitialTab, setLaunchHubInitialTab] = useState<'account' | 'inspect'>('account');
+  const [showCharacterPartyModal, setShowCharacterPartyModal] = useState(false);
   const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
 
   // GM Screen Active Room Code State
@@ -248,13 +250,36 @@ export default function App() {
 
     const handleBeforeUnload = () => {
       gameApi.leavePartySession(tabSessionId, activePartyId).catch(console.error);
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        if (supabaseUrl && anonKey && tabSessionId) {
+          fetch(`${supabaseUrl}/rest/v1/party_session_members?tab_session_id=eq.${encodeURIComponent(tabSessionId)}`, {
+            method: 'DELETE',
+            headers: {
+              'apikey': anonKey,
+              'Authorization': `Bearer ${anonKey}`,
+            },
+            keepalive: true,
+          }).catch(() => {});
+        }
+      } catch {}
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        gameApi.sendPlayerHeartbeat(tabSessionId).catch(console.error);
+      }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      gameApi.leavePartySession(tabSessionId, activePartyId).catch(console.error);
     };
   }, [activePartyId, tabSessionId]);
 
@@ -693,8 +718,7 @@ export default function App() {
                   onOpenVitalityManager={() => setShowVitalityManagerModal(true)}
                   onOpenApManager={() => setShowApManagerModal(true)}
                   onOpenPartySelector={() => {
-                    setLaunchHubInitialTab('party');
-                    setShowUnifiedLaunchHubModal(true);
+                    setShowCharacterPartyModal(true);
                   }}
                   tabSessionId={tabSessionId}
                 />
@@ -874,6 +898,14 @@ export default function App() {
             fetchInitialData();
           }}
           onLogout={async () => {
+            const partyId = useCharacterStore.getState().activePartyId;
+            if (tabSessionId && partyId) {
+              try {
+                await gameApi.leavePartySession(tabSessionId, partyId);
+              } catch (e) {
+                console.warn('Error leaving party on logout:', e);
+              }
+            }
             try {
               await supabase.auth.signOut();
             } catch (e) {
@@ -899,6 +931,20 @@ export default function App() {
           onRefreshCharacters={fetchInitialData}
         />
       </ErrorBoundary>
+
+      {/* ⚔️ Dedicated Per-Character Party Modal */}
+      {showCharacterPartyModal && (
+        <CharacterPartyModal
+          isOpen={showCharacterPartyModal}
+          onClose={() => setShowCharacterPartyModal(false)}
+          activeCharacter={activeCharacter}
+          tabSessionId={tabSessionId}
+          currentEmail={playerEmail}
+          onPartyChanged={() => {
+            fetchInitialData({ silent: true });
+          }}
+        />
+      )}
 
 
       {/* 🔐 Password Reset Modal */}

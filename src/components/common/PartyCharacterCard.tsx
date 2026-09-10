@@ -1,6 +1,6 @@
-// src/components/common/PartyCharacterCard.tsx
 import React from 'react';
 import { PartySessionMember, CharacterSheetData } from '../../types/game';
+import { X } from 'lucide-react';
 
 interface PartyCharacterCardProps {
   member: PartySessionMember;
@@ -15,24 +15,28 @@ interface PartyCharacterCardProps {
   onNudgeDown?: () => void;
   canNudgeUp?: boolean;
   canNudgeDown?: boolean;
+  onDismiss?: () => void;
 }
 
 /**
- * Resolves player's first name strictly from full name input.
- * Blueprint Section 2.C: ([Player's First Name derived from player's full name (NOT email)])
- * If name is blank or missing, returns "empty".
+ * Resolves player's first name strictly from full name input or email handle.
+ * Never returns literal "empty".
  */
-export const resolvePlayerFirstName = (rawName?: string): string => {
-  if (!rawName) return 'empty';
-  const trimmed = rawName.trim();
-  if (!trimmed) return 'empty';
-  if (trimmed.includes('@')) {
-    const handle = trimmed.split('@')[0]?.trim();
-    return handle || 'empty';
+export const resolvePlayerFirstName = (rawName?: string, email?: string): string => {
+  if (rawName && rawName.trim() && rawName.trim().toLowerCase() !== 'empty') {
+    const trimmed = rawName.trim();
+    if (trimmed.includes('@')) {
+      const handle = trimmed.split('@')[0]?.trim();
+      if (handle) return handle;
+    }
+    const parts = trimmed.split(/\s+/);
+    if (parts[0]) return parts[0];
   }
-
-  const parts = trimmed.split(/\s+/);
-  return parts[0] || 'empty';
+  if (email && email.trim()) {
+    const handle = email.split('@')[0]?.trim();
+    if (handle) return handle;
+  }
+  return 'Player';
 };
 
 /**
@@ -59,9 +63,10 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
   onNudgeDown,
   canNudgeUp = false,
   canNudgeDown = false,
+  onDismiss,
 }) => {
   const char = member.character;
-  const playerFirstName = resolvePlayerFirstName(playerNameOverride || member.player_first_name);
+  const playerFirstName = resolvePlayerFirstName(playerNameOverride || member.player_first_name, member.player_email);
   const charFirstName = resolveCharFirstName(char?.name || `Hero #${member.character_id}`);
   const race = char?.race || 'Human';
   const charClass = char?.class || 'Adventurer';
@@ -176,6 +181,21 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
                 </button>
               )}
             </div>
+          )}
+
+          {/* Dismiss from Live Party button (Visible on hover) */}
+          {onDismiss && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDismiss();
+              }}
+              className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-400 hover:bg-red-950/50 border border-transparent hover:border-red-500/40 rounded transition-all ml-0.5"
+              title="Dismiss from Party"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           )}
         </div>
       </div>

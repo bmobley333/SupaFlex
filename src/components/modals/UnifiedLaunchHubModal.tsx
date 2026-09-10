@@ -1,13 +1,12 @@
 // src/components/modals/UnifiedLaunchHubModal.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase, signInWithGoogle } from '../../lib/supabase';
+import { signInWithGoogle } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
-import { Character, Party, PartySessionMember } from '../../types/game';
+import { Character } from '../../types/game';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { RoleToggleSwitch } from '../common/RoleToggleSwitch';
 import { GenrePillSwitch } from '../common/GenrePillSwitch';
 import { InfoTooltip } from '../common/InfoTooltip';
-import { sanitizeRoomCodeInput, isValidRoomCodeFormat } from '../../utils/roomId';
 import { isGuildSpaceUnlocked, unlockGuildSpace, lockGuildSpace } from '../../utils/guildspaceAuth';
 import { isMsoEntry, compareMsoOptions } from '../../utils/kitUtils';
 
@@ -17,14 +16,14 @@ interface UnifiedLaunchHubModalProps {
   currentEmail: string | null;
   activeCharacter: Character | null;
   userCharacters: Character[];
-  tabSessionId: string;
+  tabSessionId?: string;
   onSelectCharacter: (id: number) => void;
   onCreateNewCharacter: (name: string, characterClass?: string, race?: string) => Promise<Character | null>;
   onLoginSuccess: (email: string) => void;
   onLogout: () => void;
   onCharacterCloned: (clonedChar: Character) => void;
   onRefreshCharacters?: () => void;
-  initialTab?: 'account' | 'genre' | 'inspect' | 'party';
+  initialTab?: 'account' | 'genre' | 'inspect';
 }
 
 export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
@@ -33,7 +32,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   currentEmail,
   activeCharacter,
   userCharacters,
-  tabSessionId,
+  tabSessionId: _tabSessionId,
   onSelectCharacter,
   onCreateNewCharacter,
   onLoginSuccess: _onLoginSuccess,
@@ -45,7 +44,9 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const activeRole = useCharacterStore((state) => state.activeRole);
   const setActiveRole = useCharacterStore((state) => state.setActiveRole);
   const paths = useCharacterStore((state) => state.paths || []);
-  const [rightSubTab, setRightSubTab] = useState<'account' | 'genre' | 'inspect' | 'party'>(initialTab);
+  const [rightSubTab, setRightSubTab] = useState<'account' | 'genre' | 'inspect'>(
+    initialTab === 'party' as any ? 'account' : initialTab
+  );
 
   // Create Hero State
   const [isCreatingHero, setIsCreatingHero] = useState(false);
@@ -55,7 +56,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
   useEffect(() => {
     if (isOpen && initialTab) {
-      setRightSubTab(currentEmail ? initialTab : 'account');
+      setRightSubTab(currentEmail ? (initialTab === 'party' as any ? 'account' : initialTab) : 'account');
     }
   }, [isOpen, initialTab, currentEmail]);
 
@@ -128,12 +129,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     }
   }, [currentEmail]);
 
-  useEffect(() => {
-    if (activeRole === 'gm' && rightSubTab === 'party') {
-      setRightSubTab('account');
-    }
-  }, [activeRole]);
-
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerAutoSavePlayerName = (nameValue: string, immediate = false) => {
@@ -196,106 +191,11 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const [cloningId, setCloningId] = useState<number | null>(null);
   const [cloneSuccessMsg, setCloneSuccessMsg] = useState<string | null>(null);
 
-  // Party Sub-Tab State
-  const [selectedParty, setSelectedParty] = useState<Party | null>(null);
-  const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
-  const [partyError, setPartyError] = useState<string | null>(null);
-  const [partySuccessMsg, setPartySuccessMsg] = useState<string | null>(null);
-  const [roomCodeInput, setRoomCodeInput] = useState('');
-  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
-
-  const handleJoinByRoomCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentEmail) return;
-
-    const sanitized = sanitizeRoomCodeInput(roomCodeInput);
-    if (!isValidRoomCodeFormat(sanitized)) {
-      setPartyError('Please enter a valid 4-character Party ID (e.g. K9X2).');
-      return;
-    }
-
-    const targetCharId = activeCharacter?.id || (userCharacters[0] ? userCharacters[0].id : null);
-    if (!targetCharId) {
-      setPartyError('Please select or create an Active Hero in your vault to join.');
-      return;
-    }
-
-    setPartyError(null);
-    setPartySuccessMsg(null);
-    setIsJoiningRoom(true);
-
-    try {
-      const { party } = await gameApi.joinPartyByRoomCode(sanitized, currentEmail, targetCharId, tabSessionId);
-      setSelectedParty(party);
-      await loadSessionMembers(party.id);
-      useCharacterStore.getState().setActivePartyId(party.id);
-      setPartySuccessMsg(`Successfully joined party "${party.name}" (Party ID: ${sanitized})!`);
-      setRoomCodeInput('');
-    } catch (err: any) {
-      console.error('Error joining party by room code:', err);
-      setPartyError(err.message || 'Failed to join party room.');
-    } finally {
-      setIsJoiningRoom(false);
-    }
-  };
-
   useEffect(() => {
-    if (currentEmail) {
+    if (currentEmail && isOpen) {
       loadProfile(currentEmail);
-      if (isOpen) {
-        loadParties();
-      }
     }
   }, [currentEmail, isOpen]);
-
-  useEffect(() => {
-    if (!selectedParty || !isOpen) return;
-
-    loadSessionMembers(selectedParty.id);
-
-    // Subscribe to both Postgres CDC changes and Realtime Broadcast events for party members
-    const topic = `modal_party_${selectedParty.id}_${Math.random().toString(36).substring(7)}`;
-    let cdcChannel: ReturnType<typeof supabase.channel> | null = null;
-    let broadcastChannel: ReturnType<typeof supabase.channel> | null = null;
-
-    try {
-      cdcChannel = supabase
-        .channel(topic)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'party_session_members',
-            filter: `party_id=eq.${selectedParty.id}`,
-          },
-          () => {
-            loadSessionMembers(selectedParty.id);
-          }
-        )
-        .subscribe();
-
-      broadcastChannel = supabase
-        .channel(`party:${selectedParty.id}`)
-        .on('broadcast', { event: 'party_members_updated' }, () => {
-          loadSessionMembers(selectedParty.id);
-        })
-        .on('broadcast', { event: 'party.joined' }, () => {
-          loadSessionMembers(selectedParty.id);
-        })
-        .on('broadcast', { event: 'party.left' }, () => {
-          loadSessionMembers(selectedParty.id);
-        })
-        .subscribe();
-    } catch (err) {
-      console.error('[UnifiedLaunchHubModal] Realtime subscription error:', err);
-    }
-
-    return () => {
-      if (cdcChannel) supabase.removeChannel(cdcChannel);
-      if (broadcastChannel) supabase.removeChannel(broadcastChannel);
-    };
-  }, [selectedParty, isOpen]);
 
   const loadProfile = async (targetEmail: string) => {
     try {
@@ -310,37 +210,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       }
     } catch (err) {
       console.error('Error loading profile:', err);
-    }
-  };
-
-  const loadParties = async () => {
-    if (!currentEmail) return;
-    try {
-      const data = await gameApi.getPartiesForUser(currentEmail);
-      const currentActivePartyId = useCharacterStore.getState().activePartyId;
-      if (data.length > 0) {
-        if (currentActivePartyId) {
-          const match = (data as Party[]).find((p) => p.id === currentActivePartyId);
-          if (match) {
-            setSelectedParty(match);
-            return;
-          }
-        }
-        if (!selectedParty) {
-          setSelectedParty(data[0] as Party);
-        }
-      }
-    } catch (err) {
-      console.error('Error loading parties:', err);
-    }
-  };
-
-  const loadSessionMembers = async (partyId: string) => {
-    try {
-      const members = await gameApi.getPartySessionMembers(partyId);
-      setSessionMembers(members as PartySessionMember[]);
-    } catch (err) {
-      console.error('Error loading session members:', err);
     }
   };
 
@@ -520,22 +389,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     }
   };
 
-  // --- PARTY HANDLERS ---
-  const handleLeaveParty = async () => {
-    try {
-      const activePartyId = useCharacterStore.getState().activePartyId;
-      if (tabSessionId && activePartyId) {
-        await gameApi.leavePartySession(tabSessionId, activePartyId);
-      }
-      useCharacterStore.getState().setActivePartyId(null);
-      setSelectedParty(null);
-      setSessionMembers([]);
-      setPartySuccessMsg('Left party room session.');
-    } catch (err: any) {
-      setPartyError(err.message || 'Failed to leave party.');
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fadeIn">
       <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-[900px] w-full h-[85vh] shadow-2xl text-slate-100 flex flex-col overflow-hidden">
@@ -546,11 +399,11 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
         <div className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-6 py-4 flex items-start justify-between shrink-0 gap-4">
           <div className="min-w-0 flex-1 pr-2">
             <h2 className="text-xl font-extrabold text-amber-400 flex items-center gap-2 font-outfit tracking-wide">
-              <span>🌌</span> Character, Genre & Party Selector
+              <span>🌌</span> Character & Genre Vault
             </h2>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
               {currentEmail
-                ? 'Manage your character vault, game genre, active party sessions, and clone characters.'
+                ? 'Manage your character vault, select game genres, and clone characters.'
                 : '🔒 Please sign in or create an account to access your character sheet.'}
             </p>
           </div>
@@ -936,24 +789,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                   🧬 Clone Characters
                 </button>
               )}
-              {activeRole !== 'gm' && (
-                <button
-                  onClick={() => {
-                    if (currentEmail) setRightSubTab('party');
-                  }}
-                  disabled={!currentEmail}
-                  title={!currentEmail ? 'Sign in required to join party sessions' : 'Join Party Session'}
-                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
-                    !currentEmail
-                      ? 'opacity-40 cursor-not-allowed border-transparent text-slate-500'
-                      : rightSubTab === 'party'
-                      ? 'border-emerald-400 text-emerald-400 cursor-pointer'
-                      : 'border-transparent text-slate-400 hover:text-slate-200 cursor-pointer'
-                  }`}
-                >
-                  ⚔️ Join Party
-                </button>
-              )}
             </div>
 
             <div className="flex-1 overflow-y-auto pr-1">
@@ -1229,96 +1064,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 </div>
               )}
 
-              {/* SUB-TAB 3: JOIN PARTY */}
-              {rightSubTab === 'party' && (
-                <div className="space-y-4 font-outfit">
-                  {partyError && <div className="p-3 bg-red-900/60 border border-red-500/50 rounded text-red-200 text-xs">{partyError}</div>}
-                  {partySuccessMsg && <div className="p-3 bg-emerald-900/60 border border-emerald-500/50 rounded text-emerald-200 text-xs font-semibold">{partySuccessMsg}</div>}
-
-                  {useCharacterStore.getState().activePartyId ? (
-                    /* JOINED STATE: Active Party Session Display */
-                    <div className="p-3.5 bg-slate-950/90 rounded-xl border border-cyan-500/40 space-y-3 shadow-inner">
-                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-extrabold text-cyan-400 uppercase tracking-wider font-outfit flex items-center gap-1.5">
-                            <span>👥</span> ACTIVE SESSION:
-                          </span>
-                          <span className="font-mono text-cyan-300 font-extrabold text-sm px-2 py-0.5 bg-cyan-950/80 rounded border border-cyan-800">
-                            {selectedParty?.room_code?.toUpperCase() || (useCharacterStore.getState().activePartyId?.slice(0, 4).toUpperCase() || 'LIVE')}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleLeaveParty}
-                          className="px-3 py-1 bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-700/60 font-bold text-xs rounded-xl transition cursor-pointer shadow-sm"
-                          title="Leave active room session"
-                        >
-                          Leave Party
-                        </button>
-                      </div>
-
-                      {/* Connected Roster Members */}
-                      {sessionMembers.length > 0 ? (
-                        <div className="space-y-2">
-                          <div className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex justify-between items-center">
-                            <span>Connected Party Roster</span>
-                            <span className="text-emerald-400 font-bold flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                              Live ({sessionMembers.length})
-                            </span>
-                          </div>
-                          <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                            {sessionMembers.map((m) => (
-                              <div
-                                key={m.id}
-                                className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex justify-between items-center text-xs"
-                              >
-                                <span className="font-bold text-slate-200">
-                                  🛡️ {m.character?.name || `Hero #${m.character_id}`}{' '}
-                                  {m.tab_session_id === tabSessionId && (
-                                    <span className="text-amber-400 font-mono font-bold text-[10px] ml-1">(This Tab)</span>
-                                  )}
-                                </span>
-                                <span className="text-[10px] text-slate-400">{m.player_email}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-xs text-slate-400 italic text-center py-2">
-                          Connected to party room session.
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    /* UNJOINED STATE: Enter Room Code Input Form */
-                    <form onSubmit={handleJoinByRoomCode} className="p-3.5 bg-slate-950/90 rounded-xl border border-amber-500/40 space-y-2.5 shadow-inner">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-amber-400 uppercase tracking-wider font-outfit flex items-center gap-1.5">
-                          <span>🔑</span> ENTER GM PARTY ID
-                        </span>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          maxLength={4}
-                          value={roomCodeInput}
-                          onChange={(e) => setRoomCodeInput(sanitizeRoomCodeInput(e.target.value))}
-                          className="w-32 px-3 py-2 bg-slate-900 border border-amber-500/40 rounded-lg text-center font-mono text-base font-black tracking-widest text-amber-300 uppercase focus:outline-none focus:border-amber-400"
-                        />
-                        <button
-                          type="submit"
-                          disabled={isJoiningRoom || roomCodeInput.length !== 4}
-                          className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-40 text-slate-950 font-black text-xs rounded-lg transition-all shadow-md flex items-center justify-center gap-1 cursor-pointer"
-                        >
-                          {isJoiningRoom ? 'Joining...' : '⚡ Join Party'}
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
