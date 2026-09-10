@@ -356,13 +356,14 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     if (showManageModal && type === 'spells' && functionsCatalog.length > 0) {
       updateActiveSheetData((prev) => {
         const res = reconcileCharacterVaultWithGear(prev, functionsCatalog, modsCatalog);
-        if (res.addedFunctions.length > 0 || res.removedFunctions.length > 0) {
+        if (res.updatedSheet !== prev) {
           return res.updatedSheet;
         }
         return prev;
       });
+      saveActiveCharacter();
     }
-  }, [showManageModal, type, functionsCatalog, modsCatalog, updateActiveSheetData]);
+  }, [showManageModal, type, functionsCatalog, modsCatalog, updateActiveSheetData, saveActiveCharacter]);
   
   // Search Filters for Left and Right Panes
   const [leftSearchQuery, setLeftSearchQuery] = useState('');
@@ -902,6 +903,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
               category: catalogMatch?.category || (targetSlot as any).category || null,
               slot_weight: (getItemSlotWeight(targetSlot) as 0 | 1 | 2 | 3 | 4),
               checked_state: targetSlot.checked || [false, false, false],
+              is_hardware: type === 'spells',
             };
             return { ...prev, [slotKey]: updated, character_vault: [...currentVault, vaultItem] };
           }

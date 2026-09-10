@@ -19,11 +19,9 @@ import {
   SupabaseWeapon,
   SupabaseArmor,
   SupabaseShield,
-  MagicItem,
   SupabaseBundle,
   ModItem,
   FunctionItem,
-  getCategorySlotWeight,
 } from '../../types/game';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { GearModFunctionTree } from '../common/GearModFunctionTree';
@@ -34,8 +32,6 @@ import {
   reconcileCharacterVaultWithGear,
   cleanBelongsToName,
   isModFreeForHost,
-  getFunctionsForMod as getFunctionsForModSync,
-  getFunctionsForGearItem as getFunctionsForGearItemSync,
 } from '../../utils/gearFunctionSync';
 
 export type EquipmentCategoryTab = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields' | 'kits';
@@ -312,46 +308,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     [functionHostNames, modFunctionHostNames]
   );
 
-  // Helper to find all direct functions belonging to a gear item
-  const getFunctionsForGearItem = useCallback(
-    (itemName: string): FunctionItem[] => getFunctionsForGearItemSync(itemName, functionsCatalog),
-    [functionsCatalog]
-  );
-
-  // Helper to find all functions belonging to an installed mod
-  const getFunctionsForMod = useCallback(
-    (modName: string): FunctionItem[] => getFunctionsForModSync(modName, functionsCatalog),
-    [functionsCatalog]
-  );
-
-  // Convert FunctionItem to MagicItem for character_vault
-  const mapFunctionToVaultItem = useCallback((fn: FunctionItem, hostName: string, modName?: string): MagicItem => {
-    let finalGear = hostName;
-    let finalMod = modName;
-    const parentMatch = hostName.match(/^(.+?)\s*\(([^)]+)\)$/);
-    if (!finalMod && parentMatch) {
-      finalMod = parentMatch[1];
-      finalGear = parentMatch[2];
-    }
-
-    return {
-      id: typeof fn.id === 'number' ? fn.id : Date.now() + Math.floor(Math.random() * 10000),
-      name: fn.name,
-      base_name: fn.name.replace(/\s*v\d+$/i, '').trim(),
-      version: 1,
-      action: (fn.action?.toUpperCase() as any) || 'P',
-      usage: fn.usage || '1-Enc',
-      effect: fn.effect || '',
-      notes: fn.notes || `Inherent function of ${hostName}`,
-      source: `Exotic Gear: ${hostName}`,
-      source_gear: finalGear,
-      source_mod: finalMod,
-      created_at: new Date().toISOString(),
-      category: fn.tier || (fn as any).category || 'Minor',
-      slot_weight: ((fn as any).slot_weight ?? getCategorySlotWeight(fn.tier || (fn as any).category) ?? 1) as 0 | 1 | 2 | 3 | 4,
-      is_hardware: true,
-    };
-  }, []);
 
   // Current Raw Catalog for Active Shelf Tab
   const currentRawCatalog = useMemo(() => {
@@ -631,29 +587,15 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         },
       ];
 
-      // Collect any real functions from constituent items
-      const kitConstituents = [...matchedGear, ...matchedWeapons, ...matchedArmor, ...matchedShields];
-      const kitFunctions: MagicItem[] = [];
-      kitConstituents.forEach((item) => {
-        const fns = getFunctionsForGearItem(item.name);
-        fns.forEach((fn) => {
-          kitFunctions.push(mapFunctionToVaultItem(fn, item.name));
-        });
-      });
-
       updateActiveSheetData((prev) => {
         const currentGear = prev.simple_gear || [];
-        const currentVault = prev.character_vault || [];
-        const newFunctionsToAdd = kitFunctions.filter(
-          (kf) => !currentVault.some((v: any) => cleanBelongsToName(v.name) === cleanBelongsToName(kf.name))
-        );
-        return {
+        const intermediateSheet = {
           ...prev,
           simple_gear: [...currentGear, ...newGearItems],
-          character_vault: [...currentVault, ...newFunctionsToAdd],
           gold: deduction.newGold,
           silver: deduction.newSilver,
         };
+        return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog, modsCatalog).updatedSheet;
       });
       saveActiveCharacter();
 
@@ -685,26 +627,20 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         pic: catalogItem.pic,
       };
 
-      const linkedFns = getFunctionsForGearItem(itemName).map((fn) => mapFunctionToVaultItem(fn, itemName));
-
       updateActiveSheetData((prev) => {
-        const currentVault = prev.character_vault || [];
-        const fnsToAdd = linkedFns.filter(
-          (lf) => !currentVault.some((v: any) => cleanBelongsToName(v.name) === cleanBelongsToName(lf.name))
-        );
-        return {
+        const intermediateSheet = {
           ...prev,
           simple_gear: [...(prev.simple_gear || []), newGearItem],
-          character_vault: [...currentVault, ...fnsToAdd],
           gold: deduction.newGold,
           silver: deduction.newSilver,
         };
+        return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog, modsCatalog).updatedSheet;
       });
       saveActiveCharacter();
 
       setGearCatalogFeedback({
         type: 'success',
-        message: `Purchased Exotic "${itemName}" for ${costStr}! Added to equipment${linkedFns.length ? ' and Function Vault' : ''}.`,
+        message: `Purchased Exotic "${itemName}" for ${costStr}! Added to equipment and Function Vault.`,
       });
       return;
     }
@@ -754,32 +690,15 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       pic: catalogItem.pic,
     };
 
-    const linkedFns = getFunctionsForGearItem(itemName).map((fn) => mapFunctionToVaultItem(fn, itemName));
-
-    // Auto-resolve inherent {Free} mods for this equipped item
-    const freeModsForThisItem = modsCatalog.filter((m: any) =>
-      isModFreeForHost(m, itemName)
-    );
-
-    const freeModFunctions: MagicItem[] = freeModsForThisItem.flatMap((fm: any) =>
-      getFunctionsForMod(fm.name).map((fn) => mapFunctionToVaultItem(fn, itemName, fm.name))
-    );
-
-    const allLinkedFns = [...linkedFns, ...freeModFunctions];
-
     updateActiveSheetData((prev) => {
       const currentGear = prev.simple_gear || [];
-      const currentVault = prev.character_vault || [];
-      const fnsToAdd = allLinkedFns.filter(
-        (lf) => !currentVault.some((v: any) => cleanBelongsToName(v.name) === cleanBelongsToName(lf.name))
-      );
-      return {
+      const intermediateSheet = {
         ...prev,
         simple_gear: [...currentGear, newGearItem],
-        character_vault: [...currentVault, ...fnsToAdd],
         gold: deduction.newGold,
         silver: deduction.newSilver,
       };
+      return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog, modsCatalog).updatedSheet;
     });
     saveActiveCharacter();
 
@@ -801,43 +720,37 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       return;
     }
 
-    const modFunctions = getFunctionsForMod(modName).map((fn) =>
-      mapFunctionToVaultItem(fn, parentItemName, modName)
-    );
+    const deduction = deductFundsWithChange(gold, silver, costInSilver);
+    if (!deduction.success) {
+      triggerNotEnoughMoney(modKey, modName, costStr, costInSilver);
+      return;
+    }
 
     updateActiveSheetData((prev) => {
-      const currentGold = prev.gold ?? 0;
-      const currentSilver = prev.silver ?? 0;
-      const deduction = deductFundsWithChange(currentGold, currentSilver, costInSilver);
-      if (!deduction.success) return prev;
-
-      const currentVault = prev.character_vault || [];
-      const fnsToAdd = modFunctions.filter(
-        (mf) => !currentVault.some((v: any) => cleanBelongsToName(v.name) === cleanBelongsToName(mf.name))
+      const currentGear = [...(prev.simple_gear || [])];
+      const hostIdx = currentGear.findIndex(
+        (g) => cleanBelongsToName(g.name) === cleanBelongsToName(parentItemName)
       );
+      if (hostIdx === -1) return prev;
 
-      // Consolidate mod onto the host item's installed_mods list (zero phantom cards)
-      const currentGear = (prev.simple_gear || []).map((g) => {
-        if (cleanBelongsToName(g.name) === cleanBelongsToName(parentItemName)) {
-          const currentInstalled = new Set<string>(g.installed_mods || []);
-          currentInstalled.add(modName);
-          return {
-            ...g,
-            installed_mods: Array.from(currentInstalled),
-          };
-        }
-        return g;
-      });
+      const host = currentGear[hostIdx];
+      const installedMods = new Set<string>(host.installed_mods || []);
+      if (installedMods.has(modName)) {
+        return prev;
+      }
+      installedMods.add(modName);
+      currentGear[hostIdx] = {
+        ...host,
+        installed_mods: Array.from(installedMods),
+      };
 
       const intermediateSheet = {
         ...prev,
         simple_gear: currentGear,
-        character_vault: [...currentVault, ...fnsToAdd],
         gold: deduction.newGold,
         silver: deduction.newSilver,
       };
 
-      // Ensure all vault links are cleanly reconciled
       return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog, modsCatalog).updatedSheet;
     });
     saveActiveCharacter();
@@ -887,27 +800,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     const droppedItem = gearList.find((g) => g.id === itemId);
     if (!droppedItem) return;
 
-    // Find any direct functions or mod functions belonging to this dropped item
-    const directFns = getFunctionsForGearItem(droppedItem.name);
-    const modFns = getFunctionsForMod(droppedItem.name);
-
-    // Also collect functions of any installed child mods referencing this item
-    const droppedMods = gearList.filter(
-      (g) =>
-        (g.name && g.name.endsWith(`(${droppedItem.name})`)) ||
-        (g.belongs_to && g.belongs_to.includes(droppedItem.name))
-    );
-    const droppedModFns = droppedMods.flatMap((dm) => {
-      const baseModName = dm.name.replace(/\s*\([^)]+\)$/, '').trim();
-      return getFunctionsForMod(baseModName);
-    });
-
-    const allFnNames = new Set([
-      ...directFns.map((fn) => cleanBelongsToName(fn.name)),
-      ...modFns.map((fn) => cleanBelongsToName(fn.name)),
-      ...droppedModFns.map((fn) => cleanBelongsToName(fn.name)),
-    ]);
-
     updateActiveSheetData((prev) => {
       const remainingGear = (prev.simple_gear || []).filter((g) => {
         if (g.id === itemId) return false;
@@ -916,24 +808,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         if (g.belongs_to && g.belongs_to.includes(droppedItem.name)) return false;
         return true;
       });
-      const stillHasSameGear = remainingGear.some(
-        (g) => cleanBelongsToName(g.name) === cleanBelongsToName(droppedItem.name)
-      );
 
-      let updatedVault = prev.character_vault || [];
-      let updatedSlots = prev.spell_slots || [];
-
-      if (!stillHasSameGear && allFnNames.size > 0) {
-        updatedVault = updatedVault.filter((v: any) => !allFnNames.has(cleanBelongsToName(v.name)));
-        updatedSlots = updatedSlots.filter((s: any) => !allFnNames.has(cleanBelongsToName(s.name)));
-      }
-
-      return {
+      const intermediateSheet = {
         ...prev,
         simple_gear: remainingGear,
-        character_vault: updatedVault,
-        spell_slots: updatedSlots,
       };
+
+      return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog, modsCatalog).updatedSheet;
     });
     saveActiveCharacter();
   };

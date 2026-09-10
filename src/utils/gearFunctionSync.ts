@@ -138,6 +138,10 @@ export const getFunctionsForMod = (
 /**
  * Resolves all direct functions belonging to a physically owned gear item.
  */
+/**
+ * Resolves all direct functions belonging to a physically owned gear item.
+ * Prefers exact name matches, falling back to stripped name.
+ */
 export const getFunctionsForGearItem = (
   itemName: string,
   functionsCatalog: FunctionItem[]
@@ -146,6 +150,21 @@ export const getFunctionsForGearItem = (
   const cleanItem = cleanBelongsToName(itemName);
   const cleanStripped = cleanItem.replace(/\(mso\)/gi, '').trim();
 
+  // First pass: exact matches
+  const exactMatches = functionsCatalog.filter((fn) => {
+    if (!fn.belongs_to) return false;
+    const parts = fn.belongs_to.split(',');
+    return parts.some((p) => {
+      const trimmed = p.trim();
+      if (/^Mod:\s*/i.test(trimmed)) return false;
+      const cleaned = cleanBelongsToName(trimmed);
+      return cleaned === cleanItem;
+    });
+  });
+
+  if (exactMatches.length > 0) return exactMatches;
+
+  // Second pass: stripped (mso) fallback matches
   return functionsCatalog.filter((fn) => {
     if (!fn.belongs_to) return false;
     const parts = fn.belongs_to.split(',');
@@ -210,9 +229,13 @@ export interface ReconcileResult {
 }
 
 /**
- * Universally reconciles character_vault against physically owned gear in simple_gear.
- * Strictly adheres to the separation mandate: SK cards are martial training only and have
- * ZERO relation to gear custody. All hardware functions stem exclusively from simple_gear.
+ * Universally reconciles character_vault, spell_slots (Stance A), and stance_beta_slots (Stance B)
+ * against physically owned gear in simple_gear.
+ * Strictly adheres to the single-source-of-truth mandate:
+ * Physical inventory (simple_gear) dictates reality.
+ * All hardware functions stem exclusively from physically owned gear and installed mods.
+ * When a gear item is dropped or removed, its inherent and installed functions are
+ * immediately and deterministically evicted everywhere (Vault, Stance A, Stance B).
  */
 export const reconcileCharacterVaultWithGear = (
   sheetData: CharacterSheetData | null | undefined,
@@ -227,7 +250,7 @@ export const reconcileCharacterVaultWithGear = (
     };
   }
 
-  // If functions catalog is not loaded, do not modify vault
+  // If functions catalog is not loaded yet, avoid destructive modifications
   if (!functionsCatalog || functionsCatalog.length === 0) {
     return {
       updatedSheet: sheetData,
@@ -240,7 +263,7 @@ export const reconcileCharacterVaultWithGear = (
     ? sheetData.simple_gear.filter((g) => g && g.name && g.name.trim() !== '')
     : [];
 
-  // Base host gear items in simple_gear (not child mod items)
+  // Base host gear items in simple_gear (not standalone child mod items)
   let baseGearItems = rawGear.filter(
     (g) => g.category !== '🔌 Mod' && !/mod_free|mod_/i.test(g.id || '')
   );
@@ -286,108 +309,222 @@ export const reconcileCharacterVaultWithGear = (
     });
   }
 
-  // Collect all functions that should be in the vault based on physical simple_gear ownership
+  // 1. Collect all valid functions granted by physically owned gear in simple_gear
   const expectedFunctions: MagicItem[] = [];
+  const expectedNamesSet = new Set<string>();
+  const expectedFnMap = new Map<string, MagicItem>();
+
+  const registerExpected = (fnItem: MagicItem) => {
+    const cName = cleanBelongsToName(fnItem.name);
+    const sName = cName.replace(/\(mso\)/gi, '').trim();
+    if (!expectedNamesSet.has(cName)) {
+      expectedFunctions.push(fnItem);
+      expectedNamesSet.add(cName);
+      expectedNamesSet.add(sName);
+      expectedFnMap.set(cName, fnItem);
+      expectedFnMap.set(sName, fnItem);
+    }
+  };
 
   for (const hostItem of baseGearItems) {
     const hostName = hostItem.name;
 
-    // 1. Direct functions of this gear item
+    // A. Direct functions of this gear item
     const directFns = getFunctionsForGearItem(hostName, functionsCatalog);
     for (const fn of directFns) {
-      expectedFunctions.push(mapFunctionToVaultItem(fn, hostName));
+      registerExpected(mapFunctionToVaultItem(fn, hostName));
     }
 
-    // 2. Inherent {Free} mods for this host item
+    // B. Inherent {Free} mods for this host item
     const freeModsForHost = modsCatalog.filter((m) => isModFreeForHost(m, hostName));
     for (const fm of freeModsForHost) {
       const fns = getFunctionsForMod(fm.name, functionsCatalog);
       for (const fn of fns) {
-        expectedFunctions.push(mapFunctionToVaultItem(fn, hostName, fm.name));
+        registerExpected(mapFunctionToVaultItem(fn, hostName, fm.name));
       }
     }
 
-    // 3. Purchased aftermarket mods installed on this host item
+    // C. Purchased aftermarket mods installed on this host item
     if (Array.isArray(hostItem.installed_mods)) {
       for (const modName of hostItem.installed_mods) {
         const fns = getFunctionsForMod(modName, functionsCatalog);
         for (const fn of fns) {
-          expectedFunctions.push(mapFunctionToVaultItem(fn, hostName, modName));
+          registerExpected(mapFunctionToVaultItem(fn, hostName, modName));
         }
       }
     }
   }
 
+  // Helper sets of all known function names and host gear names
+  const catalogFunctionNames = new Set<string>();
+  const catalogHostNames = new Set<string>();
+
+  for (const fn of functionsCatalog) {
+    const c = cleanBelongsToName(fn.name);
+    catalogFunctionNames.add(c);
+    catalogFunctionNames.add(c.replace(/\(mso\)/gi, '').trim());
+    if (fn.belongs_to) {
+      const parts = fn.belongs_to.split(',');
+      for (const p of parts) {
+        const hc = cleanBelongsToName(p);
+        if (hc) {
+          catalogHostNames.add(hc);
+          catalogHostNames.add(hc.replace(/\(mso\)/gi, '').trim());
+        }
+      }
+    }
+  }
+
+  for (const m of modsCatalog) {
+    const c = cleanBelongsToName(m.name);
+    catalogFunctionNames.add(c);
+    catalogFunctionNames.add(c.replace(/\(mso\)/gi, '').trim());
+    if (m.belongs_to) {
+      const parts = m.belongs_to.split(',');
+      for (const p of parts) {
+        const hc = cleanBelongsToName(p);
+        if (hc) {
+          catalogHostNames.add(hc);
+          catalogHostNames.add(hc.replace(/\(mso\)/gi, '').trim());
+        }
+      }
+    }
+  }
+
+  // Helper to check if any item is a hardware function
+  const isHardwareFunction = (item: { name?: string; is_hardware?: boolean; source_gear?: string | null; source?: string | null }): boolean => {
+    if (item.is_hardware === true) return true;
+    if (item.source_gear && item.source_gear.trim() !== '') return true;
+    const cName = cleanBelongsToName(item.name);
+    const sName = cName.replace(/\(mso\)/gi, '').trim();
+    if (catalogFunctionNames.has(cName) || catalogFunctionNames.has(sName)) return true;
+    if (catalogHostNames.has(cName) || catalogHostNames.has(sName)) return true;
+    const src = (item.source || '').toLowerCase();
+    if (src.includes('exotic gear') || src.includes('hardware purchase') || src.includes('installed gear function')) return true;
+    return false;
+  };
+
   const currentVault: MagicItem[] = Array.isArray(sheetData.character_vault)
-    ? [...sheetData.character_vault]
+    ? sheetData.character_vault
     : [];
-  const currentSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots)
+  const currentSlotsA: AbilitySlot[] = Array.isArray(sheetData.spell_slots)
     ? sheetData.spell_slots
+    : [];
+  const currentSlotsB: AbilitySlot[] = Array.isArray(sheetData.stance_beta_slots)
+    ? sheetData.stance_beta_slots
     : [];
 
   const addedFunctions: string[] = [];
-  const nextVault: MagicItem[] = [...currentVault];
+  const removedFunctions: string[] = [];
 
+  // 2. Reconcile character_vault
+  const finalVault: MagicItem[] = [];
+  const vaultProcessedNames = new Set<string>();
+
+  for (const vItem of currentVault) {
+    if (!vItem || !vItem.name) continue;
+    const cName = cleanBelongsToName(vItem.name);
+    const sName = cName.replace(/\(mso\)/gi, '').trim();
+
+    if (isHardwareFunction(vItem)) {
+      // Must be currently valid based on simple_gear ownership
+      const isExpected = expectedNamesSet.has(cName) || expectedNamesSet.has(sName);
+      if (isExpected) {
+        // De-duplicate if multiple identical items exist in vault
+        if (!vaultProcessedNames.has(cName) && !vaultProcessedNames.has(sName)) {
+          vaultProcessedNames.add(cName);
+          vaultProcessedNames.add(sName);
+          const template = expectedFnMap.get(cName) || expectedFnMap.get(sName);
+          // Preserve item but ensure robust metadata
+          finalVault.push({
+            ...vItem,
+            is_hardware: true,
+            source_gear: vItem.source_gear || template?.source_gear,
+            source_mod: vItem.source_mod || template?.source_mod,
+            source: vItem.source || template?.source || `Exotic Gear: ${template?.source_gear || 'Owned Gear'}`,
+          });
+        }
+      } else {
+        // Orphaned hardware function whose host gear is no longer owned
+        removedFunctions.push(vItem.name);
+      }
+    } else {
+      // Pure relic, unattached magic item, or custom player power -> preserve
+      finalVault.push(vItem);
+    }
+  }
+
+  // Add any expected functions that were completely missing from the vault
   for (const expFn of expectedFunctions) {
-    const cleanExp = cleanBelongsToName(expFn.name);
-    const inVault = nextVault.some((v) => cleanBelongsToName(v.name) === cleanExp);
-
-    if (!inVault) {
-      nextVault.push(expFn);
+    const cName = cleanBelongsToName(expFn.name);
+    const sName = cName.replace(/\(mso\)/gi, '').trim();
+    if (!vaultProcessedNames.has(cName) && !vaultProcessedNames.has(sName)) {
+      vaultProcessedNames.add(cName);
+      vaultProcessedNames.add(sName);
+      finalVault.push(expFn);
       addedFunctions.push(expFn.name);
     }
   }
 
-  // Ensure any abilities currently equipped in Stance Alpha or Beta are also in the Vault library
-  const betaSlots: AbilitySlot[] = Array.isArray(sheetData.stance_beta_slots)
-    ? sheetData.stance_beta_slots
-    : [];
-  const allActiveSlots = [...currentSlots, ...betaSlots];
-
-  for (const slot of allActiveSlots) {
+  // 3. Reconcile Stance Alpha (spell_slots)
+  const finalSlotsA: AbilitySlot[] = [];
+  for (const slot of currentSlotsA) {
     if (!slot || !slot.name) continue;
-    const cleanSlotName = cleanBelongsToName(slot.name);
-    const inVault = nextVault.some((v) => cleanBelongsToName(v.name) === cleanSlotName);
-    if (!inVault) {
-      nextVault.push({
-        id: (slot as any).id || Date.now() + Math.floor(Math.random() * 1000),
-        name: slot.name,
-        base_name: slot.base_name,
-        version: slot.version || 1,
-        action: slot.action,
-        usage: slot.usage,
-        effect: slot.effect,
-        notes: slot.notes,
-        source: (slot as any).source || 'Installed Gear Function',
-        source_gear: (slot as any).source_gear,
-        source_mod: (slot as any).source_mod,
-        created_at: new Date().toISOString(),
-        category: (slot as any).category || null,
-        slot_weight: (slot as any).slot_weight ?? 1,
-        checked_state: slot.checked || [false, false, false],
-        is_hardware: true,
-      });
+    const cName = cleanBelongsToName(slot.name);
+    const sName = cName.replace(/\(mso\)/gi, '').trim();
+
+    if (isHardwareFunction(slot as any)) {
+      const isExpected = expectedNamesSet.has(cName) || expectedNamesSet.has(sName);
+      if (isExpected) {
+        const template = expectedFnMap.get(cName) || expectedFnMap.get(sName);
+        finalSlotsA.push({
+          ...slot,
+          is_hardware: true,
+          source_gear: (slot as any).source_gear || template?.source_gear,
+          source_mod: (slot as any).source_mod || template?.source_mod,
+        } as any);
+      } else {
+        // Evicted from Stance Alpha because host gear was dropped!
+        removedFunctions.push(`${slot.name} (from Stance Alpha)`);
+      }
+    } else {
+      finalSlotsA.push(slot);
     }
   }
 
-  // Pruning: remove hardware functions if their host gear is completely absent from simple_gear
-  const allHostNamesClean = new Set(
-    baseGearItems.map((g) => cleanBelongsToName(g.name))
-  );
+  // 4. Reconcile Stance Beta (stance_beta_slots)
+  const finalSlotsB: AbilitySlot[] = [];
+  for (const slot of currentSlotsB) {
+    if (!slot || !slot.name) continue;
+    const cName = cleanBelongsToName(slot.name);
+    const sName = cName.replace(/\(mso\)/gi, '').trim();
 
-  const removedFunctions: string[] = [];
-  const finalVault = nextVault.filter((item) => {
-    // If not marked as hardware or has no source_gear, preserve it (relics, unattached loot)
-    if (!item.is_hardware || !item.source_gear) return true;
-    const cleanSource = cleanBelongsToName(item.source_gear);
-    // If the host gear is still physically owned, keep the function
-    if (allHostNamesClean.has(cleanSource)) return true;
+    if (isHardwareFunction(slot as any)) {
+      const isExpected = expectedNamesSet.has(cName) || expectedNamesSet.has(sName);
+      if (isExpected) {
+        const template = expectedFnMap.get(cName) || expectedFnMap.get(sName);
+        finalSlotsB.push({
+          ...slot,
+          is_hardware: true,
+          source_gear: (slot as any).source_gear || template?.source_gear,
+          source_mod: (slot as any).source_mod || template?.source_mod,
+        } as any);
+      } else {
+        // Evicted from Stance Beta because host gear was dropped!
+        removedFunctions.push(`${slot.name} (from Stance Beta)`);
+      }
+    } else {
+      finalSlotsB.push(slot);
+    }
+  }
 
-    removedFunctions.push(item.name);
-    return false;
-  });
-
-  const changed = addedFunctions.length > 0 || removedFunctions.length > 0 || gearCleaned;
+  const changed =
+    addedFunctions.length > 0 ||
+    removedFunctions.length > 0 ||
+    gearCleaned ||
+    finalVault.length !== currentVault.length ||
+    finalSlotsA.length !== currentSlotsA.length ||
+    finalSlotsB.length !== currentSlotsB.length;
 
   return {
     updatedSheet: changed
@@ -395,6 +532,8 @@ export const reconcileCharacterVaultWithGear = (
           ...sheetData,
           simple_gear: gearCleaned ? baseGearItems : sheetData.simple_gear,
           character_vault: finalVault,
+          spell_slots: finalSlotsA,
+          stance_beta_slots: finalSlotsB,
         }
       : sheetData,
     addedFunctions,
