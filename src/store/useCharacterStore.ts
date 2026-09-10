@@ -7,6 +7,7 @@ import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { reconcileCharacterVaultWithGear } from '../utils/gearFunctionSync';
 import { CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
+import { getTabSessionId } from '../utils/tabSession';
 
 const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
   if (typeof window !== 'undefined') {
@@ -144,33 +145,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   isGuildSpaceUnlocked: isGuildSpaceUnlocked(),
   error: null,
 
-  tabSessionId: (() => {
-    if (typeof window === 'undefined') return 'server_side';
-
-    const windowKey = window.name;
-    const storedTabId = sessionStorage.getItem('supaflex_tab_session_id');
-
-    // If window.name matches storedTabId, this is an existing tab refresh/navigation
-    if (windowKey && storedTabId && windowKey === `supaflex_win_${storedTabId}`) {
-      return storedTabId;
-    }
-
-    // Otherwise, this is a NEW tab or DUPLICATED tab (Ctrl+D)!
-    const newTabId = typeof crypto !== 'undefined' && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `tab_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-
-    window.name = `supaflex_win_${newTabId}`;
-    sessionStorage.setItem('supaflex_tab_session_id', newTabId);
-
-    // Purge copied sessionStorage credentials so duplicated tabs require fresh re-login
-    sessionStorage.removeItem('supaflex_player_email');
-    sessionStorage.removeItem('supaflex_player_name');
-    sessionStorage.removeItem('supaflex_active_party_id');
-    sessionStorage.removeItem('supaflex_last_active_char_id');
-
-    return newTabId;
-  })(),
+  tabSessionId: getTabSessionId(),
 
   playerEmail: (() => {
     if (typeof window === 'undefined') return '';

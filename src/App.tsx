@@ -238,7 +238,7 @@ export default function App() {
 
   // Player Party Session Heartbeat & Window Unload Life-cycle
   useEffect(() => {
-    if (!activePartyId || !tabSessionId) return;
+    if (!activePartyId || !tabSessionId || !activeCharacter?.id) return;
 
     // Send immediate heartbeat on mount/party join
     gameApi.sendPlayerHeartbeat(tabSessionId).catch(console.error);
@@ -281,7 +281,7 @@ export default function App() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       gameApi.leavePartySession(tabSessionId, activePartyId).catch(console.error);
     };
-  }, [activePartyId, tabSessionId]);
+  }, [activePartyId, tabSessionId, activeCharacter?.id]);
 
   // Realtime Party Link Broadcast Listener
   useEffect(() => {

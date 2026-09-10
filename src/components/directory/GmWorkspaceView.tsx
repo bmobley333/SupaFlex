@@ -222,22 +222,32 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         const created = await gameApi.createParty('GM Screen Party', effectiveEmail, []);
         gmParties = [created as Party];
       }
-      if (!selectedParty) {
-        const first = propActiveParty || gmParties[0];
-        setSelectedParty(first);
-        if (onSelectActiveParty) onSelectActiveParty(first);
+      const currentPartyMatches =
+        selectedParty && (selectedParty.gm_email || '').toLowerCase() === effectiveEmail;
+
+      if (!currentPartyMatches) {
+        const matchingPropParty =
+          propActiveParty && (propActiveParty.gm_email || '').toLowerCase() === effectiveEmail
+            ? propActiveParty
+            : null;
+        const target = matchingPropParty || gmParties[0];
+        setSelectedParty(target);
+        if (onSelectActiveParty && target) onSelectActiveParty(target);
       }
     } catch (e) {
       console.error('Failed to load GM parties:', e);
     }
   };
 
-  // Sync prop activeParty changes
+  // Sync prop activeParty changes strictly when owned by current GM email
   useEffect(() => {
     if (propActiveParty) {
-      setSelectedParty(propActiveParty);
+      const effectiveEmail = (currentEmail || '').trim().toLowerCase();
+      if (!effectiveEmail || (propActiveParty.gm_email || '').toLowerCase() === effectiveEmail) {
+        setSelectedParty(propActiveParty);
+      }
     }
-  }, [propActiveParty]);
+  }, [propActiveParty, currentEmail]);
 
   // Room Code Checkout & Heartbeat Lifecycle
   useEffect(() => {
