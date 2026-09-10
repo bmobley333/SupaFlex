@@ -9,9 +9,10 @@ import {
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
-import { calculateAvailableAp } from '../../types/game';
+import { calculateAvailableAp, Character } from '../../types/game';
 import { cleanPathName, isMsoEntry, compareMsoOptions } from '../../utils/kitUtils';
 import { collectPathTraitGrants, applyPathTraitGrantsToSheet } from '../../utils/bundleGrants';
+import { reconcileAbilitiesOnPathAdded } from '../../utils/pathReconciliationUtils';
 import { isGuildSpaceUnlocked } from '../../utils/guildspaceAuth';
 
 interface ManagePathsModalProps {
@@ -176,7 +177,29 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
       stockSkillsCatalog,
       stockRulesCatalog
     );
-    updateActiveSheetData((prev) => applyPathTraitGrantsToSheet(prev, grants));
+    const freeGrantNames = new Set([
+      ...grants.powers.map((p) => p.name.toLowerCase().trim()),
+      ...grants.traits.map((t) => t.name.toLowerCase().trim()),
+    ]);
+    const charWithNewRace: Character | null = activeCharacter
+      ? { ...activeCharacter, race: newRace }
+      : null;
+
+    updateActiveSheetData((prev) => {
+      const sheetWithGrants = applyPathTraitGrantsToSheet(prev, grants);
+      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, newRace, charWithNewRace, freeGrantNames);
+      if (reconciliation.totalRefund > 0) {
+        recordApExpenditure(
+          0,
+          'Powers',
+          `Path Mastery Auto-Credit: Selected Race ${newRace} (+${reconciliation.totalRefund} AP Refunded: ${reconciliation.refundLogDetails.join(', ')})`,
+          1,
+          'Paths Hub'
+        );
+      }
+      return reconciliation.updatedSheetData;
+    });
+
     saveActiveCharacter();
     setFeedbackMsg(`✓ Race Path updated to ${newRace}. Starting traits bundled!`);
     setTimeout(() => setFeedbackMsg(null), 3000);
@@ -193,7 +216,29 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
       stockSkillsCatalog,
       stockRulesCatalog
     );
-    updateActiveSheetData((prev) => applyPathTraitGrantsToSheet(prev, grants));
+    const freeGrantNames = new Set([
+      ...grants.powers.map((p) => p.name.toLowerCase().trim()),
+      ...grants.traits.map((t) => t.name.toLowerCase().trim()),
+    ]);
+    const charWithNewClass: Character | null = activeCharacter
+      ? { ...activeCharacter, class: newClass }
+      : null;
+
+    updateActiveSheetData((prev) => {
+      const sheetWithGrants = applyPathTraitGrantsToSheet(prev, grants);
+      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, newClass, charWithNewClass, freeGrantNames);
+      if (reconciliation.totalRefund > 0) {
+        recordApExpenditure(
+          0,
+          'Powers',
+          `Path Mastery Auto-Credit: Selected Class ${newClass} (+${reconciliation.totalRefund} AP Refunded: ${reconciliation.refundLogDetails.join(', ')})`,
+          1,
+          'Paths Hub'
+        );
+      }
+      return reconciliation.updatedSheetData;
+    });
+
     saveActiveCharacter();
     setFeedbackMsg(`✓ Class Path updated to ${newClass}. In-path elements unlocked!`);
     setTimeout(() => setFeedbackMsg(null), 3000);
@@ -220,14 +265,6 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
       recordApExpenditure(0, 'GM Bonus', `Learned Free Path: ${clean}`, 'Creation', 'Paths Hub');
     }
 
-    updateActiveSheetData((prev) => {
-      const currentList = Array.isArray(prev.favorite_trait_kits) ? prev.favorite_trait_kits : [];
-      return {
-        ...prev,
-        favorite_trait_kits: Array.from(new Set([...currentList, clean])),
-      };
-    });
-
     const grants = collectPathTraitGrants(
       clean,
       activeCharacter?.sheet_data?.level || 1,
@@ -235,12 +272,52 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
       stockSkillsCatalog,
       stockRulesCatalog
     );
-    updateActiveSheetData((prev) => applyPathTraitGrantsToSheet(prev, grants));
+    const freeGrantNames = new Set([
+      ...grants.powers.map((p) => p.name.toLowerCase().trim()),
+      ...grants.traits.map((t) => t.name.toLowerCase().trim()),
+    ]);
+
+    let refundAmount = 0;
+    updateActiveSheetData((prev) => {
+      const currentList = Array.isArray(prev.favorite_trait_kits) ? prev.favorite_trait_kits : [];
+      const updatedKits = Array.from(new Set([...currentList, clean]));
+      const intermediateSheet = {
+        ...prev,
+        favorite_trait_kits: updatedKits,
+      };
+      const sheetWithGrants = applyPathTraitGrantsToSheet(intermediateSheet, grants);
+      const charWithNewPath: Character | null = activeCharacter
+        ? {
+            ...activeCharacter,
+            sheet_data: {
+              ...activeCharacter.sheet_data,
+              favorite_trait_kits: updatedKits,
+            },
+          }
+        : null;
+
+      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, clean, charWithNewPath, freeGrantNames);
+      refundAmount = reconciliation.totalRefund;
+      if (reconciliation.totalRefund > 0) {
+        recordApExpenditure(
+          0,
+          'Powers',
+          `Path Mastery Auto-Credit: Learned Path ${clean} (+${reconciliation.totalRefund} AP Refunded: ${reconciliation.refundLogDetails.join(', ')})`,
+          1,
+          'Paths Hub'
+        );
+      }
+      return reconciliation.updatedSheetData;
+    });
 
     saveActiveCharacter();
     setSelectedExtraPathToBuy('');
-    setFeedbackMsg(`✓ Successfully unlocked Path: ${clean}!`);
-    setTimeout(() => setFeedbackMsg(null), 3000);
+    if (refundAmount > 0) {
+      setFeedbackMsg(`✓ Successfully unlocked Path: ${clean}! (+${refundAmount} AP Auto-Credited)`);
+    } else {
+      setFeedbackMsg(`✓ Successfully unlocked Path: ${clean}!`);
+    }
+    setTimeout(() => setFeedbackMsg(null), 3500);
   };
 
   if (!isOpen) return null;

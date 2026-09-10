@@ -170,15 +170,15 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
 
     const weapons = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
     const skilledWeapons = weapons.filter((w: any) => w && w.sk);
-    const weaponsNet = skilledWeapons.length * 1;
+    const weaponsNet = skilledWeapons.reduce((sum: number, w: any) => sum + (typeof w.ap_cost === 'number' && w.ap_cost > 0 ? w.ap_cost : 1), 0);
 
     const wardrobe = Array.isArray(sheetData.wardrobe) ? sheetData.wardrobe : [];
     const skilledArmor = wardrobe.filter((a: any) => a && a.sk);
-    const armorNet = skilledArmor.length * 1;
+    const armorNet = skilledArmor.reduce((sum: number, a: any) => sum + (typeof a.ap_cost === 'number' && a.ap_cost > 0 ? a.ap_cost : 1), 0);
 
     const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
     const skilledShields = armory.filter((s: any) => s && s.sk);
-    const shieldsNet = skilledShields.length * 1;
+    const shieldsNet = skilledShields.reduce((sum: number, s: any) => sum + (typeof s.ap_cost === 'number' && s.ap_cost > 0 ? s.ap_cost : 1), 0);
 
     const powerSlots = (sheetData.power_slots || []).filter(Boolean);
     const powersNet = calculatePowersKnownApCost(powerSlots.length);

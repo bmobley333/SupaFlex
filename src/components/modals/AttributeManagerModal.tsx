@@ -15,6 +15,7 @@ import {
   DieRating,
   calculateAvailableAp,
 } from '../../types/game';
+import { reconcileEquipmentOnAttributesChanged } from '../../utils/pathReconciliationUtils';
 
 interface AttributeManagerModalProps {
   isOpen: boolean;
@@ -258,16 +259,19 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
       return;
     }
 
-    const newAssignments = {
+    const newAssignments: Record<AttributeKey, DieRating> = {
       ...savedAttributeDice,
       [attr1Key]: die2,
       [attr2Key]: die1,
     };
 
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      attribute_dice: newAssignments,
-    }));
+    const reconciliation = reconcileEquipmentOnAttributesChanged(
+      sheetData,
+      newAssignments,
+      activeCharacter
+    );
+
+    updateActiveSheetData(() => reconciliation.updatedSheetData);
 
     if (swapCost > 0) {
       recordApExpenditure(
@@ -279,10 +283,25 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
       );
     }
 
+    if (reconciliation.totalRefund > 0) {
+      recordApExpenditure(
+        0,
+        'Weapons',
+        `Requirement Met Auto-Refund: Surcharge Refunded (+${reconciliation.totalRefund} AP: ${reconciliation.refundLogDetails.join(', ')})`,
+        1,
+        'Attribute Manager'
+      );
+    }
+
     saveActiveCharacter();
     const attr1Name = ATTRIBUTES.find((a) => a.key === attr1Key)?.name || attr1Key;
     const attr2Name = ATTRIBUTES.find((a) => a.key === attr2Key)?.name || attr2Key;
-    showToast(`Swapped ${attr1Name} (${formatDieNum(die1)}) ↔ ${attr2Name} (${formatDieNum(die2)})! ${swapCost > 0 ? '(1 AP deducted)' : '(Free)'}`);
+
+    if (reconciliation.totalRefund > 0) {
+      showToast(`Swapped ${attr1Name} ↔ ${attr2Name}! • ✨ Requirement Met: +${reconciliation.totalRefund} AP Refunded! (${reconciliation.refundLogDetails.join(', ')})`);
+    } else {
+      showToast(`Swapped ${attr1Name} (${formatDieNum(die1)}) ↔ ${attr2Name} (${formatDieNum(die2)})! ${swapCost > 0 ? '(1 AP deducted)' : '(Free)'}`);
+    }
   };
 
   // Determine if upgrading a die from currentDie to nextDie is free (Level 1 starting baseline) or costs AP
@@ -375,15 +394,18 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
     if (!pendingUpgrade) return;
     const { attrKey, attrName, currentDie, nextDie, cost } = pendingUpgrade;
 
-    const newAssignments = {
+    const newAssignments: Record<AttributeKey, DieRating> = {
       ...savedAttributeDice,
       [attrKey]: nextDie,
     };
 
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      attribute_dice: newAssignments,
-    }));
+    const reconciliation = reconcileEquipmentOnAttributesChanged(
+      sheetData,
+      newAssignments,
+      activeCharacter
+    );
+
+    updateActiveSheetData(() => reconciliation.updatedSheetData);
 
     if (cost > 0) {
       recordApExpenditure(
@@ -395,9 +417,24 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
       );
     }
 
+    if (reconciliation.totalRefund > 0) {
+      recordApExpenditure(
+        0,
+        'Weapons',
+        `Requirement Met Auto-Refund: Surcharge Refunded (+${reconciliation.totalRefund} AP: ${reconciliation.refundLogDetails.join(', ')})`,
+        1,
+        'Attribute Manager'
+      );
+    }
+
     saveActiveCharacter();
     setPendingUpgrade(null);
-    showToast(`Increased ${attrName} from ${formatDieNum(currentDie)} to ${formatDieNum(nextDie)}! (${cost > 0 ? `${cost} AP spent` : 'Free Starting Upgrade'})`);
+
+    if (reconciliation.totalRefund > 0) {
+      showToast(`Increased ${attrName} to ${formatDieNum(nextDie)}! • ✨ Requirement Met: +${reconciliation.totalRefund} AP Refunded! (${reconciliation.refundLogDetails.join(', ')})`);
+    } else {
+      showToast(`Increased ${attrName} from ${formatDieNum(currentDie)} to ${formatDieNum(nextDie)}! (${cost > 0 ? `${cost} AP spent` : 'Free Starting Upgrade'})`);
+    }
   };
 
   const handleCloseModal = () => {

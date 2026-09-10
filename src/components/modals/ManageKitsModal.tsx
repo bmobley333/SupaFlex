@@ -307,17 +307,21 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       stockSkillsCatalog,
       stockRulesCatalog
     );
+    const freeGrantNames = new Set([
+      ...grants.powers.map((p) => p.name.toLowerCase().trim()),
+      ...grants.traits.map((t) => t.name.toLowerCase().trim()),
+    ]);
     updateActiveSheetData((prev) => {
       const sheetWithGrants = applyKitTraitGrantsToSheet(prev, grants);
       const charWithNewRace: Character | null = activeCharacter
         ? { ...activeCharacter, race: newRace }
         : null;
-      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, newRace, charWithNewRace);
+      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, newRace, charWithNewRace, freeGrantNames);
       if (reconciliation.totalRefund > 0) {
         recordApExpenditure(
-          -reconciliation.totalRefund,
-          'GM Bonus',
-          `Path Mastery Auto-Credit: Selected Race ${newRace} (Refunded ${reconciliation.totalRefund} AP: ${reconciliation.refundLogDetails.join(', ')})`,
+          0,
+          'Powers',
+          `Path Mastery Auto-Credit: Selected Race ${newRace} (+${reconciliation.totalRefund} AP Refunded: ${reconciliation.refundLogDetails.join(', ')})`,
           1,
           'Kits Hub'
         );
@@ -340,17 +344,21 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       stockSkillsCatalog,
       stockRulesCatalog
     );
+    const freeGrantNames = new Set([
+      ...grants.powers.map((p) => p.name.toLowerCase().trim()),
+      ...grants.traits.map((t) => t.name.toLowerCase().trim()),
+    ]);
     updateActiveSheetData((prev) => {
       const sheetWithGrants = applyKitTraitGrantsToSheet(prev, grants);
       const charWithNewClass: Character | null = activeCharacter
         ? { ...activeCharacter, class: newClass }
         : null;
-      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, newClass, charWithNewClass);
+      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, newClass, charWithNewClass, freeGrantNames);
       if (reconciliation.totalRefund > 0) {
         recordApExpenditure(
-          -reconciliation.totalRefund,
-          'GM Bonus',
-          `Path Mastery Auto-Credit: Selected Class ${newClass} (Refunded ${reconciliation.totalRefund} AP: ${reconciliation.refundLogDetails.join(', ')})`,
+          0,
+          'Powers',
+          `Path Mastery Auto-Credit: Selected Class ${newClass} (+${reconciliation.totalRefund} AP Refunded: ${reconciliation.refundLogDetails.join(', ')})`,
           1,
           'Kits Hub'
         );
@@ -414,13 +422,18 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
           }
         : null;
 
-      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, clean, charWithNewKit);
+      const freeGrantNames = new Set([
+        ...grants.powers.map((p) => p.name.toLowerCase().trim()),
+        ...grants.traits.map((t) => t.name.toLowerCase().trim()),
+      ]);
+
+      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, clean, charWithNewKit, freeGrantNames);
 
       if (reconciliation.totalRefund > 0) {
         recordApExpenditure(
-          -reconciliation.totalRefund,
-          'GM Bonus',
-          `Path Mastery Auto-Credit: Learned Path ${clean} (Refunded ${reconciliation.totalRefund} AP: ${reconciliation.refundLogDetails.join(', ')})`,
+          0,
+          'Powers',
+          `Path Mastery Auto-Credit: Learned Path ${clean} (+${reconciliation.totalRefund} AP Refunded: ${reconciliation.refundLogDetails.join(', ')})`,
           1,
           'Kits Hub'
         );
