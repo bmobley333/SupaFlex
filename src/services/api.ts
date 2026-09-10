@@ -21,7 +21,6 @@ import {
   SupabasePath,
   SupabaseKit,
   SupabaseBundle,
-  getCategorySlotWeight,
   FunctionItem,
   ModItem,
 } from '../types/game';
@@ -29,6 +28,7 @@ import { GmAdventure } from '../types/adventures';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { resolveArtifactCatalog, CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
+import { resolveExoticCatalog, CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 
 const DEFAULT_UNARMORED_SLOT = {
   id: 'arm_none',
@@ -358,26 +358,45 @@ export const gameApi = {
     return this.getArtifacts();
   },
 
-  async getExotics(): Promise<MagicItem[]> {
-    let query = supabase.from('supplies').select('*');
-    if (!isGuildSpaceUnlocked()) {
-      query = query.not('name', 'ilike', '%(mso)%');
-    }
-    query = query.neq('category', 'Artifact').neq('cost', 'Artifact').not('domain', 'is', null);
-    const { data, error } = await query.order('name', { ascending: true });
+  async getExotics(): Promise<CatalogExotic[]> {
+    const isGs = isGuildSpaceUnlocked();
 
-    if (error) {
-      console.error('[gameApi] Error fetching exotics catalog:', error);
-      return [];
+    let suppliesQuery = supabase.from('supplies').select('*').neq('category', 'Artifact').neq('cost', 'Artifact');
+    let weaponsQuery = supabase.from('weapons').select('*').neq('cost', 'Artifact');
+    let armorQuery = supabase.from('armor').select('*').neq('cost', 'Artifact');
+    let shieldsQuery = supabase.from('shields').select('*').neq('cost', 'Artifact');
+
+    if (!isGs) {
+      suppliesQuery = suppliesQuery.not('name', 'ilike', '%(mso)%');
+      weaponsQuery = weaponsQuery.not('name', 'ilike', '%(mso)%');
+      armorQuery = armorQuery.not('name', 'ilike', '%(mso)%');
+      shieldsQuery = shieldsQuery.not('name', 'ilike', '%(mso)%');
     }
-    return (data || []).map((h: any) => ({
-      ...h,
-      path: h.path || h.kit,
-      kit: h.kit || h.bundle,
-      is_hardware: true,
-      is_exotic: true,
-      slot_weight: getCategorySlotWeight(h.category),
-    })) as MagicItem[];
+
+    const [suppliesRes, weaponsRes, armorRes, shieldsRes, fnsRes, modsRes] = await Promise.all([
+      suppliesQuery.order('name', { ascending: true }),
+      weaponsQuery.order('name', { ascending: true }),
+      armorQuery.order('name', { ascending: true }),
+      shieldsQuery.order('name', { ascending: true }),
+      this.getFunctions(),
+      this.getMods(),
+    ]);
+
+    const { allExotics } = resolveExoticCatalog(
+      suppliesRes.data || [],
+      weaponsRes.data || [],
+      armorRes.data || [],
+      shieldsRes.data || [],
+      fnsRes || [],
+      modsRes || []
+    );
+
+    return allExotics;
+  },
+
+  async getExoticsByTier(tier: ExoticTier): Promise<CatalogExotic[]> {
+    const exotics = await this.getExotics();
+    return exotics.filter((e) => e.exotic_tier === tier);
   },
 
   async getFunctions(): Promise<FunctionItem[]> {

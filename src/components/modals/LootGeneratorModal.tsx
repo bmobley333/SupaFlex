@@ -12,6 +12,7 @@ import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { VaultItem, SupabaseChaosGem } from '../../types/game';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 import { resolveLootAbilities, ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
+import { ExoticTier } from '../../utils/exoticCatalogResolver';
 
 export interface MoveToSheetPayload {
   title: string;
@@ -99,10 +100,14 @@ export const parseAndEvaluateFormula = (formula: string): { value: number; curre
 export const CATEGORY_OPTIONS = [
   { key: 'coins', label: '🪙 Coins (s/g)' },
   { key: 'chaos_gems', label: '💎 Chaos Gem (Volatile)' },
-  { key: 'hardware', label: '🧿 Exotics' },
+  { key: 'hardware', label: '🧿 Random Exotic' },
+  { key: 'exotic_Minor', label: '🍺 Minor Exotic' },
+  { key: 'exotic_Lesser', label: '🪄 Lesser Exotic' },
+  { key: 'exotic_Greater', label: '🪬 Greater Exotic' },
+  { key: 'exotic_Epic', label: '💫 Epic Exotic' },
   { key: 'magic_Minor', label: '🍺 Minor Artifact' },
   { key: 'magic_Lesser', label: '🪄 Lesser Artifact' },
-  { key: 'magic_Greater', label: '✨ Greater Artifact' },
+  { key: 'magic_Greater', label: '🪬 Greater Artifact' },
   { key: 'magic_Epic', label: '💫 Epic Artifact' },
   { key: 'gear_quality', label: '🧰 Gear Quality + Item' },
   { key: 'art_gems', label: '🎨 Art & Gems' },
@@ -124,6 +129,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
   const artifactsCatalog = useCharacterStore((state) => state.artifactsCatalog);
   const getArtifactsByTier = useCharacterStore((state) => state.getArtifactsByTier);
+  const exoticsCatalog = useCharacterStore((state) => state.exoticsCatalog);
+  const getExoticsByTier = useCharacterStore((state) => state.getExoticsByTier);
   const functionsCatalog = useCharacterStore((state) => state.functionsCatalog);
   const modsCatalog = useCharacterStore((state) => state.modsCatalog);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
@@ -178,8 +185,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         if (specificCategory === 'weapons') items = await gameApi.getWeapons();
         else if (specificCategory === 'armor') items = await gameApi.getArmor();
         else if (specificCategory === 'shields') items = await gameApi.getShields();
-        else if (specificCategory === 'relics') items = await gameApi.getArtifacts();
-        else if (specificCategory === 'hardware') items = await gameApi.getExotics();
+        else if (specificCategory === 'relics') items = (artifactsCatalog && artifactsCatalog.length > 0) ? artifactsCatalog : await gameApi.getArtifacts();
+        else if (specificCategory === 'hardware') items = (exoticsCatalog && exoticsCatalog.length > 0) ? exoticsCatalog : await gameApi.getExotics();
         else if (specificCategory === 'gear') items = await gameApi.getSupplies();
         else if (specificCategory === 'chaos_gems') items = await gameApi.getChaosGems();
 
@@ -310,28 +317,52 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     }
   };
 
-  // Fetch random exotic item from Supabase equipment table
-  const fetchRandomHardwareItem = async () => {
+  // Fetch random exotic item from authoritative multi-table Exotics catalog
+  const fetchRandomHardwareItem = async (tier?: 'Minor' | 'Lesser' | 'Greater' | 'Epic') => {
     try {
-      const { data } = await supabase
-        .from('supplies')
-        .select('*')
-        .neq('category', 'Artifact')
-        .neq('cost', 'Artifact')
-        .not('discipline', 'is', null);
-      if (data && data.length > 0) {
-        const picked = data[Math.floor(Math.random() * data.length)];
+      // 1. Authoritative cross-table resolved exotics catalog
+      let pool = tier && getExoticsByTier ? getExoticsByTier(tier) : (exoticsCatalog || []);
+      if (!pool || pool.length === 0) {
+        pool = exoticsCatalog || [];
+      }
+      if (pool && pool.length > 0) {
+        const picked = pool[Math.floor(Math.random() * pool.length)];
         return {
           ...picked,
           is_hardware: true,
           is_exotic: true,
-          description: picked.effect || picked.notes || picked.description || 'Advanced technological device.'
+          description: picked.effect || (picked as any).notes || picked.description || `Exotic ${picked.exotic_tier.toLowerCase()} device.`,
         };
       }
-    } catch {
-      // Fallback
+
+      // 2. Direct API fallback if store not yet hydrated
+      const apiExotics = await gameApi.getExotics();
+      if (apiExotics && apiExotics.length > 0) {
+        const subPool = tier ? apiExotics.filter((e) => e.exotic_tier === tier) : apiExotics;
+        const finalPool = subPool.length > 0 ? subPool : apiExotics;
+        const picked = finalPool[Math.floor(Math.random() * finalPool.length)];
+        return {
+          ...picked,
+          is_hardware: true,
+          is_exotic: true,
+          description: picked.effect || (picked as any).notes || picked.description || `Exotic ${picked.exotic_tier.toLowerCase()} device.`,
+        };
+      }
+    } catch (err) {
+      console.error('[LootGeneratorModal] Error fetching random exotic:', err);
     }
-    return { name: 'Communicator', category: '🍺 Minor', is_hardware: true, cost: '1g', description: 'Text, audio, and audiovisual comms.' };
+    return {
+      name: 'Communicator',
+      category: 'Minor Exotic',
+      cost: '1g',
+      is_hardware: true,
+      is_exotic: true,
+      exotic_tier: (tier || 'Minor') as ExoticTier,
+      action: 'P',
+      usage: '1-Enc',
+      effect: 'Text, audio, and audiovisual comms within 1 mile.',
+      description: 'Text, audio, and audiovisual comms.',
+    };
   };
 
   // Fetch random gear item from Supabase equipment table for Quality combination
@@ -420,11 +451,13 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           }
         } else if (rType === 'hardware') {
           const hw = await fetchRandomHardwareItem();
+          const tier = hw.exotic_tier || 'Minor';
+          const tierIcon = tier === 'Epic' ? '💫' : tier === 'Greater' ? '🪬' : tier === 'Lesser' ? '🪄' : '🍺';
           resList.push({
             id: `res-${Date.now()}`,
             tableKey: 'loot_main',
             categoryKey: 'hardware',
-            tableName: '🧿 Exotics',
+            tableName: `${tierIcon} ${tier} Exotic`,
             rollVal: d100,
             title: hw.name,
             description: hw.description || hw.effect || 'Advanced technological exotic item.',
@@ -432,13 +465,21 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             magicItem: hw
           });
         } else if (rType === 'magic_item') {
-          const rawRarity = entry.subtable_key?.replace('magic_', '') || 'Lesser';
-          const rarity = (rawRarity.toLowerCase() === 'artifact' || rawRarity.toLowerCase() === 'epic') ? 'Epic' : rawRarity;
+          const rawKey = (entry.subtable_key || '').toLowerCase();
+          const rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' =
+            rawKey.includes('epic') || rawKey.includes('artifact')
+              ? 'Epic'
+              : rawKey.includes('great')
+              ? 'Greater'
+              : rawKey.includes('less')
+              ? 'Lesser'
+              : 'Minor';
           const item = await fetchRandomMagicItem(rarity);
-          const iconStr = rarity === 'Minor' ? '🍺' : rarity === 'Lesser' ? '🪄' : rarity === 'Greater' ? '✨' : '💫';
+          const iconStr = rarity === 'Minor' ? '🍺' : rarity === 'Lesser' ? '🪄' : rarity === 'Greater' ? '🪬' : '💫';
           resList.push({
             id: `res-${Date.now()}`,
             tableKey: 'loot_main',
+            categoryKey: entry.subtable_key || `magic_${rarity}`,
             tableName: `${iconStr} ${rarity} Artifact`,
             rollVal: d100,
             title: `${item.name}`,
@@ -496,7 +537,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             resList.push({
               id: `res-${Date.now()}-2`,
               tableKey: 'loot_main',
-              tableName: '🪄 Double Roll Artifact',
+              categoryKey: 'magic_Lesser',
+              tableName: '🪄 Lesser Artifact (Double Roll)',
               rollVal: d100,
               title: `${r2.name}`,
               description: r2.description || `Enchanted artifact.`,
@@ -509,6 +551,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             resList.push({
               id: `res-${Date.now()}-epic1`,
               tableKey: 'loot_main',
+              categoryKey: 'magic_Epic',
               tableName: '💫 Epic Artifact',
               rollVal: 100,
               title: `${artItem.name}`,
@@ -577,10 +620,11 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         const rawRarity = tableKey.replace('magic_', '');
         const rarity = (rawRarity.toLowerCase() === 'artifact' || rawRarity.toLowerCase() === 'epic') ? 'Epic' : rawRarity;
         const item = await fetchRandomMagicItem(rarity);
-        const badgeLabel = rarity === 'Minor' ? '🍺 Minor Artifact' : rarity === 'Lesser' ? '🪄 Lesser Artifact' : rarity === 'Greater' ? '✨ Greater Artifact' : '💫 Epic Artifact';
+        const badgeLabel = rarity === 'Minor' ? '🍺 Minor Artifact' : rarity === 'Lesser' ? '🪄 Lesser Artifact' : rarity === 'Greater' ? '🪬 Greater Artifact' : '💫 Epic Artifact';
         const resObj: RollResult = {
           id: `res-${Date.now()}`,
           tableKey,
+          categoryKey: tableKey,
           tableName: badgeLabel,
           rollVal: 1,
           title: `${item.name}`,
@@ -590,16 +634,21 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         };
         if (append) setResults(prev => [resObj, ...prev]);
         return resObj;
-      } else if (tableKey === 'hardware') {
-        const hw = await fetchRandomHardwareItem();
+      } else if (tableKey === 'hardware' || tableKey.startsWith('exotic_')) {
+        const requestedTier = tableKey.startsWith('exotic_')
+          ? (tableKey.replace('exotic_', '') as 'Minor' | 'Lesser' | 'Greater' | 'Epic')
+          : undefined;
+        const hw = await fetchRandomHardwareItem(requestedTier);
+        const resolvedTier = hw.exotic_tier || requestedTier || 'Minor';
+        const tierIcon = resolvedTier === 'Epic' ? '💫' : resolvedTier === 'Greater' ? '🪬' : resolvedTier === 'Lesser' ? '🪄' : '🍺';
         const resObj: RollResult = {
           id: `res-${Date.now()}`,
-          tableKey: 'hardware',
+          tableKey,
           categoryKey: 'hardware',
-          tableName: '🧿 Exotics',
+          tableName: `${tierIcon} ${resolvedTier} Exotic`,
           rollVal: 1,
           title: hw.name,
-          description: hw.description || hw.effect || 'Advanced technological exotic item.',
+          description: hw.description || hw.effect || `Exotic ${resolvedTier.toLowerCase()} item.`,
           type: 'magic_item',
           magicItem: hw
         };
@@ -689,11 +738,12 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       } else if (preset === 'boss') {
         await handleTargetedRoll('coins', true);
         await handleTargetedRoll('art_gems', true);
+        await handleTargetedRoll('chaos_gems', true);
         await handleTargetedRoll('magic_Lesser', true);
       } else if (preset === 'dragon') {
         await handleRollMasterD100();
         await handleTargetedRoll('magic_Greater', true);
-        await handleTargetedRoll('magic_Artifact', true);
+        await handleTargetedRoll('magic_Epic', true);
       }
     } finally {
       setIsRolling(false);
@@ -924,7 +974,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 
     let categoryKey = 'gear_quality';
     if (item.type === 'coins' || item.coinsSilver || item.coinsGold) categoryKey = 'coins';
-    else if (item.magicItem) categoryKey = `magic_${item.rarity}`;
+    else if (item.magicItem) categoryKey = (item.magicItem.is_hardware || item.magicItem.is_exotic) ? 'hardware' : `magic_${item.rarity || 'Lesser'}`;
     else categoryKey = 'art_gems';
 
     const ok = await onMoveToSheet({
@@ -998,7 +1048,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     let mappedType: 'coins' | 'magic_item' | 'art_gem' | 'document' | 'junk' | 'quality' | 'special' | 'chaos_gem' = 'quality';
     if (itemPayload.categoryKey === 'coins' || itemPayload.coinsSilver || itemPayload.coinsGold) mappedType = 'coins';
     else if (itemPayload.categoryKey === 'chaos_gems' || itemPayload.chaosGem) mappedType = 'chaos_gem';
-    else if (itemPayload.categoryKey.startsWith('magic') || itemPayload.categoryKey === 'relics' || itemPayload.magicItem) mappedType = 'magic_item';
+    else if (itemPayload.categoryKey.startsWith('magic') || itemPayload.categoryKey === 'relics' || itemPayload.categoryKey === 'hardware' || itemPayload.magicItem) mappedType = 'magic_item';
     else if (itemPayload.categoryKey === 'art_gems') mappedType = 'art_gem';
     else if (itemPayload.categoryKey === 'curios') mappedType = 'document';
     else if (itemPayload.categoryKey === 'junk') mappedType = 'junk';
@@ -1867,11 +1917,9 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                                 onClick={() => {
                                   let rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' | undefined = undefined;
                                   if (specificCategory === 'relics') {
-                                    const cat = (item.category || '').toLowerCase();
-                                    if (cat.includes('epic') || cat.includes('artifact')) rarity = 'Epic';
-                                    else if (cat.includes('greater')) rarity = 'Greater';
-                                    else if (cat.includes('minor')) rarity = 'Minor';
-                                    else rarity = 'Lesser';
+                                    rarity = item.artifact_tier || ((item.category || '').toLowerCase().includes('epic') ? 'Epic' : (item.category || '').toLowerCase().includes('greater') ? 'Greater' : (item.category || '').toLowerCase().includes('minor') ? 'Minor' : 'Lesser');
+                                  } else if (specificCategory === 'hardware') {
+                                    rarity = item.exotic_tier || 'Minor';
                                   }
 
                                   handleSendSpecificToVault({
@@ -1879,7 +1927,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                                     categoryKey: specificCategory,
                                     rarity,
                                     description: item.effect || item.notes || item.description,
-                                    magicItem: specificCategory === 'relics' ? item : undefined,
+                                    magicItem: (specificCategory === 'relics' || specificCategory === 'hardware') ? item : undefined,
                                     chaosGem: specificCategory === 'chaos_gems' ? item : undefined,
                                   });
                                 }}

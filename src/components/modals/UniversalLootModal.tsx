@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { gameApi } from '../../services/api';
 import { StagedLootItem } from '../../types/adventures';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
@@ -47,6 +48,9 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
 }) => {
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
+  const artifactsCatalog = useCharacterStore((state) => state.artifactsCatalog);
+  const getArtifactsByTier = useCharacterStore((state) => state.getArtifactsByTier);
+  const exoticsCatalog = useCharacterStore((state) => state.exoticsCatalog);
 
   // Form & Drawer states
   const [activeCategoryTab, setActiveCategoryTab] = useState<LootCategoryTab>('random');
@@ -81,20 +85,16 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     const loadCatalog = async () => {
       setIsLoadingCatalog(true);
       try {
-        let tableName = 'gear';
-        if (activeCategoryTab === 'weapons') tableName = 'weapons';
-        else if (activeCategoryTab === 'armor') tableName = 'armor';
-        else if (activeCategoryTab === 'shields') tableName = 'shields';
-        else if (activeCategoryTab === 'relics') tableName = 'relics';
-        else if (activeCategoryTab === 'hardware') tableName = 'hardware';
-        else if (activeCategoryTab === 'chaos_gems') tableName = 'chaos_gems';
+        let items: any[] = [];
+        if (activeCategoryTab === 'weapons') items = await gameApi.getWeapons();
+        else if (activeCategoryTab === 'armor') items = await gameApi.getArmor();
+        else if (activeCategoryTab === 'shields') items = await gameApi.getShields();
+        else if (activeCategoryTab === 'relics') items = (artifactsCatalog && artifactsCatalog.length > 0) ? artifactsCatalog : await gameApi.getArtifacts();
+        else if (activeCategoryTab === 'hardware') items = (exoticsCatalog && exoticsCatalog.length > 0) ? exoticsCatalog : await gameApi.getExotics();
+        else if (activeCategoryTab === 'chaos_gems') items = await gameApi.getChaosGems();
+        else if (activeCategoryTab === 'gear') items = await gameApi.getSupplies();
 
-        const { data, error } = await supabase.from(tableName).select('*');
-        if (!error && data) {
-          setCatalogItems(data);
-        } else {
-          setCatalogItems([]);
-        }
+        setCatalogItems(items || []);
       } catch {
         setCatalogItems([]);
       } finally {
@@ -258,18 +258,16 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
 
     // 6. Hardware / Exotic Device
     if (rType === 'hardware' || rType === 'exotic' || subKey === 'hardware' || subKey === 'exotics') {
-      const { data: hwItems } = await supabase
-        .from('supplies')
-        .select('*')
-        .neq('category', 'Artifact')
-        .neq('cost', 'Artifact')
-        .not('discipline', 'is', null);
-      const picked = hwItems && hwItems.length > 0 ? hwItems[Math.floor(Math.random() * hwItems.length)] : null;
+      const hwPool = exoticsCatalog && exoticsCatalog.length > 0 ? exoticsCatalog : await gameApi.getExotics();
+      const picked = hwPool && hwPool.length > 0 ? hwPool[Math.floor(Math.random() * hwPool.length)] : null;
+      const resolvedTier = picked?.exotic_tier || 'Minor';
+      const tierIcon = resolvedTier === 'Epic' ? '💫' : resolvedTier === 'Greater' ? '🪬' : resolvedTier === 'Lesser' ? '🪄' : '🍺';
 
       items.push({
-        title: picked?.name || 'Technological Exotic Device',
+        title: picked?.name || `${tierIcon} ${resolvedTier} Exotic`,
         categoryKey: 'hardware',
-        description: picked?.description || picked?.effect || 'Advanced technological device with mechanical utility.',
+        description: picked?.effect || (picked as any)?.notes || picked?.description || 'Advanced technological exotic device.',
+        magicItem: picked || undefined,
         targetPlayer: target,
       });
       return items;
@@ -283,21 +281,22 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
       else if (rawName.includes('greater')) rarity = 'Greater';
       else if (rawName.includes('epic') || rawName.includes('artifact')) rarity = 'Epic';
 
-      let query = supabase.from('supplies').select('*').or('category.ilike.Artifact,cost.ilike.Artifact');
-      if (rarity === 'Epic') {
-        query = query.or('category.ilike.%Epic%,category.ilike.%Artifact%,cost.ilike.%Artifact%');
-      } else {
-        query = query.ilike('category', `%${rarity}%`);
+      let pool: any[] = getArtifactsByTier ? getArtifactsByTier(rarity) : [];
+      if (pool.length === 0 && artifactsCatalog && artifactsCatalog.length > 0) {
+        pool = artifactsCatalog.filter((a) => a.artifact_tier === rarity);
       }
-
-      const { data: relics } = await query;
-      const picked = relics && relics.length > 0 ? relics[Math.floor(Math.random() * relics.length)] : null;
+      if (pool.length === 0) {
+        const all = await gameApi.getArtifacts();
+        pool = all.filter((a) => a.artifact_tier === rarity);
+      }
+      const picked = pool && pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null;
+      const iconStr = rarity === 'Minor' ? '🍺' : rarity === 'Lesser' ? '🪄' : rarity === 'Greater' ? '🪬' : '💫';
 
       items.push({
-        title: picked?.name || `${rarity} Artifact`,
+        title: picked?.name || `${iconStr} ${rarity} Artifact`,
         categoryKey: `magic_${rarity}`,
         rarity,
-        description: picked?.effect || picked?.description || `Enchanted ${rarity} artifact.`,
+        description: picked?.effect || (picked as any)?.notes || picked?.description || `Enchanted ${rarity} artifact.`,
         magicItem: picked,
         targetPlayer: target,
       });
@@ -341,17 +340,21 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     // 10. Special: Epic Hoard (100)
     if (rType === 'special' && entry.range_min === 100) {
       // 1 Epic Magic Item / Artifact
-      const { data: epics } = await supabase
-        .from('supplies')
-        .select('*')
-        .or('category.ilike.%Epic%,category.ilike.%Artifact%,cost.ilike.%Artifact%');
-      const epicPicked = epics && epics.length > 0 ? epics[Math.floor(Math.random() * epics.length)] : null;
+      let epicPool: any[] = getArtifactsByTier ? getArtifactsByTier('Epic') : [];
+      if (epicPool.length === 0 && artifactsCatalog && artifactsCatalog.length > 0) {
+        epicPool = artifactsCatalog.filter((a) => a.artifact_tier === 'Epic');
+      }
+      if (epicPool.length === 0) {
+        const all = await gameApi.getArtifacts();
+        epicPool = all.filter((a) => a.artifact_tier === 'Epic');
+      }
+      const epicPicked = epicPool && epicPool.length > 0 ? epicPool[Math.floor(Math.random() * epicPool.length)] : null;
 
       items.push({
         title: epicPicked?.name || 'Epic Artifact',
         categoryKey: 'magic_Epic',
         rarity: 'Epic',
-        description: epicPicked?.effect || epicPicked?.description || 'Legendary artifact of immense power.',
+        description: epicPicked?.effect || (epicPicked as any)?.notes || epicPicked?.description || 'Legendary artifact of immense power.',
         magicItem: epicPicked,
         targetPlayer: target,
       });
