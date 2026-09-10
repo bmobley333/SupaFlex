@@ -26,6 +26,7 @@ import {
   getCategorySlotWeight,
 } from '../../types/game';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { GearModFunctionTree } from '../common/GearModFunctionTree';
 import { gameApi } from '../../services/api';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
@@ -48,17 +49,35 @@ export type GearDomainFilter =
   | 'Psionics'
   | 'Somatics'
   | 'Void Magic';
+export type VoidMagicType =
+  | 'Universal'
+  | 'Warlock'
+  | 'Psi-Ops'
+  | 'Nano-Tech'
+  | 'Gene-Mod'
+  | 'Cyber-Link'
+  | 'Void Magic';
 export type GearViewFilter = 'ALL' | 'STARRED';
 
 /**
  * Calculates total gold and silver inventory value for equipped gear items.
  * Enforces 100s = 1g rule so silver never exceeds 99s.
  */
-export const calculateInventoryValue = (gearList: SimpleGearItem[]) => {
+export const calculateInventoryValue = (gearList: SimpleGearItem[], modsCatalog: ModItem[] = []) => {
   let totalSilver = 0;
   for (const item of gearList) {
     const qty = Math.max(1, item.qty || 1);
     totalSilver += qty * parseCostToSilver(item.cost);
+    if (Array.isArray(item.installed_mods)) {
+      for (const modName of item.installed_mods) {
+        const modObj = modsCatalog.find(
+          (m) => cleanBelongsToName(m.name) === cleanBelongsToName(modName)
+        );
+        if (modObj) {
+          totalSilver += parseCostToSilver(modObj.cost);
+        }
+      }
+    }
   }
   const gold = Math.floor(totalSilver / 100);
   const silver = totalSilver % 100;
@@ -76,7 +95,9 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
   const rawGearList: SimpleGearItem[] = sheet?.simple_gear || [];
   const gearList: SimpleGearItem[] = useMemo(() => {
-    return rawGearList.filter((g) => g && g.name && g.name.trim() !== '');
+    return rawGearList.filter(
+      (g) => g && g.name && g.name.trim() !== '' && g.category !== '🔌 Mod' && !/mod_free|mod_/i.test(g.id || '')
+    );
   }, [rawGearList]);
 
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
@@ -104,7 +125,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [gearCatalogFeedback, setGearCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [expandedCatalogModId, setExpandedCatalogModId] = useState<string | null>(null);
-  const [expandedEquippedModIds, setExpandedEquippedModIds] = useState<Set<string>>(new Set());
 
   // Character Currency & Wallet Funds
   const gold = sheet?.gold ?? 0;
@@ -126,7 +146,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   }, [gold, silver]);
 
   // Calculate total inventory value (gold & silver, 100s = 1g)
-  const inventoryValue = useMemo(() => calculateInventoryValue(gearList), [gearList]);
+  const inventoryValue = useMemo(() => calculateInventoryValue(gearList, modsCatalog), [gearList, modsCatalog]);
 
   // Fetch all Supabase Catalogs concurrently on modal open
   useEffect(() => {
@@ -736,21 +756,10 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
     const linkedFns = getFunctionsForGearItem(itemName).map((fn) => mapFunctionToVaultItem(fn, itemName));
 
-    // Auto-install inherent {Free} mods for this equipped item
+    // Auto-resolve inherent {Free} mods for this equipped item
     const freeModsForThisItem = modsCatalog.filter((m: any) =>
       isModFreeForHost(m, itemName)
     );
-
-    const freeModGearItems: SimpleGearItem[] = freeModsForThisItem.map((fm: any) => ({
-      id: `mod_free_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-      name: `${fm.name} (${itemName})`,
-      category: '🔌 Mod',
-      cost: '0s',
-      qty: 1,
-      notes: fm.notes || `Inherent modification on ${itemName}`,
-      item_type: 'gear' as const,
-      belongs_to: `${defaultCategory}: ${itemName} {Free}`,
-    }));
 
     const freeModFunctions: MagicItem[] = freeModsForThisItem.flatMap((fm: any) =>
       getFunctionsForMod(fm.name).map((fn) => mapFunctionToVaultItem(fn, itemName, fm.name))
@@ -766,7 +775,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       );
       return {
         ...prev,
-        simple_gear: [...currentGear, newGearItem, ...freeModGearItems],
+        simple_gear: [...currentGear, newGearItem],
         character_vault: [...currentVault, ...fnsToAdd],
         gold: deduction.newGold,
         silver: deduction.newSilver,
@@ -781,7 +790,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   };
 
   // Purchase Optional Component / Mod on Owned Item
-  const handlePurchaseOptionalMod = (modItem: any, parentItemName: string, parentCategory?: string) => {
+  const handlePurchaseOptionalMod = (modItem: any, parentItemName: string, _parentCategory?: string) => {
     const modName = modItem.name;
     const costStr = modItem.cost || '0s';
     const costInSilver = parseCostToSilver(costStr);
@@ -791,17 +800,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       triggerNotEnoughMoney(modKey, modName, costStr, costInSilver);
       return;
     }
-
-    const newModGearItem: SimpleGearItem = {
-      id: `mod_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-      name: `${modName} (${parentItemName})`,
-      category: '🔌 Mod',
-      cost: costStr,
-      qty: 1,
-      notes: modItem.notes || `Installed modification on ${parentItemName}`,
-      item_type: 'gear',
-      belongs_to: `${parentCategory || 'Gear'}: ${parentItemName}`,
-    };
 
     const modFunctions = getFunctionsForMod(modName).map((fn) =>
       mapFunctionToVaultItem(fn, parentItemName, modName)
@@ -817,9 +815,23 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       const fnsToAdd = modFunctions.filter(
         (mf) => !currentVault.some((v: any) => cleanBelongsToName(v.name) === cleanBelongsToName(mf.name))
       );
+
+      // Consolidate mod onto the host item's installed_mods list (zero phantom cards)
+      const currentGear = (prev.simple_gear || []).map((g) => {
+        if (cleanBelongsToName(g.name) === cleanBelongsToName(parentItemName)) {
+          const currentInstalled = new Set<string>(g.installed_mods || []);
+          currentInstalled.add(modName);
+          return {
+            ...g,
+            installed_mods: Array.from(currentInstalled),
+          };
+        }
+        return g;
+      });
+
       const intermediateSheet = {
         ...prev,
-        simple_gear: [...(prev.simple_gear || []), newModGearItem],
+        simple_gear: currentGear,
         character_vault: [...currentVault, ...fnsToAdd],
         gold: deduction.newGold,
         silver: deduction.newSilver,
@@ -1093,15 +1105,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                     </div>
                   ) : (
                     filteredGearInventory.map((item) => {
-                      const compatibleMods = modsCatalog.filter((m: any) =>
-                        isModCompatibleWithItem(m, item)
-                      );
-                      const installedModsCount = compatibleMods.filter(
-                        (m: any) => isModFreeForHost(m, item.name) || gearList.some((g) => g.name.includes(m.name))
-                      ).length;
-                      const availableModsCount = compatibleMods.length - installedModsCount;
-                      const isModsOpen = expandedEquippedModIds.has(item.id);
-
                       return (
                         <div
                           key={item.id}
@@ -1169,106 +1172,19 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                             </div>
                           </div>
 
-                          {/* Collapsible Compatible Mods Disclosure */}
-                          {compatibleMods.length > 0 && (
-                            <div className="pt-1 border-t border-slate-800/60 flex flex-col gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setExpandedEquippedModIds((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(item.id)) next.delete(item.id);
-                                    else next.add(item.id);
-                                    return next;
-                                  });
-                                }}
-                                className="flex items-center justify-between w-full px-2 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-950 border border-slate-800/80 text-[10px] font-mono transition text-slate-300 hover:text-white cursor-pointer"
-                              >
-                                <div className="flex items-center gap-1.5">
-                                  <span>🔌</span>
-                                  <span className="font-bold text-slate-200">Compatible Mods:</span>
-                                  <span className="text-emerald-400 font-semibold">{installedModsCount} Installed</span>
-                                  {availableModsCount > 0 && (
-                                    <>
-                                      <span className="text-slate-600">•</span>
-                                      <span className="text-indigo-300 font-semibold">{availableModsCount} Available</span>
-                                    </>
-                                  )}
-                                </div>
-                                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isModsOpen ? 'rotate-180' : ''}`} />
-                              </button>
-
-                              {isModsOpen && (
-                                <div className="flex flex-col gap-1 bg-slate-950/60 p-2 rounded-lg border border-slate-800/60">
-                                  {compatibleMods.map((m: any) => {
-                                    const isFree = isModFreeForHost(m, item.name);
-                                    const isInstalled = isFree || gearList.some((g) => g.name.includes(m.name));
-
-                                    if (isInstalled) {
-                                      return (
-                                        <div key={m.id || m.name} className="flex items-center justify-between py-0.5 text-[10px] text-emerald-400">
-                                          <span className="inline-flex items-center align-baseline gap-1 font-mono truncate">
-                                            <span>✓ {m.name}</span>
-                                            <ItemNotesPopover notes={m.notes || ''} itemName={m.name} inline />
-                                          </span>
-                                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shrink-0">
-                                            Installed
-                                          </span>
-                                        </div>
-                                      );
-                                    }
-
-                                    const modCostSilver = parseCostToSilver(m.cost);
-                                    const canAffordMod = modCostSilver <= totalAvailableSilver;
-                                    const modKey = String(m.id || m.name);
-                                    const isMsoMod = isGsUnlocked && isMsoEntry(m.name);
-                                    const modRowTextColor = isMsoMod ? 'text-purple-300' : 'text-indigo-300';
-                                    const formattedCost = (m.cost || '').toLowerCase() === 'artifact' ? 'Artifact' : formatCostAbbreviated(m.cost || '0s');
-
-                                    const modButtonClass = !canAffordMod
-                                      ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-500 border-slate-700/80 opacity-60 cursor-not-allowed'
-                                      : isMsoMod
-                                      ? 'bg-purple-950/80 hover:bg-purple-900 border-purple-500/40 text-purple-200 cursor-pointer shadow-sm'
-                                      : 'bg-indigo-950/80 hover:bg-indigo-900 border-indigo-500/40 text-indigo-200 cursor-pointer shadow-sm';
-
-                                    return (
-                                      <div key={modKey} className="flex items-center justify-between py-1 border-t border-slate-800/40 text-[10px] gap-2">
-                                        <span className={`${modRowTextColor} font-semibold inline-flex items-center align-baseline truncate`}>
-                                          <span>🔌 {m.name} ({m.cost || '0s'})</span>
-                                          <ItemNotesPopover notes={m.notes || ''} itemName={m.name} inline />
-                                        </span>
-                                        <div className="relative flex items-center shrink-0">
-                                          {notEnoughMoneyTarget?.id === modKey && (
-                                            <div className="absolute bottom-full right-0 mb-1 z-30 px-2 py-0.5 bg-rose-950 border border-rose-500 rounded-lg shadow-xl text-[9px] font-bold text-rose-200 whitespace-nowrap animate-fadeIn flex items-center gap-1 pointer-events-none">
-                                              <span>❌ Not Enough Money</span>
-                                            </div>
-                                          )}
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              if (!canAffordMod) {
-                                                triggerNotEnoughMoney(modKey, m.name, m.cost || '0s', modCostSilver);
-                                              } else {
-                                                handlePurchaseOptionalMod(m, item.name, item.category || item.item_type || 'Gear');
-                                              }
-                                            }}
-                                            className={`px-2 py-0.5 rounded font-bold transition text-[9px] border ${modButtonClass}`}
-                                            title={
-                                              canAffordMod
-                                                ? `Install ${m.name} for ${m.cost || '0s'}`
-                                                : `Not Enough Money (Costs ${m.cost || '0s'}, you have ${gold}g ${silver}s)`
-                                            }
-                                          >
-                                            +Mod [{formattedCost}]
-                                          </button>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          )}
+                          {/* Reusable 2-Level Hierarchy Tree Drawer (Chassis -> Mod -> Functions) */}
+                          <GearModFunctionTree
+                            hostItem={item}
+                            modsCatalog={modsCatalog}
+                            functionsCatalog={functionsCatalog}
+                            isEditable={true}
+                            onPurchaseMod={(modItem, hostName, hostCat) =>
+                              handlePurchaseOptionalMod(modItem, hostName, hostCat)
+                            }
+                            notEnoughMoneyTarget={notEnoughMoneyTarget}
+                            totalAvailableSilver={totalAvailableSilver}
+                            isGsUnlocked={isGsUnlocked}
+                          />
                         </div>
                       );
                     })

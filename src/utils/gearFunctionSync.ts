@@ -55,6 +55,42 @@ export const isModFreeForHost = (
 };
 
 /**
+ * Strict Table- and MSO-aware matcher for mod compatibility with a host gear item.
+ */
+export const isModCompatibleWithItem = (
+  mod: { belongs_to?: string | null },
+  item: { name: string; item_type?: string; category?: string }
+): boolean => {
+  if (!mod.belongs_to || !item.name) return false;
+  const itemNameClean = cleanBelongsToName(item.name);
+  const itemTypeLower = (item.item_type || item.category || '').toLowerCase();
+
+  const parts = mod.belongs_to.split(',');
+  return parts.some((p) => {
+    const trimmed = p.trim();
+    if (!trimmed) return false;
+    const withoutFree = trimmed.replace(/\{free\}/gi, '').trim();
+    if (!withoutFree.includes(':')) {
+      return cleanBelongsToName(withoutFree) === itemNameClean;
+    }
+    const [prefix, target] = withoutFree.split(':', 2);
+    const prefLower = prefix.trim().toLowerCase();
+    const targetClean = cleanBelongsToName(target);
+
+    // Validate table prefix against item type
+    if (prefLower === 'armor' && !(itemTypeLower.includes('armor') || itemTypeLower === 'armor')) return false;
+    if ((prefLower === 'weapons' || prefLower === 'weapon') && !(itemTypeLower.includes('weapon') || itemTypeLower === 'weapon')) return false;
+    if ((prefLower === 'shields' || prefLower === 'shield') && !(itemTypeLower.includes('shield') || itemTypeLower === 'shield')) return false;
+    if (prefLower === 'supplies') {
+      if (itemTypeLower.includes('armor') || itemTypeLower.includes('weapon') || itemTypeLower.includes('shield') || itemTypeLower.includes('kit')) return false;
+    }
+    if (prefLower === 'kit' && !itemTypeLower.includes('kit')) return false;
+
+    return targetClean === itemNameClean;
+  });
+};
+
+/**
  * Resolves all functions belonging to an installed mod.
  * Prefers exact name matches (e.g. MSO variant for MSO mod), falling back to stripped name.
  */
@@ -144,6 +180,10 @@ export const mapFunctionToVaultItem = (
     finalGear = parentMatch[2];
   }
 
+  const sourceDesc = finalMod
+    ? `${finalGear} > ${finalMod}`
+    : `Exotic Gear: ${finalGear}`;
+
   return {
     id: typeof fn.id === 'number' ? fn.id : Date.now() + Math.floor(Math.random() * 10000),
     name: fn.name,
@@ -153,7 +193,7 @@ export const mapFunctionToVaultItem = (
     usage: fn.usage || '1-Enc',
     effect: fn.effect || '',
     notes: fn.notes || `Inherent function of ${hostName}`,
-    source: `Exotic Gear: ${hostName}`,
+    source: sourceDesc,
     source_gear: finalGear,
     source_mod: finalMod,
     created_at: new Date().toISOString(),
@@ -201,14 +241,50 @@ export const reconcileCharacterVaultWithGear = (
     : [];
 
   // Base host gear items in simple_gear (not child mod items)
-  const baseGearItems = rawGear.filter(
+  let baseGearItems = rawGear.filter(
     (g) => g.category !== '🔌 Mod' && !/mod_free|mod_/i.test(g.id || '')
   );
 
-  // Installed child mod items in simple_gear
+  // Installed child mod items in simple_gear (legacy standalone entries)
   const childModItems = rawGear.filter(
     (g) => g.category === '🔌 Mod' || /mod_free|mod_/i.test(g.id || '')
   );
+
+  let gearCleaned = false;
+
+  // Seamless legacy migration: consolidate childModItems into baseGearItems' installed_mods
+  if (childModItems.length > 0) {
+    gearCleaned = true;
+    baseGearItems = baseGearItems.map((base) => {
+      const baseClean = cleanBelongsToName(base.name);
+      const installedMods = new Set<string>(base.installed_mods || []);
+
+      for (const child of childModItems) {
+        const match = child.name.match(/^(.+?)\s*\(([^)]+)\)$/);
+        const childModName = match ? match[1].trim() : child.name;
+        const parentHostName = match
+          ? match[2].trim()
+          : child.belongs_to
+          ? cleanBelongsToName(child.belongs_to)
+          : '';
+
+        if (cleanBelongsToName(parentHostName) === baseClean) {
+          // Avoid adding {Free} mods to installed_mods (they are dynamically resolved as inherent)
+          const isFree = modsCatalog.some(
+            (m) => cleanBelongsToName(m.name) === cleanBelongsToName(childModName) && isModFreeForHost(m, base.name)
+          );
+          if (!isFree) {
+            installedMods.add(childModName);
+          }
+        }
+      }
+
+      return {
+        ...base,
+        installed_mods: Array.from(installedMods),
+      };
+    });
+  }
 
   // Collect all functions that should be in the vault based on physical simple_gear ownership
   const expectedFunctions: MagicItem[] = [];
@@ -230,21 +306,15 @@ export const reconcileCharacterVaultWithGear = (
         expectedFunctions.push(mapFunctionToVaultItem(fn, hostName, fm.name));
       }
     }
-  }
 
-  // 3. Purchased child mods installed on gear
-  for (const childMod of childModItems) {
-    const match = childMod.name.match(/^(.+?)\s*\(([^)]+)\)$/);
-    const baseModName = match ? match[1].trim() : childMod.name;
-    const parentHostName = match
-      ? match[2].trim()
-      : childMod.belongs_to
-      ? cleanBelongsToName(childMod.belongs_to)
-      : 'Gear';
-
-    const fns = getFunctionsForMod(baseModName, functionsCatalog);
-    for (const fn of fns) {
-      expectedFunctions.push(mapFunctionToVaultItem(fn, parentHostName, baseModName));
+    // 3. Purchased aftermarket mods installed on this host item
+    if (Array.isArray(hostItem.installed_mods)) {
+      for (const modName of hostItem.installed_mods) {
+        const fns = getFunctionsForMod(modName, functionsCatalog);
+        for (const fn of fns) {
+          expectedFunctions.push(mapFunctionToVaultItem(fn, hostName, modName));
+        }
+      }
     }
   }
 
@@ -317,12 +387,13 @@ export const reconcileCharacterVaultWithGear = (
     return false;
   });
 
-  const changed = addedFunctions.length > 0 || removedFunctions.length > 0;
+  const changed = addedFunctions.length > 0 || removedFunctions.length > 0 || gearCleaned;
 
   return {
     updatedSheet: changed
       ? {
           ...sheetData,
+          simple_gear: gearCleaned ? baseGearItems : sheetData.simple_gear,
           character_vault: finalVault,
         }
       : sheetData,

@@ -570,6 +570,7 @@ export interface SimpleGearItem {
   genres?: string[];
   pic?: string | null;
   is_exotic?: boolean;
+  installed_mods?: string[];
 }
 
 export interface ApLogEntry {

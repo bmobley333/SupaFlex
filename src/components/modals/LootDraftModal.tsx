@@ -4,9 +4,10 @@
 import React, { useState, useEffect } from 'react';
 import { MagicItem } from '../../types/game';
 import { supabase } from '../../lib/supabase';
-import { Sparkles, Gem, RefreshCw, ChevronDown } from 'lucide-react';
+import { Sparkles, Gem, RefreshCw } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { GearModFunctionTree } from '../common/GearModFunctionTree';
 import { resolveLootAbilities, ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
 
 interface LootDraftModalProps {
@@ -40,18 +41,8 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
   const getArtifactsByTier = useCharacterStore((state) => state.getArtifactsByTier);
   const artifactsCatalog = useCharacterStore((state) => state.artifactsCatalog);
   const [slots, setSlots] = useState<DraftSlot[]>([]);
-  const [expandedSlots, setExpandedSlots] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isClaiming, setIsClaiming] = useState(false);
-
-  const toggleExpandSlot = (index: number) => {
-    setExpandedSlots((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-  };
 
   useEffect(() => {
     if (isOpen) {
@@ -298,7 +289,6 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
                 const abilities = isTreasure
                   ? null
                   : resolveLootAbilities(s.item, functionsCatalog, modsCatalog);
-                const isExpanded = expandedSlots.has(idx);
                 const itemName = s.item?.name || s.item?.title || 'Reward';
                 const notes = abilities?.primaryNotes || s.item?.notes || (isTreasure ? s.item?.description : null);
                 const effectText = abilities?.primaryEffect || s.item?.effect;
@@ -389,76 +379,14 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
                         </p>
                       )}
 
-                      {/* Collapsible Inherent Functions Drawer (Destron Armor Pattern) */}
-                      {abilities && abilities.functions.length > 0 && (
-                        <div className="mt-2.5 pt-2 border-t border-slate-800/60 flex flex-col gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => toggleExpandSlot(idx)}
-                            className="flex items-center justify-between w-full px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[10px] font-mono transition text-slate-300 hover:text-white cursor-pointer"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <span>⚡</span>
-                              <span className="font-bold text-slate-200">Inherent Functions:</span>
-                              <span className="text-emerald-400 font-semibold">
-                                {abilities.functions.length} Installed
-                              </span>
-                            </div>
-                            <ChevronDown
-                              className={`w-3 h-3 text-slate-400 transition-transform ${
-                                isExpanded ? 'rotate-180' : ''
-                              }`}
-                            />
-                          </button>
-
-                          {isExpanded && (
-                            <div className="flex flex-col gap-1.5 bg-slate-900/70 p-2 rounded-lg border border-slate-800/60 max-h-48 overflow-y-auto">
-                              {abilities.functions.map((fn) => {
-                                const fnActionUpper = fn.action ? fn.action.toUpperCase() : null;
-                                const fnActionClass = fnActionUpper
-                                  ? ACTION_BADGE_COLORS[fnActionUpper] ||
-                                    'bg-slate-800 text-slate-300 border-slate-700'
-                                  : null;
-
-                                return (
-                                  <div
-                                    key={fn.id || fn.name}
-                                    className="py-1 border-b border-slate-800/40 last:border-none flex flex-col gap-1 text-[11px]"
-                                  >
-                                    <div className="flex items-center justify-between gap-1 flex-wrap">
-                                      <span className="font-semibold text-emerald-300 inline-flex items-center align-baseline gap-1">
-                                        <span>✓ {fn.name}</span>
-                                        {fn.notes && (
-                                          <ItemNotesPopover notes={fn.notes} itemName={fn.name} inline />
-                                        )}
-                                      </span>
-                                      <div className="flex items-center gap-1 shrink-0">
-                                        {fnActionUpper && (
-                                          <span
-                                            className={`text-[9px] font-mono font-bold px-1 py-0.2 rounded border ${fnActionClass}`}
-                                          >
-                                            [{fnActionUpper}]
-                                          </span>
-                                        )}
-                                        {fn.usage && (
-                                          <span className="bg-slate-950 text-[9px] font-mono text-amber-300 px-1 py-0.2 rounded border border-slate-800">
-                                            {fn.usage}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    {fn.effect && (
-                                      <p className="text-[10px] text-slate-300/90 leading-snug pl-2 border-l border-amber-500/30 font-sans">
-                                        {fn.effect}
-                                      </p>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      {/* Collapsible 2-Level Tree Hierarchy Drawer */}
+                      <GearModFunctionTree
+                        hostItem={s.item}
+                        modsCatalog={modsCatalog || []}
+                        functionsCatalog={functionsCatalog || []}
+                        isEditable={false}
+                        className="mt-2.5"
+                      />
                     </div>
 
                     <button
