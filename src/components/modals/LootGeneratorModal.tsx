@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Search } from 'lucide-react';
+import { Search, ChevronDown } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore } from '../../store/useGenreStore';
@@ -11,6 +11,7 @@ import { ChaosGauntletSocketModal } from './ChaosGauntletSocketModal';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { VaultItem, SupabaseChaosGem } from '../../types/game';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
+import { resolveLootAbilities, ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
 
 export interface MoveToSheetPayload {
   title: string;
@@ -122,6 +123,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
   const magicItems = useCharacterStore((state) => state.magicItems);
+  const functionsCatalog = useCharacterStore((state) => state.functionsCatalog);
+  const modsCatalog = useCharacterStore((state) => state.modsCatalog);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeGenre = useGenreStore((state) => state.activeGenre);
 
@@ -129,7 +132,17 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('coins');
   const [isRolling, setIsRolling] = useState(false);
   const [results, setResults] = useState<RollResult[]>([]);
+  const [expandedResultIds, setExpandedResultIds] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const toggleExpandResult = (id: string) => {
+    setExpandedResultIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
@@ -1060,7 +1073,30 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                {results.map((res) => (
+                {results.map((res) => {
+                  const targetItem =
+                    res.magicItem ||
+                    (res.type === 'chaos_gem' ? res.chaosGem : null) || {
+                      name: res.title,
+                      description: res.description,
+                    };
+                  const abilities = resolveLootAbilities(targetItem, functionsCatalog, modsCatalog);
+                  const isExpanded = expandedResultIds.has(res.id);
+                  const notes =
+                    abilities.primaryNotes ||
+                    res.magicItem?.notes ||
+                    res.chaosGem?.notes ||
+                    (res.type === 'art_gem' || res.type === 'document' ? res.description : null);
+                  const effectText = abilities.primaryEffect || res.magicItem?.effect || res.chaosGem?.effect;
+                  const hasExplicitEffect = !!effectText;
+                  const descriptionText = res.description;
+                  const showSeparateDesc =
+                    descriptionText &&
+                    descriptionText.trim() !== '' &&
+                    descriptionText.trim() !== effectText?.trim() &&
+                    descriptionText.trim() !== notes?.trim();
+
+                  return (
                   <div 
                     key={res.id} 
                     className={`p-3 rounded-xl border transition-all ${
@@ -1070,9 +1106,9 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      {/* Left Column: Line 1 Badges, Line 2 Title (Wrapping), Line 3 Description */}
-                      <div className="flex-1 min-w-0 flex flex-col gap-1">
-                        {/* Line 1: Category & Value Badges */}
+                      {/* Left Column: Badges, Title, Popover, Effect, Functions Accordion */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                        {/* Line 1: Category, Value & Tactical Badges */}
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-slate-950 border border-slate-700 text-amber-400 shadow-sm shrink-0">
                             {res.tableName}
@@ -1083,18 +1119,119 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                               <span className="font-mono font-extrabold">{res.valueText}</span>
                             </span>
                           )}
+                          {abilities.primaryAction && (
+                            <span
+                              className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                                ACTION_BADGE_COLORS[abilities.primaryAction] ||
+                                'bg-slate-800 text-slate-300 border-slate-700'
+                              }`}
+                            >
+                              [{abilities.primaryAction}]
+                            </span>
+                          )}
+                          {abilities.primaryUsage && (
+                            <span className="bg-slate-950 text-[9px] font-mono font-bold text-amber-300 px-1.5 py-0.5 rounded border border-slate-800 shrink-0">
+                              {abilities.primaryUsage}
+                            </span>
+                          )}
                         </div>
 
-                        {/* Line 2: Item Title (Always below badges, full wrap) */}
-                        <h4 className="text-sm font-bold text-slate-100 leading-snug break-words">
-                          {res.title}
+                        {/* Line 2: Item Title + Notes Popover */}
+                        <h4 className="text-sm font-bold text-slate-100 leading-snug break-words inline-flex items-center align-baseline gap-1.5 flex-wrap">
+                          <span>{res.title}</span>
+                          {notes && <ItemNotesPopover notes={notes} itemName={res.title} inline />}
                         </h4>
 
-                        {/* Line 3: Description */}
-                        {res.description && (
-                          <p className="text-[11px] text-slate-300 leading-snug font-sans break-words">
-                            {res.description}
+                        {/* Line 3: Exact Effect Box */}
+                        {hasExplicitEffect && (
+                          <div className="bg-slate-950/85 border border-slate-800/80 p-2.5 rounded-lg text-xs text-amber-200/95 leading-relaxed font-sans mt-0.5 shadow-inner">
+                            <span className="font-bold text-amber-400 font-mono text-[10px] uppercase tracking-wider block mb-0.5">
+                              ⚡ Effect:
+                            </span>
+                            {effectText}
+                          </div>
+                        )}
+
+                        {/* Line 4: Separate Description / Lore */}
+                        {(!hasExplicitEffect || showSeparateDesc) && descriptionText && (
+                          <p
+                            className={`text-[11px] leading-snug font-sans break-words ${
+                              hasExplicitEffect ? 'text-slate-400 italic mt-0.5' : 'text-slate-300'
+                            }`}
+                          >
+                            {descriptionText}
                           </p>
+                        )}
+
+                        {/* Line 5: Collapsible Inherent Functions Drawer (Destron Armor Pattern) */}
+                        {abilities.functions.length > 0 && (
+                          <div className="mt-1 pt-1.5 border-t border-slate-800/60 flex flex-col gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => toggleExpandResult(res.id)}
+                              className="flex items-center justify-between w-full px-2 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-950 border border-slate-800 text-[10px] font-mono transition text-slate-300 hover:text-white cursor-pointer"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span>⚡</span>
+                                <span className="font-bold text-slate-200">Inherent Functions:</span>
+                                <span className="text-emerald-400 font-semibold">
+                                  {abilities.functions.length} Installed
+                                </span>
+                              </div>
+                              <ChevronDown
+                                className={`w-3 h-3 text-slate-400 transition-transform ${
+                                  isExpanded ? 'rotate-180' : ''
+                                }`}
+                              />
+                            </button>
+
+                            {isExpanded && (
+                              <div className="flex flex-col gap-1.5 bg-slate-950/70 p-2 rounded-lg border border-slate-800/60 max-h-48 overflow-y-auto">
+                                {abilities.functions.map((fn) => {
+                                  const fnActionUpper = fn.action ? fn.action.toUpperCase() : null;
+                                  const fnActionClass = fnActionUpper
+                                    ? ACTION_BADGE_COLORS[fnActionUpper] ||
+                                      'bg-slate-800 text-slate-300 border-slate-700'
+                                    : null;
+
+                                  return (
+                                    <div
+                                      key={fn.id || fn.name}
+                                      className="py-1 border-b border-slate-800/40 last:border-none flex flex-col gap-1 text-[11px]"
+                                    >
+                                      <div className="flex items-center justify-between gap-1 flex-wrap">
+                                        <span className="font-semibold text-emerald-300 inline-flex items-center align-baseline gap-1">
+                                          <span>✓ {fn.name}</span>
+                                          {fn.notes && (
+                                            <ItemNotesPopover notes={fn.notes} itemName={fn.name} inline />
+                                          )}
+                                        </span>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          {fnActionUpper && (
+                                            <span
+                                              className={`text-[9px] font-mono font-bold px-1 py-0.2 rounded border ${fnActionClass}`}
+                                            >
+                                              [{fnActionUpper}]
+                                            </span>
+                                          )}
+                                          {fn.usage && (
+                                            <span className="bg-slate-950 text-[9px] font-mono text-amber-300 px-1 py-0.2 rounded border border-slate-800">
+                                              {fn.usage}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {fn.effect && (
+                                        <p className="text-[10px] text-slate-300/90 leading-snug pl-2 border-l border-amber-500/30 font-sans">
+                                          {fn.effect}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
 
@@ -1169,7 +1306,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
