@@ -159,6 +159,14 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
       .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
   }, [equippedRules, leftSearchQuery, isGsUnlocked]);
 
+  const visibleCount = useMemo(() => {
+    return equippedRules.filter((r) => !r.is_hidden).length;
+  }, [equippedRules]);
+
+  const hiddenCount = useMemo(() => {
+    return equippedRules.filter((r) => !!r.is_hidden).length;
+  }, [equippedRules]);
+
   const isRuleEquipped = (ruleName: string) => {
     return equippedRules.some((r) => r.name.toLowerCase() === ruleName.toLowerCase());
   };
@@ -292,7 +300,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   Manage Traits
                 </h3>
                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/40">
-                  Traits {equippedRules.length}; Available <strong className="text-emerald-400">{availableAp} AP</strong>
+                  Available <strong className="text-emerald-400">{availableAp} AP</strong>
                 </span>
               </div>
               <p className="text-xs text-slate-400">
@@ -319,11 +327,11 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span className="font-outfit font-bold text-xs text-slate-200 uppercase tracking-wider">
-                  My Traits ({equippedRules.length})
+                  My Traits
                 </span>
               </div>
               <span className="text-[11px] font-mono text-slate-400">
-                {filteredEquippedRules.length} Visible
+                {visibleCount} Visible, {hiddenCount} Hidden
               </span>
             </div>
 
@@ -428,16 +436,16 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
                       {/* Row 2: Badges (Cost & Matching Path & Stat Hook) */}
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {/* AP Badge */}
-                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
-                          costBadge.includes('0')
-                            ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
-                            : costBadge.includes('3')
-                            ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
-                            : 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
-                        }`}>
-                          {costBadge}
-                        </span>
+                        {/* AP Badge - only show for paid traits (1 AP or 3 AP); omit redundant 0 AP (Free) */}
+                        {!costBadge.includes('0') && !inherent && (
+                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
+                            costBadge.includes('3')
+                              ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+                              : 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
+                          }`}>
+                            {costBadge}
+                          </span>
+                        )}
 
                         {/* Clean Character Matching Path Pill (no 🧬 icon, no uppercase) */}
                         {matchingPath && matchingPath !== 'General' && (
@@ -673,17 +681,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                           className={isMso ? 'text-purple-300 font-black' : 'text-slate-100 font-black'}
                         />
 
-                        {/* AP Badge */}
-                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
-                          inherent
-                            ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
-                            : inPath
-                            ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
-                            : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
-                        }`}>
-                          {inherent ? '0 AP (Free)' : inPath ? '1 AP' : '👑 3 AP'}
-                        </span>
-
                         {/* Classification Pill: Only show for In-Path traits; hide for Universal and Out-of-Path */}
                         {inPath && !isUni && (
                           <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40">
@@ -731,8 +728,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
             <span className="font-outfit font-bold text-slate-300">
               Hero: <span className="text-purple-300">{activeCharacter?.name || 'Unnamed Hero'}</span>
             </span>
-            <span>•</span>
-            <span className="font-mono">Total Equipped: {equippedRules.length}</span>
           </div>
 
           <button
