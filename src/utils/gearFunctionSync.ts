@@ -194,7 +194,7 @@ export const mapFunctionToVaultItem = (
   let finalGear = hostName;
   let finalMod = modName;
   const parentMatch = hostName.match(/^(.+?)\s*\(([^)]+)\)$/);
-  if (!finalMod && parentMatch) {
+  if (!finalMod && parentMatch && parentMatch[2].trim().toLowerCase() !== 'mso') {
     finalMod = parentMatch[1];
     finalGear = parentMatch[2];
   }
@@ -420,6 +420,7 @@ export const reconcileCharacterVaultWithGear = (
 
   const addedFunctions: string[] = [];
   const removedFunctions: string[] = [];
+  let metadataHealed = false;
 
   // 2. Reconcile character_vault
   const finalVault: MagicItem[] = [];
@@ -439,13 +440,21 @@ export const reconcileCharacterVaultWithGear = (
           vaultProcessedNames.add(cName);
           vaultProcessedNames.add(sName);
           const template = expectedFnMap.get(cName) || expectedFnMap.get(sName);
+          const isStaleMso = vItem.source_gear?.trim().toLowerCase() === 'mso';
+          if (isStaleMso) metadataHealed = true;
+          const validGear = !isStaleMso && vItem.source_gear ? vItem.source_gear : template?.source_gear;
+          const validMod = isStaleMso ? template?.source_mod : (vItem.source_mod || template?.source_mod);
+          const validSource = isStaleMso || !vItem.source || vItem.source.startsWith('mso >')
+            ? (template?.source || `Exotic Gear: ${validGear || 'Owned Gear'}`)
+            : vItem.source;
+
           // Preserve item but ensure robust metadata
           finalVault.push({
             ...vItem,
             is_hardware: true,
-            source_gear: vItem.source_gear || template?.source_gear,
-            source_mod: vItem.source_mod || template?.source_mod,
-            source: vItem.source || template?.source || `Exotic Gear: ${template?.source_gear || 'Owned Gear'}`,
+            source_gear: validGear,
+            source_mod: validMod,
+            source: validSource,
           });
         }
       } else {
@@ -481,11 +490,18 @@ export const reconcileCharacterVaultWithGear = (
       const isExpected = expectedNamesSet.has(cName) || expectedNamesSet.has(sName);
       if (isExpected) {
         const template = expectedFnMap.get(cName) || expectedFnMap.get(sName);
+        const isStaleMso = (slot as any).source_gear?.trim().toLowerCase() === 'mso';
+        if (isStaleMso) metadataHealed = true;
+        const validGear = !isStaleMso && (slot as any).source_gear ? (slot as any).source_gear : template?.source_gear;
+        const validMod = isStaleMso ? template?.source_mod : ((slot as any).source_mod || template?.source_mod);
         finalSlotsA.push({
           ...slot,
           is_hardware: true,
-          source_gear: (slot as any).source_gear || template?.source_gear,
-          source_mod: (slot as any).source_mod || template?.source_mod,
+          source_gear: validGear,
+          source_mod: validMod,
+          source: isStaleMso || !(slot as any).source || (slot as any).source.startsWith('mso >')
+            ? (template?.source || `Exotic Gear: ${validGear || 'Owned Gear'}`)
+            : (slot as any).source,
         } as any);
       } else {
         // Evicted from Stance Alpha because host gear was dropped!
@@ -507,11 +523,18 @@ export const reconcileCharacterVaultWithGear = (
       const isExpected = expectedNamesSet.has(cName) || expectedNamesSet.has(sName);
       if (isExpected) {
         const template = expectedFnMap.get(cName) || expectedFnMap.get(sName);
+        const isStaleMso = (slot as any).source_gear?.trim().toLowerCase() === 'mso';
+        if (isStaleMso) metadataHealed = true;
+        const validGear = !isStaleMso && (slot as any).source_gear ? (slot as any).source_gear : template?.source_gear;
+        const validMod = isStaleMso ? template?.source_mod : ((slot as any).source_mod || template?.source_mod);
         finalSlotsB.push({
           ...slot,
           is_hardware: true,
-          source_gear: (slot as any).source_gear || template?.source_gear,
-          source_mod: (slot as any).source_mod || template?.source_mod,
+          source_gear: validGear,
+          source_mod: validMod,
+          source: isStaleMso || !(slot as any).source || (slot as any).source.startsWith('mso >')
+            ? (template?.source || `Exotic Gear: ${validGear || 'Owned Gear'}`)
+            : (slot as any).source,
         } as any);
       } else {
         // Evicted from Stance Beta because host gear was dropped!
@@ -526,6 +549,7 @@ export const reconcileCharacterVaultWithGear = (
     addedFunctions.length > 0 ||
     removedFunctions.length > 0 ||
     gearCleaned ||
+    metadataHealed ||
     finalVault.length !== currentVault.length ||
     finalSlotsA.length !== currentSlotsA.length ||
     finalSlotsB.length !== currentSlotsB.length;

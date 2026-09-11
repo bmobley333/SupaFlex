@@ -2049,7 +2049,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           className="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 flex flex-col gap-1.5 transition-all shrink-0 hover:border-slate-700"
                                         >
                                           <div className="flex items-start justify-between border-b border-slate-800/80 pb-1.5 gap-2">
-                                            <div className="flex flex-col gap-0.5">
+                                            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                                               <FunctionNameArea
                                                 item={item}
                                                 gearName={entry.gearName || section.gearName}
@@ -2153,7 +2153,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
                             >
                               <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
-                                <div className="flex flex-col gap-1">
+                                <div className="flex flex-col gap-1 flex-1 min-w-0">
                                   <FunctionNameArea
                                     item={item}
                                     gearName={entry.gearName || section.gearName}
@@ -2593,7 +2593,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                 className="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 flex flex-col gap-1.5 transition-all shrink-0 hover:border-slate-700"
                                               >
                                                 <div className="flex items-start justify-between border-b border-slate-800/80 pb-1.5 gap-2">
-                                                  <div className="flex flex-col gap-0.5">
+                                                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                                                     <FunctionNameArea
                                                       item={item}
                                                       gearName={entry.gearName || section.gearName}
@@ -2727,7 +2727,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
                                   >
                                     <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
-                                      <div className="flex flex-col gap-1">
+                                      <div className="flex flex-col gap-1 flex-1 min-w-0">
                                         <FunctionNameArea
                                           item={item}
                                           gearName={entry.gearName || section.gearName}

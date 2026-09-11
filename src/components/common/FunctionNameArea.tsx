@@ -1,4 +1,4 @@
-﻿// src/components/common/FunctionNameArea.tsx
+// src/components/common/FunctionNameArea.tsx
 import React, { useMemo } from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { ItemNotesPopover } from './ItemNotesPopover';
@@ -85,38 +85,56 @@ export const FunctionNameArea: React.FC<FunctionNameAreaProps> = ({
   const isMso = isMsoEntry(displayFnName);
   const formattedFnName = isGsUnlocked && isMso ? `🌌 ${displayFnName}` : displayFnName;
 
+  const pillThemeClass = useMemo(() => {
+    switch (gearIcon) {
+      case '⚔️':
+        return 'bg-rose-950/40 text-rose-200 border-rose-500/40';
+      case '🛡️':
+        return 'bg-cyan-950/40 text-cyan-200 border-cyan-500/40';
+      case '🧥':
+        return 'bg-slate-900/70 text-slate-200 border-slate-600/40';
+      case '🔮':
+        return 'bg-purple-950/40 text-purple-200 border-purple-500/40';
+      case '🎒':
+      default:
+        return 'bg-amber-950/40 text-amber-200 border-amber-500/40';
+    }
+  }, [gearIcon]);
+
   return (
-    <div className={`flex items-center gap-1.5 flex-wrap min-w-0 ${className}`}>
-      {/* 1. Optional Star Button (for modal views) */}
-      {starButton}
+    <div className={`min-w-0 font-outfit text-xs sm:text-sm text-slate-100 leading-normal ${className}`}>
+      {/* 1. Prefix: Star Button + Oval Gear Pill + Arrow (Bound non-breaking) */}
+      <span className="inline-flex items-center gap-1.5 align-middle mr-1.5 shrink-0 whitespace-nowrap">
+        {starButton}
 
-      {/* 2. Glassmorphic Gear Name Pill */}
-      {gearName && (
-        <span
-          className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-950 text-cyan-300 border border-cyan-500/40 flex items-center gap-1 shrink-0 shadow-sm"
-          title={`Belongs to: ${gearName}`}
-        >
-          <span>{gearIcon}</span>
-          <span className="truncate max-w-[150px] sm:max-w-[220px]">{gearName}</span>
-        </span>
-      )}
+        {gearName && (
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-semibold border backdrop-blur-sm shadow-sm inline-flex items-center gap-1 shrink-0 ${pillThemeClass}`}
+            title={`Belongs to: ${gearName}`}
+          >
+            <span className="leading-none text-[11px]">{gearIcon}</span>
+            <span className="truncate max-w-[140px] sm:max-w-[200px]">{gearName}</span>
+          </span>
+        )}
 
-      {/* 3. Right Arrow Icon */}
-      {gearName && (
-        <ArrowRight className="w-3 h-3 text-slate-400 shrink-0 inline" />
-      )}
-
-      {/* 4. Function Name + Notes Popover */}
-      <span className="font-outfit font-bold text-xs sm:text-sm text-slate-100 inline-flex items-center align-baseline">
-        <span className={isGsUnlocked && isMso ? 'text-purple-300' : ''}>{formattedFnName}</span>
-        {resolvedNotes && (
-          <ItemNotesPopover notes={resolvedNotes} itemName={displayFnName} inline />
+        {gearName && (
+          <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
         )}
       </span>
 
-      {/* 5. Version Badge (if v2+) */}
+      {/* 2. Function Name (Flows naturally inline with prefix) */}
+      <span className={`font-bold align-middle ${isGsUnlocked && isMso ? 'text-purple-300' : 'text-slate-100'}`}>
+        {formattedFnName}
+      </span>
+
+      {/* 3. Function Notes Popover */}
+      {resolvedNotes && (
+        <ItemNotesPopover notes={resolvedNotes} itemName={displayFnName} inline />
+      )}
+
+      {/* 4. Version Badge (if v2+) */}
       {version > 1 && (
-        <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 shrink-0 flex items-center gap-0.5">
+        <span className="inline-flex items-center gap-0.5 align-middle ml-1.5 text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 shrink-0">
           <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
           v{version}
         </span>

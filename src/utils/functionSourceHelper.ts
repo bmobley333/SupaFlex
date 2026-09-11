@@ -33,13 +33,15 @@ export const cleanSourceText = (name?: string | null): string => {
  */
 export const cleanGearTextKeepMso = (name?: string | null): string => {
   if (!name) return '';
-  let s = String(name);
+  let s = String(name).trim();
+  if (s.toLowerCase() === 'mso' || s.toLowerCase() === '(mso)') return '';
   // Strip {Free} and variants
   s = s.replace(/\{free\}/gi, '');
   // Strip table classification prefixes including Exotic and Relic
   s = s.replace(/^(Gear|Armor|Weapon|Equipment|Supplies|Mod|Exotic|Relic):\s*/i, '');
   // Clean whitespace and edge punctuation
   s = s.trim().replace(/^,+|,+$/g, '').trim();
+  if (s.toLowerCase() === 'mso' || s.toLowerCase() === '(mso)') return '';
   return s;
 };
 
@@ -71,11 +73,15 @@ export const resolveFunctionSource = (
   // Tier 1: Explicit metadata stamps
   const explicitGear = (item as any).source_gear;
   const explicitMod = (item as any).source_mod;
-  if (explicitGear) {
+  if (explicitGear && explicitGear.trim().toLowerCase() !== 'mso') {
     const gearName = cleanGearTextKeepMso(explicitGear);
     const modName = explicitMod ? cleanSourceText(explicitMod) : undefined;
     const badgeText = modName ? `${cleanSourceText(gearName)}, ${modName}` : cleanSourceText(gearName);
     return { gearName, modName, badgeText };
+  } else if (explicitGear && explicitGear.trim().toLowerCase() === 'mso' && explicitMod) {
+    // Self-healing: previous bug swapped mod and gear when item had (mso)
+    const realGear = `${cleanGearTextKeepMso(explicitMod)} (mso)`;
+    return { gearName: realGear, modName: undefined, badgeText: cleanSourceText(realGear) };
   }
 
   // Tier 2: Check embedded source string (e.g. "Exotic Gear: Mod (Host)")
@@ -88,7 +94,7 @@ export const resolveFunctionSource = (
 
     // Check for "ModName (ParentGearName)"
     const parentMatch = afterPrefix.match(/^(.+?)\s*\(([^)]+)\)$/);
-    if (parentMatch) {
+    if (parentMatch && parentMatch[2].trim().toLowerCase() !== 'mso') {
       const modName = cleanSourceText(parentMatch[1]);
       const gearName = cleanGearTextKeepMso(parentMatch[2]);
       if (gearName) {
@@ -305,22 +311,43 @@ export const getGearIcon = (
 
   if (!gearName && !itemContext) return '🎒';
 
-  const norm = (gearName || itemContext?.name || '').toLowerCase().trim();
+  const rawNorm = (gearName || itemContext?.name || '').toLowerCase().trim();
+  // Never allow 'mso' or '(mso)' to evaluate as a gear name keyword
+  if (rawNorm === 'mso' || rawNorm === '(mso)') return '🎒';
+
+  const norm = rawNorm.replace(/\(mso\)/gi, '').trim();
   const sheetData = activeCharacter?.sheet_data;
 
-  // 2. Shield Check (🛡️)
+  // 2. Cross-reference physically owned simple_gear by name/category
+  if (sheetData?.simple_gear && norm) {
+    const simpleGearMatch = (sheetData.simple_gear as any[]).find((g: any) => {
+      if (!g?.name) return false;
+      const gNorm = g.name.toLowerCase().replace(/\(mso\)/gi, '').trim();
+      return gNorm === norm || gNorm.includes(norm) || norm.includes(gNorm);
+    });
+    if (simpleGearMatch) {
+      const cat = (simpleGearMatch.category || simpleGearMatch.item_type || '').toLowerCase();
+      if (cat.includes('weapon')) return '⚔️';
+      if (cat.includes('shield')) return '🛡️';
+      if (cat.includes('armor')) return '🧥';
+      if (cat.includes('artifact') || cat.includes('relic')) return '🔮';
+    }
+  }
+
+  // 3. Shield Check (🛡️)
   if (
-    sheetData?.shield_slot?.name?.toLowerCase().includes(norm) ||
+    (sheetData?.shield_slot?.name && sheetData.shield_slot.name.toLowerCase().includes(norm)) ||
     norm.includes('shield') ||
+    norm.includes('buckler') ||
     itemContext?.item_type === 'shield' ||
     itemContext?.category === 'shields'
   ) {
     return '🛡️';
   }
 
-  // 3. Armor Check (🧥)
+  // 4. Armor Check (🧥)
   if (
-    sheetData?.armor_slot?.name?.toLowerCase().includes(norm) ||
+    (sheetData?.armor_slot?.name && sheetData.armor_slot.name.toLowerCase().includes(norm)) ||
     norm.includes('armor') ||
     norm.includes('suit') ||
     norm.includes('plate') ||
@@ -336,11 +363,12 @@ export const getGearIcon = (
     return '🧥';
   }
 
-  // 4. Weapon Check (⚔️)
+  // 5. Weapon Check (⚔️)
   if (
     (sheetData?.weapons || []).some((w: any) => w?.name?.toLowerCase().includes(norm)) ||
     norm.includes('blade') ||
     norm.includes('sword') ||
+    norm.includes('saber') ||
     norm.includes('rifle') ||
     norm.includes('cannon') ||
     norm.includes('pistol') ||
@@ -352,6 +380,21 @@ export const getGearIcon = (
     norm.includes('mace') ||
     norm.includes('hammer') ||
     norm.includes('launcher') ||
+    norm.includes('knife') ||
+    norm.includes('katana') ||
+    norm.includes('glaive') ||
+    norm.includes('halberd') ||
+    norm.includes('staff') ||
+    norm.includes('wand') ||
+    norm.includes('flail') ||
+    norm.includes('whip') ||
+    norm.includes('rapier') ||
+    norm.includes('scythe') ||
+    norm.includes('blaster') ||
+    norm.includes('carbine') ||
+    norm.includes('shotgun') ||
+    norm.includes('revolver') ||
+    norm.includes('sniper') ||
     itemContext?.item_type === 'weapon' ||
     itemContext?.category === 'weapons'
   ) {
