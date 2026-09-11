@@ -19,3 +19,6 @@ env.json
 Thumbs.db
 *.suo
 *.sln
+backups/
+__pycache__/
+*.pyc
