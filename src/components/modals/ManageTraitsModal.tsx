@@ -27,6 +27,40 @@ interface ManageTraitsModalProps {
   onClose: () => void;
 }
 
+interface HeroicCapstone {
+  id: string;
+  name: string;
+  ap_cost: number;
+  effect: string;
+}
+
+const HEROIC_CAPSTONES: HeroicCapstone[] = [
+  {
+    id: 'capstone-master-technique',
+    name: 'Master Technique',
+    ap_cost: 5,
+    effect: 'Combine two known Powers into a single combined-action deployment during combat.',
+  },
+  {
+    id: 'capstone-loadout-burn',
+    name: 'Loadout Burn',
+    ap_cost: 5,
+    effect: 'As a Free Action [F], push any active slotted Relic or Hardware to output maximum/Epic effect for 1 round before melting into inert slag, instantly freeing its Loadout Slots. (Excludes flat 1, 2, 3 consumables).',
+  },
+  {
+    id: 'capstone-second-reaction',
+    name: 'Second Reaction',
+    ap_cost: 6,
+    effect: 'Gain an additional Reaction action per combat round (increases reaction ceiling to 2).',
+  },
+  {
+    id: 'capstone-heroic-passive',
+    name: 'Heroic Passive',
+    ap_cost: 8,
+    effect: 'Unlock a signature, narrative-defining passive power or capstone immunity.',
+  },
+];
+
 export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, onClose }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
@@ -52,7 +86,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [localDomainFilter, setLocalDomainFilter] = useState<string>('ALL');
   const [traitTypeFilter, setTraitTypeFilter] = useState<'ALL' | 'STARRED'>('ALL');
-  const [traitCategoryFilter, setTraitCategoryFilter] = useState<'all' | 'in_path' | 'universal' | 'out_of_path'>('all');
+  const [traitCategoryFilter, setTraitCategoryFilter] = useState<'all' | 'in_path' | 'universal' | 'out_of_path' | 'capstones'>('all');
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
 
   // Sync genre filter when modal opens
@@ -183,6 +217,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
   // Filtered Stock Rules Catalog (Right Column)
   const filteredCatalogRules = useMemo(() => {
+    if (traitCategoryFilter === 'capstones') return [];
     return stockRulesCatalog
       .filter((r) => {
         // 1. Genre Filter
@@ -235,6 +270,16 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
       })
       .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
   }, [stockRulesCatalog, localGenreFilter, localDomainFilter, traitTypeFilter, traitCategoryFilter, catalogSearchQuery, isTraitInherent, isTraitUniversal, isTraitInPath, isRuleStarred, isGsUnlocked]);
+
+  // Filtered Heroic Capstones
+  const filteredCapstones = useMemo(() => {
+    if (traitCategoryFilter !== 'capstones') return [];
+    return HEROIC_CAPSTONES.filter((c) => {
+      if (!catalogSearchQuery.trim()) return true;
+      const q = catalogSearchQuery.toLowerCase().trim();
+      return c.name.toLowerCase().includes(q) || c.effect.toLowerCase().includes(q);
+    });
+  }, [traitCategoryFilter, catalogSearchQuery]);
 
   const handleEquipStockRule = (rule: SupabaseTrait) => {
     if (isRuleEquipped(rule.name)) return;
@@ -576,6 +621,17 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               >
                 👑 Out-of-Path (3 AP)
               </button>
+              <button
+                type="button"
+                onClick={() => setTraitCategoryFilter('capstones')}
+                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  traitCategoryFilter === 'capstones'
+                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🏆 Capstones
+              </button>
             </div>
 
             {/* Universal Notice Banner */}
@@ -598,128 +654,207 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
               </div>
             )}
 
+            {/* Capstones Notice Banner */}
+            {traitCategoryFilter === 'capstones' && (
+              <div className="p-2 rounded-xl bg-purple-950/40 border border-purple-500/40 flex items-center gap-2 text-xs text-purple-200 shrink-0">
+                <span className="text-sm shrink-0">🏆</span>
+                <span className="leading-tight">
+                  <strong>🏆 Heroic Capstones (&quot;Saving&quot; Tier):</strong> Build-defining high-tier traits. Unlocks are locked for upcoming campaign play.
+                </span>
+              </div>
+            )}
+
             {/* ROW 3: Search Bar + Dynamic Result Count */}
             <div className="flex items-center gap-2 shrink-0">
               <div className="relative flex-1">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search stock traits, perks, notes..."
+                  placeholder={traitCategoryFilter === 'capstones' ? "Search heroic capstones..." : "Search stock traits, perks, notes..."}
                   value={catalogSearchQuery}
                   onChange={(e) => setCatalogSearchQuery(e.target.value)}
                   className="w-full bg-slate-900 text-slate-200 text-xs pl-8 pr-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
                 />
               </div>
               <div className="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono font-bold text-slate-300 shrink-0">
-                {filteredCatalogRules.length} {filteredCatalogRules.length === 1 ? 'item' : 'items'}
+                {traitCategoryFilter === 'capstones' ? filteredCapstones.length : filteredCatalogRules.length}{' '}
+                {(traitCategoryFilter === 'capstones' ? filteredCapstones.length : filteredCatalogRules.length) === 1 ? 'item' : 'items'}
               </div>
             </div>
 
             {/* Zero Matches Feedback & 1-Click Reset */}
-            {filteredCatalogRules.length === 0 && (
-              <div className="p-3.5 bg-slate-950/60 rounded-xl border border-purple-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
-                <span className="text-purple-300 font-semibold">
-                  0 traits match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
-                  {localDomainFilter !== 'ALL' ? ` • ${localDomainFilter}` : ''}
-                  {traitTypeFilter !== 'ALL' ? ` • ${traitTypeFilter}` : ''})
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLocalGenreFilter(activeGenre || 'SciFi');
-                    setLocalDomainFilter('ALL');
-                    setTraitTypeFilter('ALL');
-                    setTraitCategoryFilter('all');
-                    setCatalogSearchQuery('');
-                  }}
-                  className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
-                >
-                  Reset All Filters
-                </button>
-              </div>
+            {traitCategoryFilter === 'capstones' ? (
+              filteredCapstones.length === 0 && (
+                <div className="p-3.5 bg-slate-950/60 rounded-xl border border-purple-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
+                  <span className="text-purple-300 font-semibold">
+                    0 capstones match &quot;{catalogSearchQuery}&quot;
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCatalogSearchQuery('')}
+                    className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
+                  >
+                    Clear Search
+                  </button>
+                </div>
+              )
+            ) : (
+              filteredCatalogRules.length === 0 && (
+                <div className="p-3.5 bg-slate-950/60 rounded-xl border border-purple-500/30 text-xs text-center flex flex-col items-center gap-2 shrink-0 my-1">
+                  <span className="text-purple-300 font-semibold">
+                    0 traits match active filters ({localGenreFilter !== 'ALL' ? localGenreFilter : 'All Genres'}
+                    {localDomainFilter !== 'ALL' ? ` • ${localDomainFilter}` : ''}
+                    {traitTypeFilter !== 'ALL' ? ` • ${traitTypeFilter}` : ''})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLocalGenreFilter(activeGenre || 'SciFi');
+                      setLocalDomainFilter('ALL');
+                      setTraitTypeFilter('ALL');
+                      setTraitCategoryFilter('all');
+                      setCatalogSearchQuery('');
+                    }}
+                    className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
+                  >
+                    Reset All Filters
+                  </button>
+                </div>
+              )
             )}
 
             {/* Scrollable Catalog List */}
             <div className="flex-1 overflow-y-auto pr-1 space-y-2 min-h-0">
-              {filteredCatalogRules.map((rule) => {
-                const equipped = isRuleEquipped(rule.name);
-                const starred = isRuleStarred(rule.id || rule.name);
-                const isMso = isGsUnlocked && isMsoEntry(rule.name);
-                const inPath = isTraitInPath(rule);
-                const isUni = isTraitUniversal(rule);
-                const inherent = isTraitInherent(rule);
-                const apCost = getTraitApCost(rule);
-
-                return (
-                  <div
-                    key={rule.id}
-                    className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-                      equipped
-                        ? 'bg-purple-950/20 border-purple-500/40 opacity-80'
-                        : isMso
-                        ? 'bg-purple-950/20 border-purple-500/30 hover:border-purple-500/50'
-                        : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex flex-col gap-1 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => toggleStarTrait(rule.id)}
-                          className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
-                            starred
-                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                              : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
-                          }`}
-                          title={starred ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                        >
-                          <Star className={`w-3.5 h-3.5 ${starred ? 'fill-amber-400 text-amber-400' : ''}`} />
-                        </button>
-
-                        <TraitNameWithNotes
-                          name={rule.name}
-                          notes={rule.notes || rule.effect}
-                          isMso={isMso}
-                          className={isMso ? 'text-purple-300 font-black' : 'text-slate-100 font-black'}
-                        />
-
-                        {/* Classification Pill: Only show for In-Path traits; hide for Universal and Out-of-Path */}
-                        {inPath && !isUni && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                            {getCharacterMatchingPath(rule.path || rule.kit || rule.table_group, activeCharacter)}
+              {traitCategoryFilter === 'capstones' ? (
+                filteredCapstones.map((capstone) => {
+                  const equipped = isRuleEquipped(capstone.name);
+                  return (
+                    <div
+                      key={capstone.id}
+                      className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                        equipped
+                          ? 'bg-purple-950/20 border-purple-500/40 opacity-80'
+                          : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex flex-col gap-1 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-outfit font-black text-amber-300 text-sm">
+                            {capstone.name}
                           </span>
-                        )}
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-purple-950/80 text-purple-300 border border-purple-500/40">
+                            {capstone.ap_cost} AP
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-amber-950/80 text-amber-300 border border-amber-500/40">
+                            Capstone
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                          {capstone.effect}
+                        </p>
                       </div>
 
-                      <p className="text-xs text-slate-300 leading-relaxed font-sans">{rule.effect || rule.notes || 'No effect description'}</p>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          disabled={true}
+                          className="px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition-all bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed select-none"
+                          title="Capstones are locked for upcoming campaign play."
+                        >
+                          {equipped ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Equipped</span>
+                            </>
+                          ) : (
+                            <span>Unlock ({capstone.ap_cost} AP)</span>
+                          )}
+                        </button>
+                      </div>
                     </div>
+                  );
+                })
+              ) : (
+                filteredCatalogRules.map((rule) => {
+                  const equipped = isRuleEquipped(rule.name);
+                  const starred = isRuleStarred(rule.id || rule.name);
+                  const isMso = isGsUnlocked && isMsoEntry(rule.name);
+                  const inPath = isTraitInPath(rule);
+                  const isUni = isTraitUniversal(rule);
+                  const inherent = isTraitInherent(rule);
+                  const apCost = getTraitApCost(rule);
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        disabled={equipped}
-                        onClick={() => handleEquipStockRule(rule)}
-                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition-all ${
-                          equipped
-                            ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                            : !inPath && !inherent
-                            ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer font-extrabold'
-                            : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
-                        }`}
-                      >
-                        {equipped ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Equipped</span>
-                          </>
-                        ) : (
-                          <span>+ Learn ({inherent ? 'Free' : `${apCost} AP`})</span>
-                        )}
-                      </button>
+                  return (
+                    <div
+                      key={rule.id}
+                      className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                        equipped
+                          ? 'bg-purple-950/20 border-purple-500/40 opacity-80'
+                          : isMso
+                          ? 'bg-purple-950/20 border-purple-500/30 hover:border-purple-500/50'
+                          : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex flex-col gap-1 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => toggleStarTrait(rule.id)}
+                            className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
+                              starred
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
+                            }`}
+                            title={starred ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                          >
+                            <Star className={`w-3.5 h-3.5 ${starred ? 'fill-amber-400 text-amber-400' : ''}`} />
+                          </button>
+
+                          <TraitNameWithNotes
+                            name={rule.name}
+                            notes={rule.notes || rule.effect}
+                            isMso={isMso}
+                            className={isMso ? 'text-purple-300 font-black' : 'text-slate-100 font-black'}
+                          />
+
+                          {/* Classification Pill: Only show for In-Path traits; hide for Universal and Out-of-Path */}
+                          {inPath && !isUni && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40">
+                              {getCharacterMatchingPath(rule.path || rule.kit || rule.table_group, activeCharacter)}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-slate-300 leading-relaxed font-sans">{rule.effect || rule.notes || 'No effect description'}</p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          disabled={equipped}
+                          onClick={() => handleEquipStockRule(rule)}
+                          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition-all ${
+                            equipped
+                              ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                              : !inPath && !inherent
+                              ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer font-extrabold'
+                              : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
+                          }`}
+                        >
+                          {equipped ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Equipped</span>
+                            </>
+                          ) : (
+                            <span>+ Learn ({inherent ? 'Free' : `${apCost} AP`})</span>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         </div>

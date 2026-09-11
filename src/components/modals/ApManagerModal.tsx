@@ -41,8 +41,6 @@ interface ApManagerModalProps {
   onOpenSkillsManager?: () => void;
 }
 
-type RightSubTab = 'CAPSTONES' | 'GM_BONUS';
-
 const normalizeDie = (die?: string): string => {
   if (!die) return 'd4';
   const clean = die.toString().trim().toLowerCase();
@@ -71,7 +69,6 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
     revertApExpenditure,
   } = useCharacterStore();
 
-  const [activeTab, setActiveTab] = useState<RightSubTab>('CAPSTONES');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   const handleOpenManager = (catId: string) => {
@@ -323,17 +320,6 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
 
   if (!isOpen || !activeCharacter) return null;
 
-  // Handle Tier 3 Capstones
-  const handleBuyCapstone = (title: string, cost: number) => {
-    if (availableAp < cost) {
-      showToast(`Insufficient AP! Required: ${cost} AP, Available: ${availableAp} AP.`);
-      return;
-    }
-    recordApExpenditure(cost, 'Capstones', `Unlocked Heroic Capstone: ${title}`, 3, 'Manage AP');
-    saveActiveCharacter();
-    showToast(`Unlocked Heroic Capstone: ${title}!`);
-  };
-
   // Handle GM Bonus Submission
   const handleApplyGmBonus = () => {
     const parsedAmount = parseInt(gmBonusAmountInput, 10);
@@ -372,7 +358,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                 <CardHelpButton ruleKey="leveling.advancement_steps" />
               </h2>
               <p className="text-xs text-slate-400">
-                Audit character progression, level rating, AP costs, and capstones for{' '}
+                Audit character progression, level rating, AP expenditures, and GM grants for{' '}
                 <strong className="text-purple-300">{activeCharacter.name || 'Hero'}</strong>
               </p>
             </div>
@@ -601,112 +587,17 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
               </div>
             </div>
 
-            {/* Right Pane Navigation Sub-Tabs */}
-            <div className="flex border-b border-slate-800 mb-4 shrink-0">
-              <button
-                type="button"
-                onClick={() => setActiveTab('CAPSTONES')}
-                className={`flex-1 py-2 text-xs font-bold font-outfit border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  activeTab === 'CAPSTONES'
-                    ? 'border-purple-400 text-purple-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                🏆 Capstones
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('GM_BONUS')}
-                className={`flex-1 py-2 text-xs font-bold font-outfit border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  activeTab === 'GM_BONUS'
-                    ? 'border-amber-400 text-amber-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                🎁 GM Bonus
-              </button>
+            {/* Right Pane Header: GM Bonus AP Adjustments */}
+            <div className="flex items-center gap-2 pb-2.5 mb-3 border-b border-slate-800 shrink-0 text-amber-300 font-outfit font-bold text-sm">
+              <Gift className="w-4 h-4 text-amber-400" />
+              <span>GM Bonus & AP Adjustments</span>
             </div>
 
-            {/* Sub-Tab Content Viewport */}
+            {/* Content Viewport */}
             <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
-              {/* TAB 1: HEROIC CAPSTONES */}
-              {activeTab === 'CAPSTONES' && (
-                <div className="space-y-3">
-                  <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 text-xs text-purple-200">
-                    <p className="font-bold mb-1">🏆 Heroic Capstones ("Saving" Tier)</p>
-                    <p className="text-[11px] text-purple-300/80">
-                      High-cost capstones designed for build-defining investment and long-term saving anticipation.
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-outfit font-bold text-amber-300 text-sm">Master Technique (5 AP)</h4>
-                      <button
-                        onClick={() => handleBuyCapstone('Master Technique', 5)}
-                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 font-outfit font-bold text-white transition-all text-xs cursor-pointer"
-                      >
-                        Unlock (5 AP)
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      Combine two known Powers into a single combined-action deployment during combat.
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-outfit font-bold text-amber-300 text-sm">Loadout Burn (5 AP)</h4>
-                      <button
-                        onClick={() => handleBuyCapstone('Loadout Burn', 5)}
-                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 font-outfit font-bold text-white transition-all text-xs cursor-pointer"
-                      >
-                        Unlock (5 AP)
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      As a Free Action [F], push any active slotted Relic or Hardware to output maximum/Epic effect for 1 round before melting into inert slag, instantly freeing its Loadout Slots. (Excludes flat 1, 2, 3 consumables).
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-outfit font-bold text-amber-300 text-sm">Second Reaction (6 AP)</h4>
-                      <button
-                        onClick={() => handleBuyCapstone('Second Reaction', 6)}
-                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 font-outfit font-bold text-white transition-all text-xs cursor-pointer"
-                      >
-                        Unlock (6 AP)
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      Gain an additional Reaction action per combat round (increases reaction ceiling to 2).
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-outfit font-bold text-amber-300 text-sm">Heroic Passive (8 AP)</h4>
-                      <button
-                        onClick={() => handleBuyCapstone('Heroic Passive', 8)}
-                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 font-outfit font-bold text-white transition-all text-xs cursor-pointer"
-                      >
-                        Unlock (8 AP)
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      Unlock a signature, narrative-defining passive power or capstone immunity.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 4: GM BONUS */}
-              {activeTab === 'GM_BONUS' && (
-                <div className="space-y-4">
-                  <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 text-xs text-purple-200">
-                    <p className="font-bold mb-1">🎁 GM Bonus AP Adjustments</p>
+              <div className="space-y-4">
+                <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 text-xs text-purple-200">
+                  <p className="font-bold mb-1">🎁 GM Bonus AP Adjustments</p>
                     <p className="text-[11px] text-purple-300/80">
                       Add GM quest bonus AP or apply manual AP adjustments to your hero's total pool.
                     </p>
@@ -795,7 +686,6 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                     )}
                   </div>
                 </div>
-              )}
             </div>
           </div>
         </div>
