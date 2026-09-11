@@ -33,6 +33,7 @@ import {
 } from '../../utils/functionSourceHelper';
 import { reconcileCharacterVaultWithGear } from '../../utils/gearFunctionSync';
 import { EmergencyHardwareShuntModal } from '../modals/EmergencyHardwareShuntModal';
+import { FunctionNameArea } from '../common/FunctionNameArea';
 
 const POWER_DISCIPLINES = [
   'BioTech',
@@ -2049,29 +2050,30 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                         >
                                           <div className="flex items-start justify-between border-b border-slate-800/80 pb-1.5 gap-2">
                                             <div className="flex flex-col gap-0.5">
-                                              <div className="flex items-center gap-1.5 flex-wrap">
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleToggleStarItem(item)}
-                                                  className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
-                                                    isItemStarred(item)
-                                                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                                      : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
-                                                  }`}
-                                                  title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                                >
-                                                  <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
-                                                </button>
-                                                <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
-                                                  <span>{entry.cleanFnName}</span>
-                                                  <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
-                                                </span>
-                                                {entry.version > 1 && (
-                                                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
-                                                    v{entry.version}
-                                                  </span>
-                                                )}
-                                              </div>
+                                              <FunctionNameArea
+                                                item={item}
+                                                gearName={entry.gearName || section.gearName}
+                                                gearIcon={entry.gearIcon || section.gearIcon}
+                                                fnName={entry.cleanFnName}
+                                                version={entry.version}
+                                                notes={resolvedNotes}
+                                                activeCharacter={activeCharacter}
+                                                isGsUnlocked={isGsUnlocked}
+                                                starButton={
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleToggleStarItem(item)}
+                                                    className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
+                                                      isItemStarred(item)
+                                                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                                        : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
+                                                    }`}
+                                                    title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                                  >
+                                                    <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                                  </button>
+                                                }
+                                              />
                                               {badge && (
                                                 <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                                                   <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
@@ -2152,37 +2154,30 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             >
                               <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
                                 <div className="flex flex-col gap-1">
-                                  {section.gearName && (
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 w-fit">
-                                        <span>{section.gearIcon || '🛡️'}</span>
-                                        <span className="truncate max-w-[220px]">{section.gearName}</span>
-                                      </span>
-                                    </div>
-                                  )}
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleStarItem(item)}
-                                      className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
-                                        isItemStarred(item)
-                                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                          : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
-                                      }`}
-                                      title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                    >
-                                      <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
-                                    </button>
-                                    <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
-                                      <span>{entry.cleanFnName}</span>
-                                      <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
-                                    </span>
-                                    {entry.version > 1 && (
-                                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
-                                        v{entry.version}
-                                      </span>
-                                    )}
-                                  </div>
+                                  <FunctionNameArea
+                                    item={item}
+                                    gearName={entry.gearName || section.gearName}
+                                    gearIcon={entry.gearIcon || section.gearIcon}
+                                    fnName={entry.cleanFnName}
+                                    version={entry.version}
+                                    notes={resolvedNotes}
+                                    activeCharacter={activeCharacter}
+                                    isGsUnlocked={isGsUnlocked}
+                                    starButton={
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleStarItem(item)}
+                                        className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
+                                          isItemStarred(item)
+                                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                            : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
+                                        }`}
+                                        title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                      >
+                                        <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                      </button>
+                                    }
+                                  />
                                   {badge && (
                                     <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                                       <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
@@ -2599,29 +2594,30 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                               >
                                                 <div className="flex items-start justify-between border-b border-slate-800/80 pb-1.5 gap-2">
                                                   <div className="flex flex-col gap-0.5">
-                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                      <button
-                                                        type="button"
-                                                        onClick={() => handleToggleStarItem(item)}
-                                                        className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
-                                                          isItemStarred(item)
-                                                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                                            : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
-                                                        }`}
-                                                        title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                                      >
-                                                        <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
-                                                      </button>
-                                                      <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
-                                                        <span>{entry.cleanFnName}</span>
-                                                        <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
-                                                      </span>
-                                                      {entry.version > 1 && (
-                                                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
-                                                          v{entry.version}
-                                                        </span>
-                                                      )}
-                                                    </div>
+                                                    <FunctionNameArea
+                                                      item={item}
+                                                      gearName={entry.gearName || section.gearName}
+                                                      gearIcon={entry.gearIcon || section.gearIcon}
+                                                      fnName={entry.cleanFnName}
+                                                      version={entry.version}
+                                                      notes={resolvedNotes}
+                                                      activeCharacter={activeCharacter}
+                                                      isGsUnlocked={isGsUnlocked}
+                                                      starButton={
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => handleToggleStarItem(item)}
+                                                          className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
+                                                            isItemStarred(item)
+                                                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                                              : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
+                                                          }`}
+                                                          title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                                        >
+                                                          <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                                        </button>
+                                                      }
+                                                    />
                                                     <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                                                       {badge && (
                                                         <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
@@ -2732,37 +2728,30 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   >
                                     <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
                                       <div className="flex flex-col gap-1">
-                                        {section.gearName && (
-                                          <div className="flex items-center gap-1">
-                                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 w-fit">
-                                              <span>{section.gearIcon || '🛡️'}</span>
-                                              <span className="truncate max-w-[220px]">{section.gearName}</span>
-                                            </span>
-                                          </div>
-                                        )}
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                          <button
-                                            type="button"
-                                            onClick={() => handleToggleStarItem(item)}
-                                            className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
-                                              isItemStarred(item)
-                                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                                : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
-                                            }`}
-                                            title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                          >
-                                            <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
-                                          </button>
-                                          <span className="font-outfit font-bold text-sm text-slate-100 inline-flex items-center align-baseline">
-                                            <span>{entry.cleanFnName}</span>
-                                            <ItemNotesPopover notes={resolvedNotes} itemName={entry.cleanFnName} inline />
-                                          </span>
-                                          {entry.version > 1 && (
-                                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
-                                              v{entry.version}
-                                            </span>
-                                          )}
-                                        </div>
+                                        <FunctionNameArea
+                                          item={item}
+                                          gearName={entry.gearName || section.gearName}
+                                          gearIcon={entry.gearIcon || section.gearIcon}
+                                          fnName={entry.cleanFnName}
+                                          version={entry.version}
+                                          notes={resolvedNotes}
+                                          activeCharacter={activeCharacter}
+                                          isGsUnlocked={isGsUnlocked}
+                                          starButton={
+                                            <button
+                                              type="button"
+                                              onClick={() => handleToggleStarItem(item)}
+                                              className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
+                                                isItemStarred(item)
+                                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                                  : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
+                                              }`}
+                                              title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                            >
+                                              <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                            </button>
+                                          }
+                                        />
                                         <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                                           {badge && (
                                             <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
@@ -3754,51 +3743,74 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 }`}
               >
                 {/* 1. Name Column with Version Badge */}
-                <div className="w-56 sm:w-64 md:w-80 shrink-0 flex flex-col gap-0.5">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {(() => {
-                      const displayName = type === 'spells'
-                        ? formatCompositeFunctionName(slot, functionsCatalog, modsCatalog, activeCharacter, ' • ')
-                        : baseName;
-                      const isMso = isMsoEntry(displayName);
-                      const fullName = isGsUnlocked && isMso ? `🌌 ${displayName}` : displayName;
-                      const resolvedNotes =
+                <div className={`${type === 'spells' ? 'w-64 sm:w-72 md:w-88' : 'w-56 sm:w-64 md:w-80'} shrink-0 flex flex-col gap-0.5`}>
+                  {type === 'spells' ? (
+                    <FunctionNameArea
+                      item={slot}
+                      notes={
                         slot.notes ||
+                        (functionsCatalog.find(
+                          (c) =>
+                            c.name.toLowerCase() === baseName.toLowerCase() ||
+                            c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
+                        ) as any)?.notes ||
                         (fullCatalog.find(
                           (c) =>
                             c.name.toLowerCase() === baseName.toLowerCase() ||
                             c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
-                        ) as any)?.notes;
-                      const hasNotes = Boolean(resolvedNotes && resolvedNotes.trim());
+                        ) as any)?.notes
+                      }
+                      functionsCatalog={functionsCatalog}
+                      modsCatalog={modsCatalog}
+                      activeCharacter={activeCharacter}
+                      isGsUnlocked={isGsUnlocked}
+                    />
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(() => {
+                          const displayName = baseName;
+                          const isMso = isMsoEntry(displayName);
+                          const fullName = isGsUnlocked && isMso ? `🌌 ${displayName}` : displayName;
+                          const resolvedNotes =
+                            slot.notes ||
+                            (fullCatalog.find(
+                              (c) =>
+                                c.name.toLowerCase() === baseName.toLowerCase() ||
+                                c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
+                            ) as any)?.notes;
+                          const hasNotes = Boolean(resolvedNotes && resolvedNotes.trim());
 
-                      const lastSpaceIdx = fullName.lastIndexOf(' ');
-                      const prefixText = lastSpaceIdx !== -1 ? fullName.slice(0, lastSpaceIdx + 1) : '';
-                      const lastWord = lastSpaceIdx !== -1 ? fullName.slice(lastSpaceIdx + 1) : fullName;
+                          const lastSpaceIdx = fullName.lastIndexOf(' ');
+                          const prefixText = lastSpaceIdx !== -1 ? fullName.slice(0, lastSpaceIdx + 1) : '';
+                          const lastWord = lastSpaceIdx !== -1 ? fullName.slice(lastSpaceIdx + 1) : fullName;
 
-                      return (
-                        <span
-                          className={`font-outfit font-bold text-xs leading-tight ${
-                            isGsUnlocked && isMso ? 'text-purple-300' : 'text-slate-100'
-                          }`}
-                        >
-                          {prefixText}
-                          {hasNotes ? (
-                            <span className="inline-block whitespace-nowrap">
-                              {lastWord}
-                              <ItemNotesPopover notes={resolvedNotes} itemName={displayName} inline />
+                          return (
+                            <span
+                              className={`font-outfit font-bold text-xs leading-tight ${
+                                isGsUnlocked && isMso ? 'text-purple-300' : 'text-slate-100'
+                              }`}
+                            >
+                              {prefixText}
+                              {hasNotes ? (
+                                <span className="inline-block whitespace-nowrap">
+                                  {lastWord}
+                                  <ItemNotesPopover notes={resolvedNotes} itemName={displayName} inline />
+                                </span>
+                              ) : (
+                                <span>{lastWord}</span>
+                              )}
                             </span>
-                          ) : (
-                            <span>{lastWord}</span>
-                          )}
+                          );
+                        })()}
+                      </div>
+                      {version > 1 && (
+                        <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
+                          <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
+                          v{version}
                         </span>
-                      );
-                    })()}
-                  </div>
-                  {version > 1 && (
-                    <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
-                      <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                      v{version}
-                    </span>
+                      )}
+                    </>
                   )}
                 </div>
 

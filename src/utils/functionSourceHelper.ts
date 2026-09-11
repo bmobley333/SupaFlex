@@ -282,27 +282,83 @@ export const matchFunctionSourceSearch = (
 };
 
 /**
- * Resolves an appropriate icon for the parent gear (Armor, Shield, Weapon, or Tech).
+ * Resolves an appropriate icon for the parent gear:
+ * - ⚔️ Weapons
+ * - 🧥 Armor
+ * - 🛡️ Shields
+ * - 🎒 Supplies / Gear
+ * - 🔮 Artifacts (any artifact)
  */
-export const getGearIcon = (gearName?: string | null, activeCharacter?: Character | null): string => {
-  if (!gearName) return '⚙️';
-  const norm = gearName.toLowerCase().trim();
+export const getGearIcon = (
+  gearName?: string | null,
+  activeCharacter?: Character | null,
+  itemContext?: any
+): string => {
+  // 1. Artifact Check (🔮)
+  const isArtifact =
+    itemContext?.category?.includes('Artifact') ||
+    itemContext?.is_artifact ||
+    itemContext?.cost === 'Artifact' ||
+    (itemContext?.source && String(itemContext.source).toLowerCase().includes('artifact')) ||
+    (gearName && (gearName.toLowerCase().includes('artifact') || gearName.toLowerCase().includes('relic')));
+  if (isArtifact) return '🔮';
+
+  if (!gearName && !itemContext) return '🎒';
+
+  const norm = (gearName || itemContext?.name || '').toLowerCase().trim();
   const sheetData = activeCharacter?.sheet_data;
-  if (sheetData) {
-    if (sheetData.armor_slot?.name?.toLowerCase().includes(norm)) return '🛡️';
-    if (sheetData.shield_slot?.name?.toLowerCase().includes(norm)) return '🛡️';
-    if ((sheetData.weapons || []).some((w: any) => w?.name?.toLowerCase().includes(norm))) return '⚔️';
-  }
-  if (norm.includes('armor') || norm.includes('suit') || norm.includes('plate') || norm.includes('vest') || norm.includes('helm') || norm.includes('exoskeleton')) {
+
+  // 2. Shield Check (🛡️)
+  if (
+    sheetData?.shield_slot?.name?.toLowerCase().includes(norm) ||
+    norm.includes('shield') ||
+    itemContext?.item_type === 'shield' ||
+    itemContext?.category === 'shields'
+  ) {
     return '🛡️';
   }
-  if (norm.includes('shield')) {
-    return '🛡️';
+
+  // 3. Armor Check (🧥)
+  if (
+    sheetData?.armor_slot?.name?.toLowerCase().includes(norm) ||
+    norm.includes('armor') ||
+    norm.includes('suit') ||
+    norm.includes('plate') ||
+    norm.includes('vest') ||
+    norm.includes('helm') ||
+    norm.includes('exoskeleton') ||
+    norm.includes('cuirass') ||
+    norm.includes('mail') ||
+    norm.includes('greaves') ||
+    itemContext?.item_type === 'armor' ||
+    itemContext?.category === 'armor'
+  ) {
+    return '🧥';
   }
-  if (norm.includes('blade') || norm.includes('sword') || norm.includes('rifle') || norm.includes('cannon') || norm.includes('pistol') || norm.includes('bow') || norm.includes('gun') || norm.includes('axe') || norm.includes('dagger')) {
+
+  // 4. Weapon Check (⚔️)
+  if (
+    (sheetData?.weapons || []).some((w: any) => w?.name?.toLowerCase().includes(norm)) ||
+    norm.includes('blade') ||
+    norm.includes('sword') ||
+    norm.includes('rifle') ||
+    norm.includes('cannon') ||
+    norm.includes('pistol') ||
+    norm.includes('bow') ||
+    norm.includes('gun') ||
+    norm.includes('axe') ||
+    norm.includes('dagger') ||
+    norm.includes('spear') ||
+    norm.includes('mace') ||
+    norm.includes('hammer') ||
+    norm.includes('launcher') ||
+    itemContext?.item_type === 'weapon' ||
+    itemContext?.category === 'weapons'
+  ) {
     return '⚔️';
   }
-  return '⚙️';
+
+  return '🎒';
 };
 
 export interface FunctionItemInfo<T = any> {
@@ -354,7 +410,7 @@ export const resolveFunctionItemInfo = <T extends { name?: string; effect?: stri
   }
 
   const parsed = parseAbilityVersion(cleanFnName);
-  const gearIcon = gearName ? getGearIcon(gearName, activeCharacter) : '⚙️';
+  const gearIcon = getGearIcon(gearName, activeCharacter, item);
 
   return {
     item,
