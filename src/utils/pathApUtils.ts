@@ -260,3 +260,58 @@ export const matchesApCategoryFilter = (
   }
   return evalResult.category === targetCategory;
 };
+
+/**
+ * Resolves the single path entry matching the character's known paths from a trait's raw path/source/kit.
+ * E.g., for a Shanask hero with a trait having '["Kryll (mso) {Free}", "Shanask (mso) {Free}"]',
+ * returns 'Shanask (mso) {Free}'.
+ */
+export const getCharacterMatchingPath = (
+  rawPath: string | null | undefined,
+  character: Character | null | undefined
+): string => {
+  if (!rawPath || !rawPath.trim() || rawPath === 'None') return 'General';
+
+  const trimmed = rawPath.trim();
+  let entries: string[] = [];
+
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        entries = parsed.map((p) => String(p).trim()).filter(Boolean);
+      }
+    } catch (_) {}
+  }
+
+  if (entries.length === 0) {
+    entries = trimmed.split(/[,;]/).map((p) => p.trim()).filter(Boolean);
+  }
+
+  if (entries.length === 0) return 'General';
+
+  const cleanEntryStr = (str: string) => str.replace(/^[\["']+|[\]"']+$/g, '').trim();
+
+  // If only 1 entry, return it cleaned
+  if (entries.length === 1) {
+    return cleanEntryStr(entries[0]);
+  }
+
+  // Match against character's known paths
+  const known = getCharacterKnownPaths(character);
+  for (const entry of entries) {
+    const cleaned = cleanEntryStr(entry);
+    const cleanLower = cleanPathName(cleaned).toLowerCase().trim();
+    const strippedMso = cleanLower.replace(/\(mso\)/g, '').trim();
+    for (const kp of known) {
+      if (!kp || kp === 'base') continue;
+      const cleanKp = kp.replace(/\(mso\)/g, '').trim();
+      if (cleanLower === kp || strippedMso === cleanKp || cleanLower.includes(cleanKp) || cleanKp.includes(strippedMso)) {
+        return cleaned;
+      }
+    }
+  }
+
+  // Fallback to first entry
+  return cleanEntryStr(entries[0]);
+};

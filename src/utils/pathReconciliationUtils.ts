@@ -5,7 +5,7 @@
 
 import { Character, CharacterSheetData, AbilitySlot, WeaponSlot, ArmorData, ShieldData, TraitQuirkItem, AttributeKey, DieRating, SupabaseTrait } from '../types/game';
 import { cleanPathName, parseKit, cleanKitName } from './kitUtils';
-import { getCharacterKnownPaths, evaluateItemAp, isItemInPath, parseItemPaths } from './pathApUtils';
+import { getCharacterKnownPaths, evaluateItemAp, isItemInPath, parseItemPaths, getCharacterMatchingPath } from './pathApUtils';
 
 export interface PathReconciliationResult {
   updatedSheetData: CharacterSheetData;
@@ -692,15 +692,16 @@ export const reconcileCharacterFreeTraits = (
     });
 
     if (matchesKnown && !existingNames.has((trait.name || '').toLowerCase().trim())) {
+      const resolvedMatchingPath = getCharacterMatchingPath(rawPath, character);
       existingTraits.push({
         name: trait.name,
         effect: trait.effect || '',
         notes: trait.notes || '',
         stat_hook: trait.stat_hook || null,
-        kit: trait.path || 'General',
-        table_group: trait.path || 'General',
-        source: `${cleanPathName(rawPath)} {Free}`,
-        path: trait.path,
+        kit: resolvedMatchingPath,
+        table_group: resolvedMatchingPath,
+        source: `${resolvedMatchingPath} {Free}`,
+        path: resolvedMatchingPath,
         ap_cost: 0,
         is_hidden: false,
       });

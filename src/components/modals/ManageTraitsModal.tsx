@@ -19,7 +19,7 @@ import {
   calculateAvailableAp,
 } from '../../types/game';
 import { cleanKitName, cleanPathName, isMsoEntry, compareMsoItems, compareMsoOptions } from '../../utils/kitUtils';
-import { getCharacterKnownPaths, isItemInPath, parseItemPaths } from '../../utils/pathApUtils';
+import { getCharacterKnownPaths, isItemInPath, parseItemPaths, getCharacterMatchingPath } from '../../utils/pathApUtils';
 import { reconcileCharacterFreeTraits } from '../../utils/pathReconciliationUtils';
 
 interface ManageTraitsModalProps {
@@ -348,6 +348,10 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   const costBadge = typeof rule.ap_cost === 'number'
                     ? (rule.ap_cost === 0 ? '0 AP (Free)' : `${rule.ap_cost} AP`)
                     : (inherent ? '0 AP (Free)' : '1 AP');
+                  const matchingPath = getCharacterMatchingPath(
+                    rule.path || rule.kit || rule.table_group || rule.source,
+                    activeCharacter
+                  );
 
                   return (
                     <div
@@ -358,33 +362,19 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                           : 'bg-slate-900/80 border-slate-800/80 hover:border-slate-700'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Row 1: Title (left) & Actions (upper right corner) */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
                           <TraitNameWithNotes
                             name={rule.name}
                             notes={rule.notes || rule.effect}
                             isMso={isMso}
                             className={isMso ? 'text-purple-300 font-bold' : 'text-slate-100 font-bold'}
                           />
-
-                          {/* AP Badge */}
-                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
-                            costBadge.includes('0')
-                              ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
-                              : costBadge.includes('3')
-                              ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
-                              : 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
-                          }`}>
-                            {costBadge}
-                          </span>
-
-                          {/* Clean Classification Pill */}
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                            🧬 {cleanPathName(rule.path || rule.kit || rule.table_group || rule.source || 'General')}
-                          </span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Pinned to upper right corner */}
+                        <div className="flex items-center gap-1.5 shrink-0 self-start">
                           {/* Dyslexia-Friendly KISS Visibility Pill Switch (Viewable / Hidden) */}
                           <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md">
                             <button
@@ -436,24 +426,45 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                         </div>
                       </div>
 
-                      {/* Rule Description */}
+                      {/* Row 2: Badges (Cost & Matching Path & Stat Hook) */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* AP Badge */}
+                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
+                          costBadge.includes('0')
+                            ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
+                            : costBadge.includes('3')
+                            ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+                            : 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
+                        }`}>
+                          {costBadge}
+                        </span>
+
+                        {/* Clean Character Matching Path Pill (no 🧬 icon, no uppercase) */}
+                        {matchingPath && matchingPath !== 'General' && (
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40">
+                            {matchingPath}
+                          </span>
+                        )}
+
+                        {/* Stat Hook Badge */}
+                        {rule.stat_hook && (
+                          <div className="flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded border w-fit shadow-inner text-cyan-300 bg-cyan-950/40 border-cyan-500/30">
+                            <Sparkles className="w-2.5 h-2.5 shrink-0" />
+                            <span>
+                              {rule.stat_hook.type === 'mind_die'
+                                ? 'Base AR = Mind Die Rating'
+                                : `${rule.stat_hook.value && rule.stat_hook.value > 0 ? '+' : ''}${
+                                    rule.stat_hook.value
+                                  } ${rule.stat_hook.target?.toUpperCase()}`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Row 3: Rule Effect */}
                       <p className="text-xs text-slate-300 font-sans leading-relaxed">
                         {rule.effect || rule.notes || 'No effect description'}
                       </p>
-
-                      {/* Stat Hook Badge */}
-                      {rule.stat_hook && (
-                        <div className="flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded border w-fit shadow-inner text-cyan-300 bg-cyan-950/40 border-cyan-500/30">
-                          <Sparkles className="w-2.5 h-2.5 shrink-0" />
-                          <span>
-                            {rule.stat_hook.type === 'mind_die'
-                              ? 'Base AR = Mind Die Rating'
-                              : `${rule.stat_hook.value && rule.stat_hook.value > 0 ? '+' : ''}${
-                                  rule.stat_hook.value
-                                } ${rule.stat_hook.target?.toUpperCase()}`}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   );
                 })
@@ -675,8 +686,8 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
                         {/* Classification Pill: Only show for In-Path traits; hide for Universal and Out-of-Path */}
                         {inPath && !isUni && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                            🧬 {cleanPathName(rule.path || rule.kit || rule.table_group || 'General')}
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40">
+                            {getCharacterMatchingPath(rule.path || rule.kit || rule.table_group, activeCharacter)}
                           </span>
                         )}
                       </div>
