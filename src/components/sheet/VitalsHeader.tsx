@@ -16,6 +16,7 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
 
   const [damageInput, setDamageInput] = useState('');
   const [healInput, setHealInput] = useState('');
+  const [adjInput, setAdjInput] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
@@ -48,6 +49,25 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
       handleVitChange(val);
     }
     setHealInput('');
+  };
+
+  const handleApplyAdj = () => {
+    const delta = parseInt(adjInput.trim(), 10);
+    if (!isNaN(delta) && delta !== 0) {
+      updateActiveSheetData((prev) => {
+        const currentMax = prev.vitality_max || 10;
+        const currentVal = prev.current_vitality ?? currentMax;
+        const newMax = Math.max(1, currentMax + delta);
+        const newCurrent = currentVal + delta;
+        return {
+          ...prev,
+          vitality_max: newMax,
+          current_vitality: newCurrent,
+        };
+      });
+      saveActiveCharacter();
+    }
+    setAdjInput('');
   };
 
   // Draggable Progress Bar Pointer Handlers (Smooth 60fps tracking, save only on pointer release)
@@ -126,14 +146,32 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onOpenVitalityManager}
-          className="p-1.5 px-2.5 bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-200 hover:text-white text-xs font-bold rounded-xl border border-emerald-500/40 hover:border-emerald-400 flex items-center justify-center transition-all cursor-pointer shadow-sm group"
-          title="Open Vitality Manager"
-        >
-          <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Adj [text box] */}
+          <div className="flex items-center gap-1.5 bg-slate-950/80 px-2 py-1 rounded-xl border border-slate-800 text-xs font-mono">
+            <span className="text-[11px] font-bold text-slate-400">Adj</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="±"
+              value={adjInput}
+              onChange={(e) => setAdjInput(e.target.value)}
+              onBlur={handleApplyAdj}
+              onKeyDown={(e) => e.key === 'Enter' && handleApplyAdj()}
+              className="w-10 bg-slate-900 text-emerald-300 text-xs font-mono font-bold px-1.5 py-0.5 rounded border border-slate-700 outline-none text-center focus:border-emerald-500"
+              title="Enter positive or negative integer to adjust current and total Vitality (min total 1)"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={onOpenVitalityManager}
+            className="p-1.5 px-2.5 bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-200 hover:text-white text-xs font-bold rounded-xl border border-emerald-500/40 hover:border-emerald-400 flex items-center justify-center transition-all cursor-pointer shadow-sm group"
+            title="Open Vitality Manager"
+          >
+            <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Stat Row: Prominent Current Vitality Display & Draggable Progress Bar */}

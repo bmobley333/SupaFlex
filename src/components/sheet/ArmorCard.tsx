@@ -477,6 +477,41 @@ export const ArmorCard: React.FC = () => {
     isGsUnlocked,
   ]);
 
+  const [mrAdjInput, setMrAdjInput] = useState('');
+
+  const handleApplyMrAdj = () => {
+    const delta = parseInt(mrAdjInput.trim(), 10);
+    if (!isNaN(delta) && delta !== 0) {
+      updateActiveSheetData((prev) => {
+        const currentMr = prev.movement_rate || { armored: 6, shield: 'n/a' };
+        const currentArmored = typeof currentMr.armored === 'number' ? currentMr.armored : 6;
+        const newArmored = Math.max(1, currentArmored + delta);
+        
+        let newShield: number | string = currentMr.shield;
+        if (typeof currentMr.shield === 'number') {
+          newShield = Math.max(1, currentMr.shield + delta);
+        } else if (typeof derivedShieldDrawn === 'number') {
+          newShield = Math.max(1, derivedShieldDrawn + delta);
+        }
+
+        const currentAdj = prev.mr_adj || 0;
+        const newAdj = currentAdj + delta;
+
+        return {
+          ...prev,
+          mr_adj: newAdj,
+          movement_rate: {
+            ...currentMr,
+            armored: newArmored,
+            shield: newShield,
+          },
+        };
+      });
+      saveActiveCharacter();
+    }
+    setMrAdjInput('');
+  };
+
   const shieldSlot = activeCharacter?.sheet_data?.shield_slot;
   const isShieldEquipped = shieldSlot?.equipped ?? false;
   let derivedShieldDrawn: string | number = 'n/a';
@@ -485,7 +520,9 @@ export const ArmorCard: React.FC = () => {
     const match = mrAdjustmentStr.match(/-?\d+/);
     const penalty = match ? parseInt(match[0], 10) : 0;
     const armoredMR = mrData.armored ?? 6;
-    derivedShieldDrawn = Math.max(0, armoredMR + penalty);
+    derivedShieldDrawn = Math.max(1, armoredMR + penalty);
+  } else if (typeof mrData.shield === 'number') {
+    derivedShieldDrawn = Math.max(1, mrData.shield);
   }
 
   return (
@@ -1006,7 +1043,7 @@ export const ArmorCard: React.FC = () => {
                   : 'Auto-updated matching equipped armor Armored Movement Rate'
               }
             >
-              {Math.max(0, (mrData.armored ?? 6) + statHooks.mrBonus)}
+              {Math.max(1, (mrData.armored ?? 6) + statHooks.mrBonus)}
             </div>
           </div>
 
@@ -1015,10 +1052,26 @@ export const ArmorCard: React.FC = () => {
             <span className="text-[11px] font-bold text-slate-300">Shield Drawn 👣</span>
             <div
               className="px-2 bg-slate-900 border border-slate-800 rounded py-0.5 text-xs font-mono font-extrabold text-teal-300 text-center"
-              title="Auto-calculated Armored MR reduced by shield MR penalty (min 0)"
+              title="Auto-calculated Armored MR reduced by shield MR penalty (min 1)"
             >
               {derivedShieldDrawn}
             </div>
+          </div>
+
+          {/* Adj [text box] */}
+          <div className="px-3 py-1.5 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center gap-1.5 w-fit">
+            <span className="text-[11px] font-bold text-slate-400">Adj</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="±"
+              value={mrAdjInput}
+              onChange={(e) => setMrAdjInput(e.target.value)}
+              onBlur={handleApplyMrAdj}
+              onKeyDown={(e) => e.key === 'Enter' && handleApplyMrAdj()}
+              className="w-10 bg-slate-900 text-teal-300 text-xs font-mono font-bold px-1.5 py-0.5 rounded border border-slate-700 outline-none text-center focus:border-teal-500"
+              title="Enter positive or negative integer to adjust Armored and Shield Drawn MR (hard floor 1)"
+            />
           </div>
         </div>
       </div>

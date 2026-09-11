@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowDown, Zap, ChevronDown, ChevronUp, Sparkles, X, Plus, Minus } from 'lucide-react';
+import { ArrowDown, Zap, ChevronDown, ChevronUp, Sparkles, X, Plus, Minus, RotateCcw } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, DieRating } from '../../types/game';
 import { stepDownDie } from '../../lib/dice';
@@ -116,6 +116,12 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
       sparks: newCharges,
       is_charged: sparked,
     }));
+    saveActiveCharacter();
+  };
+
+  const handleClearCharges = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    resetSparks();
     saveActiveCharacter();
   };
 
@@ -407,6 +413,21 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
                 +1 ALL
               </span>
             )}
+
+            {/* Wordless icon button to empty all charges to none */}
+            <button
+              type="button"
+              onClick={handleClearCharges}
+              disabled={charges === 0}
+              className={`p-0.5 rounded transition-all ml-0.5 ${
+                charges > 0
+                  ? 'text-amber-400/80 hover:text-amber-200 hover:scale-110 cursor-pointer'
+                  : 'text-slate-600 opacity-40 cursor-not-allowed'
+              }`}
+              title="Reset all spark charges to 0"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
 
             {/* Secondary Zone: Chevron Popover Trigger */}
             <button

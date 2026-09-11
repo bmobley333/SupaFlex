@@ -160,14 +160,14 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                   ⚡ Emergency Hardware Shunt
                 </h3>
                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-950/70 text-amber-300 border border-amber-500/40">
-                  [M] Move Action
+                  [F] Free Action
                 </span>
                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-500/40">
                   🍀 1 Luck Chit
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Hot-swap 1 Vault function into your active stance. Costs <strong className="text-emerald-300">1 Luck Chit</strong> for a <strong className="text-amber-300">[M] Move Action</strong>.
+                Hot-swap 1 Vault function into your active stance. Costs <strong className="text-emerald-300">1 Luck Chit</strong> as a <strong className="text-amber-300">[F] Free Action</strong>.
               </p>
             </div>
           </div>

@@ -1,5 +1,5 @@
 // src/components/sheet/MovementRateCard.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { calculateMovementRate } from '../../types/game';
 
@@ -7,10 +7,11 @@ const ARMORED_OPTIONS = Array.from({ length: 13 }, (_, i) => i); // 0 to 12
 
 export const MovementRateCard: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+  const [mrAdjInput, setMrAdjInput] = useState('');
 
   const derivedMR = calculateMovementRate(activeCharacter?.sheet_data);
-  const armoredMR = derivedMR.armored;
-  const shieldDrawnMR = derivedMR.shield;
+  const armoredMR = Math.max(1, derivedMR.armored);
+  const shieldDrawnMR = typeof derivedMR.shield === 'number' ? Math.max(1, derivedMR.shield) : derivedMR.shield;
 
   const handleManualArmoredChange = (newArmored: number) => {
     updateActiveSheetData((prev) => {
@@ -18,19 +19,52 @@ export const MovementRateCard: React.FC = () => {
         ...prev,
         movement_rate: {
           ...(prev.movement_rate || { armored: 6, shield: 'n/a' }),
-          armored: newArmored,
+          armored: Math.max(1, newArmored),
         },
       };
       const recalculated = calculateMovementRate(tempSheet);
       return {
         ...prev,
         movement_rate: {
-          armored: recalculated.armored,
-          shield: recalculated.shield,
+          armored: Math.max(1, recalculated.armored),
+          shield: typeof recalculated.shield === 'number' ? Math.max(1, recalculated.shield) : recalculated.shield,
         },
       };
     });
     saveActiveCharacter();
+  };
+
+  const handleApplyMrAdj = () => {
+    const delta = parseInt(mrAdjInput.trim(), 10);
+    if (!isNaN(delta) && delta !== 0) {
+      updateActiveSheetData((prev) => {
+        const currentMr = prev.movement_rate || { armored: 6, shield: 'n/a' };
+        const currentArmored = typeof currentMr.armored === 'number' ? currentMr.armored : 6;
+        const newArmored = Math.max(1, currentArmored + delta);
+
+        let newShield: number | string = currentMr.shield;
+        if (typeof currentMr.shield === 'number') {
+          newShield = Math.max(1, currentMr.shield + delta);
+        } else if (typeof shieldDrawnMR === 'number') {
+          newShield = Math.max(1, shieldDrawnMR + delta);
+        }
+
+        const currentAdj = prev.mr_adj || 0;
+        const newAdj = currentAdj + delta;
+
+        return {
+          ...prev,
+          mr_adj: newAdj,
+          movement_rate: {
+            ...currentMr,
+            armored: newArmored,
+            shield: newShield,
+          },
+        };
+      });
+      saveActiveCharacter();
+    }
+    setMrAdjInput('');
   };
 
   return (
@@ -76,10 +110,26 @@ export const MovementRateCard: React.FC = () => {
           </span>
           <div
             className="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-xs font-mono font-extrabold text-teal-300 text-center"
-            title="Auto-calculated Armored MR reduced by shield MR penalty (min 0)"
+            title="Auto-calculated Armored MR reduced by shield MR penalty (min 1)"
           >
             {shieldDrawnMR}
           </div>
+        </div>
+
+        {/* Adj [text box] */}
+        <div className="px-3 py-2 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center gap-1.5 w-fit">
+          <span className="text-[11px] font-bold text-slate-400">Adj</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="±"
+            value={mrAdjInput}
+            onChange={(e) => setMrAdjInput(e.target.value)}
+            onBlur={handleApplyMrAdj}
+            onKeyDown={(e) => e.key === 'Enter' && handleApplyMrAdj()}
+            className="w-10 bg-slate-900 text-teal-300 text-xs font-mono font-bold px-1.5 py-0.5 rounded border border-slate-700 outline-none text-center focus:border-teal-500"
+            title="Enter positive or negative integer to adjust Armored and Shield Drawn MR (hard floor 1)"
+          />
         </div>
       </div>
     </div>

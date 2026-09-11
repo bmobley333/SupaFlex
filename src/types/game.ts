@@ -690,6 +690,7 @@ export interface CharacterSheetData {
   armory?: ShieldData[];
   character_links?: EncounterLink[]; // Unique links tied to this specific character
   movement_rate?: MovementRateData;
+  mr_adj?: number; // Manual Movement Rate adjustment (applies to both Armored and Shield Drawn MR)
   bio: CharacterBio;
   essence_core?: number; // 0-100 Essence Core Progress Ring
   character_vault?: MagicItem[]; // Unlimited storage vault for claimed Relics and Hardware
@@ -960,6 +961,10 @@ export const calculateMovementRate = (sheetData: any): { armored: number; shield
     armoredMR = sheetData.movement_rate.armored;
   }
 
+  // Factor in manual adjustment (mr_adj) with hard floor of 1
+  const mrAdj = typeof sheetData.mr_adj === 'number' ? sheetData.mr_adj : 0;
+  armoredMR = Math.max(1, armoredMR + mrAdj);
+
   // 2. Shield Drawn MR Calculation
   const shieldSlot = sheetData.shield_slot;
   const isShieldEquipped = Boolean(
@@ -976,7 +981,9 @@ export const calculateMovementRate = (sheetData: any): { armored: number; shield
     const mrAdjustmentStr = shieldSlot.mr_adjustment || shieldSlot.mr || shieldSlot.effect || '0';
     const match = String(mrAdjustmentStr).match(/-?\d+/);
     const penalty = match ? parseInt(match[0], 10) : 0;
-    shieldDrawnMR = Math.max(0, armoredMR + penalty);
+    shieldDrawnMR = Math.max(1, armoredMR + penalty);
+  } else if (typeof sheetData.movement_rate?.shield === 'number') {
+    shieldDrawnMR = Math.max(1, sheetData.movement_rate.shield + mrAdj);
   }
 
   return { armored: armoredMR, shield: shieldDrawnMR };
