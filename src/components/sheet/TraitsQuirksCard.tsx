@@ -134,14 +134,14 @@ export const TraitsQuirksCard: React.FC = () => {
                 <div className="w-44 sm:w-48 shrink-0 flex flex-col gap-0.5">
                   <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline flex-wrap leading-tight ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
                     <span>{isMso ? `🌌 ${t.name}` : t.name}</span>
-                    <ItemNotesPopover notes={t.notes || (t as any).effect} itemName={t.name} inline />
+                    <ItemNotesPopover notes={t.notes || t.effect} itemName={t.name} inline />
                   </span>
                 </div>
 
                 {/* 2. Rule Description & Live Computed Stat Hook Column */}
                 <div className="flex-1 min-w-0 flex flex-col gap-1">
                   <p className="text-xs text-slate-300 whitespace-normal break-words leading-relaxed font-sans">
-                    {t.notes || (t as any).effect || 'No rule description'}
+                    {t.effect || t.notes || 'No effect description'}
                   </p>
                   {t.stat_hook && (
                     <div className="flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded border w-fit shadow-inner text-cyan-300 bg-cyan-950/40 border-cyan-500/30">

@@ -151,6 +151,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
         return (
           t.name.toLowerCase().includes(q) ||
           (t.notes || '').toLowerCase().includes(q) ||
+          (t.effect || '').toLowerCase().includes(q) ||
           (t.source || '').toLowerCase().includes(q)
         );
       })
@@ -435,7 +436,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
                       {/* Rule Description */}
                       <p className="text-xs text-slate-300 font-sans leading-relaxed">
-                        {rule.notes || rule.effect}
+                        {rule.effect || rule.notes || 'No effect description'}
                       </p>
 
                       {/* Stat Hook Badge */}
@@ -673,7 +674,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                         </span>
                       </div>
 
-                      <p className="text-xs text-slate-300 leading-relaxed font-sans">{rule.notes || rule.effect}</p>
+                      <p className="text-xs text-slate-300 leading-relaxed font-sans">{rule.effect || rule.notes || 'No effect description'}</p>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
