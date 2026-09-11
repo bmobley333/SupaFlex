@@ -107,7 +107,7 @@ interface CharacterStore {
 
   // Traits & Quirks Actions
   addTraitQuirk: (trait: TraitQuirkItem) => void;
-  removeTraitQuirk: (traitNameOrId: string | number, forceGmOverride?: boolean) => void;
+  removeTraitQuirk: (traitNameOrId: string | number, forceGmOverride?: boolean) => boolean;
   toggleTraitVisibility: (traitNameOrId: string | number) => void;
   toggleStarTrait: (id: string | number) => void;
   toggleFavoriteTraitTable: (tableGroup: string) => void;
@@ -1109,24 +1109,28 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     get().saveActiveCharacter();
   },
 
-  removeTraitQuirk: (traitNameOrId: string | number, forceGmOverride = false) => {
+  removeTraitQuirk: (traitNameOrId: string | number, forceGmOverride = false): boolean => {
     const activeRole = get().activeRole;
     const existing = get().activeCharacter?.sheet_data?.traits_quirks || [];
     const target = existing.find((t) =>
       typeof traitNameOrId === 'number' ? t.id === traitNameOrId : t.name === traitNameOrId || t.id === traitNameOrId
     );
 
-    const isTrait =
+    // Paid traits (ap_cost > 0) are learned/purchased abilities and can always be removed by the player.
+    const isPaid = typeof target?.ap_cost === 'number' && target.ap_cost > 0;
+
+    const isInherentTrait =
+      !isPaid &&
       target &&
       (target.ap_cost === 0 ||
         (target.path && (target.path.includes('{Free}') || target.path.includes('{Perk}') || target.path.includes('{Trait}'))) ||
         (target.kit && (target.kit.includes('{Free}') || target.kit.includes('{Perk}') || target.kit.includes('{Trait}'))) ||
-        (target.source && (target.source.includes('Free') || target.source.includes('Perk') || target.source.includes('Trait'))) ||
+        (target.source && (target.source.includes('{Free}') || target.source.includes('{Perk}') || target.source.includes('{Trait}'))) ||
         (target.table_group && (target.table_group.includes('{Free}') || target.table_group.includes('{Perk}') || target.table_group.includes('{Trait}'))));
 
-    if (isTrait && activeRole !== 'gm' && !forceGmOverride) {
+    if (isInherentTrait && activeRole !== 'gm' && !forceGmOverride) {
       alert('Inherent traits (0 AP) are auto-taken and cannot be removed without GM approval. Switch to GM Mode to remove traits.');
-      return;
+      return false;
     }
 
     get().updateActiveSheetData((prev) => {
@@ -1142,6 +1146,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       };
     });
     get().saveActiveCharacter();
+    return true;
   },
 
   toggleTraitVisibility: (traitNameOrId: string | number) => {

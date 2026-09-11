@@ -98,6 +98,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
   const isTraitInherent = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
     const cost = (rule as any).ap_cost;
+    if (typeof cost === 'number' && cost > 0) return false;
     if (typeof cost === 'number' && cost === 0) return true;
     if (!isTraitInPath(rule)) return false;
     const pathStr = (rule.path || rule.kit || rule.table_group || (rule as any).source || '').toLowerCase();
@@ -273,7 +274,8 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
       alert('Inherent traits (0 AP) are auto-taken and cannot be removed without GM approval. Switch to GM Mode to remove traits.');
       return;
     }
-    removeTraitQuirk(rule.name);
+    const removed = removeTraitQuirk(rule.name);
+    if (!removed) return;
     const cost = typeof rule.ap_cost === 'number' && rule.ap_cost > 0 ? rule.ap_cost : (inherent ? 0 : 1);
     if (cost > 0) {
       recordApExpenditure(-cost, 'Skills', `Removed Trait: ${rule.name} (-${cost} AP Refunded)`, 1, 'Manage Traits');
