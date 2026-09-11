@@ -1,5 +1,4 @@
-// src/components/sheet/MovementRateCard.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { calculateMovementRate } from '../../types/game';
 
@@ -7,9 +6,19 @@ const ARMORED_OPTIONS = Array.from({ length: 13 }, (_, i) => i); // 0 to 12
 
 export const MovementRateCard: React.FC = () => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
-  const [mrAdjInput, setMrAdjInput] = useState('');
+  const sheet = activeCharacter?.sheet_data;
 
-  const derivedMR = calculateMovementRate(activeCharacter?.sheet_data);
+  const [mrAdjInput, setMrAdjInput] = useState(() => {
+    const v = sheet?.mr_adj;
+    return v !== undefined && v !== 0 ? String(v) : '';
+  });
+
+  useEffect(() => {
+    const v = sheet?.mr_adj;
+    setMrAdjInput(v !== undefined && v !== 0 ? String(v) : '');
+  }, [activeCharacter?.id, sheet?.mr_adj]);
+
+  const derivedMR = calculateMovementRate(sheet);
   const armoredMR = Math.max(1, derivedMR.armored);
   const shieldDrawnMR = typeof derivedMR.shield === 'number' ? Math.max(1, derivedMR.shield) : derivedMR.shield;
 
@@ -35,8 +44,18 @@ export const MovementRateCard: React.FC = () => {
   };
 
   const handleApplyMrAdj = () => {
-    const delta = parseInt(mrAdjInput.trim(), 10);
-    if (!isNaN(delta) && delta !== 0) {
+    const trimmed = mrAdjInput.trim();
+    const parsed = trimmed === '' ? 0 : parseInt(trimmed, 10);
+    if (isNaN(parsed)) {
+      const currentStored = sheet?.mr_adj;
+      setMrAdjInput(currentStored !== undefined && currentStored !== 0 ? String(currentStored) : '');
+      return;
+    }
+
+    const oldAdj = sheet?.mr_adj || 0;
+    const delta = parsed - oldAdj;
+
+    if (delta !== 0) {
       updateActiveSheetData((prev) => {
         const currentMr = prev.movement_rate || { armored: 6, shield: 'n/a' };
         const currentArmored = typeof currentMr.armored === 'number' ? currentMr.armored : 6;
@@ -49,12 +68,9 @@ export const MovementRateCard: React.FC = () => {
           newShield = Math.max(1, shieldDrawnMR + delta);
         }
 
-        const currentAdj = prev.mr_adj || 0;
-        const newAdj = currentAdj + delta;
-
         return {
           ...prev,
-          mr_adj: newAdj,
+          mr_adj: parsed,
           movement_rate: {
             ...currentMr,
             armored: newArmored,
@@ -63,8 +79,10 @@ export const MovementRateCard: React.FC = () => {
         };
       });
       saveActiveCharacter();
+      setMrAdjInput(parsed !== 0 ? String(parsed) : (trimmed === '0' ? '0' : ''));
+    } else {
+      setMrAdjInput(parsed !== 0 ? String(parsed) : (trimmed === '0' ? '0' : ''));
     }
-    setMrAdjInput('');
   };
 
   return (
@@ -122,17 +140,16 @@ export const MovementRateCard: React.FC = () => {
           <input
             type="text"
             inputMode="numeric"
-            placeholder="±"
+            placeholder="±0"
             value={mrAdjInput}
             onChange={(e) => setMrAdjInput(e.target.value)}
             onBlur={handleApplyMrAdj}
             onKeyDown={(e) => e.key === 'Enter' && handleApplyMrAdj()}
             className="w-10 bg-slate-900 text-teal-300 text-xs font-mono font-bold px-1.5 py-0.5 rounded border border-slate-700 outline-none text-center focus:border-teal-500"
-            title="Enter positive or negative integer to adjust Armored and Shield Drawn MR (hard floor 1)"
+            title="Enter positive or negative integer for current Movement Rate modifier (hard floor 1)"
           />
         </div>
       </div>
     </div>
   );
 };
-

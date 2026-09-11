@@ -1,7 +1,7 @@
 // src/components/sheet/VitalsHeader.tsx
 // Vitality Header Component - Prominent Current Vitality readout, draggable progress bar, & quick adjusters.
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -16,9 +16,17 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
 
   const [damageInput, setDamageInput] = useState('');
   const [healInput, setHealInput] = useState('');
-  const [adjInput, setAdjInput] = useState('');
+  const [adjInput, setAdjInput] = useState(() => {
+    const v = sheet?.vit_adj;
+    return v !== undefined && v !== 0 ? String(v) : '';
+  });
   const [isDragging, setIsDragging] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const v = sheet?.vit_adj;
+    setAdjInput(v !== undefined && v !== 0 ? String(v) : '');
+  }, [activeCharacter?.id, sheet?.vit_adj]);
 
   if (!sheet) return null;
 
@@ -52,22 +60,36 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
   };
 
   const handleApplyAdj = () => {
-    const delta = parseInt(adjInput.trim(), 10);
-    if (!isNaN(delta) && delta !== 0) {
-      updateActiveSheetData((prev) => {
-        const currentMax = prev.vitality_max || 10;
-        const currentVal = prev.current_vitality ?? currentMax;
-        const newMax = Math.max(1, currentMax + delta);
-        const newCurrent = currentVal + delta;
-        return {
-          ...prev,
-          vitality_max: newMax,
-          current_vitality: newCurrent,
-        };
-      });
-      saveActiveCharacter();
+    const trimmed = adjInput.trim();
+    const parsed = trimmed === '' ? 0 : parseInt(trimmed, 10);
+    if (isNaN(parsed)) {
+      const currentStored = sheet.vit_adj;
+      setAdjInput(currentStored !== undefined && currentStored !== 0 ? String(currentStored) : '');
+      return;
     }
-    setAdjInput('');
+
+    const oldAdj = sheet.vit_adj || 0;
+    const delta = parsed - oldAdj;
+
+    if (delta !== 0) {
+      const currentMax = sheet.vitality_max || 10;
+      const currentVal = sheet.current_vitality ?? currentMax;
+      const newMax = Math.max(1, currentMax + delta);
+      const actualDelta = newMax - currentMax;
+      const newCurrent = currentVal + actualDelta;
+      const newAdj = oldAdj + actualDelta;
+
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        vit_adj: newAdj,
+        vitality_max: newMax,
+        current_vitality: newCurrent,
+      }));
+      saveActiveCharacter();
+      setAdjInput(newAdj !== 0 ? String(newAdj) : (trimmed === '0' ? '0' : ''));
+    } else {
+      setAdjInput(parsed !== 0 ? String(parsed) : (trimmed === '0' ? '0' : ''));
+    }
   };
 
   // Draggable Progress Bar Pointer Handlers (Smooth 60fps tracking, save only on pointer release)
@@ -153,13 +175,13 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
             <input
               type="text"
               inputMode="numeric"
-              placeholder="±"
+              placeholder="±0"
               value={adjInput}
               onChange={(e) => setAdjInput(e.target.value)}
               onBlur={handleApplyAdj}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyAdj()}
               className="w-10 bg-slate-900 text-emerald-300 text-xs font-mono font-bold px-1.5 py-0.5 rounded border border-slate-700 outline-none text-center focus:border-emerald-500"
-              title="Enter positive or negative integer to adjust current and total Vitality (min total 1)"
+              title="Enter positive or negative integer for current Vitality modifier (min total 1)"
             />
           </div>
 

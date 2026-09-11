@@ -635,6 +635,7 @@ export interface CharacterSheetData {
   vitality_max: number;
   vitality_base_max?: number;
   current_vitality: number;
+  vit_adj?: number; // Active persistent Vitality modifier (applies to both Current and Max Vitality)
   last_vit_roll_level?: number;
   wounds: number;
   max_wounds: number;
@@ -937,7 +938,7 @@ export const calculateMovementRate = (sheetData: any): { armored: number; shield
 
   // 1. Armored MR Calculation
   const armorSlot = sheetData.armor_slot;
-  let armoredMR = 6;
+  let baseArmoredMR = 6;
 
   if (
     armorSlot &&
@@ -949,21 +950,20 @@ export const calculateMovementRate = (sheetData: any): { armored: number; shield
     const rawMr = armorSlot.mr || armorSlot.mr_adjustment || '';
     const mrMatch = String(rawMr).match(/\d+/);
     if (mrMatch) {
-      armoredMR = parseInt(mrMatch[0], 10);
+      baseArmoredMR = parseInt(mrMatch[0], 10);
     }
-  }
-
-  if (
+  } else if (
     typeof sheetData.movement_rate?.armored === 'number' &&
     !isNaN(sheetData.movement_rate.armored) &&
     (!armorSlot || !armorSlot.mr)
   ) {
-    armoredMR = sheetData.movement_rate.armored;
+    const currentAdj = typeof sheetData.mr_adj === 'number' ? sheetData.mr_adj : 0;
+    baseArmoredMR = sheetData.movement_rate.armored - currentAdj;
   }
 
   // Factor in manual adjustment (mr_adj) with hard floor of 1
   const mrAdj = typeof sheetData.mr_adj === 'number' ? sheetData.mr_adj : 0;
-  armoredMR = Math.max(1, armoredMR + mrAdj);
+  const armoredMR = Math.max(1, baseArmoredMR + mrAdj);
 
   // 2. Shield Drawn MR Calculation
   const shieldSlot = sheetData.shield_slot;
@@ -983,7 +983,7 @@ export const calculateMovementRate = (sheetData: any): { armored: number; shield
     const penalty = match ? parseInt(match[0], 10) : 0;
     shieldDrawnMR = Math.max(1, armoredMR + penalty);
   } else if (typeof sheetData.movement_rate?.shield === 'number') {
-    shieldDrawnMR = Math.max(1, sheetData.movement_rate.shield + mrAdj);
+    shieldDrawnMR = Math.max(1, sheetData.movement_rate.shield);
   }
 
   return { armored: armoredMR, shield: shieldDrawnMR };

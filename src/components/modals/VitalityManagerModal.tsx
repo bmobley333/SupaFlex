@@ -84,13 +84,14 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
     0
   );
   const totalApVitBonus = vitalityApSpent * 2;
+  const vitAdj = typeof sheetData.vit_adj === 'number' ? sheetData.vit_adj : 0;
 
   // Decoupled Base Max Vit vs Total Max Vit
   const baseMaxVit = typeof sheetData.vitality_base_max === 'number'
     ? sheetData.vitality_base_max
-    : Math.max(0, (sheetData.vitality_max || activeCharacter.hp || 10) - totalApVitBonus);
+    : Math.max(0, (sheetData.vitality_max || activeCharacter.hp || 10) - totalApVitBonus - vitAdj);
 
-  const currentMaxVit = baseMaxVit + totalApVitBonus;
+  const currentMaxVit = baseMaxVit + totalApVitBonus + vitAdj;
   const currentVit = sheetData.current_vitality ?? currentMaxVit;
 
   // Multi-Level Roll Queue Engine
@@ -155,7 +156,7 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
     const previousBaseMax = baseMaxVit;
     const newBaseMax = Math.max(previousBaseMax, rolledBaseTotal);
     const lucked = newBaseMax > previousBaseMax;
-    const newTotalMax = newBaseMax + totalApVitBonus;
+    const newTotalMax = newBaseMax + totalApVitBonus + vitAdj;
 
     setLastRollResult({
       rolls,
@@ -203,7 +204,7 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
     }
 
     const newBaseMax = Math.max(baseMaxVit, rolledBase);
-    const newTotalMax = newBaseMax + totalApVitBonus;
+    const newTotalMax = newBaseMax + totalApVitBonus + vitAdj;
 
     updateActiveSheetData((prev) => ({
       ...prev,
