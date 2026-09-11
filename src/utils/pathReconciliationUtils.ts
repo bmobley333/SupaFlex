@@ -3,9 +3,9 @@
 // Implements the Path Mastery Auto-Credit Mandate, SkillSet Bundle Deduplication Mandate,
 // Requirement Surcharge Auto-Refund Engine, and {Free} 0-AP Path Grant Reconciler.
 
-import { Character, CharacterSheetData, AbilitySlot, WeaponSlot, ArmorData, ShieldData, TraitQuirkItem, AttributeKey, DieRating } from '../types/game';
+import { Character, CharacterSheetData, AbilitySlot, WeaponSlot, ArmorData, ShieldData, TraitQuirkItem, AttributeKey, DieRating, SupabaseTrait } from '../types/game';
 import { cleanPathName, parseKit, cleanKitName } from './kitUtils';
-import { getCharacterKnownPaths, evaluateItemAp, isItemInPath } from './pathApUtils';
+import { getCharacterKnownPaths, evaluateItemAp, isItemInPath, parseItemPaths } from './pathApUtils';
 
 export interface PathReconciliationResult {
   updatedSheetData: CharacterSheetData;
@@ -640,5 +640,80 @@ export const reconcileSkillsOnSkillsetAdded = (
     updatedIndividualSkills,
     refundedSkills,
     totalRefund: refundedSkills.length,
+  };
+};
+
+/**
+ * Automatically identifies all {Free} traits matching the character's known paths
+ * (Race, Class, and learned favorite_trait_kits) and equips any missing ones to traits_quirks with ap_cost = 0.
+ */
+export const reconcileCharacterFreeTraits = (
+  sheetData: CharacterSheetData,
+  character: Character | null | undefined,
+  catalogTraits: SupabaseTrait[] = []
+): { updatedSheetData: CharacterSheetData; newlyGrantedCount: number } => {
+  if (!character || !catalogTraits || catalogTraits.length === 0) {
+    return { updatedSheetData: sheetData, newlyGrantedCount: 0 };
+  }
+
+  const knownPaths = getCharacterKnownPaths(character);
+  if (knownPaths.size === 0) {
+    return { updatedSheetData: sheetData, newlyGrantedCount: 0 };
+  }
+
+  const existingTraits: TraitQuirkItem[] = Array.isArray(sheetData.traits_quirks)
+    ? [...sheetData.traits_quirks]
+    : [];
+  const existingNames = new Set(existingTraits.map((t) => (t.name || '').toLowerCase().trim()));
+
+  let newlyGrantedCount = 0;
+
+  for (const trait of catalogTraits) {
+    const rawPath = trait.path || trait.kit || trait.table_group || '';
+    if (!rawPath) continue;
+
+    const lowerRaw = rawPath.toLowerCase();
+    const isFree = lowerRaw.includes('{free}') || lowerRaw.includes('{perk}') || lowerRaw.includes('{trait}');
+    if (!isFree) continue;
+
+    const itemPaths = parseItemPaths(rawPath);
+    const matchesKnown = itemPaths.some((p) => {
+      const cleanLower = cleanPathName(p).toLowerCase().trim();
+      if (knownPaths.has(cleanLower)) return true;
+      const strippedMso = cleanLower.replace(/\(mso\)/g, '').trim();
+      if (knownPaths.has(strippedMso)) return true;
+      for (const kp of knownPaths) {
+        const cleanKp = kp.replace(/\(mso\)/g, '').trim();
+        if (cleanKp === strippedMso || cleanLower.includes(cleanKp) || cleanKp.includes(cleanLower)) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (matchesKnown && !existingNames.has((trait.name || '').toLowerCase().trim())) {
+      existingTraits.push({
+        name: trait.name,
+        effect: trait.effect || '',
+        notes: trait.notes || '',
+        stat_hook: trait.stat_hook || null,
+        kit: trait.path || 'General',
+        table_group: trait.path || 'General',
+        source: `${cleanPathName(rawPath)} {Free}`,
+        path: trait.path,
+        ap_cost: 0,
+        is_hidden: false,
+      });
+      existingNames.add((trait.name || '').toLowerCase().trim());
+      newlyGrantedCount++;
+    }
+  }
+
+  return {
+    updatedSheetData: {
+      ...sheetData,
+      traits_quirks: existingTraits,
+    },
+    newlyGrantedCount,
   };
 };

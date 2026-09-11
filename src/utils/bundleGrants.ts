@@ -16,7 +16,8 @@ import {
   MagicItem,
   HardwareBundleSubItem,
 } from '../types/game';
-import { matchesKitFilter, cleanKitName, parseKit } from './kitUtils';
+import { matchesKitFilter, cleanKitName, parseKit, cleanPathName } from './kitUtils';
+import { parseItemPaths } from './pathApUtils';
 
 export interface KitTraitGrants {
   kitName: string;
@@ -53,8 +54,14 @@ export const collectKitTraitGrants = (
   });
 
   const matchedTraits = catalogTraits.filter((t) => {
-    const parsed = parseKit(t.kit || t.table_group);
-    return matchesKitFilter(parsed.baseKit, cleanTarget) && parsed.minLevel <= lvl;
+    const rawPath = t.path || t.kit || t.table_group;
+    if (!rawPath) return false;
+    const paths = parseItemPaths(rawPath);
+    return paths.some((p) => {
+      const parsed = parseKit(p);
+      const isFree = p.toLowerCase().includes('{free}') || parsed.isFreeTrait || parsed.isTrait;
+      return isFree && matchesKitFilter(parsed.baseKit, cleanTarget) && parsed.minLevel <= lvl;
+    });
   });
 
   return {
@@ -122,9 +129,12 @@ export const applyKitTraitGrantsToSheet = (
         effect: gt.effect || '',
         notes: gt.notes || '',
         stat_hook: gt.stat_hook,
-        kit: gt.kit || gt.table_group || `${kitLabel} {Free}`,
-        table_group: gt.kit || gt.table_group || `${kitLabel} {Free}`,
-        source: `${kitLabel} {Free}`,
+        kit: gt.path || gt.kit || gt.table_group || `${kitLabel} {Free}`,
+        table_group: gt.path || gt.kit || gt.table_group || `${kitLabel} {Free}`,
+        source: `${cleanPathName(gt.path || kitLabel)} {Free}`,
+        path: gt.path,
+        ap_cost: 0,
+        is_hidden: false,
       }));
 
     if (newTraits.length > 0) {

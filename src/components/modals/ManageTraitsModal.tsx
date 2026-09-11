@@ -18,8 +18,9 @@ import {
   TraitItem,
   calculateAvailableAp,
 } from '../../types/game';
-import { cleanKitName, isMsoEntry, compareMsoItems, compareMsoOptions } from '../../utils/kitUtils';
+import { cleanKitName, cleanPathName, isMsoEntry, compareMsoItems, compareMsoOptions } from '../../utils/kitUtils';
 import { getCharacterKnownPaths, isItemInPath, parseItemPaths } from '../../utils/pathApUtils';
+import { reconcileCharacterFreeTraits } from '../../utils/pathReconciliationUtils';
 
 interface ManageTraitsModalProps {
   isOpen: boolean;
@@ -38,6 +39,8 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     toggleTraitVisibility,
     toggleStarTrait,
     recordApExpenditure,
+    updateActiveSheetData,
+    saveActiveCharacter,
   } = useCharacterStore();
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -59,6 +62,20 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     }
   }, [isOpen, activeGenre]);
 
+  // Auto-reconcile and equip {Free} traits matching character's known paths on open
+  useEffect(() => {
+    if (!isOpen || !activeCharacter || stockRulesCatalog.length === 0) return;
+    const { updatedSheetData, newlyGrantedCount } = reconcileCharacterFreeTraits(
+      activeCharacter.sheet_data || {},
+      activeCharacter,
+      stockRulesCatalog
+    );
+    if (newlyGrantedCount > 0) {
+      updateActiveSheetData(() => updatedSheetData);
+      saveActiveCharacter();
+    }
+  }, [isOpen, activeCharacter, stockRulesCatalog, updateActiveSheetData, saveActiveCharacter]);
+
   const equippedRules: TraitItem[] = useMemo(() => {
     return activeCharacter?.sheet_data?.traits_quirks || [];
   }, [activeCharacter?.sheet_data?.traits_quirks]);
@@ -66,18 +83,23 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
 
   const isTraitInherent = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
-    const kitStr = (rule.kit || rule.table_group || (rule as any).source || '').toLowerCase();
-    return kitStr.includes('{free}') || kitStr.includes('{perk}') || kitStr.includes('{trait}') || kitStr.includes('perk') || kitStr.includes('trait');
+    const cost = (rule as any).ap_cost;
+    if (typeof cost === 'number' && cost === 0) return true;
+    const pathStr = (rule.path || rule.kit || rule.table_group || (rule as any).source || '').toLowerCase();
+    return pathStr.includes('{free}') || pathStr.includes('{perk}') || pathStr.includes('{trait}');
   }, []);
 
   const isTraitUniversal = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
-    const pathVal = rule.path || rule.kit || rule.table_group || (rule as any).discipline || '';
+    const pathVal = rule.path || rule.kit || rule.table_group || '';
     const paths = parseItemPaths(pathVal);
     return paths.some((p) => p.toLowerCase() === 'universal');
   }, []);
 
   const isTraitInPath = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
-    const pathVal = rule.path || rule.kit || rule.table_group || (rule as any).discipline;
+    const pathVal = rule.path || rule.kit || rule.table_group;
+    if (!pathVal || pathVal.trim() === '' || pathVal.toLowerCase() === 'none') {
+      return false;
+    }
     return isItemInPath(pathVal, knownPaths);
   }, [knownPaths]);
 
@@ -108,6 +130,12 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     const set = new Set<string>();
     stockRulesCatalog.forEach((r) => {
       if (r.discipline?.trim()) set.add(r.discipline.trim());
+      if (r.path) {
+        parseItemPaths(r.path).forEach((p) => {
+          const clean = cleanPathName(p);
+          if (clean && clean !== 'General' && clean !== 'Universal') set.add(clean);
+        });
+      }
       if (r.kit?.trim()) set.add(cleanKitName(r.kit.trim()));
     });
     return Array.from(set).sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
@@ -154,9 +182,10 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
         // 2. Domain / Kit Filter
         if (localDomainFilter !== 'ALL') {
           const disc = (r.discipline || '').toLowerCase();
-          const kit = cleanKitName(r.kit || r.table_group || '').toLowerCase();
           const target = localDomainFilter.toLowerCase();
-          if (disc !== target && kit !== target && !kit.includes(target)) {
+          const paths = parseItemPaths(r.path || r.kit || r.table_group).map((p) => cleanPathName(p).toLowerCase());
+          const matchesPath = paths.some((p) => p === target || p.includes(target) || target.includes(p));
+          if (disc !== target && !matchesPath) {
             return false;
           }
         }
@@ -169,9 +198,10 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
         // 4. Category Switch (All, In-Path, Universal, Out-of-Path)
         const isUni = isTraitUniversal(r);
         const inPath = isTraitInPath(r);
+        const inherent = isTraitInherent(r);
 
         if (traitCategoryFilter === 'in_path') {
-          if (!inPath || isUni) return false;
+          if (!inPath || isUni || inherent) return false;
         } else if (traitCategoryFilter === 'universal') {
           if (!isUni) return false;
         } else if (traitCategoryFilter === 'out_of_path') {
@@ -347,7 +377,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
                           {/* Clean Classification Pill */}
                           <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                            🧬 {cleanKitName(rule.kit || rule.table_group || rule.source || 'General')}
+                            🧬 {cleanPathName(rule.path || rule.kit || rule.table_group || rule.source || 'General')}
                           </span>
                         </div>
 
@@ -498,7 +528,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
                 }`}
               >
-                🧬 In-Path (1 AP / Free)
+                🧬 In-Path (1 AP)
               </button>
               <button
                 type="button"
@@ -639,7 +669,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                         </span>
 
                         <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                          🧬 {cleanKitName(rule.kit || rule.table_group || 'General')}
+                          🧬 {cleanPathName(rule.path || rule.kit || rule.table_group || 'General')}
                         </span>
                       </div>
 

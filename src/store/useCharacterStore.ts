@@ -5,6 +5,7 @@ import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { reconcileCharacterVaultWithGear } from '../utils/gearFunctionSync';
+import { reconcileCharacterFreeTraits } from '../utils/pathReconciliationUtils';
 import { CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { getTabSessionId } from '../utils/tabSession';
@@ -249,14 +250,15 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       const currentActive = get().activeCharacter;
       let selectedChar: Character | null = null;
 
-      const reconcileSheet = (rawSheet: CharacterSheetData): CharacterSheetData => {
+      const reconcileSheet = (rawSheet: CharacterSheetData, char: Character | null): CharacterSheetData => {
         const migrated = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(rawSheet));
-        return reconcileCharacterVaultWithGear(migrated, functionsData || [], modsData || []).updatedSheet;
+        const vaultReconciled = reconcileCharacterVaultWithGear(migrated, functionsData || [], modsData || []).updatedSheet;
+        return reconcileCharacterFreeTraits(vaultReconciled, char, traits).updatedSheetData;
       };
 
       if (currentActive && myHeroes.some((c) => c.id === currentActive.id)) {
         const freshChar = myHeroes.find((c) => c.id === currentActive.id)!;
-        const migratedSheet = reconcileSheet(freshChar.sheet_data);
+        const migratedSheet = reconcileSheet(freshChar.sheet_data, freshChar);
         // Preserve active character object and unsaved local edits if present
         selectedChar = {
           ...freshChar,
@@ -269,12 +271,12 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         if (lastActiveChar) {
           selectedChar = {
             ...lastActiveChar,
-            sheet_data: reconcileSheet(lastActiveChar.sheet_data),
+            sheet_data: reconcileSheet(lastActiveChar.sheet_data, lastActiveChar),
           };
         } else if (myHeroes.length > 0) {
           selectedChar = {
             ...myHeroes[0],
-            sheet_data: reconcileSheet(myHeroes[0].sheet_data),
+            sheet_data: reconcileSheet(myHeroes[0].sheet_data, myHeroes[0]),
           };
         }
       }
@@ -308,21 +310,22 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     sessionStorage.setItem('supaflex_last_active_char_id', String(id));
     const functionsCatalog = get().functionsCatalog;
     const modsCatalog = get().modsCatalog;
-    const reconcileSheet = (rawSheet: CharacterSheetData): CharacterSheetData => {
+    const reconcileSheet = (rawSheet: CharacterSheetData, char: Character | null): CharacterSheetData => {
       const migrated = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(rawSheet));
-      return reconcileCharacterVaultWithGear(migrated, functionsCatalog, modsCatalog).updatedSheet;
+      const vaultReconciled = reconcileCharacterVaultWithGear(migrated, functionsCatalog, modsCatalog).updatedSheet;
+      return reconcileCharacterFreeTraits(vaultReconciled, char, get().traits).updatedSheetData;
     };
 
     const found = get().characters.find((c) => c.id === id);
     if (found) {
-      const migratedFoundSheet = reconcileSheet(found.sheet_data);
+      const migratedFoundSheet = reconcileSheet(found.sheet_data, found);
       const migratedFound = { ...found, sheet_data: migratedFoundSheet };
       set({ activeCharacter: migratedFound });
     }
     try {
       const updated = await gameApi.getCharacterById(id);
       if (updated) {
-        const migratedSheet = reconcileSheet(updated.sheet_data);
+        const migratedSheet = reconcileSheet(updated.sheet_data, updated);
         const migratedChar = { ...updated, sheet_data: migratedSheet };
         set((state) => ({
           activeCharacter: migratedChar,
@@ -1115,7 +1118,9 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
     const isTrait =
       target &&
-      ((target.kit && (target.kit.includes('{Free}') || target.kit.includes('{Perk}') || target.kit.includes('{Trait}'))) ||
+      (target.ap_cost === 0 ||
+        (target.path && (target.path.includes('{Free}') || target.path.includes('{Perk}') || target.path.includes('{Trait}'))) ||
+        (target.kit && (target.kit.includes('{Free}') || target.kit.includes('{Perk}') || target.kit.includes('{Trait}'))) ||
         (target.source && (target.source.includes('Free') || target.source.includes('Perk') || target.source.includes('Trait'))) ||
         (target.table_group && (target.table_group.includes('{Free}') || target.table_group.includes('{Perk}') || target.table_group.includes('{Trait}'))));
 
