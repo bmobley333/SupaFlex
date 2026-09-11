@@ -15,7 +15,7 @@ import {
   getItemSlotWeight,
   generateLoadoutScheduleRows,
 } from '../../utils/loadoutCapacitySchedule';
-import { getPowerReadyCategory } from '../../utils/readyMatrixSchedule';
+import { getPowerReadyCategory, validateReadyMatrix } from '../../utils/readyMatrixSchedule';
 import { calculatePowersKnownApCost, getPowersSoftTaxBracket } from '../../utils/powersApTaxSchedule';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 import { cleanKitName, getKitMinLevel, isMsoEntry, compareMsoOptions, compareMsoItems } from '../../utils/kitUtils';
@@ -339,7 +339,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   };
   const [showManageModal, setShowManageModal] = useState(false);
   const [readyFeedback, setReadyFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
-  const [catalogFeedback, setCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+  const [catalogFeedback, setCatalogFeedback] = useState<{ type: 'error' | 'success' | 'info'; message: string } | null>(null);
   const [catalogReadyFilter] = useState<'all' | 'primary_arsenal' | 'mobility_defense' | 'support_passive'>('all');
   const [activeTableName, setActiveTableName] = useState<string | null>(null);
 
@@ -587,8 +587,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   // Set of lowercase known ability names for strict catalog deduplication
   const knownAbilityNamesSet = useMemo(() => {
-    return new Set(slots.map((s) => cleanName(s.name).toLowerCase()));
-  }, [slots]);
+    const names = slots.map((s) => cleanName(s.name).toLowerCase());
+    if (type === 'powers') {
+      const codex = (sheetData?.character_power_codex as AbilitySlot[] | undefined) || [];
+      codex.forEach((p) => {
+        if (p?.name) names.push(cleanName(p.name).toLowerCase());
+      });
+    }
+    return new Set(names);
+  }, [slots, type, sheetData?.character_power_codex]);
 
   // Check if an item is starred in character sheet wishlist
   const isItemStarred = useCallback(
@@ -759,75 +766,149 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       if (!confirmed) return;
     }
 
+    const currentSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots : [];
+    const currentVault: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex : [];
+
+    const readiedIndex = currentSlots.findIndex(
+      (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+    );
+    const vaultIndex = currentVault.findIndex(
+      (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+    );
+
+    // Check if user already owns this power at this or higher version
+    if (readiedIndex >= 0) {
+      const oldVersion = parseAbilityVersion(currentSlots[readiedIndex].name).version;
+      if (version <= oldVersion) {
+        setCatalogFeedback({
+          type: 'info',
+          message: `"${cleanName(item.name)}" is already learned and readied in your active powers (v${oldVersion})!`,
+        });
+        setTimeout(() => setCatalogFeedback(null), 4000);
+        return;
+      }
+    } else if (vaultIndex >= 0) {
+      const oldVersion = parseAbilityVersion(currentVault[vaultIndex].name).version;
+      if (version <= oldVersion) {
+        // Already in Vault! Try to promote/ready it if Ready Matrix capacity allows
+        const targetVaultPower = currentVault[vaultIndex];
+        const vaultCat = getPowerReadyCategory(targetVaultPower);
+        const isSupport = vaultCat === 'support_passive' || (vaultCat as any) === 'contextual_passive';
+        const testSlots = [...currentSlots, { ...targetVaultPower, is_readied: true, ready: vaultCat }];
+        const charLevel = activeCharacter?.sheet_data?.level || 1;
+        const validation: { valid: boolean; error?: string } = isSupport
+          ? { valid: true }
+          : validateReadyMatrix(testSlots, charLevel);
+
+        if (validation.valid) {
+          updateActiveSheetData((prev) => {
+            const slots = Array.isArray(prev.power_slots) ? [...prev.power_slots] : [];
+            const vault = Array.isArray(prev.character_power_codex) ? [...prev.character_power_codex] : [];
+            const vIdx = vault.findIndex(
+              (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+            );
+            if (vIdx >= 0) {
+              const [promoted] = vault.splice(vIdx, 1);
+              slots.push({ ...promoted, is_readied: true, ready: vaultCat });
+            }
+            return {
+              ...prev,
+              power_slots: slots,
+              character_power_codex: vault,
+            };
+          });
+          saveActiveCharacter();
+          setCatalogFeedback({
+            type: 'success',
+            message: `"${cleanName(item.name)}" was in your Vault and is now Readied to your active powers! (0 AP charged)`,
+          });
+          setTimeout(() => setCatalogFeedback(null), 4000);
+          return;
+        } else {
+          setCatalogFeedback({
+            type: 'error',
+            message: `"${cleanName(item.name)}" is already in your Vault! Ready Matrix is full (${validation.error || 'Capacity reached'}). Unready an active power to equip it.`,
+          });
+          setTimeout(() => setCatalogFeedback(null), 5000);
+          return;
+        }
+      }
+    }
+
     if (availableAp < evalResult.apCost) {
       setCatalogFeedback({
         type: 'error',
         message: `Insufficient AP! "${cleanName(item.name)}" costs ${evalResult.apCost} AP, but you only have ${availableAp} AP available.`,
       });
+      setTimeout(() => setCatalogFeedback(null), 4000);
       return;
     }
 
+    const readyCat = getPowerReadyCategory(item);
+    const isSupport = readyCat === 'support_passive' || (readyCat as any) === 'contextual_passive';
+    const isUpgrade = readiedIndex >= 0 || vaultIndex >= 0;
+
+    let willReady = false;
+    if (readiedIndex >= 0) {
+      // Replacing an already-readied power slot -> stays readied
+      willReady = true;
+    } else if (isSupport) {
+      // Support / passive powers cost 0 slots -> always readied
+      willReady = true;
+    } else {
+      // Tactical power -> check Ready Matrix capacity
+      const testSlots = [...currentSlots, { name: cleanName(item.name), ready: readyCat } as AbilitySlot];
+      const charLevel = activeCharacter?.sheet_data?.level || 1;
+      const validation = validateReadyMatrix(testSlots, charLevel);
+      willReady = validation.valid;
+    }
+
+    const newPower: AbilitySlot = {
+      select: true,
+      name: cleanName(item.name),
+      base_name: baseName,
+      version: version,
+      action: (item.action?.toUpperCase() as any) || 'A',
+      usage: item.usage || '1-Enc',
+      effect: item.effect || '',
+      checked: [false, false, false],
+      is_readied: willReady,
+      ready: readyCat,
+      path: (item as Power).path || (item as any).kit || (item as any).table_name,
+      discipline: (item as Power).discipline,
+      ap_cost: evalResult.apCost,
+    };
+
     updateActiveSheetData((prev) => {
-      const currentSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
-      const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
+      const prevSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
+      const prevVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
 
-      const newPower: AbilitySlot = {
-        select: true,
-        name: cleanName(item.name),
-        base_name: baseName,
-        version: version,
-        action: (item.action?.toUpperCase() as any) || 'A',
-        usage: item.usage || '1-Enc',
-        effect: item.effect || '',
-        checked: [false, false, false],
-        is_readied: false,
-        ready: getPowerReadyCategory(item),
-        path: (item as Power).path || (item as any).kit || (item as any).table_name,
-        discipline: (item as Power).discipline,
-        ap_cost: evalResult.apCost,
-      };
+      let updatedSlots = [...prevSlots];
+      let updatedVault = [...prevVault];
 
-      const readiedIndex = currentSlots.findIndex(
+      const rIdx = updatedSlots.findIndex(
         (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
       );
-      const vaultIndex = currentVault.findIndex(
+      const vIdx = updatedVault.findIndex(
         (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
       );
 
-      let updatedSlots = [...currentSlots];
-      let updatedVault = [...currentVault];
-      let isUpgrade = false;
-
-      if (readiedIndex >= 0) {
-        const oldVersion = parseAbilityVersion(currentSlots[readiedIndex].name).version;
-        if (version > oldVersion) {
-          updatedSlots[readiedIndex] = { ...newPower, is_readied: true };
-          isUpgrade = true;
+      if (rIdx >= 0) {
+        updatedSlots[rIdx] = { ...newPower, is_readied: true };
+      } else if (vIdx >= 0) {
+        if (willReady) {
+          updatedVault.splice(vIdx, 1);
+          updatedSlots.push({ ...newPower, is_readied: true });
         } else {
-          return prev;
-        }
-      } else if (vaultIndex >= 0) {
-        const oldVersion = parseAbilityVersion(currentVault[vaultIndex].name).version;
-        if (version > oldVersion) {
-          updatedVault[vaultIndex] = newPower;
-          isUpgrade = true;
-        } else {
-          return prev;
+          updatedVault[vIdx] = { ...newPower, is_readied: false };
         }
       } else {
-        // Brand new learned power -> add to Vault (un-readied)
-        updatedVault.push(newPower);
+        if (willReady) {
+          updatedSlots.push({ ...newPower, is_readied: true });
+        } else {
+          updatedVault.push({ ...newPower, is_readied: false });
+        }
       }
-
-      const logAction = isUpgrade ? 'Upgraded Power' : 'Learned Power';
-
-      recordApExpenditure(
-        evalResult.apCost,
-        'Powers',
-        `${logAction}: ${cleanName(item.name)} (+${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' [👑 GM Approval]' : ''})`,
-        1,
-        'Manage Powers'
-      );
 
       return {
         ...prev,
@@ -835,90 +916,118 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         character_power_codex: updatedVault,
       };
     });
+
+    const logAction = isUpgrade ? 'Upgraded Power' : 'Learned Power';
+
+    recordApExpenditure(
+      evalResult.apCost,
+      'Powers',
+      `${logAction}: ${cleanName(item.name)} (+${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' [👑 GM Approval]' : ''})`,
+      1,
+      'Manage Powers'
+    );
+
     saveActiveCharacter();
+
+    if (willReady) {
+      setCatalogFeedback({
+        type: 'success',
+        message: `${logAction} and Readied "${cleanName(item.name)}" (${evalResult.apCost} AP)!`,
+      });
+    } else {
+      setCatalogFeedback({
+        type: 'success',
+        message: `${logAction} "${cleanName(item.name)}" (${evalResult.apCost} AP) and stored in Power Vault (Ready slots full).`,
+      });
+    }
+    setTimeout(() => setCatalogFeedback(null), 4000);
   };
 
   // Drop / Un-learn an ability from the character's active roster
   const handleForgetAbility = (abilityName: string) => {
     const { baseName: targetBaseName } = parseAbilityVersion(abilityName);
-    updateActiveSheetData((prev) => {
-      const current = [...(prev[slotKey] || [])];
 
-      if (type === 'powers') {
-        const currentSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
-        const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
+    if (type === 'powers') {
+      const currentSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots : [];
+      const currentVault: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex : [];
 
-        const targetPower = currentSlots.find(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
-        ) || currentVault.find(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
-        );
-        const refundAp = targetPower && typeof targetPower.ap_cost === 'number' && targetPower.ap_cost > 0
-          ? targetPower.ap_cost
-          : 1;
+      const targetPower = currentSlots.find(
+        (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
+      ) || currentVault.find(
+        (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
+      );
+      const refundAp = targetPower && typeof targetPower.ap_cost === 'number' && targetPower.ap_cost > 0
+        ? targetPower.ap_cost
+        : 1;
 
-        const updatedSlots = currentSlots.filter(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
-        );
-        const updatedVault = currentVault.filter(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
-        );
-
-        recordApExpenditure(
-          -refundAp,
-          'Powers',
-          `Unlearned Power: ${cleanName(abilityName)} (-${refundAp} AP Refunded)`,
-          1,
-          'Manage Powers'
-        );
+      updateActiveSheetData((prev) => {
+        const slots = Array.isArray(prev.power_slots) ? prev.power_slots : [];
+        const vault = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
 
         return {
           ...prev,
-          power_slots: updatedSlots,
-          character_power_codex: updatedVault,
+          power_slots: slots.filter(
+            (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
+          ),
+          character_power_codex: vault.filter(
+            (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
+          ),
         };
-      } else {
-        const targetSlot = current.find(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
-        );
-        const updated = current.filter(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
-        );
+      });
 
-        if (targetSlot) {
-          const currentVault = Array.isArray(prev.character_vault) ? prev.character_vault : [];
-          const inVault = currentVault.some(
-            (v) => parseAbilityVersion(v.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
-          );
-          if (!inVault) {
-            // Recover tier metadata from catalog for round-trip preservation
-            const catalogMatch = fullCatalog.find((c) => {
-              const cBase = parseAbilityVersion(cleanName(c.name || '')).baseName.toLowerCase();
-              const tBase = parseAbilityVersion(cleanName(targetSlot.name)).baseName.toLowerCase();
-              return cBase === tBase || cleanName(c.name || '').toLowerCase().includes(tBase);
-            });
-            const vaultItem: MagicItem = {
-              id: Date.now() + Math.floor(Math.random() * 1000),
-              name: targetSlot.name,
-              usage: targetSlot.usage,
-              action: targetSlot.action,
-              effect: targetSlot.effect,
-              notes: targetSlot.notes,
-              source: (targetSlot as any).source || 'Unequipped from Loadout',
-              source_gear: (targetSlot as any).source_gear,
-              source_mod: (targetSlot as any).source_mod,
-              created_at: new Date().toISOString(),
-              category: catalogMatch?.category || (targetSlot as any).category || null,
-              slot_weight: (getItemSlotWeight(targetSlot) as 0 | 1 | 2 | 3 | 4),
-              checked_state: targetSlot.checked || [false, false, false],
-              is_hardware: type === 'spells',
-            };
-            return { ...prev, [slotKey]: updated, character_vault: [...currentVault, vaultItem] };
-          }
-          return { ...prev, [slotKey]: updated };
+      recordApExpenditure(
+        -refundAp,
+        'Powers',
+        `Unlearned Power: ${cleanName(abilityName)} (-${refundAp} AP Refunded)`,
+        1,
+        'Manage Powers'
+      );
+      saveActiveCharacter();
+      return;
+    }
+
+    updateActiveSheetData((prev) => {
+      const current = [...(prev[slotKey] || [])];
+      const targetSlot = current.find(
+        (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
+      );
+      const updated = current.filter(
+        (s) => parseAbilityVersion(s.name).baseName.toLowerCase() !== targetBaseName.toLowerCase()
+      );
+
+      if (targetSlot) {
+        const currentVault = Array.isArray(prev.character_vault) ? prev.character_vault : [];
+        const inVault = currentVault.some(
+          (v) => parseAbilityVersion(v.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
+        );
+        if (!inVault) {
+          // Recover tier metadata from catalog for round-trip preservation
+          const catalogMatch = fullCatalog.find((c) => {
+            const cBase = parseAbilityVersion(cleanName(c.name || '')).baseName.toLowerCase();
+            const tBase = parseAbilityVersion(cleanName(targetSlot.name)).baseName.toLowerCase();
+            return cBase === tBase || cleanName(c.name || '').toLowerCase().includes(tBase);
+          });
+          const vaultItem: MagicItem = {
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            name: targetSlot.name,
+            usage: targetSlot.usage,
+            action: targetSlot.action,
+            effect: targetSlot.effect,
+            notes: targetSlot.notes,
+            source: (targetSlot as any).source || 'Unequipped from Loadout',
+            source_gear: (targetSlot as any).source_gear,
+            source_mod: (targetSlot as any).source_mod,
+            created_at: new Date().toISOString(),
+            category: catalogMatch?.category || (targetSlot as any).category || null,
+            slot_weight: (getItemSlotWeight(targetSlot) as 0 | 1 | 2 | 3 | 4),
+            checked_state: targetSlot.checked || [false, false, false],
+            is_hardware: type === 'spells',
+          };
+          return { ...prev, [slotKey]: updated, character_vault: [...currentVault, vaultItem] };
         }
         return { ...prev, [slotKey]: updated };
       }
+      return { ...prev, [slotKey]: updated };
     });
     saveActiveCharacter();
   };
@@ -1002,61 +1111,81 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       created_at: new Date().toISOString(),
     };
 
+    const currentSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots : [];
+    const currentVault: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex : [];
+    const combinedOld = [...currentSlots, ...currentVault];
+    const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
+    const oldApSpent = oldTotalUnits;
+
+    const readyCat = getPowerReadyCategory(newItem);
+    const isSupport = readyCat === 'support_passive' || (readyCat as any) === 'contextual_passive';
+
+    const existingReadiedIdx = currentSlots.findIndex(
+      (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+    );
+
+    let willReady = false;
+    if (existingReadiedIdx >= 0) {
+      willReady = true;
+    } else if (isSupport) {
+      willReady = true;
+    } else {
+      const testSlots = [...currentSlots, { name: versionedName, ready: readyCat } as AbilitySlot];
+      const charLevel = activeCharacter?.sheet_data?.level || 1;
+      const validation = validateReadyMatrix(testSlots, charLevel);
+      willReady = validation.valid;
+    }
+
+    const newPower: AbilitySlot = {
+      select: true,
+      name: versionedName,
+      base_name: baseName,
+      version: version,
+      action: (createAction.toUpperCase() as any) || 'A',
+      usage: createUsage,
+      effect: createEffect.trim(),
+      checked: [false, false, false],
+      is_readied: willReady,
+      ready: readyCat,
+    };
+
+    let isUpgrade = false;
+
     updateActiveSheetData((prev) => {
       const customKey = type === 'powers' ? 'custom_powers' : 'custom_magic_items';
       const existingCustom = prev[customKey] || [];
       const updatedCustom = [...existingCustom, newItem];
 
-      const currentSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
-      const currentVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
-      const combinedOld = [...currentSlots, ...currentVault];
-      const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
-      const oldApSpent = oldTotalUnits;
+      const prevSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
+      const prevVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
 
-      const newPower: AbilitySlot = {
-        select: true,
-        name: versionedName,
-        base_name: baseName,
-        version: version,
-        action: (createAction.toUpperCase() as any) || 'A',
-        usage: createUsage,
-        effect: createEffect.trim(),
-        checked: [false, false, false],
-        is_readied: false,
-        ready: getPowerReadyCategory(newItem),
-      };
+      let updatedSlots = [...prevSlots];
+      let updatedVault = [...prevVault];
 
-      const existingReadiedIdx = currentSlots.findIndex(
+      const rIdx = updatedSlots.findIndex(
         (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
       );
-      const existingVaultIdx = currentVault.findIndex(
+      const vIdx = updatedVault.findIndex(
         (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
       );
 
-      let updatedSlots = [...currentSlots];
-      let updatedVault = [...currentVault];
-      let isUpgrade = false;
-
-      if (existingReadiedIdx >= 0) {
-        updatedSlots[existingReadiedIdx] = { ...newPower, is_readied: true };
+      if (rIdx >= 0) {
+        updatedSlots[rIdx] = { ...newPower, is_readied: true };
         isUpgrade = true;
-      } else if (existingVaultIdx >= 0) {
-        updatedVault[existingVaultIdx] = newPower;
+      } else if (vIdx >= 0) {
+        if (willReady) {
+          updatedVault.splice(vIdx, 1);
+          updatedSlots.push({ ...newPower, is_readied: true });
+        } else {
+          updatedVault[vIdx] = { ...newPower, is_readied: false };
+        }
         isUpgrade = true;
       } else {
-        updatedVault.push(newPower);
-      }
-
-      const combinedNew = [...updatedSlots, ...updatedVault];
-      const prunedCombined = pruneLesserPowerVersions(combinedNew);
-      const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
-      const newApSpent = newTotalUnits;
-      const apDiff = newApSpent - oldApSpent;
-
-      const logAction = isUpgrade ? 'Upgraded Power' : 'Created & Learned Power';
-
-      if (apDiff > 0) {
-        recordApExpenditure(apDiff, 'Powers', `${logAction}: ${versionedName} (+${apDiff} AP)`, 1, 'Manage Powers');
+        if (willReady) {
+          updatedSlots.push({ ...newPower, is_readied: true });
+        } else {
+          updatedVault.push({ ...newPower, is_readied: false });
+        }
       }
 
       return {
@@ -1066,6 +1195,21 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         character_power_codex: updatedVault,
       };
     });
+
+    const combinedNew = willReady
+      ? [...currentSlots, newPower, ...currentVault]
+      : [...currentSlots, ...currentVault, newPower];
+    const prunedCombined = pruneLesserPowerVersions(combinedNew);
+    const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
+    const newApSpent = newTotalUnits;
+    const apDiff = newApSpent - oldApSpent;
+
+    const logAction = isUpgrade ? 'Upgraded Power' : 'Created & Learned Power';
+
+    if (apDiff > 0) {
+      recordApExpenditure(apDiff, 'Powers', `${logAction}: ${versionedName} (+${apDiff} AP)`, 1, 'Manage Powers');
+    }
+
     saveActiveCharacter();
 
     setCreateName('');
@@ -1805,6 +1949,25 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
 
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const res = toggleReadyPower(item.name);
+                                      if (res.success) {
+                                        saveActiveCharacter();
+                                        setCatalogFeedback({
+                                          type: 'info',
+                                          message: `Unreadied "${baseName}" and moved to Power Vault.`,
+                                        });
+                                        setTimeout(() => setCatalogFeedback(null), 3000);
+                                      }
+                                    }}
+                                    className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-cyan-300 transition-colors shrink-0 cursor-pointer"
+                                    title="Unready to Power Vault"
+                                  >
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                  </button>
+
                                   <div className="flex items-center gap-1">
                                     <button
                                       type="button"
@@ -2079,8 +2242,52 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
                   {/* --- RIGHT COLUMN: TABS INTERFACE --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                    {/* Pane Sub-Tab Header (Spells only; Powers has a single unified catalog pane) */}
-                    {type === 'spells' && (
+                    {/* Pane Sub-Tab Header */}
+                    {type === 'powers' ? (
+                      <div className="flex border-b border-slate-800 mb-4 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isVersionEditMode) setIsVersionEditMode(false);
+                            setActiveRightTab('CATALOG');
+                          }}
+                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'CATALOG'
+                              ? 'border-emerald-400 text-emerald-400'
+                              : 'border-transparent text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          🌐 Stock Catalog
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isVersionEditMode) setIsVersionEditMode(false);
+                            setActiveRightTab('CODEX');
+                          }}
+                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                            activeRightTab === 'CODEX'
+                              ? 'border-amber-400 text-amber-400'
+                              : 'border-transparent text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          📜 Power Vault ({(Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex.length : 0)})
+                        </button>
+                        {isVersionEditMode && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveRightTab('EDITOR')}
+                            className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                              activeRightTab === 'EDITOR'
+                                ? 'border-violet-400 text-violet-400'
+                                : 'border-transparent text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            ✨ Version Editor
+                          </button>
+                        )}
+                      </div>
+                    ) : (
                       <div className="flex border-b border-slate-800 mb-4 shrink-0">
                         <button
                           type="button"
@@ -2940,12 +3147,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 shrink-0 transition-all ${
                                   catalogFeedback.type === 'error'
                                     ? 'bg-rose-950/90 border-rose-500/60 text-rose-200 shadow-md shadow-rose-950/50'
+                                    : catalogFeedback.type === 'info'
+                                    ? 'bg-amber-950/90 border-amber-500/60 text-amber-200 shadow-md shadow-amber-950/50'
                                     : 'bg-emerald-950/90 border-emerald-500/60 text-emerald-200 shadow-md shadow-emerald-950/50'
                                 }`}
                               >
                                 <div className="flex items-center gap-2">
                                   {catalogFeedback.type === 'error' ? (
                                     <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                                  ) : catalogFeedback.type === 'info' ? (
+                                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
                                   ) : (
                                     <Check className="w-4 h-4 text-emerald-400 shrink-0" />
                                   )}
@@ -3176,12 +3387,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 shrink-0 transition-all ${
                                   catalogFeedback.type === 'error'
                                     ? 'bg-rose-950/90 border-rose-500/60 text-rose-200 shadow-md shadow-rose-950/50'
+                                    : catalogFeedback.type === 'info'
+                                    ? 'bg-amber-950/90 border-amber-500/60 text-amber-200 shadow-md shadow-amber-950/50'
                                     : 'bg-emerald-950/90 border-emerald-500/60 text-emerald-200 shadow-md shadow-emerald-950/50'
                                 }`}
                               >
                                 <div className="flex items-center gap-2">
                                   {catalogFeedback.type === 'error' ? (
                                     <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                                  ) : catalogFeedback.type === 'info' ? (
+                                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
                                   ) : (
                                     <Check className="w-4 h-4 text-emerald-400 shrink-0" />
                                   )}

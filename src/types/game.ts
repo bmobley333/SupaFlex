@@ -754,6 +754,18 @@ export interface Power {
   domain?: string;
 }
 
+export const parseAbilityVersion = (name: string): { baseName: string; version: number } => {
+  if (!name) return { baseName: '', version: 1 };
+  const match = name.match(/^(.*?)(?:\s+v(\d+))?$/i);
+  if (match) {
+    return {
+      baseName: (match[1] || name).trim(),
+      version: match[2] ? parseInt(match[2], 10) : 1,
+    };
+  }
+  return { baseName: name.trim(), version: 1 };
+};
+
 export const calculateLifetimeAp = (level: number): number => {
   const numLevel = typeof level === 'number' && !isNaN(level) && level > 0 ? level : 1;
   return 8 + (numLevel - 1) * 2;
@@ -780,10 +792,30 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
   const focusNet = Math.max(0, sumLogCategory('Focus Die'));
   const gmBonus = apLog.reduce((sum, e) => (e && (e.category === 'GM Bonus' || e.category === 'Manual') ? sum + (e.cost || 0) : sum), 0);
 
-  const powerSlots = (sheetData.power_slots || []).filter(Boolean);
+  const rawPowerSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots.filter(Boolean) : [];
+  const rawCodexPowers: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex.filter(Boolean) : [];
+
+  // Deduplicate by baseName so higher versions don't double count
+  const allPowersMap = new Map<string, AbilitySlot>();
+  for (const p of [...rawPowerSlots, ...rawCodexPowers]) {
+    if (!p || !p.name) continue;
+    const { baseName, version } = parseAbilityVersion(p.name);
+    const key = baseName.toLowerCase();
+    const existing = allPowersMap.get(key);
+    if (!existing) {
+      allPowersMap.set(key, { ...p, base_name: baseName, version });
+    } else {
+      const existingVersion = existing.version || parseAbilityVersion(existing.name).version;
+      if (version > existingVersion) {
+        allPowersMap.set(key, { ...p, base_name: baseName, version });
+      }
+    }
+  }
+  const allKnownPowers = Array.from(allPowersMap.values());
+
   let powersNet = 0;
-  for (let i = 0; i < powerSlots.length; i++) {
-    const p = powerSlots[i];
+  for (let i = 0; i < allKnownPowers.length; i++) {
+    const p = allKnownPowers[i];
     if (typeof p.ap_cost === 'number' && p.ap_cost > 0) {
       powersNet += p.ap_cost;
     } else {
@@ -854,18 +886,6 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     weaponsNet;
 
   return { totalSpent, gmBonus, categories };
-};
-
-export const parseAbilityVersion = (name: string): { baseName: string; version: number } => {
-  if (!name) return { baseName: '', version: 1 };
-  const match = name.match(/^(.*?)(?:\s+v(\d+))?$/i);
-  if (match) {
-    return {
-      baseName: (match[1] || name).trim(),
-      version: match[2] ? parseInt(match[2], 10) : 1,
-    };
-  }
-  return { baseName: name.trim(), version: 1 };
 };
 
 export const calculateSpentAp = (logOrSheet?: any): number => {
