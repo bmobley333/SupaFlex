@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
-import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { TraitNameWithNotes } from '../common/TraitNameWithNotes';
 import { ManageTraitsModal } from '../modals/ManageTraitsModal';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
@@ -131,11 +131,14 @@ export const TraitsQuirksCard: React.FC = () => {
                 }`}
               >
                 {/* 1. Name Column */}
-                <div className="w-44 sm:w-48 shrink-0 flex flex-col gap-0.5">
-                  <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline flex-wrap leading-tight ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                    <span>{isMso ? `🌌 ${t.name}` : t.name}</span>
-                    <ItemNotesPopover notes={t.notes || t.effect} itemName={t.name} inline />
-                  </span>
+                <div className="w-48 sm:w-56 shrink-0 flex flex-col gap-0.5">
+                  <TraitNameWithNotes
+                    name={t.name}
+                    notes={t.notes || t.effect}
+                    isMso={isMso}
+                    icon={isMso ? '🌌' : null}
+                    className={isMso ? 'text-purple-300' : 'text-slate-100'}
+                  />
                 </div>
 
                 {/* 2. Rule Description & Live Computed Stat Hook Column */}

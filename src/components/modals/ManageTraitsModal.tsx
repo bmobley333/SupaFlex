@@ -11,7 +11,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { TraitNameWithNotes } from '../common/TraitNameWithNotes';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import {
   SupabaseTrait,
@@ -82,19 +82,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
   const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
 
-  const isTraitInherent = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
-    const cost = (rule as any).ap_cost;
-    if (typeof cost === 'number' && cost === 0) return true;
-    const pathStr = (rule.path || rule.kit || rule.table_group || (rule as any).source || '').toLowerCase();
-    return pathStr.includes('{free}') || pathStr.includes('{perk}') || pathStr.includes('{trait}');
-  }, []);
-
-  const isTraitUniversal = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
-    const pathVal = rule.path || rule.kit || rule.table_group || '';
-    const paths = parseItemPaths(pathVal);
-    return paths.some((p) => p.toLowerCase() === 'universal');
-  }, []);
-
   const isTraitInPath = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
     const pathVal = rule.path || rule.kit || rule.table_group;
     if (!pathVal || pathVal.trim() === '' || pathVal.toLowerCase() === 'none') {
@@ -102,6 +89,20 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     }
     return isItemInPath(pathVal, knownPaths);
   }, [knownPaths]);
+
+  const isTraitUniversal = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
+    const pathVal = rule.path || rule.kit || rule.table_group || '';
+    const paths = parseItemPaths(pathVal);
+    return paths.some((p) => p.toLowerCase() === 'universal');
+  }, []);
+
+  const isTraitInherent = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
+    const cost = (rule as any).ap_cost;
+    if (typeof cost === 'number' && cost === 0) return true;
+    if (!isTraitInPath(rule)) return false;
+    const pathStr = (rule.path || rule.kit || rule.table_group || (rule as any).source || '').toLowerCase();
+    return pathStr.includes('{free}') || pathStr.includes('{perk}') || pathStr.includes('{trait}');
+  }, [isTraitInPath]);
 
   const getTraitApCost = useCallback((rule: SupabaseTrait | TraitItem): number => {
     if (isTraitInherent(rule)) return 0;
@@ -359,11 +360,12 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`text-xs font-outfit font-bold inline-flex items-center align-baseline gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                            <span>{isMso ? '🌌' : '🧬'}</span>
-                            <span>{rule.name}</span>
-                            <ItemNotesPopover notes={rule.notes || rule.effect} itemName={rule.name} inline />
-                          </span>
+                          <TraitNameWithNotes
+                            name={rule.name}
+                            notes={rule.notes || rule.effect}
+                            isMso={isMso}
+                            className={isMso ? 'text-purple-300 font-bold' : 'text-slate-100 font-bold'}
+                          />
 
                           {/* AP Badge */}
                           <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
@@ -623,6 +625,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                 const starred = isRuleStarred(rule.id || rule.name);
                 const isMso = isGsUnlocked && isMsoEntry(rule.name);
                 const inPath = isTraitInPath(rule);
+                const isUni = isTraitUniversal(rule);
                 const inherent = isTraitInherent(rule);
                 const apCost = getTraitApCost(rule);
 
@@ -652,11 +655,12 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                           <Star className={`w-3.5 h-3.5 ${starred ? 'fill-amber-400 text-amber-400' : ''}`} />
                         </button>
 
-                        <span className={`text-xs font-outfit font-black inline-flex items-center align-baseline gap-1 ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
-                          <span>{isMso ? '🌌' : '🧬'}</span>
-                          <span>{rule.name}</span>
-                          <ItemNotesPopover notes={rule.notes || rule.effect} itemName={rule.name} inline />
-                        </span>
+                        <TraitNameWithNotes
+                          name={rule.name}
+                          notes={rule.notes || rule.effect}
+                          isMso={isMso}
+                          className={isMso ? 'text-purple-300 font-black' : 'text-slate-100 font-black'}
+                        />
 
                         {/* AP Badge */}
                         <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
@@ -669,9 +673,12 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                           {inherent ? '0 AP (Free)' : inPath ? '1 AP' : '👑 3 AP'}
                         </span>
 
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                          🧬 {cleanPathName(rule.path || rule.kit || rule.table_group || 'General')}
-                        </span>
+                        {/* Classification Pill: Only show for In-Path traits; hide for Universal and Out-of-Path */}
+                        {inPath && !isUni && (
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/40">
+                            🧬 {cleanPathName(rule.path || rule.kit || rule.table_group || 'General')}
+                          </span>
+                        )}
                       </div>
 
                       <p className="text-xs text-slate-300 leading-relaxed font-sans">{rule.effect || rule.notes || 'No effect description'}</p>
