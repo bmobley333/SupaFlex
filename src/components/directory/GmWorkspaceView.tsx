@@ -86,8 +86,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     }
   };
 
-  // Notes Textarea Ref & Icon Insertion
+  // Notes Textarea Ref & Formatting Mode
   const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [notesMode, setNotesMode] = useState<'view' | 'edit'>('view');
+
   const ATTRIBUTE_EFFECT_ICONS = [
     { label: 'Magic ✨', icon: '✨' },
     { label: 'Might 💪', icon: '💪' },
@@ -97,6 +99,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   ];
 
   const insertIconAtNotesCursor = (iconStr: string) => {
+    if (notesMode !== 'edit') {
+      setNotesMode('edit');
+    }
     const currentNotes = activeEncounter?.notes || activeEncounter?.tactical_notes || '';
     const textarea = notesTextareaRef.current;
     if (!textarea) {
@@ -111,6 +116,93 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       textarea.focus();
       textarea.setSelectionRange(start + iconStr.length, start + iconStr.length);
     }, 0);
+  };
+
+  const renderFormattedEncounterNotes = (rawText: string) => {
+    if (!rawText || !rawText.trim()) {
+      return (
+        <span className="text-slate-500 italic text-xs">
+          No notes for this encounter. Click to add notes...
+        </span>
+      );
+    }
+
+    const lines = rawText.split(/\r?\n/);
+    return (
+      <div className="space-y-1 text-slate-200 font-sans text-xs leading-relaxed">
+        {lines.map((line, idx) => {
+          const trimmed = line.trim();
+          if (!trimmed) {
+            return <div key={idx} className="h-1.5" />;
+          }
+
+          if (trimmed === '---') {
+            return <div key={idx} className="border-t border-slate-800/80 my-2" />;
+          }
+
+          // Major Section Headers: Room Description, Tactical Encounter Notes, Overview
+          if (
+            trimmed === 'Room Description:' ||
+            trimmed === 'Tactical Encounter Notes:' ||
+            trimmed.startsWith('Overview:') ||
+            trimmed.startsWith('Act I:') ||
+            trimmed.startsWith('Act II:') ||
+            trimmed.startsWith('Act III:') ||
+            trimmed.startsWith('Act IV:')
+          ) {
+            return (
+              <div
+                key={idx}
+                className="text-sky-300 font-extrabold text-xs tracking-wider uppercase border-b border-sky-900/40 pb-0.5 mt-2 mb-1 flex items-center gap-1.5"
+              >
+                <span>{trimmed}</span>
+              </div>
+            );
+          }
+
+          // Prompt Keywords: "• Scene:", "• GM Notes:", "• Objective:", "• Opponents:", "• Reward:", "• Treasure:", "• Trap:", "• Puzzle:", "• Special:"
+          const kwMatch = trimmed.match(
+            /^(?:[•\-\*]\s*)?(Scene|GM Notes|Objective|Opponents|Reward|Treasure|Trap|Puzzle|Special|Puzzle \/ Trap \/ Reward):\s*(.*)$/i
+          );
+          if (kwMatch) {
+            const kw = kwMatch[1];
+            const rest = kwMatch[2];
+            return (
+              <div key={idx} className="flex items-start gap-1.5 leading-relaxed">
+                <span className="font-extrabold text-sky-400 shrink-0 font-sans tracking-wide">
+                  • {kw}:
+                </span>
+                {rest && <span className="text-slate-200">{rest}</span>}
+              </div>
+            );
+          }
+
+          // Monster Sub-lines: "  - 2 Ogrind Guards: ...", "Station Commander Klyss: ..."
+          const monMatch = trimmed.match(
+            /^(?:[•\-\*○]\s*)?(\d+(?:-\d+)?\s+[A-Za-z0-9 '–\-]+(?:\([^\)]+\))?|Station Commander Klyss[^\:]*|Overseer Ketone[^\:]*|Paralith Captain):\s*(.*)$/
+          );
+          if (monMatch) {
+            const mName = monMatch[1];
+            const mRest = monMatch[2];
+            return (
+              <div key={idx} className="pl-4 flex items-start gap-1.5 leading-relaxed">
+                <span className="font-bold text-amber-300 shrink-0 font-sans">
+                  - {mName}:
+                </span>
+                <span className="text-slate-300">{mRest}</span>
+              </div>
+            );
+          }
+
+          // Standard text line
+          return (
+            <div key={idx} className="text-slate-200 leading-relaxed">
+              {line}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   // Inline Monster Edit State
@@ -688,15 +780,43 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           {/* Permanent Always-Open Encounter Notes Card */}
           <div className="bg-slate-950/90 border border-slate-800 border-t-2 border-t-amber-500/50 p-3.5 rounded-xl shadow-inner flex flex-col gap-2.5 font-outfit mt-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h4 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider flex items-center gap-2 font-mono">
-                <div className="p-1 rounded-lg bg-amber-950/90 border border-amber-500/40 text-amber-300 flex items-center justify-center shadow-sm">
-                  <StickyNote className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-3 flex-wrap">
+                <h4 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider flex items-center gap-2 font-mono">
+                  <div className="p-1 rounded-lg bg-amber-950/90 border border-amber-500/40 text-amber-300 flex items-center justify-center shadow-sm">
+                    <StickyNote className="w-3.5 h-3.5" />
+                  </div>
+                  <span>Encounter Notes</span>
+                  {activeEncounter && (
+                    <span className="text-slate-400 font-normal">({activeEncounter.title})</span>
+                  )}
+                </h4>
+
+                {/* Dyslexia-Friendly Multi-Option Pill Switch: View vs Edit */}
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                  <button
+                    type="button"
+                    onClick={() => setNotesMode('view')}
+                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      notesMode === 'view'
+                        ? 'bg-sky-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    👁️ View
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNotesMode('edit')}
+                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      notesMode === 'edit'
+                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    ✏️ Edit
+                  </button>
                 </div>
-                <span>Encounter Notes</span>
-                {activeEncounter && (
-                  <span className="text-slate-400 font-normal">({activeEncounter.title})</span>
-                )}
-              </h4>
+              </div>
 
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Insert Icon Buttons */}
@@ -723,19 +843,31 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 </div>
               </div>
             </div>
-            <textarea
-              ref={notesTextareaRef}
-              rows={3}
-              value={activeEncounter?.notes || activeEncounter?.tactical_notes || ''}
-              onChange={(e) => setEncounterNotes(e.target.value)}
-              placeholder={
-                activeEncounter
-                  ? 'e.g. Floor spikes trigger on round 2; 2 skeleton archers on catwalks; secret door behind altar...'
-                  : 'Select or create an encounter above to write notes...'
-              }
-              disabled={!activeEncounter}
-              className="w-full bg-slate-900/90 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 font-mono outline-none focus:border-amber-500/80 transition placeholder:text-slate-600 disabled:opacity-40"
-            />
+
+            {/* Formatted View vs Raw Edit */}
+            {notesMode === 'view' ? (
+              <div
+                onClick={() => setNotesMode('edit')}
+                title="Click anywhere to edit notes"
+                className="w-full min-h-[100px] max-h-80 overflow-y-auto bg-slate-900/90 border border-slate-800 rounded-lg p-3 text-xs font-sans leading-relaxed cursor-pointer hover:border-slate-700/80 transition-colors shadow-inner select-text"
+              >
+                {renderFormattedEncounterNotes(activeEncounter?.notes || activeEncounter?.tactical_notes || '')}
+              </div>
+            ) : (
+              <textarea
+                ref={notesTextareaRef}
+                rows={4}
+                value={activeEncounter?.notes || activeEncounter?.tactical_notes || ''}
+                onChange={(e) => setEncounterNotes(e.target.value)}
+                placeholder={
+                  activeEncounter
+                    ? 'e.g. Floor spikes trigger on round 2; 2 skeleton archers on catwalks; secret door behind altar...'
+                    : 'Select or create an encounter above to write notes...'
+                }
+                disabled={!activeEncounter}
+                className="w-full bg-slate-900/90 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 font-mono outline-none focus:border-amber-500/80 transition placeholder:text-slate-600 disabled:opacity-40 leading-relaxed"
+              />
+            )}
           </div>
         </div>
       </div>
