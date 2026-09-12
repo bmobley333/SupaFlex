@@ -215,11 +215,11 @@ export const WeaponsCard: React.FC = () => {
       if (inPath && anyMeetsReq) {
         return { inPath: true, meetsReq: true, category: '1AP', apCost: 1, requiresGmApproval: false, statDownscaled: false };
       } else if (inPath && !anyMeetsReq) {
-        return { inPath: true, meetsReq: false, category: '2AP', apCost: 2, requiresGmApproval: false, statDownscaled: true };
+        return { inPath: true, meetsReq: false, category: '2AP', apCost: 2, requiresGmApproval: false, statDownscaled: false };
       } else if (!inPath && anyMeetsReq) {
         return { inPath: false, meetsReq: true, category: '3AP', apCost: 3, requiresGmApproval: true, statDownscaled: false };
       } else {
-        return { inPath: false, meetsReq: false, category: '4AP', apCost: 4, requiresGmApproval: true, statDownscaled: true };
+        return { inPath: false, meetsReq: false, category: '4AP', apCost: 4, requiresGmApproval: true, statDownscaled: false };
       }
     },
     [knownPaths, attributeDice]
@@ -241,18 +241,9 @@ export const WeaponsCard: React.FC = () => {
     const isSkilled = canAfford;
 
     const newSlots: WeaponSlot[] = variantsToEquip.map((variant) => {
-      const variantEval = evaluateItemAp(weapon.path, variant.requirementStr, attributeDice, knownPaths, variant.variantType);
-      let calculatedAtk = calculateWeaponAtk(variant.name, variant.mhs, attributeDice);
+      const calculatedAtk = calculateWeaponAtk(variant.name, variant.mhs, attributeDice);
       const isSpecialDmg = variant.dmg === '❌' || weapon.dmg === '❌';
-      let calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(variant.name, variant.mhs, attributeDice));
-
-      // Temporary downscale (-1 die step) if requirements are unmet
-      if (!variantEval.meetsReq) {
-        calculatedAtk = getStepDownDie(calculatedAtk);
-        if (calculatedDmg !== '❌') {
-          calculatedDmg = String(getStepDownDie(parseInt(calculatedDmg, 10) || 4));
-        }
-      }
+      const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(variant.name, variant.mhs, attributeDice));
 
       const cleanBlockNum = variant.max_block ? variant.max_block.replace('🛡️', '') : 'n/a';
       const slotName = weapon.type.includes(',') ? `${variant.name} (${variant.variantType})` : variant.name;
@@ -265,7 +256,7 @@ export const WeaponsCard: React.FC = () => {
         atk: String(calculatedAtk),
         dmg: calculatedDmg,
         max_blk: cleanBlockNum,
-        effect: `${variant.variantType} Weapon (${evalResult.apCost} AP${variantEval.statDownscaled ? ', Downscaled' : ''}, Req ${variant.requirementStr})`,
+        effect: `${variant.variantType} Weapon (${evalResult.apCost} AP, Req ${variant.requirementStr})`,
         notes: weapon.notes,
         ap_cost: evalResult.apCost,
       };
@@ -1084,16 +1075,9 @@ export const WeaponsCard: React.FC = () => {
                                 <div className="flex flex-col gap-1.5 pt-0.5">
                                   {variants.map((v) => {
                                     const variantEval = evaluateItemAp(weapon.path, v.requirementStr, attributeDice, knownPaths, v.variantType);
-                                    let calculatedAtk = calculateWeaponAtk(v.name, v.mhs, attributeDice);
+                                    const calculatedAtk = calculateWeaponAtk(v.name, v.mhs, attributeDice);
                                     const isSpecialDmg = v.dmg === '❌' || weapon.dmg === '❌';
-                                    let calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(v.name, v.mhs, attributeDice));
-
-                                    if (!variantEval.meetsReq) {
-                                      calculatedAtk = getStepDownDie(calculatedAtk);
-                                      if (calculatedDmg !== '❌') {
-                                        calculatedDmg = String(getStepDownDie(parseInt(calculatedDmg, 10) || 4));
-                                      }
-                                    }
+                                    const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(v.name, v.mhs, attributeDice));
 
                                     return (
                                       <div
@@ -1115,13 +1099,9 @@ export const WeaponsCard: React.FC = () => {
                                           <span>Dmg: <strong className={isSpecialDmg ? "text-rose-400 font-black text-xs" : "text-rose-300"} title={isSpecialDmg ? "Special Damage: Governed by loaded ammunition type from Equipment" : undefined}>{calculatedDmg}</strong></span>
                                           <span>•</span>
                                           <span>Blk: <strong className="text-amber-300">{v.max_block}</strong></span>
-                                          {variantEval.meetsReq ? (
+                                          {variantEval.meetsReq && (
                                             <span className="text-[10px] text-emerald-400 font-sans font-bold flex items-center gap-0.5 ml-1">
                                               Qualified
-                                            </span>
-                                          ) : (
-                                            <span className="text-[10px] text-amber-400 font-sans font-semibold ml-1">
-                                              Downscaled (-1 die)
                                             </span>
                                           )}
                                         </div>

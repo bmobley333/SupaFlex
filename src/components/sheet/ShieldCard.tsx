@@ -181,7 +181,7 @@ export const ShieldCard: React.FC = () => {
       cost: item.cost,
       notes: item.notes,
       ap_cost: evalResult.apCost,
-      effect: `${evalResult.apCost} AP${evalResult.statDownscaled ? ' (Downscaled -4 Blk)' : ''}`,
+      effect: `${evalResult.apCost} AP`,
     };
 
     updateActiveSheetData((prev) => {
@@ -917,11 +917,7 @@ export const ShieldCard: React.FC = () => {
                                 <span>Req: <strong className="text-slate-200">{item.requirement}</strong></span>
                                 <span>Blk: <strong className="text-amber-300">{item.max_block}</strong></span>
                                 <span>MR: <strong className="text-cyan-300">{item.mr}</strong></span>
-                                {evalResult.statDownscaled ? (
-                                  <span className="text-[10px] text-amber-400 font-sans font-semibold">
-                                    Downscaled (-4 Blk)
-                                  </span>
-                                ) : (
+                                {evalResult.meetsReq && (
                                   <span className="text-[10px] text-emerald-400 font-sans font-bold">
                                     Qualified
                                   </span>

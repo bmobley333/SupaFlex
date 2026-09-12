@@ -239,7 +239,7 @@ export const evaluateItemAp = (
       category: '2AP',
       apCost: 2,
       requiresGmApproval: false,
-      statDownscaled: true,
+      statDownscaled: false,
     };
   }
 
@@ -265,7 +265,7 @@ export const evaluateItemAp = (
     category: '4AP',
     apCost: 4,
     requiresGmApproval: !isUniversal,
-    statDownscaled: true,
+    statDownscaled: false,
     isUniversal,
   };
 };

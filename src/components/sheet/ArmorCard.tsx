@@ -184,7 +184,7 @@ export const ArmorCard: React.FC = () => {
       cost: item.cost,
       notes: item.notes,
       ap_cost: evalResult.apCost,
-      effect: `${evalResult.apCost} AP${evalResult.statDownscaled ? ' (Downscaled -2 AR)' : ''}`,
+      effect: `${evalResult.apCost} AP`,
     };
 
     updateActiveSheetData((prev) => {
@@ -923,11 +923,7 @@ export const ArmorCard: React.FC = () => {
                                   <span>Req: <strong className="text-slate-200">{item.requirement}</strong></span>
                                   <span>AR: <strong className="text-amber-300">{item.ar}</strong></span>
                                   <span>MR: <strong className="text-cyan-300">{item.mr}</strong></span>
-                                  {evalResult.statDownscaled ? (
-                                    <span className="text-[10px] text-amber-400 font-sans font-semibold">
-                                      Downscaled (-2 AR)
-                                    </span>
-                                  ) : (
+                                  {evalResult.meetsReq && (
                                     <span className="text-[10px] text-emerald-400 font-sans font-bold">
                                       Qualified
                                     </span>

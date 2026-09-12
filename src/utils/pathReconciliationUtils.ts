@@ -344,10 +344,10 @@ export const reconcileAbilitiesOnPathAdded = (
  * 
  * 1. Unmet Requirement Auto-Refund: Any item previously purchased at unmet requirement rates
  *    (2 AP In-Path or 4 AP Out-of-Path) that now meets requirements has its +1 AP surcharge
- *    refunded, ap_cost decreased by 1, and downscaled stats upscaled to full native ratings (0 AP).
- * 2. Attribute Oscillation (Option A): If an attribute temporarily drops below requirement,
- *    combat stats downscale to match the lower attribute without re-taxing the player.
- *    Because ap_cost is already at baseline and tracked, swapping back later will never trigger duplicate refunds.
+ *    refunded and ap_cost decreased by 1.
+ * 2. Attribute Scaling & Legacy Healing: Combat stats always spec cleanly to the character's
+ *    current attributes without artificial downscaled penalties (-1 die, -2 AR, -4 Blk).
+ *    Any legacy items containing "(Downscaled...)" are automatically healed to native stats.
  */
 export const reconcileEquipmentOnAttributesChanged = (
   sheetData: CharacterSheetData,
@@ -383,10 +383,8 @@ export const reconcileEquipmentOnAttributesChanged = (
           w.variantType
         );
 
-        const isDownscaled = Boolean(w.effect && w.effect.toLowerCase().includes('downscaled'));
-
+        let updatedApCost = w.ap_cost;
         if (evalResult.meetsReq) {
-          let updatedApCost = w.ap_cost;
           // If was previously burdened by unmet requirement surcharge (2 AP In-Path or 4 AP Out-of-Path)
           if (evalResult.inPath && w.ap_cost > 1) {
             const diff = w.ap_cost - 1;
@@ -399,41 +397,23 @@ export const reconcileEquipmentOnAttributesChanged = (
             refundLogDetails.push(`${w.name} (-${diff} AP, Requirement Met)`);
             updatedApCost = 3;
           }
-
-          // Restore native Attack and Damage ratings
-          const nativeAtk = calculateWeaponAtk(w.name, w.mhs, attributeDice);
-          const nativeDmg = w.dmg === '❌' ? '❌' : String(calculateWeaponDmg(w.name, w.mhs, attributeDice));
-          const cleanEffect = (w.effect || '')
-            .replace(/,\s*Downscaled/gi, '')
-            .replace(/\s*\(Downscaled\)/gi, '')
-            .trim();
-
-          return {
-            ...w,
-            ap_cost: updatedApCost,
-            atk: String(nativeAtk),
-            dmg: nativeDmg,
-            effect: cleanEffect,
-          };
-        } else {
-          // Requirement unmet: Apply Option A Zero-Friction Stat Downscaling (no surcharge re-tax)
-          if (!isDownscaled) {
-            const currentAtkNum = parseInt(w.atk, 10) || calculateWeaponAtk(w.name, w.mhs, attributeDice);
-            const downAtk = getStepDownDie(currentAtkNum);
-            const downDmg = w.dmg === '❌' ? '❌' : String(getStepDownDie(parseInt(w.dmg, 10) || 4));
-            const updatedEffect = w.effect
-              ? (w.effect.includes('Downscaled') ? w.effect : `${w.effect}, Downscaled`)
-              : 'Downscaled';
-
-            return {
-              ...w,
-              atk: String(downAtk),
-              dmg: downDmg,
-              effect: updatedEffect,
-            };
-          }
-          return w;
         }
+
+        // Always calculate Attack and Damage at current attribute ratings (no -1 die step down)
+        const nativeAtk = calculateWeaponAtk(w.name, w.mhs, attributeDice);
+        const nativeDmg = w.dmg === '❌' ? '❌' : String(calculateWeaponDmg(w.name, w.mhs, attributeDice));
+        const cleanEffect = (w.effect || '')
+          .replace(/,\s*Downscaled/gi, '')
+          .replace(/\s*\(Downscaled\)/gi, '')
+          .trim();
+
+        return {
+          ...w,
+          ap_cost: updatedApCost,
+          atk: String(nativeAtk),
+          dmg: nativeDmg,
+          effect: cleanEffect,
+        };
       })
     : [];
 
@@ -445,8 +425,8 @@ export const reconcileEquipmentOnAttributesChanged = (
         const evalResult = evaluateItemAp(a.path, a.requirement, attributeDice, knownPaths);
         const isDownscaled = Boolean(a.effect && a.effect.toLowerCase().includes('downscaled'));
 
+        let updatedApCost = a.ap_cost;
         if (evalResult.meetsReq) {
-          let updatedApCost = a.ap_cost;
           if (evalResult.inPath && a.ap_cost > 1) {
             const diff = a.ap_cost - 1;
             totalRefund += diff;
@@ -458,55 +438,36 @@ export const reconcileEquipmentOnAttributesChanged = (
             refundLogDetails.push(`${a.name} (-${diff} AP, Requirement Met)`);
             updatedApCost = 3;
           }
+        }
 
-          let restoredAr = a.ar || 0;
-          if (isDownscaled) {
-            restoredAr = Math.min(10, restoredAr + 2);
-          }
+        // Restore any legacy downscaled AR (-2 AR) back to standard
+        let restoredAr = a.ar || 0;
+        if (isDownscaled) {
+          restoredAr = Math.min(10, restoredAr + 2);
+        }
 
-          const cleanEffect = (a.effect || '')
-            .replace(/\s*\(Downscaled\s*-2\s*AR\)/gi, '')
-            .replace(/\s*\(Downscaled\)/gi, '')
-            .trim();
+        const cleanEffect = (a.effect || '')
+          .replace(/\s*\(Downscaled\s*-2\s*AR\)/gi, '')
+          .replace(/\s*\(Downscaled\)/gi, '')
+          .trim();
 
-          const updatedArmor = {
-            ...a,
+        const updatedArmor = {
+          ...a,
+          ap_cost: updatedApCost,
+          ar: restoredAr,
+          effect: cleanEffect,
+        };
+
+        if (nextArmorSlot && nextArmorSlot.name.toLowerCase() === a.name.toLowerCase()) {
+          nextArmorSlot = {
+            ...nextArmorSlot,
             ap_cost: updatedApCost,
             ar: restoredAr,
             effect: cleanEffect,
           };
-
-          if (nextArmorSlot && nextArmorSlot.name.toLowerCase() === a.name.toLowerCase()) {
-            nextArmorSlot = {
-              ...nextArmorSlot,
-              ap_cost: updatedApCost,
-              ar: restoredAr,
-              effect: cleanEffect,
-            };
-          }
-
-          return updatedArmor;
-        } else {
-          // Requirement unmet: Downscale AR by 2 (minimum 2)
-          if (!isDownscaled) {
-            const downAr = Math.max(2, (a.ar || 4) - 2);
-            const updatedEffect = `${a.effect || ''} (Downscaled -2 AR)`.trim();
-            const updatedArmor = {
-              ...a,
-              ar: downAr,
-              effect: updatedEffect,
-            };
-            if (nextArmorSlot && nextArmorSlot.name.toLowerCase() === a.name.toLowerCase()) {
-              nextArmorSlot = {
-                ...nextArmorSlot,
-                ar: downAr,
-                effect: updatedEffect,
-              };
-            }
-            return updatedArmor;
-          }
-          return a;
         }
+
+        return updatedArmor;
       })
     : [];
 
@@ -518,8 +479,8 @@ export const reconcileEquipmentOnAttributesChanged = (
         const evalResult = evaluateItemAp(s.path, s.requirement, attributeDice, knownPaths);
         const isDownscaled = Boolean(s.effect && s.effect.toLowerCase().includes('downscaled'));
 
+        let updatedApCost = s.ap_cost;
         if (evalResult.meetsReq) {
-          let updatedApCost = s.ap_cost;
           if (evalResult.inPath && s.ap_cost > 1) {
             const diff = s.ap_cost - 1;
             totalRefund += diff;
@@ -531,60 +492,38 @@ export const reconcileEquipmentOnAttributesChanged = (
             refundLogDetails.push(`${s.name} (-${diff} AP, Requirement Met)`);
             updatedApCost = 3;
           }
+        }
 
-          let restoredBlock = typeof s.max_block === 'number'
-            ? s.max_block
-            : parseInt(String(s.max_block || 8).replace(/\D/g, ''), 10) || 8;
-          if (isDownscaled) {
-            restoredBlock = Math.min(20, restoredBlock + 4);
-          }
+        // Restore any legacy downscaled Block Cap (-4 Blk) back to standard
+        let restoredBlock = typeof s.max_block === 'number'
+          ? s.max_block
+          : parseInt(String(s.max_block || 8).replace(/\D/g, ''), 10) || 8;
+        if (isDownscaled) {
+          restoredBlock = Math.min(20, restoredBlock + 4);
+        }
 
-          const cleanEffect = (s.effect || '')
-            .replace(/\s*\(Downscaled\s*-4\s*Blk\)/gi, '')
-            .replace(/\s*\(Downscaled\)/gi, '')
-            .trim();
+        const cleanEffect = (s.effect || '')
+          .replace(/\s*\(Downscaled\s*-4\s*Blk\)/gi, '')
+          .replace(/\s*\(Downscaled\)/gi, '')
+          .trim();
 
-          const updatedShield = {
-            ...s,
+        const updatedShield = {
+          ...s,
+          ap_cost: updatedApCost,
+          max_block: restoredBlock,
+          effect: cleanEffect,
+        };
+
+        if (nextShieldSlot && nextShieldSlot.name.toLowerCase() === s.name.toLowerCase()) {
+          nextShieldSlot = {
+            ...nextShieldSlot,
             ap_cost: updatedApCost,
             max_block: restoredBlock,
             effect: cleanEffect,
           };
-
-          if (nextShieldSlot && nextShieldSlot.name.toLowerCase() === s.name.toLowerCase()) {
-            nextShieldSlot = {
-              ...nextShieldSlot,
-              ap_cost: updatedApCost,
-              max_block: restoredBlock,
-              effect: cleanEffect,
-            };
-          }
-
-          return updatedShield;
-        } else {
-          // Requirement unmet: Downscale Block Cap by 4 (minimum 4)
-          if (!isDownscaled) {
-            const currentBlock = typeof s.max_block === 'number'
-              ? s.max_block
-              : parseInt(String(s.max_block || 8).replace(/\D/g, ''), 10) || 8;
-            const downBlock = Math.max(4, currentBlock - 4);
-            const updatedEffect = `${s.effect || ''} (Downscaled -4 Blk)`.trim();
-            const updatedShield = {
-              ...s,
-              max_block: downBlock,
-              effect: updatedEffect,
-            };
-            if (nextShieldSlot && nextShieldSlot.name.toLowerCase() === s.name.toLowerCase()) {
-              nextShieldSlot = {
-                ...nextShieldSlot,
-                max_block: downBlock,
-                effect: updatedEffect,
-              };
-            }
-            return updatedShield;
-          }
-          return s;
         }
+
+        return updatedShield;
       })
     : [];
 
