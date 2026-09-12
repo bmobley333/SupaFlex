@@ -1954,7 +1954,11 @@ export const gameApi = {
         console.warn('[gameApi] Notice fetching adventures:', error.message);
         return [];
       }
-      return (data || []) as GmAdventure[];
+      return (data || []).map((adv: any) => ({
+        ...adv,
+        links: adv.links || adv.structure?.links || [],
+        loot: adv.loot || adv.structure?.loot || [],
+      })) as GmAdventure[];
     } catch (e) {
       console.error('[gameApi] Error in getAdventuresForUser:', e);
       return [];
@@ -1967,6 +1971,8 @@ export const gameApi = {
       const nowIso = new Date().toISOString();
       const defaultStructure = {
         acts: [],
+        links: [],
+        loot: [],
       };
 
       const payload = {
@@ -1989,7 +1995,12 @@ export const gameApi = {
         console.error('[gameApi] Error creating adventure:', error);
         throw error;
       }
-      return data as GmAdventure;
+      const created = data as GmAdventure;
+      return {
+        ...created,
+        links: created.links || created.structure?.links || [],
+        loot: created.loot || created.structure?.loot || [],
+      };
     } catch (e) {
       console.error('[gameApi] Error in createAdventure:', e);
       throw e;
@@ -1998,15 +2009,31 @@ export const gameApi = {
 
   async updateAdventure(id: string, updates: Partial<GmAdventure>): Promise<GmAdventure | null> {
     try {
-      const payload: any = {
-        ...updates,
+      // Build safe database payload containing only valid columns in public.adventures
+      const safePayload: Record<string, any> = {
         updated_at: new Date().toISOString(),
       };
-      delete payload.id;
+
+      const allowedColumns = ['title', 'description', 'genre', 'is_active', 'is_published', 'gm_email', 'structure'];
+      for (const col of allowedColumns) {
+        if ((updates as any)[col] !== undefined) {
+          safePayload[col] = (updates as any)[col];
+        }
+      }
+
+      // If updates includes links or loot, ensure they are synced inside safePayload.structure
+      if (updates.links !== undefined || updates.loot !== undefined) {
+        const existingStructure = safePayload.structure || updates.structure || {};
+        safePayload.structure = {
+          ...existingStructure,
+          ...(updates.links !== undefined ? { links: updates.links } : {}),
+          ...(updates.loot !== undefined ? { loot: updates.loot } : {}),
+        };
+      }
 
       const { data, error } = await supabase
         .from('adventures')
-        .update(payload)
+        .update(safePayload)
         .eq('id', id)
         .select('*')
         .single();
@@ -2015,7 +2042,12 @@ export const gameApi = {
         console.error('[gameApi] Error updating adventure:', error);
         throw error;
       }
-      return data as GmAdventure;
+      const updated = data as GmAdventure;
+      return {
+        ...updated,
+        links: updates.links || updated.links || updated.structure?.links || [],
+        loot: updates.loot || updated.loot || updated.structure?.loot || [],
+      };
     } catch (e) {
       console.error('[gameApi] Error in updateAdventure:', e);
       throw e;

@@ -146,8 +146,13 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
 
   getActiveAdventure: () => {
     const { adventures, activeAdventureId } = get();
-    if (!activeAdventureId) return adventures[0] || null;
-    return adventures.find((a) => a.id === activeAdventureId) || null;
+    const adv = !activeAdventureId ? (adventures[0] || null) : (adventures.find((a) => a.id === activeAdventureId) || null);
+    if (!adv) return null;
+    return {
+      ...adv,
+      links: adv.links || adv.structure?.links || [],
+      loot: adv.loot || adv.structure?.loot || [],
+    };
   },
 
   getActiveAct: () => {
@@ -209,11 +214,17 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
         }
       }
 
-      set({ adventures: list });
+      const normalizedList = list.map((a: GmAdventure) => ({
+        ...a,
+        links: a.links || a.structure?.links || [],
+        loot: a.loot || a.structure?.loot || [],
+      }));
+
+      set({ adventures: normalizedList });
 
       // Auto-validate and select first adventure/act/encounter if none selected or stale
       const currentAdvId = get().activeAdventureId;
-      const targetAdv = list.find((a: GmAdventure) => a.id === currentAdvId) || list[0];
+      const targetAdv = normalizedList.find((a: GmAdventure) => a.id === currentAdvId) || normalizedList[0];
 
       if (targetAdv) {
         get().selectAdventure(targetAdv.id);
@@ -346,7 +357,21 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
 
   updateAdventure: async (id: string, updates: Partial<GmAdventure>) => {
     try {
-      const updated = await gameApi.updateAdventure(id, updates);
+      const adv = get().adventures.find((a) => a.id === id);
+      let resolvedStructure = updates.structure || adv?.structure || { acts: [] };
+      if (updates.links !== undefined) {
+        resolvedStructure = { ...resolvedStructure, links: updates.links };
+      }
+      if (updates.loot !== undefined) {
+        resolvedStructure = { ...resolvedStructure, loot: updates.loot };
+      }
+
+      const safeUpdates: Partial<GmAdventure> = {
+        ...updates,
+        structure: resolvedStructure,
+      };
+
+      const updated = await gameApi.updateAdventure(id, safeUpdates);
       if (updated) {
         set((state) => ({
           adventures: state.adventures.map((a) => (a.id === id ? { ...a, ...updated } : a)),
@@ -891,20 +916,49 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
       created_at: new Date().toISOString(),
     };
 
-    const updatedLoot = [...(adv.loot || []), newItem];
-    await get().updateAdventure(adventureId, { loot: updatedLoot });
+    const currentLoot = adv.loot || adv.structure?.loot || [];
+    const updatedLoot = [...currentLoot, newItem];
+    const newStructure = { ...(adv.structure || { acts: [] }), loot: updatedLoot };
+
+    set((state) => ({
+      adventures: state.adventures.map((a) =>
+        a.id === adventureId ? { ...a, loot: updatedLoot, structure: newStructure } : a
+      ),
+    }));
+
+    await get().updateAdventure(adventureId, { structure: newStructure, loot: updatedLoot });
   },
 
   deleteAdventureLoot: async (adventureId: string, lootId: string) => {
     const adv = get().adventures.find((a) => a.id === adventureId);
-    if (!adv || !adv.loot) return;
+    if (!adv) return;
 
-    const updatedLoot = adv.loot.filter((l) => l.id !== lootId);
-    await get().updateAdventure(adventureId, { loot: updatedLoot });
+    const currentLoot: StagedLootItem[] = adv.loot || adv.structure?.loot || [];
+    const updatedLoot = currentLoot.filter((l: StagedLootItem) => l.id !== lootId);
+    const newStructure = { ...(adv.structure || { acts: [] }), loot: updatedLoot };
+
+    set((state) => ({
+      adventures: state.adventures.map((a) =>
+        a.id === adventureId ? { ...a, loot: updatedLoot, structure: newStructure } : a
+      ),
+    }));
+
+    await get().updateAdventure(adventureId, { structure: newStructure, loot: updatedLoot });
   },
 
   clearAdventureLoot: async (adventureId: string) => {
-    await get().updateAdventure(adventureId, { loot: [] });
+    const adv = get().adventures.find((a) => a.id === adventureId);
+    if (!adv) return;
+
+    const newStructure = { ...(adv.structure || { acts: [] }), loot: [] };
+
+    set((state) => ({
+      adventures: state.adventures.map((a) =>
+        a.id === adventureId ? { ...a, loot: [], structure: newStructure } : a
+      ),
+    }));
+
+    await get().updateAdventure(adventureId, { structure: newStructure, loot: [] });
   },
 
   addEncounterLoot: async (adventureId: string, actId: string, encounterId: string, item: Omit<StagedLootItem, 'id' | 'created_at'>) => {

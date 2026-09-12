@@ -158,6 +158,7 @@ export interface GmAct {
 export interface AdventureStructure {
   acts: GmAct[];
   links?: EncounterLink[];
+  loot?: StagedLootItem[];
 }
 
 export interface GmAdventure {

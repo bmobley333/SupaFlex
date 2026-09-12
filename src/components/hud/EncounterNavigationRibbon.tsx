@@ -569,7 +569,7 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
           {/* Adventure Loot Dropdown (Amber Theme) */}
           <UniversalLootDropdown
             label="Adventure Loot"
-            loot={activeAdv?.loot || []}
+            loot={activeAdv?.loot || activeAdv?.structure?.loot || []}
             disabled={!activeAdv}
             disabledTooltip="Select an adventure first"
             themeColor="amber"
@@ -593,7 +593,7 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
           {/* Adventure Links Dropdown (Teal Theme) */}
           <UniversalLinksDropdown
             label="Adventure Links"
-            links={activeAdv?.links || []}
+            links={activeAdv?.links || activeAdv?.structure?.links || []}
             disabled={!activeAdv}
             disabledTooltip="Select an adventure first"
             themeColor="teal"

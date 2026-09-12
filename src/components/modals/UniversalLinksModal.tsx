@@ -262,7 +262,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         return {
           title: 'Adventure Links & Notes',
           subtitle: activeAdv ? activeAdv.title : 'No Active Adventure Selected',
-          links: activeAdv?.links || [],
+          links: activeAdv?.links || activeAdv?.structure?.links || [],
           icon: <Map className="w-5 h-5 text-indigo-400" />,
           activeColor: 'bg-indigo-600',
           accentText: 'text-indigo-300',
@@ -772,7 +772,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                     }`}
                   >
                     <Map className="w-3.5 h-3.5" />
-                    <span>Adventure ({activeAdv?.links?.length || 0})</span>
+                    <span>Adventure ({(activeAdv?.links || activeAdv?.structure?.links || []).length})</span>
                   </button>
 
                   <button
