@@ -145,9 +145,18 @@ export const normalizeCharacterData = (c: Character): Character => {
   const cleanSkillsets = (rawSheet.known_skillsets?.length ? rawSheet.known_skillsets : c.skills || []).filter(
     (s) => s && typeof s === 'string' && s.trim() !== ''
   );
-  const cleanIndividualSkills = (rawSheet.known_individual_skills || []).filter(
+  const rawIndiv = (rawSheet.known_individual_skills || []).filter(
     (s) => s && typeof s === 'string' && s.trim() !== ''
   );
+  const indivSeen = new Set<string>();
+  const cleanIndividualSkills: string[] = [];
+  for (const sk of rawIndiv) {
+    const normalized = sk.trim().toLowerCase() === 'nish (mso)' ? 'Nish' : sk.trim();
+    if (!indivSeen.has(normalized.toLowerCase())) {
+      indivSeen.add(normalized.toLowerCase());
+      cleanIndividualSkills.push(normalized);
+    }
+  }
 
   const normalizedSheet: CharacterSheetData = {
     ...rawSheet,

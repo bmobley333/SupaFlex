@@ -22,6 +22,25 @@ const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
   return [];
 };
 
+const sanitizeNishSkills = (sheet: CharacterSheetData): CharacterSheetData => {
+  if (!sheet) return sheet;
+  const indiv = sheet.known_individual_skills;
+  if (!Array.isArray(indiv) || !indiv.some((s) => s && s.toLowerCase().includes('nish (mso)'))) {
+    return sheet;
+  }
+  const seen = new Set<string>();
+  const sanitized: string[] = [];
+  for (const s of indiv) {
+    if (!s) continue;
+    const clean = s.trim().toLowerCase() === 'nish (mso)' ? 'Nish' : s.trim();
+    if (!seen.has(clean.toLowerCase())) {
+      seen.add(clean.toLowerCase());
+      sanitized.push(clean);
+    }
+  }
+  return { ...sheet, known_individual_skills: sanitized };
+};
+
 interface CharacterStore {
   // State
   characters: Character[];
@@ -251,7 +270,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       let selectedChar: Character | null = null;
 
       const reconcileSheet = (rawSheet: CharacterSheetData, char: Character | null): CharacterSheetData => {
-        const migrated = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(rawSheet));
+        const cleanedSheet = sanitizeNishSkills(rawSheet);
+        const migrated = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(cleanedSheet));
         const vaultReconciled = reconcileCharacterVaultWithGear(migrated, functionsData || [], modsData || []).updatedSheet;
         return reconcileCharacterFreeTraits(vaultReconciled, char, traits).updatedSheetData;
       };
@@ -311,7 +331,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const functionsCatalog = get().functionsCatalog;
     const modsCatalog = get().modsCatalog;
     const reconcileSheet = (rawSheet: CharacterSheetData, char: Character | null): CharacterSheetData => {
-      const migrated = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(rawSheet));
+      const cleanedSheet = sanitizeNishSkills(rawSheet);
+      const migrated = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(cleanedSheet));
       const vaultReconciled = reconcileCharacterVaultWithGear(migrated, functionsCatalog, modsCatalog).updatedSheet;
       return reconcileCharacterFreeTraits(vaultReconciled, char, get().traits).updatedSheetData;
     };
