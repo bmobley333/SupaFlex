@@ -33,6 +33,8 @@ import {
   reconcileCharacterVaultWithGear,
   cleanBelongsToName,
   isModFreeForHost,
+  isBelongsToMatch,
+  splitBelongsToTargets,
 } from '../../utils/gearFunctionSync';
 
 export type EquipmentCategoryTab = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields' | 'kits';
@@ -209,7 +211,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       const itemNameClean = cleanBelongsToName(item.name);
       const itemTypeLower = (item.item_type || item.category || '').toLowerCase();
 
-      const parts = mod.belongs_to.split(',');
+      const parts = splitBelongsToTargets(mod.belongs_to);
       return parts.some((p) => {
         const trimmed = p.trim();
         if (!trimmed) return false;
@@ -241,7 +243,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     const set = new Set<string>();
     functionsCatalog.forEach((fn) => {
       if (!fn.belongs_to) return;
-      const parts = fn.belongs_to.split(',');
+      const parts = splitBelongsToTargets(fn.belongs_to);
       for (const part of parts) {
         const trimmed = part.trim();
         if (/^Mod:\s*/i.test(trimmed)) {
@@ -261,7 +263,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     const set = new Set<string>();
     functionsCatalog.forEach((fn) => {
       if (!fn.belongs_to) return;
-      const parts = fn.belongs_to.split(',');
+      const parts = splitBelongsToTargets(fn.belongs_to);
       for (const part of parts) {
         const trimmed = part.trim();
         if (!/^Mod:\s*/i.test(trimmed)) {
@@ -285,7 +287,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       const hasFunction = modsWithFunctions.has(modClean) || modsWithFunctions.has(modStripped);
       if (!hasFunction || !m.belongs_to) return;
 
-      const parts = m.belongs_to.split(',');
+      const parts = splitBelongsToTargets(m.belongs_to);
       for (const part of parts) {
         const cleaned = cleanBelongsToName(part);
         if (cleaned) {
@@ -645,10 +647,10 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
     if (itemType === 'kit') {
       const kitName = catalogItem.name;
-      const matchedGear = gearCatalog.filter((g: any) => g.belongs_to && g.belongs_to.includes(kitName));
-      const matchedWeapons = weaponsCatalog.filter((w: any) => w.belongs_to && w.belongs_to.includes(kitName));
-      const matchedArmor = armorCatalog.filter((a: any) => a.belongs_to && a.belongs_to.includes(kitName));
-      const matchedShields = shieldsCatalog.filter((s: any) => s.belongs_to && s.belongs_to.includes(kitName));
+      const matchedGear = gearCatalog.filter((g: any) => isBelongsToMatch(g.belongs_to, kitName, true));
+      const matchedWeapons = weaponsCatalog.filter((w: any) => isBelongsToMatch(w.belongs_to, kitName, true));
+      const matchedArmor = armorCatalog.filter((a: any) => isBelongsToMatch(a.belongs_to, kitName, true));
+      const matchedShields = shieldsCatalog.filter((s: any) => isBelongsToMatch(s.belongs_to, kitName, true));
 
       const newGearItems: SimpleGearItem[] = [
         ...matchedGear.map((g: any) => ({
@@ -924,7 +926,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         if (g.id === itemId) return false;
         // Drop installed child mods that belong to this item
         if (g.name && g.name.endsWith(`(${droppedItem.name})`)) return false;
-        if (g.belongs_to && g.belongs_to.includes(droppedItem.name)) return false;
+        if (isBelongsToMatch(g.belongs_to, droppedItem.name, true)) return false;
         return true;
       });
 

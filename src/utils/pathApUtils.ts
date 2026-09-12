@@ -83,6 +83,40 @@ export const parseItemPaths = (rawPath?: string | null): string[] => {
 };
 
 /**
+ * Normalizes a path string for comparison:
+ * 1. Strips all curly-brace tags like {Free}, {Perk}, {Trait}, {Free1}, {3}, etc.
+ * 2. Normalizes case (lowercase) and trims whitespace.
+ * 3. Collapses multiple spaces and normalizes hyphens between words to spaces so
+ *    "Cyber-Warrior (mso)" and "Cyber Warrior (mso)" match smoothly.
+ */
+export const normalizePathForComparison = (path?: string | null): string => {
+  if (!path) return '';
+  return path
+    .replace(/\{[^}]+\}/g, '') // Strip curly brace tags like {Free}
+    .replace(/^[\["']+|[\]"']+$/g, '') // Strip JSON quotes/brackets
+    .toLowerCase()
+    .replace(/-/g, ' ') // Normalize hyphens to spaces (e.g. Cyber-Warrior <-> Cyber Warrior)
+    .replace(/\s+/g, ' ') // Collapse multiple spaces
+    .trim();
+};
+
+/**
+ * Strict whole-string matcher between two path strings.
+ * Requires that pathA and pathB match in their ENTIRETY (ignoring {Free} / {Perk} / {Trait} tags and casing).
+ * Prevents substring false positives: "Warrior (mso)" will NOT match "Cyber-Warrior (mso)".
+ */
+export const isPathStringMatch = (
+  pathA?: string | null,
+  pathB?: string | null
+): boolean => {
+  if (!pathA || !pathB) return false;
+  const normA = normalizePathForComparison(pathA);
+  const normB = normalizePathForComparison(pathB);
+  if (!normA || !normB) return false;
+  return normA === normB;
+};
+
+/**
  * Evaluates whether an item is within the character's known Paths.
  * Items with NO path specified (None, empty, General, Universal) are considered universally In-Path.
  */
@@ -107,18 +141,10 @@ export const isItemInPath = (
     return false;
   }
 
-  // Check for direct or partial match against character known paths
+  // Check for strict whole-string match against character known paths
   return paths.some((p) => {
-    const cleanLower = p.toLowerCase();
-    if (knownPaths.has(cleanLower)) return true;
-
-    // Substring match for MSO variants (e.g. "Tech Melee Weapons" in "Tech Melee Weapons (mso)")
-    const strippedMso = cleanLower.replace(/\(mso\)/g, '').trim();
-    if (knownPaths.has(strippedMso)) return true;
-
     for (const kp of knownPaths) {
-      const cleanKp = kp.replace(/\(mso\)/g, '').trim();
-      if (cleanKp === strippedMso || cleanLower.includes(cleanKp) || cleanKp.includes(cleanLower)) {
+      if (isPathStringMatch(p, kp)) {
         return true;
       }
     }
@@ -301,12 +327,9 @@ export const getCharacterMatchingPath = (
   const known = getCharacterKnownPaths(character);
   for (const entry of entries) {
     const cleaned = cleanEntryStr(entry);
-    const cleanLower = cleanPathName(cleaned).toLowerCase().trim();
-    const strippedMso = cleanLower.replace(/\(mso\)/g, '').trim();
     for (const kp of known) {
       if (!kp || kp === 'base') continue;
-      const cleanKp = kp.replace(/\(mso\)/g, '').trim();
-      if (cleanLower === kp || strippedMso === cleanKp || cleanLower.includes(cleanKp) || cleanKp.includes(strippedMso)) {
+      if (isPathStringMatch(cleaned, kp)) {
         return cleaned;
       }
     }

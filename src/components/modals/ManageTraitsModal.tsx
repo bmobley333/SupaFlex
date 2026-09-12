@@ -19,7 +19,7 @@ import {
   calculateAvailableAp,
 } from '../../types/game';
 import { cleanKitName, cleanPathName, isMsoEntry, compareMsoItems, compareMsoOptions } from '../../utils/kitUtils';
-import { getCharacterKnownPaths, isItemInPath, parseItemPaths, getCharacterMatchingPath } from '../../utils/pathApUtils';
+import { getCharacterKnownPaths, isItemInPath, parseItemPaths, getCharacterMatchingPath, isPathStringMatch } from '../../utils/pathApUtils';
 import { reconcileCharacterFreeTraits } from '../../utils/pathReconciliationUtils';
 
 interface ManageTraitsModalProps {
@@ -229,8 +229,8 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
         if (localDomainFilter !== 'ALL') {
           const disc = (r.discipline || '').toLowerCase();
           const target = localDomainFilter.toLowerCase();
-          const paths = parseItemPaths(r.path || r.kit || r.table_group).map((p) => cleanPathName(p).toLowerCase());
-          const matchesPath = paths.some((p) => p === target || p.includes(target) || target.includes(p));
+          const paths = parseItemPaths(r.path || r.kit || r.table_group);
+          const matchesPath = paths.some((p) => isPathStringMatch(p, target));
           if (disc !== target && !matchesPath) {
             return false;
           }

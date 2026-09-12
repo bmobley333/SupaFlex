@@ -29,6 +29,55 @@ export const cleanBelongsToName = (raw?: string | null): string => {
 };
 
 /**
+ * Splits a compound belongs_to string safely into individual target entries.
+ * Uses lookahead for category prefixes (e.g. "Mod:", "Armor:", "Gear:", "Kit:", "Supplies:", "Weapon:", "Shield:")
+ * to preserve item names that contain internal commas (e.g. "Crawler, Personal (mso)").
+ */
+export const splitBelongsToTargets = (belongsToStr?: string | null): string[] => {
+  if (!belongsToStr || !belongsToStr.trim()) return [];
+  const trimmed = belongsToStr.trim();
+  if (trimmed.includes(';')) {
+    return trimmed.split(';').map((p) => p.trim()).filter(Boolean);
+  }
+  if (/,\s*(?=[A-Za-z]+:)/.test(trimmed)) {
+    return trimmed.split(/,\s*(?=[A-Za-z]+:)/).map((p) => p.trim()).filter(Boolean);
+  }
+  return [trimmed];
+};
+
+/**
+ * Strict whole-string matcher checking whether a belongs_to string links to a target host or kit item.
+ * Requires that at least one target in belongs_to matches targetHostName in its ENTIRETY.
+ * Strips category prefixes (Kit:, Gear:, Mod:), trailing {Free}, and (x2) count indicators before comparing.
+ * Prevents substring false positives (e.g. "Tool Kit" will NOT match "Engineer Tool Kit").
+ */
+export const isBelongsToMatch = (
+  belongsToStr?: string | null,
+  targetHostName?: string | null,
+  allowMsoFallback: boolean = false
+): boolean => {
+  if (!belongsToStr || !targetHostName) return false;
+  const cleanTarget = cleanBelongsToName(targetHostName);
+  if (!cleanTarget) return false;
+  const targetStripped = cleanTarget.replace(/\(mso\)/gi, '').trim();
+
+  const parts = splitBelongsToTargets(belongsToStr);
+  return parts.some((part) => {
+    const cleanPart = cleanBelongsToName(part);
+    if (cleanPart === cleanTarget) return true;
+    if (allowMsoFallback) {
+      const partStripped = cleanPart.replace(/\(mso\)/gi, '').trim();
+      return (
+        cleanPart === targetStripped ||
+        partStripped === cleanTarget ||
+        partStripped === targetStripped
+      );
+    }
+    return false;
+  });
+};
+
+/**
  * Checks if a mod is inherently {Free} for a specific physically owned host item.
  */
 export const isModFreeForHost = (
@@ -39,7 +88,7 @@ export const isModFreeForHost = (
   const hostClean = cleanBelongsToName(hostItemName);
   const hostStripped = hostClean.replace(/\(mso\)/gi, '').trim();
 
-  const parts = mod.belongs_to.split(',');
+  const parts = splitBelongsToTargets(mod.belongs_to);
   return parts.some((p) => {
     const trimmed = p.trim();
     if (!/\{free\}/i.test(trimmed)) return false;
@@ -65,7 +114,7 @@ export const isModCompatibleWithItem = (
   const itemNameClean = cleanBelongsToName(item.name);
   const itemTypeLower = (item.item_type || item.category || '').toLowerCase();
 
-  const parts = mod.belongs_to.split(',');
+  const parts = splitBelongsToTargets(mod.belongs_to);
   return parts.some((p) => {
     const trimmed = p.trim();
     if (!trimmed) return false;
@@ -105,7 +154,7 @@ export const getFunctionsForMod = (
   // First pass: exact matches
   const exactMatches = functionsCatalog.filter((fn) => {
     if (!fn.belongs_to) return false;
-    const parts = fn.belongs_to.split(',');
+    const parts = splitBelongsToTargets(fn.belongs_to);
     return parts.some((p) => {
       const trimmed = p.trim();
       if (!/^Mod:\s*/i.test(trimmed)) return false;
@@ -119,7 +168,7 @@ export const getFunctionsForMod = (
   // Second pass: stripped (mso) fallback matches
   return functionsCatalog.filter((fn) => {
     if (!fn.belongs_to) return false;
-    const parts = fn.belongs_to.split(',');
+    const parts = splitBelongsToTargets(fn.belongs_to);
     return parts.some((p) => {
       const trimmed = p.trim();
       if (!/^Mod:\s*/i.test(trimmed)) return false;
@@ -137,9 +186,6 @@ export const getFunctionsForMod = (
 
 /**
  * Resolves all direct functions belonging to a physically owned gear item.
- */
-/**
- * Resolves all direct functions belonging to a physically owned gear item.
  * Prefers exact name matches, falling back to stripped name.
  */
 export const getFunctionsForGearItem = (
@@ -153,7 +199,7 @@ export const getFunctionsForGearItem = (
   // First pass: exact matches
   const exactMatches = functionsCatalog.filter((fn) => {
     if (!fn.belongs_to) return false;
-    const parts = fn.belongs_to.split(',');
+    const parts = splitBelongsToTargets(fn.belongs_to);
     return parts.some((p) => {
       const trimmed = p.trim();
       if (/^Mod:\s*/i.test(trimmed)) return false;
@@ -167,7 +213,7 @@ export const getFunctionsForGearItem = (
   // Second pass: stripped (mso) fallback matches
   return functionsCatalog.filter((fn) => {
     if (!fn.belongs_to) return false;
-    const parts = fn.belongs_to.split(',');
+    const parts = splitBelongsToTargets(fn.belongs_to);
     return parts.some((p) => {
       const trimmed = p.trim();
       if (/^Mod:\s*/i.test(trimmed)) return false;
@@ -364,7 +410,7 @@ export const reconcileCharacterVaultWithGear = (
     catalogFunctionNames.add(c);
     catalogFunctionNames.add(c.replace(/\(mso\)/gi, '').trim());
     if (fn.belongs_to) {
-      const parts = fn.belongs_to.split(',');
+      const parts = splitBelongsToTargets(fn.belongs_to);
       for (const p of parts) {
         const hc = cleanBelongsToName(p);
         if (hc) {
@@ -380,7 +426,7 @@ export const reconcileCharacterVaultWithGear = (
     catalogFunctionNames.add(c);
     catalogFunctionNames.add(c.replace(/\(mso\)/gi, '').trim());
     if (m.belongs_to) {
-      const parts = m.belongs_to.split(',');
+      const parts = splitBelongsToTargets(m.belongs_to);
       for (const p of parts) {
         const hc = cleanBelongsToName(p);
         if (hc) {

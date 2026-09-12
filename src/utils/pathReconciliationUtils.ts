@@ -5,7 +5,7 @@
 
 import { Character, CharacterSheetData, AbilitySlot, WeaponSlot, ArmorData, ShieldData, TraitQuirkItem, AttributeKey, DieRating, SupabaseTrait } from '../types/game';
 import { cleanPathName, parseKit, cleanKitName } from './kitUtils';
-import { getCharacterKnownPaths, evaluateItemAp, isItemInPath, parseItemPaths, getCharacterMatchingPath } from './pathApUtils';
+import { getCharacterKnownPaths, evaluateItemAp, isItemInPath, parseItemPaths, getCharacterMatchingPath, isPathStringMatch } from './pathApUtils';
 
 export interface PathReconciliationResult {
   updatedSheetData: CharacterSheetData;
@@ -121,7 +121,7 @@ export const reconcileAbilitiesOnPathAdded = (
     const parsed = parseKit(target);
     if (parsed.isTrait || parsed.isFreeTrait || (rawSource && rawSource.toLowerCase().includes('{free}'))) {
       const base = cleanKitName(parsed.baseKit).toLowerCase().trim();
-      if (base === cleanNewPath || cleanNewPath.includes(base) || base.includes(cleanNewPath)) {
+      if (isPathStringMatch(base, cleanNewPath)) {
         return true;
       }
     }
@@ -678,13 +678,8 @@ export const reconcileCharacterFreeTraits = (
 
     const itemPaths = parseItemPaths(rawPath);
     const matchesKnown = itemPaths.some((p) => {
-      const cleanLower = cleanPathName(p).toLowerCase().trim();
-      if (knownPaths.has(cleanLower)) return true;
-      const strippedMso = cleanLower.replace(/\(mso\)/g, '').trim();
-      if (knownPaths.has(strippedMso)) return true;
       for (const kp of knownPaths) {
-        const cleanKp = kp.replace(/\(mso\)/g, '').trim();
-        if (cleanKp === strippedMso || cleanLower.includes(cleanKp) || cleanKp.includes(cleanLower)) {
+        if (isPathStringMatch(p, kp)) {
           return true;
         }
       }

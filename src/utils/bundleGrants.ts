@@ -231,8 +231,8 @@ export const collectHardwareBundleSubItems = (
 
   const matchesBundle = (bundleField?: string) => {
     if (!bundleField) return false;
-    const cleanField = bundleField.toLowerCase();
-    return cleanField.includes(cleanTarget);
+    const parts = bundleField.split(/[,;]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+    return parts.some((p) => p === cleanTarget);
   };
 
   catalogArmor.filter((a) => matchesBundle(a.bundle)).forEach((a) => {

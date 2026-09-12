@@ -7,6 +7,7 @@ import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp 
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { isTraitItem, isMsoEntry, compareMsoOptions, compareMsoItems } from '../../utils/kitUtils';
+import { isPathStringMatch, parseItemPaths } from '../../utils/pathApUtils';
 import { reconcileSkillsOnSkillsetAdded } from '../../utils/pathReconciliationUtils';
 
 interface DerivedSkill {
@@ -527,9 +528,10 @@ export const SkillsetsPanel: React.FC = () => {
       // 2. Domain / Discipline
       if (localDisciplineFilter !== 'ALL') {
         const disc = (ks.discipline || '').toLowerCase();
-        const kit = (ks.kit || ks.table_group || '').toLowerCase();
         const target = localDisciplineFilter.toLowerCase();
-        if (disc !== target && !kit.includes(target)) {
+        const paths = parseItemPaths(ks.kit || ks.table_group);
+        const matchesKit = paths.some((p) => isPathStringMatch(p, target));
+        if (disc !== target && !matchesKit) {
           return false;
         }
       }
@@ -574,9 +576,10 @@ export const SkillsetsPanel: React.FC = () => {
       // 2. Domain / Discipline
       if (localDisciplineFilter !== 'ALL') {
         const disc = (sk.discipline || '').toLowerCase();
-        const kit = (sk.kit || sk.table_group || '').toLowerCase();
         const target = localDisciplineFilter.toLowerCase();
-        if (disc !== target && !kit.includes(target)) {
+        const paths = parseItemPaths(sk.kit || sk.table_group);
+        const matchesKit = paths.some((p) => isPathStringMatch(p, target));
+        if (disc !== target && !matchesKit) {
           return false;
         }
       }
