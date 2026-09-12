@@ -16,6 +16,7 @@ interface UnifiedLaunchHubModalProps {
   currentEmail: string | null;
   activeCharacter: Character | null;
   userCharacters: Character[];
+  isLoadingCharacters?: boolean;
   tabSessionId?: string;
   onSelectCharacter: (id: number) => void;
   onCreateNewCharacter: (name: string, characterClass?: string, race?: string) => Promise<Character | null>;
@@ -32,6 +33,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   currentEmail,
   activeCharacter,
   userCharacters,
+  isLoadingCharacters,
   tabSessionId: _tabSessionId,
   onSelectCharacter,
   onCreateNewCharacter,
@@ -41,6 +43,8 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   onRefreshCharacters,
   initialTab = 'account',
 }) => {
+  const storeLoading = useCharacterStore((state) => state.isLoading);
+  const isLoading = isLoadingCharacters ?? storeLoading;
   const activeRole = useCharacterStore((state) => state.activeRole);
   const setActiveRole = useCharacterStore((state) => state.setActiveRole);
   const paths = useCharacterStore((state) => state.paths || []);
@@ -173,8 +177,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   // Inline Character Edit State
   const [editingCharId, setEditingCharId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
-  const [editRace, setEditRace] = useState('');
-  const [editClass, setEditClass] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Character Safety Delete Modal State
@@ -219,8 +221,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const handleStartEdit = (char: Character) => {
     setEditingCharId(char.id);
     setEditName(char.name);
-    setEditRace(char.race || 'Human');
-    setEditClass(char.class || 'Adventurer');
   };
 
   const handleSaveEdit = async (char: Character) => {
@@ -233,22 +233,22 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
         identity: {
           ...((char.sheet_data as any)?.identity || {}),
           name: editName.trim(),
-          race: editRace.trim() || 'Human',
-          class: editClass.trim() || 'Adventurer',
+          race: char.race || 'Human',
+          class: char.class || 'Adventurer',
         },
       };
 
       await gameApi.updateCharacter(char.id, {
         name: editName.trim(),
-        race: editRace.trim() || 'Human',
-        class: editClass.trim() || 'Adventurer',
+        race: char.race || 'Human',
+        class: char.class || 'Adventurer',
         sheet_data: updatedSheet as any,
       });
 
       setEditingCharId(null);
       if (onRefreshCharacters) onRefreshCharacters();
     } catch (err) {
-      console.error('Failed to update character identity:', err);
+      console.error('Failed to update character name:', err);
     } finally {
       setIsSavingEdit(false);
     }
@@ -476,9 +476,19 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
               <>
                 {/* Header & Create Button */}
                 <div className="flex items-center justify-between mb-3 shrink-0">
-                  <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
-                    🛡️ Character Vault ({userCharacters.length})
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5 font-outfit">
+                      🛡️ Character Vault
+                    </h3>
+                    {isLoading ? (
+                      <span className="text-[10px] font-medium text-indigo-300 bg-indigo-950/70 border border-indigo-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="w-2 h-2 border-2 border-indigo-400/40 border-t-indigo-400 rounded-full animate-spin"></span>
+                        Loading...
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold text-slate-400">({userCharacters.length})</span>
+                    )}
+                  </div>
                   {currentEmail && (
                     <button
                       onClick={() => {
@@ -568,7 +578,15 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
                 {/* Character Cards List */}
                 <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
-                  {userCharacters.length === 0 ? (
+                  {isLoading ? (
+                    <div className="p-8 bg-slate-900/60 border border-indigo-500/20 rounded-xl text-center space-y-3 flex flex-col items-center justify-center">
+                      <div className="w-7 h-7 border-2 border-indigo-500/30 border-t-indigo-400 rounded-full animate-spin"></div>
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-200 text-sm">Fetching your hero vault...</p>
+                        <p className="text-xs text-slate-400">Retrieving characters and cloud sync state. Please wait a moment.</p>
+                      </div>
+                    </div>
+                  ) : userCharacters.length === 0 ? (
                     <div className="p-6 bg-slate-900/60 border border-slate-800 rounded-xl text-center text-xs text-slate-400 space-y-2">
                       {currentEmail ? (
                         <>
@@ -614,45 +632,15 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                                   type="text"
                                   value={editName}
                                   onChange={(e) => setEditName(e.target.value)}
-                                  className="w-full px-2.5 py-1 bg-slate-950 border border-indigo-500/60 rounded text-xs text-slate-100 font-bold"
+                                  className="w-full px-2.5 py-1.5 bg-slate-950 border border-indigo-500/60 rounded-lg text-xs text-slate-100 font-bold focus:outline-none focus:border-indigo-400"
+                                  placeholder="Hero Name"
+                                  autoFocus
                                 />
-                                <div className="grid grid-cols-2 gap-2">
-                                  <select
-                                    value={editRace}
-                                    onChange={(e) => setEditRace(e.target.value)}
-                                    className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200 cursor-pointer"
-                                  >
-                                    {raceOptions.map((r) => (
-                                      <option
-                                        key={r}
-                                        value={r}
-                                        className={isMsoEntry(r) ? 'font-bold text-purple-300 bg-slate-900' : 'text-slate-100 bg-slate-950'}
-                                      >
-                                        {isMsoEntry(r) ? `🌌 ${r}` : r}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <select
-                                    value={editClass}
-                                    onChange={(e) => setEditClass(e.target.value)}
-                                    className="w-full px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[11px] text-slate-200 cursor-pointer"
-                                  >
-                                    {classOptions.map((c) => (
-                                      <option
-                                        key={c}
-                                        value={c}
-                                        className={isMsoEntry(c) ? 'font-bold text-purple-300 bg-slate-900' : 'text-slate-100 bg-slate-950'}
-                                      >
-                                        {isMsoEntry(c) ? `🌌 ${c}` : c}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div className="flex justify-end gap-1.5 pt-1">
+                                <div className="flex justify-end gap-1.5 pt-0.5">
                                   <button
                                     type="button"
                                     onClick={() => setEditingCharId(null)}
-                                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold rounded"
+                                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold rounded-lg transition cursor-pointer"
                                   >
                                     Cancel
                                   </button>
@@ -660,7 +648,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                                     type="button"
                                     onClick={() => handleSaveEdit(char)}
                                     disabled={isSavingEdit || !editName.trim()}
-                                    className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded"
+                                    className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-[11px] font-bold rounded-lg transition cursor-pointer"
                                   >
                                     {isSavingEdit ? 'Saving...' : 'Save'}
                                   </button>
@@ -1000,8 +988,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                             setGuildSpacePasskey(e.target.value);
                             setPasskeyFeedback(null);
                           }}
-                          placeholder="Enter Setting Passkey (e.g. The Old Gang)..."
-                          className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-purple-500"
+                          className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-purple-500"
                         />
                         <button
                           type="submit"

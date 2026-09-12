@@ -195,7 +195,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   fetchInitialData: async (options?: { silent?: boolean }) => {
-    const isSilent = options?.silent || get().characters.length > 0;
+    const isSilent = options?.silent === true;
     if (!isSilent) {
       set({ isLoading: true, error: null });
     }

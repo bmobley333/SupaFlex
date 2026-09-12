@@ -208,9 +208,9 @@ export default function App() {
         const currentEmail = useCharacterStore.getState().playerEmail;
         await handleAuthUser(userEmail, userName);
 
-        // If user changed or fresh login event occurred, silently update data in background
+        // If user changed or fresh login event occurred, fetch data with active loading state
         if (currentEmail !== userEmail || event === 'SIGNED_IN') {
-          fetchInitialData({ silent: true });
+          fetchInitialData({ silent: false });
         }
 
         // Clean URL hash safely only AFTER session is established
@@ -887,6 +887,7 @@ export default function App() {
           currentEmail={playerEmail}
           activeCharacter={activeCharacter}
           userCharacters={myHeroes}
+          isLoadingCharacters={isLoading}
           tabSessionId={tabSessionId}
           initialTab={launchHubInitialTab}
           onSelectCharacter={selectCharacter}
