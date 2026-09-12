@@ -109,7 +109,7 @@ const parseAbilityVersion = (name: string): { baseName: string; version: number 
 const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; icon: string; style: string; slotsText: string } => {
   if (!itemObj) return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '1 Slot' };
 
-  let subStr = itemObj.category || itemObj.rarity || '';
+  let subStr = itemObj.category || itemObj.rarity || itemObj.artifact_tier || itemObj.tier || '';
 
   if (!subStr && catalog && catalog.length > 0) {
     const rawName = itemObj.name || itemObj.title || '';
@@ -119,7 +119,7 @@ const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; 
       return cBase === baseName || cleanName(c.name || '').toLowerCase().includes(baseName);
     });
     if (found) {
-      subStr = found.category || found.rarity || '';
+      subStr = found.category || found.rarity || found.artifact_tier || found.tier || '';
     }
   }
 
@@ -128,14 +128,24 @@ const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; 
   if (str.includes('free') || str.includes('⭕') || str.includes('0 slot')) {
     return { label: 'Free', icon: '⭕', style: 'bg-slate-900/80 text-slate-300 border-slate-700/50', slotsText: '0 Slots' };
   }
-  if (str.includes('relic') || str.includes('epic') || str.includes('artifact') || str.includes('💫')) {
-    return { label: 'Epic', icon: '💫', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40', slotsText: '4 Slots' };
+  if (str.includes('minor') || str.includes('🍺')) {
+    return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '1 Slot' };
+  }
+  if (str.includes('lesser') || str.includes('🪄')) {
+    return { label: 'Lesser', icon: '🪄', style: 'bg-blue-950/80 text-blue-300 border-blue-500/40', slotsText: '2 Slots' };
   }
   if (str.includes('greater') || str.includes('🪬')) {
     return { label: 'Greater', icon: '🪬', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40', slotsText: '3 Slots' };
   }
-  if (str.includes('lesser') || str.includes('🪄')) {
-    return { label: 'Lesser', icon: '🪄', style: 'bg-blue-950/80 text-blue-300 border-blue-500/40', slotsText: '2 Slots' };
+  if (str.includes('epic') || str.includes('💫')) {
+    return { label: 'Epic', icon: '💫', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40', slotsText: '4 Slots' };
+  }
+  if (typeof itemObj.slot_weight === 'number') {
+    if (itemObj.slot_weight === 0) return { label: 'Free', icon: '⭕', style: 'bg-slate-900/80 text-slate-300 border-slate-700/50', slotsText: '0 Slots' };
+    if (itemObj.slot_weight === 2) return { label: 'Lesser', icon: '🪄', style: 'bg-blue-950/80 text-blue-300 border-blue-500/40', slotsText: '2 Slots' };
+    if (itemObj.slot_weight === 3) return { label: 'Greater', icon: '🪬', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40', slotsText: '3 Slots' };
+    if (itemObj.slot_weight === 4) return { label: 'Epic', icon: '💫', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40', slotsText: '4 Slots' };
+    return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '1 Slot' };
   }
   return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '1 Slot' };
 };

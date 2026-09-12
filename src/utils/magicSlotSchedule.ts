@@ -34,7 +34,7 @@ const cleanName = (name: string) => name.replace(/\s*\[[A-Z]+\]$/i, '').trim();
 export const getItemSlotWeight = (item: MagicItemLike, catalog?: MagicItemLike[]): number => {
   if (!item) return 1;
 
-  let itemSub = `${item.rarity || ''} ${item.category || ''}`.trim();
+  let itemSub = `${item.rarity || ''} ${item.category || ''} ${item.artifact_tier || ''} ${item.tier || ''}`.trim();
   let explicitWeight = typeof item.slot_weight === 'number' && item.slot_weight >= 0 && item.slot_weight <= 4 ? item.slot_weight : null;
 
   if (catalog && catalog.length > 0) {
@@ -53,26 +53,32 @@ export const getItemSlotWeight = (item: MagicItemLike, catalog?: MagicItemLike[]
       if (typeof found.slot_weight === 'number' && found.slot_weight >= 0 && found.slot_weight <= 4) {
         explicitWeight = found.slot_weight;
       }
-      const foundSub = `${found.rarity || ''} ${found.category || ''}`.trim();
+      const foundSub = `${found.rarity || ''} ${found.category || ''} ${found.artifact_tier || ''} ${found.tier || ''}`.trim();
       itemSub = `${itemSub} ${foundSub}`.trim();
     }
   }
 
   const fullStr = `${itemSub} ${item.name || item.title || ''}`.toLowerCase();
 
-  if (fullStr.includes('mundane') || fullStr.includes('utility') || fullStr.includes('0-slot') || fullStr.includes('zero')) {
+  if (fullStr.includes('free') || fullStr.includes('⭕') || fullStr.includes('mundane') || fullStr.includes('utility') || fullStr.includes('0-slot') || fullStr.includes('zero')) {
     return 0;
   }
-  if (fullStr.includes('relic') || fullStr.includes('epic') || fullStr.includes('artifact')) {
-    return 4;
+  if (fullStr.includes('minor') || fullStr.includes('🍺')) {
+    return 1;
   }
-  if (fullStr.includes('greater')) {
-    return 3;
-  }
-  if (fullStr.includes('lesser')) {
+  if (fullStr.includes('lesser') || fullStr.includes('🪄')) {
     return 2;
   }
-  if (fullStr.includes('minor')) {
+  if (fullStr.includes('greater') || fullStr.includes('🪬')) {
+    return 3;
+  }
+  if (fullStr.includes('epic') || fullStr.includes('💫')) {
+    return 4;
+  }
+  if (explicitWeight !== null) {
+    return explicitWeight;
+  }
+  if (fullStr.includes('relic') || fullStr.includes('artifact')) {
     return 1;
   }
 

@@ -381,6 +381,38 @@ export const reconcileCharacterVaultWithGear = (
       registerExpected(mapFunctionToVaultItem(fn, hostName));
     }
 
+    // Fallback: If hostItem is an Artifact or Exotic and has no catalog functions
+    if (
+      directFns.length === 0 &&
+      (hostItem.category?.includes('Artifact') ||
+        hostItem.item_type === 'artifact' ||
+        hostItem.cost === 'Artifact' ||
+        hostItem.category?.includes('Exotic') ||
+        hostItem.item_type === 'exotic' ||
+        hostItem.is_exotic)
+    ) {
+      const s = String(hostItem.category || hostItem.notes || '').toLowerCase();
+      const tier: 'Minor' | 'Lesser' | 'Greater' | 'Epic' =
+        s.includes('minor') || s.includes('🍺')
+          ? 'Minor'
+          : s.includes('greater') || s.includes('🪬')
+          ? 'Greater'
+          : s.includes('epic') || s.includes('💫')
+          ? 'Epic'
+          : 'Lesser';
+      const synFn: FunctionItem = {
+        id: Date.now() + Math.floor(Math.random() * 10000),
+        name: hostName,
+        tier,
+        effect: hostItem.notes || 'Inherent item function',
+        action: 'P',
+        usage: '1-Enc',
+        belongs_to: `Supplies: ${hostName}`,
+        genres: ['Fantasy'],
+      };
+      registerExpected(mapFunctionToVaultItem(synFn, hostName));
+    }
+
     // B. Inherent {Free} mods for this host item
     const freeModsForHost = modsCatalog.filter((m) => isModFreeForHost(m, hostName));
     for (const fm of freeModsForHost) {
@@ -437,20 +469,27 @@ export const reconcileCharacterVaultWithGear = (
     }
   }
 
-  // Helper to check if any item is a hardware function
+  // Helper to check if any item is a gear-linked function (Exotics or Artifacts)
   const isHardwareFunction = (item: { name?: string; is_hardware?: boolean; source_gear?: string | null; source?: string | null; category?: string | null }): boolean => {
-    // Pure Artifacts are standalone magical relics, not hardware chassis mods
-    if (item.category && item.category.includes('Artifact')) return false;
-    if (item.is_hardware === false) return false;
-
-    if (item.is_hardware === true) return true;
-    if (item.source_gear && item.source_gear.trim() !== '') return true;
     const cName = cleanBelongsToName(item.name);
     const sName = cName.replace(/\(mso\)/gi, '').trim();
+
+    // 1. If it directly matches an expected function granted by simple_gear, it IS a gear function
+    if (expectedNamesSet.has(cName) || expectedNamesSet.has(sName)) return true;
+
+    // 2. Explicit gear link
+    if (item.source_gear && item.source_gear.trim() !== '' && item.source_gear.trim().toLowerCase() !== 'mso') return true;
+
+    // 3. Explicit hardware flag
+    if (item.is_hardware === true) return true;
+
+    // 4. Matches known catalog functions or host equipment names
     if (catalogFunctionNames.has(cName) || catalogFunctionNames.has(sName)) return true;
     if (catalogHostNames.has(cName) || catalogHostNames.has(sName)) return true;
+
     const src = (item.source || '').toLowerCase();
-    if (src.includes('exotic gear') || src.includes('hardware purchase') || src.includes('installed gear function')) return true;
+    if (src.includes('exotic gear') || src.includes('hardware purchase') || src.includes('installed gear function') || src.includes('loot claim')) return true;
+
     return false;
   };
 
@@ -493,10 +532,17 @@ export const reconcileCharacterVaultWithGear = (
           const validSource = isStaleMso || !vItem.source || vItem.source.startsWith('mso >')
             ? (template?.source || `Exotic Gear: ${validGear || 'Owned Gear'}`)
             : vItem.source;
+          const validCategory = template?.category || vItem.category;
+          const validWeight = template?.slot_weight ?? vItem.slot_weight;
+          if (vItem.slot_weight !== validWeight || vItem.category !== validCategory) {
+            metadataHealed = true;
+          }
 
           // Preserve item but ensure robust metadata
           finalVault.push({
             ...vItem,
+            category: validCategory,
+            slot_weight: validWeight,
             is_hardware: true,
             source_gear: validGear,
             source_mod: validMod,
@@ -540,8 +586,15 @@ export const reconcileCharacterVaultWithGear = (
         if (isStaleMso) metadataHealed = true;
         const validGear = !isStaleMso && (slot as any).source_gear ? (slot as any).source_gear : template?.source_gear;
         const validMod = isStaleMso ? template?.source_mod : ((slot as any).source_mod || template?.source_mod);
+        const validCategory = template?.category || (slot as any).category;
+        const validWeight = template?.slot_weight ?? (slot as any).slot_weight;
+        if ((slot as any).slot_weight !== validWeight || (slot as any).category !== validCategory) {
+          metadataHealed = true;
+        }
         finalSlotsA.push({
           ...slot,
+          category: validCategory,
+          slot_weight: validWeight,
           is_hardware: true,
           source_gear: validGear,
           source_mod: validMod,
@@ -573,8 +626,15 @@ export const reconcileCharacterVaultWithGear = (
         if (isStaleMso) metadataHealed = true;
         const validGear = !isStaleMso && (slot as any).source_gear ? (slot as any).source_gear : template?.source_gear;
         const validMod = isStaleMso ? template?.source_mod : ((slot as any).source_mod || template?.source_mod);
+        const validCategory = template?.category || (slot as any).category;
+        const validWeight = template?.slot_weight ?? (slot as any).slot_weight;
+        if ((slot as any).slot_weight !== validWeight || (slot as any).category !== validCategory) {
+          metadataHealed = true;
+        }
         finalSlotsB.push({
           ...slot,
+          category: validCategory,
+          slot_weight: validWeight,
           is_hardware: true,
           source_gear: validGear,
           source_mod: validMod,

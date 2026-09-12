@@ -2,8 +2,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { Database, BookOpen, Loader2, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseKey } from './lib/supabase';
 import { gameApi } from './services/api';
-import { Character, TreasureItem, SimpleGearItem, MagicItem } from './types/game';
-import { getItemSlotWeight } from './utils/magicSlotSchedule';
+import { Character, TreasureItem, SimpleGearItem } from './types/game';
 import { reconcileCharacterVaultWithGear } from './utils/gearFunctionSync';
 import { useCharacterStore } from './store/useCharacterStore';
 import { useAdventureStore } from './store/useAdventureStore';
@@ -444,30 +443,21 @@ export default function App() {
         const m = itemPayload.magicItem || {};
         const isHw = !!(m.is_hardware || m.is_exotic || category === 'hardware');
         const itemName = m.name || itemPayload.title || (isHw ? 'Exotic Device' : 'Artifact');
-        const itemCategory = m.category || (isHw ? '🧿 Exotic' : '🔮 Artifact');
+        const rawTier = m.artifact_tier || m.tier || (
+          category.toLowerCase().includes('minor') ? 'Minor' :
+          category.toLowerCase().includes('greater') ? 'Greater' :
+          category.toLowerCase().includes('epic') ? 'Epic' :
+          category.toLowerCase().includes('lesser') ? 'Lesser' : undefined
+        );
+        const itemCategory = m.category || (isHw ? '🧿 Exotic' : rawTier ? `${rawTier} Artifact` : '🔮 Artifact');
         const itemEffect = m.effect || m.description || itemPayload.description || '';
 
-        const magicItemObj: MagicItem = {
-          id: Date.now() + Math.floor(Math.random() * 1000),
-          name: itemName,
-          usage: m.usage || '1-Enc',
-          action: m.action || 'P',
-          effect: itemEffect,
-          source: m.source || (isHw ? 'Exotic Loot' : 'Loot Claim'),
-          created_at: new Date().toISOString(),
-          category: itemCategory,
-          slot_weight: (getItemSlotWeight({ ...m, name: itemName, category: itemCategory }) as 1 | 2 | 3 | 4),
-          is_hardware: isHw,
-          is_exotic: isHw,
-          cost: m.cost || (isHw ? 'Exotic' : 'Artifact'),
-        };
-
-        // Also add physical item to simple_gear for physical custody in Gear Card
+        // Add physical item to simple_gear for physical custody in Gear Card
         const gearItem: SimpleGearItem = {
           id: `gear-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
           name: itemName,
           qty: 1,
-          category: isHw ? '🧿 Exotic' : '🔮 Artifact',
+          category: itemCategory,
           item_type: isHw ? 'exotic' : 'artifact',
           is_exotic: isHw ? true : undefined,
           cost: m.cost || (isHw ? 'Exotic' : 'Artifact'),
@@ -475,14 +465,12 @@ export default function App() {
         };
 
         updateActiveSheetData((prev) => {
-          const currentVault = prev.character_vault || [];
           const currentGear = prev.simple_gear || [];
           const intermediateSheet = {
             ...prev,
-            character_vault: [...currentVault, magicItemObj],
             simple_gear: [...currentGear, gearItem],
           };
-          // Reconcile functions in case exotic or artifact has linked functions in catalog
+          // Reconcile functions will cleanly register or synthesize the single canonical function in character_vault
           return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog, modsCatalog).updatedSheet;
         });
       } else {

@@ -1082,9 +1082,11 @@ export const getTierSlotWeight = (tier: string | number | undefined | null): 0 |
   if (typeof tier === 'number' && tier >= 0 && tier <= 4) return tier as 0 | 1 | 2 | 3 | 4;
   const t = String(tier || '').toLowerCase();
   if (t.includes('free') || t.includes('⭕') || t.includes('0')) return 0;
-  if (t.includes('relic') || t.includes('epic') || t.includes('4')) return 4;
-  if (t.includes('greater') || t.includes('3')) return 3;
-  if (t.includes('lesser') || t.includes('2')) return 2;
+  if (t.includes('minor') || t.includes('🍺') || t.includes('1')) return 1;
+  if (t.includes('lesser') || t.includes('🪄') || t.includes('2')) return 2;
+  if (t.includes('greater') || t.includes('🪬') || t.includes('3')) return 3;
+  if (t.includes('epic') || t.includes('💫') || t.includes('4')) return 4;
+  if (t.includes('relic') || t.includes('artifact')) return 1;
   return 1;
 };
 

@@ -245,14 +245,15 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 
   // Fetch random magic item
   const fetchRandomMagicItem = async (rarity: string) => {
-    const isEpicTier = rarity.toLowerCase() === 'epic' || rarity.toLowerCase() === 'artifact';
-    const cleanRarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' = isEpicTier
-      ? 'Epic'
-      : rarity.toLowerCase().includes('great')
-      ? 'Greater'
-      : rarity.toLowerCase().includes('less')
-      ? 'Lesser'
-      : 'Minor';
+    const rLower = rarity.toLowerCase();
+    const cleanRarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' =
+      rLower.includes('minor') || rLower.includes('🍺')
+        ? 'Minor'
+        : rLower.includes('great') || rLower.includes('🪬')
+        ? 'Greater'
+        : rLower.includes('epic') || rLower.includes('💫')
+        ? 'Epic'
+        : 'Lesser';
     
     try {
       // 1. Authoritative cross-table resolved artifacts catalog
@@ -817,12 +818,14 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 
     if (res.type === 'chaos_gem') {
       fillPercentage = 15;
-    } else if (res.tableName.includes('Lesser') || (res.type === 'magic_item' && !res.tableName.includes('Greater') && !res.tableName.includes('Epic') && !res.tableName.includes('Artifact'))) {
-      fillPercentage = 12;
-    } else if (res.tableName.includes('Greater')) {
+    } else if (res.tableName.includes('Minor') || (res.magicItem?.artifact_tier === 'Minor')) {
+      fillPercentage = 8;
+    } else if (res.tableName.includes('Greater') || (res.magicItem?.artifact_tier === 'Greater')) {
       fillPercentage = 25;
-    } else if (res.tableName.includes('Artifact') || res.tableName.includes('Epic')) {
+    } else if (res.tableName.includes('Epic') || (res.magicItem?.artifact_tier === 'Epic')) {
       fillPercentage = 50;
+    } else {
+      fillPercentage = 12; // Lesser default
     }
 
     const currentEssence = activeCharacter?.sheet_data?.essence_core || 0;
@@ -856,9 +859,11 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     const existingVault: VaultItem[] = existingVaultStr ? JSON.parse(existingVaultStr) : [];
 
     let tierRarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' = 'Lesser';
-    if (res.tableName.includes('Minor')) tierRarity = 'Minor';
-    if (res.tableName.includes('Greater')) tierRarity = 'Greater';
-    if (res.tableName.includes('Artifact') || res.tableName.includes('Epic')) tierRarity = 'Epic';
+    const checkStr = `${res.magicItem?.artifact_tier || ''} ${res.tableName} ${res.categoryKey || ''}`.toLowerCase();
+    if (checkStr.includes('minor') || checkStr.includes('🍺')) tierRarity = 'Minor';
+    else if (checkStr.includes('greater') || checkStr.includes('🪬')) tierRarity = 'Greater';
+    else if (checkStr.includes('epic') || checkStr.includes('💫')) tierRarity = 'Epic';
+    else tierRarity = 'Lesser';
 
     const newItem: VaultItem = {
       id: `vlt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,

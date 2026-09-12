@@ -277,9 +277,10 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     if (rType === 'magic_item' || rType === 'artifact' || entry.result_name.toLowerCase().includes('magic') || entry.result_name.toLowerCase().includes('relic') || entry.result_name.toLowerCase().includes('artifact')) {
       let rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' = 'Lesser';
       const rawName = (entry.result_name + ' ' + (subKey || '')).toLowerCase();
-      if (rawName.includes('minor')) rarity = 'Minor';
-      else if (rawName.includes('greater')) rarity = 'Greater';
-      else if (rawName.includes('epic') || rawName.includes('artifact')) rarity = 'Epic';
+      if (rawName.includes('minor') || rawName.includes('🍺')) rarity = 'Minor';
+      else if (rawName.includes('greater') || rawName.includes('🪬')) rarity = 'Greater';
+      else if (rawName.includes('epic') || rawName.includes('💫')) rarity = 'Epic';
+      else rarity = 'Lesser';
 
       let pool: any[] = getArtifactsByTier ? getArtifactsByTier(rarity) : [];
       if (pool.length === 0 && artifactsCatalog && artifactsCatalog.length > 0) {
@@ -290,6 +291,9 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
         pool = all.filter((a) => a.artifact_tier === rarity);
       }
       const picked = pool && pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null;
+      if (picked?.artifact_tier) {
+        rarity = picked.artifact_tier;
+      }
       const iconStr = rarity === 'Minor' ? '🍺' : rarity === 'Lesser' ? '🪄' : rarity === 'Greater' ? '🪬' : '💫';
 
       items.push({
@@ -297,7 +301,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
         categoryKey: `magic_${rarity}`,
         rarity,
         description: picked?.effect || (picked as any)?.notes || picked?.description || `Enchanted ${rarity} artifact.`,
-        magicItem: picked,
+        magicItem: picked ? { ...picked, category: `${rarity} Artifact`, artifact_tier: rarity } : undefined,
         targetPlayer: target,
       });
       return items;
@@ -514,11 +518,15 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     let rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' | undefined = undefined;
 
     if (activeCategoryTab === 'relics') {
-      const cat = (item.category || '').toLowerCase();
-      if (cat.includes('epic') || cat.includes('artifact')) rarity = 'Epic';
-      else if (cat.includes('greater')) rarity = 'Greater';
-      else if (cat.includes('minor')) rarity = 'Minor';
-      else rarity = 'Lesser';
+      if (item.artifact_tier) {
+        rarity = item.artifact_tier;
+      } else {
+        const cat = (item.category || item.rarity || '').toLowerCase();
+        if (cat.includes('minor') || cat.includes('🍺')) rarity = 'Minor';
+        else if (cat.includes('greater') || cat.includes('🪬')) rarity = 'Greater';
+        else if (cat.includes('epic') || cat.includes('💫')) rarity = 'Epic';
+        else rarity = 'Lesser';
+      }
     }
 
     await onAddLoot({
