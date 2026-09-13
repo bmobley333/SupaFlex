@@ -1613,8 +1613,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     );
   }, [type, filteredRoster, functionsCatalog, modsCatalog, activeCharacter, sheetData.character_vault, isGsUnlocked]);
 
-  const sectionIcon = type === 'powers' ? '🔥' : '🔮';
-  const displayTitle = title || (type === 'powers' ? 'MY POWERS' : 'EXOTIC POWERS');
+  const sectionIcon = type === 'powers' ? '🔥' : '🧿';
+  const displayTitle = title || (type === 'powers' ? 'MY POWERS' : "EXOTIC'S POWERS");
 
   // Action Economy or Alphabetical Sorting for Active Sheet (with Action Channel Filtering for Powers & Loadout)
   const sortedSlots = useMemo(() => {
@@ -3796,7 +3796,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
                   <div className="flex items-center gap-3">
                     <span className="font-outfit font-bold text-slate-300">
-                      {type === 'powers' ? '🔥 Powers Manager' : "🔮 Exotic Power's Manager"}
+                      {type === 'powers' ? '🔥 Powers Manager' : "🧿 Exotic Power's Manager"}
                     </span>
                   </div>
                   
