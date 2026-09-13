@@ -7,6 +7,7 @@ interface GmToolsPopoverProps {
   onOpenNishTcGenerator: () => void;
   onOpenCraftingMall?: () => void;
   onOpenMasterArchitectDesk?: () => void;
+  onOpenMasterRoster?: () => void;
   isMasterArchitect?: boolean;
 }
 
@@ -16,6 +17,7 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
   onOpenNishTcGenerator,
   onOpenCraftingMall,
   onOpenMasterArchitectDesk,
+  onOpenMasterRoster,
   isMasterArchitect = false,
 }) => {
   return (
@@ -186,6 +188,34 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
               </div>
               <p className="text-[11px] text-amber-200/70 group-hover:text-amber-100 transition-colors leading-tight mt-0.5">
                 Curate & 1-click promote creations to Master DB.
+              </p>
+            </div>
+          </button>
+        )}
+
+        {/* Tool 5: Master Player Roster & Inspector (Blake Exclusive) */}
+        {isMasterArchitect && onOpenMasterRoster && (
+          <button
+            onClick={() => {
+              onOpenMasterRoster();
+              onClose();
+            }}
+            className="group flex items-start gap-3 p-2.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-500/60 hover:border-indigo-400 transition-all text-left w-full cursor-pointer mt-1"
+          >
+            <div className="p-2 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 group-hover:bg-indigo-500/30 transition-colors shrink-0">
+              👥
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-outfit font-bold text-indigo-200 group-hover:text-indigo-100 transition-colors truncate">
+                  Master Player Roster
+                </span>
+                <span className="text-[10px] font-bold text-indigo-950 bg-indigo-300 px-1.5 py-0.5 rounded uppercase shrink-0">
+                  Master
+                </span>
+              </div>
+              <p className="text-[11px] text-indigo-200/70 group-hover:text-indigo-100 transition-colors leading-tight mt-0.5">
+                Inspect & load any player character across accounts.
               </p>
             </div>
           </button>

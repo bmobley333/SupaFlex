@@ -24,7 +24,7 @@ interface UnifiedLaunchHubModalProps {
   onLogout: () => void;
   onCharacterCloned: (clonedChar: Character) => void;
   onRefreshCharacters?: () => void;
-  initialTab?: 'account' | 'genre' | 'inspect';
+  initialTab?: 'account' | 'genre' | 'inspect' | 'master_roster';
 }
 
 export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
@@ -48,8 +48,17 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const activeRole = useCharacterStore((state) => state.activeRole);
   const setActiveRole = useCharacterStore((state) => state.setActiveRole);
   const paths = useCharacterStore((state) => state.paths || []);
+  const allCharacters = useCharacterStore((state) => state.characters || []);
+  const allPlayers = useCharacterStore((state) => state.players || []);
+
+  const isMasterAccount = (currentEmail || '').toLowerCase().trim() === 'metascapegame@gmail.com';
+  const [rosterMode, setRosterMode] = useState<'my_heroes' | 'master_roster'>('my_heroes');
+  const [masterSearchQuery, setMasterSearchQuery] = useState('');
+  const [collapsedPlayers, setCollapsedPlayers] = useState<Record<string, boolean>>({});
+  const [selectedInspectChar, setSelectedInspectChar] = useState<Character | null>(null);
+
   const [rightSubTab, setRightSubTab] = useState<'account' | 'genre' | 'inspect'>(
-    initialTab === 'party' as any ? 'account' : initialTab
+    initialTab === 'party' as any || initialTab === 'master_roster' ? 'account' : initialTab
   );
 
   // Create Hero State
@@ -60,9 +69,13 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
 
   useEffect(() => {
     if (isOpen && initialTab) {
-      setRightSubTab(currentEmail ? (initialTab === 'party' as any ? 'account' : initialTab) : 'account');
+      if (initialTab === 'master_roster' && isMasterAccount) {
+        setRosterMode('master_roster');
+      } else {
+        setRightSubTab(currentEmail ? (initialTab === 'party' as any ? 'account' : (initialTab as any)) : 'account');
+      }
     }
-  }, [isOpen, initialTab, currentEmail]);
+  }, [isOpen, initialTab, currentEmail, isMasterAccount]);
 
   useEffect(() => {
     if (!currentEmail || activeRole === 'gm') {
@@ -70,6 +83,109 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
       if (!currentEmail && isCreatingHero) setIsCreatingHero(false);
     }
   }, [currentEmail, activeRole, rightSubTab, isCreatingHero]);
+
+  const togglePlayerCollapse = (email: string) => {
+    setCollapsedPlayers((prev) => ({
+      ...prev,
+      [email]: !prev[email],
+    }));
+  };
+
+  const handleMasterLaunch = (char: Character) => {
+    if (activeRole === 'gm') {
+      setActiveRole('player');
+    }
+    onSelectCharacter(char.id);
+    onClose();
+  };
+
+  const masterPlayerGroups = React.useMemo(() => {
+    if (!isMasterAccount) return [];
+
+    const playerMap = new Map<string, { email: string; name: string; allow_cloning: boolean }>();
+    allPlayers.forEach((p) => {
+      const emailKey = (p.email || '').toLowerCase().trim();
+      if (!emailKey) return;
+      const fullName = [p.first_name, p.last_name].filter(Boolean).join(' ').trim();
+      playerMap.set(emailKey, {
+        email: emailKey,
+        name: fullName,
+        allow_cloning: p.allow_cloning ?? true,
+      });
+    });
+
+    const groupMap = new Map<string, Character[]>();
+    allCharacters.forEach((c) => {
+      const emailKey = (c.owner_email || '').toLowerCase().trim() || 'unassigned@supaflex.local';
+      if (!groupMap.has(emailKey)) {
+        groupMap.set(emailKey, []);
+      }
+      groupMap.get(emailKey)!.push(c);
+    });
+
+    const query = masterSearchQuery.toLowerCase().trim();
+    const groups: {
+      email: string;
+      displayName: string;
+      playerName: string;
+      characters: Character[];
+      allowCloning: boolean;
+    }[] = [];
+
+    groupMap.forEach((chars, email) => {
+      const prof = playerMap.get(email);
+      const playerName = prof?.name || '';
+      const displayName = playerName ? `${playerName} (${email})` : email;
+
+      const sortedChars = [...chars].sort((a, b) =>
+        (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+      );
+
+      if (query) {
+        const matchesPlayer =
+          displayName.toLowerCase().includes(query) ||
+          email.includes(query) ||
+          playerName.toLowerCase().includes(query);
+
+        const filteredChars = sortedChars.filter((c) => {
+          const charName = (c.name || '').toLowerCase();
+          const charClass = (c.class || '').toLowerCase();
+          const charRace = (c.race || '').toLowerCase();
+          return charName.includes(query) || charClass.includes(query) || charRace.includes(query);
+        });
+
+        if (matchesPlayer) {
+          groups.push({
+            email,
+            displayName,
+            playerName,
+            characters: sortedChars,
+            allowCloning: prof?.allow_cloning ?? true,
+          });
+        } else if (filteredChars.length > 0) {
+          groups.push({
+            email,
+            displayName,
+            playerName,
+            characters: filteredChars,
+            allowCloning: prof?.allow_cloning ?? true,
+          });
+        }
+      } else {
+        groups.push({
+          email,
+          displayName,
+          playerName,
+          characters: sortedChars,
+          allowCloning: prof?.allow_cloning ?? true,
+        });
+      }
+    });
+
+    return groups.sort((a, b) =>
+      a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' })
+    );
+  }, [isMasterAccount, allPlayers, allCharacters, masterSearchQuery]);
 
   // Account Sub-Tab State
   const [allowCloning, setAllowCloning] = useState(true);
@@ -452,7 +568,186 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
           {/* PANE 1 (LEFT): My Character Vault Roster (col-span-6)   */}
           {/* ------------------------------------------------------ */}
           <div className="md:col-span-6 border-r border-slate-800/80 pr-6 flex flex-col h-full overflow-hidden">
-            {activeRole === 'gm' ? (
+            {/* Master Account Pill Switch: [ 👤 My Heroes / 👑 GM Screen | 👑 Master Roster ] */}
+            {isMasterAccount && (
+              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md mb-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setRosterMode('my_heroes')}
+                  className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    rosterMode === 'my_heroes'
+                      ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  {activeRole === 'gm' ? '👑 GM Screen' : `👤 My Heroes (${userCharacters.length})`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRosterMode('master_roster')}
+                  className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    rosterMode === 'master_roster'
+                      ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  👑 Master Roster ({allCharacters.length})
+                </button>
+              </div>
+            )}
+
+            {rosterMode === 'master_roster' && isMasterAccount ? (
+              <>
+                {/* Search Bar & Collapse Toggle */}
+                <div className="flex items-center gap-2 mb-3 shrink-0">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={masterSearchQuery}
+                      onChange={(e) => setMasterSearchQuery(e.target.value)}
+                      placeholder="🔍 Search player, email, or hero..."
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 font-medium"
+                    />
+                    {masterSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setMasterSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs px-1 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allCollapsed = Object.keys(collapsedPlayers).length > 0 && Object.values(collapsedPlayers).every(Boolean);
+                      if (allCollapsed) {
+                        setCollapsedPlayers({});
+                      } else {
+                        const newCollapsed: Record<string, boolean> = {};
+                        masterPlayerGroups.forEach((g) => {
+                          newCollapsed[g.email] = true;
+                        });
+                        setCollapsedPlayers(newCollapsed);
+                      }
+                    }}
+                    className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 text-[11px] font-semibold rounded-lg shrink-0 transition cursor-pointer"
+                    title="Expand or collapse all player sections"
+                  >
+                    {Object.keys(collapsedPlayers).length > 0 && Object.values(collapsedPlayers).every(Boolean) ? 'Expand All' : 'Collapse All'}
+                  </button>
+                </div>
+
+                {/* Master Player Groups List */}
+                <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                  {masterPlayerGroups.length === 0 ? (
+                    <div className="p-6 bg-slate-900/60 border border-slate-800 rounded-xl text-center text-xs text-slate-400">
+                      No players or heroes match "{masterSearchQuery}".
+                    </div>
+                  ) : (
+                    masterPlayerGroups.map((group) => {
+                      const isCollapsed = collapsedPlayers[group.email] === true && !masterSearchQuery.trim();
+                      const isSelectedOwner = selectedInspectChar?.owner_email?.toLowerCase().trim() === group.email;
+
+                      return (
+                        <div
+                          key={group.email}
+                          className={`rounded-xl border transition-all overflow-hidden ${
+                            isSelectedOwner
+                              ? 'bg-slate-900/90 border-amber-500/50 shadow-sm'
+                              : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+                          }`}
+                        >
+                          {/* Player Group Accordion Header */}
+                          <button
+                            type="button"
+                            onClick={() => togglePlayerCollapse(group.email)}
+                            className="w-full p-2.5 flex items-center justify-between gap-2 text-left bg-slate-950/70 hover:bg-slate-950/90 transition cursor-pointer select-none border-b border-slate-800/60"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="text-amber-400 text-xs shrink-0 font-mono">
+                                {isCollapsed ? '▶' : '▼'}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-xs text-slate-200 font-outfit truncate">
+                                    {group.playerName || group.email}
+                                  </span>
+                                  {group.playerName && (
+                                    <span className="text-[10px] font-mono text-slate-400 truncate">
+                                      ({group.email})
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 shrink-0">
+                              {group.characters.length} {group.characters.length === 1 ? 'Hero' : 'Heroes'}
+                            </span>
+                          </button>
+
+                          {/* Character Items in Player Group */}
+                          {!isCollapsed && (
+                            <div className="p-2 space-y-1.5 bg-slate-950/40">
+                              {group.characters.map((char) => {
+                                const isActive = activeCharacter?.id === char.id;
+                                const isInspected = selectedInspectChar?.id === char.id;
+
+                                return (
+                                  <div
+                                    key={char.id}
+                                    onClick={() => setSelectedInspectChar(char)}
+                                    className={`p-2.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                                      isActive
+                                        ? 'bg-gradient-to-r from-indigo-950/90 to-slate-900 border-indigo-500/80 shadow-md shadow-indigo-950/50'
+                                        : isInspected
+                                        ? 'bg-amber-950/40 border-amber-500/60'
+                                        : 'bg-slate-900/70 border-slate-800/80 hover:bg-slate-900 hover:border-slate-700'
+                                    }`}
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-1.5 min-h-[20px]">
+                                        <span className="font-bold text-xs text-slate-100 truncate font-outfit">
+                                          {char.name}
+                                        </span>
+                                        {isActive && (
+                                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/30 border border-indigo-400/50 text-indigo-200 shrink-0">
+                                            Active
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 flex-wrap mt-0.5">
+                                        <span className="text-purple-300 font-semibold">{char.race || 'Human'}</span>
+                                        <span>•</span>
+                                        <span className="text-indigo-300 font-semibold">{char.class || 'Adventurer'}</span>
+                                        <span>•</span>
+                                        <span className="font-mono text-amber-300 font-bold">Lvl {char.sheet_data?.level || 1}</span>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleMasterLaunch(char)}
+                                        className="px-2.5 py-1 bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 text-white font-bold text-[11px] rounded-lg transition shadow-sm cursor-pointer flex items-center gap-1"
+                                        title="Load this character sheet immediately"
+                                      >
+                                        <span>▶️</span> Launch
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            ) : activeRole === 'gm' ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-slate-900/80 rounded-2xl border border-amber-500/30 space-y-4 my-auto shadow-inner">
                 <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-3xl text-amber-400 shadow-md">
                   👑
@@ -745,58 +1040,241 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
           {/* ------------------------------------------------------ */}
           <div className="md:col-span-6 flex flex-col h-full overflow-hidden">
             
-            {/* Top Sub-Tab Selector */}
-            <div className="flex border-b border-slate-800 mb-4 shrink-0">
-              <button
-                onClick={() => setRightSubTab('account')}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
-                  rightSubTab === 'account'
-                    ? 'border-amber-400 text-amber-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                👤 Account
-              </button>
-              <button
-                onClick={() => {
-                  if (currentEmail) setRightSubTab('genre');
-                }}
-                disabled={!currentEmail}
-                title={!currentEmail ? 'Sign in required to configure genre filter' : 'Configure Genre Filter'}
-                className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
-                  !currentEmail
-                    ? 'opacity-40 cursor-not-allowed border-transparent text-slate-500'
-                    : rightSubTab === 'genre'
-                    ? 'border-cyan-400 text-cyan-400 cursor-pointer'
-                    : 'border-transparent text-slate-400 hover:text-slate-200 cursor-pointer'
-                }`}
-              >
-                🌐 Genre
-              </button>
-              {activeRole !== 'gm' && (
+            {/* Top Sub-Tab Selector / Master Inspector Header */}
+            {isMasterAccount && rosterMode === 'master_roster' ? (
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-4 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-amber-400 text-sm">👑</span>
+                  <span className="font-outfit font-extrabold text-xs text-amber-300 uppercase tracking-wider">
+                    Master Hero Inspector
+                  </span>
+                </div>
+                {selectedInspectChar && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedInspectChar(null)}
+                    className="text-[11px] text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                  >
+                    Clear Selection
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex border-b border-slate-800 mb-4 shrink-0">
+                <button
+                  onClick={() => setRightSubTab('account')}
+                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer ${
+                    rightSubTab === 'account'
+                      ? 'border-amber-400 text-amber-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  👤 Account
+                </button>
                 <button
                   onClick={() => {
-                    if (currentEmail) setRightSubTab('inspect');
+                    if (currentEmail) setRightSubTab('genre');
                   }}
                   disabled={!currentEmail}
-                  title={!currentEmail ? 'Sign in required to clone characters' : 'Clone Characters'}
+                  title={!currentEmail ? 'Sign in required to configure genre filter' : 'Configure Genre Filter'}
                   className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
                     !currentEmail
                       ? 'opacity-40 cursor-not-allowed border-transparent text-slate-500'
-                      : rightSubTab === 'inspect'
-                      ? 'border-indigo-400 text-indigo-400 cursor-pointer'
+                      : rightSubTab === 'genre'
+                      ? 'border-cyan-400 text-cyan-400 cursor-pointer'
                       : 'border-transparent text-slate-400 hover:text-slate-200 cursor-pointer'
                   }`}
                 >
-                  🧬 Clone Characters
+                  🌐 Genre
                 </button>
-              )}
-            </div>
+                {activeRole !== 'gm' && (
+                  <button
+                    onClick={() => {
+                      if (currentEmail) setRightSubTab('inspect');
+                    }}
+                    disabled={!currentEmail}
+                    title={!currentEmail ? 'Sign in required to clone characters' : 'Clone Characters'}
+                    className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
+                      !currentEmail
+                        ? 'opacity-40 cursor-not-allowed border-transparent text-slate-500'
+                        : rightSubTab === 'inspect'
+                        ? 'border-indigo-400 text-indigo-400 cursor-pointer'
+                        : 'border-transparent text-slate-400 hover:text-slate-200 cursor-pointer'
+                    }`}
+                  >
+                    🧬 Clone Characters
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="flex-1 overflow-y-auto pr-1">
-              
-              {/* SUB-TAB 1: ACCOUNT & AUTH */}
-              {rightSubTab === 'account' && (
+              {isMasterAccount && rosterMode === 'master_roster' ? (
+                <div className="space-y-4">
+                  {inspectError && (
+                    <div className="p-3 bg-red-900/60 border border-red-500/50 rounded-lg text-red-200 text-xs">
+                      {inspectError}
+                    </div>
+                  )}
+                  {cloneSuccessMsg && (
+                    <div className="p-3 bg-emerald-900/60 border border-emerald-500/50 rounded-lg text-emerald-200 text-xs font-semibold">
+                      {cloneSuccessMsg}
+                    </div>
+                  )}
+
+                  {selectedInspectChar ? (
+                    <div className="p-4 bg-slate-900/80 border border-amber-500/40 rounded-xl space-y-3.5 shadow-inner">
+                      <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">👑</span>
+                            <h3 className="font-outfit font-extrabold text-base text-amber-300 truncate">
+                              {selectedInspectChar.name}
+                            </h3>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {selectedInspectChar.race || 'Human'} • {selectedInspectChar.class || 'Adventurer'} • Level {selectedInspectChar.sheet_data?.level || 1}
+                          </p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-mono font-bold shrink-0">
+                          ID: {selectedInspectChar.id}
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1 text-xs">
+                        <div className="flex justify-between text-slate-400">
+                          <span>Player Account:</span>
+                          <strong className="font-mono text-amber-300">{selectedInspectChar.owner_email || 'Unassigned'}</strong>
+                        </div>
+                        <div className="flex justify-between text-slate-400">
+                          <span>Last Synchronized:</span>
+                          <span className="text-slate-300">
+                            {selectedInspectChar.updated_at ? new Date(selectedInspectChar.updated_at).toLocaleString() : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Core Attribute Ratings */}
+                      <div>
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Attribute Dice
+                        </span>
+                        <div className="grid grid-cols-5 gap-1.5 text-center">
+                          <div className="p-1.5 bg-slate-950/90 rounded-lg border border-slate-800">
+                            <div className="text-[10px] text-slate-400 font-bold">Might</div>
+                            <div className="text-xs font-mono font-extrabold text-amber-400">
+                              {selectedInspectChar.sheet_data?.attribute_dice?.might || selectedInspectChar.might || 'd4'}
+                            </div>
+                          </div>
+                          <div className="p-1.5 bg-slate-950/90 rounded-lg border border-slate-800">
+                            <div className="text-[10px] text-slate-400 font-bold">Motion</div>
+                            <div className="text-xs font-mono font-extrabold text-emerald-400">
+                              {selectedInspectChar.sheet_data?.attribute_dice?.motion || selectedInspectChar.motion || 'd4'}
+                            </div>
+                          </div>
+                          <div className="p-1.5 bg-slate-950/90 rounded-lg border border-slate-800">
+                            <div className="text-[10px] text-slate-400 font-bold">Mind</div>
+                            <div className="text-xs font-mono font-extrabold text-sky-400">
+                              {selectedInspectChar.sheet_data?.attribute_dice?.mind || selectedInspectChar.mind || 'd4'}
+                            </div>
+                          </div>
+                          <div className="p-1.5 bg-slate-950/90 rounded-lg border border-slate-800">
+                            <div className="text-[10px] text-slate-400 font-bold">Magic</div>
+                            <div className="text-xs font-mono font-extrabold text-purple-400">
+                              {selectedInspectChar.sheet_data?.attribute_dice?.magic || selectedInspectChar.magic || 'd4'}
+                            </div>
+                          </div>
+                          <div className="p-1.5 bg-slate-950/90 rounded-lg border border-slate-800">
+                            <div className="text-[10px] text-slate-400 font-bold">Moxie</div>
+                            <div className="text-xs font-mono font-extrabold text-rose-400">
+                              {selectedInspectChar.sheet_data?.attribute_dice?.moxie || selectedInspectChar.moxie || 'd4'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Metrics */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="p-2 bg-slate-950/60 rounded-lg border border-slate-800 flex justify-between">
+                          <span className="text-slate-400">Vitality Max:</span>
+                          <span className="font-bold text-slate-200">
+                            {selectedInspectChar.sheet_data?.vitality_max || selectedInspectChar.hp || 10}
+                          </span>
+                        </div>
+                        <div className="p-2 bg-slate-950/60 rounded-lg border border-slate-800 flex justify-between">
+                          <span className="text-slate-400">Wealth:</span>
+                          <span className="font-bold text-amber-300 font-mono">
+                            {selectedInspectChar.sheet_data?.gold || 0}g / {selectedInspectChar.sheet_data?.silver || 0}s
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Skillsets & Capabilities */}
+                      <div className="p-2.5 bg-slate-950/60 rounded-lg border border-slate-800 space-y-1 text-xs">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Known Skillsets</div>
+                        <div className="text-xs text-slate-200 flex flex-wrap gap-1">
+                          {(selectedInspectChar.sheet_data?.known_skillsets || []).length > 0 ? (
+                            (selectedInspectChar.sheet_data?.known_skillsets || []).map((p) => (
+                              <span key={p} className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] font-semibold text-slate-300">
+                                {p}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-slate-500 italic text-[11px]">No skillsets unlocked</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleMasterLaunch(selectedInspectChar)}
+                          className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition shadow-md cursor-pointer flex items-center justify-center gap-2"
+                        >
+                          <span>▶️</span> Launch Full Character Sheet
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleCloneCharacter(selectedInspectChar)}
+                          disabled={cloningId === selectedInspectChar.id}
+                          className="w-full py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-bold text-xs rounded-xl transition border border-slate-700 cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <span>🧬</span> {cloningId === selectedInspectChar.id ? 'Cloning Hero...' : 'Clone to My Master Vault'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-6 bg-slate-900/60 border border-slate-800 rounded-xl text-center space-y-3 flex flex-col items-center justify-center h-full my-auto">
+                      <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-2xl text-amber-400">
+                        👑
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-outfit font-extrabold text-sm text-slate-200">
+                          Master Multi-Player Vault Inspector
+                        </h4>
+                        <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+                          Select any hero on the left to preview attributes, inspect sheets, clone to your vault, or launch directly into your active screen.
+                        </p>
+                      </div>
+                      <div className="p-2.5 bg-slate-950/80 rounded-lg border border-slate-800 text-[11px] text-slate-400 w-full max-w-xs space-y-1">
+                        <div className="flex justify-between">
+                          <span>Total Heroes:</span>
+                          <strong className="text-amber-300">{allCharacters.length}</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total Player Accounts:</span>
+                          <strong className="text-indigo-300">{masterPlayerGroups.length}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* SUB-TAB 1: ACCOUNT & AUTH */}
+                  {rightSubTab === 'account' && (
                 <div className="space-y-4">
                   {currentEmail ? (
                     <div className="space-y-4">
@@ -1064,6 +1542,8 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                   )}
                 </div>
               )}
+            </>
+          )}
 
             </div>
           </div>

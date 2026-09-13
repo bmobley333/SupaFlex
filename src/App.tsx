@@ -87,7 +87,7 @@ export default function App() {
   const [showUnifiedLaunchHubModal, setShowUnifiedLaunchHubModal] = useState(
     typeof window !== 'undefined' ? !sessionStorage.getItem('supaflex_player_email') : true
   );
-  const [launchHubInitialTab, setLaunchHubInitialTab] = useState<'account' | 'inspect'>('account');
+  const [launchHubInitialTab, setLaunchHubInitialTab] = useState<'account' | 'inspect' | 'master_roster'>('account');
   const [showCharacterPartyModal, setShowCharacterPartyModal] = useState(false);
   const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
 
@@ -144,6 +144,7 @@ export default function App() {
   const updateGmLink = useAdventureStore((state) => state.updateGmLink);
   const deleteGmLink = useAdventureStore((state) => state.deleteGmLink);
   const reorderGmLinkByIndex = useAdventureStore((state) => state.reorderGmLinkByIndex);
+  const isMasterAccount = (playerEmail || '').toLowerCase().trim() === 'metascapegame@gmail.com';
 
   useEffect(() => {
     fetchInitialData();
@@ -386,13 +387,18 @@ export default function App() {
   useEffect(() => {
     if (!playerEmail.trim()) return;
 
+    // Master account exemption: if master account is inspecting ANY character in `characters`, preserve selection!
+    if (isMasterAccount && activeCharacter && characters.some((c) => c.id === activeCharacter.id)) {
+      return;
+    }
+
     if (myHeroes.length > 0) {
       const activeInMyHeroes = activeCharacter && myHeroes.some((c) => c.id === activeCharacter.id);
       if (!activeInMyHeroes) {
         selectCharacter(myHeroes[0].id);
       }
     }
-  }, [myHeroes, activeCharacter, playerEmail, selectCharacter]);
+  }, [myHeroes, activeCharacter, playerEmail, isMasterAccount, characters, selectCharacter]);
 
   // Unified Move to Sheet Claim Handler
 
@@ -555,7 +561,10 @@ export default function App() {
             <AccountPillButton
               email={playerEmail}
               isGmMode={activeRole === 'gm'}
-              onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
+              onOpenLaunchHub={() => {
+                setLaunchHubInitialTab('account');
+                setShowUnifiedLaunchHubModal(true);
+              }}
             />
           </div>
 
@@ -569,10 +578,26 @@ export default function App() {
             </div>
           ) : (
             activeCharacter && (
-              <div className="flex-1 flex items-center justify-center min-w-0 px-2 py-0.5 animate-fadeIn">
-                <h2 className="font-outfit text-lg md:text-xl font-black tracking-widest bg-gradient-to-r from-slate-100 via-amber-200 to-amber-400 bg-clip-text text-transparent uppercase drop-shadow-[0_2px_12px_rgba(251,191,36,0.3)] truncate max-w-[420px]">
+              <div className="flex-1 flex items-center justify-center min-w-0 px-2 py-0.5 animate-fadeIn gap-3">
+                <h2 className="font-outfit text-lg md:text-xl font-black tracking-widest bg-gradient-to-r from-slate-100 via-amber-200 to-amber-400 bg-clip-text text-transparent uppercase drop-shadow-[0_2px_12px_rgba(251,191,36,0.3)] truncate max-w-[320px]">
                   {activeCharacter?.name || 'Hero'}
                 </h2>
+                {isMasterAccount && activeCharacter.owner_email && activeCharacter.owner_email.toLowerCase().trim() !== playerEmail.toLowerCase().trim() && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold shadow-sm shrink-0 animate-fadeIn">
+                    <span>👑 Inspecting:</span>
+                    <span className="text-slate-200 font-mono text-[11px] truncate max-w-[150px]">{activeCharacter.owner_email}</span>
+                    {myHeroes.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => selectCharacter(myHeroes[0].id)}
+                        className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-amber-600 hover:text-slate-950 text-slate-300 transition cursor-pointer font-extrabold"
+                        title="Return to your own hero"
+                      >
+                        ✕ Return
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )
           )}
@@ -621,7 +646,11 @@ export default function App() {
                     onOpenNishTcGenerator={() => setShowNishTcModal(true)}
                     onOpenCraftingMall={() => setShowCraftingMallModal(true)}
                     onOpenMasterArchitectDesk={() => setShowMasterArchitectDeskModal(true)}
-                    isMasterArchitect={playerEmail?.toLowerCase().trim() === 'metascapegame@gmail.com'}
+                    onOpenMasterRoster={() => {
+                      setLaunchHubInitialTab('master_roster');
+                      setShowUnifiedLaunchHubModal(true);
+                    }}
+                    isMasterArchitect={isMasterAccount}
                   />
                 )}
               </div>

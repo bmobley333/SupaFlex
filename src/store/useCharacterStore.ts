@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, ModItem } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, ModItem, PlayerRecord } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
@@ -45,6 +45,7 @@ interface CharacterStore {
   // State
   characters: Character[];
   activeCharacter: Character | null;
+  players: PlayerRecord[];
   powers: Power[];
   magicItems: MagicItem[];
   artifactsCatalog: CatalogArtifact[];
@@ -147,6 +148,7 @@ interface CharacterStore {
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
   characters: [],
   activeCharacter: null,
+  players: [],
   powers: [],
   magicItems: [],
   artifactsCatalog: [],
@@ -227,7 +229,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return;
       }
 
-      const [chars, powers, items, skills, traits, pathsData, bundlesData, functionsData, modsData, artifactsData, exoticsData] = await Promise.all([
+      const [chars, powers, items, skills, traits, pathsData, bundlesData, functionsData, modsData, artifactsData, exoticsData, playersData] = await Promise.all([
         gameApi.getCharacters(),
         gameApi.getPowers(),
         gameApi.getMagicItems(),
@@ -239,6 +241,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         gameApi.getMods(),
         gameApi.getArtifacts(),
         gameApi.getExotics(),
+        gameApi.getPlayers(),
       ]);
 
       const email = (get().playerEmail || '').trim().toLowerCase();
@@ -248,6 +251,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         set({
           characters: chars,
           activeCharacter: null,
+          players: playersData || [],
           powers,
           magicItems: items,
           artifactsCatalog: artifactsData || [],
@@ -265,7 +269,9 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return;
       }
 
+      const isMaster = email === 'metascapegame@gmail.com';
       const myHeroes = chars.filter((c) => (c.owner_email || '').trim().toLowerCase() === email);
+      const eligiblePool = isMaster ? chars : myHeroes;
       const currentActive = get().activeCharacter;
       let selectedChar: Character | null = null;
 
@@ -276,8 +282,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return reconcileCharacterFreeTraits(vaultReconciled, char, traits).updatedSheetData;
       };
 
-      if (currentActive && myHeroes.some((c) => c.id === currentActive.id)) {
-        const freshChar = myHeroes.find((c) => c.id === currentActive.id)!;
+      if (currentActive && eligiblePool.some((c) => c.id === currentActive.id)) {
+        const freshChar = eligiblePool.find((c) => c.id === currentActive.id)!;
         const migratedSheet = reconcileSheet(freshChar.sheet_data, freshChar);
         // Preserve active character object and unsaved local edits if present
         selectedChar = {
@@ -286,7 +292,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         };
       } else {
         const lastActiveId = sessionStorage.getItem('supaflex_last_active_char_id');
-        const lastActiveChar = myHeroes.find((c) => String(c.id) === lastActiveId);
+        const lastActiveChar = eligiblePool.find((c) => String(c.id) === lastActiveId);
 
         if (lastActiveChar) {
           selectedChar = {
@@ -304,6 +310,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       set({
         characters: chars,
         activeCharacter: selectedChar,
+        players: playersData || [],
         powers,
         magicItems: items,
         artifactsCatalog: artifactsData || [],

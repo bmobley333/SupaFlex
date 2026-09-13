@@ -734,6 +734,14 @@ export interface Character {
   updated_at?: string;
 }
 
+export interface PlayerRecord {
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  allow_cloning?: boolean;
+  created_at?: string;
+}
+
 export interface Power {
   id: number;
   name: string;

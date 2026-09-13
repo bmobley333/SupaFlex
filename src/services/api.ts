@@ -23,6 +23,7 @@ import {
   SupabaseBundle,
   FunctionItem,
   ModItem,
+  PlayerRecord,
 } from '../types/game';
 import { GmAdventure } from '../types/adventures';
 import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
@@ -908,6 +909,19 @@ export const gameApi = {
     }
 
     return true;
+  },
+
+  async getPlayers(): Promise<PlayerRecord[]> {
+    const { data, error } = await supabase
+      .from('players')
+      .select('email, first_name, last_name, allow_cloning, created_at')
+      .order('last_name', { ascending: true });
+
+    if (error) {
+      console.error('[gameApi] Error fetching players:', error);
+      return [];
+    }
+    return (data || []) as PlayerRecord[];
   },
 
   // --- CHARACTERS BY OWNER ---
