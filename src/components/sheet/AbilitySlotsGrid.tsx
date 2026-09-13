@@ -177,7 +177,7 @@ const pruneLesserPowerVersions = (abilitySlots: AbilitySlot[]): AbilitySlot[] =>
   return Object.values(highestMap);
 };
 
-const calculateTotalPowerUnits = (abilitySlots: AbilitySlot[]): number => {
+export const calculateTotalPowerUnits = (abilitySlots: AbilitySlot[]): number => {
   const pruned = pruneLesserPowerVersions(abilitySlots);
   return pruned.reduce((sum, slot) => {
     const { version } = parseAbilityVersion(slot.name);
@@ -401,6 +401,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [isVersionEditMode, setIsVersionEditMode] = useState(false);
   const [versionEditBaseName, setVersionEditBaseName] = useState('');
   const [versionEditNextVersion, setVersionEditNextVersion] = useState(1);
+  const [versionEditItem, setVersionEditItem] = useState<any>(null);
 
   const insertIconAtCursor = (iconStr: string) => {
     const textarea = createEffectRef.current;
@@ -422,16 +423,19 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const handleLaunchVersionEditor = (item: Power | MagicItem | AbilitySlot) => {
     const cleaned = cleanName(item.name);
     const { baseName, version } = parseAbilityVersion(cleaned);
-    const nextVer = version + 1;
+    const itemVer = typeof (item as any).version === 'number' ? (item as any).version : version;
+    const currentVer = Math.max(version, itemVer, 1);
+    const nextVer = currentVer + 1;
     const nextVersionedName = `${baseName} v${nextVer}`;
 
     setIsVersionEditMode(true);
     setVersionEditBaseName(baseName);
     setVersionEditNextVersion(nextVer);
+    setVersionEditItem(item);
 
     setCreateName(nextVersionedName);
-    setCreateAction(item.action || 'A');
-    setCreateUsage(item.usage || '1');
+    setCreateAction(item.action || (type === 'powers' ? 'A' : 'P'));
+    setCreateUsage(item.usage || (type === 'powers' ? '1' : '1-Enc'));
     setCreateEffect(item.effect || '');
 
     setActiveRightTab('EDITOR');
@@ -1095,132 +1099,233 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     saveActiveCharacter();
   };
 
-  // Custom Creation Save Handler (Strictly for Powers)
+  // Custom Creation / Version Save Handler (Powers and Functions)
   const handleSaveCustomAbility = () => {
     if (!createName.trim()) return;
+    if (availableAp < 1) {
+      setCatalogFeedback({
+        type: 'error',
+        message: `Insufficient AP! You need at least 1 AP to create or upgrade a version.`,
+      });
+      return;
+    }
+
     const rawClean = cleanName(createName.trim());
     const { baseName, version } = parseAbilityVersion(rawClean);
     const versionedName = `${baseName} v${version}`;
 
-    const newItem: Power = {
-      id: Date.now(),
-      name: versionedName,
-      base_name: baseName,
-      version: version,
-      action: createAction,
-      usage: createUsage,
-      effect: createEffect.trim(),
-      category: 'Custom',
-      created_at: new Date().toISOString(),
-    };
+    if (type === 'powers') {
+      const newItem: Power = {
+        id: Date.now(),
+        name: versionedName,
+        base_name: baseName,
+        version: version,
+        action: createAction,
+        usage: createUsage,
+        effect: createEffect.trim(),
+        category: 'Custom',
+        created_at: new Date().toISOString(),
+      };
 
-    const currentSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots : [];
-    const currentVault: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex : [];
-    const combinedOld = [...currentSlots, ...currentVault];
-    const oldTotalUnits = calculateTotalPowerUnits(pruneLesserPowerVersions(combinedOld));
-    const oldApSpent = oldTotalUnits;
+      const currentSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots : [];
 
-    const readyCat = getPowerReadyCategory(newItem);
-    const isSupport = readyCat === 'support_passive' || (readyCat as any) === 'contextual_passive';
+      const readyCat = getPowerReadyCategory(newItem);
+      const isSupport = readyCat === 'support_passive' || (readyCat as any) === 'contextual_passive';
 
-    const existingReadiedIdx = currentSlots.findIndex(
-      (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-    );
-
-    let willReady = false;
-    if (existingReadiedIdx >= 0) {
-      willReady = true;
-    } else if (isSupport) {
-      willReady = true;
-    } else {
-      const testSlots = [...currentSlots, { name: versionedName, ready: readyCat } as AbilitySlot];
-      const charLevel = activeCharacter?.sheet_data?.level || 1;
-      const validation = validateReadyMatrix(testSlots, charLevel);
-      willReady = validation.valid;
-    }
-
-    const newPower: AbilitySlot = {
-      select: true,
-      name: versionedName,
-      base_name: baseName,
-      version: version,
-      action: (createAction.toUpperCase() as any) || 'A',
-      usage: createUsage,
-      effect: createEffect.trim(),
-      checked: [false, false, false],
-      is_readied: willReady,
-      ready: readyCat,
-    };
-
-    let isUpgrade = false;
-
-    updateActiveSheetData((prev) => {
-      const customKey = type === 'powers' ? 'custom_powers' : 'custom_magic_items';
-      const existingCustom = prev[customKey] || [];
-      const updatedCustom = [...existingCustom, newItem];
-
-      const prevSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
-      const prevVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
-
-      let updatedSlots = [...prevSlots];
-      let updatedVault = [...prevVault];
-
-      const rIdx = updatedSlots.findIndex(
-        (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-      );
-      const vIdx = updatedVault.findIndex(
+      const existingReadiedIdx = currentSlots.findIndex(
         (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
       );
 
-      if (rIdx >= 0) {
-        updatedSlots[rIdx] = { ...newPower, is_readied: true };
-        isUpgrade = true;
-      } else if (vIdx >= 0) {
-        if (willReady) {
-          updatedVault.splice(vIdx, 1);
-          updatedSlots.push({ ...newPower, is_readied: true });
-        } else {
-          updatedVault[vIdx] = { ...newPower, is_readied: false };
-        }
-        isUpgrade = true;
+      let willReady = false;
+      if (existingReadiedIdx >= 0) {
+        willReady = true;
+      } else if (isSupport) {
+        willReady = true;
       } else {
-        if (willReady) {
-          updatedSlots.push({ ...newPower, is_readied: true });
-        } else {
-          updatedVault.push({ ...newPower, is_readied: false });
-        }
+        const testSlots = [...currentSlots, { name: versionedName, ready: readyCat } as AbilitySlot];
+        const charLevel = activeCharacter?.sheet_data?.level || 1;
+        const validation = validateReadyMatrix(testSlots, charLevel);
+        willReady = validation.valid;
       }
 
-      return {
-        ...prev,
-        [customKey]: updatedCustom,
-        power_slots: updatedSlots,
-        character_power_codex: updatedVault,
+      const newPower: AbilitySlot = {
+        select: true,
+        name: versionedName,
+        base_name: baseName,
+        version: version,
+        action: (createAction.toUpperCase() as any) || 'A',
+        usage: createUsage,
+        effect: createEffect.trim(),
+        checked: [false, false, false],
+        is_readied: willReady,
+        ready: readyCat,
       };
-    });
 
-    const combinedNew = willReady
-      ? [...currentSlots, newPower, ...currentVault]
-      : [...currentSlots, ...currentVault, newPower];
-    const prunedCombined = pruneLesserPowerVersions(combinedNew);
-    const newTotalUnits = calculateTotalPowerUnits(prunedCombined);
-    const newApSpent = newTotalUnits;
-    const apDiff = newApSpent - oldApSpent;
+      let isUpgrade = false;
 
-    const logAction = isUpgrade ? 'Upgraded Power' : 'Created & Learned Power';
+      updateActiveSheetData((prev) => {
+        const existingCustom = prev.custom_powers || [];
+        const updatedCustom = [...existingCustom, newItem];
 
-    if (apDiff > 0) {
-      recordApExpenditure(apDiff, 'Powers', `${logAction}: ${versionedName} (+${apDiff} AP)`, 1, 'Manage Powers');
+        const prevSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
+        const prevVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
+
+        let updatedSlots = [...prevSlots];
+        let updatedVault = [...prevVault];
+
+        const rIdx = updatedSlots.findIndex(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+        );
+        const vIdx = updatedVault.findIndex(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+        );
+
+        if (rIdx >= 0) {
+          updatedSlots[rIdx] = { ...newPower, is_readied: true };
+          isUpgrade = true;
+        } else if (vIdx >= 0) {
+          if (willReady) {
+            updatedVault.splice(vIdx, 1);
+            updatedSlots.push({ ...newPower, is_readied: true });
+          } else {
+            updatedVault[vIdx] = { ...newPower, is_readied: false };
+          }
+          isUpgrade = true;
+        } else {
+          if (willReady) {
+            updatedSlots.push({ ...newPower, is_readied: true });
+          } else {
+            updatedVault.push({ ...newPower, is_readied: false });
+          }
+        }
+
+        return {
+          ...prev,
+          custom_powers: updatedCustom,
+          power_slots: updatedSlots,
+          character_power_codex: updatedVault,
+        };
+      });
+
+      const logAction = isUpgrade ? 'Upgraded Power' : 'Created & Learned Power';
+      recordApExpenditure(1, 'Powers', `${logAction}: ${versionedName} (+1 AP)`, 1, 'Manage Powers');
+
+      saveActiveCharacter();
+
+      setCreateName('');
+      setCreateAction('A');
+      setCreateUsage('1');
+      setCreateEffect('');
+      setVersionEditItem(null);
+      setIsVersionEditMode(false);
+      setActiveRightTab('CATALOG');
+    } else {
+      // type === 'spells' (Functions / Hardware)
+      const newWeight = typeof versionEditItem?.slot_weight === 'number'
+        ? versionEditItem.slot_weight
+        : (getItemSlotWeight(versionEditItem) as 0 | 1 | 2 | 3 | 4) || 0;
+
+      const newVaultItem: MagicItem = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        name: versionedName,
+        base_name: baseName,
+        version: version,
+        action: (createAction.toUpperCase() as any) || 'P',
+        usage: createUsage,
+        effect: createEffect.trim(),
+        notes: versionEditItem?.notes || '',
+        source: versionEditItem?.source || 'Custom Function Version',
+        source_gear: versionEditItem?.source_gear,
+        source_mod: versionEditItem?.source_mod,
+        category: versionEditItem?.category || null,
+        cost: versionEditItem?.cost,
+        is_hardware: true,
+        slot_weight: newWeight,
+        checked_state: versionEditItem?.checked_state || versionEditItem?.checked || [false, false, false],
+        created_at: new Date().toISOString(),
+      };
+
+      updateActiveSheetData((prev) => {
+        const existingCustom = prev.custom_magic_items || [];
+        const updatedCustom = [...existingCustom, newVaultItem];
+
+        const prevVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];
+        const prevAlpha: AbilitySlot[] = Array.isArray(prev.spell_slots) ? prev.spell_slots : [];
+        const prevBeta: AbilitySlot[] = Array.isArray(prev.stance_beta_slots) ? prev.stance_beta_slots : [];
+
+        // Update character_vault
+        let updatedVault = [...prevVault];
+        const vIdx = updatedVault.findIndex(
+          (v) => parseAbilityVersion(v.name).baseName.toLowerCase() === baseName.toLowerCase()
+        );
+        if (vIdx >= 0) {
+          updatedVault[vIdx] = { ...updatedVault[vIdx], ...newVaultItem };
+        } else {
+          updatedVault.push(newVaultItem);
+        }
+
+        // Update Stance Alpha if equipped
+        let updatedAlpha = [...prevAlpha];
+        const aIdx = updatedAlpha.findIndex(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+        );
+        if (aIdx >= 0) {
+          updatedAlpha[aIdx] = {
+            ...updatedAlpha[aIdx],
+            name: versionedName,
+            base_name: baseName,
+            version: version,
+            action: (createAction.toUpperCase() as any) || 'P',
+            usage: createUsage,
+            effect: createEffect.trim(),
+          };
+        }
+
+        // Update Stance Beta if equipped
+        let updatedBeta = [...prevBeta];
+        const bIdx = updatedBeta.findIndex(
+          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
+        );
+        if (bIdx >= 0) {
+          updatedBeta[bIdx] = {
+            ...updatedBeta[bIdx],
+            name: versionedName,
+            base_name: baseName,
+            version: version,
+            action: (createAction.toUpperCase() as any) || 'P',
+            usage: createUsage,
+            effect: createEffect.trim(),
+          };
+        }
+
+        // Self-heal: If this function had previously leaked into character_power_codex, clean it up
+        const prevPowerCodex: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
+        const cleanedPowerCodex = prevPowerCodex.filter(
+          (p) => parseAbilityVersion(p.name).baseName.toLowerCase() !== baseName.toLowerCase()
+        );
+
+        return {
+          ...prev,
+          custom_magic_items: updatedCustom,
+          character_vault: updatedVault,
+          spell_slots: updatedAlpha,
+          stance_beta_slots: updatedBeta,
+          character_power_codex: cleanedPowerCodex,
+        };
+      });
+
+      recordApExpenditure(1, 'Magic Items', `Upgraded Function: ${versionedName} (+1 AP)`, 1, 'Manage Functions');
+
+      saveActiveCharacter();
+
+      setCreateName('');
+      setCreateAction('P');
+      setCreateUsage('1-Enc');
+      setCreateEffect('');
+      setVersionEditItem(null);
+      setIsVersionEditMode(false);
+      setActiveRightTab('VAULT');
     }
-
-    saveActiveCharacter();
-
-    setCreateName('');
-    setCreateAction('A');
-    setCreateUsage('1');
-    setCreateEffect('');
-    setIsVersionEditMode(false);
-    setActiveRightTab('CATALOG');
   };
 
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
@@ -2648,6 +2753,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                         </span>
                                                       )}
                                                     </div>
+
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleLaunchVersionEditor(item)}
+                                                      className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 transition-colors shrink-0 cursor-pointer"
+                                                      title={`Version edit ${entry.baseName}`}
+                                                    >
+                                                      <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+
                                                     {inCurrentStance ? (
                                                       <button
                                                         type="button"
@@ -2782,6 +2897,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             </span>
                                           )}
                                         </div>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => handleLaunchVersionEditor(item)}
+                                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 transition-colors shrink-0 cursor-pointer"
+                                          title={`Version edit ${entry.baseName}`}
+                                        >
+                                          <Edit2 className="w-3.5 h-3.5" />
+                                        </button>
+
                                         {inCurrentStance ? (
                                           <button
                                             type="button"
@@ -3546,9 +3671,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               type="button"
                               onClick={() => {
                                 setIsVersionEditMode(false);
-                                setActiveRightTab('CATALOG');
+                                setActiveRightTab(type === 'powers' ? 'CATALOG' : 'VAULT');
                               }}
-                              className="text-slate-400 hover:text-rose-300 text-xs font-bold transition-colors"
+                              className="text-slate-400 hover:text-rose-300 text-xs font-bold transition-colors cursor-pointer"
                               title="Cancel Version Editing"
                             >
                               Cancel
@@ -3631,10 +3756,20 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
                           <button
                             type="submit"
-                            className="w-full mt-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md"
+                            disabled={availableAp < 1}
+                            className={`w-full mt-1 py-2 font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md ${
+                              availableAp < 1
+                                ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+                                : 'bg-amber-600 hover:bg-amber-500 text-white cursor-pointer shadow-amber-900/30'
+                            }`}
+                            title={availableAp < 1 ? 'Insufficient AP (1 AP required to create/upgrade a version)' : `Save & Learn ${createName} (Expends 1 AP)`}
                           >
                             <Sparkles className="w-4 h-4" />
-                            <span>Save & Learn {createName} to Vault</span>
+                            <span>
+                              {availableAp < 1
+                                ? `Insufficient AP (${availableAp} AP / 1 AP required)`
+                                : `Save & Learn ${createName} (1 AP)`}
+                            </span>
                           </button>
                         </form>
                       </div>
@@ -3741,26 +3876,38 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 {/* 1. Name Column with Version Badge */}
                 <div className={`${type === 'spells' ? 'w-64 sm:w-72 md:w-88' : 'w-56 sm:w-64 md:w-80'} shrink-0 flex flex-col gap-0.5`}>
                   {type === 'spells' ? (
-                    <FunctionNameArea
-                      item={slot}
-                      notes={
-                        slot.notes ||
-                        (functionsCatalog.find(
-                          (c) =>
-                            c.name.toLowerCase() === baseName.toLowerCase() ||
-                            c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
-                        ) as any)?.notes ||
-                        (fullCatalog.find(
-                          (c) =>
-                            c.name.toLowerCase() === baseName.toLowerCase() ||
-                            c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
-                        ) as any)?.notes
-                      }
-                      functionsCatalog={functionsCatalog}
-                      modsCatalog={modsCatalog}
-                      activeCharacter={activeCharacter}
-                      isGsUnlocked={isGsUnlocked}
-                    />
+                    <>
+                      <FunctionNameArea
+                        item={slot}
+                        notes={
+                          slot.notes ||
+                          (functionsCatalog.find(
+                            (c) =>
+                              c.name.toLowerCase() === baseName.toLowerCase() ||
+                              c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
+                          ) as any)?.notes ||
+                          (fullCatalog.find(
+                            (c) =>
+                              c.name.toLowerCase() === baseName.toLowerCase() ||
+                              c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
+                          ) as any)?.notes
+                        }
+                        functionsCatalog={functionsCatalog}
+                        modsCatalog={modsCatalog}
+                        activeCharacter={activeCharacter}
+                        isGsUnlocked={isGsUnlocked}
+                        hideInlineVersionBadge
+                      />
+                      {(() => {
+                        const slotVer = Math.max(version, (slot as any).version || 1);
+                        return slotVer > 1 ? (
+                          <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
+                            <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
+                            v{slotVer}
+                          </span>
+                        ) : null;
+                      })()}
+                    </>
                   ) : (
                     <>
                       <div className="flex items-center gap-1.5 flex-wrap">

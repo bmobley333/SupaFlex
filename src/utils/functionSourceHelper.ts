@@ -452,16 +452,21 @@ export const resolveFunctionItemInfo = <T extends { name?: string; effect?: stri
     }
   }
 
-  const parsed = parseAbilityVersion(cleanFnName);
+  const parsedItem = parseAbilityVersion(item.name || '');
+  const parsedClean = parseAbilityVersion(cleanFnName);
+  const itemVer = typeof (item as any).version === 'number' ? (item as any).version : 1;
+  const resolvedVersion = Math.max(parsedItem.version, parsedClean.version, itemVer, 1);
+
+  const baseFnName = parsedClean.baseName || parsedItem.baseName || cleanFnName;
   const gearIcon = getGearIcon(gearName, activeCharacter, item);
 
   return {
     item,
-    cleanFnName: parsed.baseName || cleanFnName,
+    cleanFnName: baseFnName,
     gearName,
     gearIcon,
-    version: parsed.version || 1,
-    baseName: parsed.baseName || cleanFnName,
+    version: resolvedVersion,
+    baseName: baseFnName,
     compositeName,
   };
 };

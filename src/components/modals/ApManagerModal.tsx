@@ -12,6 +12,8 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import {
   ApLogEntry,
+  AbilitySlot,
+  parseAbilityVersion,
   calculateLifetimeAp,
   calculateLiveSheetSpentAp,
   calculateAvailableAp,
@@ -177,9 +179,36 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
     const skilledShields = armory.filter((s: any) => s && s.sk);
     const shieldsNet = skilledShields.reduce((sum: number, s: any) => sum + (typeof s.ap_cost === 'number' && s.ap_cost > 0 ? s.ap_cost : 1), 0);
 
-    const powerSlots = (sheetData.power_slots || []).filter(Boolean);
-    const powersNet = calculatePowersKnownApCost(powerSlots.length);
-    const powersBracket = getPowersSoftTaxBracket(powerSlots.length);
+    const rawPowerSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots.filter(Boolean) : [];
+    const rawCodexPowers: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex.filter(Boolean) : [];
+
+    const allPowersMap = new Map<string, AbilitySlot>();
+    for (const p of [...rawPowerSlots, ...rawCodexPowers]) {
+      if (!p || !p.name) continue;
+      const { baseName, version } = parseAbilityVersion(p.name);
+      const key = baseName.toLowerCase();
+      const existing = allPowersMap.get(key);
+      if (!existing) {
+        allPowersMap.set(key, { ...p, base_name: baseName, version });
+      } else {
+        const existingVersion = existing.version || parseAbilityVersion(existing.name).version;
+        if (version > existingVersion) {
+          allPowersMap.set(key, { ...p, base_name: baseName, version });
+        }
+      }
+    }
+    const allKnownPowers = Array.from(allPowersMap.values());
+    const powersBaseNet = calculatePowersKnownApCost(allKnownPowers.length);
+    const powersBracket = getPowersSoftTaxBracket(allKnownPowers.length);
+
+    let powerUpgradesNet = 0;
+    for (const p of allKnownPowers) {
+      const ver = typeof p.version === 'number' ? p.version : parseAbilityVersion(p.name).version;
+      if (ver > 1) {
+        powerUpgradesNet += (ver - 1);
+      }
+    }
+    const powersNet = powersBaseNet + powerUpgradesNet;
 
     const loadoutExpansions = typeof sheetData.loadout_expansions_purchased === 'number'
       ? sheetData.loadout_expansions_purchased
@@ -189,7 +218,33 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
           ? Math.max(0, sheetData.unlocked_magic_slots - 3)
           : 0));
     const totalLoadoutCapacity = calculateTotalLoadoutCapacity(loadoutExpansions);
-    const magicItemsNet = calculateSpentApOnLoadoutExpansions(loadoutExpansions);
+    const loadoutApSpent = calculateSpentApOnLoadoutExpansions(loadoutExpansions);
+
+    // Calculate function version upgrades across equipped stance slots and vault
+    const allFunctions = [
+      ...(Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : []),
+      ...(Array.isArray(sheetData.stance_beta_slots) ? sheetData.stance_beta_slots : []),
+      ...(Array.isArray(sheetData.character_vault) ? sheetData.character_vault : []),
+    ];
+    const functionVersionMap = new Map<string, number>();
+    for (const f of allFunctions) {
+      if (!f || !f.name) continue;
+      const { baseName, version } = parseAbilityVersion(f.name);
+      const itemVer = typeof f.version === 'number' ? f.version : version;
+      const maxVer = Math.max(version, itemVer, 1);
+      const key = baseName.toLowerCase();
+      const existing = functionVersionMap.get(key) || 1;
+      if (maxVer > existing) {
+        functionVersionMap.set(key, maxVer);
+      }
+    }
+    let functionVersionsNet = 0;
+    for (const ver of functionVersionMap.values()) {
+      if (ver > 1) {
+        functionVersionsNet += (ver - 1);
+      }
+    }
+    const magicItemsNet = loadoutApSpent + functionVersionsNet;
 
     const sumLogCategory = (cat: string) =>
       apLog.reduce((sum, e) => (e && e.category === cat ? sum + (e.cost || 0) : sum), 0);
@@ -260,6 +315,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
           { label: `Base Loadout Slots`, value: `4 Slots (0 AP Baseline)` },
           { label: `Purchased Expansions`, value: `${loadoutExpansions} Expansions (+${loadoutExpansions * 2} Slots)` },
           { label: `Total Active Loadout Capacity`, value: `${totalLoadoutCapacity} Slots (Uncapped)` },
+          ...(functionVersionsNet > 0 ? [{ label: `Function Version Upgrades`, value: `+${functionVersionsNet} AP` }] : []),
           { label: `Total AP Invested`, value: `${magicItemsNet} AP` },
         ],
       },
@@ -270,7 +326,8 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: powersNet,
         badgeColor: 'text-amber-400 bg-amber-950/60 border-amber-500/30',
         details: [
-          { label: `Learned Powers (${powerSlots.length} Powers)`, value: `${powersNet} AP Total` },
+          { label: `Learned Powers (${allKnownPowers.length} Powers)`, value: `${powersBaseNet} AP Base` },
+          ...(powerUpgradesNet > 0 ? [{ label: `Power Version Upgrades`, value: `+${powerUpgradesNet} AP` }] : []),
           { label: `Soft Tax Bracket`, value: `${powersBracket.tierName} (+${powersBracket.costPerNextPower} AP/power)` },
         ],
       },

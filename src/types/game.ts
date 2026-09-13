@@ -836,6 +836,13 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
       else powersNet += 4;
     }
   }
+  // Add +1 AP per power version beyond v1
+  for (const p of allKnownPowers) {
+    const ver = typeof p.version === 'number' ? p.version : parseAbilityVersion(p.name).version;
+    if (ver > 1) {
+      powersNet += (ver - 1);
+    }
+  }
 
   const expansions = typeof sheetData.loadout_expansions_purchased === 'number'
     ? sheetData.loadout_expansions_purchased
@@ -845,7 +852,32 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
         ? Math.max(0, sheetData.unlocked_magic_slots - 3)
         : 0));
   const loadoutNet = (expansions * (expansions + 1)) / 2;
-  const magicItemsNet = loadoutNet;
+
+  // Add +1 AP per function version beyond v1 across equipped slots and vault
+  const allFunctions = [
+    ...(Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : []),
+    ...(Array.isArray(sheetData.stance_beta_slots) ? sheetData.stance_beta_slots : []),
+    ...(Array.isArray(sheetData.character_vault) ? sheetData.character_vault : []),
+  ];
+  const functionVersionMap = new Map<string, number>();
+  for (const f of allFunctions) {
+    if (!f || !f.name) continue;
+    const { baseName, version } = parseAbilityVersion(f.name);
+    const itemVer = typeof f.version === 'number' ? f.version : version;
+    const maxVer = Math.max(version, itemVer, 1);
+    const key = baseName.toLowerCase();
+    const existing = functionVersionMap.get(key) || 1;
+    if (maxVer > existing) {
+      functionVersionMap.set(key, maxVer);
+    }
+  }
+  let functionVersionsNet = 0;
+  for (const ver of functionVersionMap.values()) {
+    if (ver > 1) {
+      functionVersionsNet += (ver - 1);
+    }
+  }
+  const magicItemsNet = loadoutNet + functionVersionsNet;
 
   const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
   const skilledShields = armory.filter((s: any) => s && s.sk);

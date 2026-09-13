@@ -1,8 +1,8 @@
 // src/components/common/FunctionNameArea.tsx
 import React, { useMemo } from 'react';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { ItemNotesPopover } from './ItemNotesPopover';
-import { AbilitySlot, MagicItem, FunctionItem, ModItem, Character } from '../../types/game';
+import { AbilitySlot, MagicItem, FunctionItem, ModItem, Character, parseAbilityVersion } from '../../types/game';
 import {
   resolveFunctionItemInfo,
   cleanSourceText,
@@ -22,6 +22,7 @@ interface FunctionNameAreaProps {
   activeCharacter?: Character | null;
   isGsUnlocked?: boolean;
   starButton?: React.ReactNode;
+  hideInlineVersionBadge?: boolean;
   className?: string;
 }
 
@@ -37,16 +38,21 @@ export const FunctionNameArea: React.FC<FunctionNameAreaProps> = ({
   activeCharacter,
   isGsUnlocked = false,
   starButton,
+  hideInlineVersionBadge = false,
   className = '',
 }) => {
   // Resolve gear & function info if not explicitly passed
   const resolvedInfo = useMemo(() => {
     if (propFnName !== undefined) {
+      const parsedItem = parseAbilityVersion(item?.name || '');
+      const parsedProp = parseAbilityVersion(propFnName);
+      const itemVer = typeof item?.version === 'number' ? item.version : 1;
+      const finalVer = Math.max(propVersion ?? 1, parsedItem.version, parsedProp.version, itemVer, 1);
       return {
         gearName: propGearName ?? null,
         gearIcon: propGearIcon ?? '🎒',
-        cleanFnName: propFnName,
-        version: propVersion ?? 1,
+        cleanFnName: parsedProp.baseName || propFnName,
+        version: finalVer,
       };
     }
     return resolveFunctionItemInfo(item, functionsCatalog, modsCatalog, activeCharacter);
@@ -133,9 +139,8 @@ export const FunctionNameArea: React.FC<FunctionNameAreaProps> = ({
       )}
 
       {/* 4. Version Badge (if v2+) */}
-      {version > 1 && (
-        <span className="inline-flex items-center gap-0.5 align-middle ml-1.5 text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 shrink-0">
-          <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
+      {!hideInlineVersionBadge && version > 1 && (
+        <span className="inline-flex items-center align-middle ml-1.5 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 shrink-0">
           v{version}
         </span>
       )}
