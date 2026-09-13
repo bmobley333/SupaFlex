@@ -138,17 +138,75 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
   // Editor Tab State (for Right Pane)
   const [activeEditorTab, setActiveEditorTab] = useState<EditorTab>(initialTab || 'link');
 
-  const bio: CharacterBio = activeCharacter?.sheet_data?.bio || {};
+  // Character Dossier Local State & 3-Tier Auto-Save Engine
+  const [localBio, setLocalBio] = useState<CharacterBio>(activeCharacter?.sheet_data?.bio || {});
+  const bio = localBio;
+  const [bioSaveStatus, setBioSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const bioDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Synchronize local bio state when modal opens or active character switches
+  useEffect(() => {
+    if (isOpen && activeCharacter?.sheet_data?.bio) {
+      setLocalBio(activeCharacter.sheet_data.bio);
+    }
+  }, [isOpen, activeCharacter?.id]);
+
+  // Clean up debounce timer and flush pending save on unmount or modal close
+  useEffect(() => {
+    return () => {
+      if (bioDebounceTimerRef.current) {
+        clearTimeout(bioDebounceTimerRef.current);
+        bioDebounceTimerRef.current = null;
+        saveActiveCharacter();
+      }
+    };
+  }, [saveActiveCharacter]);
+
+  const triggerDebouncedBioSave = () => {
+    setBioSaveStatus('saving');
+    if (bioDebounceTimerRef.current) {
+      clearTimeout(bioDebounceTimerRef.current);
+    }
+    bioDebounceTimerRef.current = setTimeout(async () => {
+      bioDebounceTimerRef.current = null;
+      try {
+        await saveActiveCharacter();
+        setBioSaveStatus('saved');
+        setTimeout(() => setBioSaveStatus('idle'), 2500);
+      } catch (err) {
+        console.error('[UniversalLinksModal] Auto-save bio failed:', err);
+        setBioSaveStatus('idle');
+      }
+    }, 1200);
+  };
 
   const handleBioChange = (field: keyof CharacterBio, value: string) => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      bio: {
-        ...(prev.bio || {}),
-        [field]: value,
-      },
-    }));
-    saveActiveCharacter();
+    setLocalBio((prev) => {
+      const next = { ...prev, [field]: value };
+      // Keep Zustand in-memory sheet_data synchronized immediately without triggering network
+      updateActiveSheetData((sheet) => ({
+        ...sheet,
+        bio: next,
+      }));
+      return next;
+    });
+    triggerDebouncedBioSave();
+  };
+
+  const handleBioBlur = async () => {
+    if (bioDebounceTimerRef.current) {
+      clearTimeout(bioDebounceTimerRef.current);
+      bioDebounceTimerRef.current = null;
+      setBioSaveStatus('saving');
+      try {
+        await saveActiveCharacter();
+        setBioSaveStatus('saved');
+        setTimeout(() => setBioSaveStatus('idle'), 2500);
+      } catch (err) {
+        console.error('[UniversalLinksModal] Blur auto-save bio failed:', err);
+        setBioSaveStatus('idle');
+      }
+    }
   };
 
   // Sync initial scope & tab on modal open or role change
@@ -1645,8 +1703,22 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                           Character Dossier ({activeCharacter?.name || 'Active Hero'})
                         </h4>
                       </div>
-                      <span className="text-[11px] text-slate-400 font-mono">
-                        Auto-saved to Character Sheet
+                      <span className="text-[11px] font-mono flex items-center gap-1.5 transition-colors">
+                        {bioSaveStatus === 'saving' ? (
+                          <span className="text-amber-400 flex items-center gap-1.5 font-bold">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                            Saving...
+                          </span>
+                        ) : bioSaveStatus === 'saved' ? (
+                          <span className="text-emerald-400 flex items-center gap-1.5 font-bold">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                            All changes saved
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">
+                            Auto-saved to Character Sheet
+                          </span>
+                        )}
                       </span>
                     </div>
 
@@ -1656,9 +1728,10 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                         <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">Hgt (Height)</span>
                         <input
                           type="text"
-                          value={bio.height || ''}
+                          value={localBio.height || ''}
                           placeholder="e.g. 5'11&quot;"
                           onChange={(e) => handleBioChange('height', e.target.value)}
+                          onBlur={handleBioBlur}
                           className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
                         />
                       </div>
@@ -1667,9 +1740,10 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                         <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">Wgt (Weight)</span>
                         <input
                           type="text"
-                          value={bio.weight || ''}
+                          value={localBio.weight || ''}
                           placeholder="e.g. 175 lbs"
                           onChange={(e) => handleBioChange('weight', e.target.value)}
+                          onBlur={handleBioBlur}
                           className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
                         />
                       </div>
@@ -1678,9 +1752,10 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                         <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">Age</span>
                         <input
                           type="text"
-                          value={bio.age || ''}
+                          value={localBio.age || ''}
                           placeholder="e.g. 28"
                           onChange={(e) => handleBioChange('age', e.target.value)}
+                          onBlur={handleBioBlur}
                           className="bg-slate-900 text-slate-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500"
                         />
                       </div>
@@ -1696,9 +1771,10 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                         </div>
                         <input
                           type="text"
-                          value={bio.appearance || ''}
+                          value={localBio.appearance || ''}
                           placeholder="Physical description..."
                           onChange={(e) => handleBioChange('appearance', e.target.value)}
+                          onBlur={handleBioBlur}
                           className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full"
                         />
                       </div>
@@ -1711,9 +1787,10 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                         </div>
                         <input
                           type="text"
-                          value={bio.positive_trait || ''}
+                          value={localBio.positive_trait || ''}
                           placeholder="Key strength or virtue..."
                           onChange={(e) => handleBioChange('positive_trait', e.target.value)}
+                          onBlur={handleBioBlur}
                           className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-emerald-500 w-full"
                         />
                       </div>
@@ -1726,9 +1803,10 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                         </div>
                         <input
                           type="text"
-                          value={bio.negative_trait || ''}
+                          value={localBio.negative_trait || ''}
                           placeholder="Character flaw or weakness..."
                           onChange={(e) => handleBioChange('negative_trait', e.target.value)}
+                          onBlur={handleBioBlur}
                           className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-rose-500 w-full"
                         />
                       </div>
@@ -1741,9 +1819,10 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                         </div>
                         <input
                           type="text"
-                          value={bio.flair || ''}
+                          value={localBio.flair || ''}
                           placeholder="Unique signature quirk or habit..."
                           onChange={(e) => handleBioChange('flair', e.target.value)}
+                          onBlur={handleBioBlur}
                           className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-purple-500 w-full"
                         />
                       </div>
@@ -1756,9 +1835,10 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                         </div>
                         <textarea
                           rows={2}
-                          value={bio.adventuring_goal || ''}
+                          value={localBio.adventuring_goal || ''}
                           placeholder="Long-term quest or narrative drive..."
                           onChange={(e) => handleBioChange('adventuring_goal', e.target.value)}
+                          onBlur={handleBioBlur}
                           className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-amber-500 w-full resize-none"
                         />
                       </div>
@@ -1771,9 +1851,10 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                         </div>
                         <textarea
                           rows={3}
-                          value={bio.notes || ''}
+                          value={localBio.notes || ''}
                           placeholder="General campaign notes, secrets, contacts, and personal logs..."
                           onChange={(e) => handleBioChange('notes', e.target.value)}
+                          onBlur={handleBioBlur}
                           className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-800 outline-none focus:border-cyan-500 w-full resize-none"
                         />
                       </div>
