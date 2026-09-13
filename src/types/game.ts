@@ -862,7 +862,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
   const functionVersionMap = new Map<string, number>();
   for (const f of allFunctions) {
     if (!f || !f.name) continue;
-    const { baseName, version } = parseAbilityVersion(f.name);
+    const { baseName, version } = parseAbilityVersion(f.base_name || f.name);
     const itemVer = typeof f.version === 'number' ? f.version : version;
     const maxVer = Math.max(version, itemVer, 1);
     const key = baseName.toLowerCase();
@@ -904,7 +904,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     Capstones: capstonesNet,
     Focus: focusNet,
     'GM Bonus': gmBonus,
-    'Loadout Slots': loadoutNet,
+    'Loadout Slots': loadoutNet + functionVersionsNet,
     'Magic Items': magicItemsNet,
     Powers: powersNet,
     Shields: shieldsNet,
@@ -920,6 +920,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     capstonesNet +
     focusNet +
     loadoutNet +
+    functionVersionsNet +
     powersNet +
     shieldsNet +
     skillsNet +

@@ -421,10 +421,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   };
 
   const handleLaunchVersionEditor = (item: Power | MagicItem | AbilitySlot) => {
-    const cleaned = cleanName(item.name);
-    const { baseName, version } = parseAbilityVersion(cleaned);
-    const itemVer = typeof (item as any).version === 'number' ? (item as any).version : version;
-    const currentVer = Math.max(version, itemVer, 1);
+    const rawTarget = (item as any).base_name || item.name;
+    const cleaned = cleanName(rawTarget);
+    const { baseName } = parseAbilityVersion(cleaned);
+    const nameVer = parseAbilityVersion(cleanName(item.name)).version;
+    const itemVer = typeof (item as any).version === 'number' ? (item as any).version : nameVer;
+    const currentVer = Math.max(nameVer, itemVer, 1);
     const nextVer = currentVer + 1;
     const nextVersionedName = `${baseName} v${nextVer}`;
 
@@ -1255,20 +1257,28 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
         // Update character_vault
         let updatedVault = [...prevVault];
-        const vIdx = updatedVault.findIndex(
-          (v) => parseAbilityVersion(v.name).baseName.toLowerCase() === baseName.toLowerCase()
-        );
+        const vIdx = updatedVault.findIndex((v) => {
+          const vBase = parseAbilityVersion(v.base_name || v.name).baseName.toLowerCase();
+          const targetBase = baseName.toLowerCase();
+          return vBase === targetBase || cleanName(v.name).toLowerCase() === targetBase;
+        });
         if (vIdx >= 0) {
-          updatedVault[vIdx] = { ...updatedVault[vIdx], ...newVaultItem };
+          updatedVault[vIdx] = {
+            ...updatedVault[vIdx],
+            ...newVaultItem,
+            id: updatedVault[vIdx].id || newVaultItem.id,
+          };
         } else {
           updatedVault.push(newVaultItem);
         }
 
         // Update Stance Alpha if equipped
         let updatedAlpha = [...prevAlpha];
-        const aIdx = updatedAlpha.findIndex(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-        );
+        const aIdx = updatedAlpha.findIndex((s) => {
+          const sBase = parseAbilityVersion((s as any).base_name || s.name).baseName.toLowerCase();
+          const targetBase = baseName.toLowerCase();
+          return sBase === targetBase || cleanName(s.name).toLowerCase() === targetBase;
+        });
         if (aIdx >= 0) {
           updatedAlpha[aIdx] = {
             ...updatedAlpha[aIdx],
@@ -1283,9 +1293,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
         // Update Stance Beta if equipped
         let updatedBeta = [...prevBeta];
-        const bIdx = updatedBeta.findIndex(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-        );
+        const bIdx = updatedBeta.findIndex((s) => {
+          const sBase = parseAbilityVersion((s as any).base_name || s.name).baseName.toLowerCase();
+          const targetBase = baseName.toLowerCase();
+          return sBase === targetBase || cleanName(s.name).toLowerCase() === targetBase;
+        });
         if (bIdx >= 0) {
           updatedBeta[bIdx] = {
             ...updatedBeta[bIdx],
@@ -1300,9 +1312,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
         // Self-heal: If this function had previously leaked into character_power_codex, clean it up
         const prevPowerCodex: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
-        const cleanedPowerCodex = prevPowerCodex.filter(
-          (p) => parseAbilityVersion(p.name).baseName.toLowerCase() !== baseName.toLowerCase()
-        );
+        const cleanedPowerCodex = prevPowerCodex.filter((p) => {
+          const pBase = parseAbilityVersion(p.base_name || p.name).baseName.toLowerCase();
+          return pBase !== baseName.toLowerCase();
+        });
 
         return {
           ...prev,

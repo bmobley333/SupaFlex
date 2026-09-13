@@ -32,6 +32,7 @@ export const cleanBelongsToName = (raw?: string | null): string => {
     .replace(TABLE_PREFIX_REGEX, '')
     .replace(/\{[^}]+\}/g, '')
     .replace(/\(x\d+\)/gi, '')
+    .replace(/\s+v\d+$/i, '')
     .trim()
     .toLowerCase();
 };
@@ -484,18 +485,23 @@ export const reconcileCharacterVaultWithGear = (
   }
 
   // Helper to check if any item is a gear-linked function (Exotics or Artifacts)
-  const isHardwareFunction = (item: { name?: string; is_hardware?: boolean; source_gear?: string | null; source?: string | null; category?: string | null }): boolean => {
-    const cName = cleanBelongsToName(item.name);
+  const isHardwareFunction = (item: { name?: string; base_name?: string; is_hardware?: boolean; source_gear?: string | null; source?: string | null; category?: string | null }): boolean => {
+    const rawName = item.base_name || item.name || '';
+    const cName = cleanBelongsToName(rawName);
     const sName = cName.replace(/\(mso\)/gi, '').trim();
 
     // 1. If it directly matches an expected function granted by simple_gear, it IS a gear function
     if (expectedNamesSet.has(cName) || expectedNamesSet.has(sName)) return true;
 
     // 2. Explicit gear link
-    if (item.source_gear && item.source_gear.trim() !== '' && item.source_gear.trim().toLowerCase() !== 'mso') return true;
+    if (item.source_gear && item.source_gear.trim() !== '' && item.source_gear.trim().toLowerCase() !== 'mso') {
+      const gClean = cleanBelongsToName(item.source_gear);
+      const gStripped = gClean.replace(/\(mso\)/gi, '').trim();
+      if (expectedNamesSet.has(gClean) || expectedNamesSet.has(gStripped)) return true;
+    }
 
-    // 3. Explicit hardware flag
-    if (item.is_hardware === true) return true;
+    // 3. Explicit hardware flag WITH gear link or catalog match
+    if (item.is_hardware === true && (item.source_gear || catalogFunctionNames.has(cName) || catalogFunctionNames.has(sName) || catalogHostNames.has(cName) || catalogHostNames.has(sName))) return true;
 
     // 4. Matches known catalog functions or host equipment names
     if (catalogFunctionNames.has(cName) || catalogFunctionNames.has(sName)) return true;
@@ -527,18 +533,28 @@ export const reconcileCharacterVaultWithGear = (
 
   for (const vItem of currentVault) {
     if (!vItem || !vItem.name) continue;
-    const cName = cleanBelongsToName(vItem.name);
+    const rawName = vItem.base_name || vItem.name;
+    const cName = cleanBelongsToName(rawName);
     const sName = cName.replace(/\(mso\)/gi, '').trim();
+    const gName = vItem.source_gear ? cleanBelongsToName(vItem.source_gear) : '';
+    const gStripped = gName ? gName.replace(/\(mso\)/gi, '').trim() : '';
 
     if (isHardwareFunction(vItem)) {
       // Must be currently valid based on simple_gear ownership
-      const isExpected = expectedNamesSet.has(cName) || expectedNamesSet.has(sName);
+      const isExpected =
+        expectedNamesSet.has(cName) ||
+        expectedNamesSet.has(sName) ||
+        (gName && (expectedNamesSet.has(gName) || expectedNamesSet.has(gStripped)));
+
       if (isExpected) {
         // De-duplicate if multiple identical items exist in vault
         if (!vaultProcessedNames.has(cName) && !vaultProcessedNames.has(sName)) {
           vaultProcessedNames.add(cName);
           vaultProcessedNames.add(sName);
-          const template = expectedFnMap.get(cName) || expectedFnMap.get(sName);
+          const template =
+            expectedFnMap.get(cName) ||
+            expectedFnMap.get(sName) ||
+            (gName ? expectedFnMap.get(gName) || expectedFnMap.get(gStripped) : undefined);
           const isStaleMso = vItem.source_gear?.trim().toLowerCase() === 'mso';
           if (isStaleMso) metadataHealed = true;
           const validGear = !isStaleMso && vItem.source_gear ? vItem.source_gear : template?.source_gear;
@@ -589,13 +605,23 @@ export const reconcileCharacterVaultWithGear = (
   const finalSlotsA: AbilitySlot[] = [];
   for (const slot of currentSlotsA) {
     if (!slot || !slot.name) continue;
-    const cName = cleanBelongsToName(slot.name);
+    const rawName = (slot as any).base_name || slot.name;
+    const cName = cleanBelongsToName(rawName);
     const sName = cName.replace(/\(mso\)/gi, '').trim();
+    const gName = (slot as any).source_gear ? cleanBelongsToName((slot as any).source_gear) : '';
+    const gStripped = gName ? gName.replace(/\(mso\)/gi, '').trim() : '';
 
     if (isHardwareFunction(slot as any)) {
-      const isExpected = expectedNamesSet.has(cName) || expectedNamesSet.has(sName);
+      const isExpected =
+        expectedNamesSet.has(cName) ||
+        expectedNamesSet.has(sName) ||
+        (gName && (expectedNamesSet.has(gName) || expectedNamesSet.has(gStripped)));
+
       if (isExpected) {
-        const template = expectedFnMap.get(cName) || expectedFnMap.get(sName);
+        const template =
+          expectedFnMap.get(cName) ||
+          expectedFnMap.get(sName) ||
+          (gName ? expectedFnMap.get(gName) || expectedFnMap.get(gStripped) : undefined);
         const isStaleMso = (slot as any).source_gear?.trim().toLowerCase() === 'mso';
         if (isStaleMso) metadataHealed = true;
         const validGear = !isStaleMso && (slot as any).source_gear ? (slot as any).source_gear : template?.source_gear;
@@ -629,13 +655,23 @@ export const reconcileCharacterVaultWithGear = (
   const finalSlotsB: AbilitySlot[] = [];
   for (const slot of currentSlotsB) {
     if (!slot || !slot.name) continue;
-    const cName = cleanBelongsToName(slot.name);
+    const rawName = (slot as any).base_name || slot.name;
+    const cName = cleanBelongsToName(rawName);
     const sName = cName.replace(/\(mso\)/gi, '').trim();
+    const gName = (slot as any).source_gear ? cleanBelongsToName((slot as any).source_gear) : '';
+    const gStripped = gName ? gName.replace(/\(mso\)/gi, '').trim() : '';
 
     if (isHardwareFunction(slot as any)) {
-      const isExpected = expectedNamesSet.has(cName) || expectedNamesSet.has(sName);
+      const isExpected =
+        expectedNamesSet.has(cName) ||
+        expectedNamesSet.has(sName) ||
+        (gName && (expectedNamesSet.has(gName) || expectedNamesSet.has(gStripped)));
+
       if (isExpected) {
-        const template = expectedFnMap.get(cName) || expectedFnMap.get(sName);
+        const template =
+          expectedFnMap.get(cName) ||
+          expectedFnMap.get(sName) ||
+          (gName ? expectedFnMap.get(gName) || expectedFnMap.get(gStripped) : undefined);
         const isStaleMso = (slot as any).source_gear?.trim().toLowerCase() === 'mso';
         if (isStaleMso) metadataHealed = true;
         const validGear = !isStaleMso && (slot as any).source_gear ? (slot as any).source_gear : template?.source_gear;
