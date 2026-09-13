@@ -386,13 +386,24 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
     loadSessionMembers(partyId, false);
 
-    // 1. Postgres CDC channel for new players / heartbeats / leaves
+    // 1. Postgres CDC channel strictly for new players and leaves (ignoring heartbeat UPDATEs)
     const cdcChannel = supabase.channel(`gm_roster_cdc_${partyId}`);
     cdcChannel
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: 'party_session_members',
+        },
+        () => {
+          loadSessionMembers(partyId, true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
           schema: 'public',
           table: 'party_session_members',
         },
@@ -428,11 +439,30 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     };
   }, [selectedParty?.id]);
 
+  const areGmMembersEqual = (a: PartySessionMember[], b: PartySessionMember[]) => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      const ma = a[i];
+      const mb = b[i];
+      if (ma.id !== mb.id || ma.character_id !== mb.character_id) return false;
+      if (ma.player_first_name !== mb.player_first_name || ma.player_email !== mb.player_email) return false;
+      const vitA = ma.character?.sheet_data?.current_vitality ?? ma.character?.hp;
+      const vitB = mb.character?.sheet_data?.current_vitality ?? mb.character?.hp;
+      if (vitA !== vitB) return false;
+      const maxVitA = ma.character?.sheet_data?.vitality_max;
+      const maxVitB = mb.character?.sheet_data?.vitality_max;
+      if (maxVitA !== maxVitB) return false;
+      if (ma.character?.name !== mb.character?.name) return false;
+    }
+    return true;
+  };
+
   const loadSessionMembers = async (partyId: string, isSilent = false) => {
     if (!isSilent) setIsMembersLoading(true);
     try {
       const data = await gameApi.getPartySessionMembers(partyId);
-      setSessionMembers((data || []) as PartySessionMember[]);
+      const newMembers = (data || []) as PartySessionMember[];
+      setSessionMembers((prev) => (areGmMembersEqual(prev, newMembers) ? prev : newMembers));
     } catch (e) {
       console.error('Failed to load party members:', e);
     } finally {

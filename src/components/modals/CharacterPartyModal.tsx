@@ -82,12 +82,17 @@ export const CharacterPartyModal: React.FC<CharacterPartyModalProps> = ({
 
     loadPartyDetails();
 
-    // Subscribe to realtime roster updates
+    // Subscribe to realtime roster updates (strictly INSERT and DELETE to ignore heartbeat UPDATEs)
     const cdcChannel = supabase.channel(`modal_roster_cdc_${activePartyId}`);
     cdcChannel
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'party_session_members' },
+        { event: 'INSERT', schema: 'public', table: 'party_session_members' },
+        () => loadPartyDetails()
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'party_session_members' },
         () => loadPartyDetails()
       )
       .subscribe();

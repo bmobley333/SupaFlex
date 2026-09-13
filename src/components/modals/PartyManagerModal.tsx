@@ -42,13 +42,25 @@ export const PartyManagerModal: React.FC<PartyManagerModalProps> = ({
 
     loadSessionMembers(selectedParty.id);
 
-    // Real-time subscription to party_session_members changes
+    // Real-time subscription to party_session_members changes (strictly INSERT and DELETE)
     const channel = supabase
       .channel(`party:${selectedParty.id}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: 'party_session_members',
+          filter: `party_id=eq.${selectedParty.id}`,
+        },
+        () => {
+          loadSessionMembers(selectedParty.id);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
           schema: 'public',
           table: 'party_session_members',
           filter: `party_id=eq.${selectedParty.id}`,

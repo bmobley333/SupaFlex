@@ -1210,14 +1210,11 @@ export const gameApi = {
       }
     }
 
-    // 60-second staleness threshold for tabletop playtest session members (heartbeats fire every 15s)
-    const activeCutoff = new Date(Date.now() - 60 * 1000).toISOString();
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetPartyUuid);
 
     let query = supabase
       .from('party_session_members')
       .select('*, character:characters(*)')
-      .gte('last_seen', activeCutoff)
       .order('character_id', { ascending: true });
 
     if (isUuid) {
@@ -1227,15 +1224,6 @@ export const gameApi = {
     }
 
     const { data, error } = await query;
-
-    // Asynchronously prune dead ghost sessions from DB (> 90s inactive)
-    const deadCutoff = new Date(Date.now() - 90 * 1000).toISOString();
-    Promise.resolve(
-      supabase
-        .from('party_session_members')
-        .delete()
-        .lt('last_seen', deadCutoff)
-    ).catch(() => {});
 
     if (error) {
       console.error('[gameApi] Error fetching party session members:', error);

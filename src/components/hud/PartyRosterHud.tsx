@@ -26,6 +26,25 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
   const [displayRoomCode, setDisplayRoomCode] = useState<string | null>(null);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
 
+  // Fast shallow comparison to prevent unnecessary DOM re-renders and card flickering
+  const areMembersEqual = (a: PartySessionMember[], b: PartySessionMember[]) => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      const ma = a[i];
+      const mb = b[i];
+      if (ma.id !== mb.id || ma.character_id !== mb.character_id) return false;
+      if (ma.player_first_name !== mb.player_first_name || ma.player_email !== mb.player_email) return false;
+      const vitA = ma.character?.sheet_data?.current_vitality ?? ma.character?.hp;
+      const vitB = mb.character?.sheet_data?.current_vitality ?? mb.character?.hp;
+      if (vitA !== vitB) return false;
+      const maxVitA = ma.character?.sheet_data?.vitality_max;
+      const maxVitB = mb.character?.sheet_data?.vitality_max;
+      if (maxVitA !== maxVitB) return false;
+      if (ma.character?.name !== mb.character?.name) return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
     if (!activePartyId) {
       setSessionMembers([]);
@@ -50,17 +69,19 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
 
         // Verify active session with Supabase and self-heal missing DB session rows
         if (tabSessionId && activeCharacter?.id) {
-          const isRegisteredInDb = members.some((m) => m.tab_session_id === tabSessionId);
+          const isRegisteredInDb = members.some(
+            (m) => m.tab_session_id === tabSessionId || Number(m.character_id) === Number(activeCharacter.id)
+          );
           if (!isRegisteredInDb) {
             const playerEmail = useCharacterStore.getState().playerEmail;
             await gameApi.ensureTabPartySession(activePartyId, tabSessionId, activeCharacter.id, playerEmail);
             const updatedMembers = await gameApi.getPartySessionMembers(activePartyId);
-            setSessionMembers(updatedMembers);
+            setSessionMembers((prev) => (areMembersEqual(prev, updatedMembers) ? prev : updatedMembers));
             return;
           }
         }
 
-        setSessionMembers(members);
+        setSessionMembers((prev) => (areMembersEqual(prev, members) ? prev : members));
       } catch (err) {
         console.error('[PartyRosterHud] Failed to load session members:', err);
       }
@@ -68,13 +89,24 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
 
     loadMembers();
 
-    // Subscribe to Realtime CDC & Broadcast for active party members
+    // Subscribe to Realtime CDC strictly for INSERT and DELETE to ignore heartbeat UPDATE thrash
     const cdcChannel = supabase.channel(`roster_cdc_${activePartyId}`);
     cdcChannel
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: 'party_session_members',
+        },
+        () => {
+          loadMembers();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
           schema: 'public',
           table: 'party_session_members',
         },
