@@ -35,7 +35,9 @@ import {
   isModFreeForHost,
   isBelongsToMatch,
   splitBelongsToTargets,
+  getFunctionsForGearItem,
 } from '../../utils/gearFunctionSync';
+import { ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
 
 export type EquipmentCategoryTab = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields' | 'kits';
 export type InventoryCategoryTab = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields';
@@ -131,6 +133,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
   const [gearCatalogFeedback, setGearCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [expandedCatalogModId, setExpandedCatalogModId] = useState<string | null>(null);
+  const [expandedCatalogFunctionId, setExpandedCatalogFunctionId] = useState<string | null>(null);
 
   // Character Currency & Wallet Funds
   const gold = sheet?.gold ?? 0;
@@ -216,10 +219,12 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         const trimmed = p.trim();
         if (!trimmed) return false;
         const withoutFree = trimmed.replace(/\{free\}/gi, '').trim();
-        if (!withoutFree.includes(':')) {
+        const colonIdx = withoutFree.indexOf(':');
+        if (colonIdx === -1) {
           return cleanBelongsToName(withoutFree) === itemNameClean;
         }
-        const [prefix, target] = withoutFree.split(':', 2);
+        const prefix = withoutFree.slice(0, colonIdx);
+        const target = withoutFree.slice(colonIdx + 1);
         const prefLower = prefix.trim().toLowerCase();
         const targetClean = cleanBelongsToName(target);
 
@@ -1631,6 +1636,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                           category: catalogItem.category,
                         })
                       );
+                      const inherentFunctions = getFunctionsForGearItem(catalogItem.name, functionsCatalog);
+                      const isFunctionsExpanded = expandedCatalogFunctionId === itemKey;
 
                       return (
                         <div
@@ -1668,6 +1675,17 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                   >
                                     <span>🔌 {availableMods.length} {availableMods.length === 1 ? 'Mod' : 'Mods'}</span>
                                     <ChevronDown className={`w-2.5 h-2.5 transition-transform ${isModsExpanded ? 'rotate-180' : ''}`} />
+                                  </button>
+                                )}
+                                {inherentFunctions.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedCatalogFunctionId(isFunctionsExpanded ? null : itemKey)}
+                                    className="px-1.5 py-0.5 rounded bg-amber-950/80 hover:bg-amber-900/90 text-amber-300 border border-amber-500/30 text-[9px] font-mono flex items-center gap-1 cursor-pointer transition shrink-0"
+                                    title="Toggle inherent functions"
+                                  >
+                                    <span>⚡ {inherentFunctions.length} {inherentFunctions.length === 1 ? 'Function' : 'Functions'}</span>
+                                    <ChevronDown className={`w-2.5 h-2.5 transition-transform ${isFunctionsExpanded ? 'rotate-180' : ''}`} />
                                   </button>
                                 )}
                               </div>
@@ -1741,6 +1759,51 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                         {isModFree ? 'Inherent to gear' : 'Install once owned'}
                                       </span>
                                     </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Inline Expandable Inherent Functions Preview */}
+                          {isFunctionsExpanded && inherentFunctions.length > 0 && (
+                            <div className="mt-1 pt-2 border-t border-slate-800/80 flex flex-col gap-1.5 bg-slate-950/60 p-2 rounded-lg">
+                              <span className="text-[10px] font-mono font-bold text-amber-300 uppercase tracking-wide flex items-center gap-1">
+                                <span>⚡ Inherent Functions ({inherentFunctions.length}):</span>
+                              </span>
+                              {inherentFunctions.map((fn: FunctionItem) => {
+                                const actionBadgeColor = ACTION_BADGE_COLORS[fn.action || ''] || 'bg-slate-800 text-slate-300 border-slate-700';
+                                return (
+                                  <div
+                                    key={fn.id || fn.name}
+                                    className="flex flex-col gap-1 bg-slate-900/80 p-2 rounded border border-slate-800/80 text-xs"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-black border uppercase shrink-0 ${actionBadgeColor}`}>
+                                          {fn.action || 'P'}
+                                        </span>
+                                        {fn.usage && (
+                                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-slate-800/80 text-slate-300 border border-slate-700 shrink-0">
+                                            {fn.usage}
+                                          </span>
+                                        )}
+                                        <span className="text-amber-200 font-bold text-xs truncate">
+                                          {fn.name}
+                                        </span>
+                                        <ItemNotesPopover notes={fn.notes || ''} itemName={fn.name} inline />
+                                      </div>
+                                      {fn.tier && (
+                                        <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                                          {fn.tier}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {fn.effect && (
+                                      <p className="text-[11px] text-slate-300 leading-snug pl-1 border-l border-amber-500/30 mt-0.5">
+                                        {fn.effect}
+                                      </p>
+                                    )}
                                   </div>
                                 );
                               })}

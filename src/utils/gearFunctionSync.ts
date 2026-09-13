@@ -13,15 +13,23 @@ import {
 } from '../types/game';
 
 /**
+ * Authoritative regular expression matching canonical table and category prefixes in belongs_to strings.
+ * Explicitly guards against stripping legitimate product item names containing colons
+ * (e.g. "Missile: Assassin (Proximity Ambush)", "Grenade: HE", "Tip: Exploding").
+ */
+export const TABLE_PREFIX_REGEX =
+  /^(Mod|Armor|Weapons?|Supplies|Equipment|Gear|Exotics?|Relics?|Shields?|Kits?|Paths?):\s*/i;
+
+/**
  * Normalizes belongs_to strings by stripping table/category prefixes
  * such as "Mod:", "Armor:", "Weapon:", "Supplies:", "Equipment:", "Exotic:", "Relic:",
- * and tag markers like {Free}, (x2), etc.
+ * and tag markers like {Free}, (x2), etc. Preserves item names containing colons.
  */
 export const cleanBelongsToName = (raw?: string | null): string => {
   if (!raw) return '';
   return raw
     .trim()
-    .replace(/^[A-Za-z0-9_\-\s]+:\s*/, '')
+    .replace(TABLE_PREFIX_REGEX, '')
     .replace(/\{[^}]+\}/g, '')
     .replace(/\(x\d+\)/gi, '')
     .trim()
@@ -38,6 +46,10 @@ export const splitBelongsToTargets = (belongsToStr?: string | null): string[] =>
   const trimmed = belongsToStr.trim();
   if (trimmed.includes(';')) {
     return trimmed.split(';').map((p) => p.trim()).filter(Boolean);
+  }
+  // Lookahead for table prefix (e.g. "Mod:", "Armor:", "Supplies:", etc.)
+  if (/,\s*(?=(?:Mod|Armor|Weapons?|Supplies|Equipment|Gear|Exotics?|Relics?|Shields?|Kits?|Paths?):\s*)/i.test(trimmed)) {
+    return trimmed.split(/,\s*(?=(?:Mod|Armor|Weapons?|Supplies|Equipment|Gear|Exotics?|Relics?|Shields?|Kits?|Paths?):\s*)/i).map((p) => p.trim()).filter(Boolean);
   }
   if (/,\s*(?=[A-Za-z]+:)/.test(trimmed)) {
     return trimmed.split(/,\s*(?=[A-Za-z]+:)/).map((p) => p.trim()).filter(Boolean);
@@ -119,10 +131,12 @@ export const isModCompatibleWithItem = (
     const trimmed = p.trim();
     if (!trimmed) return false;
     const withoutFree = trimmed.replace(/\{free\}/gi, '').trim();
-    if (!withoutFree.includes(':')) {
+    const colonIdx = withoutFree.indexOf(':');
+    if (colonIdx === -1) {
       return cleanBelongsToName(withoutFree) === itemNameClean;
     }
-    const [prefix, target] = withoutFree.split(':', 2);
+    const prefix = withoutFree.slice(0, colonIdx);
+    const target = withoutFree.slice(colonIdx + 1);
     const prefLower = prefix.trim().toLowerCase();
     const targetClean = cleanBelongsToName(target);
 
