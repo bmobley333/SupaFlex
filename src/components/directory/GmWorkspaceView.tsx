@@ -375,7 +375,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     return () => {
       if (heartbeatInterval) clearInterval(heartbeatInterval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      gameApi.closePartyRoom(selectedParty.id).catch(console.error);
+      // NOTE: Do not close party room on component unmount; closures occur strictly on beforeunload or explicit GM action
     };
   }, [selectedParty?.id]);
 

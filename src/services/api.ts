@@ -1319,7 +1319,7 @@ export const gameApi = {
   },
 
   // --- ROOM CODES & DISCONNECT HEARTBEAT ---
-  async checkoutPartyRoomCodeForGmEmail(gmEmail: string): Promise<{ party: any; roomCode: string }> {
+  async checkoutPartyRoomCodeForGmEmail(gmEmail: string, forceNew: boolean = false): Promise<{ party: any; roomCode: string }> {
     try {
       const cleanEmail = gmEmail.trim().toLowerCase();
       const existing = await this.getPartiesForUser(cleanEmail);
@@ -1329,7 +1329,7 @@ export const gameApi = {
         party = await this.createParty('MetaScape Campaign', cleanEmail, []);
       }
 
-      return await this.checkoutPartyRoomCode(party.id);
+      return await this.checkoutPartyRoomCode(party.id, forceNew);
     } catch (err: any) {
       console.warn('[gameApi] Room code checkout fallback:', err?.message || err);
       const fallbackCode = generateRoomId();
@@ -1340,8 +1340,23 @@ export const gameApi = {
     }
   },
 
-  async checkoutPartyRoomCode(partyId: string): Promise<{ party: any; roomCode: string }> {
+  async checkoutPartyRoomCode(partyId: string, forceNew: boolean = false): Promise<{ party: any; roomCode: string }> {
     await this.cleanupStaleRooms();
+
+    // If not explicitly forced to generate a new code, check if party already has an active, valid room code
+    if (!forceNew) {
+      const { data: existingParty } = await supabase
+        .from('parties')
+        .select('*')
+        .eq('id', partyId)
+        .maybeSingle();
+
+      const existingCode = existingParty?.room_code || existingParty?.party_code;
+      if (existingParty?.is_active && existingCode && existingCode.trim().length === 4) {
+        await this.sendGmHeartbeat(partyId);
+        return { party: existingParty, roomCode: existingCode.trim().toUpperCase() };
+      }
+    }
 
     let attempts = 0;
     let candidate = '';

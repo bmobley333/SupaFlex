@@ -97,7 +97,7 @@ export default function App() {
   const handleResetRoomCode = async () => {
     try {
       const email = useCharacterStore.getState().playerEmail || 'gm-guest@supaflex.internal';
-      const result = await gameApi.checkoutPartyRoomCodeForGmEmail(email);
+      const result = await gameApi.checkoutPartyRoomCodeForGmEmail(email, true);
       setActiveRoomCode(result.roomCode);
     } catch (e) {
       console.error('Failed to reset room code:', e);
@@ -208,8 +208,8 @@ export default function App() {
         const currentEmail = useCharacterStore.getState().playerEmail;
         await handleAuthUser(userEmail, userName);
 
-        // If user changed or fresh login event occurred, fetch data with active loading state
-        if (currentEmail !== userEmail || event === 'SIGNED_IN') {
+        // Only trigger full data fetch if user was unauthenticated or identity changed
+        if (!currentEmail || currentEmail !== userEmail) {
           fetchInitialData({ silent: false });
         }
 
