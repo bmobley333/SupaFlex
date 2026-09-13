@@ -525,14 +525,14 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-[2500px] mx-auto font-outfit">
+    <div className="max-w-[2500px] mx-auto font-outfit lg:h-full lg:min-h-0 lg:flex lg:flex-col">
       {/* Main Grid: Party Roster (Left) vs Monster Roster (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Party Roster + LINKS (4 cols) */}
-        <div className="lg:col-span-4 space-y-6 flex flex-col">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:flex-1 lg:min-h-0">
+        {/* Left Column: Party Roster (4 cols) */}
+        <div className="lg:col-span-4 flex flex-col lg:h-full lg:min-h-0">
           {/* Card 1: Party Roster */}
-          <div className="bg-gradient-to-b from-sky-950/30 via-slate-900/90 to-slate-950/95 p-4 rounded-2xl border border-slate-800 border-t-2 border-t-sky-500/90 space-y-4 shadow-lg shadow-sky-950/20 flex flex-col">
-            <div className="flex items-center justify-between border-b border-sky-500/20 pb-3">
+          <div className="bg-gradient-to-b from-sky-950/30 via-slate-900/90 to-slate-950/95 p-4 rounded-2xl border border-slate-800 border-t-2 border-t-sky-500/90 space-y-4 shadow-lg shadow-sky-950/20 flex flex-col lg:h-full lg:min-h-0">
+            <div className="flex items-center justify-between border-b border-sky-500/20 pb-3 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-xl bg-sky-950/90 border border-sky-500/50 text-sky-300 flex items-center justify-center shadow-[0_0_12px_rgba(14,165,233,0.25)]">
                   <span className="text-base leading-none">👥</span>
@@ -620,7 +620,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="space-y-2.5 overflow-y-auto max-h-[720px] pr-1">
+              <div className="space-y-2.5 overflow-y-auto lg:flex-1 lg:min-h-0 pr-1">
                 {orderedSessionMembers.map((member, idx) => (
                   <PartyCharacterCard
                     key={member.id || member.character_id || `pm_${idx}`}
@@ -644,9 +644,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         </div>
 
         {/* Right Column: Adventure Encounters Suite (8 cols) */}
-        <div className="lg:col-span-8 bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 p-4 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 space-y-4 shadow-lg shadow-amber-950/20 flex flex-col font-outfit">
-          {/* Section Header: Adventure Encounters */}
-          <div className="flex items-center gap-2.5 border-b border-amber-500/20 pb-2.5">
+        <div className="lg:col-span-8 bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 p-4 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 shadow-lg shadow-amber-950/20 flex flex-col lg:h-full lg:min-h-0 font-outfit">
+          {/* Scrollable Content Container for Right Pane */}
+          <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto pr-1.5 space-y-4">
+            {/* Section Header: Adventure Encounters */}
+            <div className="flex items-center gap-2.5 border-b border-amber-500/20 pb-2.5">
             <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)]">
               <span className="text-base leading-none">🗺️</span>
             </div>
@@ -900,6 +902,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
             )}
           </div>
         </div>
+      </div>
       </div>
 
       {/* Master Monster Manager Modal */}

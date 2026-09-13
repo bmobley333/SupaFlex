@@ -114,13 +114,14 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
       )}
 
       {/* 
-        Single-line layout for wide viewports, wrapped two-line layout for narrow sidebar panels.
-        Blueprint 2.C Syntax: ([Player's First Name]) [Character's First Name] [Race] [Class], [Current Vit]/[Max Vit] [Vit %]% [vitality graphic]
+        S-Tier Party Member Card Layout:
+        - Row 1 Right Segment: Vitality readout, pulse dot, and equal-length (w-16 / 64px) health bar are rigidly anchored to Row 1, right-aligned.
+        - Left Segment: Player Name, Character Name, Race, and Class. If horizontal space is constrained, secondary info wraps onto Row 2 without affecting Row 1 Vitality.
       */}
-      <div className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-1 leading-snug ${isDraggable ? 'pl-2' : ''}`}>
-        {/* Left Segment: Player Name, Character Name, Race, Class, and Trailing Comma */}
-        <div className="flex items-center gap-1.5 flex-wrap font-bold text-slate-100">
-          <span className="font-mono text-amber-300 font-extrabold text-xs">
+      <div className={`flex items-start justify-between gap-2 leading-snug ${isDraggable ? 'pl-2' : ''}`}>
+        {/* Left Segment: Player Name, Character Name, Race, Class */}
+        <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap font-bold text-slate-100">
+          <span className="font-mono text-amber-300 font-extrabold text-xs shrink-0">
             ({playerFirstName})
           </span>
           <span className="text-slate-100 font-extrabold text-xs">
@@ -134,14 +135,14 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
           </span>
         </div>
 
-        {/* Right Segment: Vitality readout, bar graphic, & touch nudge arrows */}
-        <div className="flex items-center gap-2 shrink-0">
-          <span className={`font-mono text-[11px] font-extrabold px-1.5 py-0.5 rounded border ${badgeColorClass}`}>
+        {/* Right Segment: Vitality readout, fixed-width bar graphic, & touch nudge arrows - Rigorously Row 1, Right Aligned */}
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto pt-0.5">
+          <span className={`font-mono text-[11px] font-extrabold min-w-[64px] text-center px-1.5 py-0.5 rounded border shrink-0 ${badgeColorClass}`}>
             {currentVit}/{maxVit} {pct}%
           </span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className={`w-2 h-2 rounded-full ${dotColorClass} animate-pulse shrink-0`} />
-            <div className="w-12 h-2 bg-slate-900 rounded-full border border-slate-800 overflow-hidden shrink-0">
+            <div className="w-16 h-2 bg-slate-900 rounded-full border border-slate-800 overflow-hidden shrink-0" title={`${pct}% Vitality remaining`}>
               <div
                 className={`h-full transition-all duration-500 rounded-full ${barColorClass}`}
                 style={{ width: `${pct}%` }}
@@ -151,7 +152,7 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
 
           {/* Micro Nudge Arrows (Visible on card hover/focus) */}
           {(onNudgeUp || onNudgeDown) && (
-            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity ml-1">
+            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity ml-1 shrink-0">
               {onNudgeUp && (
                 <button
                   type="button"
