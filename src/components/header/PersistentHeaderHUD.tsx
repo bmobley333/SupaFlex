@@ -42,6 +42,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
     updateActiveSheetData,
     saveActiveCharacter,
     spendMeta,
+    spendLuckForBolt,
     resetSparks,
     addCharacterLink,
     updateCharacterLink,
@@ -383,9 +384,15 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
                 : 'bg-amber-950/40 border-amber-500/30 text-amber-200'
             }`}
           >
-            <span className="text-amber-400 font-bold flex items-center gap-1">
-              <span>⚡</span> Spark Charges:
-            </span>
+            {isSparked || charges >= 5 ? (
+              <span className="text-amber-300 font-black flex items-center gap-0.5 tracking-tight text-[11px] uppercase drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]">
+                1-⚡BOLT
+              </span>
+            ) : (
+              <span className="text-amber-400 font-bold flex items-center gap-1">
+                Sparks:
+              </span>
+            )}
 
             {/* Inline Direct Manipulation Clickable Lightning Bolt Icons */}
             <div className="flex items-center gap-1">
@@ -400,7 +407,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
                         ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]'
                         : 'text-slate-700 hover:text-amber-500/60'
                     }`}
-                    title={`Toggle Charge ${idx + 1}`}
+                    title={`Toggle Spark ${idx + 1}`}
                   >
                     <Zap className="w-3.5 h-3.5" />
                   </button>
@@ -424,7 +431,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
                   ? 'text-amber-400/80 hover:text-amber-200 hover:scale-110 cursor-pointer'
                   : 'text-slate-600 opacity-40 cursor-not-allowed'
               }`}
-              title="Reset all spark charges to 0"
+              title="Reset all sparks to 0"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -433,7 +440,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
             <button
               onClick={() => toggleDrawer('spark')}
               className="p-0.5 text-amber-400 hover:text-amber-200 transition-colors ml-0.5"
-              title="Click to configure Spark Engine & Spend Spark"
+              title="Click to configure Bolt Engine & Spend Bolt"
             >
               {activeDrawer === 'spark' ? (
                 <ChevronUp className="w-3.5 h-3.5" />
@@ -449,12 +456,12 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
               <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5">
                 <span className="font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1 text-[11px]">
                   <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  Spark Engine (Charges: {charges}/5)
+                  Bolt Engine (Sparks: {charges}/5)
                 </span>
                 <div className="flex items-center gap-2">
                   {isSparked && (
                     <span className="px-1.5 py-0.5 bg-amber-500 text-slate-950 font-outfit font-black text-[10px] rounded shadow animate-bounce">
-                      ⚡ SPARKED!
+                      1-⚡ BOLT READY!
                     </span>
                   )}
                   <button
@@ -467,7 +474,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
                 </div>
               </div>
 
-              {/* 5-Peg Charge Meter */}
+              {/* 5-Peg Spark Meter */}
               <div className="flex items-center justify-between gap-1.5 bg-slate-950/80 px-2 py-1.5 rounded-lg border border-slate-800">
                 {Array.from({ length: 5 }).map((_, idx) => (
                   <button
@@ -478,24 +485,46 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
                         ? 'bg-amber-500 text-slate-950 border border-amber-400 shadow-sm shadow-amber-500/40 opacity-100'
                         : 'bg-slate-950 text-slate-600 border border-slate-800 hover:border-amber-500/50 opacity-40'
                     }`}
-                    title={`Toggle Charge peg ${idx + 1}`}
+                    title={`Toggle Spark peg ${idx + 1}`}
                   >
-                    ⚡
+                    {idx + 1}
                   </button>
                 ))}
               </div>
 
               <div className="flex items-center justify-between gap-2 pt-0.5">
-                <button
-                  onClick={() => {
-                    spendMeta();
-                    saveActiveCharacter();
-                  }}
-                  disabled={charges < 5}
-                  className="px-2.5 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-semibold rounded border border-indigo-500/30 transition-all disabled:opacity-40"
-                >
-                  Spend Spark (1-⚡)
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      spendMeta();
+                      saveActiveCharacter();
+                    }}
+                    disabled={charges < 5}
+                    className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold rounded border border-amber-500/30 transition-all disabled:opacity-40"
+                  >
+                    Spend Bolt (1-⚡)
+                  </button>
+
+                  {charges < 5 && (
+                    <button
+                      onClick={() => {
+                        const res = spendLuckForBolt();
+                        if (res.success) {
+                          saveActiveCharacter();
+                        }
+                      }}
+                      disabled={luck <= 0 || Boolean(sheet?.luck_bolt_sub_used_in_encounter)}
+                      className="px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold rounded border border-emerald-500/30 transition-all disabled:opacity-40 flex items-center gap-1"
+                      title={
+                        sheet?.luck_bolt_sub_used_in_encounter
+                          ? "Luck-for-Bolt already used this encounter (1/Enc)"
+                          : "Spend 1 Luck chit in place of a Bolt (1 per encounter)"
+                      }
+                    >
+                      <span>🍀</span> Spend Luck
+                    </button>
+                  )}
+                </div>
 
                 <button
                   onClick={() => {
@@ -503,7 +532,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
                     saveActiveCharacter();
                   }}
                   className="px-2 py-1 bg-slate-950 hover:bg-slate-800 text-slate-400 text-xs font-mono rounded border border-slate-800"
-                  title="Reset Charges to 0"
+                  title="Reset Sparks to 0"
                 >
                   Reset
                 </button>

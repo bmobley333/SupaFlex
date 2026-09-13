@@ -646,10 +646,10 @@ export interface CharacterSheetData {
   attribute_dice: Record<AttributeKey, DieRating>;
   focus_die_current?: DieRating;
   focus_die_max?: DieRating;
-  charges?: number; // 0-5 Charges (5 Charges = 1 Spark)
-  is_sparked?: boolean; // True when charges === 5 (Fully Sparked: +1 to ALL rolls)
-  sparks?: number; // Deprecated alias for charges
-  is_charged?: boolean; // Deprecated alias for is_sparked
+  charges?: number; // 0-5 Sparks (5 Sparks = 1 Bolt)
+  is_sparked?: boolean; // True when charges === 5 (Holding a Full Bolt: +1 to ALL rolls)
+  sparks?: number; // Synonymous with charges
+  is_charged?: boolean; // Alias for is_sparked
   luck?: number; // 0-5 Luck Pool (Default 3, Max 5)
   max_luck?: number; // Default 5
   gold?: number;
@@ -678,6 +678,7 @@ export interface CharacterSheetData {
   power_slots: AbilitySlot[];
   character_power_codex?: AbilitySlot[]; // Unlimited storage codex for un-readied powers (matching character_vault)
   tactical_pivot_used_in_encounter?: boolean; // True if player has executed their 1-per-encounter Tactical Pivot
+  luck_bolt_sub_used_in_encounter?: boolean; // True if player has spent a Luck chit in place of a Bolt this encounter (1/Enc limit)
   spell_slots: AbilitySlot[]; // Active Stance (Stance Alpha by default)
   stance_beta_slots?: AbilitySlot[]; // Standby Stance (Stance Beta)
   active_stance?: 'alpha' | 'beta'; // Active Stance mode (defaults to 'alpha')

@@ -86,12 +86,15 @@ interface CharacterStore {
   deleteCharacter: (id: number) => Promise<void>;
   addCharge: (amount?: number) => void;
   spendSpark: () => void;
+  spendBolt: () => void;
+  spendLuckForBolt: () => { success: boolean; error?: string };
   resetCharges: () => void;
   addSpark: (amount?: number) => void;
   spendMeta: () => void;
   resetSparks: () => void;
+  resetEncounterSubstitutions: () => void;
   toggleReadyPower: (powerName: string) => { success: boolean; error?: string };
-  executeTacticalPivot: (unreadyPowerName: string, readyPowerName: string) => { success: boolean; error?: string };
+  executeTacticalPivot: (unreadyPowerName: string, readyPowerName: string, useLuckInsteadOfBolt?: boolean) => { success: boolean; error?: string };
   resetTacticalPivot: () => void;
   switchFunctionStance: (targetStance: 'alpha' | 'beta') => { success: boolean; cost: 'M' | 'AM'; error?: string };
   executeHardwareShunt: (vaultItemName: string, outgoingSlotNames: string[]) => { success: boolean; error?: string };
@@ -544,7 +547,39 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
   addSpark: (amount = 1) => get().addCharge(amount),
   spendMeta: () => get().spendSpark(),
+  spendBolt: () => get().spendSpark(),
   resetSparks: () => get().resetCharges(),
+
+  spendLuckForBolt: () => {
+    const active = get().activeCharacter;
+    if (!active || !active.sheet_data) return { success: false, error: 'No active character.' };
+
+    const sheet = active.sheet_data;
+    if (sheet.luck_bolt_sub_used_in_encounter) {
+      return { success: false, error: 'Luck-for-Bolt substitution has already been used in this encounter (1 per encounter).' };
+    }
+
+    const currentLuck = sheet.luck ?? 0;
+    if (currentLuck <= 0) {
+      return { success: false, error: 'Insufficient Luck chits to substitute for a Bolt.' };
+    }
+
+    const nextLuck = Math.max(0, currentLuck - 1);
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      luck: nextLuck,
+      luck_bolt_sub_used_in_encounter: true,
+    }));
+
+    return { success: true };
+  },
+
+  resetEncounterSubstitutions: () => {
+    get().updateActiveSheetData((prev) => ({
+      ...prev,
+      luck_bolt_sub_used_in_encounter: false,
+    }));
+  },
 
   toggleReadyPower: (powerName: string) => {
     const active = get().activeCharacter;
@@ -609,7 +644,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     return { success: false, error: `Power "${powerName}" not found in active sheet or Vault.` };
   },
 
-  executeTacticalPivot: (unreadyPowerName: string, readyPowerName: string) => {
+  executeTacticalPivot: (unreadyPowerName: string, readyPowerName: string, useLuckInsteadOfBolt: boolean = false) => {
     const active = get().activeCharacter;
     if (!active || !active.sheet_data) return { success: false, error: 'No active character.' };
 
@@ -620,8 +655,21 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
     const charges = typeof sheet.charges === 'number' ? sheet.charges : (sheet.sparks || 0);
     const isSparked = sheet.is_sparked || charges >= 5;
+
+    let spendingLuck = false;
     if (!isSparked && charges < 5) {
-      return { success: false, error: 'Tactical Pivot requires 1 Full Spark (5 Charges).' };
+      if (useLuckInsteadOfBolt) {
+        if (sheet.luck_bolt_sub_used_in_encounter) {
+          return { success: false, error: 'Luck-for-Bolt substitution has already been used in this encounter (1 per encounter).' };
+        }
+        const currentLuck = sheet.luck ?? 0;
+        if (currentLuck <= 0) {
+          return { success: false, error: 'Insufficient Luck chits to substitute for a Bolt.' };
+        }
+        spendingLuck = true;
+      } else {
+        return { success: false, error: 'Tactical Pivot requires 1 Bolt (5 Sparks) or 1 Luck chit (1/Enc).' };
+      }
     }
 
     const powerSlots = Array.isArray(sheet.power_slots) ? [...sheet.power_slots] : [];
@@ -647,7 +695,9 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const newCodex = [...codex];
     newCodex[codexIdx] = { ...outgoingPower, is_readied: false, ready: getPowerReadyCategory(outgoingPower) };
 
-    const remainingCharges = Math.max(0, charges - 5);
+    const remainingCharges = spendingLuck ? charges : Math.max(0, charges - 5);
+    const currentLuck = sheet.luck ?? 0;
+    const newLuck = spendingLuck ? Math.max(0, currentLuck - 1) : currentLuck;
 
     get().updateActiveSheetData((prev) => ({
       ...prev,
@@ -657,6 +707,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       sparks: remainingCharges,
       is_sparked: remainingCharges >= 5,
       is_charged: remainingCharges >= 5,
+      luck: newLuck,
+      luck_bolt_sub_used_in_encounter: spendingLuck ? true : prev.luck_bolt_sub_used_in_encounter,
       tactical_pivot_used_in_encounter: true,
     }));
 
@@ -667,6 +719,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     get().updateActiveSheetData((prev) => ({
       ...prev,
       tactical_pivot_used_in_encounter: false,
+      luck_bolt_sub_used_in_encounter: false,
     }));
   },
 

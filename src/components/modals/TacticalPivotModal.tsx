@@ -27,6 +27,10 @@ export const TacticalPivotModal: React.FC<TacticalPivotModalProps> = ({ isOpen, 
   const charges = typeof sheet.charges === 'number' ? sheet.charges : (sheet.sparks || 0);
   const isSparked = sheet.is_sparked || charges >= 5;
   const pivotUsed = Boolean(sheet.tactical_pivot_used_in_encounter);
+  const luck = sheet.luck ?? 0;
+  const luckSubUsed = Boolean(sheet.luck_bolt_sub_used_in_encounter);
+  const canUseLuck = !isSparked && luck > 0 && !luckSubUsed;
+  const [useLuckForPivot, setUseLuckForPivot] = useState(false);
 
   const powerSlots: AbilitySlot[] = Array.isArray(sheet.power_slots) ? sheet.power_slots : [];
   const codex: AbilitySlot[] = Array.isArray(sheet.character_power_codex) ? sheet.character_power_codex : [];
@@ -61,7 +65,8 @@ export const TacticalPivotModal: React.FC<TacticalPivotModalProps> = ({ isOpen, 
       return;
     }
 
-    const result = executeTacticalPivot(selectedCodexPower.name, selectedReadySlot.name);
+    const spendingLuck = !isSparked && useLuckForPivot && canUseLuck;
+    const result = executeTacticalPivot(selectedCodexPower.name, selectedReadySlot.name, spendingLuck);
     if (!result.success) {
       setErrorMessage(result.error || 'Failed to execute Tactical Pivot.');
       return;
@@ -73,6 +78,7 @@ export const TacticalPivotModal: React.FC<TacticalPivotModalProps> = ({ isOpen, 
       setSelectedCodexPower(null);
       setSelectedReadySlot(null);
       setSuccessMessage(null);
+      setUseLuckForPivot(false);
     }, 1200);
   };
 
@@ -90,7 +96,7 @@ export const TacticalPivotModal: React.FC<TacticalPivotModalProps> = ({ isOpen, 
                 ⚡ Tactical Pivot (In-Combat Swap)
               </h3>
               <p className="text-xs text-slate-400">
-                Spend <strong className="text-amber-300">1 Free Action (F) + 1 Spark (5⚡)</strong> to swap 1 un-readied Vault power into your active Ready Matrix.
+                Spend <strong className="text-amber-300">1 Free Action (F) + 1 Bolt (1-⚡)</strong> [or 1 Luck 🍀 (1/Enc)] to swap 1 un-readied Vault power into your active Ready Matrix.
               </p>
             </div>
           </div>
@@ -105,13 +111,19 @@ export const TacticalPivotModal: React.FC<TacticalPivotModalProps> = ({ isOpen, 
         {/* Status Strip */}
         <div className="px-4 py-2.5 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between text-xs font-mono flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 font-bold">Spark Status:</span>
+            <span className="text-slate-400 font-bold">Bolt Status:</span>
             <span className={`px-2 py-0.5 rounded-full font-bold border ${
               isSparked
                 ? 'bg-amber-950/80 border-amber-500/40 text-amber-300'
-                : 'bg-rose-950/60 border-rose-500/30 text-rose-300'
+                : canUseLuck && useLuckForPivot
+                  ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                  : 'bg-rose-950/60 border-rose-500/30 text-rose-300'
             }`}>
-              ⚡ {charges}/5 Charges {isSparked ? '(Spark Ready!)' : '(Insufficient Charges)'}
+              {isSparked
+                ? '⚡ 1-⚡BOLT Ready (5/5 Sparks)'
+                : canUseLuck && useLuckForPivot
+                  ? '🍀 Luck Substitution Active'
+                  : `${charges}/5 Sparks (Building Bolt...)`}
             </span>
           </div>
 
@@ -248,8 +260,8 @@ export const TacticalPivotModal: React.FC<TacticalPivotModalProps> = ({ isOpen, 
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between gap-3 shrink-0">
-          <div className="text-xs text-slate-400 flex items-center gap-2">
+        <div className="px-4 py-3 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between gap-3 shrink-0 flex-wrap">
+          <div className="text-xs text-slate-400 flex items-center gap-3 flex-wrap">
             {selectedCodexPower && selectedReadySlot ? (
               <span className="font-mono text-slate-200 flex items-center gap-1.5">
                 <span className="text-amber-300">{selectedCodexPower.name}</span>
@@ -259,20 +271,38 @@ export const TacticalPivotModal: React.FC<TacticalPivotModalProps> = ({ isOpen, 
             ) : (
               <span>Select both a Codex power and an active slot above to proceed.</span>
             )}
+
+            {canUseLuck && (
+              <label className="flex items-center gap-1.5 text-xs text-emerald-300 font-semibold cursor-pointer bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-500/40 hover:bg-emerald-950/90 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={useLuckForPivot}
+                  onChange={(e) => setUseLuckForPivot(e.target.checked)}
+                  className="rounded border-slate-700 text-emerald-500 focus:ring-0 cursor-pointer"
+                />
+                <span>🍀 Use Luck for Bolt (1/Enc)</span>
+              </label>
+            )}
           </div>
 
           <button
             type="button"
-            disabled={!selectedCodexPower || !selectedReadySlot || !isSparked || pivotUsed}
+            disabled={!selectedCodexPower || !selectedReadySlot || pivotUsed || (!isSparked && (!canUseLuck || !useLuckForPivot))}
             onClick={handleExecute}
             className={`px-4 py-2 rounded-xl text-xs font-outfit font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg cursor-pointer ${
-              !selectedCodexPower || !selectedReadySlot || !isSparked || pivotUsed
+              !selectedCodexPower || !selectedReadySlot || pivotUsed || (!isSparked && (!canUseLuck || !useLuckForPivot))
                 ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                : 'bg-amber-600 hover:bg-amber-500 text-slate-950 shadow-amber-500/30'
+                : !isSparked && useLuckForPivot
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-slate-950 shadow-emerald-500/30'
+                  : 'bg-amber-600 hover:bg-amber-500 text-slate-950 shadow-amber-500/30'
             }`}
           >
             <Zap className="w-4 h-4 fill-slate-950" />
-            Execute Tactical Pivot (1⚡)
+            {isSparked
+              ? 'Execute Tactical Pivot (1-⚡)'
+              : useLuckForPivot
+                ? 'Execute with Luck (1 🍀)'
+                : 'Insufficient Sparks (Need 1-⚡)'}
           </button>
         </div>
       </div>
