@@ -202,7 +202,7 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
           {/* Prominent Current Vitality on Left (Allows Negative Numbers) */}
           <div className="flex items-baseline gap-2 shrink-0">
             <span className={`text-2xl font-extrabold font-outfit ${
-              currentVit < 0 ? 'text-rose-500' : vitPercent > 50 ? 'text-emerald-400' : vitPercent > 20 ? 'text-amber-400' : 'text-rose-400'
+              currentVit < 0 ? 'text-rose-500' : vitPercent >= 100 ? 'text-emerald-400' : vitPercent <= 50 ? 'text-rose-400' : 'text-amber-400'
             }`}>
               {currentVit}
             </span>
@@ -223,13 +223,15 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
           >
             <div
               className={`h-full relative ${isDragging ? 'transition-none' : 'transition-all duration-150'} ${
-                currentVit < 0 ? 'bg-rose-950/40' : vitPercent > 50 ? 'bg-emerald-500' : vitPercent > 20 ? 'bg-amber-500' : 'bg-rose-500'
+                currentVit < 0 ? 'bg-rose-950/40' : vitPercent >= 100 ? 'bg-emerald-500' : vitPercent <= 50 ? 'bg-rose-500' : 'bg-amber-500'
               }`}
               style={{ width: `${currentVit < 0 ? 0 : vitPercent}%` }}
             >
               {/* Glowing Draggable Handle Knob */}
               {currentVit > 0 && (
-                <div className="absolute right-0 top-0 bottom-0 w-2.5 bg-white/90 rounded-full shadow-lg shadow-emerald-500/80 group-hover:scale-125 transition-transform" />
+                <div className={`absolute right-0 top-0 bottom-0 w-2.5 bg-white/90 rounded-full shadow-lg transition-transform group-hover:scale-125 ${
+                  vitPercent >= 100 ? 'shadow-emerald-500/80' : vitPercent <= 50 ? 'shadow-rose-500/80' : 'shadow-amber-500/80'
+                }`} />
               )}
             </div>
           </div>
@@ -274,9 +276,15 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
                 min="1"
                 value={damageInput}
                 onChange={(e) => setDamageInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleApplyDamage()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleApplyDamage();
+                    e.currentTarget.blur();
+                  }
+                }}
+                onBlur={handleApplyDamage}
                 className="w-14 bg-slate-900 text-rose-300 text-xs font-mono font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none text-center focus:border-rose-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                title="Type number and press Enter to apply damage"
+                title="Type number and press Enter or click away to apply damage"
               />
             </div>
 
@@ -287,9 +295,15 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
                 min="1"
                 value={healInput}
                 onChange={(e) => setHealInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleApplyHeal()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleApplyHeal();
+                    e.currentTarget.blur();
+                  }
+                }}
+                onBlur={handleApplyHeal}
                 className="w-14 bg-slate-900 text-emerald-300 text-xs font-mono font-bold px-2 py-1 rounded-lg border border-slate-700 outline-none text-center focus:border-emerald-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                title="Type number and press Enter to apply healing"
+                title="Type number and press Enter or click away to apply healing"
               />
             </div>
           </div>

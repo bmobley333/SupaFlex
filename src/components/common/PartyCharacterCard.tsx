@@ -76,16 +76,16 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
   const maxVit = sheetData.vitality_max ?? 28;
   const pct = maxVit > 0 ? Math.min(100, Math.max(0, Math.round((currentVit / maxVit) * 100))) : 0;
 
-  // Color indicator classes based on Vit %
+  // Color indicator classes based on Vit %: Green = 100%, Red = 50% or less, Orange = between 50% and 100%
   let barColorClass = 'bg-emerald-500';
   let badgeColorClass = 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10';
   let dotColorClass = 'bg-emerald-400';
 
-  if (pct < 25) {
-    barColorClass = 'bg-red-500';
-    badgeColorClass = 'text-red-400 border-red-500/40 bg-red-500/10';
-    dotColorClass = 'bg-red-400';
-  } else if (pct < 75) {
+  if (pct <= 50) {
+    barColorClass = 'bg-rose-500';
+    badgeColorClass = 'text-rose-400 border-rose-500/40 bg-rose-500/10';
+    dotColorClass = 'bg-rose-400';
+  } else if (pct < 100) {
     barColorClass = 'bg-amber-500';
     badgeColorClass = 'text-amber-400 border-amber-500/40 bg-amber-500/10';
     dotColorClass = 'bg-amber-400';
