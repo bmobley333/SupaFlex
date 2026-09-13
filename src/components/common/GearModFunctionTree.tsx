@@ -1,4 +1,4 @@
-﻿// src/components/common/GearModFunctionTree.tsx
+// src/components/common/GearModFunctionTree.tsx
 // Authoritative, DRY 2-level hierarchy tree (Chassis -> Mod -> Functions)
 // Supports Standard Gear (with mods), Exotics, and Artifacts.
 
@@ -123,13 +123,13 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
               {totalActiveFunctionsCount > 0 && (
                 <>
                   <span className="text-slate-600">•</span>
-                  <span className="text-amber-300 font-semibold">{totalActiveFunctionsCount} Functions</span>
+                  <span className="text-amber-300 font-semibold">{totalActiveFunctionsCount} Exotic Powers</span>
                 </>
               )}
             </>
           ) : (
             <>
-              <span className="font-bold text-slate-200">Inherent Functions:</span>
+              <span className="font-bold text-slate-200">Inherent Exotic Powers:</span>
               <span className="text-emerald-400 font-semibold">{directFunctions.length} Installed</span>
             </>
           )}

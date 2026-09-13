@@ -102,15 +102,15 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
     setSuccessMessage(null);
 
     if (!selectedVaultItem) {
-      setErrorMessage('Please select 1 Vault function to bring online.');
+      setErrorMessage('Please select 1 Vault power to bring online.');
       return;
     }
     if (overage > 0) {
-      setErrorMessage(`Loadout exceeds capacity by ${overage} slot(s). Remove active functions to balance.`);
+      setErrorMessage(`Loadout exceeds capacity by ${overage} slot(s). Remove active powers to balance.`);
       return;
     }
     if (!hasLuckChit) {
-      setErrorMessage('Emergency Hardware Shunt requires 1 Luck Chit (🍀). You have 0.');
+      setErrorMessage('Emergency Exotic Shunt requires 1 Luck Chit (🍀). You have 0.');
       return;
     }
 
@@ -120,12 +120,12 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
 
     const result = executeHardwareShunt(selectedVaultItem.name, outgoingNames);
     if (!result.success) {
-      setErrorMessage(result.error || 'Failed to execute Emergency Hardware Shunt.');
+      setErrorMessage(result.error || 'Failed to execute Emergency Exotic Shunt.');
       return;
     }
 
     setSuccessMessage(
-      `Emergency Shunt complete! ${selectedVaultItem.name} is now ONLINE. ${outgoingNames.length} function(s) placed in Cold Storage.`
+      `Emergency Shunt complete! ${selectedVaultItem.name} is now ONLINE. ${outgoingNames.length} power(s) placed in Cold Storage.`
     );
     setTimeout(() => {
       onClose();
@@ -157,7 +157,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide">
-                  ⚡ Emergency Hardware Shunt
+                  ⚡ Emergency Exotic Shunt
                 </h3>
                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-950/70 text-amber-300 border border-amber-500/40">
                   [F] Free Action
@@ -167,7 +167,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Hot-swap 1 Vault function into your active stance. Costs <strong className="text-emerald-300">1 Luck Chit</strong> as a <strong className="text-amber-300">[F] Free Action</strong>.
+                Hot-swap 1 Exotics Vault power into your active stance. Costs <strong className="text-emerald-300">1 Luck Chit</strong> as a <strong className="text-amber-300">[F] Free Action</strong>.
               </p>
             </div>
           </div>
@@ -192,15 +192,15 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
         <div className="px-4 py-2 bg-slate-950/70 border-b border-slate-800 flex items-center justify-between text-xs font-mono flex-wrap gap-2">
           <div className="flex items-center gap-2 text-[11px] text-slate-300">
             <span className="font-bold text-cyan-300">Workflow:</span>
-            <span>1. Select 1 Vault function (Right)</span>
+            <span>1. Select 1 Exotics Vault power (Right)</span>
             <ArrowRight className="w-3 h-3 text-slate-500 inline" />
-            <span>2. Remove active functions (Left) if over capacity</span>
+            <span>2. Remove active powers (Left) if over capacity</span>
             <ArrowRight className="w-3 h-3 text-slate-500 inline" />
             <span>3. Pay 1 Luck Chit (Bottom Right)</span>
           </div>
           <div className="text-[11px] text-rose-300 flex items-center gap-1">
             <ShieldAlert className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-            <span>Removed functions lock in Cold Storage</span>
+            <span>Removed powers lock in Cold Storage</span>
           </div>
         </div>
 
@@ -233,7 +233,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                     ⚠️ OVERLOAD: +{overage} Slot{overage > 1 ? 's' : ''} Overage!
                   </div>
                   <div className="text-[11px] text-rose-400">
-                    Remove active functions below to balance your loadout before applying.
+                    Remove active powers below to balance your loadout before applying.
                   </div>
                 </div>
               </div>
@@ -250,7 +250,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono font-bold text-cyan-300 flex items-center gap-1">
                     <Sparkles className="w-3 h-3 text-cyan-400" />
-                    <span>INCOMING FROM VAULT (1 of 1)</span>
+                    <span>INCOMING FROM EXOTICS VAULT (1 of 1)</span>
                   </span>
                   <button
                     type="button"
@@ -275,7 +275,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
             {/* Equipped Active Functions List */}
             <div className="flex-1 overflow-y-auto max-h-[340px] border border-slate-800/80 rounded-xl bg-slate-950/40 p-1.5 flex flex-col gap-1.5">
               {activeSlots.length === 0 ? (
-                <div className="py-8 text-center text-slate-500 text-xs">No active functions equipped.</div>
+                <div className="py-8 text-center text-slate-500 text-xs">No active exotic powers equipped.</div>
               ) : (
                 activeSlots.map((slot, sIdx) => {
                   const isRemoved = removedSlotNames.has(slot.name.trim().toLowerCase());
@@ -303,7 +303,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                               type="button"
                               onClick={() => handleRemoveSlot(slot.name)}
                               className="px-2 py-0.5 rounded-lg text-[10px] font-bold border border-rose-500/40 bg-rose-950/60 hover:bg-rose-900 text-rose-300 transition-all flex items-center gap-1 cursor-pointer"
-                              title="Unslot this function (irreversible during this shunt)"
+                              title="Unslot this power (irreversible during this shunt)"
                             >
                               <Trash2 className="w-3 h-3" />
                               <span>Remove</span>
@@ -327,11 +327,11 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
             </div>
           </div>
 
-          {/* PANE 2 (RIGHT): Hardware Vault Catalog (1 Add Allowed) */}
+          {/* PANE 2 (RIGHT): Exotics Vault Catalog (1 Add Allowed) */}
           <div className="flex flex-col gap-2.5 min-h-0">
             <div className="flex items-center justify-between">
               <span className="font-outfit font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
-                <span>📦</span> Hardware Vault Catalog
+                <span>📦</span> Exotics Vault Catalog
               </span>
               <span className="text-[11px] font-mono text-slate-400">{availableVaultItems.length} available</span>
             </div>
@@ -343,7 +343,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search Vault functions..."
+                placeholder="Search Exotics Vault..."
                 className="w-full pl-8 pr-3 py-1.5 bg-slate-950/70 border border-slate-800 rounded-xl text-slate-200 text-xs placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
               />
             </div>
@@ -351,7 +351,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
             {/* Vault Functions List */}
             <div className="flex-1 overflow-y-auto max-h-[380px] border border-slate-800/80 rounded-xl bg-slate-950/40 p-1.5 flex flex-col gap-1.5">
               {availableVaultItems.length === 0 ? (
-                <div className="py-8 text-center text-slate-500 text-xs">No matching functions in Vault.</div>
+                <div className="py-8 text-center text-slate-500 text-xs">No matching powers in Exotics Vault.</div>
               ) : (
                 availableVaultItems.map((item) => {
                   const isSelected = selectedVaultItem?.name === item.name;
@@ -421,14 +421,14 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                   <>
                     <ArrowRight className="w-3.5 h-3.5 text-slate-500 inline" />
                     <span className="text-slate-400">Cold Storage:</span>
-                    <strong className="text-amber-300">{removedSlotNames.size} function(s)</strong>
+                    <strong className="text-amber-300">{removedSlotNames.size} power(s)</strong>
                   </>
                 )}
               </div>
             )}
             {!errorMessage && !successMessage && !selectedVaultItem && (
               <div className="text-slate-500">
-                Select 1 function from the Hardware Vault on the right to begin shunting.
+                Select 1 power from the Exotics Vault on the right to begin shunting.
               </div>
             )}
           </div>
@@ -454,7 +454,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
               <span>🍀</span>
               <span>
                 {!selectedVaultItem
-                  ? 'Select 1 Vault Function'
+                  ? 'Select 1 Vault Power'
                   : overage > 0
                   ? `Over Capacity (+${overage} Slots)`
                   : !hasLuckChit

@@ -276,7 +276,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       'Loadout Slots' as any,
       `Unlocked Loadout Capacity (${newTotalSlots} Slots)`,
       1,
-      'Functions Manager'
+      "Exotic Power's Manager"
     );
 
     await saveActiveCharacter();
@@ -1236,7 +1236,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         usage: createUsage,
         effect: createEffect.trim(),
         notes: versionEditItem?.notes || '',
-        source: versionEditItem?.source || 'Custom Function Version',
+        source: versionEditItem?.source || 'Custom Exotic Power Version',
         source_gear: versionEditItem?.source_gear,
         source_mod: versionEditItem?.source_mod,
         category: versionEditItem?.category || null,
@@ -1327,7 +1327,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         };
       });
 
-      recordApExpenditure(1, 'Magic Items', `Upgraded Function: ${versionedName} (+1 AP)`, 1, 'Manage Functions');
+      recordApExpenditure(1, 'Magic Items', `Upgraded Exotic Power: ${versionedName} (+1 AP)`, 1, "Exotic Power's Manager");
 
       saveActiveCharacter();
 
@@ -1613,8 +1613,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     );
   }, [type, filteredRoster, functionsCatalog, modsCatalog, activeCharacter, sheetData.character_vault, isGsUnlocked]);
 
-  const sectionIcon = type === 'powers' ? '🔥' : '🧿';
-  const displayTitle = title || (type === 'powers' ? 'POWERS' : 'FUNCTIONS');
+  const sectionIcon = type === 'powers' ? '🔥' : '🔮';
+  const displayTitle = title || (type === 'powers' ? 'MY POWERS' : 'EXOTIC POWERS');
 
   // Action Economy or Alphabetical Sorting for Active Sheet (with Action Channel Filtering for Powers & Loadout)
   const sortedSlots = useMemo(() => {
@@ -1640,6 +1640,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     });
   }, [activeDisplaySlots, slots, type, abilitySortMode, abilityActionFilter, isGsUnlocked, functionsCatalog, modsCatalog, activeCharacter]);
 
+
+
   return (
     <div
       ref={cardContainerRef}
@@ -1657,7 +1659,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title={`Click to open ${type === 'powers' ? 'Powers' : 'Loadout'} Manager`}
+            title={`Click to open ${type === 'powers' ? 'Powers' : "Exotic Power's"} Manager`}
           >
             <div className={`p-1.5 rounded-xl border flex items-center justify-center shrink-0 group-hover:scale-105 transition-all ${
               type === 'powers'
@@ -1837,12 +1839,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </div>
                       <div>
                         <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                          {type === 'powers' ? 'Powers Manager' : 'Functions Manager'}
+                          {type === 'powers' ? 'Powers Manager' : "Exotic Power's Manager"}
                         </h3>
                         <p className="text-xs text-slate-400 hidden sm:block">
                           {type === 'powers'
                             ? 'Manage character powers side-by-side with the SupaFlex stock catalog.'
-                            : 'Manage active Function Slots (🧿) moving abilities between the Vault and your active slots.'}
+                            : 'Manage active Exotic Slots (🧿) moving abilities between the Exotics Vault and your active slots.'}
                         </p>
                       </div>
                     </div>
@@ -1864,7 +1866,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 {/* 2-COLUMN SPLIT-PANE BODY */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
                   
-                  {/* --- LEFT COLUMN: ACTIVE FUNCTIONS ONLY --- */}
+                  {/* --- LEFT COLUMN: ACTIVE EXOTIC POWERS / MY POWERS --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                     {/* Pane Header */}
                     <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
@@ -1872,16 +1874,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         {type === 'powers' ? (
                           <Flame className="w-4 h-4 text-amber-400" />
                         ) : (
-                          <span className="text-sm leading-none">🧿</span>
+                          <span className="text-sm leading-none">🔮</span>
                         )}
                         <span className={`text-xs font-outfit font-bold uppercase tracking-wider ${type === 'powers' ? 'text-amber-300' : 'text-cyan-300'}`}>
-                          {type === 'powers' ? 'Ready Powers' : 'Active Functions'}
+                          {type === 'powers' ? 'My Powers' : 'Active Exotic Powers'}
                         </span>
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
                           {type === 'powers' ? activeDisplaySlots.length : slots.length}
                         </span>
 
-                        {/* Stance Switcher for Functions in Modal */}
+                        {/* Stance Switcher for Exotic Powers in Modal */}
                         {type === 'spells' && (
                           <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner">
                             <button
@@ -1926,12 +1928,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </div>
                     </div>
 
-                    {/* Left Pane Slots Status Pill (Functions Mode) */}
+                    {/* Left Pane Slots Status Pill (Exotics Mode) */}
                     {type === 'spells' && (() => {
                       const remainingSlots = Math.max(0, totalLoadoutCapacity - totalUsedLoadoutSlots);
                       return (
                         <div className="mt-2.5 px-3 py-1.5 bg-slate-900/90 border border-cyan-500/40 rounded-xl text-xs font-mono flex items-center justify-between gap-2 shadow-inner shrink-0">
-                          <span className="text-cyan-300 font-bold flex items-center gap-1">🧿 Function Slots:</span>
+                          <span className="text-cyan-300 font-bold flex items-center gap-1">🧿 Exotic Slots:</span>
                           <div className="flex items-center gap-2 text-[11px] font-bold">
                             <span className="text-slate-300">Capacity <strong className="text-slate-100">{totalLoadoutCapacity}</strong></span>
                             <span className="text-slate-600">|</span>
@@ -2410,7 +2412,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               : 'border-transparent text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          🏺 Function Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
+                          🏺 Exotics Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
                         </button>
                         <button
                           type="button"
@@ -2594,7 +2596,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                               <input
                                 type="text"
-                                placeholder="Search Vault functions..."
+                                placeholder="Search Exotics Vault..."
                                 value={rightSearchQuery}
                                 onChange={(e) => setRightSearchQuery(e.target.value)}
                                 className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 w-full"
@@ -2626,9 +2628,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
                                 <Sparkles className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
                                 {rightSearchQuery ? (
-                                  <span>No items matching "{rightSearchQuery}" in Vault.</span>
+                                  <span>No items matching "{rightSearchQuery}" in Exotics Vault.</span>
                                 ) : (
-                                  <span>Vault is empty. Claim items from Catalog (Tab 2) or Loot Generator.</span>
+                                  <span>Exotics Vault is empty. Claim items from Catalog (Tab 2) or Loot Generator.</span>
                                 )}
                               </div>
                             ) : (
@@ -3794,7 +3796,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
                   <div className="flex items-center gap-3">
                     <span className="font-outfit font-bold text-slate-300">
-                      {type === 'powers' ? '🔥 Powers Manager' : '🧿 Functions Manager'}
+                      {type === 'powers' ? '🔥 Powers Manager' : "🔮 Exotic Power's Manager"}
                     </span>
                   </div>
                   
@@ -3853,7 +3855,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
               type="button"
               onClick={() => setShowShuntModal(true)}
               className="py-1 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm cursor-pointer bg-cyan-950/70 hover:bg-cyan-900/70 border-cyan-500/50 text-cyan-300 hover:text-white"
-              title="Emergency Hardware Shunt: Spend 1 Move Action [M] and 1 Luck Chit (🍀) to hot-swap Vault functions"
+              title="Emergency Exotic Shunt: Spend 1 Move Action [M] and 1 Luck Chit (🍀) to hot-swap Exotics Vault powers"
             >
               <Cpu className="w-3.5 h-3.5 text-cyan-400" />
               <span className="font-outfit text-xs font-bold">Shunt</span>
@@ -4025,10 +4027,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         ) : (
           <div className="p-4 bg-slate-950/40 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
             {abilityActionFilter !== 'ALL'
-              ? `No ${abilityActionFilter} action ${type === 'powers' ? 'powers' : 'functions'} learned or visible.`
+              ? `No ${abilityActionFilter} action ${type === 'powers' ? 'powers' : 'exotic powers'} learned or visible.`
               : type === 'powers'
               ? 'No powers learned yet. Click "Powers Manager" above to browse the catalog.'
-              : 'No active functions equipped yet. Click "Functions Manager" above to select abilities.'}
+              : 'No active exotic powers equipped yet. Click "Exotic Power\'s Manager" above to select abilities.'}
           </div>
         )}
       </div>

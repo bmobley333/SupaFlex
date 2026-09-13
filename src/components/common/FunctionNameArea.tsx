@@ -64,8 +64,8 @@ export const FunctionNameArea: React.FC<FunctionNameAreaProps> = ({
   const rawFnName = resolvedInfo.cleanFnName;
   const version = resolvedInfo.version || 1;
 
-  // De-duplication Rule: If gear name and function name are identical (e.g. Banner of Eternity)
-  // reduce the function name to the literal word "Function"
+  // De-duplication Rule: If gear name and function name are identical (e.g. Banner of Eternity or [Armor] of Serenity)
+  // reduce the function name to the literal word "Exotic Power"
   const isIdenticalName = useMemo(() => {
     if (!gearName || !rawFnName) return false;
     const cleanG = cleanSourceText(gearName).toLowerCase();
@@ -73,7 +73,7 @@ export const FunctionNameArea: React.FC<FunctionNameAreaProps> = ({
     return cleanG === cleanF;
   }, [gearName, rawFnName]);
 
-  const displayFnName = isIdenticalName ? 'Function' : rawFnName;
+  const displayFnName = isIdenticalName ? 'Exotic Power' : rawFnName;
 
   // Resolved notes: strictly the FUNCTION's notes
   const resolvedNotes = useMemo(() => {

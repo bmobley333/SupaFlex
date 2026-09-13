@@ -300,14 +300,28 @@ export const getGearIcon = (
   activeCharacter?: Character | null,
   itemContext?: any
 ): string => {
-  // 1. Artifact Check (🔮)
-  const isArtifact =
-    itemContext?.category?.includes('Artifact') ||
+  // 1. Exotic / Artifact Check (🔮)
+  const isExoticOrArtifact =
+    itemContext?.category?.toLowerCase().includes('artifact') ||
+    itemContext?.category?.toLowerCase().includes('exotic') ||
     itemContext?.is_artifact ||
+    itemContext?.is_exotic ||
     itemContext?.cost === 'Artifact' ||
-    (itemContext?.source && String(itemContext.source).toLowerCase().includes('artifact')) ||
-    (gearName && (gearName.toLowerCase().includes('artifact') || gearName.toLowerCase().includes('relic')));
-  if (isArtifact) return '🔮';
+    (itemContext?.source && (
+      String(itemContext.source).toLowerCase().includes('artifact') ||
+      String(itemContext.source).toLowerCase().includes('exotic')
+    )) ||
+    (itemContext?.belongs_to && (
+      String(itemContext.belongs_to).toLowerCase().includes('artifact') ||
+      String(itemContext.belongs_to).toLowerCase().includes('exotic')
+    )) ||
+    (gearName && (
+      gearName.toLowerCase().includes('artifact') ||
+      gearName.toLowerCase().includes('relic') ||
+      gearName.toLowerCase().includes('exotic') ||
+      /^\[.+?\]/.test(gearName) // e.g. [Armor] of Serenity, [Weapon] of Echoes
+    ));
+  if (isExoticOrArtifact) return '🔮';
 
   if (!gearName && !itemContext) return '🎒';
 
@@ -327,10 +341,13 @@ export const getGearIcon = (
     });
     if (simpleGearMatch) {
       const cat = (simpleGearMatch.category || simpleGearMatch.item_type || '').toLowerCase();
+      const cost = String(simpleGearMatch.cost || '').toLowerCase();
+      if (cat.includes('artifact') || cat.includes('relic') || cat.includes('exotic') || cost.includes('artifact') || simpleGearMatch.is_artifact) {
+        return '🔮';
+      }
       if (cat.includes('weapon')) return '⚔️';
       if (cat.includes('shield')) return '🛡️';
       if (cat.includes('armor')) return '🧥';
-      if (cat.includes('artifact') || cat.includes('relic')) return '🔮';
     }
   }
 

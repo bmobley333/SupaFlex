@@ -762,7 +762,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
       setGearCatalogFeedback({
         type: 'success',
-        message: `Purchased Exotic "${itemName}" for ${costStr}! Added to equipment and Function Vault.`,
+        message: `Purchased Exotic "${itemName}" for ${costStr}! Added to equipment and Exotics Vault.`,
       });
       return;
     }
@@ -1682,9 +1682,9 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                     type="button"
                                     onClick={() => setExpandedCatalogFunctionId(isFunctionsExpanded ? null : itemKey)}
                                     className="px-1.5 py-0.5 rounded bg-amber-950/80 hover:bg-amber-900/90 text-amber-300 border border-amber-500/30 text-[9px] font-mono flex items-center gap-1 cursor-pointer transition shrink-0"
-                                    title="Toggle inherent functions"
+                                    title="Toggle inherent exotic powers"
                                   >
-                                    <span>⚡ {inherentFunctions.length} {inherentFunctions.length === 1 ? 'Function' : 'Functions'}</span>
+                                    <span>⚡ {inherentFunctions.length} {inherentFunctions.length === 1 ? 'Exotic Power' : 'Exotic Powers'}</span>
                                     <ChevronDown className={`w-2.5 h-2.5 transition-transform ${isFunctionsExpanded ? 'rotate-180' : ''}`} />
                                   </button>
                                 )}
@@ -1769,7 +1769,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                           {isFunctionsExpanded && inherentFunctions.length > 0 && (
                             <div className="mt-1 pt-2 border-t border-slate-800/80 flex flex-col gap-1.5 bg-slate-950/60 p-2 rounded-lg">
                               <span className="text-[10px] font-mono font-bold text-amber-300 uppercase tracking-wide flex items-center gap-1">
-                                <span>⚡ Inherent Functions ({inherentFunctions.length}):</span>
+                                <span>⚡ Inherent Exotic Powers ({inherentFunctions.length}):</span>
                               </span>
                               {inherentFunctions.map((fn: FunctionItem) => {
                                 const actionBadgeColor = ACTION_BADGE_COLORS[fn.action || ''] || 'bg-slate-800 text-slate-300 border-slate-700';

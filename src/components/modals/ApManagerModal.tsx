@@ -315,7 +315,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
           { label: `Base Loadout Slots`, value: `4 Slots (0 AP Baseline)` },
           { label: `Purchased Expansions`, value: `${loadoutExpansions} Expansions (+${loadoutExpansions * 2} Slots)` },
           { label: `Total Active Loadout Capacity`, value: `${totalLoadoutCapacity} Slots (Uncapped)` },
-          ...(functionVersionsNet > 0 ? [{ label: `Function Version Upgrades`, value: `+${functionVersionsNet} AP` }] : []),
+          ...(functionVersionsNet > 0 ? [{ label: `Exotic Power Version Upgrades`, value: `+${functionVersionsNet} AP` }] : []),
           { label: `Total AP Invested`, value: `${magicItemsNet} AP` },
         ],
       },
