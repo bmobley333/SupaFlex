@@ -281,7 +281,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
 
           <div className="flex items-center gap-2.5">
             <div className="px-3 py-1 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
-              AP [{availableAp}]
+              AP {availableAp}
             </div>
 
             <button

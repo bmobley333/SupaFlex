@@ -70,7 +70,7 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
             >
               <span>Lvl {level}</span>
               <span className="text-amber-500/50">•</span>
-              <span>AP [{availableAp}]</span>
+              <span>AP {availableAp}</span>
               <ChevronDown className="w-3 text-amber-400" />
             </button>
 
