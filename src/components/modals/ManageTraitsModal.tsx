@@ -96,15 +96,15 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     }
   }, [isOpen, activeGenre]);
 
-  // Auto-reconcile and equip {Free} traits matching character's known paths on open
+  // Auto-reconcile, prune ghost traits, and equip {Free} traits matching character's known paths on open
   useEffect(() => {
     if (!isOpen || !activeCharacter || stockRulesCatalog.length === 0) return;
-    const { updatedSheetData, newlyGrantedCount } = reconcileCharacterFreeTraits(
+    const { updatedSheetData, newlyGrantedCount, prunedCount } = reconcileCharacterFreeTraits(
       activeCharacter.sheet_data || {},
       activeCharacter,
       stockRulesCatalog
     );
-    if (newlyGrantedCount > 0) {
+    if (newlyGrantedCount > 0 || prunedCount > 0) {
       updateActiveSheetData(() => updatedSheetData);
       saveActiveCharacter();
     }
@@ -133,8 +133,9 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   const isTraitInherent = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
     const cost = (rule as any).ap_cost;
     if (typeof cost === 'number' && cost > 0) return false;
-    if (typeof cost === 'number' && cost === 0) return true;
+    // Trait MUST be in character's known paths to be inherent
     if (!isTraitInPath(rule)) return false;
+    if (typeof cost === 'number' && cost === 0) return true;
     const pathStr = (rule.path || rule.kit || rule.table_group || (rule as any).source || '').toLowerCase();
     return pathStr.includes('{free}') || pathStr.includes('{perk}') || pathStr.includes('{trait}');
   }, [isTraitInPath]);

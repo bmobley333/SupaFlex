@@ -318,11 +318,6 @@ export const getCharacterMatchingPath = (
 
   const cleanEntryStr = (str: string) => str.replace(/^[\["']+|[\]"']+$/g, '').trim();
 
-  // If only 1 entry, return it cleaned
-  if (entries.length === 1) {
-    return cleanEntryStr(entries[0]);
-  }
-
   // Match against character's known paths
   const known = getCharacterKnownPaths(character);
   for (const entry of entries) {

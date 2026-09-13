@@ -16,8 +16,8 @@ import {
   MagicItem,
   HardwareBundleSubItem,
 } from '../types/game';
-import { matchesKitFilter, cleanKitName, parseKit, cleanPathName } from './kitUtils';
-import { parseItemPaths } from './pathApUtils';
+import { cleanKitName, parseKit, cleanPathName } from './kitUtils';
+import { parseItemPaths, isPathStringMatch } from './pathApUtils';
 
 export interface KitTraitGrants {
   kitName: string;
@@ -44,13 +44,25 @@ export const collectKitTraitGrants = (
   const lvl = Math.max(1, characterLevel);
 
   const matchedPowers = catalogPowers.filter((p) => {
-    const parsed = parseKit(p.kit || p.table_group);
-    return parsed.isTrait && matchesKitFilter(parsed.baseKit, cleanTarget) && parsed.minLevel <= lvl;
+    const raw = p.path || p.kit || p.table_group;
+    if (!raw) return false;
+    const paths = parseItemPaths(raw);
+    return paths.some((pathStr) => {
+      const parsed = parseKit(pathStr);
+      const isFree = pathStr.toLowerCase().includes('{free}') || parsed.isFreeTrait || parsed.isTrait;
+      return isFree && isPathStringMatch(parsed.baseKit, cleanTarget) && parsed.minLevel <= lvl;
+    });
   });
 
   const matchedSkills = catalogSkills.filter((s) => {
-    const parsed = parseKit(s.kit || s.table_group);
-    return parsed.isTrait && matchesKitFilter(parsed.baseKit, cleanTarget) && parsed.minLevel <= lvl;
+    const raw = s.path || s.kit || s.table_group;
+    if (!raw) return false;
+    const paths = parseItemPaths(raw);
+    return paths.some((pathStr) => {
+      const parsed = parseKit(pathStr);
+      const isFree = pathStr.toLowerCase().includes('{free}') || parsed.isFreeTrait || parsed.isTrait;
+      return isFree && isPathStringMatch(parsed.baseKit, cleanTarget) && parsed.minLevel <= lvl;
+    });
   });
 
   const matchedTraits = catalogTraits.filter((t) => {
@@ -60,7 +72,7 @@ export const collectKitTraitGrants = (
     return paths.some((p) => {
       const parsed = parseKit(p);
       const isFree = p.toLowerCase().includes('{free}') || parsed.isFreeTrait || parsed.isTrait;
-      return isFree && matchesKitFilter(parsed.baseKit, cleanTarget) && parsed.minLevel <= lvl;
+      return isFree && isPathStringMatch(parsed.baseKit, cleanTarget) && parsed.minLevel <= lvl;
     });
   });
 
