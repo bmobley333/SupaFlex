@@ -194,13 +194,19 @@ export const FocusManagerModal: React.FC<FocusManagerModalProps> = ({ isOpen, on
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 rounded hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Close modal"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-2.5">
+            <div className="px-3 py-1 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
+              AP [{availableAp}]
+            </div>
+
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Close modal"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {/* 📐 TWO-PANE GRID ARCHITECTURE */}

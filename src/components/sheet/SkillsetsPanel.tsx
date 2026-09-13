@@ -147,12 +147,6 @@ export const SkillsetsPanel: React.FC = () => {
     moxie: 'd8',
   };
 
-  // Skillsets & Skills AP Metrics (2 AP per SkillSet; 1 AP per Individual Skill)
-  const skillsetCount = useMemo(() => Array.from(new Set(knownSkillsetNames)).length, [knownSkillsetNames]);
-  const individualSkillCount = knownIndividualSkills.length;
-  const skillsetsApSpent = skillsetCount * 2;
-  const individualSkillsApSpent = individualSkillCount * 1;
-  const totalApSpent = skillsetsApSpent + individualSkillsApSpent;
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
@@ -674,24 +668,17 @@ export const SkillsetsPanel: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Header Status Pill */}
-                  <div className="px-3.5 py-1 bg-indigo-950/70 border border-indigo-500/40 rounded-full font-mono font-bold text-xs text-indigo-200 flex items-center gap-2 shadow-md">
-                    <span>
-                      SkillSets <strong className="text-indigo-300">{skillsetCount}</strong>
-                      {individualSkillCount > 0 && <>; Skills <strong className="text-indigo-300">{individualSkillCount}</strong></>}; Used{' '}
-                      <strong className="text-rose-300">
-                        {totalApSpent} AP
-                      </strong>
-                      ; Available <strong className="text-emerald-400">{availableAp} AP</strong>
-                    </span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="px-3 py-1 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
+                      AP [{availableAp}]
+                    </div>
+                    <button
+                      onClick={handleCloseManageModal}
+                      className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
-
-                  <button
-                    onClick={handleCloseManageModal}
-                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
                 </div>
 
                 {/* 2-COLUMN SPLIT-PANE BODY */}

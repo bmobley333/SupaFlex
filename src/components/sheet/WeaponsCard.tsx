@@ -186,19 +186,6 @@ export const WeaponsCard: React.FC = () => {
     return Array.from(map.values()).sort((a, b) => compareMsoItems({ name: a.baseName }, { name: b.baseName }, isGsUnlocked));
   }, [weapons, supabaseWeapons, isGsUnlocked]);
 
-  // Skilled weapon groups (groups containing at least 1 slot with sk === true)
-  const skilledWeaponGroups = useMemo(() => {
-    return groupedEquippedWeapons.filter((g) => g.slots.some((s) => s.sk));
-  }, [groupedEquippedWeapons]);
-
-  const skilledWeaponsCount = skilledWeaponGroups.length;
-  const weaponApSpent = useMemo(() => {
-    return skilledWeaponGroups.reduce((acc, g) => {
-      const groupCost = g.slots.reduce((max, s) => Math.max(max, s.ap_cost || 1), 1);
-      return acc + groupCost;
-    }, 0);
-  }, [skilledWeaponGroups]);
-
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
@@ -623,21 +610,17 @@ export const WeaponsCard: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* KISS Top-Center Header Status Pill */}
-                  <div className="px-3.5 py-1 bg-purple-950/70 border border-purple-500/40 rounded-full font-mono font-bold text-xs text-purple-200 flex items-center gap-2 shadow-md">
-                    <span>
-                      Skilled <strong className="text-purple-300">{skilledWeaponsCount}</strong>; Used{' '}
-                      <strong className="text-rose-300">{weaponApSpent} AP</strong>; Available{' '}
-                      <strong className="text-emerald-400">{availableAp} AP</strong>
-                    </span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="px-3 py-1 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
+                      AP [{availableAp}]
+                    </div>
+                    <button
+                      onClick={handleCloseManageModal}
+                      className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
-
-                  <button
-                    onClick={handleCloseManageModal}
-                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
                 </div>
 
                 {/* 2-COLUMN SPLIT-PANE BODY */}

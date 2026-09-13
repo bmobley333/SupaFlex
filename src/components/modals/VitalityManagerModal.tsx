@@ -257,12 +257,9 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Header AP Pill Badge: Used X AP; Available Y AP */}
-            <div className="px-3.5 py-1.5 bg-slate-950/80 rounded-full border border-cyan-500/40 text-xs font-mono font-bold flex items-center gap-2 shadow-inner">
-              <span className="text-slate-300">Used <span className="text-rose-400 font-extrabold">{vitalityApSpent} AP</span></span>
-              <span className="text-slate-600">;</span>
-              <span className="text-slate-300">Available <span className="text-emerald-400 font-extrabold">{availableAp} AP</span></span>
+          <div className="flex items-center gap-2.5">
+            <div className="px-3 py-1 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
+              AP [{availableAp}]
             </div>
 
             <button
@@ -449,7 +446,17 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
                 </div>
                 <button
                   onClick={handleBuyVit}
-                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 font-outfit font-bold text-white transition-all shadow-md text-xs cursor-pointer shrink-0 active:scale-95"
+                  disabled={availableAp < 1}
+                  title={
+                    availableAp < 1
+                      ? `Insufficient AP: Requires 1 AP (${availableAp} AP available)`
+                      : 'Buy +2 Vit (1 AP)'
+                  }
+                  className={`px-3 py-1.5 rounded-lg font-outfit font-bold text-xs transition-all shadow-md shrink-0 ${
+                    availableAp < 1
+                      ? 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed opacity-80'
+                      : 'bg-rose-600 hover:bg-rose-500 text-white cursor-pointer active:scale-95'
+                  }`}
                 >
                   Buy +2 Vit (1 AP)
                 </button>

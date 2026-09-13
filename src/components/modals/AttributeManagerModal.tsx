@@ -323,16 +323,19 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
   };
 
   // Ceiling Validation for Pool Upgrade (Cumulative High-Tier Limits)
-  const canUpgradeDieInPool = (currentDie: DieRating): { allowed: boolean; cost: number; reason?: string } => {
+  const canUpgradeDieInPool = (currentDie: DieRating): {
+    allowed: boolean;
+    cost: number;
+    reason?: string;
+    isCeilingCap?: boolean;
+    isInsufficientAp?: boolean;
+  } => {
     const upgradeInfo = DIE_UPGRADE_COSTS[currentDie];
     if (!upgradeInfo) {
       return { allowed: false, cost: 0, reason: 'Already at Max Rating (12)' };
     }
 
     const apCost = getUpgradeApCost(currentDie);
-    if (availableAp < apCost) {
-      return { allowed: false, cost: apCost, reason: `Requires ${apCost} AP (Available: ${availableAp} AP)` };
-    }
 
     // Simulate upgrading one instance of `currentDie` to `upgradeInfo.next`
     const nextDie = upgradeInfo.next;
@@ -354,16 +357,25 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
     const maxD6Plus = maxD8Plus + (targetCeiling.d6 || 0);
 
     if (d12Count > maxD12) {
-      return { allowed: false, cost: apCost, reason: `Exceeds max 12 for Level ${level} (Ceiling Max: ${maxD12}x 12)` };
+      return { allowed: false, cost: apCost, isCeilingCap: true, reason: `Exceeds max 12 for Level ${level} (Ceiling Max: ${maxD12}x 12)` };
     }
     if (d10PlusCount > maxD10Plus) {
-      return { allowed: false, cost: apCost, reason: `Exceeds max 10+ for Level ${level} (Ceiling Max: ${maxD10Plus}x 10+)` };
+      return { allowed: false, cost: apCost, isCeilingCap: true, reason: `Exceeds max 10+ for Level ${level} (Ceiling Max: ${maxD10Plus}x 10+)` };
     }
     if (d8PlusCount > maxD8Plus) {
-      return { allowed: false, cost: apCost, reason: `Exceeds max 8+ for Level ${level} (Ceiling Max: ${maxD8Plus}x 8+)` };
+      return { allowed: false, cost: apCost, isCeilingCap: true, reason: `Exceeds max 8+ for Level ${level} (Ceiling Max: ${maxD8Plus}x 8+)` };
     }
     if (d6PlusCount > maxD6Plus) {
-      return { allowed: false, cost: apCost, reason: `Exceeds max 6+ for Level ${level} (Ceiling Max: ${maxD6Plus}x 6+)` };
+      return { allowed: false, cost: apCost, isCeilingCap: true, reason: `Exceeds max 6+ for Level ${level} (Ceiling Max: ${maxD6Plus}x 6+)` };
+    }
+
+    if (availableAp < apCost) {
+      return {
+        allowed: false,
+        cost: apCost,
+        isInsufficientAp: true,
+        reason: `Insufficient AP: Requires ${apCost} AP (${availableAp} AP available)`,
+      };
     }
 
     return { allowed: true, cost: apCost };
@@ -538,10 +550,10 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="px-3.5 py-1.5 bg-purple-950/80 border border-purple-500/40 rounded-full font-mono text-xs font-bold text-slate-200 shadow-md">
-              Available <strong className="text-emerald-400 font-bold">{availableAp} AP</strong>
-            </span>
+          <div className="flex items-center gap-2.5">
+            <div className="px-3 py-1 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
+              AP [{availableAp}]
+            </div>
             <button
               onClick={handleCloseModal}
               className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
@@ -651,6 +663,16 @@ export const AttributeManagerModal: React.FC<AttributeManagerModalProps> = ({ is
                         >
                           <TrendingUp className="w-3.5 h-3.5" />
                           Increase Die
+                        </button>
+                      ) : upgradeValidation.isInsufficientAp ? (
+                        <button
+                          type="button"
+                          disabled
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-500 border border-slate-700/60 font-outfit font-bold text-xs flex items-center gap-1 cursor-not-allowed opacity-80"
+                          title={upgradeValidation.reason}
+                        >
+                          <TrendingUp className="w-3.5 h-3.5 text-slate-500" />
+                          Increase Die ({upgradeValidation.cost} AP)
                         </button>
                       ) : (
                         <span

@@ -75,14 +75,6 @@ export const ShieldCard: React.FC = () => {
     return item.sk ?? true;
   };
 
-  const skilledShieldList = useMemo(() => {
-    return armory.filter(isShieldSkilled);
-  }, [armory]);
-
-  const skilledShieldCount = skilledShieldList.length;
-  const shieldApSpent = useMemo(() => {
-    return skilledShieldList.reduce((acc, item) => acc + (item.ap_cost || 1), 0);
-  }, [skilledShieldList]);
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
@@ -526,21 +518,17 @@ export const ShieldCard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* KISS Top-Center Header Status Pill */}
-                <div className="px-3.5 py-1 bg-cyan-950/70 border border-cyan-500/40 rounded-full font-mono font-bold text-xs text-cyan-200 flex items-center gap-2 shadow-md">
-                  <span>
-                    Skilled <strong className="text-cyan-300">{skilledShieldCount}</strong>; Used{' '}
-                    <strong className="text-rose-300">{shieldApSpent} AP</strong>; Available{' '}
-                    <strong className="text-emerald-400">{availableAp} AP</strong>
-                  </span>
+                <div className="flex items-center gap-2.5">
+                  <div className="px-3 py-1 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
+                    AP [{availableAp}]
+                  </div>
+                  <button
+                    onClick={handleCloseManageModal}
+                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 shrink-0 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-
-                <button
-                  onClick={handleCloseManageModal}
-                  className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 shrink-0 cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
               </div>
 
               {/* 2-Column Split-Pane Body */}

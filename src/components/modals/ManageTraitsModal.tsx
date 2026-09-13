@@ -347,9 +347,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                 <h3 className="font-outfit font-black text-base text-slate-100 uppercase tracking-wide">
                   Manage Traits
                 </h3>
-                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/40">
-                  Available <strong className="text-emerald-400">{availableAp} AP</strong>
-                </span>
               </div>
               <p className="text-xs text-slate-400">
                 Equip traits and manage in-game sheet visibility.
@@ -357,13 +354,18 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2.5">
+            <div className="px-3 py-1 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
+              AP [{availableAp}]
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* ================= 2. SPLIT-PANE 2-COLUMN BODY ================= */}
@@ -830,27 +832,39 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          disabled={equipped}
-                          onClick={() => handleEquipStockRule(rule)}
-                          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition-all ${
-                            equipped
-                              ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                              : !inPath && !inherent
-                              ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer font-extrabold'
-                              : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
-                          }`}
-                        >
-                          {equipped ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>Equipped</span>
-                            </>
-                          ) : (
-                            <span>+ Learn ({inherent ? 'Free' : `${apCost} AP`})</span>
-                          )}
-                        </button>
+                        {(() => {
+                          const isApInsufficient = !equipped && !inherent && availableAp < apCost;
+                          return (
+                            <button
+                              type="button"
+                              disabled={equipped || isApInsufficient}
+                              onClick={() => handleEquipStockRule(rule)}
+                              title={
+                                equipped
+                                  ? 'Already equipped'
+                                  : isApInsufficient
+                                  ? `Insufficient AP: Requires ${apCost} AP (${availableAp} AP available)`
+                                  : `Learn ${rule.name} (${inherent ? 'Free' : `${apCost} AP`})`
+                              }
+                              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition-all ${
+                                equipped || isApInsufficient
+                                  ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-80'
+                                  : !inPath && !inherent
+                                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer font-extrabold'
+                                  : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
+                              }`}
+                            >
+                              {equipped ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span>Equipped</span>
+                                </>
+                              ) : (
+                                <span>+ Learn ({inherent ? 'Free' : `${apCost} AP`})</span>
+                              )}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   );

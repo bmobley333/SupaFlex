@@ -16,11 +16,9 @@ import {
   AbilitySlot,
   TraitQuirkItem,
   calculateAvailableAp,
-  Character,
 } from '../../types/game';
 import { cleanKitName, matchesKitFilter } from '../../utils/kitUtils';
 import { collectKitTraitGrants, applyKitTraitGrantsToSheet } from '../../utils/bundleGrants';
-import { reconcileAbilitiesOnPathAdded } from '../../utils/pathReconciliationUtils';
 
 interface ManageKitsModalProps {
   isOpen: boolean;
@@ -307,26 +305,8 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       stockSkillsCatalog,
       stockRulesCatalog
     );
-    const freeGrantNames = new Set([
-      ...grants.powers.map((p) => p.name.toLowerCase().trim()),
-      ...grants.traits.map((t) => t.name.toLowerCase().trim()),
-    ]);
     updateActiveSheetData((prev) => {
-      const sheetWithGrants = applyKitTraitGrantsToSheet(prev, grants);
-      const charWithNewRace: Character | null = activeCharacter
-        ? { ...activeCharacter, race: newRace }
-        : null;
-      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, newRace, charWithNewRace, freeGrantNames);
-      if (reconciliation.totalRefund > 0) {
-        recordApExpenditure(
-          0,
-          'Powers',
-          `Path Mastery Auto-Credit: Selected Race ${newRace} (+${reconciliation.totalRefund} AP Refunded: ${reconciliation.refundLogDetails.join(', ')})`,
-          1,
-          'Kits Hub'
-        );
-      }
-      return reconciliation.updatedSheetData;
+      return applyKitTraitGrantsToSheet(prev, grants);
     });
     saveActiveCharacter();
     setFeedbackMsg(`✓ Race Kit updated to ${newRace}. Starting traits bundled!`);
@@ -344,26 +324,8 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
       stockSkillsCatalog,
       stockRulesCatalog
     );
-    const freeGrantNames = new Set([
-      ...grants.powers.map((p) => p.name.toLowerCase().trim()),
-      ...grants.traits.map((t) => t.name.toLowerCase().trim()),
-    ]);
     updateActiveSheetData((prev) => {
-      const sheetWithGrants = applyKitTraitGrantsToSheet(prev, grants);
-      const charWithNewClass: Character | null = activeCharacter
-        ? { ...activeCharacter, class: newClass }
-        : null;
-      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, newClass, charWithNewClass, freeGrantNames);
-      if (reconciliation.totalRefund > 0) {
-        recordApExpenditure(
-          0,
-          'Powers',
-          `Path Mastery Auto-Credit: Selected Class ${newClass} (+${reconciliation.totalRefund} AP Refunded: ${reconciliation.refundLogDetails.join(', ')})`,
-          1,
-          'Kits Hub'
-        );
-      }
-      return reconciliation.updatedSheetData;
+      return applyKitTraitGrantsToSheet(prev, grants);
     });
     saveActiveCharacter();
     setFeedbackMsg(`✓ Class Kit updated to ${newClass}. In-kit elements unlocked!`);
@@ -409,37 +371,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
         stockSkillsCatalog,
         stockRulesCatalog
       );
-      const sheetWithGrants = applyKitTraitGrantsToSheet(intermediateSheet, grants);
-
-      // Reconcile out-of-path abilities that now match this new Path
-      const charWithNewKit: Character | null = activeCharacter
-        ? {
-            ...activeCharacter,
-            sheet_data: {
-              ...activeCharacter.sheet_data,
-              favorite_trait_kits: updatedKits,
-            },
-          }
-        : null;
-
-      const freeGrantNames = new Set([
-        ...grants.powers.map((p) => p.name.toLowerCase().trim()),
-        ...grants.traits.map((t) => t.name.toLowerCase().trim()),
-      ]);
-
-      const reconciliation = reconcileAbilitiesOnPathAdded(sheetWithGrants, clean, charWithNewKit, freeGrantNames);
-
-      if (reconciliation.totalRefund > 0) {
-        recordApExpenditure(
-          0,
-          'Powers',
-          `Path Mastery Auto-Credit: Learned Path ${clean} (+${reconciliation.totalRefund} AP Refunded: ${reconciliation.refundLogDetails.join(', ')})`,
-          1,
-          'Kits Hub'
-        );
-      }
-
-      return reconciliation.updatedSheetData;
+      return applyKitTraitGrantsToSheet(intermediateSheet, grants);
     });
 
     saveActiveCharacter();

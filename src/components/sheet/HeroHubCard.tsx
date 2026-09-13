@@ -4,6 +4,7 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { UniversalLinksModal } from '../modals/UniversalLinksModal';
 import { ManagePathsModal } from '../modals/ManagePathsModal';
 import { isMsoEntry } from '../../utils/kitUtils';
+import { calculateAvailableAp } from '../../types/game';
 
 interface HeroHubCardProps {
   onOpenApManager?: () => void;
@@ -36,6 +37,7 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
 
   const isRaceMso = isGsUnlocked && isMsoEntry(race);
   const isClassMso = isGsUnlocked && isMsoEntry(charClass);
+  const availableAp = calculateAvailableAp(level, sheet);
 
   const handleOpenApManager = () => {
     if (onOpenApManager) {
@@ -63,10 +65,12 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
             <button
               type="button"
               onClick={handleOpenApManager}
-              className="flex items-center gap-1 px-2 py-0.5 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/40 rounded-lg text-amber-300 hover:text-amber-100 shadow-sm shrink-0 font-mono font-extrabold text-[11px] transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/40 rounded-lg text-amber-300 hover:text-amber-100 shadow-sm shrink-0 font-mono font-extrabold text-[11px] transition-all cursor-pointer"
               title="Manage Level & AP"
             >
               <span>Lvl {level}</span>
+              <span className="text-amber-500/50">•</span>
+              <span>AP [{availableAp}]</span>
               <ChevronDown className="w-3 text-amber-400" />
             </button>
 
