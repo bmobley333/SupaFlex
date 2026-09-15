@@ -276,7 +276,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       'Loadout Slots' as any,
       `Unlocked Loadout Capacity (${newTotalSlots} Slots)`,
       1,
-      "Exotic Power's Manager"
+      "Exotic Gear Powers Manager"
     );
 
     await saveActiveCharacter();
@@ -1327,7 +1327,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         };
       });
 
-      recordApExpenditure(1, 'Magic Items', `Upgraded Exotic Power: ${versionedName} (+1 AP)`, 1, "Exotic Power's Manager");
+      recordApExpenditure(1, 'Magic Items', `Upgraded Exotic Power: ${versionedName} (+1 AP)`, 1, "Exotic Gear Powers Manager");
 
       saveActiveCharacter();
 
@@ -1614,7 +1614,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   }, [type, filteredRoster, functionsCatalog, modsCatalog, activeCharacter, sheetData.character_vault, isGsUnlocked]);
 
   const sectionIcon = type === 'powers' ? '🔥' : '🧿';
-  const displayTitle = title || (type === 'powers' ? 'MY POWERS' : "EXOTIC'S POWERS");
+  const displayTitle = title || (type === 'powers' ? 'MY POWERS' : "EXOTIC GEAR POWERS");
 
   // Action Economy or Alphabetical Sorting for Active Sheet (with Action Channel Filtering for Powers & Loadout)
   const sortedSlots = useMemo(() => {
@@ -1659,7 +1659,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title={`Click to open ${type === 'powers' ? 'Powers' : "Exotic Power's"} Manager`}
+            title={`Click to open ${type === 'powers' ? 'Powers' : "Exotic Gear Powers"} Manager`}
           >
             <div className={`p-1.5 rounded-xl border flex items-center justify-center shrink-0 group-hover:scale-105 transition-all ${
               type === 'powers'
@@ -1839,7 +1839,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </div>
                       <div>
                         <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                          {type === 'powers' ? 'Powers Manager' : "Exotic Power's Manager"}
+                          {type === 'powers' ? 'Powers Manager' : "Exotic Gear Powers Manager"}
                         </h3>
                         <p className="text-xs text-slate-400 hidden sm:block">
                           {type === 'powers'
@@ -3796,7 +3796,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
                   <div className="flex items-center gap-3">
                     <span className="font-outfit font-bold text-slate-300">
-                      {type === 'powers' ? '🔥 Powers Manager' : "🧿 Exotic Power's Manager"}
+                      {type === 'powers' ? '🔥 Powers Manager' : "🧿 Exotic Gear Powers Manager"}
                     </span>
                   </div>
                   
@@ -4030,7 +4030,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
               ? `No ${abilityActionFilter} action ${type === 'powers' ? 'powers' : 'exotic powers'} learned or visible.`
               : type === 'powers'
               ? 'No powers learned yet. Click "Powers Manager" above to browse the catalog.'
-              : 'No active exotic powers equipped yet. Click "Exotic Power\'s Manager" above to select abilities.'}
+              : 'No active exotic powers equipped yet. Click "Exotic Gear Powers Manager" above to select abilities.'}
           </div>
         )}
       </div>

@@ -80,10 +80,10 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* 2-Column Responsive Section: 🔥 MY POWERS & 🧿 EXOTIC'S POWERS */}
+      {/* 2-Column Responsive Section: 🔥 MY POWERS & 🧿 EXOTIC GEAR POWERS */}
       <div id="section-powers-magic" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
         <AbilitySlotsGrid title="MY POWERS" type="powers" />
-        <AbilitySlotsGrid title="EXOTIC'S POWERS" type="spells" />
+        <AbilitySlotsGrid title="EXOTIC GEAR POWERS" type="spells" />
       </div>
 
       {/* Quick Section Jump Navigation HUD Pill */}
