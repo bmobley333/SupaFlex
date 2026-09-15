@@ -34,16 +34,10 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
 
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-[60vh] relative">
-      {/* High-Density Top Section: Hero Hub (Left), Money (Center), Gear (Right) */}
+      {/* Top Section: Hero Hub (Left), Image 1 Area Left Empty (Right) */}
       <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch scroll-mt-32">
         <div className="lg:col-span-12 xl:col-span-5 2xl:col-span-6 flex">
           <HeroHubCard onOpenApManager={onOpenApManager} className="w-full h-full" />
-        </div>
-        <div className="lg:col-span-7 xl:col-span-4 2xl:col-span-4 flex">
-          <MoneyCard className="w-full h-full" />
-        </div>
-        <div className="lg:col-span-5 xl:col-span-3 2xl:col-span-2 flex">
-          <GearCard className="w-full h-full" />
         </div>
       </div>
 
@@ -80,10 +74,23 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* 2-Column Responsive Section: 🔥 MY POWERS & 🧿 EXOTIC GEAR POWERS */}
+      {/* 2-Column Responsive Section: 🔥 MY POWERS (Left) & 🧿 EXOTIC GEAR & POWERS (Right) */}
       <div id="section-powers-magic" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
+        {/* Column 1: My Powers */}
         <AbilitySlotsGrid title="MY POWERS" type="powers" />
-        <AbilitySlotsGrid title="EXOTIC GEAR POWERS" type="spells" />
+
+        {/* Column 2: Physical Commerce, Inventory & Exotic Combat Impacts */}
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch">
+            <div className="sm:col-span-7 flex">
+              <MoneyCard className="w-full h-full" />
+            </div>
+            <div className="sm:col-span-5 flex">
+              <GearCard className="w-full h-full" />
+            </div>
+          </div>
+          <AbilitySlotsGrid title="EXOTIC GEAR POWERS" type="spells" />
+        </div>
       </div>
 
       {/* Quick Section Jump Navigation HUD Pill */}
