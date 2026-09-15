@@ -32,7 +32,7 @@ interface CatalogsCachePayload {
   };
 }
 
-function loadCatalogsFromCache(): CatalogsCachePayload['data'] | null {
+function loadCatalogsFromCache(minTimestamp?: number): CatalogsCachePayload['data'] | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(CATALOGS_CACHE_KEY);
@@ -41,6 +41,10 @@ function loadCatalogsFromCache(): CatalogsCachePayload['data'] | null {
     if (!parsed || parsed.version !== 1 || !parsed.timestamp || !parsed.data) return null;
     if (Date.now() - parsed.timestamp > CATALOGS_CACHE_TTL_MS) {
       localStorage.removeItem(CATALOGS_CACHE_KEY);
+      return null;
+    }
+    // Auto-invalidate if cloud beacon is newer than cached timestamp
+    if (minTimestamp && parsed.timestamp < minTimestamp) {
       return null;
     }
     return parsed.data;
@@ -300,7 +304,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       let exoticsData: CatalogExotic[];
       let playersData: PlayerRecord[];
 
-      const cached = !options?.forceRefresh ? loadCatalogsFromCache() : null;
+      // Check 40-byte cloud beacon to detect if Antigravity / admin pushed database adjustments
+      const beaconTimeStr = await gameApi.getCatalogBeacon();
+      const beaconTime = beaconTimeStr ? new Date(beaconTimeStr).getTime() : 0;
+      const cached = !options?.forceRefresh ? loadCatalogsFromCache(beaconTime) : null;
 
       if (cached) {
         // Fast path: Instant load from localStorage (0 REST calls, 0 egress)

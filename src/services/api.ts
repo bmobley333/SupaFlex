@@ -922,6 +922,7 @@ export const gameApi = {
     const { data, error } = await supabase
       .from('players')
       .select('email, first_name, last_name, allow_cloning, created_at')
+      .not('email', 'ilike', 'system_%')
       .order('last_name', { ascending: true });
 
     if (error) {
@@ -929,6 +930,42 @@ export const gameApi = {
       return [];
     }
     return (data || []) as PlayerRecord[];
+  },
+
+  async getCatalogBeacon(): Promise<string | null> {
+    try {
+      const { data } = await supabase
+        .from('players')
+        .select('first_name')
+        .eq('email', 'system_catalogs_version@supaflex.local')
+        .maybeSingle();
+      return data?.first_name || null;
+    } catch {
+      return null;
+    }
+  },
+
+  async updateCatalogBeacon(): Promise<string> {
+    const nowIso = new Date().toISOString();
+    try {
+      await supabase
+        .from('players')
+        .upsert({
+          email: 'system_catalogs_version@supaflex.local',
+          first_name: nowIso,
+          last_name: 'catalog_beacon_v1',
+        });
+
+      const ch = supabase.channel('system_catalogs_global');
+      await ch.send({
+        type: 'broadcast',
+        event: 'catalog_version_updated',
+        payload: { timestamp: nowIso },
+      });
+    } catch (e) {
+      console.warn('[gameApi] Notice updating catalog beacon:', e);
+    }
+    return nowIso;
   },
 
   // --- CHARACTERS BY OWNER ---

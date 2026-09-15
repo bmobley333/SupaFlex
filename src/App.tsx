@@ -233,6 +233,20 @@ export default function App() {
     };
   }, [fetchInitialData, setPlayerEmail, setPlayerName]);
 
+  // Realtime Cloud Beacon Listener: Auto-updates catalogs live when Antigravity pushes changes
+  useEffect(() => {
+    const catalogChannel = supabase.channel('system_catalogs_global');
+    catalogChannel
+      .on('broadcast', { event: 'catalog_version_updated' }, () => {
+        fetchInitialData({ silent: true, forceRefresh: true });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(catalogChannel);
+    };
+  }, [fetchInitialData]);
+
   const activePartyId = useCharacterStore((state) => state.activePartyId);
 
   // Dynamic Browser Tab Title Lifecycle
