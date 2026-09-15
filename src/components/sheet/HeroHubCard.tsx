@@ -1,6 +1,8 @@
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { calculateAvailableAp } from '../../types/game';
+import { CardHelpButton } from '../common/CardHelpButton';
 
 export interface CharacterCardProps {
   onOpenApManager?: () => void;
@@ -38,10 +40,13 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({ onOpenApManager, c
             <span className="text-base leading-none">⭐</span>
           </div>
 
-          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase group-hover:text-white transition-colors shrink-0">
-            Level & AP
+          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase group-hover:text-white transition-colors shrink-0 flex items-center gap-1.5">
+            <span>Level & AP</span>
+            <ChevronDown className="w-3.5 h-3.5 text-amber-400/70 group-hover:text-amber-300 group-hover:translate-y-0.5 transition-all" />
           </h3>
         </button>
+
+        <CardHelpButton ruleKey="leveling.advancement_steps" />
 
         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
 
