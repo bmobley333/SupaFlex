@@ -5,6 +5,7 @@ import { AttributeKey, DieRating } from '../../types/game';
 import { stepDownDie } from '../../lib/dice';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
+import { UniversalLinksModal } from '../modals/UniversalLinksModal';
 
 interface AttributeConfig {
   key: AttributeKey;
@@ -50,6 +51,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
     reorderCharacterLinkByIndex,
   } = useCharacterStore();
   const [activeDrawer, setActiveDrawer] = useState<'none' | 'attributes' | 'focus' | 'spark' | 'luck'>('none');
+  const [showDossierModal, setShowDossierModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -542,10 +544,20 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
         </div>
       </div>
 
-      {/* Right Zone: Character Links Dropdown (Row 2, Aligned below Player Links / Resources) */}
-      <div className="shrink-0 flex items-center justify-end">
+      {/* Right Zone: Dossier Button + Character Notes Dropdown (Row 2, Aligned below Player Notes / Resources) */}
+      <div className="shrink-0 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setShowDossierModal(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm cursor-pointer bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/35 text-purple-300 shadow-purple-950/40"
+          title="Open Character Dossier"
+        >
+          <span className="text-xs leading-none">👤</span>
+          <span className="font-outfit font-extrabold tracking-wide">Dossier</span>
+        </button>
+
         <UniversalLinksDropdown
-          label="Character Links"
+          label="Character Notes"
           links={sheet?.character_links || []}
           themeColor="teal"
           onAddLink={addCharacterLink}
@@ -554,6 +566,16 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
           onReorderLinkByIndex={reorderCharacterLinkByIndex}
         />
       </div>
+
+      {showDossierModal && (
+        <UniversalLinksModal
+          isOpen={showDossierModal}
+          onClose={() => setShowDossierModal(false)}
+          initialScope="character"
+          initialTab="dossier"
+          themeColor="indigo"
+        />
+      )}
     </div>
   );
 };

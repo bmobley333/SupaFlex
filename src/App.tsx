@@ -604,10 +604,10 @@ export default function App() {
 
           {/* Right Zone: GM Tools, Resources Popover & Database Indicator */}
           <div className="flex items-center gap-2">
-            {/* 🔗 GM Links Dropdown (GM Mode Only, Left of GM Tools) */}
+            {/* 🔗 GM Notes Dropdown (GM Mode Only, Left of GM Tools) */}
             {activeRole === 'gm' && (
               <UniversalLinksDropdown
-                label="GM Links"
+                label="GM Notes"
                 links={gmLinks}
                 themeColor="teal"
                 onAddLink={addGmLink}
@@ -656,10 +656,10 @@ export default function App() {
               </div>
             )}
 
-            {/* 🔗 Player Links Dropdown (Player Mode Only, Top Right just before Resources) */}
+            {/* 🔗 Player Notes Dropdown (Player Mode Only, Top Right just before Resources) */}
             {activeRole !== 'gm' && (
               <UniversalLinksDropdown
-                label="Player Links"
+                label="Player Notes"
                 links={playerLinks}
                 themeColor="teal"
                 onAddLink={addPlayerLink}

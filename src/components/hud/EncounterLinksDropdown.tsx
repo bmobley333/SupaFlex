@@ -23,7 +23,7 @@ export const EncounterLinksDropdown: React.FC<EncounterLinksDropdownProps> = ({ 
 
   return (
     <UniversalLinksDropdown
-      label="Encounter Links"
+      label="Encounter Notes"
       links={links}
       disabled={!activeEnc}
       disabledTooltip="Select an encounter first"

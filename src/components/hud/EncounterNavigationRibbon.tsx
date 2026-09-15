@@ -548,12 +548,12 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
               type="button"
               onClick={async () => {
                 if (!activeAdv || !activeAct || !activeEnc) return;
-                if (confirm('Reset all Encounter Monsters, Loot, and Links to empty for this Ad-Lib Encounter?')) {
+                if (confirm('Reset all Encounter Monsters, Loot, and Notes to empty for this Ad-Lib Encounter?')) {
                   await resetEncounterAll(activeAdv.id, activeAct.id, activeEnc.id);
                 }
               }}
               className="px-3 py-1 bg-rose-950/90 hover:bg-rose-900 border border-rose-500/60 hover:border-rose-400 text-rose-200 rounded-lg text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 shadow-lg cursor-pointer h-[42px] min-w-[170px]"
-              title="Reset all Encounter Monsters, Encounter Loot, and Encounter Links to empty"
+              title="Reset all Encounter Monsters, Encounter Loot, and Encounter Notes to empty"
             >
               <div className="flex items-center gap-1 text-rose-300 font-extrabold text-[11px] uppercase tracking-wider">
                 <RotateCcw className="w-3 h-3 text-rose-400" />
@@ -564,7 +564,7 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
           </div>
         )}
 
-        {/* Right Section: Adventure Loot Dropdown + Adventure Links Dropdown */}
+        {/* Right Section: Adventure Loot Dropdown + Adventure Notes Dropdown */}
         <div className="flex items-center gap-2">
           {/* Adventure Loot Dropdown (Amber Theme) */}
           <UniversalLootDropdown
@@ -590,9 +590,9 @@ export const EncounterNavigationRibbon: React.FC<EncounterNavigationRibbonProps>
             }}
           />
 
-          {/* Adventure Links Dropdown (Teal Theme) */}
+          {/* Adventure Notes Dropdown (Teal Theme) */}
           <UniversalLinksDropdown
-            label="Adventure Links"
+            label="Adventure Notes"
             links={activeAdv?.links || activeAdv?.structure?.links || []}
             disabled={!activeAdv}
             disabledTooltip="Select an adventure first"

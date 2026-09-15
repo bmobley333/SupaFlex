@@ -294,8 +294,8 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
     switch (currentScope) {
       case 'gm':
         return {
-          title: 'GM Global Links & Notes',
-          subtitle: 'Universal Campaign & Reference Links',
+          title: 'GM Notes',
+          subtitle: 'Universal Campaign & Reference Notes',
           links: gmLinks,
           icon: <Crown className="w-5 h-5 text-amber-400" />,
           activeColor: 'bg-teal-600',
@@ -318,7 +318,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         };
       case 'adventure':
         return {
-          title: 'Adventure Links & Notes',
+          title: 'Adventure Notes',
           subtitle: activeAdv ? activeAdv.title : 'No Active Adventure Selected',
           links: activeAdv?.links || activeAdv?.structure?.links || [],
           icon: <Map className="w-5 h-5 text-indigo-400" />,
@@ -326,7 +326,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
           accentText: 'text-indigo-300',
           badgeStyle: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40',
           isDisabled: !activeAdv,
-          disabledReason: 'Select or create an adventure in GM Screen to manage Adventure Links & Notes.',
+          disabledReason: 'Select or create an adventure in GM Screen to manage Adventure Notes.',
           onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
             if (!activeAdv) return;
             await addAdventureLink(activeAdv.id, name, url, tag, desc);
@@ -346,7 +346,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         };
       case 'encounter':
         return {
-          title: 'Encounter Links & Notes',
+          title: 'Encounter Notes',
           subtitle: activeEnc ? `${activeAdv?.title || 'Adv'} > ${activeEnc.title}` : 'No Active Encounter Selected',
           links: activeEnc?.links || [],
           icon: <Swords className="w-5 h-5 text-amber-400" />,
@@ -354,7 +354,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
           accentText: 'text-amber-300',
           badgeStyle: 'bg-amber-950/80 text-amber-300 border-amber-500/40',
           isDisabled: !activeEnc || !activeAdv || !activeAct,
-          disabledReason: 'Select an encounter in GM Screen to manage Encounter-specific links & notes.',
+          disabledReason: 'Select an encounter in GM Screen to manage Encounter-specific notes.',
           onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
             if (!activeAdv || !activeAct || !activeEnc) return;
             await addEncounterLink(activeAdv.id, activeAct.id, activeEnc.id, name, url, tag, desc);
@@ -374,8 +374,8 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         };
       case 'player':
         return {
-          title: 'Player Global Links & Notes',
-          subtitle: playerEmail ? `Account: ${playerEmail}` : 'Account-Wide Player Links & Notes',
+          title: 'Player Notes',
+          subtitle: playerEmail ? `Account: ${playerEmail}` : 'Account-Wide Player Notes',
           links: playerLinks,
           icon: <User className="w-5 h-5 text-cyan-400" />,
           activeColor: 'bg-cyan-600',
@@ -398,7 +398,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         };
       case 'character':
         return {
-          title: 'Character Links & Notes',
+          title: 'Character Notes',
           subtitle: activeCharacter ? activeCharacter.name : 'No Active Hero Selected',
           links: activeCharacter?.sheet_data?.character_links || [],
           icon: <Scroll className="w-5 h-5 text-indigo-400" />,
@@ -406,7 +406,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
           accentText: 'text-indigo-300',
           badgeStyle: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40',
           isDisabled: !activeCharacter,
-          disabledReason: 'Select or load a hero character to manage character-specific links & notes.',
+          disabledReason: 'Select or load a hero character to manage character-specific notes.',
           onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
             addCharacterLink(name, url, tag, desc);
           },
@@ -423,8 +423,8 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
       case 'received':
       default:
         return {
-          title: 'Received Links, Notes & Handouts',
-          subtitle: 'Real-Time In-Session Shared Links & Notes Inbox',
+          title: 'Received Notes & Handouts',
+          subtitle: 'Real-Time In-Session Shared Notes & Handouts Inbox',
           links: receivedLinks,
           icon: <Inbox className="w-5 h-5 text-emerald-400" />,
           activeColor: 'bg-emerald-600',
@@ -937,7 +937,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                 <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   type="text"
-                  placeholder={currentScope === 'received' ? 'Search received items...' : 'Search links & notes...'}
+                  placeholder={currentScope === 'received' ? 'Search received items...' : 'Search notes...'}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-7 pr-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
@@ -1033,9 +1033,9 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
                 filteredLinks.length === 0 && !isDossierVisibleInLeftPane ? (
                   <div className="h-full flex flex-col items-center justify-center p-6 bg-slate-950/30 rounded-xl border border-slate-800/60 text-center">
                     <Link2 className="w-8 h-8 text-slate-600 mb-2" />
-                    <p className="text-xs font-bold text-slate-400">No items in {scopeData.title.split('&')[0]}</p>
+                    <p className="text-xs font-bold text-slate-400">No items in {scopeData.title}</p>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      {scopeData.isDisabled ? scopeData.disabledReason : 'Use the editor on the right to create links or notes.'}
+                      {scopeData.isDisabled ? scopeData.disabledReason : 'Use the editor on the right to create notes.'}
                     </p>
                   </div>
                 ) : (
