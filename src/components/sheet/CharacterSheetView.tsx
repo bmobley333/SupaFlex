@@ -2,6 +2,7 @@
 import React from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { HeroHubCard } from './HeroHubCard';
+import { PathsCard } from './PathsCard';
 import { MoneyCard } from './MoneyCard';
 import { GearCard } from './GearCard';
 import { TraitsQuirksCard } from './TraitsQuirksCard';
@@ -65,11 +66,10 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
 
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-[60vh] relative">
-      {/* Top Section: Hero Hub (Left), Image 1 Area Left Empty (Right) */}
-      <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch scroll-mt-32">
-        <div className="lg:col-span-12 xl:col-span-5 2xl:col-span-6 flex">
-          <HeroHubCard onOpenApManager={onOpenApManager} className="w-full h-full" />
-        </div>
+      {/* Top Section: Character Card (Left) & Paths Card (Right) */}
+      <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch scroll-mt-32">
+        <HeroHubCard onOpenApManager={onOpenApManager} className="w-full h-full" />
+        <PathsCard className="w-full h-full" />
       </div>
 
       {/* Symmetrical 2-Column Capabilities Grid: Skills (Left) and Traits (Right) when at top */}

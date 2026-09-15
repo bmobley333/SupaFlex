@@ -1,42 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { UniversalLinksModal } from '../modals/UniversalLinksModal';
-import { ManagePathsModal } from '../modals/ManagePathsModal';
-import { isMsoEntry } from '../../utils/kitUtils';
 import { calculateAvailableAp } from '../../types/game';
 
-interface HeroHubCardProps {
+export interface CharacterCardProps {
   onOpenApManager?: () => void;
   className?: string;
 }
 
-export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, className = '' }) => {
+export const CharacterCard: React.FC<CharacterCardProps> = ({ onOpenApManager, className = '' }) => {
   const { activeCharacter } = useCharacterStore();
-  const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
-
   const [showDossierModal, setShowDossierModal] = useState(false);
-  const [showPathsModal, setShowPathsModal] = useState(false);
-
-  // Listen for global manager events
-  useEffect(() => {
-    const handleOpen = (e: CustomEvent) => {
-      if (e.detail === 'paths' || e.detail === 'kits') setShowPathsModal(true);
-    };
-    window.addEventListener('supaflex:open-manager' as any, handleOpen);
-    return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
-  }, []);
 
   if (!activeCharacter) return null;
 
   const sheet = activeCharacter.sheet_data;
   const heroName = activeCharacter.name || 'Hero';
   const level = sheet?.level ?? 1;
-  const race = activeCharacter.race || 'Human';
-  const charClass = activeCharacter.class || 'Vanguard';
-
-  const isRaceMso = isGsUnlocked && isMsoEntry(race);
-  const isClassMso = isGsUnlocked && isMsoEntry(charClass);
   const availableAp = calculateAvailableAp(level, sheet);
 
   const handleOpenApManager = () => {
@@ -50,7 +31,7 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
   return (
     <>
       <div className={`bg-gradient-to-b from-slate-800/40 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-slate-400/90 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap shadow-lg shadow-slate-950/20 ${className}`}>
-        {/* Left Zone: Hero Identity, Level/AP Trigger & Race/Class Pills */}
+        {/* Left Zone: Character Identity & Level/AP Trigger */}
         <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
           <div className="p-1.5 rounded-xl bg-slate-855 border border-slate-600/50 text-slate-200 flex items-center justify-center shadow-[0_0_12px_rgba(148,163,184,0.2)] shrink-0">
             <span className="text-base leading-none">👤</span>
@@ -58,7 +39,7 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
 
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <h3 className="font-outfit font-bold text-sm tracking-wide text-slate-100 uppercase truncate">
-              {heroName}
+              Character: {heroName}
             </h3>
 
             {/* ⭐ Level & AP Integrated Pill with Chevron Trigger */}
@@ -73,40 +54,10 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
               <span>AP {availableAp}</span>
               <ChevronDown className="w-3 text-amber-400" />
             </button>
-
-            {/* 🧬 Race & Class Path Pills */}
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowPathsModal(true)}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
-                  isRaceMso
-                    ? 'bg-purple-950/80 hover:bg-purple-900 border border-purple-500/60 text-purple-300 shadow-sm font-extrabold'
-                    : 'bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/35 hover:border-purple-400 text-purple-300'
-                }`}
-                title="Manage Path"
-              >
-                <span>{isRaceMso ? '🌌' : '🧬'}</span>
-                <span>{race}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPathsModal(true)}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
-                  isClassMso
-                    ? 'bg-purple-950/80 hover:bg-purple-900 border border-purple-500/60 text-purple-300 shadow-sm font-extrabold'
-                    : 'bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/35 hover:border-indigo-400 text-indigo-300'
-                }`}
-                title="Manage Path"
-              >
-                <span>{isClassMso ? '🌌' : '⚔️'}</span>
-                <span>{charClass}</span>
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* Right Zone: Dossier + Manage Paths + Manage Kits Buttons */}
+        {/* Right Zone: Dossier + Manage Level & AP Action Buttons */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <button
             type="button"
@@ -118,15 +69,15 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
             <span className="font-outfit font-extrabold tracking-wide">Dossier</span>
           </button>
 
-          {/* 🧭 Manage Paths Action Button */}
+          {/* ⭐ Manage Level & AP Action Button (replaces Manage Paths) */}
           <button
             type="button"
-            onClick={() => setShowPathsModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm cursor-pointer bg-purple-950/80 hover:bg-purple-900/90 text-purple-200 border-purple-500/50 hover:border-purple-400 shadow-purple-950/40"
-            title="Manage Starting Paths, In-Path AP Purchasing & Unlock New Paths"
+            onClick={handleOpenApManager}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm cursor-pointer bg-amber-950/60 hover:bg-amber-900/70 text-amber-200 border-amber-500/50 hover:border-amber-400 shadow-amber-950/40"
+            title="Manage Level, AP Allocations, and Historical Ledger"
           >
-            <span className="text-xs">🧭</span>
-            <span className="font-outfit font-black tracking-wide">Manage Paths</span>
+            <span className="text-xs">⭐</span>
+            <span className="font-outfit font-black tracking-wide">Manage Level & AP</span>
           </button>
         </div>
       </div>
@@ -140,13 +91,8 @@ export const HeroHubCard: React.FC<HeroHubCardProps> = ({ onOpenApManager, class
           themeColor="indigo"
         />
       )}
-
-      {showPathsModal && (
-        <ManagePathsModal
-          isOpen={showPathsModal}
-          onClose={() => setShowPathsModal(false)}
-        />
-      )}
     </>
   );
 };
+
+export const HeroHubCard = CharacterCard;
