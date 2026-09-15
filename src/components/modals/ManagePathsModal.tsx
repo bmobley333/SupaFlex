@@ -5,7 +5,6 @@ import {
   X,
   Sparkles,
   Layers,
-  Compass,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
@@ -263,8 +262,8 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
         {/* Header */}
         <div className="px-5 py-3.5 bg-slate-950 border-b border-purple-500/30 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-xl bg-purple-950/90 border border-purple-500/50 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.3)]">
-              <Compass className="w-5 h-5 text-purple-400" />
+            <div className="p-1.5 rounded-xl bg-purple-950/90 border border-purple-500/50 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.3)] flex items-center justify-center">
+              <span className="text-base leading-none">🧭</span>
             </div>
             <div>
               <h2 className="font-outfit font-black text-lg text-purple-200 tracking-wide uppercase flex items-center gap-2">
@@ -313,8 +312,8 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
               {/* Card Header */}
               <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-1 rounded-lg bg-purple-950 text-purple-300 border border-purple-500/40">
-                    <Compass className="w-4 h-4 text-purple-400" />
+                  <div className="p-1 rounded-lg bg-purple-950 text-purple-300 border border-purple-500/40 flex items-center justify-center">
+                    <span className="text-sm leading-none">🧭</span>
                   </div>
                   <span className="font-outfit font-black text-sm uppercase tracking-wider text-purple-200">
                     My Paths

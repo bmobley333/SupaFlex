@@ -20,8 +20,8 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
   const hudItems: HUDItem[] = React.useMemo(() => {
     const topCardsItem: HUDItem = {
       id: 'section-top-cards',
-      label: 'Character & Paths',
-      icons: '👤 🧭',
+      label: 'Level, AP & Paths',
+      icons: '⭐ 🧭',
       activeColorClass: 'bg-indigo-900/60 text-indigo-200 border-indigo-400 shadow-indigo-500/30',
       borderColorClass: 'hover:border-indigo-500/50 hover:bg-indigo-950/40 text-slate-300',
     };

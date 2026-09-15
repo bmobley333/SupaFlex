@@ -27,13 +27,11 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
   const isRaceMso = isGsUnlocked && isMsoEntry(race);
   const isClassMso = isGsUnlocked && isMsoEntry(charClass);
 
-  const extraLearnedPaths = useMemo(() => {
+  const shipOfficerPath = useMemo(() => {
     const fromSheet: string[] = activeCharacter?.sheet_data?.favorite_trait_kits || [];
-    return fromSheet.filter((k) => {
-      const lower = (k || '').toLowerCase().trim();
-      return lower !== 'base' && lower !== 'universal' && k !== race && k !== charClass;
-    });
-  }, [race, charClass, activeCharacter?.sheet_data?.favorite_trait_kits]);
+    return fromSheet.find((k) => (k || '').toLowerCase().includes('ship officer'));
+  }, [activeCharacter?.sheet_data?.favorite_trait_kits]);
+  const isShipOfficerMso = isGsUnlocked && shipOfficerPath ? isMsoEntry(shipOfficerPath) : false;
 
   if (!activeCharacter) return null;
 
@@ -56,7 +54,7 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
             </h3>
           </button>
 
-          {/* Active Path Pills (Species, Class, Learned) */}
+          {/* Active Path Pills (Species, Class, and optional Ship Officer) */}
           <div className="flex items-center gap-1.5 flex-wrap">
             {/* Species / Heritage Path */}
             <button
@@ -88,26 +86,22 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
               <span>{charClass}</span>
             </button>
 
-            {/* Extra Learned Paths */}
-            {extraLearnedPaths.map((pathName) => {
-              const isMso = isGsUnlocked && isMsoEntry(pathName);
-              return (
-                <button
-                  key={pathName}
-                  type="button"
-                  onClick={() => setShowPathsModal(true)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 shadow-sm ${
-                    isMso
-                      ? 'bg-purple-950/80 hover:bg-purple-900 border border-purple-500/60 text-purple-300 font-extrabold'
-                      : 'bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-500/40 hover:border-indigo-400 text-indigo-200'
-                  }`}
-                  title="Learned Path"
-                >
-                  <span>{isMso ? '🌌' : '🧭'}</span>
-                  <span>{pathName}</span>
-                </button>
-              );
-            })}
+            {/* Ship Officer Path (only if active/learned) */}
+            {shipOfficerPath && (
+              <button
+                type="button"
+                onClick={() => setShowPathsModal(true)}
+                className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 shadow-sm ${
+                  isShipOfficerMso
+                    ? 'bg-purple-950/80 hover:bg-purple-900 border border-purple-500/60 text-purple-300 font-extrabold'
+                    : 'bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-500/40 hover:border-indigo-400 text-indigo-200'
+                }`}
+                title="Ship Officer Path"
+              >
+                <span>{isShipOfficerMso ? '🌌' : '🚀'}</span>
+                <span>{shipOfficerPath}</span>
+              </button>
+            )}
           </div>
         </div>
 

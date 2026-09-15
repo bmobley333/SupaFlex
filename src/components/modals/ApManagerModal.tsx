@@ -411,7 +411,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
           <div className="flex items-center gap-3">
             <div>
               <h2 className="font-outfit font-black text-xl text-slate-100 tracking-wide flex items-center gap-2">
-                🧩 Manage Level & AP
+                ⭐ Manage Level & AP
                 <CardHelpButton ruleKey="leveling.advancement_steps" />
               </h2>
               <p className="text-xs text-slate-400">
