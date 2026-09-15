@@ -9,6 +9,60 @@ import { reconcileCharacterFreeTraits } from '../utils/pathReconciliationUtils';
 import { CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { getTabSessionId } from '../utils/tabSession';
+import { supabase } from '../lib/supabase';
+
+const CATALOGS_CACHE_KEY = 'supaflex_catalogs_cache_v1';
+const CATALOGS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface CatalogsCachePayload {
+  version: number;
+  timestamp: number;
+  data: {
+    powers: Power[];
+    items: MagicItem[];
+    skills: SupabaseSkill[];
+    traits: SupabaseTrait[];
+    pathsData: SupabasePath[];
+    bundlesData: SupabaseBundle[];
+    functionsData: FunctionItem[];
+    modsData: ModItem[];
+    artifactsData: CatalogArtifact[];
+    exoticsData: CatalogExotic[];
+    playersData: PlayerRecord[];
+  };
+}
+
+function loadCatalogsFromCache(): CatalogsCachePayload['data'] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(CATALOGS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed: CatalogsCachePayload = JSON.parse(raw);
+    if (!parsed || parsed.version !== 1 || !parsed.timestamp || !parsed.data) return null;
+    if (Date.now() - parsed.timestamp > CATALOGS_CACHE_TTL_MS) {
+      localStorage.removeItem(CATALOGS_CACHE_KEY);
+      return null;
+    }
+    return parsed.data;
+  } catch (e) {
+    console.warn('[CatalogsCache] Error reading cache:', e);
+    return null;
+  }
+}
+
+function saveCatalogsToCache(data: CatalogsCachePayload['data']): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const payload: CatalogsCachePayload = {
+      version: 1,
+      timestamp: Date.now(),
+      data,
+    };
+    localStorage.setItem(CATALOGS_CACHE_KEY, JSON.stringify(payload));
+  } catch (e) {
+    console.warn('[CatalogsCache] Error writing cache:', e);
+  }
+}
 
 const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
   if (typeof window !== 'undefined') {
@@ -77,7 +131,8 @@ interface CharacterStore {
   tabSessionId: string;
 
   // Actions
-  fetchInitialData: (options?: { silent?: boolean }) => Promise<void>;
+  fetchInitialData: (options?: { silent?: boolean; forceRefresh?: boolean }) => Promise<void>;
+  refreshCatalogs: () => Promise<void>;
   selectCharacter: (id: number) => void;
   createNewCharacter: (name: string, characterClass?: string, race?: string) => Promise<Character | null>;
   updateActiveSheetData: (updater: (prev: CharacterSheetData) => CharacterSheetData) => void;
@@ -199,7 +254,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     return (get().exoticsCatalog || []).filter((e) => e.exotic_tier === tier);
   },
 
-  fetchInitialData: async (options?: { silent?: boolean }) => {
+  fetchInitialData: async (options?: { silent?: boolean; forceRefresh?: boolean }) => {
     const isSilent = options?.silent === true;
     if (!isSilent) {
       set({ isLoading: true, error: null });
@@ -232,20 +287,93 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return;
       }
 
-      const [chars, powers, items, skills, traits, pathsData, bundlesData, functionsData, modsData, artifactsData, exoticsData, playersData] = await Promise.all([
-        gameApi.getCharacters(),
-        gameApi.getPowers(),
-        gameApi.getMagicItems(),
-        gameApi.getSkills(),
-        gameApi.getTraits(),
-        gameApi.getPaths(),
-        gameApi.getBundles(),
-        gameApi.getFunctions(),
-        gameApi.getMods(),
-        gameApi.getArtifacts(),
-        gameApi.getExotics(),
-        gameApi.getPlayers(),
-      ]);
+      let chars: Character[];
+      let powers: Power[];
+      let items: MagicItem[];
+      let skills: SupabaseSkill[];
+      let traits: SupabaseTrait[];
+      let pathsData: SupabasePath[];
+      let bundlesData: SupabaseBundle[];
+      let functionsData: FunctionItem[];
+      let modsData: ModItem[];
+      let artifactsData: CatalogArtifact[];
+      let exoticsData: CatalogExotic[];
+      let playersData: PlayerRecord[];
+
+      const cached = !options?.forceRefresh ? loadCatalogsFromCache() : null;
+
+      if (cached) {
+        // Fast path: Instant load from localStorage (0 REST calls, 0 egress)
+        powers = cached.powers;
+        items = cached.items;
+        skills = cached.skills;
+        traits = cached.traits;
+        pathsData = cached.pathsData;
+        bundlesData = cached.bundlesData;
+        functionsData = cached.functionsData;
+        modsData = cached.modsData;
+        artifactsData = cached.artifactsData;
+        exoticsData = cached.exoticsData;
+        playersData = cached.playersData;
+
+        chars = await gameApi.getCharacters();
+      } else {
+        // Cold fetch: Download all catalogs from Supabase and cache locally
+        const [
+          fetchedChars,
+          fetchedPowers,
+          fetchedItems,
+          fetchedSkills,
+          fetchedTraits,
+          fetchedPaths,
+          fetchedBundles,
+          fetchedFunctions,
+          fetchedMods,
+          fetchedArtifacts,
+          fetchedExotics,
+          fetchedPlayers,
+        ] = await Promise.all([
+          gameApi.getCharacters(),
+          gameApi.getPowers(),
+          gameApi.getMagicItems(),
+          gameApi.getSkills(),
+          gameApi.getTraits(),
+          gameApi.getPaths(),
+          gameApi.getBundles(),
+          gameApi.getFunctions(),
+          gameApi.getMods(),
+          gameApi.getArtifacts(),
+          gameApi.getExotics(),
+          gameApi.getPlayers(),
+        ]);
+
+        chars = fetchedChars;
+        powers = fetchedPowers;
+        items = fetchedItems;
+        skills = fetchedSkills;
+        traits = fetchedTraits;
+        pathsData = fetchedPaths;
+        bundlesData = fetchedBundles;
+        functionsData = fetchedFunctions;
+        modsData = fetchedMods;
+        artifactsData = fetchedArtifacts;
+        exoticsData = fetchedExotics;
+        playersData = fetchedPlayers;
+
+        saveCatalogsToCache({
+          powers,
+          items,
+          skills,
+          traits,
+          pathsData,
+          bundlesData,
+          functionsData,
+          modsData,
+          artifactsData,
+          exoticsData,
+          playersData,
+        });
+      }
 
       const email = (get().playerEmail || '').trim().toLowerCase();
 
@@ -488,9 +616,37 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         characters: state.characters.map((c) => (c.id === saved.id ? saved : c)),
         isSaving: false,
       }));
+
+      // Instant optimistic vitals broadcast to active party members (< 50ms peer-to-peer sync)
+      const activePartyId = get().activePartyId;
+      if (activePartyId) {
+        try {
+          const curVit = saved.sheet_data?.current_vitality ?? saved.hp ?? 28;
+          const maxVit = saved.sheet_data?.vitality_max ?? 28;
+          const channel = supabase.channel(`party:${activePartyId}`);
+          channel.send({
+            type: 'broadcast',
+            event: 'party_members_updated',
+            payload: {
+              partyId: activePartyId,
+              character_id: saved.id,
+              current_vitality: curVit,
+              vitality_max: maxVit,
+              hp: curVit,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        } catch (bcErr) {
+          console.warn('[useCharacterStore] Notice broadcasting vitals update:', bcErr);
+        }
+      }
     } catch (err: any) {
       set({ isSaving: false, error: err.message || 'Failed to save character.' });
     }
+  },
+
+  refreshCatalogs: async () => {
+    await get().fetchInitialData({ forceRefresh: true });
   },
 
   deleteCharacter: async (id: number) => {

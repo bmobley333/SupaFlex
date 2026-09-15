@@ -72,8 +72,8 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
   const charClass = char?.class || 'Adventurer';
 
   const sheetData: Partial<CharacterSheetData> = char?.sheet_data || {};
-  const currentVit = sheetData.current_vitality ?? char?.hp ?? 28;
-  const maxVit = sheetData.vitality_max ?? 28;
+  const currentVit = (char as any)?.current_vitality ?? sheetData.current_vitality ?? char?.hp ?? 28;
+  const maxVit = (char as any)?.vitality_max ?? sheetData.vitality_max ?? 28;
   const pct = maxVit > 0 ? Math.min(100, Math.max(0, Math.round((currentVit / maxVit) * 100))) : 0;
 
   // Color indicator classes based on Vit %: Green = 100%, Red = 50% or less, Orange = between 50% and 100%

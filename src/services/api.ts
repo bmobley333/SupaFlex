@@ -1235,7 +1235,7 @@ export const gameApi = {
 
     let query = supabase
       .from('party_session_members')
-      .select('*, character:characters(*)')
+      .select('id, party_id, character_id, player_email, tab_session_id, last_seen, character:characters(id, name, race, class, hp, current_vitality:sheet_data->current_vitality, vitality_max:sheet_data->vitality_max)')
       .order('character_id', { ascending: true });
 
     if (isUuid) {
@@ -1252,7 +1252,7 @@ export const gameApi = {
     }
 
     // Fetch player profiles to attach first_name for roster card display
-    const uniqueEmails = Array.from(new Set((data || []).map((m) => (m.player_email || '').toLowerCase()).filter(Boolean)));
+    const uniqueEmails = Array.from(new Set((data || []).map((m: any) => (m.player_email || '').toLowerCase()).filter(Boolean)));
     const playerProfileMap = new Map<string, string>();
     if (uniqueEmails.length > 0) {
       const { data: playersData } = await supabase
@@ -1268,7 +1268,20 @@ export const gameApi = {
 
     // Strict deduplication by character_id (keeping newest last_seen row)
     const memberMap = new Map<number, any>();
-    (data || []).forEach((m) => {
+    (data || []).forEach((m: any) => {
+      // Normalize character vitals for 100% backward compatibility with components reading sheet_data
+      if (m.character) {
+        const curVit = m.character.current_vitality ?? m.character.hp ?? 28;
+        const maxVit = m.character.vitality_max ?? 28;
+        m.character.sheet_data = {
+          ...(m.character.sheet_data || {}),
+          current_vitality: curVit,
+          vitality_max: maxVit,
+        };
+        m.character.current_vitality = curVit;
+        m.character.vitality_max = maxVit;
+      }
+
       const existing = memberMap.get(m.character_id);
       if (!existing || new Date(m.last_seen) > new Date(existing.last_seen)) {
         const emailKey = (m.player_email || '').toLowerCase();

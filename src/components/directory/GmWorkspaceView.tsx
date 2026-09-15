@@ -274,8 +274,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     getName: (m) => resolveCharFirstName(m.character?.name || `Hero #${m.character_id}`),
     getVitPct: (m) => {
       const sheetData: Partial<CharacterSheetData> = m.character?.sheet_data || {};
-      const current = sheetData.current_vitality ?? m.character?.hp ?? 28;
-      const max = sheetData.vitality_max ?? 28;
+      const current = (m.character as any)?.current_vitality ?? sheetData.current_vitality ?? m.character?.hp ?? 28;
+      const max = (m.character as any)?.vitality_max ?? sheetData.vitality_max ?? 28;
       return max > 0 ? (current / max) * 100 : 0;
     },
   });
@@ -413,10 +413,36 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       )
       .subscribe();
 
-    // 2. Broadcast channel for instantaneous player arrival
+    // 2. Broadcast channel for instantaneous player arrival and vitals updates
     const broadcastChannel = supabase.channel(`party:${partyId}`);
     broadcastChannel
-      .on('broadcast', { event: 'party_members_updated' }, () => {
+      .on('broadcast', { event: 'party_members_updated' }, (payload: any) => {
+        // Instant optimistic vitals update (< 50ms peer-to-peer sync)
+        const data = payload?.payload;
+        if (data?.character_id && (data.current_vitality !== undefined || data.hp !== undefined)) {
+          const charId = Number(data.character_id);
+          const newCurrentVit = data.current_vitality ?? data.hp;
+          const newMaxVit = data.vitality_max;
+          setSessionMembers((prev) =>
+            prev.map((m) => {
+              if (Number(m.character_id) === charId && m.character) {
+                const updatedChar = {
+                  ...m.character,
+                  hp: newCurrentVit,
+                  current_vitality: newCurrentVit,
+                  ...(newMaxVit !== undefined ? { vitality_max: newMaxVit } : {}),
+                  sheet_data: {
+                    ...(m.character.sheet_data || {}),
+                    current_vitality: newCurrentVit,
+                    ...(newMaxVit !== undefined ? { vitality_max: newMaxVit } : {}),
+                  },
+                };
+                return { ...m, character: updatedChar as any };
+              }
+              return m;
+            })
+          );
+        }
         loadSessionMembers(partyId, true);
       })
       .on('broadcast', { event: 'party.joined' }, () => {
@@ -427,10 +453,12 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       })
       .subscribe();
 
-    // 3. Periodic polling fallback every 10 seconds to catch any missed socket events
+    // 3. Periodic polling fallback every 60 seconds (paused when tab hidden)
     const pollInterval = setInterval(() => {
-      loadSessionMembers(partyId, true);
-    }, 10000);
+      if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+        loadSessionMembers(partyId, true);
+      }
+    }, 60000);
 
     return () => {
       supabase.removeChannel(cdcChannel);

@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { RulesProvider } from './context/RulesContext.tsx';
+import { initNetworkTelemetry } from './utils/networkTelemetry.ts';
+
+initNetworkTelemetry();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
