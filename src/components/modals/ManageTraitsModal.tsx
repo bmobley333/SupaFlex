@@ -574,7 +574,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                 className="bg-slate-900 text-purple-300 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-purple-500 cursor-pointer w-full truncate shadow-sm"
               >
                 <option value="ALL">🌐 All Traits</option>
-                <option value="STARRED">⭐ Starred ({starredTraitsCount})</option>
+                <option value="STARRED">⭐ Wish List ({starredTraitsCount})</option>
               </select>
             </div>
 
@@ -808,7 +808,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                                 : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
                             }`}
-                            title={starred ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                            title={starred ? 'On Wish List' : 'Click to add to Wish List'}
                           >
                             <Star className={`w-3.5 h-3.5 ${starred ? 'fill-amber-400 text-amber-400' : ''}`} />
                           </button>

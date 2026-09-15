@@ -739,7 +739,7 @@ export const ArmorCard: React.FC = () => {
                             }`}
                           >
                             <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
-                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred ({starredArmorCount})</option>
+                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Wish List ({starredArmorCount})</option>
                             <option value="4" className="bg-slate-900 text-slate-200">🧥 AR 4</option>
                             <option value="6" className="bg-slate-900 text-slate-200">🧥 AR 6</option>
                             <option value="8" className="bg-slate-900 text-slate-200">🧥 AR 8</option>
@@ -885,7 +885,7 @@ export const ArmorCard: React.FC = () => {
                                           ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                                           : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
                                       }`}
-                                      title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                      title={isItemStarred(item) ? 'On Wish List' : 'Click to add to Wish List'}
                                     >
                                       <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
                                     </button>

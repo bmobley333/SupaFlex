@@ -862,7 +862,7 @@ export const WeaponsCard: React.FC = () => {
                             }`}
                           >
                             <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
-                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Starred ({starredWeaponsCount})</option>
+                            <option value="STARRED" className="bg-slate-900 text-slate-200">⭐ Wish List ({starredWeaponsCount})</option>
                             <option value="Unarmed" className="bg-slate-900 text-slate-200">🥊 Unarmed</option>
                             <option value="Hurled" className="bg-slate-900 text-slate-200">🪓 Hurled</option>
                             <option value="Melee" className="bg-slate-900 text-slate-200">🗡️ Melee</option>
@@ -1013,7 +1013,7 @@ export const WeaponsCard: React.FC = () => {
                                           ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                                           : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
                                       }`}
-                                      title={isItemStarred(weapon) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                      title={isItemStarred(weapon) ? 'On Wish List' : 'Click to add to Wish List'}
                                     >
                                       <Star className={`w-3.5 h-3.5 ${isItemStarred(weapon) ? 'fill-amber-400 text-amber-400' : ''}`} />
                                     </button>

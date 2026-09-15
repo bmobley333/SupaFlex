@@ -28,14 +28,22 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({ onOpenApManager, c
     <div className={`bg-gradient-to-b from-slate-800/40 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-slate-400/90 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap shadow-lg shadow-slate-950/20 ${className}`}>
       {/* Left Zone: Level & AP Identity & Informative Stat Pills */}
       <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
-        <div className="p-1.5 rounded-xl bg-amber-950/80 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] shrink-0">
-          <span className="text-base leading-none">⭐</span>
-        </div>
+        <button
+          type="button"
+          onClick={handleOpenApManager}
+          className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left shrink-0"
+          title="Click to open Manage Level & AP"
+        >
+          <div className="p-1.5 rounded-xl bg-amber-950/80 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] group-hover:scale-105 group-hover:border-amber-400 transition-all shrink-0">
+            <span className="text-base leading-none">⭐</span>
+          </div>
 
-        <div className="flex items-center gap-2 min-w-0 flex-wrap">
-          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase shrink-0">
+          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase group-hover:text-white transition-colors shrink-0">
             Level & AP
           </h3>
+        </button>
+
+        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
 
           {/* ⭐ Level Informative Pill */}
           <div

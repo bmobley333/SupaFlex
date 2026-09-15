@@ -663,7 +663,7 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
               }`}
             >
               <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-              <span>Starred</span>
+              <span>Wish List</span>
               <span className="text-[10px] font-mono opacity-80">({starredCount})</span>
             </button>
           )}

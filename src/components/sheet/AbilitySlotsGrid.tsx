@@ -2184,7 +2184,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                         ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                                                         : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
                                                     }`}
-                                                    title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                                    title={isItemStarred(item) ? 'On Wish List' : 'Click to add to Wish List'}
                                                   >
                                                     <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
                                                   </button>
@@ -2617,7 +2617,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               >
                                 <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
                                 <option value="STARRED" className="bg-slate-900 text-slate-200">
-                                  ⭐ Starred ({vaultStarredCount})
+                                  ⭐ Wish List ({vaultStarredCount})
                                 </option>
                               </select>
                             </div>
@@ -2728,7 +2728,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                               ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                                                               : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
                                                           }`}
-                                                          title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                                          title={isItemStarred(item) ? 'On Wish List' : 'Click to add to Wish List'}
                                                         >
                                                           <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
                                                         </button>
@@ -3144,7 +3144,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   >
                                     <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
                                     <option value="STARRED" className="bg-slate-900 text-slate-200">
-                                      ⭐ Starred ({starredCatalogItems.length})
+                                      ⭐ Wish List ({starredCatalogItems.length})
                                     </option>
                                     {POWER_DISCIPLINES.map((disc) => (
                                       <option key={disc} value={disc} className="bg-slate-900 text-slate-200">
@@ -3328,7 +3328,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                                                 : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
                                             }`}
-                                            title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
+                                            title={isItemStarred(item) ? 'On Wish List' : 'Click to add to Wish List'}
                                           >
                                             <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
                                           </button>
