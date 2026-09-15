@@ -32,6 +32,37 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
   const { activeCharacter, playerEmail } = useCharacterStore();
   const heroKey = activeCharacter?.id ? `hero_${activeCharacter.id}` : 'no_hero';
 
+  const [traitsSkillsAtBottom, setTraitsSkillsAtBottom] = React.useState<boolean>(() => {
+    try {
+      return localStorage.getItem('supaflex_traits_skills_bottom') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleTraitsSkillsPosition = React.useCallback(() => {
+    setTraitsSkillsAtBottom((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('supaflex_traits_skills_bottom', String(next));
+      } catch {}
+      return next;
+    });
+    setTimeout(() => {
+      const el = document.getElementById('section-capabilities');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
+  }, []);
+
+  const capabilitiesSection = (
+    <div id="section-capabilities" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
+      <SkillsetsPanel onTogglePosition={handleToggleTraitsSkillsPosition} isAtBottom={traitsSkillsAtBottom} />
+      <TraitsQuirksCard onTogglePosition={handleToggleTraitsSkillsPosition} isAtBottom={traitsSkillsAtBottom} />
+    </div>
+  );
+
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-[60vh] relative">
       {/* Top Section: Hero Hub (Left), Image 1 Area Left Empty (Right) */}
@@ -41,11 +72,8 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* Symmetrical 2-Column Capabilities Grid: Traits (Left) and Skills (Right) */}
-      <div id="section-capabilities" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
-        <TraitsQuirksCard />
-        <SkillsetsPanel />
-      </div>
+      {/* Symmetrical 2-Column Capabilities Grid: Skills (Left) and Traits (Right) when at top */}
+      {!traitsSkillsAtBottom && capabilitiesSection}
 
       {/* Responsive Combat & Protection Matrix: 2-Column (1366px Laptops) vs 3-Column (1920px+ Widescreen) */}
       <div id="section-combat-vitals" className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 scroll-mt-32">
@@ -74,12 +102,9 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* 2-Column Responsive Section: 🔥 MY POWERS (Left) & 🧿 EXOTIC GEAR & POWERS (Right) */}
+      {/* 2-Column Responsive Section: 🧿 EXOTIC GEAR POWERS & COMMERCE (Left) & 🔥 MY POWERS (Right) */}
       <div id="section-powers-magic" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
-        {/* Column 1: My Powers */}
-        <AbilitySlotsGrid title="MY POWERS" type="powers" />
-
-        {/* Column 2: Physical Commerce, Inventory & Exotic Combat Impacts */}
+        {/* Column 1 (Left): Physical Commerce, Inventory & Exotic Combat Impacts */}
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch">
             <div className="sm:col-span-7 flex">
@@ -91,10 +116,16 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
           </div>
           <AbilitySlotsGrid title="EXOTIC GEAR POWERS" type="spells" />
         </div>
+
+        {/* Column 2 (Right): My Powers */}
+        <AbilitySlotsGrid title="MY POWERS" type="powers" />
       </div>
 
+      {/* Symmetrical 2-Column Capabilities Grid: Skills (Left) and Traits (Right) when relocated to bottom */}
+      {traitsSkillsAtBottom && capabilitiesSection}
+
       {/* Quick Section Jump Navigation HUD Pill */}
-      <SectionJumpHUD />
+      <SectionJumpHUD traitsSkillsAtBottom={traitsSkillsAtBottom} />
     </div>
   );
 };

@@ -1,6 +1,5 @@
-// src/components/sheet/SkillsetsPanel.tsx
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Check, ChevronDown, Search, X, Scroll, GraduationCap, Star, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, Search, X, Scroll, GraduationCap, Star, Trash2, ArrowDown, ArrowUp } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
@@ -9,6 +8,11 @@ import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { isTraitItem, isMsoEntry, compareMsoOptions, compareMsoItems } from '../../utils/kitUtils';
 import { isPathStringMatch, parseItemPaths } from '../../utils/pathApUtils';
 import { reconcileSkillsOnSkillsetAdded } from '../../utils/pathReconciliationUtils';
+
+export interface SkillsetsPanelProps {
+  onTogglePosition?: () => void;
+  isAtBottom?: boolean;
+}
 
 interface DerivedSkill {
   name: string;
@@ -78,7 +82,7 @@ const parseSkill = (
   };
 };
 
-export const SkillsetsPanel: React.FC = () => {
+export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition, isAtBottom }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const { activeCharacter, skills, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
@@ -630,23 +634,39 @@ export const SkillsetsPanel: React.FC = () => {
           <CardHelpButton ruleKey="skills.basics" />
         </div>
 
-        {/* Manage Skills Action Button */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowManageModal(!showManageModal)}
-            className={`p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm cursor-pointer group ${
-              showManageModal
-                ? 'bg-indigo-600/30 text-indigo-200 border-indigo-400 shadow-indigo-500/30'
-                : 'bg-indigo-950/40 hover:bg-indigo-900/50 border-indigo-500/30 text-indigo-300 hover:text-white'
-            }`}
-            title="Open Skills Manager"
-          >
-            <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
-          </button>
+        {/* Manage Skills & Reposition Action Buttons */}
+        <div className="flex items-center gap-1.5">
+          {onTogglePosition && (
+            <button
+              type="button"
+              onClick={onTogglePosition}
+              className="p-1.5 px-2 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm cursor-pointer group bg-indigo-950/40 hover:bg-indigo-900/50 border-indigo-500/30 hover:border-indigo-400 text-indigo-300 hover:text-white"
+              title={isAtBottom ? 'Move Skills & Traits to top of sheet' : 'Move Skills & Traits to bottom of sheet'}
+            >
+              {isAtBottom ? (
+                <ArrowUp className="w-3.5 h-3.5 group-hover:-translate-y-0.5 transition-transform" />
+              ) : (
+                <ArrowDown className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" />
+              )}
+            </button>
+          )}
 
-          {/* MASTER 2-COLUMN SPLIT-PANE GLASSMORPHIC MODAL */}
-          {showManageModal && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowManageModal(!showManageModal)}
+              className={`p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm cursor-pointer group ${
+                showManageModal
+                  ? 'bg-indigo-600/30 text-indigo-200 border-indigo-400 shadow-indigo-500/30'
+                  : 'bg-indigo-950/40 hover:bg-indigo-900/50 border-indigo-500/30 text-indigo-300 hover:text-white'
+              }`}
+              title="Open Skills Manager"
+            >
+              <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
+            </button>
+
+            {/* MASTER 2-COLUMN SPLIT-PANE GLASSMORPHIC MODAL */}
+            {showManageModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
               <div
                 ref={modalRef}
@@ -1160,6 +1180,7 @@ export const SkillsetsPanel: React.FC = () => {
           )}
         </div>
       </div>
+    </div>
 
       {/* Active Known Skillsets Top Strip (when learned) */}
       {uniqueKnownSkillsetNames.length > 0 && (

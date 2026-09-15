@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles,
   ChevronDown,
+  ArrowDown,
+  ArrowUp,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -9,7 +11,12 @@ import { TraitNameWithNotes } from '../common/TraitNameWithNotes';
 import { ManageTraitsModal } from '../modals/ManageTraitsModal';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
-export const TraitsQuirksCard: React.FC = () => {
+export interface TraitsQuirksCardProps {
+  onTogglePosition?: () => void;
+  isAtBottom?: boolean;
+}
+
+export const TraitsQuirksCard: React.FC<TraitsQuirksCardProps> = ({ onTogglePosition, isAtBottom }) => {
   const { activeCharacter } = useCharacterStore();
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
@@ -99,6 +106,21 @@ export const TraitsQuirksCard: React.FC = () => {
                 <span>All ({validTraits.length})</span>
               </button>
             </div>
+          )}
+
+          {onTogglePosition && (
+            <button
+              type="button"
+              onClick={onTogglePosition}
+              className="p-1.5 px-2 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm cursor-pointer group bg-purple-950/80 hover:bg-purple-900/90 border-purple-500/40 hover:border-purple-400 text-purple-200 hover:text-white"
+              title={isAtBottom ? 'Move Skills & Traits to top of sheet' : 'Move Skills & Traits to bottom of sheet'}
+            >
+              {isAtBottom ? (
+                <ArrowUp className="w-3.5 h-3.5 group-hover:-translate-y-0.5 transition-transform" />
+              ) : (
+                <ArrowDown className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" />
+              )}
+            </button>
           )}
 
           <button

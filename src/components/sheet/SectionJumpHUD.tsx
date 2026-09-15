@@ -9,40 +9,49 @@ interface HUDItem {
   borderColorClass: string;
 }
 
-const HUD_ITEMS: HUDItem[] = [
-  {
-    id: 'section-top-cards',
-    label: 'Hero Hub',
-    icons: '👤',
-    activeColorClass: 'bg-indigo-900/60 text-indigo-200 border-indigo-400 shadow-indigo-500/30',
-    borderColorClass: 'hover:border-indigo-500/50 hover:bg-indigo-950/40 text-slate-300',
-  },
-  {
-    id: 'section-capabilities',
-    label: 'Traits & Skillsets',
-    icons: '🧬 🎓',
-    activeColorClass: 'bg-purple-900/60 text-purple-200 border-purple-400 shadow-purple-500/30',
-    borderColorClass: 'hover:border-purple-500/50 hover:bg-purple-950/40 text-slate-300',
-  },
-  {
-    id: 'section-combat-vitals',
-    label: 'Combat & Vitality',
-    icons: '⚔️ 🧥 🛡️ 💎 ❤️ 🐉 👥',
-    activeColorClass: 'bg-rose-900/60 text-rose-200 border-rose-400 shadow-rose-500/30',
-    borderColorClass: 'hover:border-rose-500/50 hover:bg-rose-950/40 text-slate-300',
-  },
-  {
-    id: 'section-powers-magic',
-    label: 'Powers & Gear',
-    icons: '🔥 💰 ⚙️ 🧿',
-    activeColorClass: 'bg-amber-900/60 text-amber-200 border-amber-400 shadow-amber-500/30',
-    borderColorClass: 'hover:border-amber-500/50 hover:bg-amber-950/40 text-slate-300',
-  },
-];
+interface SectionJumpHUDProps {
+  traitsSkillsAtBottom?: boolean;
+}
 
-export const SectionJumpHUD: React.FC = () => {
+export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBottom = false }) => {
   const [activeSection, setActiveSection] = useState<string>('section-top-cards');
   const [hoveredLabel, setHoveredLabel] = useState<string | null>(null);
+
+  const hudItems: HUDItem[] = React.useMemo(() => {
+    const topCardsItem: HUDItem = {
+      id: 'section-top-cards',
+      label: 'Hero Hub',
+      icons: '👤',
+      activeColorClass: 'bg-indigo-900/60 text-indigo-200 border-indigo-400 shadow-indigo-500/30',
+      borderColorClass: 'hover:border-indigo-500/50 hover:bg-indigo-950/40 text-slate-300',
+    };
+    const capabilitiesItem: HUDItem = {
+      id: 'section-capabilities',
+      label: 'Skills & Traits',
+      icons: '🎓 🧬',
+      activeColorClass: 'bg-purple-900/60 text-purple-200 border-purple-400 shadow-purple-500/30',
+      borderColorClass: 'hover:border-purple-500/50 hover:bg-purple-950/40 text-slate-300',
+    };
+    const combatItem: HUDItem = {
+      id: 'section-combat-vitals',
+      label: 'Combat & Vitality',
+      icons: '⚔️ 🧥 🛡️ 💎 ❤️ 🐉 👥',
+      activeColorClass: 'bg-rose-900/60 text-rose-200 border-rose-400 shadow-rose-500/30',
+      borderColorClass: 'hover:border-rose-500/50 hover:bg-rose-950/40 text-slate-300',
+    };
+    const powersItem: HUDItem = {
+      id: 'section-powers-magic',
+      label: 'Powers & Gear',
+      icons: '🔥 💰 ⚙️ 🧿',
+      activeColorClass: 'bg-amber-900/60 text-amber-200 border-amber-400 shadow-amber-500/30',
+      borderColorClass: 'hover:border-amber-500/50 hover:bg-amber-950/40 text-slate-300',
+    };
+
+    if (traitsSkillsAtBottom) {
+      return [topCardsItem, combatItem, powersItem, capabilitiesItem];
+    }
+    return [topCardsItem, capabilitiesItem, combatItem, powersItem];
+  }, [traitsSkillsAtBottom]);
 
   useEffect(() => {
     const observerOptions: IntersectionObserverInit = {
@@ -61,7 +70,7 @@ export const SectionJumpHUD: React.FC = () => {
 
     const observer = new IntersectionObserver(handleIntersect, observerOptions);
 
-    HUD_ITEMS.forEach((item) => {
+    hudItems.forEach((item) => {
       const el = document.getElementById(item.id);
       if (el) observer.observe(el);
     });
@@ -69,7 +78,7 @@ export const SectionJumpHUD: React.FC = () => {
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [hudItems]);
 
   const scrollToSection = (id: string) => {
     setActiveSection(id);
@@ -90,7 +99,7 @@ export const SectionJumpHUD: React.FC = () => {
 
       {/* Glassmorphic Pill Dock */}
       <div className="pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-slate-800 shadow-2xl rounded-full px-3.5 py-1.5 flex items-center gap-2 transition-all">
-        {HUD_ITEMS.map((item) => {
+        {hudItems.map((item) => {
           const isActive = activeSection === item.id;
           return (
             <button
