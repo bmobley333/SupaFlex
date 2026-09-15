@@ -1368,6 +1368,42 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           </div>
                         </div>
                       )}
+
+                      {/* ⚡ Static Data & Egress Defense Card */}
+                      <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-2 shadow-md">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-amber-400 text-sm">⚡</span>
+                            <label className="text-xs font-bold text-slate-200 uppercase tracking-wider font-outfit">
+                              Static Data & Egress Defense
+                            </label>
+                            <InfoTooltip text="Catalogs (Powers, Items, Skills, Traits, Paths) are cached in LocalStorage to eliminate repetitive database downloads and maintain zero bandwidth costs. Click to pull fresh copies from Supabase anytime." />
+                          </div>
+                          <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                            LocalStorage (24h TTL)
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between pt-1">
+                          <p className="text-[11px] text-slate-400">
+                            10 game catalogs cached locally (0 bytes egress on app load).
+                          </p>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setIsRefreshingCatalogs(true);
+                              await useCharacterStore.getState().refreshCatalogs();
+                              setIsRefreshingCatalogs(false);
+                              setCatalogRefreshSuccess(true);
+                              setTimeout(() => setCatalogRefreshSuccess(false), 3000);
+                            }}
+                            disabled={isRefreshingCatalogs}
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-slate-600/80 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+                          >
+                            <span className={isRefreshingCatalogs ? 'animate-spin' : ''}>🔄</span>
+                            <span>{isRefreshingCatalogs ? 'Refreshing...' : catalogRefreshSuccess ? '✓ Updated!' : 'Refresh Catalogs'}</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
