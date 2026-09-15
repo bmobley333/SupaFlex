@@ -1668,13 +1668,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             }`}>
               <span className="text-base leading-none whitespace-nowrap flex items-center gap-0.5">{sectionIcon}</span>
             </div>
-            <h3 className={`font-outfit font-extrabold text-sm tracking-widest uppercase flex items-center gap-1.5 group-hover:text-white transition-colors ${
+            <h3 className={`font-outfit font-extrabold text-sm tracking-widest uppercase group-hover:text-white transition-colors ${
               type === 'powers' ? 'text-orange-200' : 'text-pink-200'
             }`}>
-              <span>{displayTitle}</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-all group-hover:translate-y-0.5 ${
-                type === 'powers' ? 'text-orange-400/70 group-hover:text-orange-300' : 'text-pink-400/70 group-hover:text-pink-300'
-              }`} />
+              {displayTitle}
             </h3>
           </button>
           <CardHelpButton ruleKey={type === 'powers' ? 'powers.basics' : 'magic_items.basics'} />

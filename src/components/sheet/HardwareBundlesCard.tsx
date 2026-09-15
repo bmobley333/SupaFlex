@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Package,
-  ChevronDown,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -58,9 +57,8 @@ export const HardwareBundlesCard: React.FC = () => {
             <div className="p-1.5 rounded-xl bg-cyan-950/90 border border-cyan-500/50 text-cyan-300 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.25)] group-hover:scale-105 group-hover:border-cyan-400 transition-all">
               <span className="text-base leading-none">🎒</span>
             </div>
-            <h3 className="font-outfit font-black text-sm tracking-wider text-slate-100 uppercase group-hover:text-cyan-200 transition-colors flex items-center gap-1.5">
-              <span>Equipment Kits</span>
-              <ChevronDown className="w-3.5 h-3.5 text-cyan-400/70 group-hover:text-cyan-300 group-hover:translate-y-0.5 transition-all" />
+            <h3 className="font-outfit font-black text-sm tracking-wider text-slate-100 uppercase group-hover:text-cyan-200 transition-colors">
+              Equipment Kits
             </h3>
           </button>
           <CardHelpButton ruleKey="gear" />

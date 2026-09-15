@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Check, ChevronDown, Search, X, Scroll, GraduationCap, Star, Trash2, ArrowDown, ArrowUp } from 'lucide-react';
+import { Check, Search, X, Scroll, GraduationCap, Star, Trash2, ArrowDown, ArrowUp } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
@@ -626,9 +626,8 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
             <div className="p-1.5 rounded-xl bg-indigo-900/90 border border-indigo-500/60 text-indigo-200 flex items-center justify-center shadow-[0_0_14px_rgba(99,102,241,0.35)] group-hover:scale-105 group-hover:border-indigo-400 transition-all">
               <span className="text-base leading-none">🎓</span>
             </div>
-            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-indigo-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
-              <span>Skills</span>
-              <ChevronDown className="w-3.5 h-3.5 text-indigo-400/70 group-hover:text-indigo-300 group-hover:translate-y-0.5 transition-all" />
+            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-indigo-200 uppercase group-hover:text-white transition-colors">
+              Skills
             </h3>
           </button>
           <CardHelpButton ruleKey="skills.basics" />

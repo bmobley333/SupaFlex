@@ -3,7 +3,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
-  ChevronDown,
   Trash2,
   X,
   Search,
@@ -161,9 +160,8 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
             <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] group-hover:scale-105 group-hover:border-amber-400 transition-all">
               <span className="text-base leading-none">💰</span>
             </div>
-            <span className="font-outfit font-extrabold text-xs tracking-wider text-amber-200 uppercase group-hover:text-white transition-colors flex items-center gap-1">
-              <span>Money & Valuables</span>
-              <ChevronDown className="w-3 h-3 text-amber-400/70 group-hover:text-amber-300 group-hover:translate-y-0.5 transition-all" />
+            <span className="font-outfit font-extrabold text-xs tracking-wider text-amber-200 uppercase group-hover:text-white transition-colors">
+              Money & Valuables
             </span>
           </button>
         </div>

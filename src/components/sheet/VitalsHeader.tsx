@@ -2,7 +2,6 @@
 // Vitality Header Component - Prominent Current Vitality readout, draggable progress bar, & quick adjusters.
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 
@@ -155,9 +154,8 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
             <div className="p-1.5 rounded-xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.25)] group-hover:scale-105 group-hover:border-emerald-400 transition-all">
               <span className="text-base leading-none">❤️</span>
             </div>
-            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-emerald-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
-              <span>Vitality</span>
-              <ChevronDown className="w-3.5 h-3.5 text-emerald-400/70 group-hover:text-emerald-300 group-hover:translate-y-0.5 transition-all" />
+            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-emerald-200 uppercase group-hover:text-white transition-colors">
+              Vitality
             </h3>
           </button>
           <CardHelpButton ruleKey="vitality.death_checks" />

@@ -1,6 +1,6 @@
 // src/components/sheet/WeaponsCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, X, Check, Swords, Loader2, Search, Star, Trash2, AlertCircle } from 'lucide-react';
+import { X, Check, Swords, Loader2, Search, Star, Trash2, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
@@ -564,9 +564,8 @@ export const WeaponsCard: React.FC = () => {
             <div className="p-1.5 rounded-xl bg-rose-950/90 border border-rose-500/50 text-rose-300 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.25)] group-hover:scale-105 group-hover:border-rose-400 transition-all">
               <span className="text-base leading-none">⚔️</span>
             </div>
-            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-rose-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
-              <span>Weapon SK</span>
-              <ChevronDown className="w-3.5 h-3.5 text-rose-400/70 group-hover:text-rose-300 group-hover:translate-y-0.5 transition-all" />
+            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-rose-200 uppercase group-hover:text-white transition-colors">
+              Weapon SK
             </h3>
           </button>
           <CardHelpButton ruleKey="weapons.basics" />

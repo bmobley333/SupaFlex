@@ -1,6 +1,6 @@
 // src/components/sheet/ArmorCard.tsx
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, X, Check, Shirt, Search, Loader2, Star, Trash2, AlertCircle } from 'lucide-react';
+import { X, Check, Shirt, Search, Loader2, Star, Trash2, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
@@ -548,9 +548,8 @@ export const ArmorCard: React.FC = () => {
             <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] group-hover:scale-105 group-hover:border-amber-400 transition-all">
               <span className="text-base leading-none">🧥</span>
             </div>
-            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
-              <span>Armor SK</span>
-              <ChevronDown className="w-3.5 h-3.5 text-amber-400/70 group-hover:text-amber-300 group-hover:translate-y-0.5 transition-all" />
+            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase group-hover:text-white transition-colors">
+              Armor SK
             </h3>
           </button>
           <CardHelpButton ruleKey="col.armor.ar" />

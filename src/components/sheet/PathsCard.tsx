@@ -1,6 +1,5 @@
 // src/components/sheet/PathsCard.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ManagePathsModal } from '../modals/ManagePathsModal';
 import { isMsoEntry } from '../../utils/kitUtils';
@@ -51,9 +50,8 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
             <div className="p-1.5 rounded-xl bg-purple-950/90 border border-purple-500/50 text-purple-300 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.25)] group-hover:scale-105 group-hover:border-purple-400 transition-all shrink-0">
               <span className="text-base leading-none">🧭</span>
             </div>
-            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-purple-200 uppercase group-hover:text-white transition-colors flex items-center gap-1.5">
-              <span>Paths</span>
-              <ChevronDown className="w-3.5 h-3.5 text-purple-400/70 group-hover:text-purple-300 group-hover:translate-y-0.5 transition-all" />
+            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-purple-200 uppercase group-hover:text-white transition-colors">
+              Paths
             </h3>
           </button>
 

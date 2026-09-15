@@ -1012,9 +1012,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
             <div className="p-1.5 rounded-xl bg-teal-950/90 border border-teal-500/50 text-teal-300 flex items-center justify-center shadow-[0_0_12px_rgba(20,184,166,0.25)] group-hover:scale-105 group-hover:border-teal-400 transition-all">
               <span className="text-base leading-none">⚙️</span>
             </div>
-            <span className="font-outfit font-extrabold text-xs tracking-wider text-teal-200 uppercase group-hover:text-white transition-colors flex items-center gap-1">
-              <span>Gear</span>
-              <ChevronDown className="w-3 h-3 text-teal-400/70 group-hover:text-teal-300 group-hover:translate-y-0.5 transition-all" />
+            <span className="font-outfit font-extrabold text-xs tracking-wider text-teal-200 uppercase group-hover:text-white transition-colors">
+              Gear
             </span>
           </button>
         </div>
