@@ -82,9 +82,11 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   }, [isOpen, initialTab, currentEmail, isMasterAccount]);
 
   useEffect(() => {
-    if (!currentEmail || activeRole === 'gm') {
+    if (!currentEmail) {
       if (rightSubTab !== 'account') setRightSubTab('account');
-      if (!currentEmail && isCreatingHero) setIsCreatingHero(false);
+      if (isCreatingHero) setIsCreatingHero(false);
+    } else if (activeRole === 'gm' && rightSubTab === 'inspect') {
+      setRightSubTab('account');
     }
   }, [currentEmail, activeRole, rightSubTab, isCreatingHero]);
 
@@ -534,6 +536,9 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 activeRole={activeRole}
                 onRoleChange={(newRole) => {
                   setActiveRole(newRole);
+                  if (newRole === 'gm') {
+                    onClose();
+                  }
                 }}
               />
             )}
@@ -584,7 +589,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       : 'text-slate-400 hover:text-slate-200 border border-transparent'
                   }`}
                 >
-                  {activeRole === 'gm' ? '👑 GM Screen' : `👤 My Heroes (${userCharacters.length})`}
+                  👤 My Heroes ({userCharacters.length})
                 </button>
                 <button
                   type="button"
@@ -751,26 +756,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                   )}
                 </div>
               </>
-            ) : activeRole === 'gm' ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-slate-900/80 rounded-2xl border border-amber-500/30 space-y-4 my-auto shadow-inner">
-                <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-3xl text-amber-400 shadow-md">
-                  👑
-                </div>
-                <div className="space-y-1.5">
-                  <h3 className="text-base font-extrabold text-amber-400 font-outfit uppercase tracking-wider">
-                    Game Master Mode Active
-                  </h3>
-                  <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                    Player hero selection is hidden while in GM Mode. Click below or close this selector to launch the GM Command Console.
-                  </p>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <span>👑</span> Launch GM Screen
-                </button>
-              </div>
             ) : (
               <>
                 {/* Header & Create Button */}
@@ -997,6 +982,9 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => {
+                                      if (activeRole === 'gm') {
+                                        setActiveRole('player');
+                                      }
                                       onSelectCharacter(char.id);
                                       onClose();
                                     }}
