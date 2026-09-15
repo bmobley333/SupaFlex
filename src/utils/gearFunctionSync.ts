@@ -290,13 +290,13 @@ export interface ReconcileResult {
 }
 
 /**
- * Universally reconciles character_vault, spell_slots (Stance A), and stance_beta_slots (Stance B)
+ * Universally reconciles character_vault and spell_slots (Active Exotic Powers)
  * against physically owned gear in simple_gear.
  * Strictly adheres to the single-source-of-truth mandate:
  * Physical inventory (simple_gear) dictates reality.
  * All hardware functions stem exclusively from physically owned gear and installed mods.
  * When a gear item is dropped or removed, its inherent and installed functions are
- * immediately and deterministically evicted everywhere (Vault, Stance A, Stance B).
+ * immediately and deterministically evicted everywhere (Vault and Active Slots).
  */
 export const reconcileCharacterVaultWithGear = (
   sheetData: CharacterSheetData | null | undefined,
@@ -601,8 +601,8 @@ export const reconcileCharacterVaultWithGear = (
     }
   }
 
-  // 3. Reconcile Stance Alpha (spell_slots)
-  const finalSlotsA: AbilitySlot[] = [];
+  // 3. Reconcile Active Exotic Powers (spell_slots)
+  const finalSlots: AbilitySlot[] = [];
   for (const slot of currentSlotsA) {
     if (!slot || !slot.name) continue;
     const rawName = (slot as any).base_name || slot.name;
@@ -631,7 +631,7 @@ export const reconcileCharacterVaultWithGear = (
         if ((slot as any).slot_weight !== validWeight || (slot as any).category !== validCategory) {
           metadataHealed = true;
         }
-        finalSlotsA.push({
+        finalSlots.push({
           ...slot,
           category: validCategory,
           slot_weight: validWeight,
@@ -643,61 +643,46 @@ export const reconcileCharacterVaultWithGear = (
             : (slot as any).source,
         } as any);
       } else {
-        // Evicted from Stance Alpha because host gear was dropped!
-        removedFunctions.push(`${slot.name} (from Stance Alpha)`);
+        // Evicted from Active Exotic Powers because host gear was dropped!
+        removedFunctions.push(`${slot.name} (from Active Exotic Powers)`);
       }
     } else {
-      finalSlotsA.push(slot);
+      finalSlots.push(slot);
     }
   }
 
-  // 4. Reconcile Stance Beta (stance_beta_slots)
-  const finalSlotsB: AbilitySlot[] = [];
-  for (const slot of currentSlotsB) {
-    if (!slot || !slot.name) continue;
-    const rawName = (slot as any).base_name || slot.name;
-    const cName = cleanBelongsToName(rawName);
-    const sName = cName.replace(/\(mso\)/gi, '').trim();
-    const gName = (slot as any).source_gear ? cleanBelongsToName((slot as any).source_gear) : '';
-    const gStripped = gName ? gName.replace(/\(mso\)/gi, '').trim() : '';
+  // 4. Migrate and self-heal any legacy Stance Beta slots into character_vault
+  if (currentSlotsB.length > 0) {
+    for (const bSlot of currentSlotsB) {
+      if (!bSlot || !bSlot.name) continue;
+      const rawName = (bSlot as any).base_name || bSlot.name;
+      const cName = cleanBelongsToName(rawName);
+      const sName = cName.replace(/\(mso\)/gi, '').trim();
 
-    if (isHardwareFunction(slot as any)) {
-      const isExpected =
-        expectedNamesSet.has(cName) ||
-        expectedNamesSet.has(sName) ||
-        (gName && (expectedNamesSet.has(gName) || expectedNamesSet.has(gStripped)));
+      const alreadyInVault = finalVault.some((v) => {
+        const vRaw = v.base_name || v.name;
+        const vClean = cleanBelongsToName(vRaw);
+        return vClean === cName || vClean === sName;
+      });
 
-      if (isExpected) {
-        const template =
-          expectedFnMap.get(cName) ||
-          expectedFnMap.get(sName) ||
-          (gName ? expectedFnMap.get(gName) || expectedFnMap.get(gStripped) : undefined);
-        const isStaleMso = (slot as any).source_gear?.trim().toLowerCase() === 'mso';
-        if (isStaleMso) metadataHealed = true;
-        const validGear = !isStaleMso && (slot as any).source_gear ? (slot as any).source_gear : template?.source_gear;
-        const validMod = isStaleMso ? template?.source_mod : ((slot as any).source_mod || template?.source_mod);
-        const validCategory = template?.category || (slot as any).category;
-        const validWeight = template?.slot_weight ?? (slot as any).slot_weight;
-        if ((slot as any).slot_weight !== validWeight || (slot as any).category !== validCategory) {
-          metadataHealed = true;
-        }
-        finalSlotsB.push({
-          ...slot,
-          category: validCategory,
-          slot_weight: validWeight,
-          is_hardware: true,
-          source_gear: validGear,
-          source_mod: validMod,
-          source: isStaleMso || !(slot as any).source || (slot as any).source.startsWith('mso >')
-            ? (template?.source || `Exotic Gear: ${validGear || 'Owned Gear'}`)
-            : (slot as any).source,
-        } as any);
-      } else {
-        // Evicted from Stance Beta because host gear was dropped!
-        removedFunctions.push(`${slot.name} (from Stance Beta)`);
+      if (!alreadyInVault) {
+        finalVault.push({
+          id: typeof (bSlot as any).id === 'number' ? (bSlot as any).id : Date.now() + Math.floor(Math.random() * 10000),
+          name: bSlot.name,
+          base_name: (bSlot as any).base_name || bSlot.name,
+          version: (bSlot as any).version || 1,
+          action: (bSlot.action as any) || 'P',
+          usage: bSlot.usage || '1-Enc',
+          effect: bSlot.effect || '',
+          notes: bSlot.notes || '',
+          source: (bSlot as any).source || 'Migrated from Stance B',
+          created_at: new Date().toISOString(),
+          category: (bSlot as any).category || undefined,
+          slot_weight: (bSlot as any).slot_weight ?? 1,
+          is_hardware: (bSlot as any).is_hardware ?? true,
+        });
+        metadataHealed = true;
       }
-    } else {
-      finalSlotsB.push(slot);
     }
   }
 
@@ -707,8 +692,8 @@ export const reconcileCharacterVaultWithGear = (
     gearCleaned ||
     metadataHealed ||
     finalVault.length !== currentVault.length ||
-    finalSlotsA.length !== currentSlotsA.length ||
-    finalSlotsB.length !== currentSlotsB.length;
+    finalSlots.length !== currentSlotsA.length ||
+    currentSlotsB.length > 0;
 
   return {
     updatedSheet: changed
@@ -716,8 +701,8 @@ export const reconcileCharacterVaultWithGear = (
           ...sheetData,
           simple_gear: gearCleaned ? baseGearItems : sheetData.simple_gear,
           character_vault: finalVault,
-          spell_slots: finalSlotsA,
-          stance_beta_slots: finalSlotsB,
+          spell_slots: finalSlots,
+          stance_beta_slots: [],
         }
       : sheetData,
     addedFunctions,

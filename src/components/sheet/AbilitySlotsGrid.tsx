@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, CheckCircle, Zap, Trash2, AlertCircle, Check, ArrowUpDown, Cpu } from 'lucide-react';
+import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, Zap, Trash2, AlertCircle, Check, ArrowUpDown, Cpu } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -9,11 +9,9 @@ import { QuickDeckBar } from '../common/QuickDeckBar';
 import { AbilitySlot, Power, MagicItem, calculateAvailableAp, getCategorySlotWeight } from '../../types/game';
 import {
   calculateTotalLoadoutCapacity,
-  getApCostForNextExpansion,
   calculateSpentApOnLoadoutExpansions,
   calculateTotalLoadoutSlotsUsed,
   getItemSlotWeight,
-  generateLoadoutScheduleRows,
 } from '../../utils/loadoutCapacitySchedule';
 import { getPowerReadyCategory, validateReadyMatrix } from '../../utils/readyMatrixSchedule';
 import { calculatePowersKnownApCost, getPowersSoftTaxBracket } from '../../utils/powersApTaxSchedule';
@@ -202,19 +200,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     setAbilitySortMode,
     setAbilityActionFilter,
     isGuildSpaceUnlocked: isGsUnlocked,
-    switchFunctionStance,
   } = useCharacterStore();
   const sheetData: any = activeCharacter?.sheet_data || {};
-  const activeStance: 'alpha' | 'beta' = sheetData.active_stance === 'beta' ? 'beta' : 'alpha';
-  const slotKey = type === 'powers' ? 'power_slots' : (activeStance === 'beta' ? 'stance_beta_slots' : 'spell_slots');
-  const standbySlotKey = type === 'powers' ? null : (activeStance === 'beta' ? 'spell_slots' : 'stance_beta_slots');
+  const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
 
   const [showShuntModal, setShowShuntModal] = useState(false);
-
-  const handleSwitchStance = (targetStance: 'alpha' | 'beta') => {
-    switchFunctionStance(targetStance);
-    saveActiveCharacter();
-  };
 
   const rawSlots: AbilitySlot[] = (activeCharacter?.sheet_data?.[slotKey as keyof typeof activeCharacter.sheet_data] as AbilitySlot[]) || [];
   const slots: AbilitySlot[] = useMemo(() => {
@@ -227,13 +217,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return pruneLesserPowerVersions(slots);
   }, [slots]);
 
-  // Loadout Expansions & Universal Capacity
+  // Loadout Expansions & Universal Capacity (Baseline: 5 Slots, 1 AP per slot indefinitely)
   const loadoutExpansions = typeof sheetData.loadout_expansions_purchased === 'number'
     ? sheetData.loadout_expansions_purchased
     : (typeof sheetData.unlocked_loadout_slots === 'number'
-      ? Math.max(0, Math.floor((sheetData.unlocked_loadout_slots - 4) / 2))
+      ? Math.max(0, sheetData.unlocked_loadout_slots - 5)
       : (typeof sheetData.unlocked_magic_slots === 'number'
-        ? Math.max(0, sheetData.unlocked_magic_slots - 3)
+        ? Math.max(0, sheetData.unlocked_magic_slots - 5)
         : 0));
 
   const totalLoadoutCapacity = useMemo(() => {
@@ -244,7 +234,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return calculateTotalLoadoutSlotsUsed(slots);
   }, [slots]);
 
-  const nextLoadoutExpansionCost = getApCostForNextExpansion(loadoutExpansions);
   const totalLoadoutApSpent = calculateSpentApOnLoadoutExpansions(loadoutExpansions);
 
   const availableAp = calculateAvailableAp(
@@ -253,10 +242,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   );
 
   const handleUnlockLoadoutExpansion = async () => {
-    if (availableAp < nextLoadoutExpansionCost) {
+    if (availableAp < 1) {
       setCatalogFeedback({
         type: 'error',
-        message: `Insufficient AP (${availableAp} AP available, ${nextLoadoutExpansionCost} AP required for +2 Slots).`,
+        message: `Insufficient AP (${availableAp} AP available, 1 AP required for +1 Slot).`,
       });
       return;
     }
@@ -272,9 +261,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     }));
 
     recordApExpenditure(
-      nextLoadoutExpansionCost,
+      1,
       'Loadout Slots' as any,
-      `Unlocked Loadout Capacity (${newTotalSlots} Slots)`,
+      `Unlocked Exotic Power Slot (${newTotalSlots} Slots Total)`,
       1,
       "Exotic Gear Powers Manager"
     );
@@ -283,7 +272,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
     setCatalogFeedback({
       type: 'success',
-      message: `Successfully expanded Loadout Capacity to ${newTotalSlots} Slots!`,
+      message: `Successfully unlocked +1 Exotic Power Slot! New capacity: ${newTotalSlots} slots.`,
     });
   };
 
@@ -503,24 +492,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       slotToUpdate.checked = newChecked;
       updatedSlots[realIndex] = slotToUpdate;
 
-      // Cross-Stance Synchronization for Functions (both ways: Alpha <-> Beta)
-      let updatedStandby = standbySlotKey ? prev[standbySlotKey] : undefined;
-      if (standbySlotKey && Array.isArray(prev[standbySlotKey])) {
-        const targetClean = cleanName(targetSlot.base_name || targetSlot.name).toLowerCase();
-        updatedStandby = prev[standbySlotKey].map((sSlot) => {
-          if (!sSlot || !sSlot.name) return sSlot;
-          const sClean = cleanName(sSlot.base_name || sSlot.name).toLowerCase();
-          if (sClean === targetClean) {
-            return { ...sSlot, checked: newChecked };
-          }
-          return sSlot;
-        });
-      }
-
       return {
         ...prev,
         [slotKey]: updatedSlots,
-        ...(standbySlotKey && updatedStandby ? { [standbySlotKey]: updatedStandby } : {}),
       };
     });
     saveActiveCharacter();
@@ -540,15 +514,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         };
       }
 
-      // Functions mode: clear uses in BOTH Stance Alpha (spell_slots) AND Stance Beta (stance_beta_slots)
+      // Functions mode: clear uses in spell_slots
       const currentAlpha = Array.isArray(prev.spell_slots) ? prev.spell_slots : [];
-      const currentBeta = Array.isArray(prev.stance_beta_slots) ? prev.stance_beta_slots : [];
 
       const clearedAlpha = currentAlpha.map((slot: any) => ({
-        ...slot,
-        checked: [false, false, false],
-      }));
-      const clearedBeta = currentBeta.map((slot: any) => ({
         ...slot,
         checked: [false, false, false],
       }));
@@ -556,8 +525,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       return {
         ...prev,
         spell_slots: clearedAlpha,
-        stance_beta_slots: clearedBeta,
-        stance_switch_count: 0,
         cold_storage_functions: [],
       };
     });
@@ -1043,34 +1010,25 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   const handleEquipVaultItem = (vaultItem: MagicItem) => {
     const weight = typeof vaultItem.slot_weight === 'number' ? vaultItem.slot_weight : getCategorySlotWeight(vaultItem.category || vaultItem.rarity);
-    const targetSlotKey = (slotKey === 'stance_beta_slots' ? 'stance_beta_slots' : 'spell_slots') as 'spell_slots' | 'stance_beta_slots';
-    const otherSlotKey = (targetSlotKey === 'stance_beta_slots' ? 'spell_slots' : 'stance_beta_slots') as 'spell_slots' | 'stance_beta_slots';
-    const currentSlots: AbilitySlot[] = Array.isArray(sheetData[targetSlotKey]) ? sheetData[targetSlotKey] : [];
+    const currentSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
     const activeSlotsUsed = calculateTotalLoadoutSlotsUsed(currentSlots);
 
     const cleanTarget = cleanName(vaultItem.base_name || vaultItem.name).toLowerCase();
     if (currentSlots.some((s: any) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === cleanTarget)) {
-      alert(`⚠️ "${cleanName(vaultItem.name)}" is already equipped in this Stance.`);
+      alert(`⚠️ "${cleanName(vaultItem.name)}" is already equipped.`);
       return;
     }
 
     if (weight > 0 && activeSlotsUsed + weight > totalLoadoutCapacity) {
-      alert(`❌ Insufficient Loadout Capacity! Active loadout is ${activeSlotsUsed}/${totalLoadoutCapacity} slots. Item requires ${weight} slots. Unlock +2 Loadout Slots in the Buy Slots tab or header button.`);
+      alert(`❌ Insufficient Exotic Power Slots! Active loadout is ${activeSlotsUsed}/${totalLoadoutCapacity} slots. Item requires ${weight} slots. Unlock +1 Slot in the Buy Slots tab.`);
       return;
     }
 
     updateActiveSheetData((prev) => {
       const currentVault = Array.isArray(prev.character_vault) ? prev.character_vault : [];
-      const currentTargetSlots = Array.isArray(prev[targetSlotKey]) ? prev[targetSlotKey] : [];
+      const currentTargetSlots = Array.isArray(prev.spell_slots) ? prev.spell_slots : [];
 
-      let initialChecked = vaultItem.checked_state || [false, false, false];
-      const standbySlots = Array.isArray(prev[otherSlotKey]) ? prev[otherSlotKey] : [];
-      const matchingStandby = standbySlots.find(
-        (s) => cleanName(s.base_name || s.name).toLowerCase() === cleanTarget
-      );
-      if (matchingStandby && Array.isArray(matchingStandby.checked)) {
-        initialChecked = matchingStandby.checked;
-      }
+      const initialChecked = vaultItem.checked_state || [false, false, false];
 
       const newSlot: any = {
         select: true,
@@ -1095,7 +1053,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       return {
         ...prev,
         character_vault: updatedVault,
-        [targetSlotKey]: [...currentTargetSlots, newSlot],
+        spell_slots: [...currentTargetSlots, newSlot],
       };
     });
     saveActiveCharacter();
@@ -1253,7 +1211,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
         const prevVault: MagicItem[] = Array.isArray(prev.character_vault) ? prev.character_vault : [];
         const prevAlpha: AbilitySlot[] = Array.isArray(prev.spell_slots) ? prev.spell_slots : [];
-        const prevBeta: AbilitySlot[] = Array.isArray(prev.stance_beta_slots) ? prev.stance_beta_slots : [];
 
         // Update character_vault
         let updatedVault = [...prevVault];
@@ -1272,7 +1229,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           updatedVault.push(newVaultItem);
         }
 
-        // Update Stance Alpha if equipped
+        // Update spell_slots if equipped
         let updatedAlpha = [...prevAlpha];
         const aIdx = updatedAlpha.findIndex((s) => {
           const sBase = parseAbilityVersion((s as any).base_name || s.name).baseName.toLowerCase();
@@ -1282,25 +1239,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         if (aIdx >= 0) {
           updatedAlpha[aIdx] = {
             ...updatedAlpha[aIdx],
-            name: versionedName,
-            base_name: baseName,
-            version: version,
-            action: (createAction.toUpperCase() as any) || 'P',
-            usage: createUsage,
-            effect: createEffect.trim(),
-          };
-        }
-
-        // Update Stance Beta if equipped
-        let updatedBeta = [...prevBeta];
-        const bIdx = updatedBeta.findIndex((s) => {
-          const sBase = parseAbilityVersion((s as any).base_name || s.name).baseName.toLowerCase();
-          const targetBase = baseName.toLowerCase();
-          return sBase === targetBase || cleanName(s.name).toLowerCase() === targetBase;
-        });
-        if (bIdx >= 0) {
-          updatedBeta[bIdx] = {
-            ...updatedBeta[bIdx],
             name: versionedName,
             base_name: baseName,
             version: version,
@@ -1322,7 +1260,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           custom_magic_items: updatedCustom,
           character_vault: updatedVault,
           spell_slots: updatedAlpha,
-          stance_beta_slots: updatedBeta,
           character_power_codex: cleanedPowerCodex,
         };
       });
@@ -1800,6 +1737,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         </div>
 
         <div className="flex items-center justify-end gap-2 shrink-0">
+          {type === 'spells' && (
+            <button
+              type="button"
+              onClick={() => setShowShuntModal(true)}
+              className="py-1 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm cursor-pointer bg-cyan-950/70 hover:bg-cyan-900/70 border-cyan-500/50 text-cyan-300 hover:text-white shrink-0"
+              title="Emergency Exotic Shunt: Spend 1 Move Action [M] and 1 Luck Chit (🍀) to hot-swap Exotics Vault powers"
+            >
+              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="font-outfit text-xs font-bold">Shunt</span>
+            </button>
+          )}
+
           <div className="relative">
             <button
               type="button"
@@ -1879,38 +1828,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
                           {type === 'powers' ? activeDisplaySlots.length : slots.length}
                         </span>
-
-                        {/* Stance Switcher for Exotic Powers in Modal */}
-                        {type === 'spells' && (
-                          <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner">
-                            <button
-                              type="button"
-                              onClick={() => handleSwitchStance('alpha')}
-                              className={`py-0.5 px-2 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                                activeStance === 'alpha'
-                                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                              title="Configure Stance Alpha"
-                            >
-                              <span>🅰️</span>
-                              <span>Stance A</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSwitchStance('beta')}
-                              className={`py-0.5 px-2 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                                activeStance === 'beta'
-                                  ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                              title="Configure Stance Beta"
-                            >
-                              <span>🅱️</span>
-                              <span>Stance B</span>
-                            </button>
-                          </div>
-                        )}
                       </div>
 
                       {/* Roster Search Filter */}
@@ -2409,7 +2326,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               : 'border-transparent text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          🏺 Exotics Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
+                          🏺 Exotic Powers Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
                         </button>
                         <button
                           type="button"
@@ -2690,15 +2607,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                               ) as any)?.notes;
 
                                             const itemCleanName = cleanName(item.base_name || item.name).toLowerCase();
-                                            const alphaSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
-                                            const betaSlots: AbilitySlot[] = Array.isArray(sheetData.stance_beta_slots) ? sheetData.stance_beta_slots : [];
-                                            const inStanceAlpha = Array.isArray(alphaSlots) && alphaSlots.some(
-                                              (s) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === itemCleanName
+                                            const equippedSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
+                                            const isEquipped = equippedSlots.some(
+                                              (s) => s && s.name && cleanName((s as any).base_name || s.name).toLowerCase() === itemCleanName
                                             );
-                                            const inStanceBeta = Array.isArray(betaSlots) && betaSlots.some(
-                                              (s) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === itemCleanName
-                                            );
-                                            const inCurrentStance = activeStance === 'alpha' ? inStanceAlpha : inStanceBeta;
 
                                             return (
                                               <div
@@ -2739,14 +2651,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                           <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
                                                         </span>
                                                       )}
-                                                      {inStanceAlpha && (
-                                                        <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40" title="Equipped in Stance Alpha">
-                                                          🅰️ In Stance A
-                                                        </span>
-                                                      )}
-                                                      {inStanceBeta && (
-                                                        <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/40" title="Equipped in Stance Beta">
-                                                          🅱️ In Stance B
+                                                      {isEquipped && (
+                                                        <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40" title="Equipped in active exotic slots">
+                                                          ✅ Equipped
                                                         </span>
                                                       )}
                                                     </div>
@@ -2775,25 +2682,25 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                       <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
 
-                                                    {inCurrentStance ? (
+                                                    {isEquipped ? (
                                                       <button
                                                         type="button"
                                                         onClick={() => handleForgetAbility(item.name)}
                                                         className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white shadow-sm transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                                        title={`Unequip from ${activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'}`}
+                                                        title="Unequip from active exotic slots"
                                                       >
                                                         <X className="w-3.5 h-3.5" />
-                                                        Unequip ({activeStance === 'alpha' ? 'A' : 'B'})
+                                                        Unequip
                                                       </button>
                                                     ) : (
                                                       <button
                                                         type="button"
                                                         onClick={() => handleEquipVaultItem(item)}
                                                         className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                                        title={`Equip into ${activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'}`}
+                                                        title="Equip into active exotic slots"
                                                       >
                                                         <Plus className="w-3.5 h-3.5" />
-                                                        Equip to {activeStance === 'alpha' ? 'A' : 'B'} ({weight === 0 ? '0 ⚙️' : `${weight} 🧿`})
+                                                        Equip ({weight === 0 ? '0 ⚙️' : `${weight} 🧿`})
                                                       </button>
                                                     )}
                                                   </div>
@@ -2834,15 +2741,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                   ) as any)?.notes;
 
                                 const itemCleanName = cleanName(item.base_name || item.name).toLowerCase();
-                                const alphaSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
-                                const betaSlots: AbilitySlot[] = Array.isArray(sheetData.stance_beta_slots) ? sheetData.stance_beta_slots : [];
-                                const inStanceAlpha = Array.isArray(alphaSlots) && alphaSlots.some(
-                                  (s) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === itemCleanName
+                                const equippedSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
+                                const isEquipped = equippedSlots.some(
+                                  (s) => s && s.name && cleanName((s as any).base_name || s.name).toLowerCase() === itemCleanName
                                 );
-                                const inStanceBeta = Array.isArray(betaSlots) && betaSlots.some(
-                                  (s) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === itemCleanName
-                                );
-                                const inCurrentStance = activeStance === 'alpha' ? inStanceAlpha : inStanceBeta;
 
                                 return (
                                   <div
@@ -2883,14 +2785,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                               <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
                                             </span>
                                           )}
-                                          {inStanceAlpha && (
-                                            <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40" title="Equipped in Stance Alpha">
-                                              🅰️ In Stance A
-                                            </span>
-                                          )}
-                                          {inStanceBeta && (
-                                            <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/40" title="Equipped in Stance Beta">
-                                              🅱️ In Stance B
+                                          {isEquipped && (
+                                            <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40" title="Equipped in active exotic slots">
+                                              ✅ Equipped
                                             </span>
                                           )}
                                         </div>
@@ -2919,25 +2816,25 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           <Edit2 className="w-3.5 h-3.5" />
                                         </button>
 
-                                        {inCurrentStance ? (
+                                        {isEquipped ? (
                                           <button
                                             type="button"
                                             onClick={() => handleForgetAbility(item.name)}
                                             className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white shadow-sm transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                            title={`Unequip from ${activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'}`}
+                                            title="Unequip from active exotic slots"
                                           >
                                             <X className="w-3.5 h-3.5" />
-                                            Unequip ({activeStance === 'alpha' ? 'A' : 'B'})
+                                            Unequip
                                           </button>
                                         ) : (
                                           <button
                                             type="button"
                                             onClick={() => handleEquipVaultItem(item)}
                                             className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                            title={`Equip into ${activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'}`}
+                                            title="Equip into active exotic slots"
                                           >
                                             <Plus className="w-3.5 h-3.5" />
-                                            Equip to {activeStance === 'alpha' ? 'A' : 'B'} ({weight === 0 ? '0 ⚙️' : `${weight} 🧿`})
+                                            Equip ({weight === 0 ? '0 ⚙️' : `${weight} 🧿`})
                                           </button>
                                         )}
                                       </div>
@@ -2957,120 +2854,53 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       );
                     })()}
 
-                    {/* TAB: BUY SLOTS (Uncapped Soft-Slope Loadout Capacity Engine) */}
-                    {activeRightTab === 'SLOTS' && type === 'spells' && (() => {
-                      const scheduleRows = generateLoadoutScheduleRows(12);
-
-                      return (
-                        <div className="flex flex-col gap-3 flex-1 min-h-0 mt-2.5 overflow-y-auto pr-1">
-                          {/* Top Status Header Pill */}
-                          <div className="px-3.5 py-1.5 bg-pink-950/70 border border-pink-500/40 rounded-full font-mono font-bold text-xs text-pink-200 flex items-center justify-between shadow-md shrink-0 flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              <span>Capacity <strong className="text-pink-300">{totalLoadoutCapacity} Slots</strong></span>
-                              <span className="text-pink-500/60">•</span>
-                              <span>Used <strong className="text-amber-300">{totalUsedLoadoutSlots} Slots</strong></span>
-                              <span className="text-pink-500/60">•</span>
-                              <span>Spent <strong className="text-rose-400">{totalLoadoutApSpent} AP</strong></span>
-                            </div>
-                            <div>
-                              <span>Available <strong className="text-emerald-400">{availableAp} AP</strong></span>
-                            </div>
+                    {/* TAB: BUY SLOTS (Exotic Power Slots - 1 AP per slot indefinitely) */}
+                    {activeRightTab === 'SLOTS' && type === 'spells' && (
+                      <div className="flex flex-col gap-3 flex-1 min-h-0 mt-2.5 overflow-y-auto pr-1">
+                        {/* Top Status Header Pill */}
+                        <div className="px-3.5 py-1.5 bg-cyan-950/70 border border-cyan-500/40 rounded-full font-mono font-bold text-xs text-cyan-200 flex items-center justify-between shadow-md shrink-0 flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span>Capacity <strong className="text-cyan-300">{totalLoadoutCapacity} Slots</strong></span>
+                            <span className="text-cyan-500/60">•</span>
+                            <span>Used <strong className="text-amber-300">{totalUsedLoadoutSlots} Slots</strong></span>
+                            <span className="text-cyan-500/60">•</span>
+                            <span>Spent <strong className="text-rose-400">{totalLoadoutApSpent} AP</strong></span>
                           </div>
-
-                          {/* Upgrade Action Box */}
-                          <div className="p-3 bg-slate-900/90 rounded-xl border border-pink-500/40 flex items-center justify-between gap-3 shrink-0 shadow-md">
-                            <div className="space-y-0.5">
-                              <div className="flex items-center gap-1.5">
-                                <Sparkles className="w-4 h-4 text-pink-400" />
-                                <span className="font-outfit font-bold text-sm text-slate-100">
-                                  Next Expansion: +2 Slots ({totalLoadoutCapacity + 2} Total Capacity)
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-slate-400 font-mono">
-                                Expansion #{loadoutExpansions + 1} | Cost: <strong className="text-amber-300">{nextLoadoutExpansionCost} AP</strong> (Uncapped Expansion)
-                              </p>
-                            </div>
-
-                            <button
-                              type="button"
-                              disabled={availableAp < nextLoadoutExpansionCost}
-                              onClick={handleUnlockLoadoutExpansion}
-                              className={`px-3 py-1.5 rounded-xl font-outfit font-bold text-xs flex items-center gap-1.5 shadow-md transition-all shrink-0 ${
-                                availableAp >= nextLoadoutExpansionCost
-                                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white cursor-pointer active:scale-95'
-                                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                              }`}
-                            >
-                              <Sparkles className="w-3.5 h-3.5 text-pink-300" />
-                              <span>Unlock +2 Slots ({nextLoadoutExpansionCost} AP)</span>
-                            </button>
-                          </div>
-
-                          {/* Complete Slot Progression & AP Cost Schedule Table */}
-                          <div className="flex flex-col gap-1.5 shrink-0 pb-2">
-                            <div className="flex items-center justify-between px-1">
-                              <span className="font-outfit font-bold text-xs uppercase text-slate-300 tracking-wider flex items-center gap-1.5">
-                                <span>📜</span> Uncapped Loadout Capacity Schedule
-                              </span>
-                              <span className="text-[10px] text-slate-400 font-mono">Master Blueprint Schedule</span>
-                            </div>
-
-                            <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/80 shadow-inner">
-                              <table className="w-full text-left text-[11px]">
-                                <thead className="bg-slate-900/90 text-slate-400 border-b border-slate-800 font-mono uppercase text-[10px]">
-                                  <tr>
-                                    <th className="py-1.5 px-2.5">Expansion Level</th>
-                                    <th className="py-1.5 px-2.5">Total Capacity</th>
-                                    <th className="py-1.5 px-2.5">Step Cost</th>
-                                    <th className="py-1.5 px-2.5">Cumulative AP</th>
-                                    <th className="py-1.5 px-2.5 text-right">Status</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-800/60 font-mono">
-                                  {scheduleRows.map((row, idx) => {
-                                    const isCurrent = totalLoadoutCapacity === row.totalSlots;
-                                    const isUnlocked = totalLoadoutCapacity >= row.totalSlots;
-                                    const isNextTarget = row.step === loadoutExpansions + 1;
-
-                                    return (
-                                      <tr
-                                        key={idx}
-                                        className={`transition-colors ${
-                                          isCurrent
-                                            ? 'bg-pink-950/40 text-pink-100 font-bold border-l-2 border-l-pink-400'
-                                            : isUnlocked
-                                            ? 'text-slate-300 bg-slate-900/30'
-                                            : 'text-slate-500'
-                                        }`}
-                                      >
-                                        <td className="py-1.5 px-2.5 flex items-center gap-1.5">
-                                          {isCurrent && <span className="text-pink-400 text-xs">⭐</span>}
-                                          <span>{row.label}</span>
-                                        </td>
-                                        <td className="py-1.5 px-2.5 font-bold">{row.totalSlots} Slots</td>
-                                        <td className="py-1.5 px-2.5">{row.step === 0 ? '0 AP (Baseline)' : `${row.apCost} AP (+2 Slots)`}</td>
-                                        <td className="py-1.5 px-2.5 text-purple-300 font-bold">{row.cumulativeAp} AP</td>
-                                        <td className="py-1.5 px-2.5 text-right">
-                                          {isUnlocked ? (
-                                            <span className="text-emerald-400 font-bold flex items-center justify-end gap-1">
-                                              <CheckCircle className="w-3 h-3 text-emerald-400" /> Unlocked
-                                            </span>
-                                          ) : isNextTarget ? (
-                                            <span className="text-pink-300 font-bold">⚡ Next Target</span>
-                                          ) : (
-                                            <span className="text-slate-500">Uncapped Pool</span>
-                                          )}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
+                          <div>
+                            <span>Available <strong className="text-emerald-400">{availableAp} AP</strong></span>
                           </div>
                         </div>
-                      );
-                    })()}
+
+                        {/* Upgrade Action Box */}
+                        <div className="p-4 bg-slate-900/90 rounded-xl border border-cyan-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 shadow-md">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-cyan-400" />
+                              <span className="font-outfit font-bold text-sm text-slate-100">
+                                Next Slot: +1 Slot ({totalLoadoutCapacity + 1} Slots Total)
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-400 font-mono">
+                              Baseline: 5 Slots (0 AP) • Cost: <strong className="text-amber-300">1 AP</strong>
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={availableAp < 1}
+                            onClick={handleUnlockLoadoutExpansion}
+                            className={`px-4 py-2 rounded-xl font-outfit font-bold text-xs flex items-center gap-2 shadow-md transition-all shrink-0 ${
+                              availableAp >= 1
+                                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white cursor-pointer active:scale-95'
+                                : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                            }`}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+                            <span>Unlock +1 Slot (1 AP)</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* TAB 2: STOCK CATALOG VIEW */}
                     {activeRightTab === 'CATALOG' && (
@@ -3811,55 +3641,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
           </div>
         </div>
       </div>
-
-      {/* Title Row 2: Stance Sub-Header Bar (Functions Mode) */}
-      {type === 'spells' && (
-        <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-1.5 flex items-center justify-between gap-2 shadow-inner backdrop-blur-md flex-wrap sm:flex-nowrap">
-          {/* Left: Stance Switcher, Next Cost Badge, & Emergency Shunt */}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
-            {/* KISS Multi-Option Stance Switcher */}
-            <div className="bg-slate-950/90 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner">
-              <button
-                type="button"
-                onClick={() => handleSwitchStance('alpha')}
-                className={`py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeStance === 'alpha'
-                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-                title="Active Mode: Stance Alpha"
-              >
-                <span>🅰️</span>
-                <span>Stance A</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchStance('beta')}
-                className={`py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeStance === 'beta'
-                    ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-                title="Active Mode: Stance Beta"
-              >
-                <span>🅱️</span>
-                <span>Stance B</span>
-              </button>
-            </div>
-
-            {/* Emergency Hardware Shunt Trigger */}
-            <button
-              type="button"
-              onClick={() => setShowShuntModal(true)}
-              className="py-1 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm cursor-pointer bg-cyan-950/70 hover:bg-cyan-900/70 border-cyan-500/50 text-cyan-300 hover:text-white"
-              title="Emergency Exotic Shunt: Spend 1 Move Action [M] and 1 Luck Chit (🍀) to hot-swap Exotics Vault powers"
-            >
-              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="font-outfit text-xs font-bold">Shunt</span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Main Character Sheet Card View */}
       <div className="flex flex-col gap-2 min-h-[260px]">

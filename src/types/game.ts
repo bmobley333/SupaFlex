@@ -679,10 +679,10 @@ export interface CharacterSheetData {
   character_power_codex?: AbilitySlot[]; // Unlimited storage codex for un-readied powers (matching character_vault)
   tactical_pivot_used_in_encounter?: boolean; // True if player has executed their 1-per-encounter Tactical Pivot
   luck_bolt_sub_used_in_encounter?: boolean; // True if player has spent a Luck chit in place of a Bolt this encounter (1/Enc limit)
-  spell_slots: AbilitySlot[]; // Active Stance (Stance Alpha by default)
-  stance_beta_slots?: AbilitySlot[]; // Standby Stance (Stance Beta)
-  active_stance?: 'alpha' | 'beta'; // Active Stance mode (defaults to 'alpha')
-  stance_switch_count?: number; // In-encounter Stance switches (0 = next is [M], >=1 = next is [AM])
+  spell_slots: AbilitySlot[]; // Active Exotic Power Slots (5 baseline)
+  stance_beta_slots?: AbilitySlot[]; // @deprecated Former Standby Stance (Stance Beta)
+  active_stance?: 'alpha' | 'beta'; // @deprecated Former Active Stance mode
+  stance_switch_count?: number; // @deprecated Former In-encounter Stance switch counter
   cold_storage_functions?: string[]; // Function names locked out via Emergency Hardware Shunt
   gear_slots: EquipmentSlot[];
   weapons?: WeaponSlot[];
@@ -696,8 +696,8 @@ export interface CharacterSheetData {
   bio: CharacterBio;
   essence_core?: number; // 0-100 Essence Core Progress Ring
   character_vault?: MagicItem[]; // Unlimited storage vault for claimed Relics and Hardware
-  loadout_expansions_purchased?: number; // Count of +2 Loadout Slots expansions purchased with AP (0, 1, 2, 3...)
-  unlocked_loadout_slots?: number; // Total active Loadout Slots capacity (Formula: 4 + expansions * 2)
+  loadout_expansions_purchased?: number; // Count of +1 Exotic Power Slot expansions purchased with AP (1 AP each)
+  unlocked_loadout_slots?: number; // Total active Exotic Power Slots capacity (Formula: 5 + expansions)
   unlocked_magic_slots?: number; // Deprecated alias for unlocked_loadout_slots
   starred_loadout_items?: (number | string)[]; // Starred Loadout Wishlist IDs
   starred_magic_items?: (number | string)[]; // Starred Magic Item Wishlist IDs (alias)
@@ -848,16 +848,15 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
   const expansions = typeof sheetData.loadout_expansions_purchased === 'number'
     ? sheetData.loadout_expansions_purchased
     : (typeof sheetData.unlocked_loadout_slots === 'number'
-      ? Math.max(0, Math.floor((sheetData.unlocked_loadout_slots - 4) / 2))
+      ? Math.max(0, sheetData.unlocked_loadout_slots - 5)
       : (typeof sheetData.unlocked_magic_slots === 'number'
-        ? Math.max(0, sheetData.unlocked_magic_slots - 3)
+        ? Math.max(0, sheetData.unlocked_magic_slots - 5)
         : 0));
-  const loadoutNet = (expansions * (expansions + 1)) / 2;
+  const loadoutNet = expansions;
 
   // Add +1 AP per function version beyond v1 across equipped slots and vault
   const allFunctions = [
     ...(Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : []),
-    ...(Array.isArray(sheetData.stance_beta_slots) ? sheetData.stance_beta_slots : []),
     ...(Array.isArray(sheetData.character_vault) ? sheetData.character_vault : []),
   ];
   const functionVersionMap = new Map<string, number>();

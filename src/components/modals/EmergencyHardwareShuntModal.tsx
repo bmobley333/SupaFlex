@@ -28,9 +28,8 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
 
   const sheet = activeCharacter?.sheet_data;
 
-  // Stance & slot setup
-  const activeStance: 'alpha' | 'beta' = sheet?.active_stance === 'beta' ? 'beta' : 'alpha';
-  const slotKey = activeStance === 'beta' ? 'stance_beta_slots' : 'spell_slots';
+  // Slot setup (Active Exotic Powers are stored in spell_slots)
+  const slotKey = 'spell_slots';
   const rawActiveSlots: AbilitySlot[] = Array.isArray(sheet?.[slotKey]) ? (sheet[slotKey] as AbilitySlot[]) : [];
   const activeSlots = useMemo(() => {
     return rawActiveSlots.filter((s) => s && s.name && s.name.trim() !== '');
@@ -40,11 +39,11 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
   const coldStorage: string[] = Array.isArray(sheet?.cold_storage_functions) ? sheet.cold_storage_functions : [];
   const currentLuck: number = typeof sheet?.luck === 'number' ? sheet.luck : 3;
 
-  // Capacity calculations
+  // Capacity calculations (5 baseline slots + 1 per expansion)
   const loadoutExpansions = typeof sheet?.loadout_expansions_purchased === 'number'
     ? sheet.loadout_expansions_purchased
     : (typeof sheet?.unlocked_loadout_slots === 'number'
-      ? Math.max(0, Math.floor((sheet.unlocked_loadout_slots - 4) / 2))
+      ? Math.max(0, sheet.unlocked_loadout_slots - 5)
       : 0);
   const totalLoadoutCapacity = calculateTotalLoadoutCapacity(loadoutExpansions);
 
@@ -160,14 +159,14 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                   ⚡ Emergency Exotic Shunt
                 </h3>
                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-950/70 text-amber-300 border border-amber-500/40">
-                  [F] Free Action
+                  [M] Move Action
                 </span>
                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-500/40">
                   🍀 1 Luck Chit
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Hot-swap 1 Exotics Vault power into your active stance. Costs <strong className="text-emerald-300">1 Luck Chit</strong> as a <strong className="text-amber-300">[F] Free Action</strong>.
+                Hot-swap 1 Exotics Vault power into your active loadout. Costs <strong className="text-emerald-300">1 Luck Chit</strong> and 1 <strong className="text-amber-300">[M] Move Action</strong>.
               </p>
             </div>
           </div>
@@ -210,8 +209,8 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
           <div className="flex flex-col gap-2.5 min-h-0">
             <div className="flex items-center justify-between">
               <span className="font-outfit font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-                <span>{activeStance === 'alpha' ? '🅰️' : '🅱️'}</span>
-                <span>Active Loadout ({activeStance === 'alpha' ? 'Stance Alpha' : 'Stance Beta'})</span>
+                <span>🧿</span>
+                <span>Active Exotic Powers</span>
               </span>
               <span
                 className={`text-[11px] font-mono font-extrabold px-2 py-0.5 rounded border ${
@@ -383,7 +382,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                                 : 'bg-slate-950 text-cyan-300 border-slate-800 hover:border-cyan-500/50 hover:bg-slate-900'
                             }`}
                           >
-                            {isSelected ? '✓ Selected' : '+ Add to Stance'}
+                            {isSelected ? '✓ Selected' : '+ Add to Loadout'}
                           </button>
                         </div>
                       </div>

@@ -723,64 +723,9 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     }));
   },
 
-  switchFunctionStance: (targetStance: 'alpha' | 'beta') => {
-    const active = get().activeCharacter;
-    if (!active || !active.sheet_data) return { success: false, cost: 'M', error: 'No active character.' };
-
-    const sheet = active.sheet_data;
-    const currentStance = sheet.active_stance === 'beta' ? 'beta' : 'alpha';
-    if (currentStance === targetStance) {
-      return { success: true, cost: 'M' };
-    }
-
-    const switchCount = typeof sheet.stance_switch_count === 'number' ? sheet.stance_switch_count : 0;
-    const cost: 'M' | 'AM' = switchCount === 0 ? 'M' : 'AM';
-
-    const slotsAlpha = Array.isArray(sheet.spell_slots) ? sheet.spell_slots : [];
-    const slotsBeta = Array.isArray(sheet.stance_beta_slots) ? sheet.stance_beta_slots : [];
-
-    // Mirror usage checkboxes bi-directionally between matching abilities across both stances
-    // Source of truth for checked state comes from current active stance
-    const currentActiveSlots = currentStance === 'beta' ? slotsBeta : slotsAlpha;
-    const activeCheckedMap = new Map<string, boolean[]>();
-    currentActiveSlots.forEach((slot) => {
-      if (slot && slot.name) {
-        const cleanKey = (slot.base_name || slot.name).replace(/\s*\[[A-Z]+\]$/i, '').trim().toLowerCase();
-        activeCheckedMap.set(cleanKey, slot.checked || [false, false, false]);
-      }
-    });
-
-    const updatedAlpha = currentStance === 'beta'
-      ? slotsAlpha.map((slot) => {
-          if (!slot || !slot.name) return slot;
-          const cleanKey = (slot.base_name || slot.name).replace(/\s*\[[A-Z]+\]$/i, '').trim().toLowerCase();
-          if (activeCheckedMap.has(cleanKey)) {
-            return { ...slot, checked: activeCheckedMap.get(cleanKey)! };
-          }
-          return slot;
-        })
-      : slotsAlpha;
-
-    const updatedBeta = currentStance === 'alpha'
-      ? slotsBeta.map((slot) => {
-          if (!slot || !slot.name) return slot;
-          const cleanKey = (slot.base_name || slot.name).replace(/\s*\[[A-Z]+\]$/i, '').trim().toLowerCase();
-          if (activeCheckedMap.has(cleanKey)) {
-            return { ...slot, checked: activeCheckedMap.get(cleanKey)! };
-          }
-          return slot;
-        })
-      : slotsBeta;
-
-    get().updateActiveSheetData((prev) => ({
-      ...prev,
-      spell_slots: updatedAlpha,
-      stance_beta_slots: updatedBeta,
-      active_stance: targetStance,
-      stance_switch_count: switchCount + 1,
-    }));
-
-    return { success: true, cost };
+  // @deprecated Dual combat stances removed in favor of single Active Exotic Powers loadout
+  switchFunctionStance: (_targetStance: 'alpha' | 'beta') => {
+    return { success: true, cost: 'M' as const };
   },
 
   executeHardwareShunt: (vaultItemName: string, outgoingSlotNames: string[]) => {
@@ -793,8 +738,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       return { success: false, error: 'Emergency Hardware Shunt requires 1 Luck Chit (🍀).' };
     }
 
-    const activeStance = sheet.active_stance === 'beta' ? 'beta' : 'alpha';
-    const slotKey = activeStance === 'beta' ? 'stance_beta_slots' : 'spell_slots';
+    const slotKey = 'spell_slots';
     const currentSlots: AbilitySlot[] = Array.isArray(sheet[slotKey]) ? [...(sheet[slotKey] as AbilitySlot[])] : [];
     const currentVault: MagicItem[] = Array.isArray(sheet.character_vault) ? [...sheet.character_vault] : [];
 

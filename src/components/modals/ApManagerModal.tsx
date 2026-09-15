@@ -213,17 +213,16 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
     const loadoutExpansions = typeof sheetData.loadout_expansions_purchased === 'number'
       ? sheetData.loadout_expansions_purchased
       : (typeof sheetData.unlocked_loadout_slots === 'number'
-        ? Math.max(0, Math.floor((sheetData.unlocked_loadout_slots - 4) / 2))
+        ? Math.max(0, sheetData.unlocked_loadout_slots - 5)
         : (typeof sheetData.unlocked_magic_slots === 'number'
-          ? Math.max(0, sheetData.unlocked_magic_slots - 3)
+          ? Math.max(0, sheetData.unlocked_magic_slots - 5)
           : 0));
     const totalLoadoutCapacity = calculateTotalLoadoutCapacity(loadoutExpansions);
     const loadoutApSpent = calculateSpentApOnLoadoutExpansions(loadoutExpansions);
 
-    // Calculate function version upgrades across equipped stance slots and vault
+    // Calculate function version upgrades across equipped slots and vault
     const allFunctions = [
       ...(Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : []),
-      ...(Array.isArray(sheetData.stance_beta_slots) ? sheetData.stance_beta_slots : []),
       ...(Array.isArray(sheetData.character_vault) ? sheetData.character_vault : []),
     ];
     const functionVersionMap = new Map<string, number>();
@@ -312,9 +311,9 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: magicItemsNet,
         badgeColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-500/30',
         details: [
-          { label: `Base Loadout Slots`, value: `4 Slots (0 AP Baseline)` },
-          { label: `Purchased Expansions`, value: `${loadoutExpansions} Expansions (+${loadoutExpansions * 2} Slots)` },
-          { label: `Total Active Loadout Capacity`, value: `${totalLoadoutCapacity} Slots (Uncapped)` },
+          { label: `Base Exotic Power Slots`, value: `5 Slots (0 AP Baseline)` },
+          { label: `Purchased Slots`, value: `${loadoutExpansions} Slots (+${loadoutExpansions} AP)` },
+          { label: `Total Active Loadout Capacity`, value: `${totalLoadoutCapacity} Slots` },
           ...(functionVersionsNet > 0 ? [{ label: `Exotic Power Version Upgrades`, value: `+${functionVersionsNet} AP` }] : []),
           { label: `Total AP Invested`, value: `${magicItemsNet} AP` },
         ],

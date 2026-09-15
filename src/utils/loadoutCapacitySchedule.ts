@@ -3,33 +3,31 @@ import { getCategorySlotWeight } from '../types/game';
 /**
  * Baseline Loadout Capacity at Level 1 (0 AP cost).
  */
-export const BASELINE_LOADOUT_CAPACITY = 4;
+export const BASELINE_LOADOUT_CAPACITY = 5;
 
 /**
- * Calculates total available Loadout Capacity based on number of +2 expansions purchased.
- * Formula: 4 + (expansionsPurchased * 2)
+ * Calculates total available Loadout Capacity based on number of +1 expansions purchased.
+ * Formula: 5 + expansionsPurchased (1 slot per expansion)
  */
 export function calculateTotalLoadoutCapacity(expansionsPurchased: number = 0): number {
   const k = Math.max(0, expansionsPurchased);
-  return BASELINE_LOADOUT_CAPACITY + (k * 2);
+  return BASELINE_LOADOUT_CAPACITY + k;
 }
 
 /**
- * Calculates the AP cost for the NEXT +2 Loadout Slots expansion step.
- * The k-th expansion step costs k AP (Expansion 1 = 1 AP, Expansion 2 = 2 AP, etc.).
+ * Calculates the AP cost for the NEXT Loadout Slot expansion step.
+ * In the new flat economy, each additional slot costs 1 AP indefinitely.
  */
-export function getApCostForNextExpansion(currentExpansions: number = 0): number {
-  const k = Math.max(0, currentExpansions);
-  return k + 1;
+export function getApCostForNextExpansion(_currentExpansions: number = 0): number {
+  return 1;
 }
 
 /**
  * Calculates the total cumulative AP invested into Loadout Capacity expansions.
- * Formula: Triangular sum = (k * (k + 1)) / 2 AP
+ * Formula: 1 AP per purchased slot = expansionsPurchased AP
  */
 export function calculateSpentApOnLoadoutExpansions(expansionsPurchased: number = 0): number {
-  const k = Math.max(0, expansionsPurchased);
-  return (k * (k + 1)) / 2;
+  return Math.max(0, expansionsPurchased);
 }
 
 /**
@@ -67,7 +65,7 @@ export interface LoadoutScheduleRow {
 }
 
 /**
- * Generates an explicit schedule table array up to a given number of expansion steps (default 10 steps / 24 slots).
+ * Generates an explicit schedule table array up to a given number of expansion steps (default 10 steps / 15 slots).
  */
 export function generateLoadoutScheduleRows(maxSteps: number = 10): LoadoutScheduleRow[] {
   const rows: LoadoutScheduleRow[] = [
@@ -86,9 +84,9 @@ export function generateLoadoutScheduleRows(maxSteps: number = 10): LoadoutSched
       step: k,
       label: `Expansion ${k}`,
       totalSlots: calculateTotalLoadoutCapacity(k),
-      slotsGained: 2,
-      apCost: getApCostForNextExpansion(k - 1),
-      cumulativeAp: calculateSpentApOnLoadoutExpansions(k),
+      slotsGained: 1,
+      apCost: 1,
+      cumulativeAp: k,
     });
   }
 

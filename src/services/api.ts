@@ -73,6 +73,8 @@ export const createDefaultSheetData = (): CharacterSheetData => ({
   active_stance: 'alpha',
   stance_switch_count: 0,
   cold_storage_functions: [],
+  loadout_expansions_purchased: 0,
+  unlocked_loadout_slots: 5,
   gear_slots: [],
   chaos_gauntlet_slots: DEFAULT_CHAOS_GAUNTLET_SLOTS,
   bio: {
@@ -125,10 +127,15 @@ export function ensureLatestSheetSchema(rawSheet: any): CharacterSheetData {
     loadout_expansions_purchased: typeof rawSheet.loadout_expansions_purchased === 'number'
       ? rawSheet.loadout_expansions_purchased
       : (typeof rawSheet.unlocked_loadout_slots === 'number'
-        ? Math.max(0, Math.floor((rawSheet.unlocked_loadout_slots - 4) / 2))
+        ? Math.max(0, rawSheet.unlocked_loadout_slots - 5)
         : (typeof rawSheet.unlocked_magic_slots === 'number'
-          ? Math.max(0, rawSheet.unlocked_magic_slots - 3)
+          ? Math.max(0, rawSheet.unlocked_magic_slots - 5)
           : 0)),
+    unlocked_loadout_slots: typeof rawSheet.unlocked_loadout_slots === 'number'
+      ? Math.max(5, rawSheet.unlocked_loadout_slots)
+      : (typeof rawSheet.loadout_expansions_purchased === 'number'
+        ? 5 + rawSheet.loadout_expansions_purchased
+        : 5),
   };
 }
 
