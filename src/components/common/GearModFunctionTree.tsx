@@ -74,14 +74,16 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
 
   const hostName = hostItem?.name || hostItem?.title || '';
 
-  // 1. Direct inherent functions belonging to the chassis without any mod
+  // 1. Direct inherent functions belonging to the chassis without any mod (alphabetical A-Z)
   const directFunctions = useMemo(() => {
-    return getFunctionsForGearItem(hostName, functionsCatalog);
+    const fns = getFunctionsForGearItem(hostName, functionsCatalog);
+    return [...fns].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
   }, [hostName, functionsCatalog]);
 
-  // 2. Compatible mods from catalog
+  // 2. Compatible mods from catalog (alphabetical A-Z)
   const compatibleMods = useMemo(() => {
-    return modsCatalog.filter((m) => isModCompatibleWithItem(m, hostItem));
+    const mods = modsCatalog.filter((m) => isModCompatibleWithItem(m, hostItem));
+    return [...mods].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
   }, [modsCatalog, hostItem]);
 
   // 3. Installed mods resolution
@@ -365,7 +367,9 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
           {/* LEVEL 1: Compatible Mods Nodes */}
           {visibleMods.map((m) => {
             const isInstalled = installedModsSet.has(cleanBelongsToName(m.name));
-            const rawModFunctions = getFunctionsForMod(m.name, functionsCatalog);
+            const rawModFunctions = [...getFunctionsForMod(m.name, functionsCatalog)].sort((a, b) =>
+              (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+            );
             const modFunctions = isCardOrActiveMode
               ? rawModFunctions.filter((fn) => isGearPowerLearned(fn.name, learnedSlots))
               : rawModFunctions;

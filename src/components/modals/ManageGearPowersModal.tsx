@@ -48,56 +48,72 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
   const spellSlots = useMemo(() => (Array.isArray(sheet?.spell_slots) ? sheet.spell_slots : []), [sheet?.spell_slots]);
   const simpleGear = useMemo(() => (Array.isArray(sheet?.simple_gear) ? sheet.simple_gear : []), [sheet?.simple_gear]);
 
-  // Owned gear with at least one learned power for the left column
+  // Owned gear with at least one learned power for the left column (alphabetical A-Z)
   const leftGearItems = useMemo(() => {
     const query = leftSearch.trim().toLowerCase();
-    return simpleGear.filter((item) => {
-      const hostName = item.name || '';
-      if (query && !hostName.toLowerCase().includes(query)) {
-        // Also check if any learned power or mod matches
+    return simpleGear
+      .filter((item) => {
+        const hostName = item.name || '';
+        const cleanHost = cleanBelongsToName(hostName);
+
+        // Check if any learned slot explicitly names this host gear
+        const hasDirectSlot = spellSlots.some((s) => cleanBelongsToName(s.source_gear) === cleanHost);
         const directFns = getFunctionsForGearItem(hostName, functionsCatalog);
-        const hasMatchingLearnedFn = directFns.some(
-          (fn) => isGearPowerLearned(fn.name, spellSlots) && fn.name.toLowerCase().includes(query)
-        );
-        if (!hasMatchingLearnedFn) {
-          const compMods = modsCatalog.filter((m) => isModCompatibleWithItem(m, item));
-          const hasMatchingModPower = compMods.some((m) =>
+        const directLearned = directFns.some((fn) => isGearPowerLearned(fn.name, spellSlots));
+
+        const compMods = modsCatalog.filter((m) => isModCompatibleWithItem(m, item));
+        const installedSet = new Set((item.installed_mods || []).map(cleanBelongsToName));
+        const modLearned = compMods.some((m) => {
+          if (!installedSet.has(cleanBelongsToName(m.name))) return false;
+          return getFunctionsForMod(m.name, functionsCatalog).some((fn) => isGearPowerLearned(fn.name, spellSlots));
+        });
+
+        const hasAnyLearned = hasDirectSlot || directLearned || modLearned;
+        if (!hasAnyLearned) return false;
+
+        if (query) {
+          const matchesHost = hostName.toLowerCase().includes(query);
+          const matchesDirectFn = directFns.some(
+            (fn) => isGearPowerLearned(fn.name, spellSlots) && fn.name.toLowerCase().includes(query)
+          );
+          const matchesModPower = compMods.some((m) =>
+            installedSet.has(cleanBelongsToName(m.name)) &&
             getFunctionsForMod(m.name, functionsCatalog).some(
               (fn) => isGearPowerLearned(fn.name, spellSlots) && fn.name.toLowerCase().includes(query)
             )
           );
-          if (!hasMatchingModPower) return false;
+          if (!matchesHost && !matchesDirectFn && !matchesModPower) return false;
         }
-      }
 
-      // Must have at least 1 learned power
-      const directFns = getFunctionsForGearItem(hostName, functionsCatalog);
-      const directLearned = directFns.some((fn) => isGearPowerLearned(fn.name, spellSlots));
-      if (directLearned) return true;
-
-      const compMods = modsCatalog.filter((m) => isModCompatibleWithItem(m, item));
-      const installedSet = new Set((item.installed_mods || []).map(cleanBelongsToName));
-      return compMods.some((m) => {
-        if (!installedSet.has(cleanBelongsToName(m.name))) return false;
-        return getFunctionsForMod(m.name, functionsCatalog).some((fn) => isGearPowerLearned(fn.name, spellSlots));
-      });
-    });
+        return true;
+      })
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
   }, [simpleGear, leftSearch, spellSlots, functionsCatalog, modsCatalog]);
 
-  // All owned gear for the right catalog column (filtered by search)
+  // Owned gear that has mods and/or gear powers for the right "My Exotic Gear" column (alphabetical A-Z)
   const rightGearItems = useMemo(() => {
     const query = rightSearch.trim().toLowerCase();
-    return simpleGear.filter((item) => {
-      const hostName = item.name || '';
-      if (!query) return true;
-      if (hostName.toLowerCase().includes(query)) return true;
-      const compMods = modsCatalog.filter((m) => isModCompatibleWithItem(m, item));
-      if (compMods.some((m) => m.name.toLowerCase().includes(query))) return true;
-      const directFns = getFunctionsForGearItem(hostName, functionsCatalog);
-      if (directFns.some((f) => f.name.toLowerCase().includes(query))) return true;
-      const modFns = compMods.flatMap((m) => getFunctionsForMod(m.name, functionsCatalog));
-      return modFns.some((f) => f.name.toLowerCase().includes(query));
-    });
+    return simpleGear
+      .filter((item) => {
+        const hostName = item.name || '';
+        const directFns = getFunctionsForGearItem(hostName, functionsCatalog);
+        const compMods = modsCatalog.filter((m) => isModCompatibleWithItem(m, item));
+
+        // Must have at least 1 mod or 1 gear power
+        const hasModsOrPowers = directFns.length > 0 || compMods.length > 0;
+        if (!hasModsOrPowers) return false;
+
+        if (query) {
+          const matchesHost = hostName.toLowerCase().includes(query);
+          const matchesMod = compMods.some((m) => m.name.toLowerCase().includes(query));
+          const matchesDirectFn = directFns.some((f) => f.name.toLowerCase().includes(query));
+          const matchesModFn = compMods.flatMap((m) => getFunctionsForMod(m.name, functionsCatalog)).some((f) => f.name.toLowerCase().includes(query));
+          if (!matchesHost && !matchesMod && !matchesDirectFn && !matchesModFn) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
   }, [simpleGear, rightSearch, modsCatalog, functionsCatalog]);
 
   const totalLearnedCount = spellSlots.length;
@@ -118,7 +134,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
             </div>
             <div>
               <h3 className="font-outfit font-black text-base text-slate-100 uppercase tracking-wide">
-                Manage Gear Powers
+                Gear Powers Manager
               </h3>
               <p className="text-xs text-slate-400">
                 Learn 1-AP combat powers rooted in your owned gear chassis and installed mods.
@@ -223,13 +239,13 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-800/80 shrink-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm">📚</span>
+                <span className="text-sm">🧿</span>
                 <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                  Gear Powers Catalog
+                  My Exotic Gear
                 </h4>
               </div>
               <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-500/30">
-                {rightGearItems.length} Owned Hardware
+                {rightGearItems.length} Exotic Items
               </span>
             </div>
 
@@ -238,7 +254,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Filter owned gear, mods, or powers..."
+                placeholder="Filter exotic gear, mods, or powers..."
                 value={rightSearch}
                 onChange={(e) => setRightSearch(e.target.value)}
                 className="w-full bg-slate-900/90 text-xs pl-8 pr-2.5 py-1.5 rounded-xl border border-slate-800 text-white outline-none focus:border-indigo-500 transition-all placeholder:text-slate-500"
@@ -279,9 +295,9 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center h-full py-12 text-center text-slate-500 text-xs px-4">
-                  <p className="font-semibold text-slate-400">No owned gear items found.</p>
+                  <p className="font-semibold text-slate-400">No owned exotic gear items found.</p>
                   <p className="text-[11px] mt-1 text-slate-500">
-                    Purchase weapons, armor, shields, or gear from the Gear Manager or find loot first!
+                    Purchase weapons, armor, shields, or gear with mods/powers from the Gear Manager, or discover exotic loot!
                   </p>
                 </div>
               )}
