@@ -84,6 +84,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   const [supabaseMonsters, setSupabaseMonsters] = useState<SupabaseMonster[]>([]);
   const [isLoadingCodex, setIsLoadingCodex] = useState(false);
   const [addedCodexIds, setAddedCodexIds] = useState<Record<string, boolean>>({});
+  const [copiedCodexId, setCopiedCodexId] = useState<string | null>(null);
 
   // Right Pane Tab Navigation State ('paste_quick' | 'codex')
   const [activeRightTab, setActiveRightTab] = useState<'paste_quick' | 'codex'>('paste_quick');
@@ -219,7 +220,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     setQuickAdd(DEFAULT_QUICK_ADD);
   };
 
-  const handleAddCodexMonster = (sm: SupabaseMonster) => {
+  const getCodexMonsterStatblock = (sm: SupabaseMonster): string => {
     const nameStr = sm.name || 'Codex Monster';
     const nish = extractFirstInt(sm.nish, 10);
     const mr = extractFirstInt(sm.mr, 10);
@@ -229,16 +230,30 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     
     let attrNums = extractAllInts(sm.attributes);
     while (attrNums.length < 5) attrNums.push(10);
-    const attrStr = `[✨${attrNums[0]}/💪${attrNums[1]}/👁️${attrNums[2]}/🏃${attrNums[3]}/🫀${attrNums[4]}]`;
+    const attrStr = `– [✨${attrNums[0]}/💪${attrNums[1]}/👁️${attrNums[2]}/🏃${attrNums[3]}/🫀${attrNums[4]}]`;
     const notes = sm.abilities ? ` (${sm.abilities})` : '';
 
-    const fullStatStr = `${nameStr} 🚩${nish} 👣${mr} ⚔️${atk} 🧥${def} ❤️${vit} ${attrStr}${notes}`;
+    return `${nameStr} 🚩${nish} 👣${mr} ⚔️${atk} 🧥${def} ❤️${vit} ${attrStr}${notes}`.trim();
+  };
+
+  const handleAddCodexMonster = (sm: SupabaseMonster) => {
+    const fullStatStr = getCodexMonsterStatblock(sm);
     const parsed = parseMonsterLine(fullStatStr);
     onSaveMonsters([...monsters, parsed]);
 
     setAddedCodexIds((prev) => ({ ...prev, [sm.id || sm.name]: true }));
     setTimeout(() => {
       setAddedCodexIds((prev) => ({ ...prev, [sm.id || sm.name]: false }));
+    }, 1500);
+  };
+
+  const handleCopyCodexMonster = (sm: SupabaseMonster) => {
+    const fullStatStr = getCodexMonsterStatblock(sm);
+    navigator.clipboard.writeText(fullStatStr);
+    const key = String(sm.id || sm.name);
+    setCopiedCodexId(key);
+    setTimeout(() => {
+      setCopiedCodexId((prev) => (prev === key ? null : prev));
     }, 1500);
   };
 
@@ -381,7 +396,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     Paste Multi-Row Statblocks
                   </span>
                   <p className="text-[11px] text-slate-400 leading-tight">
-                    Paste raw monster stats directly from your adventure (e.g. Word/Doc). Multiple rows will be automatically parsed and added to the roster. Assumes SupaFlex formatting
+                    Paste raw monster stats directly from your adventure (Word, Google Docs, GM Screen, or Codex). Single-row and multi-row card formats are automatically detected and parsed.
                   </p>
                   <textarea
                     rows={3}
@@ -608,17 +623,28 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                                 <span>❤️ {extractFirstInt(sm.vit, 10)}</span>
                               </span>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleAddCodexMonster(sm)}
-                              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all shrink-0 cursor-pointer ${
-                                isAdded
-                                  ? 'bg-emerald-600 text-slate-950 font-bold'
-                                  : 'bg-indigo-600/30 text-indigo-200 border border-indigo-500/40 hover:bg-indigo-600/50'
-                              }`}
-                            >
-                              {isAdded ? <Check className="w-3.5 h-3.5 inline" /> : '+ Add'}
-                            </button>
+                            <div className="flex items-center gap-1.5 shrink-0 select-none">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCodexMonster(sm)}
+                                className="p-1.5 text-slate-400 hover:text-amber-300 rounded transition-colors text-xs cursor-pointer select-none"
+                                title={copiedCodexId === (sm.id || sm.name) ? "Copied clean statblock!" : "Copy Statblock (Clipboard)"}
+                                aria-label="Copy Codex Monster Statblock"
+                              >
+                                {copiedCodexId === (sm.id || sm.name) ? '✅' : '📋'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleAddCodexMonster(sm)}
+                                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all shrink-0 cursor-pointer ${
+                                  isAdded
+                                    ? 'bg-emerald-600 text-slate-950 font-bold'
+                                    : 'bg-indigo-600/30 text-indigo-200 border border-indigo-500/40 hover:bg-indigo-600/50'
+                                }`}
+                              >
+                                {isAdded ? <Check className="w-3.5 h-3.5 inline" /> : '+ Add'}
+                              </button>
+                            </div>
                           </div>
                         );
                       })}

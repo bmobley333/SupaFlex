@@ -1,31 +1,12 @@
 // src/components/common/GmMonsterCard.tsx
 // GM Monster Card - Single-line high-density layout with full combat specs, alphabetical attributes, & private GM notes.
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ItemNotesPopover } from './ItemNotesPopover';
+import { formatMonsterDataToStatblock, MonsterStatData } from '../../utils/monsterStatParser';
 
-export interface MonsterData {
+export interface MonsterData extends MonsterStatData {
   id: string | number;
-  name: string;
-  count?: number;
-  equipment?: string;
-  initiative?: number;
-  mr?: number;
-  attack?: number;
-  damage?: number;
-  min_wounds?: number;
-  defense?: number;
-  armor?: number;
-  max_vit?: number;
-  current_vit?: number;
-  attributes?: {
-    magic?: number;
-    might?: number;
-    mind?: number;
-    motion?: number;
-    moxie?: number;
-  };
-  gm_notes?: string;
 }
 
 interface GmMonsterCardProps {
@@ -35,6 +16,17 @@ interface GmMonsterCardProps {
 }
 
 export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, onDelete }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const statblock = formatMonsterDataToStatblock(monster);
+    navigator.clipboard.writeText(statblock);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   const countPrefix = monster.count && monster.count > 1 ? `${monster.count} ` : '';
   const equipStr = monster.equipment ? ` (${monster.equipment})` : '';
 
@@ -83,28 +75,39 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
       </div>
 
       {/* Action Controls */}
-      {(onEdit || onDelete) && (
-        <div className="flex items-center gap-1 shrink-0">
-          {onEdit && (
-            <button
-              onClick={() => onEdit(monster)}
-              className="text-slate-400 hover:text-amber-400 p-0.5 rounded transition-colors text-xs"
-              title="Edit Monster"
-            >
-              ✏️
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={() => onDelete(monster.id)}
-              className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors text-xs"
-              title="Delete Monster"
-            >
-              🗑️
-            </button>
-          )}
-        </div>
-      )}
+      <div className="flex items-center gap-1 shrink-0 select-none">
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="text-slate-400 hover:text-amber-300 p-0.5 rounded transition-colors text-xs cursor-pointer select-none"
+          title={copied ? "Copied clean statblock!" : "Copy Statblock (Clipboard)"}
+          aria-label="Copy Monster Statblock"
+        >
+          {copied ? '✅' : '📋'}
+        </button>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={() => onEdit(monster)}
+            className="text-slate-400 hover:text-amber-400 p-0.5 rounded transition-colors text-xs cursor-pointer select-none"
+            title="Edit Monster"
+            aria-label="Edit Monster"
+          >
+            ✏️
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(monster.id)}
+            className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors text-xs cursor-pointer select-none"
+            title="Delete Monster"
+            aria-label="Delete Monster"
+          >
+            🗑️
+          </button>
+        )}
+      </div>
     </div>
   );
 };
