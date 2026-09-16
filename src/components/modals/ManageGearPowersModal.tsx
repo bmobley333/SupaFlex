@@ -252,10 +252,10 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
             </div>
             <div>
               <h3 className="font-outfit font-black text-base text-slate-100 uppercase tracking-wide">
-                Gear Powers Manager
+                Exotic Gear Manager
               </h3>
               <p className="text-xs text-slate-400">
-                Learn 1-AP combat powers rooted in your owned gear chassis and installed mods.
+                Learn 1-AP combat powers rooted in your owned exotic gear chassis and installed mods.
               </p>
             </div>
           </div>
