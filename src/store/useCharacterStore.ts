@@ -40,6 +40,10 @@ function loadCatalogsFromCache(minTimestamp?: number): CatalogsCachePayload['dat
     if (!raw) return null;
     const parsed: CatalogsCachePayload = JSON.parse(raw);
     if (!parsed || parsed.version !== 1 || !parsed.timestamp || !parsed.data) return null;
+    // Auto-invalidate if functionsData is empty or missing (e.g. following database migration)
+    if (!Array.isArray(parsed.data.functionsData) || parsed.data.functionsData.length === 0) {
+      return null;
+    }
     if (Date.now() - parsed.timestamp > CATALOGS_CACHE_TTL_MS) {
       localStorage.removeItem(CATALOGS_CACHE_KEY);
       return null;

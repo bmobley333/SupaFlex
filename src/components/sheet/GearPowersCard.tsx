@@ -56,7 +56,7 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
     <>
       <div className={`bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3 shadow-xl ${className}`}>
         {/* ================= 1. CARD HEADER ================= */}
-        <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-800/80 flex-wrap">
+        <div className="relative flex items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
           {/* Interactive Clickable Title & Emoji */}
           <div className="flex items-center gap-2.5">
             <button
@@ -74,19 +74,21 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
             </button>
           </div>
 
-          {/* Action Buttons: Clear Uses & Canonical Pencil Button */}
-          <div className="flex items-center gap-2">
+          {/* Centered Clear Uses Button */}
+          <div className="absolute left-1/2 -translate-x-1/2">
             <button
               type="button"
               onClick={clearAllGearPowerUses}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-950/80 hover:bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-950/80 hover:bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition shadow-sm cursor-pointer whitespace-nowrap"
               title="Reset all tracked uses on learned gear powers"
             >
               <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
               <span>Clear Uses</span>
             </button>
+          </div>
 
-            {/* Minimalist Pencil Action Button */}
+          {/* Minimalist Pencil Action Button */}
+          <div>
             <button
               type="button"
               onClick={() => setIsManageModalOpen(true)}

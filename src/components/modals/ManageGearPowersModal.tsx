@@ -1,11 +1,20 @@
 // src/components/modals/ManageGearPowersModal.tsx
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Search, Zap } from 'lucide-react';
+import { X, Search, Zap, Trash2 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { GearModFunctionTree } from '../common/GearModFunctionTree';
-import { calculateAvailableAp, isGearPowerLearned } from '../../types/game';
-import { cleanBelongsToName, getFunctionsForGearItem, getFunctionsForMod, isModCompatibleWithItem } from '../../utils/gearFunctionSync';
+import { calculateAvailableAp, isGearPowerLearned, cleanAbilityName, SimpleGearItem, AbilitySlot, ApLogEntry, FunctionItem, ModItem } from '../../types/game';
+import {
+  cleanBelongsToName,
+  getFunctionsForGearItem,
+  getFunctionsForMod,
+  isModCompatibleWithItem,
+  isModFreeForHost,
+  isBelongsToMatch,
+  reconcileCharacterVaultWithGear,
+} from '../../utils/gearFunctionSync';
+import { gameApi } from '../../services/api';
 
 interface ManageGearPowersModalProps {
   isOpen: boolean;
@@ -27,7 +36,36 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
     learnGearPower,
     unlearnGearPower,
     installModToGearItem,
+    updateActiveSheetData,
+    saveActiveCharacter,
   } = useCharacterStore();
+
+  // Self-healing catalogs: ensure functions & mods are populated even if store cache was cold
+  const [localFunctions, setLocalFunctions] = useState<FunctionItem[]>(functionsCatalog);
+  const [localMods, setLocalMods] = useState<ModItem[]>(modsCatalog);
+
+  useEffect(() => {
+    if (functionsCatalog && functionsCatalog.length > 0) {
+      setLocalFunctions(functionsCatalog);
+    } else {
+      gameApi.getGearPowers().then((data) => {
+        if (data && data.length > 0) setLocalFunctions(data);
+      });
+    }
+  }, [functionsCatalog]);
+
+  useEffect(() => {
+    if (modsCatalog && modsCatalog.length > 0) {
+      setLocalMods(modsCatalog);
+    } else {
+      gameApi.getMods().then((data) => {
+        if (data && data.length > 0) setLocalMods(data);
+      });
+    }
+  }, [modsCatalog]);
+
+  const effectiveFunctions = localFunctions.length > 0 ? localFunctions : functionsCatalog;
+  const effectiveMods = localMods.length > 0 ? localMods : modsCatalog;
 
   // Close on Escape key
   useEffect(() => {
@@ -48,7 +86,82 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
   const spellSlots = useMemo(() => (Array.isArray(sheet?.spell_slots) ? sheet.spell_slots : []), [sheet?.spell_slots]);
   const simpleGear = useMemo(() => (Array.isArray(sheet?.simple_gear) ? sheet.simple_gear : []), [sheet?.simple_gear]);
 
-  // Owned gear with at least one learned power for the left column (alphabetical A-Z)
+  // Drop gear item with AP refund for any learned powers on it
+  const handleDropGearItem = (item: SimpleGearItem) => {
+    const cleanHost = cleanBelongsToName(item.name);
+    const directFns = getFunctionsForGearItem(item.name, effectiveFunctions);
+    const directFnNames = new Set(directFns.map((f) => cleanAbilityName(f.name)));
+
+    const compMods = effectiveMods.filter((m) => isModCompatibleWithItem(m, item));
+    const modFnNames = new Set<string>();
+    compMods.forEach((m) => {
+      getFunctionsForMod(m.name, effectiveFunctions).forEach((f) => {
+        modFnNames.add(cleanAbilityName(f.name));
+      });
+    });
+
+    // Determine learned powers rooted in this gear item or installed mods
+    const droppedSlots: AbilitySlot[] = [];
+    const remainingSlots: AbilitySlot[] = [];
+
+    spellSlots.forEach((slot) => {
+      const slotTargetName = cleanAbilityName(slot.name);
+      const slotBaseTarget = cleanAbilityName(slot.base_name);
+      const slotSourceGearClean = cleanBelongsToName(slot.source_gear);
+
+      const belongsToItem =
+        slotSourceGearClean === cleanHost ||
+        directFnNames.has(slotTargetName) ||
+        directFnNames.has(slotBaseTarget) ||
+        modFnNames.has(slotTargetName) ||
+        modFnNames.has(slotBaseTarget) ||
+        (Boolean((slot as any).source) && cleanBelongsToName((slot as any).source).includes(cleanHost));
+
+      if (belongsToItem) {
+        droppedSlots.push(slot);
+      } else {
+        remainingSlots.push(slot);
+      }
+    });
+
+    const refundAp = droppedSlots.length;
+    const refundEntry: ApLogEntry | null =
+      refundAp > 0
+        ? {
+            id: `refund_gear_powers_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            cost: -refundAp,
+            category: 'Gear Powers',
+            description: `Refund ${refundAp} AP from dropped gear: ${item.name}`,
+            tier: 'Manual',
+            source: item.name,
+            timestamp: new Date().toISOString(),
+          }
+        : null;
+
+    const remainingGear = simpleGear.filter((g) => {
+      if (g.id && item.id && g.id === item.id) return false;
+      if (cleanBelongsToName(g.name) === cleanHost) return false;
+      if (g.name && g.name.endsWith(`(${item.name})`)) return false;
+      if (isBelongsToMatch(g.belongs_to, item.name, true)) return false;
+      return true;
+    });
+
+    updateActiveSheetData((prev) => {
+      const intermediateSheet = {
+        ...prev,
+        simple_gear: remainingGear,
+        spell_slots: remainingSlots,
+        ap_log: [
+          ...(Array.isArray(prev.ap_log) ? prev.ap_log : []),
+          ...(refundEntry ? [refundEntry] : []),
+        ],
+      };
+      return reconcileCharacterVaultWithGear(intermediateSheet, effectiveFunctions, effectiveMods).updatedSheet;
+    });
+    saveActiveCharacter();
+  };
+
+  // Owned gear with installed mods OR at least one learned power for the left column (alphabetical A-Z)
   const leftGearItems = useMemo(() => {
     const query = leftSearch.trim().toLowerCase();
     return simpleGear
@@ -56,39 +169,43 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
         const hostName = item.name || '';
         const cleanHost = cleanBelongsToName(hostName);
 
-        // Check if any learned slot explicitly names this host gear
+        // 1. Check installed mods (user explicitly owns mods on this gear item)
+        const compMods = effectiveMods.filter((m) => isModCompatibleWithItem(m, item));
+        const installedSet = new Set((item.installed_mods || []).map(cleanBelongsToName));
+        const hasInstalledMods =
+          (Array.isArray(item.installed_mods) && item.installed_mods.length > 0) ||
+          compMods.some((m) => isModFreeForHost(m, hostName));
+
+        // 2. Check learned powers rooted in this gear item or installed mods
         const hasDirectSlot = spellSlots.some((s) => cleanBelongsToName(s.source_gear) === cleanHost);
-        const directFns = getFunctionsForGearItem(hostName, functionsCatalog);
+        const directFns = getFunctionsForGearItem(hostName, effectiveFunctions);
         const directLearned = directFns.some((fn) => isGearPowerLearned(fn.name, spellSlots));
 
-        const compMods = modsCatalog.filter((m) => isModCompatibleWithItem(m, item));
-        const installedSet = new Set((item.installed_mods || []).map(cleanBelongsToName));
         const modLearned = compMods.some((m) => {
           if (!installedSet.has(cleanBelongsToName(m.name))) return false;
-          return getFunctionsForMod(m.name, functionsCatalog).some((fn) => isGearPowerLearned(fn.name, spellSlots));
+          return getFunctionsForMod(m.name, effectiveFunctions).some((fn) => isGearPowerLearned(fn.name, spellSlots));
         });
 
-        const hasAnyLearned = hasDirectSlot || directLearned || modLearned;
-        if (!hasAnyLearned) return false;
+        const hasAnyActive = hasInstalledMods || hasDirectSlot || directLearned || modLearned;
+        if (!hasAnyActive) return false;
 
         if (query) {
           const matchesHost = hostName.toLowerCase().includes(query);
-          const matchesDirectFn = directFns.some(
-            (fn) => isGearPowerLearned(fn.name, spellSlots) && fn.name.toLowerCase().includes(query)
+          const matchesModName = compMods.some(
+            (m) => installedSet.has(cleanBelongsToName(m.name)) && m.name.toLowerCase().includes(query)
           );
+          const matchesDirectFn = directFns.some((fn) => fn.name.toLowerCase().includes(query));
           const matchesModPower = compMods.some((m) =>
             installedSet.has(cleanBelongsToName(m.name)) &&
-            getFunctionsForMod(m.name, functionsCatalog).some(
-              (fn) => isGearPowerLearned(fn.name, spellSlots) && fn.name.toLowerCase().includes(query)
-            )
+            getFunctionsForMod(m.name, effectiveFunctions).some((fn) => fn.name.toLowerCase().includes(query))
           );
-          if (!matchesHost && !matchesDirectFn && !matchesModPower) return false;
+          if (!matchesHost && !matchesModName && !matchesDirectFn && !matchesModPower) return false;
         }
 
         return true;
       })
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-  }, [simpleGear, leftSearch, spellSlots, functionsCatalog, modsCatalog]);
+  }, [simpleGear, leftSearch, spellSlots, effectiveFunctions, effectiveMods]);
 
   // Owned gear that has mods and/or gear powers for the right "My Exotic Gear" column (alphabetical A-Z)
   const rightGearItems = useMemo(() => {
@@ -96,25 +213,26 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
     return simpleGear
       .filter((item) => {
         const hostName = item.name || '';
-        const directFns = getFunctionsForGearItem(hostName, functionsCatalog);
-        const compMods = modsCatalog.filter((m) => isModCompatibleWithItem(m, item));
+        const directFns = getFunctionsForGearItem(hostName, effectiveFunctions);
+        const compMods = effectiveMods.filter((m) => isModCompatibleWithItem(m, item));
+        const hasInstalledMods = Array.isArray(item.installed_mods) && item.installed_mods.length > 0;
 
-        // Must have at least 1 mod or 1 gear power
-        const hasModsOrPowers = directFns.length > 0 || compMods.length > 0;
+        // Must have at least 1 mod (compatible or installed) or 1 gear power
+        const hasModsOrPowers = directFns.length > 0 || compMods.length > 0 || hasInstalledMods;
         if (!hasModsOrPowers) return false;
 
         if (query) {
           const matchesHost = hostName.toLowerCase().includes(query);
           const matchesMod = compMods.some((m) => m.name.toLowerCase().includes(query));
           const matchesDirectFn = directFns.some((f) => f.name.toLowerCase().includes(query));
-          const matchesModFn = compMods.flatMap((m) => getFunctionsForMod(m.name, functionsCatalog)).some((f) => f.name.toLowerCase().includes(query));
+          const matchesModFn = compMods.flatMap((m) => getFunctionsForMod(m.name, effectiveFunctions)).some((f) => f.name.toLowerCase().includes(query));
           if (!matchesHost && !matchesMod && !matchesDirectFn && !matchesModFn) return false;
         }
 
         return true;
       })
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-  }, [simpleGear, rightSearch, modsCatalog, functionsCatalog]);
+  }, [simpleGear, rightSearch, effectiveMods, effectiveFunctions]);
 
   const totalLearnedCount = spellSlots.length;
 
@@ -203,20 +321,32 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                     className="p-2.5 rounded-xl border border-slate-800/80 bg-slate-900/60 flex flex-col gap-1.5 shadow-sm"
                   >
                     <div className="flex items-center justify-between text-xs font-bold text-slate-200">
-                      <span className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5 truncate">
                         <span>🛡️</span>
-                        <span>{item.name}</span>
+                        <span className="truncate">{item.name}</span>
                       </span>
-                      <span className="text-[10px] text-slate-400 font-mono uppercase">
-                        {item.category || item.item_type || 'Gear'}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] text-slate-400 font-mono uppercase">
+                          {item.category || item.item_type || 'Gear'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDropGearItem(item)}
+                          className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 rounded transition-colors cursor-pointer"
+                          title={`Drop ${item.name} (refunds AP for any learned powers)`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <GearModFunctionTree
                       hostItem={item}
-                      modsCatalog={modsCatalog}
-                      functionsCatalog={functionsCatalog}
+                      modsCatalog={effectiveMods}
+                      functionsCatalog={effectiveFunctions}
                       mode="manager-active"
+                      availableAp={availableAp}
                       learnedSlots={spellSlots}
+                      onLearnPower={(fn, hostName, modName) => learnGearPower(fn, hostName, modName)}
                       onUnlearnPower={unlearnGearPower}
                       defaultExpanded={true}
                     />
@@ -270,18 +400,28 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                     className="p-2.5 rounded-xl border border-slate-800/80 bg-slate-900/60 flex flex-col gap-1.5 shadow-sm"
                   >
                     <div className="flex items-center justify-between text-xs font-bold text-slate-200">
-                      <span className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5 truncate">
                         <span>⚙️</span>
-                        <span>{item.name}</span>
+                        <span className="truncate">{item.name}</span>
                       </span>
-                      <span className="text-[10px] text-slate-400 font-mono uppercase">
-                        {item.category || item.item_type || 'Gear'}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] text-slate-400 font-mono uppercase">
+                          {item.category || item.item_type || 'Gear'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDropGearItem(item)}
+                          className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 rounded transition-colors cursor-pointer"
+                          title={`Drop ${item.name} (refunds AP for any learned powers)`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <GearModFunctionTree
                       hostItem={item}
-                      modsCatalog={modsCatalog}
-                      functionsCatalog={functionsCatalog}
+                      modsCatalog={effectiveMods}
+                      functionsCatalog={effectiveFunctions}
                       mode="manager-catalog"
                       isEditable={true}
                       totalAvailableSilver={totalSilver}

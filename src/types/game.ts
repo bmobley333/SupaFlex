@@ -907,7 +907,11 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
 
 export const cleanAbilityName = (name?: string | null): string => {
   if (!name) return '';
-  return name.replace(/\s*\[[A-Z]+\]$/i, '').trim().toLowerCase();
+  return name
+    .replace(/\s*\[[A-Z]+\]$/i, '')
+    .replace(/\s+v\d+$/i, '')
+    .trim()
+    .toLowerCase();
 };
 
 export const isGearPowerLearned = (fnName: string, learnedSlots?: AbilitySlot[]): boolean => {

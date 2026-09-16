@@ -135,8 +135,17 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
     return count;
   }, [directLearnedPowers, modsWithLearnedPowers, functionsCatalog, learnedSlots]);
 
-  // If in 'card' or 'manager-active' mode and no learned powers exist on this gear item, do not render
-  if ((mode === 'card' || mode === 'manager-active') && totalLearnedOnItem === 0) {
+  const installedMods = useMemo(() => {
+    return compatibleMods.filter((m) => installedModsSet.has(cleanBelongsToName(m.name)));
+  }, [compatibleMods, installedModsSet]);
+
+  // If in 'card' mode and no learned powers exist on this gear item, do not render
+  if (mode === 'card' && totalLearnedOnItem === 0) {
+    return null;
+  }
+
+  // If in 'manager-active' mode, render if learned powers exist OR installed mods exist OR direct inherent powers exist
+  if (mode === 'manager-active' && totalLearnedOnItem === 0 && installedModsCount === 0 && directFunctions.length === 0) {
     return null;
   }
 
@@ -164,12 +173,20 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
     if (mode === 'manager-active') {
       return (
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span>🛡️</span>
-          <span className="font-bold text-slate-200">{hostName}</span>
-          <span className="text-slate-600">•</span>
-          <span className="text-emerald-400 font-semibold">{modsWithLearnedPowers.length} Mods</span>
-          <span className="text-slate-600">•</span>
-          <span className="text-amber-300 font-semibold">{totalLearnedOnItem} Active Powers</span>
+          <span>{hasMods ? '🔌' : '⚡'}</span>
+          {hasMods ? (
+            <>
+              <span className="font-bold text-slate-200">Installed Mods:</span>
+              <span className="text-emerald-400 font-semibold">{installedModsCount} Active</span>
+              <span className="text-slate-600">•</span>
+              <span className="text-amber-300 font-semibold">{totalLearnedOnItem} Powers Learned</span>
+            </>
+          ) : (
+            <>
+              <span className="font-bold text-slate-200">Inherent Gear Powers:</span>
+              <span className="text-emerald-400 font-semibold">{directLearnedPowers.length} / {directFunctions.length} Learned</span>
+            </>
+          )}
         </div>
       );
     }
@@ -228,9 +245,13 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
     );
   };
 
-  const isCardOrActiveMode = mode === 'card' || mode === 'manager-active';
-  const visibleDirectFunctions = isCardOrActiveMode ? directLearnedPowers : directFunctions;
-  const visibleMods = isCardOrActiveMode ? modsWithLearnedPowers : compatibleMods;
+  const visibleDirectFunctions = mode === 'card' ? directLearnedPowers : directFunctions;
+  const visibleMods =
+    mode === 'card'
+      ? modsWithLearnedPowers
+      : mode === 'manager-active'
+      ? installedMods
+      : compatibleMods;
 
   return (
     <div className={`pt-1 border-t border-slate-800/60 flex flex-col gap-1.5 ${className}`}>
@@ -317,14 +338,32 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
                           )}
 
                           {mode === 'manager-active' && (
-                            <button
-                              type="button"
-                              onClick={() => onUnlearnPower && onUnlearnPower(fn.name)}
-                              className="px-2 py-0.5 rounded font-bold transition text-[9px] border cursor-pointer bg-rose-950/80 hover:bg-rose-900 border-rose-500/40 text-rose-200 shadow-sm"
-                              title={`Unlearn ${fn.name} and refund 1 AP`}
-                            >
-                              Unlearn (1 AP)
-                            </button>
+                            <>
+                              {isLearned ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onUnlearnPower && onUnlearnPower(fn.name)}
+                                  className="px-2 py-0.5 rounded font-bold transition text-[9px] border cursor-pointer bg-rose-950/80 hover:bg-rose-900 border-rose-500/40 text-rose-200 shadow-sm"
+                                  title={`Unlearn ${fn.name} and refund 1 AP`}
+                                >
+                                  Unlearn (1 AP)
+                                </button>
+                              ) : onLearnPower ? (
+                                <button
+                                  type="button"
+                                  disabled={availableAp < 1}
+                                  onClick={() => onLearnPower(fn, hostName, '')}
+                                  className={`px-2 py-0.5 rounded font-bold transition text-[9px] border cursor-pointer ${
+                                    availableAp >= 1
+                                      ? 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-200 shadow-sm'
+                                      : 'bg-slate-800/80 text-slate-500 border-slate-700/80 opacity-60 cursor-not-allowed'
+                                  }`}
+                                  title={availableAp >= 1 ? `Learn ${fn.name} for 1 AP` : 'Need at least 1 AP to learn'}
+                                >
+                                  + Learn (1 AP)
+                                </button>
+                              ) : null}
+                            </>
                           )}
 
                           {(mode === 'manager-catalog' || mode === 'gear-manager') && (
@@ -370,7 +409,7 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
             const rawModFunctions = [...getFunctionsForMod(m.name, functionsCatalog)].sort((a, b) =>
               (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
             );
-            const modFunctions = isCardOrActiveMode
+            const modFunctions = mode === 'card'
               ? rawModFunctions.filter((fn) => isGearPowerLearned(fn.name, learnedSlots))
               : rawModFunctions;
             const modKey = String(m.id || m.name);
@@ -508,14 +547,32 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
                               )}
 
                               {mode === 'manager-active' && isInstalled && (
-                                <button
-                                  type="button"
-                                  onClick={() => onUnlearnPower && onUnlearnPower(fn.name)}
-                                  className="px-2 py-0.5 rounded font-bold transition text-[9px] border cursor-pointer bg-rose-950/80 hover:bg-rose-900 border-rose-500/40 text-rose-200 shadow-sm"
-                                  title={`Unlearn ${fn.name} and refund 1 AP`}
-                                >
-                                  Unlearn (1 AP)
-                                </button>
+                                <>
+                                  {isLearned ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => onUnlearnPower && onUnlearnPower(fn.name)}
+                                      className="px-2 py-0.5 rounded font-bold transition text-[9px] border cursor-pointer bg-rose-950/80 hover:bg-rose-900 border-rose-500/40 text-rose-200 shadow-sm"
+                                      title={`Unlearn ${fn.name} and refund 1 AP`}
+                                    >
+                                      Unlearn (1 AP)
+                                    </button>
+                                  ) : onLearnPower ? (
+                                    <button
+                                      type="button"
+                                      disabled={availableAp < 1}
+                                      onClick={() => onLearnPower(fn, hostName, m.name)}
+                                      className={`px-2 py-0.5 rounded font-bold transition text-[9px] border cursor-pointer ${
+                                        availableAp >= 1
+                                          ? 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-200 shadow-sm'
+                                          : 'bg-slate-800/80 text-slate-500 border-slate-700/80 opacity-60 cursor-not-allowed'
+                                      }`}
+                                      title={availableAp >= 1 ? `Learn ${fn.name} for 1 AP` : 'Need at least 1 AP to learn'}
+                                    >
+                                      + Learn (1 AP)
+                                    </button>
+                                  ) : null}
+                                </>
                               )}
 
                               {(mode === 'manager-catalog' || mode === 'gear-manager') && (

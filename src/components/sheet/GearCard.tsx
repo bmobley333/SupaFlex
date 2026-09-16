@@ -24,6 +24,9 @@ import {
   ModItem,
   FunctionItem,
   calculateAvailableAp,
+  AbilitySlot,
+  ApLogEntry,
+  cleanAbilityName,
 } from '../../types/game';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { GearModFunctionTree } from '../common/GearModFunctionTree';
@@ -37,6 +40,7 @@ import {
   isBelongsToMatch,
   splitBelongsToTargets,
   getFunctionsForGearItem,
+  getFunctionsForMod,
 } from '../../utils/gearFunctionSync';
 import { ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
 
@@ -928,6 +932,56 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     const droppedItem = gearList.find((g) => g.id === itemId);
     if (!droppedItem) return;
 
+    const cleanHost = cleanBelongsToName(droppedItem.name);
+    const directFns = getFunctionsForGearItem(droppedItem.name, functionsCatalog);
+    const directFnNames = new Set(directFns.map((f) => cleanAbilityName(f.name)));
+
+    const compMods = modsCatalog.filter((m) => isModCompatibleWithItem(m, droppedItem));
+    const modFnNames = new Set<string>();
+    compMods.forEach((m) => {
+      getFunctionsForMod(m.name, functionsCatalog).forEach((f) => {
+        modFnNames.add(cleanAbilityName(f.name));
+      });
+    });
+
+    const currentSlots = Array.isArray(sheet?.spell_slots) ? sheet.spell_slots : [];
+    const droppedSlots: AbilitySlot[] = [];
+    const remainingSlots: AbilitySlot[] = [];
+
+    currentSlots.forEach((slot) => {
+      const slotTargetName = cleanAbilityName(slot.name);
+      const slotBaseTarget = cleanAbilityName(slot.base_name);
+      const slotSourceGearClean = cleanBelongsToName(slot.source_gear);
+
+      const belongsToItem =
+        slotSourceGearClean === cleanHost ||
+        directFnNames.has(slotTargetName) ||
+        directFnNames.has(slotBaseTarget) ||
+        modFnNames.has(slotTargetName) ||
+        modFnNames.has(slotBaseTarget) ||
+        (Boolean((slot as any).source) && cleanBelongsToName((slot as any).source).includes(cleanHost));
+
+      if (belongsToItem) {
+        droppedSlots.push(slot);
+      } else {
+        remainingSlots.push(slot);
+      }
+    });
+
+    const refundAp = droppedSlots.length;
+    const refundEntry: ApLogEntry | null =
+      refundAp > 0
+        ? {
+            id: `refund_gear_powers_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            cost: -refundAp,
+            category: 'Gear Powers',
+            description: `Refund ${refundAp} AP from dropped gear: ${droppedItem.name}`,
+            tier: 'Manual',
+            source: droppedItem.name,
+            timestamp: new Date().toISOString(),
+          }
+        : null;
+
     updateActiveSheetData((prev) => {
       const remainingGear = (prev.simple_gear || []).filter((g) => {
         if (g.id === itemId) return false;
@@ -940,6 +994,11 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       const intermediateSheet = {
         ...prev,
         simple_gear: remainingGear,
+        spell_slots: remainingSlots,
+        ap_log: [
+          ...(Array.isArray(prev.ap_log) ? prev.ap_log : []),
+          ...(refundEntry ? [refundEntry] : []),
+        ],
       };
 
       return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog, modsCatalog).updatedSheet;
