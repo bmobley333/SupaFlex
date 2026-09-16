@@ -65,9 +65,9 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
           return true;
         }
 
-        // 2. Direct inherent functions on chassis
+        // 2. Direct inherent powers learned on this chassis
         const directFns = getFunctionsForGearItem(hostName, functionsCatalog);
-        if (directFns.length > 0) return true;
+        if (directFns.some((fn) => isGearPowerLearned(fn.name, spellSlots))) return true;
 
         // 3. Installed aftermarket mods
         if (Array.isArray(item.installed_mods) && item.installed_mods.length > 0) return true;
@@ -285,19 +285,17 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
                   {isExpanded && (
                     <div className="ml-8 sm:ml-9 pl-4 sm:pl-5 border-l-2 border-cyan-500/40 flex flex-col gap-3 pt-1.5 pb-1">
                       {/* LEVEL 1: Inherent Chassis Powers (No Mod) */}
-                      {directFns.length > 0 && (
+                      {directLearnedPowers.length > 0 && (
                         <div className="flex flex-col gap-2">
-                          {/* Mod Header: Inherent (No Mod) in purple without emoji */}
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-300 font-mono py-0.5">
+                          {/* Mod Header: Inherent (No Mod) in Warm Amber without emoji */}
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 font-mono tracking-wide py-0.5">
                             <span>Inherent (No Mod)</span>
                           </div>
 
                           {/* Indented Power Cards (left border under 'h' in Inherent) */}
-                          {directLearnedPowers.length > 0 && (
-                            <div className="flex flex-col gap-2 pl-3.5 sm:pl-4">
-                              {directLearnedPowers.map((fn) => renderPowerCard(fn))}
-                            </div>
-                          )}
+                          <div className="flex flex-col gap-2 pl-3.5 sm:pl-4">
+                            {directLearnedPowers.map((fn) => renderPowerCard(fn))}
+                          </div>
                         </div>
                       )}
 
@@ -310,8 +308,8 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
 
                         return (
                           <div key={mod.id || mod.name} className="flex flex-col gap-2">
-                            {/* Mod Header: Mod Name in purple without emoji + ℹ️ only if note exists */}
-                            <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-300 font-mono py-0.5">
+                            {/* Mod Header: Mod Name in Warm Amber without emoji + ℹ️ only if note exists */}
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 font-mono tracking-wide py-0.5">
                               <span>{mod.name}</span>
                               {mod.notes && mod.notes.trim() ? (
                                 <ItemNotesPopover notes={mod.notes} itemName={mod.name} inline />
