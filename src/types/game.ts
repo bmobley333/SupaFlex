@@ -572,6 +572,7 @@ export interface SimpleGearItem {
   pic?: string | null;
   is_exotic?: boolean;
   installed_mods?: string[];
+  removed_mods?: string[];
 }
 
 export interface ApLogEntry {

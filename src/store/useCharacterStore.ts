@@ -4,7 +4,7 @@ import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
-import { reconcileCharacterVaultWithGear, cleanBelongsToName } from '../utils/gearFunctionSync';
+import { reconcileCharacterVaultWithGear, cleanBelongsToName, getFunctionsForMod } from '../utils/gearFunctionSync';
 import { parseCostToSilver, deductFundsWithChange } from '../utils/moneyUtils';
 import { reconcileCharacterFreeTraits } from '../utils/pathReconciliationUtils';
 import { CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
@@ -211,6 +211,7 @@ interface CharacterStore {
   toggleGearPowerUsage: (powerName: string, checkIndex: number) => void;
   clearAllGearPowerUses: () => void;
   installModToGearItem: (modItem: ModItem, hostName: string) => { success: boolean; error?: string };
+  uninstallModFromGearItem: (modName: string, hostName: string) => { success: boolean; error?: string; refundedAp?: number };
 
   // Shared Ability Sort & Filter State (Powers & Loadout)
   abilitySortMode: 'action' | 'name';
@@ -1606,9 +1607,17 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       return { success: true };
     }
     installedMods.add(modItem.name);
+
+    // If previously marked removed, restore it
+    const cleanModName = cleanBelongsToName(modItem.name);
+    const updatedRemoved = (host.removed_mods || []).filter(
+      (m) => cleanBelongsToName(m) !== cleanModName
+    );
+
     currentGear[hostIdx] = {
       ...host,
       installed_mods: Array.from(installedMods),
+      removed_mods: updatedRemoved,
     };
 
     get().updateActiveSheetData((sheet) => ({
@@ -1619,6 +1628,86 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     }));
     get().saveActiveCharacter();
     return { success: true };
+  },
+
+  uninstallModFromGearItem: (modName: string, hostName: string) => {
+    const active = get().activeCharacter;
+    if (!active) return { success: false, error: 'No active character' };
+    const currentSheet = active.sheet_data || createDefaultSheetData();
+
+    const currentGear = [...(currentSheet.simple_gear || [])];
+    const hostIdx = currentGear.findIndex(
+      (g) => cleanBelongsToName(g.name) === cleanBelongsToName(hostName)
+    );
+    if (hostIdx === -1) return { success: false, error: 'Host gear item not found' };
+
+    const host = currentGear[hostIdx];
+    const cleanTargetMod = cleanBelongsToName(modName);
+
+    // 1. Remove from installed_mods
+    const updatedInstalled = (host.installed_mods || []).filter(
+      (m) => cleanBelongsToName(m) !== cleanTargetMod
+    );
+
+    // 2. Add to removed_mods (overrides inherent free mods)
+    const removedSet = new Set((host.removed_mods || []).map(cleanBelongsToName));
+    removedSet.add(cleanTargetMod);
+
+    currentGear[hostIdx] = {
+      ...host,
+      installed_mods: updatedInstalled,
+      removed_mods: Array.from(removedSet),
+    };
+
+    // 3. Find powers belonging to this mod and unlearn them with AP refund
+    const effectiveFunctions = get().functionsCatalog || [];
+    const modFns = getFunctionsForMod(modName, effectiveFunctions);
+    const modFnNames = new Set(modFns.map((fn) => cleanAbilityName(fn.name)));
+
+    const currentSpellSlots: AbilitySlot[] = Array.isArray(currentSheet.spell_slots) ? [...currentSheet.spell_slots] : [];
+    const unlearnedSlots: AbilitySlot[] = [];
+    const remainingSpellSlots: AbilitySlot[] = [];
+
+    currentSpellSlots.forEach((slot) => {
+      const slotName = cleanAbilityName(slot.name);
+      const slotBase = cleanAbilityName(slot.base_name);
+      const slotMod = cleanBelongsToName((slot as any).source_mod);
+      const matchesMod =
+        slotMod === cleanTargetMod ||
+        modFnNames.has(slotName) ||
+        modFnNames.has(slotBase);
+
+      if (matchesMod) {
+        unlearnedSlots.push(slot);
+      } else {
+        remainingSpellSlots.push(slot);
+      }
+    });
+
+    const refundAp = unlearnedSlots.length;
+    const refundLogEntry: ApLogEntry | null =
+      refundAp > 0
+        ? {
+            id: `refund_mod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            category: 'Gear Powers',
+            description: `Refund ${refundAp} AP from removed mod: ${modName}`,
+            source: hostName,
+            tier: 1,
+            cost: -refundAp,
+            timestamp: new Date().toISOString(),
+          }
+        : null;
+
+    const currentLog = Array.isArray(currentSheet.ap_log) ? currentSheet.ap_log : [];
+
+    get().updateActiveSheetData((sheet) => ({
+      ...sheet,
+      simple_gear: currentGear,
+      spell_slots: remainingSpellSlots,
+      ap_log: refundLogEntry ? [...currentLog, refundLogEntry] : currentLog,
+    }));
+    get().saveActiveCharacter();
+    return { success: true, refundedAp: refundAp };
   },
 
   // Shared Ability Sort & Filter State & Setters
