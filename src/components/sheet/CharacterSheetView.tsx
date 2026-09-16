@@ -13,6 +13,7 @@ import { ShieldCard } from './ShieldCard';
 import { ChaosGauntletCard } from './ChaosGauntletCard';
 import { VitalsHeader } from './VitalsHeader';
 import { AbilitySlotsGrid } from './AbilitySlotsGrid';
+import { GearPowersCard } from './GearPowersCard';
 import { SectionJumpHUD } from './SectionJumpHUD';
 import { GmMonsterTrackerHud } from '../hud/GmMonsterTrackerHud';
 import { PartyRosterHud } from '../hud/PartyRosterHud';
@@ -114,7 +115,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
               <GearCard className="w-full h-full" />
             </div>
           </div>
-          <AbilitySlotsGrid title="GEAR POWERS" type="spells" />
+          <GearPowersCard />
         </div>
 
         {/* Column 2 (Right): My Powers */}

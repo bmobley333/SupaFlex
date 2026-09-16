@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, ModItem, PlayerRecord } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, GearPowerItem, ModItem, PlayerRecord, ApLogEntry, isGearPowerLearned, cleanAbilityName, calculateAvailableAp } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
-import { reconcileCharacterVaultWithGear } from '../utils/gearFunctionSync';
+import { reconcileCharacterVaultWithGear, cleanBelongsToName } from '../utils/gearFunctionSync';
+import { parseCostToSilver, deductFundsWithChange } from '../utils/moneyUtils';
 import { reconcileCharacterFreeTraits } from '../utils/pathReconciliationUtils';
 import { CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
@@ -165,7 +166,7 @@ interface CharacterStore {
   setActivePartyId: (partyId: string | null) => void;
   recordApExpenditure: (
     cost: number,
-    category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual',
+    category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Gear Powers' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual',
     description: string,
     tier: 1 | 2 | 3 | 'Creation' | 'Manual',
     source: string
@@ -199,6 +200,13 @@ interface CharacterStore {
   addHardwareBundle: (bundle: HardwareBundleItem) => void;
   removeHardwareBundle: (bundleNameOrId: string | number) => void;
   toggleHardwareBundleVisibility: (bundleNameOrId: string | number) => void;
+
+  // Gear Powers Actions (1 AP Universal Learning)
+  learnGearPower: (power: GearPowerItem, hostGearName: string, hostModName?: string) => boolean;
+  unlearnGearPower: (powerName: string) => void;
+  toggleGearPowerUsage: (powerName: string, checkIndex: number) => void;
+  clearAllGearPowerUses: () => void;
+  installModToGearItem: (modItem: ModItem, hostName: string) => { success: boolean; error?: string };
 
   // Shared Ability Sort & Filter State (Powers & Loadout)
   abilitySortMode: 'action' | 'name';
@@ -1443,6 +1451,170 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       };
     });
     get().saveActiveCharacter();
+  },
+
+  learnGearPower: (power: GearPowerItem, hostGearName: string, hostModName?: string) => {
+    const active = get().activeCharacter;
+    if (!active) return false;
+    const currentSheet = active.sheet_data || createDefaultSheetData();
+    const availableAp = calculateAvailableAp(currentSheet.level || 1, currentSheet);
+    if (availableAp < 1) return false;
+
+    const currentSpellSlots: AbilitySlot[] = Array.isArray(currentSheet.spell_slots) ? [...currentSheet.spell_slots] : [];
+    if (isGearPowerLearned(power.name, currentSpellSlots)) return true;
+
+    const parseUsageCount = (usage?: string): number => {
+      if (!usage) return 0;
+      const match = usage.trim().match(/^([1-3])/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+    const usageCount = parseUsageCount(power.usage);
+
+    const newSlot: AbilitySlot = {
+      select: false,
+      name: power.name,
+      action: (power.action || 'P') as any,
+      usage: power.usage || '1-Enc',
+      effect: power.effect || '',
+      checked: usageCount > 0 ? Array(usageCount).fill(false) : [],
+      notes: power.notes || '',
+      ap_cost: 1,
+      source_gear: hostGearName,
+      source_mod: hostModName || '',
+    };
+
+    const newLogEntry: ApLogEntry = {
+      id: String(Date.now()),
+      category: 'Gear Powers',
+      description: `Learned ${power.name}`,
+      source: hostGearName,
+      tier: 1,
+      cost: 1,
+      timestamp: new Date().toISOString(),
+    };
+
+    const currentLog: ApLogEntry[] = Array.isArray(currentSheet.ap_log) ? [...currentSheet.ap_log] : [];
+
+    get().updateActiveSheetData((sheet) => ({
+      ...sheet,
+      spell_slots: [...currentSpellSlots, newSlot],
+      ap_log: [...currentLog, newLogEntry],
+    }));
+    get().saveActiveCharacter();
+    return true;
+  },
+
+  unlearnGearPower: (powerName: string) => {
+    const active = get().activeCharacter;
+    if (!active) return;
+    const currentSheet = active.sheet_data || createDefaultSheetData();
+    const currentSpellSlots: AbilitySlot[] = Array.isArray(currentSheet.spell_slots) ? [...currentSheet.spell_slots] : [];
+    
+    const target = cleanAbilityName(powerName);
+    const filtered = currentSpellSlots.filter(
+      (s) => cleanAbilityName(s.name) !== target && cleanAbilityName(s.base_name) !== target
+    );
+    if (filtered.length === currentSpellSlots.length) return;
+
+    const newLogEntry: ApLogEntry = {
+      id: String(Date.now()),
+      category: 'Gear Powers',
+      description: `Refunded ${powerName}`,
+      source: 'Refund',
+      tier: 1,
+      cost: -1,
+      timestamp: new Date().toISOString(),
+    };
+
+    const currentLog: ApLogEntry[] = Array.isArray(currentSheet.ap_log) ? [...currentSheet.ap_log] : [];
+
+    get().updateActiveSheetData((sheet) => ({
+      ...sheet,
+      spell_slots: filtered,
+      ap_log: [...currentLog, newLogEntry],
+    }));
+    get().saveActiveCharacter();
+  },
+
+  toggleGearPowerUsage: (powerName: string, checkIndex: number) => {
+    const active = get().activeCharacter;
+    if (!active) return;
+    const currentSheet = active.sheet_data || createDefaultSheetData();
+    const currentSpellSlots: AbilitySlot[] = Array.isArray(currentSheet.spell_slots) ? [...currentSheet.spell_slots] : [];
+    const target = cleanAbilityName(powerName);
+    const slotIdx = currentSpellSlots.findIndex(
+      (s) => cleanAbilityName(s.name) === target || cleanAbilityName(s.base_name) === target
+    );
+    if (slotIdx === -1) return;
+
+    const slotToUpdate = { ...currentSpellSlots[slotIdx] };
+    const newChecked = [...(slotToUpdate.checked || [false, false, false])];
+    newChecked[checkIndex] = !newChecked[checkIndex];
+    slotToUpdate.checked = newChecked;
+    currentSpellSlots[slotIdx] = slotToUpdate;
+
+    get().updateActiveSheetData((sheet) => ({
+      ...sheet,
+      spell_slots: currentSpellSlots,
+    }));
+    get().saveActiveCharacter();
+  },
+
+  clearAllGearPowerUses: () => {
+    const active = get().activeCharacter;
+    if (!active) return;
+    const currentSheet = active.sheet_data || createDefaultSheetData();
+    const currentSpellSlots: AbilitySlot[] = Array.isArray(currentSheet.spell_slots) ? currentSheet.spell_slots : [];
+    const cleared = currentSpellSlots.map((s) => ({
+      ...s,
+      checked: Array.isArray(s.checked) ? s.checked.map(() => false) : [false, false, false],
+    }));
+
+    get().updateActiveSheetData((sheet) => ({
+      ...sheet,
+      spell_slots: cleared,
+    }));
+    get().saveActiveCharacter();
+  },
+
+  installModToGearItem: (modItem: ModItem, hostName: string) => {
+    const active = get().activeCharacter;
+    if (!active) return { success: false, error: 'No active character' };
+    const currentSheet = active.sheet_data || createDefaultSheetData();
+    const gold = currentSheet.gold || 0;
+    const silver = currentSheet.silver || 0;
+    const costInSilver = parseCostToSilver(modItem.cost || '0s');
+
+    const deduction = deductFundsWithChange(gold, silver, costInSilver);
+    if (!deduction.success) {
+      return { success: false, error: 'Not enough money' };
+    }
+
+    const currentGear = [...(currentSheet.simple_gear || [])];
+    const hostIdx = currentGear.findIndex(
+      (g) => cleanBelongsToName(g.name) === cleanBelongsToName(hostName)
+    );
+    if (hostIdx === -1) return { success: false, error: 'Host gear item not found' };
+
+    const host = currentGear[hostIdx];
+    const installedMods = new Set<string>(host.installed_mods || []);
+    if (installedMods.has(modItem.name)) {
+      return { success: true };
+    }
+    installedMods.add(modItem.name);
+    currentGear[hostIdx] = {
+      ...host,
+      installed_mods: Array.from(installedMods),
+    };
+
+    get().updateActiveSheetData((sheet) => ({
+      ...sheet,
+      simple_gear: currentGear,
+      gold: deduction.newGold,
+      silver: deduction.newSilver,
+    }));
+    get().saveActiveCharacter();
+    return { success: true };
   },
 
   // Shared Ability Sort & Filter State & Setters

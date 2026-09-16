@@ -577,7 +577,7 @@ export interface SimpleGearItem {
 export interface ApLogEntry {
   id: string;
   timestamp: string;
-  category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual';
+  category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Gear Powers' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual';
   cost: number;
   description: string;
   tier: 1 | 2 | 3 | 'Creation' | 'Manual';
@@ -841,39 +841,17 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     }
   }
 
-  const expansions = typeof sheetData.loadout_expansions_purchased === 'number'
-    ? sheetData.loadout_expansions_purchased
-    : (typeof sheetData.unlocked_loadout_slots === 'number'
-      ? Math.max(0, sheetData.unlocked_loadout_slots - 5)
-      : (typeof sheetData.unlocked_magic_slots === 'number'
-        ? Math.max(0, sheetData.unlocked_magic_slots - 5)
-        : 0));
-  const loadoutNet = expansions;
-
-  // Add +1 AP per function version beyond v1 across equipped slots and vault
-  const allFunctions = [
-    ...(Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : []),
-    ...(Array.isArray(sheetData.character_vault) ? sheetData.character_vault : []),
-  ];
-  const functionVersionMap = new Map<string, number>();
-  for (const f of allFunctions) {
-    if (!f || !f.name) continue;
-    const { baseName, version } = parseAbilityVersion(f.base_name || f.name);
-    const itemVer = typeof f.version === 'number' ? f.version : version;
-    const maxVer = Math.max(version, itemVer, 1);
-    const key = baseName.toLowerCase();
-    const existing = functionVersionMap.get(key) || 1;
-    if (maxVer > existing) {
-      functionVersionMap.set(key, maxVer);
+  // 1 AP per learned Gear Power in spell_slots (plus version upgrades)
+  const spellSlots = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
+  let gearPowersNet = spellSlots.reduce((sum: number, s: any) => sum + (typeof s?.ap_cost === 'number' && s.ap_cost > 0 ? s.ap_cost : 1), 0);
+  for (const s of spellSlots) {
+    if (!s || !s.name) continue;
+    const { version } = parseAbilityVersion(s.base_name || s.name);
+    const itemVer = typeof s.version === 'number' ? s.version : version;
+    if (itemVer > 1) {
+      gearPowersNet += (itemVer - 1);
     }
   }
-  let functionVersionsNet = 0;
-  for (const ver of functionVersionMap.values()) {
-    if (ver > 1) {
-      functionVersionsNet += (ver - 1);
-    }
-  }
-  const magicItemsNet = loadoutNet + functionVersionsNet;
 
   const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
   const skilledShields = armory.filter((s: any) => s && s.sk);
@@ -899,9 +877,10 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     Attributes: attributesNet,
     Capstones: capstonesNet,
     Focus: focusNet,
+    'Gear Powers': gearPowersNet,
     'GM Bonus': gmBonus,
-    'Loadout Slots': loadoutNet + functionVersionsNet,
-    'Magic Items': magicItemsNet,
+    'Loadout Slots': gearPowersNet,
+    'Magic Items': gearPowersNet,
     Powers: powersNet,
     Shields: shieldsNet,
     Skills: skillsNet,
@@ -915,8 +894,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     attributesNet +
     capstonesNet +
     focusNet +
-    loadoutNet +
-    functionVersionsNet +
+    gearPowersNet +
     powersNet +
     shieldsNet +
     skillsNet +
@@ -925,6 +903,23 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     weaponsNet;
 
   return { totalSpent, gmBonus, categories };
+};
+
+export const cleanAbilityName = (name?: string | null): string => {
+  if (!name) return '';
+  return name.replace(/\s*\[[A-Z]+\]$/i, '').trim().toLowerCase();
+};
+
+export const isGearPowerLearned = (fnName: string, learnedSlots?: AbilitySlot[]): boolean => {
+  if (!learnedSlots || !Array.isArray(learnedSlots)) return false;
+  const target = cleanAbilityName(fnName);
+  return learnedSlots.some((s) => cleanAbilityName(s.name) === target || cleanAbilityName(s.base_name) === target);
+};
+
+export const getLearnedGearPower = (fnName: string, learnedSlots?: AbilitySlot[]): AbilitySlot | undefined => {
+  if (!learnedSlots || !Array.isArray(learnedSlots)) return undefined;
+  const target = cleanAbilityName(fnName);
+  return learnedSlots.find((s) => cleanAbilityName(s.name) === target || cleanAbilityName(s.base_name) === target);
 };
 
 export const calculateSpentAp = (logOrSheet?: any): number => {

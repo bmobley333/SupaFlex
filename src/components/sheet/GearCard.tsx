@@ -23,6 +23,7 @@ import {
   SupabaseBundle,
   ModItem,
   FunctionItem,
+  calculateAvailableAp,
 } from '../../types/game';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { GearModFunctionTree } from '../common/GearModFunctionTree';
@@ -93,8 +94,9 @@ interface GearCardProps {
 
 export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, isGuildSpaceUnlocked: isGsUnlocked } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, isGuildSpaceUnlocked: isGsUnlocked, learnGearPower, unlearnGearPower } = useCharacterStore();
   const sheet = activeCharacter?.sheet_data;
+  const availableAp = sheet ? calculateAvailableAp(sheet.level || 1, sheet) : 0;
 
   const rawGearList: SimpleGearItem[] = sheet?.simple_gear || [];
   const gearList: SimpleGearItem[] = useMemo(() => {
@@ -1324,12 +1326,17 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                             hostItem={item}
                             modsCatalog={modsCatalog}
                             functionsCatalog={functionsCatalog}
+                            mode="gear-manager"
                             isEditable={true}
                             onPurchaseMod={(modItem, hostName, hostCat) =>
                               handlePurchaseOptionalMod(modItem, hostName, hostCat)
                             }
                             notEnoughMoneyTarget={notEnoughMoneyTarget}
                             totalAvailableSilver={totalAvailableSilver}
+                            availableAp={availableAp}
+                            learnedSlots={sheet?.spell_slots}
+                            onLearnPower={(power, hostName, modName) => learnGearPower(power, hostName, modName)}
+                            onUnlearnPower={(powerName) => unlearnGearPower(powerName)}
                             isGsUnlocked={isGsUnlocked}
                           />
                         </div>
