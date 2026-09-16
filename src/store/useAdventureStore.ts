@@ -97,6 +97,8 @@ interface AdventureStoreState {
   resetEncounterAll: (adventureId: string, actId: string, encounterId: string) => Promise<void>;
   ensureAdLibEncounter: (adventureId: string, actId: string) => Promise<string | null>;
   deployToLiveParty: (partyId: string) => Promise<void>;
+  designSnapshot: GmAdventure[] | null;
+  revertGameDayToDesign: () => void;
 }
 
 const STORAGE_ACTIVE_ADV = 'supaflex_active_adv_id';
@@ -143,6 +145,7 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
   gmLinks: getInitialGmLinks(),
   gameDaySandbox: {},
   gameDayDifficulty: {},
+  designSnapshot: null,
 
   getActiveAdventure: () => {
     const { adventures, activeAdventureId } = get();
@@ -197,7 +200,35 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_SESSION_MODE, mode);
     }
-    set({ sessionMode: mode });
+    const currentMode = get().sessionMode;
+    if (currentMode === 'design' && mode === 'game_day') {
+      const snapshot = get().designSnapshot || JSON.parse(JSON.stringify(get().adventures));
+      set({ sessionMode: mode, designSnapshot: snapshot });
+    } else {
+      set({ sessionMode: mode });
+    }
+  },
+
+  revertGameDayToDesign: () => {
+    const { designSnapshot } = get();
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_SESSION_MODE, 'design');
+    }
+    if (designSnapshot) {
+      set({
+        adventures: JSON.parse(JSON.stringify(designSnapshot)),
+        designSnapshot: null,
+        sessionMode: 'design',
+        gameDaySandbox: {},
+        gameDayDifficulty: {},
+      });
+    } else {
+      set({
+        sessionMode: 'design',
+        gameDaySandbox: {},
+        gameDayDifficulty: {},
+      });
+    }
   },
 
   fetchAdventures: async (gmEmail: string) => {
@@ -221,6 +252,9 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
       }));
 
       set({ adventures: normalizedList });
+      if (get().sessionMode === 'game_day' && !get().designSnapshot) {
+        set({ designSnapshot: JSON.parse(JSON.stringify(normalizedList)) });
+      }
 
       // Auto-validate and select first adventure/act/encounter if none selected or stale
       const currentAdvId = get().activeAdventureId;
@@ -371,10 +405,16 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
         structure: resolvedStructure,
       };
 
-      const updated = await gameApi.updateAdventure(id, safeUpdates);
-      if (updated) {
+      if (get().sessionMode === 'design') {
+        const updated = await gameApi.updateAdventure(id, safeUpdates);
+        if (updated) {
+          set((state) => ({
+            adventures: state.adventures.map((a) => (a.id === id ? { ...a, ...updated } : a)),
+          }));
+        }
+      } else {
         set((state) => ({
-          adventures: state.adventures.map((a) => (a.id === id ? { ...a, ...updated } : a)),
+          adventures: state.adventures.map((a) => (a.id === id ? { ...a, ...safeUpdates } : a)),
         }));
       }
     } catch (e) {
@@ -574,7 +614,9 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
       adventures: state.adventures.map((a) => (a.id === adventureId ? { ...a, structure: newStructure } : a)),
     }));
 
-    await get().updateAdventure(adventureId, { structure: newStructure });
+    if (get().sessionMode === 'design') {
+      await get().updateAdventure(adventureId, { structure: newStructure });
+    }
   },
 
   deleteEncounter: async (adventureId: string, actId: string, encounterId: string) => {
@@ -1088,8 +1130,27 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     if (!activeAdventureId || !activeActId || !activeEncounterId) return;
 
     if (sessionMode === 'game_day') {
-      // Update temporary sandbox only
+      const adv = get().getActiveAdventure();
+      const act = get().getActiveAct();
+      if (!adv || !act) return;
+      const updatedAdv = {
+        ...adv,
+        structure: {
+          ...adv.structure,
+          acts: adv.structure.acts.map((a) =>
+            a.id === act.id
+              ? {
+                  ...a,
+                  encounters: a.encounters.map((e) =>
+                    e.id === activeEncounterId ? { ...e, monsters } : e
+                  ),
+                }
+              : a
+          ),
+        },
+      };
       set((state) => ({
+        adventures: state.adventures.map((a) => (a.id === adv.id ? updatedAdv : a)),
         gameDaySandbox: {
           ...state.gameDaySandbox,
           [activeEncounterId]: monsters,
@@ -1119,7 +1180,27 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     });
 
     if (sessionMode === 'game_day') {
+      const adv = get().getActiveAdventure();
+      const act = get().getActiveAct();
+      const updatedAdv = adv && act ? {
+        ...adv,
+        structure: {
+          ...adv.structure,
+          acts: adv.structure.acts.map((a) =>
+            a.id === act.id
+              ? {
+                  ...a,
+                  encounters: a.encounters.map((e) =>
+                    e.id === activeEncounterId ? { ...e, master_dif: targetDif, monsters: currentMonsters.length > 0 ? scaled : e.monsters } : e
+                  ),
+                }
+              : a
+          ),
+        },
+      } : null;
+
       set((state) => ({
+        adventures: updatedAdv ? state.adventures.map((a) => (a.id === adv!.id ? updatedAdv : a)) : state.adventures,
         gameDayDifficulty: {
           ...state.gameDayDifficulty,
           [activeEncounterId]: targetDif,
@@ -1149,12 +1230,54 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
     const enc = get().getActiveEncounter();
     if (!enc) return;
 
+    const { designSnapshot } = get();
+    let restoredMonsters: PreStagedMonster[] | undefined;
+    let restoredDif: number | undefined;
+
+    if (designSnapshot) {
+      for (const a of designSnapshot) {
+        for (const act of (a.structure?.acts || [])) {
+          const match = (act.encounters || []).find((e) => e.id === enc.id);
+          if (match) {
+            restoredMonsters = match.monsters;
+            restoredDif = match.master_dif;
+            break;
+          }
+        }
+      }
+    }
+
     set((state) => {
       const updatedSandbox = { ...state.gameDaySandbox };
       delete updatedSandbox[enc.id];
       const updatedDifficulty = { ...state.gameDayDifficulty };
       delete updatedDifficulty[enc.id];
+
+      const adv = get().getActiveAdventure();
+      const act = get().getActiveAct();
+      const updatedAdv = adv && act && (restoredMonsters !== undefined || restoredDif !== undefined) ? {
+        ...adv,
+        structure: {
+          ...adv.structure,
+          acts: adv.structure.acts.map((a) =>
+            a.id === act.id
+              ? {
+                  ...a,
+                  encounters: a.encounters.map((e) =>
+                    e.id === enc.id ? {
+                      ...e,
+                      monsters: restoredMonsters !== undefined ? restoredMonsters : e.monsters,
+                      master_dif: restoredDif !== undefined ? restoredDif : e.master_dif,
+                    } : e
+                  ),
+                }
+              : a
+          ),
+        },
+      } : null;
+
       return {
+        adventures: updatedAdv ? state.adventures.map((a) => (a.id === adv!.id ? updatedAdv : a)) : state.adventures,
         gameDaySandbox: updatedSandbox,
         gameDayDifficulty: updatedDifficulty,
       };
