@@ -718,12 +718,12 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                         {/* LEVEL 1: Inherent Chassis Powers (No Mod) */}
                         {directFns.length > 0 && (
                           <div className="flex flex-col gap-2">
-                            {/* Mod Header: Inherent (No Mod) in Warm Amber + Installed Badge */}
-                            <div className="flex items-center justify-between py-0.5">
-                              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 font-mono tracking-wide">
-                                <span>Inherent (No Mod)</span>
-                              </div>
-                              <span className="px-2.5 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
+                            {/* Mod Header: Inherent (No Mod) in Warm Amber + Inline Installed Badge */}
+                            <div className="flex items-center gap-2.5 py-0.5">
+                              <span className="text-xs font-bold text-amber-300 font-mono tracking-wide">
+                                Inherent (No Mod)
+                              </span>
+                              <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
                                 Installed
                               </span>
                             </div>
@@ -748,55 +748,53 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
 
                           return (
                             <div key={mod.id || mod.name} className="flex flex-col gap-2">
-                              {/* Mod Header Row: Name in Warm Amber + Buy Button OR Installed Badge & Trashcan */}
-                              <div className="flex items-center justify-between py-0.5 gap-2">
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 font-mono tracking-wide">
-                                  <span>{mod.name}</span>
-                                  {mod.notes && mod.notes.trim() ? (
-                                    <ItemNotesPopover notes={mod.notes} itemName={mod.name} inline />
-                                  ) : null}
-                                </div>
+                              {/* Mod Header Row: Inline Name, ℹ️, and Action Elements */}
+                              <div className="flex items-center gap-2.5 py-0.5 flex-wrap">
+                                <span className="text-xs font-bold text-amber-300 font-mono tracking-wide">
+                                  {mod.name}
+                                </span>
+                                {mod.notes && mod.notes.trim() ? (
+                                  <ItemNotesPopover notes={mod.notes} itemName={mod.name} inline />
+                                ) : null}
 
-                                <div className="flex items-center gap-1.5">
-                                  {isInstalled ? (
-                                    <>
-                                      {/* Gold Installed Badge */}
-                                      <span className="px-2.5 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
-                                        Installed
-                                      </span>
+                                {isInstalled ? (
+                                  <div className="inline-flex items-center gap-1.5">
+                                    {/* Gold Installed Badge */}
+                                    <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
+                                      Installed
+                                    </span>
 
-                                      {/* Uninstall Mod Trashcan */}
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUninstallMod(mod.name, hostName)}
-                                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 border border-transparent hover:border-rose-500/40 rounded-lg transition-all cursor-pointer shadow-sm"
-                                        title={`Remove ${mod.name} (uninstalls mod, unlearns its powers, refunds AP)`}
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    /* Green + Buy [price] Button */
+                                    {/* Uninstall Mod Trashcan */}
                                     <button
                                       type="button"
-                                      onClick={() => handleBuyMod(mod, hostName)}
-                                      disabled={!canAfford}
-                                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm ${
-                                        canAfford
-                                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50 cursor-pointer shadow-emerald-950/30'
-                                          : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
-                                      }`}
-                                      title={
-                                        canAfford
-                                          ? `Buy and install ${mod.name} for ${costFormatted}`
-                                          : `Insufficient funds (Requires ${costFormatted}, you have ${gold}g ${silver}s)`
-                                      }
+                                      onClick={() => handleUninstallMod(mod.name, hostName)}
+                                      className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 border border-transparent hover:border-rose-500/40 rounded-lg transition-all cursor-pointer shadow-sm"
+                                      title={`Remove ${mod.name} (uninstalls mod, unlearns its powers, refunds AP)`}
                                     >
-                                      <Plus className="w-3.5 h-3.5" />
-                                      <span>Buy {costFormatted}</span>
+                                      <Trash2 className="w-3.5 h-3.5" />
                                     </button>
-                                  )}
-                                </div>
+                                  </div>
+                                ) : (
+                                  /* Green + Buy [price] Button */
+                                  <button
+                                    type="button"
+                                    onClick={() => handleBuyMod(mod, hostName)}
+                                    disabled={!canAfford}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1 shadow-sm ${
+                                      canAfford
+                                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50 cursor-pointer shadow-emerald-950/30'
+                                        : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+                                    }`}
+                                    title={
+                                      canAfford
+                                        ? `Buy and install ${mod.name} for ${costFormatted}`
+                                        : `Insufficient funds (Requires ${costFormatted}, you have ${gold}g ${silver}s)`
+                                    }
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>Buy {costFormatted}</span>
+                                  </button>
+                                )}
                               </div>
 
                               {/* Indented Power Cards under this Mod */}

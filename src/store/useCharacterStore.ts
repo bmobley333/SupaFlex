@@ -12,7 +12,7 @@ import { CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { getTabSessionId } from '../utils/tabSession';
 import { supabase } from '../lib/supabase';
 
-const CATALOGS_CACHE_KEY = 'supaflex_catalogs_cache_v1';
+const CATALOGS_CACHE_KEY = 'supaflex_catalogs_cache_v2';
 const CATALOGS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CatalogsCachePayload {
@@ -36,10 +36,13 @@ interface CatalogsCachePayload {
 function loadCatalogsFromCache(minTimestamp?: number): CatalogsCachePayload['data'] | null {
   if (typeof window === 'undefined') return null;
   try {
+    // Purge old v1 cache if present
+    localStorage.removeItem('supaflex_catalogs_cache_v1');
+
     const raw = localStorage.getItem(CATALOGS_CACHE_KEY);
     if (!raw) return null;
     const parsed: CatalogsCachePayload = JSON.parse(raw);
-    if (!parsed || parsed.version !== 1 || !parsed.timestamp || !parsed.data) return null;
+    if (!parsed || parsed.version !== 2 || !parsed.timestamp || !parsed.data) return null;
     // Auto-invalidate if functionsData is empty or missing (e.g. following database migration)
     if (!Array.isArray(parsed.data.functionsData) || parsed.data.functionsData.length === 0) {
       return null;
@@ -63,7 +66,7 @@ function saveCatalogsToCache(data: CatalogsCachePayload['data']): void {
   if (typeof window === 'undefined') return;
   try {
     const payload: CatalogsCachePayload = {
-      version: 1,
+      version: 2,
       timestamp: Date.now(),
       data,
     };
