@@ -1,5 +1,4 @@
-// src/utils/monsterStatParser.ts
-// Utility to parse single or multi-row monster statblocks into reduced player views
+import { SupabaseMonster } from '../types/game';
 
 export interface ParsedMonster {
   id: string;
@@ -10,6 +9,10 @@ export interface ParsedMonster {
   fullText: string;
   reducedText: string;
   baseFullText?: string;
+  scaled_dif?: number;
+  is_codex?: boolean;
+  codex_notes?: string;
+  codex_id?: number | string;
 }
 
 export function parseMonsterLine(line: string): ParsedMonster {
@@ -93,6 +96,48 @@ export interface MonsterStatData {
     moxie?: number;
   };
   gm_notes?: string;
+  is_codex?: boolean;
+}
+
+/**
+ * Resolves notes for a monster strictly from the Supabase Codex catalog by name.
+ * Strips quantity prefixes (e.g. "2 Orc Archers" -> "Orc Archer") and attempts exact,
+ * lowercase, and singular matching.
+ * Returns the Supabase abilities / notes string if matched, or undefined.
+ */
+export function resolveCodexMonsterNotes(
+  monsterName: string | undefined | null,
+  codexCatalog: SupabaseMonster[] = []
+): string | undefined {
+  if (!monsterName || !codexCatalog || codexCatalog.length === 0) return undefined;
+
+  // Clean name: strip numbers, gear in brackets/parens, trim
+  const clean = monsterName
+    .replace(/^\d+\s*/, '')
+    .replace(/\s*[\(\[].*?[\)\]]/g, '')
+    .trim()
+    .toLowerCase();
+  if (!clean) return undefined;
+
+  // 1. Exact match
+  const exact = codexCatalog.find((sm) => sm.name?.toLowerCase().trim() === clean);
+  if (exact) return exact.notes || exact.abilities || undefined;
+
+  // 2. Singularize (e.g. "Acid Spitters" -> "Acid Spitter")
+  if (clean.endsWith('s')) {
+    const singular = clean.slice(0, -1);
+    const foundSingular = codexCatalog.find((sm) => sm.name?.toLowerCase().trim() === singular);
+    if (foundSingular) return foundSingular.notes || foundSingular.abilities || undefined;
+  }
+
+  // 3. Prefix / substring match if codex name starts with or is contained in clean
+  const match = codexCatalog.find((sm) => {
+    const smName = sm.name?.toLowerCase().trim();
+    return smName && (smName === clean || clean.startsWith(smName));
+  });
+  if (match) return match.notes || match.abilities || undefined;
+
+  return undefined;
 }
 
 /**

@@ -243,8 +243,6 @@ export function parseMonsterLineToData(raw: string, id: string = 'mon_tmp'): Mon
     }
   }
 
-  const notesMatch = raw.match(/(?:\]|❤️\s*\d+)\s*\((.*)\)$/);
-
   return {
     id,
     name: parsed.nameWithEquip || 'Monster',
@@ -258,6 +256,6 @@ export function parseMonsterLineToData(raw: string, id: string = 'mon_tmp'): Mon
     max_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
     current_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
     attributes: attrValues,
-    gm_notes: notesMatch ? notesMatch[1] : undefined,
+    gm_notes: undefined,
   };
 }

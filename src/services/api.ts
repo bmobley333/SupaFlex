@@ -31,6 +31,8 @@ import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { resolveArtifactCatalog, CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { resolveExoticCatalog, CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 
+let cachedSupabaseMonsters: SupabaseMonster[] | null = null;
+
 const DEFAULT_UNARMORED_SLOT = {
   id: 'arm_none',
   name: 'Unarmored',
@@ -1541,6 +1543,9 @@ export const gameApi = {
 
   // --- MONSTER ROSTER SYNC & BROADCAST ---
   async getSupabaseMonsters(): Promise<SupabaseMonster[]> {
+    if (cachedSupabaseMonsters && cachedSupabaseMonsters.length > 0) {
+      return cachedSupabaseMonsters;
+    }
     try {
       const { data, error } = await supabase
         .from('monsters')
@@ -1552,7 +1557,8 @@ export const gameApi = {
         return [];
       }
 
-      return data || [];
+      cachedSupabaseMonsters = (data as SupabaseMonster[]) || [];
+      return cachedSupabaseMonsters;
     } catch (e) {
       console.error('[gameApi] Error in getSupabaseMonsters:', e);
       return [];

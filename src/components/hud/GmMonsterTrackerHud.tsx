@@ -164,7 +164,6 @@ export const GmMonsterTrackerHud: React.FC = () => {
     const defNums = parsed.defenseStat.match(/\d+/g) || [];
     const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
 
-    const notesMatch = raw.match(/(?:\]|❤️\s*\d+)\s*\((.*)\)$/);
     const attrMatch = raw.match(/\[✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*👁️\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(?:🫀|💖)\s*(\d+)\]/u);
 
     return {
@@ -194,7 +193,7 @@ export const GmMonsterTrackerHud: React.FC = () => {
         motion: 10,
         moxie: 10,
       }),
-      gm_notes: m.gm_notes || (notesMatch ? notesMatch[1] : undefined),
+      gm_notes: (m as any).codex_notes || m.gm_notes || undefined,
     };
   };
 

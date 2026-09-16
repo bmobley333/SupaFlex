@@ -45,7 +45,6 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
   const motion = attrs.motion ?? 10;
   const moxie = attrs.moxie ?? 10;
 
-  const notesStr = monster.gm_notes ? ` (${monster.gm_notes})` : '';
 
   return (
     <div className="bg-slate-900/90 border border-amber-500/30 hover:border-amber-500/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono shadow-sm flex flex-wrap items-center justify-between gap-x-3 gap-y-1 transition-all">
@@ -69,9 +68,6 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
         <span className="text-amber-200/90 font-semibold text-[11px] shrink-0">
           – [✨{magic}/💪{might}/👁️{mind}/🏃{motion}/🫀{moxie}]
         </span>
-
-        {/* Private GM Notes */}
-        {notesStr && <span className="italic text-slate-400 text-[11px] truncate">{notesStr}</span>}
       </div>
 
       {/* Action Controls */}

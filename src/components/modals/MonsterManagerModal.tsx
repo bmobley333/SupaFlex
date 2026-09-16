@@ -10,6 +10,7 @@ import {
   ParsedMonster,
   parseMonsterLine,
   parseMultiRowMonsterBlock,
+  resolveCodexMonsterNotes,
 } from '../../utils/monsterStatParser';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import {
@@ -153,7 +154,8 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
       }
     }
 
-    const notesMatch = raw.match(/(?:\]|❤️\s*\d+)\s*\((.*)\)$/);
+    // Resolve notes ONLY from Supabase Codex
+    const codexNotes = m.codex_notes || resolveCodexMonsterNotes(parsed.nameWithEquip, supabaseMonsters);
 
     return {
       id: m.id,
@@ -168,7 +170,8 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
       max_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
       current_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
       attributes: attrValues,
-      gm_notes: notesMatch ? notesMatch[1] : undefined,
+      gm_notes: codexNotes,
+      is_codex: !!codexNotes || m.is_codex,
     };
   };
 
@@ -239,6 +242,9 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   const handleAddCodexMonster = (sm: SupabaseMonster) => {
     const fullStatStr = getCodexMonsterStatblock(sm);
     const parsed = parseMonsterLine(fullStatStr);
+    parsed.is_codex = true;
+    parsed.codex_notes = sm.notes || sm.abilities || undefined;
+    parsed.codex_id = sm.id;
     onSaveMonsters([...monsters, parsed]);
 
     setAddedCodexIds((prev) => ({ ...prev, [sm.id || sm.name]: true }));

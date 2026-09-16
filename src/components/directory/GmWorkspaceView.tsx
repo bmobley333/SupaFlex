@@ -5,8 +5,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ArrowUpDown, StickyNote, Rocket } from 'lucide-react';
 import { gameApi } from '../../services/api';
 import { supabase } from '../../lib/supabase';
-import { Party, PartySessionMember, CharacterSheetData } from '../../types/game';
-import { parseMonsterLine, ParsedMonster, sortMonstersByPreset, MonsterSortPreset } from '../../utils/monsterStatParser';
+import { Party, PartySessionMember, CharacterSheetData, SupabaseMonster } from '../../types/game';
+import { parseMonsterLine, ParsedMonster, sortMonstersByPreset, MonsterSortPreset, resolveCodexMonsterNotes } from '../../utils/monsterStatParser';
 import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { useRosterOrdering } from '../../hooks/useRosterOrdering';
@@ -35,6 +35,15 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 }) => {
   // GM Party State
   const [selectedParty, setSelectedParty] = useState<Party | null>(propActiveParty);
+  const [supabaseMonsters, setSupabaseMonsters] = useState<SupabaseMonster[]>([]);
+
+  useEffect(() => {
+    gameApi.getSupabaseMonsters().then((data) => {
+      if (data && data.length > 0) {
+        setSupabaseMonsters(data);
+      }
+    });
+  }, []);
 
   // Storage Keys
   const partyIdOrDef = selectedParty?.id || 'default';
@@ -521,7 +530,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const defNums = parsed.defenseStat.match(/\d+/g) || [];
     const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
     const attrMatch = raw.match(/\[✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*👁️\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(?:🫀|💖)\s*(\d+)\]/u);
-    const notesMatch = raw.match(/(?:\]|❤️\s*\d+)\s*\((.*)\)$/);
+
+    // Resolve notes ONLY from Supabase Codex
+    const codexNotes = m.codex_notes || resolveCodexMonsterNotes(parsed.nameWithEquip, supabaseMonsters);
 
     return {
       id: m.id,
@@ -548,7 +559,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         motion: 10,
         moxie: 10,
       },
-      gm_notes: notesMatch ? notesMatch[1] : undefined,
+      gm_notes: codexNotes,
+      is_codex: !!codexNotes || m.is_codex,
     };
   };
 
@@ -629,9 +641,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   </div>
                 )}
               </div>
-              <span className="text-[10px] font-bold text-indigo-300 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/80 font-outfit">
-                Live Session
-              </span>
             </div>
 
             {!selectedParty ? (
