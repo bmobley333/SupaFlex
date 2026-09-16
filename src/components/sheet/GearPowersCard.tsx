@@ -110,7 +110,7 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
         }`}
       >
         {/* 1. Name Column with Version Badge (Narrowed exclusively to absorb left indent) */}
-        <div className="w-44 sm:w-52 md:w-64 shrink-0 flex flex-col gap-0.5">
+        <div className="w-36 sm:w-44 md:w-56 shrink-0 flex flex-col gap-0.5">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-outfit font-bold text-xs leading-tight text-slate-100">
               {baseName}
@@ -263,40 +263,38 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
                 .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
 
               return (
-                <div key={itemKey} className="flex flex-col gap-1.5">
-                  {/* Gear Item Pill Header (Dropdown Accordion Toggle) */}
+                <div key={itemKey} className="flex flex-col gap-2 pb-2 border-b border-slate-800/40 last:border-none">
+                  {/* Gear Item Pill Header (Compact w-fit with immediate chevron & Cyan Exotic Glow) */}
                   <button
                     type="button"
                     onClick={() => toggleItemExpanded(itemKey)}
-                    className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-800/80 hover:border-slate-700 py-1.5 px-3 rounded-xl flex items-center justify-between text-xs font-bold text-slate-200 transition-all shadow-inner cursor-pointer select-none group"
+                    className="w-fit inline-flex items-center gap-2 py-1.5 px-3 rounded-xl bg-cyan-950/90 hover:bg-cyan-900/90 border border-cyan-500/60 hover:border-cyan-400 text-xs font-bold text-cyan-100 transition-all shadow-[0_0_14px_rgba(6,182,212,0.25)] cursor-pointer select-none group"
                   >
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span className="truncate">{item.name}</span>
-                      {item.notes && item.notes.trim() ? (
-                        <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
-                      ) : null}
-                    </div>
+                    <span className="truncate">{item.name}</span>
+                    {item.notes && item.notes.trim() ? (
+                      <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
+                    ) : null}
                     <ChevronDown
-                      className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-transform shrink-0 ${
+                      className={`w-3.5 h-3.5 text-cyan-400 group-hover:text-cyan-200 transition-transform shrink-0 ${
                         isExpanded ? 'rotate-180' : ''
                       }`}
                     />
                   </button>
 
-                  {/* Dropdown Contents when Expanded */}
+                  {/* Dropdown Contents: Vertical Guide Line from Gear Item down across all Mods */}
                   {isExpanded && (
-                    <div className="flex flex-col gap-3 pt-1 pb-1">
+                    <div className="ml-3.5 sm:ml-4 pl-4 sm:pl-5 border-l-2 border-cyan-500/40 flex flex-col gap-3 pt-1.5 pb-1">
                       {/* LEVEL 1: Inherent Chassis Powers (No Mod) */}
                       {directFns.length > 0 && (
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-2">
                           {/* Mod Header: 📦 Inherent (No Mod) without ℹ️ icon */}
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 py-0.5 pl-1">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 py-0.5">
                             <span>📦 Inherent (No Mod)</span>
                           </div>
 
                           {/* Indented Power Cards (if any learned) */}
                           {directLearnedPowers.length > 0 && (
-                            <div className="flex flex-col gap-2 pl-4 sm:pl-6 ml-2 border-l-2 border-slate-800/60 my-1">
+                            <div className="flex flex-col gap-2 pl-2 sm:pl-3">
                               {directLearnedPowers.map((fn) => renderPowerCard(fn))}
                             </div>
                           )}
@@ -311,9 +309,9 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
                         const modLearnedPowers = modFns.filter((fn) => isGearPowerLearned(fn.name, spellSlots));
 
                         return (
-                          <div key={mod.id || mod.name} className="flex flex-col gap-1.5">
+                          <div key={mod.id || mod.name} className="flex flex-col gap-2">
                             {/* Mod Header: Mod Name + ℹ️ only if note exists */}
-                            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200 py-0.5 pl-1">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200 py-0.5">
                               <span className="text-indigo-300 font-mono">🔌 {mod.name}</span>
                               {mod.notes && mod.notes.trim() ? (
                                 <ItemNotesPopover notes={mod.notes} itemName={mod.name} inline />
@@ -322,7 +320,7 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
 
                             {/* Indented Power Cards (if any learned) */}
                             {modLearnedPowers.length > 0 && (
-                              <div className="flex flex-col gap-2 pl-4 sm:pl-6 ml-2 border-l-2 border-slate-800/60 my-1">
+                              <div className="flex flex-col gap-2 pl-2 sm:pl-3">
                                 {modLearnedPowers.map((fn) => renderPowerCard(fn))}
                               </div>
                             )}
