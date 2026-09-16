@@ -88,15 +88,11 @@ export type BundleCategory = KitCategory;
 export type SupabaseBundle = SupabaseKit;
 
 /**
- * Universal helper to calculate Loadout Slot cost (0, 1, 2, 3, 4) from canonical category string.
+ * Universal helper to calculate Loadout Slot cost (0 or 1) from canonical category string.
  */
 export function getCategorySlotWeight(category?: string): 0 | 1 | 2 | 3 | 4 {
   if (!category) return 1;
   if (/free|⭕|mundane|utility|0-slot|zero/i.test(category)) return 0;
-  if (category.includes('Minor')) return 1;
-  if (category.includes('Lesser')) return 2;
-  if (category.includes('Greater')) return 3;
-  if (category.includes('Epic') || category.includes('Relic')) return 4;
   return 1;
 }
 
@@ -1102,14 +1098,14 @@ export type HardwareItem = ExoticItem;
 
 export type LoadoutItem = MagicItem | ExoticItem | HardwareItem;
 
-/** Canonical S-Tier Interface for Functions (Actionable abilities derived from Exotics/Artifacts/Mods) */
-export interface FunctionItem {
+/** Canonical S-Tier Interface for Gear Powers (Actionable abilities derived from Equipment/Mods/Artifacts) */
+export interface GearPowerItem {
   id: number;
   name: string;
   action: 'AM' | 'A' | 'M' | 'P' | 'F';
   usage: string;
   effect: string;
-  tier: HardwareTier | string;
+  tier?: 'Free ⭕' | string | null;
   belongs_to: string;
   genres: string[];
   notes?: string;
@@ -1118,16 +1114,14 @@ export interface FunctionItem {
   created_at?: string;
 }
 
-/** Canonical helper to derive numeric slot weight (0-4) from tier or rarity string */
+/** Backward-compatible alias for GearPowerItem */
+export type FunctionItem = GearPowerItem;
+
+/** Canonical helper to derive numeric slot weight (0 or 1) from tier or rarity string */
 export const getTierSlotWeight = (tier: string | number | undefined | null): 0 | 1 | 2 | 3 | 4 => {
   if (typeof tier === 'number' && tier >= 0 && tier <= 4) return tier as 0 | 1 | 2 | 3 | 4;
   const t = String(tier || '').toLowerCase();
   if (t.includes('free') || t.includes('⭕') || t.includes('0')) return 0;
-  if (t.includes('minor') || t.includes('🍺') || t.includes('1')) return 1;
-  if (t.includes('lesser') || t.includes('🪄') || t.includes('2')) return 2;
-  if (t.includes('greater') || t.includes('🪬') || t.includes('3')) return 3;
-  if (t.includes('epic') || t.includes('💫') || t.includes('4')) return 4;
-  if (t.includes('relic') || t.includes('artifact')) return 1;
   return 1;
 };
 

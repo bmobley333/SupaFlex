@@ -263,16 +263,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     recordApExpenditure(
       1,
       'Loadout Slots' as any,
-      `Unlocked Exotic Power Slot (${newTotalSlots} Slots Total)`,
+      `Unlocked Gear Power Slot (${newTotalSlots} Slots Total)`,
       1,
-      "Exotic Gear Powers Manager"
+      "Gear Powers Manager"
     );
 
     await saveActiveCharacter();
 
     setCatalogFeedback({
       type: 'success',
-      message: `Successfully unlocked +1 Exotic Power Slot! New capacity: ${newTotalSlots} slots.`,
+      message: `Successfully unlocked +1 Gear Power Slot! New capacity: ${newTotalSlots} slots.`,
     });
   };
 
@@ -1020,7 +1020,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     }
 
     if (weight > 0 && activeSlotsUsed + weight > totalLoadoutCapacity) {
-      alert(`❌ Insufficient Exotic Power Slots! Active loadout is ${activeSlotsUsed}/${totalLoadoutCapacity} slots. Item requires ${weight} slots. Unlock +1 Slot in the Buy Slots tab.`);
+      alert(`❌ Insufficient Gear Power Slots! Active loadout is ${activeSlotsUsed}/${totalLoadoutCapacity} slots. Item requires ${weight} slots. Unlock +1 Slot in the Buy Slots tab.`);
       return;
     }
 
@@ -1194,7 +1194,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         usage: createUsage,
         effect: createEffect.trim(),
         notes: versionEditItem?.notes || '',
-        source: versionEditItem?.source || 'Custom Exotic Power Version',
+        source: versionEditItem?.source || 'Custom Gear Power Version',
         source_gear: versionEditItem?.source_gear,
         source_mod: versionEditItem?.source_mod,
         category: versionEditItem?.category || null,
@@ -1264,7 +1264,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         };
       });
 
-      recordApExpenditure(1, 'Magic Items', `Upgraded Exotic Power: ${versionedName} (+1 AP)`, 1, "Exotic Gear Powers Manager");
+      recordApExpenditure(1, 'Magic Items', `Upgraded Gear Power: ${versionedName} (+1 AP)`, 1, "Gear Powers Manager");
 
       saveActiveCharacter();
 
@@ -1551,7 +1551,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   }, [type, filteredRoster, functionsCatalog, modsCatalog, activeCharacter, sheetData.character_vault, isGsUnlocked]);
 
   const sectionIcon = type === 'powers' ? '🔥' : '🧿';
-  const displayTitle = title || (type === 'powers' ? 'MY POWERS' : "EXOTIC GEAR POWERS");
+  const displayTitle = title || (type === 'powers' ? 'MY POWERS' : "GEAR POWERS");
 
   // Action Economy or Alphabetical Sorting for Active Sheet (with Action Channel Filtering for Powers & Loadout)
   const sortedSlots = useMemo(() => {
@@ -1596,7 +1596,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title={`Click to open ${type === 'powers' ? 'Powers' : "Exotic Gear Powers"} Manager`}
+            title={`Click to open ${type === 'powers' ? 'Powers' : "Gear Powers"} Manager`}
           >
             <div className={`p-1.5 rounded-xl border flex items-center justify-center shrink-0 group-hover:scale-105 transition-all ${
               type === 'powers'
@@ -1742,7 +1742,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
               type="button"
               onClick={() => setShowShuntModal(true)}
               className="py-1 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm cursor-pointer bg-cyan-950/70 hover:bg-cyan-900/70 border-cyan-500/50 text-cyan-300 hover:text-white shrink-0"
-              title="Emergency Exotic Shunt: Spend 1 Move Action [M] and 1 Luck Chit (🍀) to hot-swap Exotics Vault powers"
+              title="Emergency Gear Shunt: Spend 1 Move Action [M] and 1 Luck Chit (🍀) to hot-swap Gear Powers Vault abilities during combat."
             >
               <Cpu className="w-3.5 h-3.5 text-cyan-400" />
               <span className="font-outfit text-xs font-bold">Shunt</span>
@@ -1785,12 +1785,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </div>
                       <div>
                         <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                          {type === 'powers' ? 'Powers Manager' : "Exotic Gear Powers Manager"}
+                          {type === 'powers' ? 'Powers Manager' : "Gear Powers Manager"}
                         </h3>
                         <p className="text-xs text-slate-400 hidden sm:block">
                           {type === 'powers'
                             ? 'Manage character powers side-by-side with the SupaFlex stock catalog.'
-                            : 'Manage active Exotic Slots (🧿) moving abilities between the Exotics Vault and your active slots.'}
+                            : 'Manage active Gear Power Slots (🧿) moving abilities between the Gear Powers Vault and your active slots.'}
                         </p>
                       </div>
                     </div>
@@ -1812,7 +1812,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 {/* 2-COLUMN SPLIT-PANE BODY */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
                   
-                  {/* --- LEFT COLUMN: ACTIVE EXOTIC POWERS / MY POWERS --- */}
+                  {/* --- LEFT COLUMN: ACTIVE GEAR POWERS / MY POWERS --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                     {/* Pane Header */}
                     <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 shrink-0">
@@ -1823,7 +1823,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           <span className="text-sm leading-none">🔮</span>
                         )}
                         <span className={`text-xs font-outfit font-bold uppercase tracking-wider ${type === 'powers' ? 'text-amber-300' : 'text-cyan-300'}`}>
-                          {type === 'powers' ? 'My Powers' : 'Active Exotic Powers'}
+                          {type === 'powers' ? 'My Powers' : 'Active Gear Powers'}
                         </span>
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-slate-900 rounded text-slate-300 border border-slate-800">
                           {type === 'powers' ? activeDisplaySlots.length : slots.length}
@@ -1842,12 +1842,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </div>
                     </div>
 
-                    {/* Left Pane Slots Status Pill (Exotics Mode) */}
+                    {/* Left Pane Slots Status Pill (Gear Powers Mode) */}
                     {type === 'spells' && (() => {
                       const remainingSlots = Math.max(0, totalLoadoutCapacity - totalUsedLoadoutSlots);
                       return (
                         <div className="mt-2.5 px-3 py-1.5 bg-slate-900/90 border border-cyan-500/40 rounded-xl text-xs font-mono flex items-center justify-between gap-2 shadow-inner shrink-0">
-                          <span className="text-cyan-300 font-bold flex items-center gap-1">🧿 Exotic Slots:</span>
+                          <span className="text-cyan-300 font-bold flex items-center gap-1">🧿 Gear Slots:</span>
                           <div className="flex items-center gap-2 text-[11px] font-bold">
                             <span className="text-slate-300">Capacity <strong className="text-slate-100">{totalLoadoutCapacity}</strong></span>
                             <span className="text-slate-600">|</span>
@@ -2326,7 +2326,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               : 'border-transparent text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          🏺 Exotic Powers Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
+                          🏺 Gear Powers Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
                         </button>
                         <button
                           type="button"
@@ -2510,7 +2510,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                               <input
                                 type="text"
-                                placeholder="Search Exotics Vault..."
+                                placeholder="Search Gear Powers Vault..."
                                 value={rightSearchQuery}
                                 onChange={(e) => setRightSearchQuery(e.target.value)}
                                 className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 w-full"
@@ -2542,9 +2542,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                               <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
                                 <Sparkles className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
                                 {rightSearchQuery ? (
-                                  <span>No items matching "{rightSearchQuery}" in Exotics Vault.</span>
+                                  <span>No items matching "{rightSearchQuery}" in Gear Powers Vault.</span>
                                 ) : (
-                                  <span>Exotics Vault is empty. Claim items from Catalog (Tab 2) or Loot Generator.</span>
+                                  <span>Gear Powers Vault is empty. Claim items from Catalog (Tab 2) or Loot Generator.</span>
                                 )}
                               </div>
                             ) : (
@@ -2652,7 +2652,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                         </span>
                                                       )}
                                                       {isEquipped && (
-                                                        <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40" title="Equipped in active exotic slots">
+                                                        <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40" title="Equipped in active gear power slots">
                                                           ✅ Equipped
                                                         </span>
                                                       )}
@@ -2687,7 +2687,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                         type="button"
                                                         onClick={() => handleForgetAbility(item.name)}
                                                         className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white shadow-sm transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                                        title="Unequip from active exotic slots"
+                                                        title="Unequip from active gear power slots"
                                                       >
                                                         <X className="w-3.5 h-3.5" />
                                                         Unequip
@@ -2697,7 +2697,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                                         type="button"
                                                         onClick={() => handleEquipVaultItem(item)}
                                                         className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                                        title="Equip into active exotic slots"
+                                                        title="Equip into active gear power slots"
                                                       >
                                                         <Plus className="w-3.5 h-3.5" />
                                                         Equip ({weight === 0 ? '0 ⚙️' : `${weight} 🧿`})
@@ -2786,7 +2786,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             </span>
                                           )}
                                           {isEquipped && (
-                                            <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40" title="Equipped in active exotic slots">
+                                            <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40" title="Equipped in active gear power slots">
                                               ✅ Equipped
                                             </span>
                                           )}
@@ -2821,7 +2821,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             type="button"
                                             onClick={() => handleForgetAbility(item.name)}
                                             className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white shadow-sm transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                            title="Unequip from active exotic slots"
+                                            title="Unequip from active gear power slots"
                                           >
                                             <X className="w-3.5 h-3.5" />
                                             Unequip
@@ -2831,7 +2831,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             type="button"
                                             onClick={() => handleEquipVaultItem(item)}
                                             className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                            title="Equip into active exotic slots"
+                                            title="Equip into active gear power slots"
                                           >
                                             <Plus className="w-3.5 h-3.5" />
                                             Equip ({weight === 0 ? '0 ⚙️' : `${weight} 🧿`})
@@ -2854,7 +2854,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       );
                     })()}
 
-                    {/* TAB: BUY SLOTS (Exotic Power Slots - 1 AP per slot indefinitely) */}
+                    {/* TAB: BUY SLOTS (Gear Power Slots - 1 AP per slot indefinitely) */}
                     {activeRightTab === 'SLOTS' && type === 'spells' && (
                       <div className="flex flex-col gap-3 flex-1 min-h-0 mt-2.5 overflow-y-auto pr-1">
                         {/* Top Status Header Pill */}
@@ -3623,7 +3623,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
                   <div className="flex items-center gap-3">
                     <span className="font-outfit font-bold text-slate-300">
-                      {type === 'powers' ? '🔥 Powers Manager' : "🧿 Exotic Gear Powers Manager"}
+                      {type === 'powers' ? '🔥 Powers Manager' : "🧿 Gear Powers Manager"}
                     </span>
                   </div>
                   
@@ -3805,10 +3805,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         ) : (
           <div className="p-4 bg-slate-950/40 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
             {abilityActionFilter !== 'ALL'
-              ? `No ${abilityActionFilter} action ${type === 'powers' ? 'powers' : 'exotic powers'} learned or visible.`
+              ? `No ${abilityActionFilter} action ${type === 'powers' ? 'powers' : 'gear powers'} learned or visible.`
               : type === 'powers'
               ? 'No powers learned yet. Click "Powers Manager" above to browse the catalog.'
-              : 'No active exotic powers equipped yet. Click "Exotic Gear Powers Manager" above to select abilities.'}
+              : 'No active gear powers equipped yet. Click "Gear Powers Manager" above to select abilities.'}
           </div>
         )}
       </div>

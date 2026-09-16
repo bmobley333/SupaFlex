@@ -102,9 +102,9 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* 2-Column Responsive Section: 🧿 EXOTIC GEAR POWERS & COMMERCE (Left) & 🔥 MY POWERS (Right) */}
+      {/* 2-Column Responsive Section: 🧿 GEAR POWERS & COMMERCE (Left) & 🔥 MY POWERS (Right) */}
       <div id="section-powers-magic" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
-        {/* Column 1 (Left): Physical Commerce, Inventory & Exotic Combat Impacts */}
+        {/* Column 1 (Left): Physical Commerce, Inventory & Gear Powers Combat Impacts */}
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch">
             <div className="sm:col-span-7 flex">
@@ -114,7 +114,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
               <GearCard className="w-full h-full" />
             </div>
           </div>
-          <AbilitySlotsGrid title="EXOTIC GEAR POWERS" type="spells" />
+          <AbilitySlotsGrid title="GEAR POWERS" type="spells" />
         </div>
 
         {/* Column 2 (Right): My Powers */}

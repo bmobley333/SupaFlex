@@ -11,7 +11,7 @@
   },
   "leveling.creation_steps": {
     "title": "Character Creation Steps",
-    "summary": "1. 🧭 Starting Paths — Race Path & Class Path (0 AP free Trait grants).\n2. ✅ Attributes — Assign 1x d4, 2x d6, 2x d8 across Might, Motion, Mind, Magic, Moxie.\n3. ❤️ Vitality — Starting Vit = 10 + 1d(Moxie).\n4. 🔮 Focus Die — Starting Focus Die at d4.\n5. 💍 Loadout Slots — 4 Base Loadout Slots (0 AP).\n6. 💰 Currency — 1 Gold (1g) + 1d100 Silver (s) (100s = 1g).\n7. 🧩 8 Starting AP — Spend across Skills, Weapons, Armor, Powers, and flexible boons.",
+    "summary": "1. 🧭 Starting Paths — Race Path & Class Path (0 AP free Trait grants).\n2. ✅ Attributes — Assign 1x d4, 2x d6, 2x d8 across Might, Motion, Mind, Magic, Moxie.\n3. ❤️ Vitality — Starting Vit = 10 + 1d(Moxie).\n4. 🔮 Focus Die — Starting Focus Die at d4.\n5. 💍 Gear Power Slots — 5 Base Gear Power Slots (0 AP).\n6. 💰 Currency — 1 Gold (1g) + 1d100 Silver (s) (100s = 1g).\n7. 🧩 8 Starting AP — Spend across Skills, Weapons, Armor, Powers, and flexible boons.",
     "anchor": "#character-creation"
   },
   "leveling.advancement_steps": {
@@ -36,12 +36,12 @@
   },
   "powers.basics": {
     "title": "Powers & Combat Rules",
-    "summary": "Auto-Readied Power Card:\n• Auto-Ready — All learned Powers are immediately active and readied on your character's Power Card. No rigid ready-slot buckets.\n• 4-Channel Action Economy — Round Action Pool = 1 Attack (A) + 1 Move (M) + 1 Partial (P) + Unlimited Free (F) actions (and hybrid AM).\n\nExclusive Stacking Master Rule:\n• Master Invariant — A character may benefit from only the single highest value or best effect of a given power or modifier at any time.\n\nPowers & Magic Items Parity:\n• Shared Rules Engine — Powers & Magic Items function EXACTLY the same (Magic Items are powers granted by item possession).\n• Equipment Requirement — Magic Items must be properly held, drawn, or worn to work and draw from Loadout Slots.\n\nAlways Skilled:\n• Skilled Invocation — Powers and Magic Items are ALWAYS considered Skilled (2H20 + Attribute Die).\n\nSyntax Standard:\n• Formula — Name | Action Budget | Usage Frequency → Mechanical Effect.\n• Example — Discordant Chord | A | 1-Rnd → Magic✨ attack vs all Short foes for d4 Dmg.\n\nRange:\n• Guidance — 8 Tactical Bands: Self, Touch, 1 (adjacent), 2 (reach), Short (≤6 sq), Medium (≤12 sq), Long (≤24 sq), Extreme (≥25 sq).\n• Disadvantage Extension — GM may allow a single range extension at disadvantage.\n\nThe Luck Twist (Rule of 1):\n• Apply one instant \"Rule of 1\" boost per Luck chit (Max 1 Luck Twist per activation): -1 Action Budget, +1 Target, +1 Die Tier, +1 Range Band, +1 Push/Move.\n• Luck-for-Bolt Substitution — Per encounter, spend 1 Luck chit (🍀) in place of a Bolt (⚡) to activate a 1-⚡ power (Max 1/encounter without GM approval; additional uses require GM authorization).",
+    "summary": "Auto-Readied Power Card:\n• Auto-Ready — All learned Powers are immediately active and readied on your character's Power Card. No rigid ready-slot buckets.\n• 4-Channel Action Economy — Round Action Pool = 1 Attack (A) + 1 Move (M) + 1 Partial (P) + Unlimited Free (F) actions (and hybrid AM).\n\nExclusive Stacking Master Rule:\n• Master Invariant — A character may benefit from only the single highest value or best effect of a given power or modifier at any time.\n\nPowers & Magic Items Parity:\n• Shared Rules Engine — Powers & Magic Items function EXACTLY the same (Magic Items are powers granted by item possession).\n• Equipment Requirement — Magic Items must be properly held, drawn, or worn to work and draw from Loadout Slots.\n\nAlways Skilled:\n• Skilled Invocation — Powers and Magic Items are ALWAYS considered Skilled (2H20 + Attribute Die).\n\nSyntax Standard:\n• Formula — Name | Action Budget | Usage Frequency → Mechanical Effect.\n• Example — Discordant Chord | A | 1-Rnd → Magic✨ attack vs all Short foes for d4 Dmg.\n\nRange:\n• Guidance — 8 Tactical Bands: Self, Touch, 1 (adjacent), 2 (reach), Short (≤6 sq), Medium (≤12 sq), Long (≤24 sq), Extreme (≥25 sq).\n• Disadvantage Extension — GM may allow a single range extension at disadvantage.\n\nThe Luck Twist (Rule of 1):\n• Apply one instant \"Rule of 1\" boost per Luck chit (Max 1 Luck Twist per activation): -1 Action Budget, +1 Target, +1 Die Tier, +1 Range Band, +1 Push/Move.",
     "anchor": "#abilities-powers-magic-items-skills"
   },
   "magic_items.basics": {
-    "title": "Equipment & Loadout Slots",
-    "summary": "Universal Capacity Pool:\n• Base Capacity — Every character starts with 4 Loadout Slots at Level 1.\n• Shared Bandwidth — Both Artifacts (💍 Magic Relics) and Exotics (🧿 Tech/Cyber/Biotech) draw from the same Loadout Capacity Pool.\n• Mundane Gear — Standard gear, weapons, armor, and tools consume 0 Loadout Slots.\n\nTier Slot Weights:\n• 🍺 Minor Item — 1 Loadout Slot\n• 🪄 Lesser Item — 2 Loadout Slots\n• 🪬 Greater Item — 3 Loadout Slots\n• 💫 Epic Item — 4 Loadout Slots\n\nLoadout vs. Vault:\n• Active Loadout — The items actively attuned, wired, or holstered on your person.\n• The Vault — Unlimited inactive storage. Swap items between Vault and active Loadout Slots during a 5-minute out-of-combat breather.",
+    "title": "Equipment & Gear Power Slots",
+    "summary": "Universal Capacity Pool:\n• Base Capacity — Every character starts with 5 Gear Power Slots at Level 1.\n• Shared Bandwidth — Both Artifacts (💍 Magic Relics) and Gear Powers (🧿 Tech/Cyber/Biotech) draw from the same Gear Power Slots Pool.\n• Mundane Gear — Standard gear, weapons, armor, and tools consume 0 Gear Power Slots.\n\nGear Power Slot Weights:\n• ⭕ Free Utility — 0 Gear Power Slots\n• 🧿 Standard Gear Power — 1 Gear Power Slot\n\nGear Powers vs. Vault:\n• Active Gear Powers — The equipment abilities actively attuned, wired, or holstered on your person.\n• The Gear Powers Vault — Unlimited inactive storage. Swap gear powers between Vault and active Gear Power Slots during a 5-minute out-of-combat breather.",
     "anchor": "#equipment-loadout"
   },
   "weapons.basics": {
@@ -76,7 +76,7 @@
   },
   "col.powers.usage": {
     "title": "Usage Frequency (🔄)",
-    "summary": "Standardized 9-option usage list:\n• 1, 2, 3 — Flat uses per encounter.\n• 1-⚡ (1 Bolt) — Consumes 1 Bolt (5 Sparks, ⚡). Can be activated once per encounter by spending 1 Luck chit (🍀) without GM approval.\n• 1-🍀 — Consumes 1 Luck chit.\n• 1-Enc, 2-Enc, 3-Enc — Replenishes after each encounter.\n• 1-Rnd — Usable once per round on your Nish.",
+    "summary": "Standardized 9-option usage list: 1, 2, 3, 1-⚡, 1-🍀, 1-Enc, 2-Enc, 3-Enc, 1-Rnd.",
     "anchor": "#usage-the-charge-engine"
   },
   "col.powers.action": {
@@ -100,8 +100,8 @@
     "anchor": "#leveling-advancement"
   },
   "col.magic_items.category": {
-    "title": "Item Category & Loadout Slots (💫)",
-    "summary": "Item tier and loadout cost: 🍺 Minor (1 Slot), 🪄 Lesser (2 Slots), 🪬 Greater (3 Slots), 💫 Epic (4 Slots).",
+    "title": "Item Category & Gear Power Slots (💫)",
+    "summary": "Item tier and slot cost: ⭕ Free (0 Slots), 🧿 Standard (1 Slot).",
     "anchor": "#equipment-loadout"
   },
   "focus.basics": {
@@ -113,10 +113,5 @@
     "title": "Chaos Gauntlet & Chaos Gems",
     "summary": "Core Mechanics:\n• Gauntlet Slots — 6 Conduits: 1 Wrist Mega Slot (👑) + 5 Finger Conduits (🖐️).\n• Attuned Crystallization — Volatile crystallizations that cannot be carried loosely in bags or pouches; only exist when socketed in a gauntlet.\n• Irrevocable Fusion — Removing a gem from a gauntlet conduit immediately shatters and destroys it.\n• 3 Durability Uses — Gems start with 3 uses; when a gem reaches 0 uses, its energy matrix collapses and it is permanently destroyed.\n• Free Action (F) — Activating a Chaos Gem is a Free Action (F). Limit 1 Chaos Gem per combat round.\n• Mega Slot Spark Synergy — The Wrist Mega Slot can also be activated by spending a Full Spark (⚡) without consuming gem durability.\n• Loot-Only Acquisition — Chaos Gems are discovered exclusively through the Loot Generator or active adventure drops.",
     "anchor": "#chaos-gauntlet-chaos-gems"
-  },
-  "paths.basics": {
-    "title": "Paths & Character Archetypes",
-    "summary": "<!-- tab: 🧭 Paths & Kits -->\nCore Concepts:\n• Paths (AP) vs. Kits (g/s) — Paths are intangible capability suites unlocked with AP. Kits are physical gear packages bought with currency ($g/s$).\n• Starting Paths — Every hero begins with a Species/Heritage Path and a Class Path at Level 1, granting free inherent biological/cultural traits (0 AP).\n• In-Path Progression — Elements matching your active Paths cost standard AP (1 AP for traits/powers/weapons/armor/shields, 2 AP for skill sets).\n• Out-of-Path Surcharges — Elements outside your active Paths require GM approval and incur a +2 AP surcharge (+1 AP surcharge for skill sets).\n• Unlocking New Paths — Heroes may unlock additional Paths (e.g. Ship Officer, Prestigious Archetypes, Multiclass suites) for 4 AP with GM approval.\n• Filtered Sheet Strip — The Paths card displays your Species Path (🧬), Class Path (⚔️), and Ship Officer Path (🚀, if learned). Full path management and unlocks are handled in the Paths Manager (✏️).\n\n<!-- tab: 📊 Path Advancement Costs -->\n| Element Type | In-Path Cost | Out-of-Path Cost (GM Approval) | Special Conditions |\n| :--- | :---: | :---: | :--- |\n| **⚔️ Weapons / 🥋 Armor / 🛡️ Shields** | **(1 AP)** | **(3 AP)** | If stats unmet: +1 AP surcharge (specs at current stats) |\n| **🔥 Powers / 🧬 Traits** | **(1 AP)** | **(3 AP)** | Powers subject to progressive soft tax (7+ powers) |\n| **🎓 Skill Sets** | **(2 AP)** | **(3 AP)** | Derives multiple individual skills |\n| **🧭 New Path Unlocked** | **(4 AP)** | **(4 AP)** | Unlocks all In-Path pricing permanently |\n| **👑 Heroic Capstone** | **(5–8 AP)** | **Path Required** | Unique legendary capstone ability |",
-    "anchor": "#system-taxonomy-paths-kits-elements-gear-abilities"
   }
 }

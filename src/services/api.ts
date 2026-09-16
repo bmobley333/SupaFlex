@@ -22,6 +22,7 @@ import {
   SupabaseKit,
   SupabaseBundle,
   FunctionItem,
+  GearPowerItem,
   ModItem,
   PlayerRecord,
 } from '../types/game';
@@ -418,13 +419,17 @@ export const gameApi = {
     return exotics.filter((e) => e.exotic_tier === tier);
   },
 
-  async getFunctions(): Promise<FunctionItem[]> {
-    const { data, error } = await supabase.from('functions').select('*').order('name', { ascending: true });
+  async getGearPowers(): Promise<GearPowerItem[]> {
+    const { data, error } = await supabase.from('gear_powers').select('*').order('name', { ascending: true });
     if (error) {
-      console.error('[gameApi] Error fetching functions catalog:', error);
+      console.error('[gameApi] Error fetching gear powers catalog:', error);
       return [];
     }
-    return (data || []) as FunctionItem[];
+    return (data || []) as GearPowerItem[];
+  },
+
+  async getFunctions(): Promise<FunctionItem[]> {
+    return this.getGearPowers();
   },
 
   async getMods(): Promise<ModItem[]> {
