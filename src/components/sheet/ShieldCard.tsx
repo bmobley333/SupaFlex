@@ -24,7 +24,7 @@ import {
 export const ShieldCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, shieldsCatalog: storeShields } = useCharacterStore();
 
   const shield: ShieldData = activeCharacter?.sheet_data?.shield_slot || {
     id: 'shd_default',
@@ -98,14 +98,18 @@ export const ShieldCard: React.FC = () => {
 
   useEffect(() => {
     if (showManageModal) {
-      setIsLoadingCatalog(true);
-      gameApi
-        .getShields()
-        .then(setShieldCatalog)
-        .catch(console.error)
-        .finally(() => setIsLoadingCatalog(false));
+      if (storeShields && storeShields.length > 0) {
+        setShieldCatalog(storeShields);
+      } else {
+        setIsLoadingCatalog(true);
+        gameApi
+          .getShields()
+          .then(setShieldCatalog)
+          .catch(console.error)
+          .finally(() => setIsLoadingCatalog(false));
+      }
     }
-  }, [showManageModal]);
+  }, [showManageModal, storeShields]);
 
   const handleCloseManageModal = () => {
     setShowManageModal(false);

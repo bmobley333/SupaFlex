@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, GearPowerItem, ModItem, PlayerRecord, ApLogEntry, isGearPowerLearned, cleanAbilityName, calculateAvailableAp } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, SupabaseSupply, SupabaseWeapon, SupabaseArmor, SupabaseShield, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, GearPowerItem, ModItem, PlayerRecord, ApLogEntry, isGearPowerLearned, cleanAbilityName, calculateAvailableAp } from '../types/game';
 import { gameApi, createDefaultSheetData } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
@@ -12,7 +12,7 @@ import { CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { getTabSessionId } from '../utils/tabSession';
 import { supabase } from '../lib/supabase';
 
-const CATALOGS_CACHE_KEY = 'supaflex_catalogs_cache_v3';
+const CATALOGS_CACHE_KEY = 'supaflex_catalogs_cache_v4';
 const CATALOGS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CatalogsCachePayload {
@@ -30,22 +30,27 @@ interface CatalogsCachePayload {
     artifactsData: CatalogArtifact[];
     exoticsData: CatalogExotic[];
     playersData: PlayerRecord[];
+    suppliesData: SupabaseSupply[];
+    weaponsData: SupabaseWeapon[];
+    armorData: SupabaseArmor[];
+    shieldsData: SupabaseShield[];
   };
 }
 
 function loadCatalogsFromCache(minTimestamp?: number): CatalogsCachePayload['data'] | null {
   if (typeof window === 'undefined') return null;
   try {
-    // Purge old v1 and v2 cache if present
+    // Purge old v1, v2, and v3 cache if present
     localStorage.removeItem('supaflex_catalogs_cache_v1');
     localStorage.removeItem('supaflex_catalogs_cache_v2');
+    localStorage.removeItem('supaflex_catalogs_cache_v3');
 
     const raw = localStorage.getItem(CATALOGS_CACHE_KEY);
     if (!raw) return null;
     const parsed: CatalogsCachePayload = JSON.parse(raw);
-    if (!parsed || parsed.version !== 3 || !parsed.timestamp || !parsed.data) return null;
-    // Auto-invalidate if functionsData is empty or missing (e.g. following database migration)
-    if (!Array.isArray(parsed.data.functionsData) || parsed.data.functionsData.length === 0) {
+    if (!parsed || parsed.version !== 4 || !parsed.timestamp || !parsed.data) return null;
+    // Auto-invalidate if functionsData or suppliesData is empty or missing (e.g. following database migration)
+    if (!Array.isArray(parsed.data.functionsData) || parsed.data.functionsData.length === 0 || !Array.isArray(parsed.data.suppliesData)) {
       return null;
     }
     if (Date.now() - parsed.timestamp > CATALOGS_CACHE_TTL_MS) {
@@ -67,7 +72,7 @@ function saveCatalogsToCache(data: CatalogsCachePayload['data']): void {
   if (typeof window === 'undefined') return;
   try {
     const payload: CatalogsCachePayload = {
-      version: 3,
+      version: 4,
       timestamp: Date.now(),
       data,
     };
@@ -125,6 +130,10 @@ interface CharacterStore {
   bundles: SupabaseBundle[];
   functionsCatalog: FunctionItem[];
   modsCatalog: ModItem[];
+  suppliesCatalog: SupabaseSupply[];
+  weaponsCatalog: SupabaseWeapon[];
+  armorCatalog: SupabaseArmor[];
+  shieldsCatalog: SupabaseShield[];
   isLoading: boolean;
   isSaving: boolean;
   dbConnected: boolean;
@@ -248,6 +257,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   bundles: [],
   functionsCatalog: [],
   modsCatalog: [],
+  suppliesCatalog: [],
+  weaponsCatalog: [],
+  armorCatalog: [],
+  shieldsCatalog: [],
   isLoading: false,
   isSaving: false,
   dbConnected: false,
@@ -337,6 +350,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       let artifactsData: CatalogArtifact[];
       let exoticsData: CatalogExotic[];
       let playersData: PlayerRecord[];
+      let suppliesData: SupabaseSupply[];
+      let weaponsData: SupabaseWeapon[];
+      let armorData: SupabaseArmor[];
+      let shieldsData: SupabaseShield[];
 
       // Check 40-byte cloud beacon to detect if Antigravity / admin pushed database adjustments
       const beaconTimeStr = await gameApi.getCatalogBeacon();
@@ -356,6 +373,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         artifactsData = cached.artifactsData;
         exoticsData = cached.exoticsData;
         playersData = cached.playersData;
+        suppliesData = cached.suppliesData || [];
+        weaponsData = cached.weaponsData || [];
+        armorData = cached.armorData || [];
+        shieldsData = cached.shieldsData || [];
 
         chars = await gameApi.getCharacters();
       } else {
@@ -373,6 +394,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           fetchedArtifacts,
           fetchedExotics,
           fetchedPlayers,
+          fetchedSupplies,
+          fetchedWeapons,
+          fetchedArmor,
+          fetchedShields,
         ] = await Promise.all([
           gameApi.getCharacters(),
           gameApi.getPowers(),
@@ -386,6 +411,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           gameApi.getArtifacts(),
           gameApi.getExotics(),
           gameApi.getPlayers(),
+          gameApi.getSupplies(),
+          gameApi.getWeapons(),
+          gameApi.getArmor(),
+          gameApi.getShields(),
         ]);
 
         chars = fetchedChars;
@@ -400,6 +429,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         artifactsData = fetchedArtifacts;
         exoticsData = fetchedExotics;
         playersData = fetchedPlayers;
+        suppliesData = fetchedSupplies || [];
+        weaponsData = fetchedWeapons || [];
+        armorData = fetchedArmor || [];
+        shieldsData = fetchedShields || [];
 
         saveCatalogsToCache({
           powers,
@@ -413,6 +446,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           artifactsData,
           exoticsData,
           playersData,
+          suppliesData,
+          weaponsData,
+          armorData,
+          shieldsData,
         });
       }
 
@@ -436,6 +473,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           bundles: bundlesData,
           functionsCatalog: functionsData || [],
           modsCatalog: modsData || [],
+          suppliesCatalog: suppliesData || [],
+          weaponsCatalog: weaponsData || [],
+          armorCatalog: armorData || [],
+          shieldsCatalog: shieldsData || [],
           isLoading: false,
         });
         return;
@@ -495,6 +536,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         bundles: bundlesData,
         functionsCatalog: functionsData || [],
         modsCatalog: modsData || [],
+        suppliesCatalog: suppliesData || [],
+        weaponsCatalog: weaponsData || [],
+        armorCatalog: armorData || [],
+        shieldsCatalog: shieldsData || [],
         isLoading: false,
       });
     } catch (err: any) {

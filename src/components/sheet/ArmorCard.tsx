@@ -32,7 +32,7 @@ const getDieNum = (dieRating?: string): number => {
 export const ArmorCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, armorCatalog: storeArmor } = useCharacterStore();
   const statHooks = useMemo(() => resolveStatHooks(activeCharacter?.sheet_data), [activeCharacter?.sheet_data]);
 
   const armor: ArmorData = activeCharacter?.sheet_data?.armor_slot || {
@@ -104,14 +104,18 @@ export const ArmorCard: React.FC = () => {
 
   useEffect(() => {
     if (showManageModal) {
-      setIsLoadingCatalog(true);
-      gameApi
-        .getArmor()
-        .then(setArmorCatalog)
-        .catch(console.error)
-        .finally(() => setIsLoadingCatalog(false));
+      if (storeArmor && storeArmor.length > 0) {
+        setArmorCatalog(storeArmor);
+      } else {
+        setIsLoadingCatalog(true);
+        gameApi
+          .getArmor()
+          .then(setArmorCatalog)
+          .catch(console.error)
+          .finally(() => setIsLoadingCatalog(false));
+      }
     }
-  }, [showManageModal]);
+  }, [showManageModal, storeArmor]);
 
   const handleCloseManageModal = () => {
     setShowManageModal(false);

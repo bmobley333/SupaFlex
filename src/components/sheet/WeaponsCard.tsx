@@ -89,7 +89,7 @@ const calculateWeaponDmg = (name: string, mhsCategory: string, attributeDice: Re
 export const WeaponsCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, weaponsCatalog: storeWeapons } = useCharacterStore();
   const rawWeapons: WeaponSlot[] = activeCharacter?.sheet_data?.weapons || [];
   const weapons: WeaponSlot[] = useMemo(() => {
     return rawWeapons.filter((w) => w && w.name && w.name.trim() !== '');
@@ -127,23 +127,27 @@ export const WeaponsCard: React.FC = () => {
     return (slotName || '').replace(/\s*\([^)]+\)$/, '').trim();
   };
 
-  // Fetch weapons catalog from Supabase on modal opening
+  // Fetch weapons catalog from Supabase on modal opening or consume instant cache
   useEffect(() => {
     if (showManageModal) {
-      setIsLoadingCatalog(true);
-      gameApi
-        .getWeapons()
-        .then((data) => {
-          setSupabaseWeapons(data);
-        })
-        .catch((err) => {
-          console.error('Failed to load weapons catalog:', err);
-        })
-        .finally(() => {
-          setIsLoadingCatalog(false);
-        });
+      if (storeWeapons && storeWeapons.length > 0) {
+        setSupabaseWeapons(storeWeapons);
+      } else {
+        setIsLoadingCatalog(true);
+        gameApi
+          .getWeapons()
+          .then((data) => {
+            setSupabaseWeapons(data);
+          })
+          .catch((err) => {
+            console.error('Failed to load weapons catalog:', err);
+          })
+          .finally(() => {
+            setIsLoadingCatalog(false);
+          });
+      }
     }
-  }, [showManageModal]);
+  }, [showManageModal, storeWeapons]);
 
   const handleCloseManageModal = () => {
     setShowManageModal(false);
