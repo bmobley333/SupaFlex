@@ -32,6 +32,7 @@ import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
 import { FireworksModal } from './components/common/FireworksModal';
 import { resolveCharFirstName } from './components/common/PartyCharacterCard';
 import { useScrollRestoration } from './hooks/useScrollRestoration';
+import { useModalScrollGuard } from './hooks/useModalScrollGuard';
 
 export default function App() {
   const [newCharName, setNewCharName] = useState('');
@@ -115,6 +116,9 @@ export default function App() {
   const activeCharState = useCharacterStore((state) => state.activeCharacter);
   const scrollKey = activeRoleState === 'gm' ? 'gm' : activeCharState?.id ? `hero_${activeCharState.id}` : 'sheet';
   useScrollRestoration({ key: scrollKey });
+
+  // S-Tier Universal Modal Scroll Isolation & Mouse Wheel Guardrails
+  useModalScrollGuard();
 
   const {
     characters,

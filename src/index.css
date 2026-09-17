@@ -39,3 +39,19 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(99, 102, 241, 0.5);
 }
+
+/* S-Tier Modal Scroll Isolation & Background Freeze Guardrails */
+html {
+  scrollbar-gutter: stable;
+}
+
+body.modal-open {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+/* Universal modal scroll containment to eliminate scroll chaining */
+.fixed.inset-0,
+.fixed.inset-0 * {
+  overscroll-behavior: contain;
+}
