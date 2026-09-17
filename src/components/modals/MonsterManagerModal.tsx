@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, Plus, Search, FileText, Skull, Check } from 'lucide-react';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
-import { supabase } from '../../lib/supabase';
+import { gameApi } from '../../services/api';
 import { SupabaseMonster } from '../../types/game';
 import {
   ParsedMonster,
@@ -100,9 +100,9 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const fetchMonsters = async () => {
       setIsLoadingCodex(true);
       try {
-        const { data, error } = await supabase.from('monsters').select('*').order('name');
-        if (!error && data) {
-          setSupabaseMonsters(data as SupabaseMonster[]);
+        const data = await gameApi.getSupabaseMonsters();
+        if (data && data.length > 0) {
+          setSupabaseMonsters(data);
         }
       } catch (err) {
         console.error('[MonsterManagerModal] Supabase codex error:', err);

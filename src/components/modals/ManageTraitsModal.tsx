@@ -89,6 +89,23 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   const [traitCategoryFilter, setTraitCategoryFilter] = useState<'all' | 'in_path' | 'universal' | 'out_of_path' | 'capstones'>('all');
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
 
+  // Incremental DOM Chunk Batching for Traits catalog (drops initial DOM mount from ~5,200 to ~550 nodes)
+  const [visibleCatalogCount, setVisibleCatalogCount] = useState<number>(40);
+
+  useEffect(() => {
+    setVisibleCatalogCount(40);
+  }, [isOpen, localGenreFilter, localDomainFilter, traitTypeFilter, traitCategoryFilter, catalogSearchQuery]);
+
+  const handleCatalogScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - (scrollTop + clientHeight) < 250) {
+      setVisibleCatalogCount((prev) => {
+        if (prev >= filteredCatalogRules.length) return prev;
+        return Math.min(prev + 40, filteredCatalogRules.length);
+      });
+    }
+  };
+
   // Sync genre filter when modal opens
   useEffect(() => {
     if (isOpen && activeGenre) {
@@ -727,7 +744,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
             )}
 
             {/* Scrollable Catalog List */}
-            <div className="flex-1 overflow-y-auto pr-1 space-y-2 min-h-0">
+            <div onScroll={handleCatalogScroll} className="flex-1 overflow-y-auto pr-1 space-y-2 min-h-0">
               {traitCategoryFilter === 'capstones' ? (
                 filteredCapstones.map((capstone) => {
                   const equipped = isRuleEquipped(capstone.name);
@@ -778,7 +795,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   );
                 })
               ) : (
-                filteredCatalogRules.map((rule) => {
+                filteredCatalogRules.slice(0, visibleCatalogCount).map((rule) => {
                   const equipped = isRuleEquipped(rule.name);
                   const starred = isRuleStarred(rule.id || rule.name);
                   const isMso = isGsUnlocked && isMsoEntry(rule.name);
@@ -869,6 +886,11 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                     </div>
                   );
                 })
+              )}
+              {traitCategoryFilter !== 'capstones' && filteredCatalogRules.length > visibleCatalogCount && (
+                <div className="py-2 text-center text-xs text-purple-300/80 font-mono bg-slate-950/60 rounded-xl border border-slate-800 shrink-0">
+                  Showing {Math.min(visibleCatalogCount, filteredCatalogRules.length)} of {filteredCatalogRules.length} traits • Scroll down for more...
+                </div>
               )}
             </div>
           </div>

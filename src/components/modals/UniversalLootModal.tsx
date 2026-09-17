@@ -1,7 +1,7 @@
 // src/components/modals/UniversalLootModal.tsx
 // Two-Pane Master Blueprint Modal for Adventure & Encounter Loot Staging, d100 Rolling & Party Vault Delivery
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Coins,
@@ -51,6 +51,10 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
   const artifactsCatalog = useCharacterStore((state) => state.artifactsCatalog);
   const getArtifactsByTier = useCharacterStore((state) => state.getArtifactsByTier);
   const exoticsCatalog = useCharacterStore((state) => state.exoticsCatalog);
+  const suppliesCatalog = useCharacterStore((state) => state.suppliesCatalog);
+  const weaponsCatalog = useCharacterStore((state) => state.weaponsCatalog);
+  const armorCatalog = useCharacterStore((state) => state.armorCatalog);
+  const shieldsCatalog = useCharacterStore((state) => state.shieldsCatalog);
 
   // Form & Drawer states
   const [activeCategoryTab, setActiveCategoryTab] = useState<LootCategoryTab>('random');
@@ -78,7 +82,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  // Load catalog items on tab switch
+  // Load catalog items on tab switch (from warm store cache, 0 network calls)
   useEffect(() => {
     if (!isOpen || activeCategoryTab === 'random' || activeCategoryTab === 'coins') return;
 
@@ -86,13 +90,21 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
       setIsLoadingCatalog(true);
       try {
         let items: any[] = [];
-        if (activeCategoryTab === 'weapons') items = await gameApi.getWeapons();
-        else if (activeCategoryTab === 'armor') items = await gameApi.getArmor();
-        else if (activeCategoryTab === 'shields') items = await gameApi.getShields();
-        else if (activeCategoryTab === 'relics') items = (artifactsCatalog && artifactsCatalog.length > 0) ? artifactsCatalog : await gameApi.getArtifacts();
-        else if (activeCategoryTab === 'hardware') items = (exoticsCatalog && exoticsCatalog.length > 0) ? exoticsCatalog : await gameApi.getExotics();
-        else if (activeCategoryTab === 'chaos_gems') items = await gameApi.getChaosGems();
-        else if (activeCategoryTab === 'gear') items = await gameApi.getSupplies();
+        if (activeCategoryTab === 'weapons') {
+          items = (weaponsCatalog && weaponsCatalog.length > 0) ? weaponsCatalog : await gameApi.getWeapons();
+        } else if (activeCategoryTab === 'armor') {
+          items = (armorCatalog && armorCatalog.length > 0) ? armorCatalog : await gameApi.getArmor();
+        } else if (activeCategoryTab === 'shields') {
+          items = (shieldsCatalog && shieldsCatalog.length > 0) ? shieldsCatalog : await gameApi.getShields();
+        } else if (activeCategoryTab === 'relics') {
+          items = (artifactsCatalog && artifactsCatalog.length > 0) ? artifactsCatalog : await gameApi.getArtifacts();
+        } else if (activeCategoryTab === 'hardware') {
+          items = (exoticsCatalog && exoticsCatalog.length > 0) ? exoticsCatalog : await gameApi.getExotics();
+        } else if (activeCategoryTab === 'chaos_gems') {
+          items = await gameApi.getChaosGems();
+        } else if (activeCategoryTab === 'gear') {
+          items = (suppliesCatalog && suppliesCatalog.length > 0) ? suppliesCatalog : await gameApi.getSupplies();
+        }
 
         setCatalogItems(items || []);
       } catch {
@@ -103,7 +115,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     };
 
     loadCatalog();
-  }, [isOpen, activeCategoryTab]);
+  }, [isOpen, activeCategoryTab, weaponsCatalog, armorCatalog, shieldsCatalog, suppliesCatalog, artifactsCatalog, exoticsCatalog]);
 
   if (!isOpen) return null;
 
@@ -562,19 +574,21 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     }
   };
 
-  // Filter Catalog Items by Search with MSO priority
-  const filteredCatalog = catalogItems
-    .filter((i) => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        (i.name || '').toLowerCase().includes(q) ||
-        (i.category || '').toLowerCase().includes(q) ||
-        (i.effect || '').toLowerCase().includes(q) ||
-        (i.description || '').toLowerCase().includes(q)
-      );
-    })
-    .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  // Filter Catalog Items by Search with MSO priority (memoized to eliminate render-loop churn)
+  const filteredCatalog = useMemo(() => {
+    return catalogItems
+      .filter((i) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+          (i.name || '').toLowerCase().includes(q) ||
+          (i.category || '').toLowerCase().includes(q) ||
+          (i.effect || '').toLowerCase().includes(q) ||
+          (i.description || '').toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
+  }, [catalogItems, searchQuery, isGsUnlocked]);
 
   if (typeof document === 'undefined') return null;
 

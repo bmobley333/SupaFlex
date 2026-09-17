@@ -27,7 +27,6 @@ import {
   getPowersSoftTaxBracket,
 } from '../../utils/powersApTaxSchedule';
 import { checkAndAutoEquipLevelUpTraits } from '../../utils/bundleGrants';
-import { supabase } from '../../lib/supabase';
 
 interface ApManagerModalProps {
   isOpen: boolean;
@@ -69,6 +68,9 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
     saveActiveCharacter,
     recordApExpenditure,
     revertApExpenditure,
+    powers = [],
+    skills = [],
+    traits = [],
   } = useCharacterStore();
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -614,30 +616,20 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                   min={1}
                   max={250}
                   value={level}
-                  onChange={async (e) => {
+                  onChange={(e) => {
                     const val = Math.max(1, Math.min(250, parseInt(e.target.value, 10) || 1));
                     if (val > level) {
-                      try {
-                        const [{ data: catPowers }, { data: catSkills }, { data: catRules }] = await Promise.all([
-                          supabase.from('powers').select('*'),
-                          supabase.from('skills').select('*'),
-                          supabase.from('trait_rules').select('*'),
-                        ]);
-                        const { updatedSheet, newlyGrantedNames } = checkAndAutoEquipLevelUpTraits(
-                          sheetData,
-                          val,
-                          catPowers || [],
-                          catSkills || [],
-                          catRules || []
-                        );
-                        updateActiveSheetData(() => updatedSheet);
-                        saveActiveCharacter();
-                        if (newlyGrantedNames.length > 0) {
-                          showToast(`🎉 Level ${val} Milestone: Auto-equipped ${newlyGrantedNames.join(', ')}!`);
-                        }
-                      } catch {
-                        updateActiveSheetData((prev: any) => ({ ...prev, level: val }));
-                        saveActiveCharacter();
+                      const { updatedSheet, newlyGrantedNames } = checkAndAutoEquipLevelUpTraits(
+                        sheetData,
+                        val,
+                        powers,
+                        skills,
+                        traits
+                      );
+                      updateActiveSheetData(() => updatedSheet);
+                      saveActiveCharacter();
+                      if (newlyGrantedNames.length > 0) {
+                        showToast(`🎉 Level ${val} Milestone: Auto-equipped ${newlyGrantedNames.join(', ')}!`);
                       }
                     } else {
                       updateActiveSheetData((prev: any) => ({ ...prev, level: val }));

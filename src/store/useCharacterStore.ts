@@ -82,6 +82,9 @@ function saveCatalogsToCache(data: CatalogsCachePayload['data']): void {
   }
 }
 
+let characterSaveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingSaveResolvers: Array<() => void> = [];
+
 const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
   if (typeof window !== 'undefined') {
     try {
@@ -167,7 +170,7 @@ interface CharacterStore {
   createNewCharacter: (name: string, characterClass?: string, race?: string) => Promise<Character | null>;
   updateActiveSheetData: (updater: (prev: CharacterSheetData) => CharacterSheetData) => void;
   updateActiveCharacterMeta: (updates: Partial<Character>) => void;
-  saveActiveCharacter: () => Promise<void>;
+  saveActiveCharacter: (immediate?: boolean) => Promise<void>;
   deleteCharacter: (id: number) => Promise<void>;
   addCharge: (amount?: number) => void;
   spendSpark: () => void;
@@ -378,7 +381,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         armorData = cached.armorData || [];
         shieldsData = cached.shieldsData || [];
 
-        chars = await gameApi.getCharacters();
+        chars = await gameApi.getCharactersSummary();
       } else {
         // Cold fetch: Download all catalogs from Supabase and cache locally
         const [
@@ -399,7 +402,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           fetchedArmor,
           fetchedShields,
         ] = await Promise.all([
-          gameApi.getCharacters(),
+          gameApi.getCharactersSummary(),
           gameApi.getPowers(),
           gameApi.getMagicItems(),
           gameApi.getSkills(),
@@ -495,27 +498,30 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         return reconcileCharacterFreeTraits(vaultReconciled, char, traits).updatedSheetData;
       };
 
+      let targetCandidate: Character | null = null;
       if (currentActive && eligiblePool.some((c) => c.id === currentActive.id)) {
-        const freshChar = eligiblePool.find((c) => c.id === currentActive.id)!;
-        const migratedSheet = reconcileSheet(freshChar.sheet_data, freshChar);
-        // Preserve active character object and unsaved local edits if present
-        selectedChar = {
-          ...freshChar,
-          sheet_data: migratedSheet,
-        };
+        targetCandidate = eligiblePool.find((c) => c.id === currentActive.id)!;
       } else {
         const lastActiveId = sessionStorage.getItem('supaflex_last_active_char_id');
         const lastActiveChar = eligiblePool.find((c) => String(c.id) === lastActiveId);
-
         if (lastActiveChar) {
-          selectedChar = {
-            ...lastActiveChar,
-            sheet_data: reconcileSheet(lastActiveChar.sheet_data, lastActiveChar),
-          };
+          targetCandidate = lastActiveChar;
         } else if (myHeroes.length > 0) {
+          targetCandidate = myHeroes[0];
+        }
+      }
+
+      if (targetCandidate) {
+        // Download full sheet_data only for the single active hero on boot (97% bandwidth reduction)
+        const fullChar = (currentActive && currentActive.id === targetCandidate.id && currentActive.sheet_data)
+          ? currentActive
+          : await gameApi.getCharacterById(targetCandidate.id);
+
+        if (fullChar) {
+          const migratedSheet = reconcileSheet(fullChar.sheet_data, fullChar);
           selectedChar = {
-            ...myHeroes[0],
-            sheet_data: reconcileSheet(myHeroes[0].sheet_data, myHeroes[0]),
+            ...fullChar,
+            sheet_data: migratedSheet,
           };
         }
       }
@@ -676,59 +682,86 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     });
   },
 
-  saveActiveCharacter: async () => {
-    const active = get().activeCharacter;
-    if (!active) return;
-    set({ isSaving: true });
-    try {
-      const saved = await gameApi.updateCharacter(active.id, {
-        name: active.name,
-        class: active.class,
-        race: active.race,
-        hp: active.hp,
-        might: active.might,
-        motion: active.motion,
-        mind: active.mind,
-        magic: active.magic,
-        moxie: active.moxie,
-        skills: active.skills,
-        inventory: active.inventory,
-        owner_email: active.owner_email,
-        sheet_data: active.sheet_data,
-      });
+  saveActiveCharacter: async (immediate: boolean = false) => {
+    return new Promise<void>((resolve) => {
+      pendingSaveResolvers.push(resolve);
 
-      set((state) => ({
-        activeCharacter: saved,
-        characters: state.characters.map((c) => (c.id === saved.id ? saved : c)),
-        isSaving: false,
-      }));
-
-      // Instant optimistic vitals broadcast to active party members (< 50ms peer-to-peer sync)
-      const activePartyId = get().activePartyId;
-      if (activePartyId) {
-        try {
-          const curVit = saved.sheet_data?.current_vitality ?? saved.hp ?? 28;
-          const maxVit = saved.sheet_data?.vitality_max ?? 28;
-          const channel = supabase.channel(`party:${activePartyId}`);
-          channel.send({
-            type: 'broadcast',
-            event: 'party_members_updated',
-            payload: {
-              partyId: activePartyId,
-              character_id: saved.id,
-              current_vitality: curVit,
-              vitality_max: maxVit,
-              hp: curVit,
-              timestamp: new Date().toISOString(),
-            },
-          });
-        } catch (bcErr) {
-          console.warn('[useCharacterStore] Notice broadcasting vitals update:', bcErr);
+      const executeSave = async () => {
+        if (characterSaveDebounceTimer) {
+          clearTimeout(characterSaveDebounceTimer);
+          characterSaveDebounceTimer = null;
         }
+        const resolversToNotify = [...pendingSaveResolvers];
+        pendingSaveResolvers = [];
+
+        const active = get().activeCharacter;
+        if (!active) {
+          resolversToNotify.forEach((r) => r());
+          return;
+        }
+        set({ isSaving: true });
+        try {
+          const saved = await gameApi.updateCharacter(active.id, {
+            name: active.name,
+            class: active.class,
+            race: active.race,
+            hp: active.hp,
+            might: active.might,
+            motion: active.motion,
+            mind: active.mind,
+            magic: active.magic,
+            moxie: active.moxie,
+            skills: active.skills,
+            inventory: active.inventory,
+            owner_email: active.owner_email,
+            sheet_data: active.sheet_data,
+          });
+
+          set((state) => ({
+            activeCharacter: saved,
+            characters: state.characters.map((c) => (c.id === saved.id ? saved : c)),
+            isSaving: false,
+          }));
+
+          // Instant optimistic vitals broadcast to active party members (< 50ms peer-to-peer sync)
+          const activePartyId = get().activePartyId;
+          if (activePartyId) {
+            try {
+              const curVit = saved.sheet_data?.current_vitality ?? saved.hp ?? 28;
+              const maxVit = saved.sheet_data?.vitality_max ?? 28;
+              const channel = supabase.channel(`party:${activePartyId}`);
+              channel.send({
+                type: 'broadcast',
+                event: 'party_members_updated',
+                payload: {
+                  partyId: activePartyId,
+                  character_id: saved.id,
+                  current_vitality: curVit,
+                  vitality_max: maxVit,
+                  hp: curVit,
+                  timestamp: new Date().toISOString(),
+                },
+              });
+            } catch (bcErr) {
+              console.warn('[useCharacterStore] Notice broadcasting vitals update:', bcErr);
+            }
+          }
+        } catch (err: any) {
+          set({ isSaving: false, error: err.message || 'Failed to save character.' });
+        } finally {
+          resolversToNotify.forEach((r) => r());
+        }
+      };
+
+      if (immediate) {
+        executeSave();
+      } else {
+        if (characterSaveDebounceTimer) {
+          clearTimeout(characterSaveDebounceTimer);
+        }
+        characterSaveDebounceTimer = setTimeout(executeSave, 350);
       }
-    } catch (err: any) {
-      set({ isSaving: false, error: err.message || 'Failed to save character.' });
-    }
+    });
   },
 
   refreshCatalogs: async () => {

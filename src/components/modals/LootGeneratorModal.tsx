@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -134,6 +134,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const getExoticsByTier = useCharacterStore((state) => state.getExoticsByTier);
   const functionsCatalog = useCharacterStore((state) => state.functionsCatalog);
   const modsCatalog = useCharacterStore((state) => state.modsCatalog);
+  const suppliesCatalog = useCharacterStore((state) => state.suppliesCatalog);
+  const weaponsCatalog = useCharacterStore((state) => state.weaponsCatalog);
+  const armorCatalog = useCharacterStore((state) => state.armorCatalog);
+  const shieldsCatalog = useCharacterStore((state) => state.shieldsCatalog);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeGenre = useGenreStore((state) => state.activeGenre);
 
@@ -165,7 +169,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
 
   const essenceCore = activeCharacter?.sheet_data?.essence_core || 0;
 
-  // Load specific catalog on category change
+  // Load specific catalog on category change (warm store cache, 0 network calls)
   useEffect(() => {
     if (!isOpen || activeRightTab !== 'SPECIFIC' || specificCategory === 'coins') return;
 
@@ -173,13 +177,21 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       setIsLoadingSpecificCatalog(true);
       try {
         let items: any[] = [];
-        if (specificCategory === 'weapons') items = await gameApi.getWeapons();
-        else if (specificCategory === 'armor') items = await gameApi.getArmor();
-        else if (specificCategory === 'shields') items = await gameApi.getShields();
-        else if (specificCategory === 'relics') items = (artifactsCatalog && artifactsCatalog.length > 0) ? artifactsCatalog : await gameApi.getArtifacts();
-        else if (specificCategory === 'hardware') items = (exoticsCatalog && exoticsCatalog.length > 0) ? exoticsCatalog : await gameApi.getExotics();
-        else if (specificCategory === 'gear') items = await gameApi.getSupplies();
-        else if (specificCategory === 'chaos_gems') items = await gameApi.getChaosGems();
+        if (specificCategory === 'weapons') {
+          items = (weaponsCatalog && weaponsCatalog.length > 0) ? weaponsCatalog : await gameApi.getWeapons();
+        } else if (specificCategory === 'armor') {
+          items = (armorCatalog && armorCatalog.length > 0) ? armorCatalog : await gameApi.getArmor();
+        } else if (specificCategory === 'shields') {
+          items = (shieldsCatalog && shieldsCatalog.length > 0) ? shieldsCatalog : await gameApi.getShields();
+        } else if (specificCategory === 'relics') {
+          items = (artifactsCatalog && artifactsCatalog.length > 0) ? artifactsCatalog : await gameApi.getArtifacts();
+        } else if (specificCategory === 'hardware') {
+          items = (exoticsCatalog && exoticsCatalog.length > 0) ? exoticsCatalog : await gameApi.getExotics();
+        } else if (specificCategory === 'gear') {
+          items = (suppliesCatalog && suppliesCatalog.length > 0) ? suppliesCatalog : await gameApi.getSupplies();
+        } else if (specificCategory === 'chaos_gems') {
+          items = await gameApi.getChaosGems();
+        }
 
         setSpecificCatalog(items || []);
       } catch {
@@ -189,7 +201,24 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       }
     };
     loadCat();
-  }, [isOpen, activeRightTab, specificCategory]);
+  }, [isOpen, activeRightTab, specificCategory, weaponsCatalog, armorCatalog, shieldsCatalog, suppliesCatalog, artifactsCatalog, exoticsCatalog]);
+
+  // Memoized Filter & Sort with MSO priority (eliminates render-loop churn)
+  const filteredSpecificCatalog = useMemo(() => {
+    return specificCatalog
+      .filter((i) => {
+        if (!specificSearchQuery.trim()) return true;
+        const q = specificSearchQuery.toLowerCase();
+        return (
+          (i.name || '').toLowerCase().includes(q) ||
+          (i.category || '').toLowerCase().includes(q) ||
+          (i.effect || '').toLowerCase().includes(q) ||
+          (i.description || '').toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => compareMsoItems(a, b, isGsUnlocked))
+      .slice(0, 50);
+  }, [specificCatalog, specificSearchQuery, isGsUnlocked]);
 
   useEffect(() => {
     if (isOpen) {
@@ -357,13 +386,13 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     };
   };
 
-  // Fetch random gear item from Supabase equipment table for Quality combination
+  // Select random gear item from warm suppliesCatalog for Quality combination (0 REST calls)
   const fetchRandomGearItem = async () => {
     try {
-      const { data } = await supabase.from('supplies').select('*');
-      if (data && data.length > 0) {
-        const filtered = data.filter(g => !g.category.includes('💰') && !g.category.includes('Quality') && !g.category.includes('Art') && !g.category.includes('Curios') && !g.category.includes('Junk'));
-        const pool = filtered.length > 0 ? filtered : data;
+      const poolData = (suppliesCatalog && suppliesCatalog.length > 0) ? suppliesCatalog : [];
+      if (poolData.length > 0) {
+        const filtered = poolData.filter(g => !g.category.includes('💰') && !g.category.includes('Quality') && !g.category.includes('Art') && !g.category.includes('Curios') && !g.category.includes('Junk'));
+        const pool = filtered.length > 0 ? filtered : poolData;
         return pool[Math.floor(Math.random() * pool.length)];
       }
     } catch {
@@ -1803,20 +1832,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                       <div className="py-8 text-center text-slate-400 text-xs">Loading catalog...</div>
                     ) : (
                       <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
-                        {specificCatalog
-                          .filter((i) => {
-                            if (!specificSearchQuery.trim()) return true;
-                            const q = specificSearchQuery.toLowerCase();
-                            return (
-                              (i.name || '').toLowerCase().includes(q) ||
-                              (i.category || '').toLowerCase().includes(q) ||
-                              (i.effect || '').toLowerCase().includes(q) ||
-                              (i.description || '').toLowerCase().includes(q)
-                            );
-                          })
-                          .sort((a, b) => compareMsoItems(a, b, isGsUnlocked))
-                          .slice(0, 50)
-                          .map((item) => {
+                        {filteredSpecificCatalog.map((item) => {
                             const isMso = isGsUnlocked && isMsoEntry(item.name);
                             return (
                               <div

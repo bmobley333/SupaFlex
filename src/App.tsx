@@ -272,8 +272,9 @@ export default function App() {
     // Send immediate heartbeat on mount/party join
     gameApi.sendPlayerHeartbeat(tabSessionId).catch(console.error);
 
-    // 15-second heartbeat loop
+    // 15-second heartbeat loop (guarded by tab visibility to eliminate idle background egress)
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       gameApi.sendPlayerHeartbeat(tabSessionId).catch(console.error);
     }, 15000);
 

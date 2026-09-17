@@ -1285,6 +1285,34 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const [vaultFilter, setVaultFilter] = useState<'ALL' | 'STARRED'>('ALL');
   const [activePowerApCategory, setActivePowerApCategory] = useState<ApCostCategory>('all');
 
+  // Incremental DOM Chunk Batching for Powers & Magic Items catalogs (drops initial DOM mount from ~9,300 to ~600 nodes)
+  const [visibleCatalogCount, setVisibleCatalogCount] = useState<number>(40);
+
+  useEffect(() => {
+    setVisibleCatalogCount(40);
+  }, [
+    type,
+    localGenreFilter,
+    hardwareTierFilter,
+    powerDomainFilter,
+    powerDisciplineFilter,
+    vaultFilter,
+    activePowerApCategory,
+    rightSearchQuery,
+    activeTableName,
+    showManageModal,
+  ]);
+
+  const handleCatalogScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - (scrollTop + clientHeight) < 250) {
+      setVisibleCatalogCount((prev) => {
+        if (prev >= filteredCatalogAbilities.length) return prev;
+        return Math.min(prev + 40, filteredCatalogAbilities.length);
+      });
+    }
+  };
+
   const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
   const attributeDice = useMemo(() => activeCharacter?.sheet_data?.attribute_dice || {}, [activeCharacter]);
 
@@ -3126,9 +3154,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             )}
 
                             {/* Scrollable Catalog Powers List */}
-                            <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
+                            <div onScroll={handleCatalogScroll} className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
                               {filteredCatalogAbilities.length > 0 ? (
-                                filteredCatalogAbilities.map((item, idx) => {
+                                filteredCatalogAbilities.slice(0, visibleCatalogCount).map((item, idx) => {
                                   const { baseName, version } = parseAbilityVersion(item.name);
                                   const actionUpper = (item.action || '').toUpperCase();
                                   const evalResult = getPowerEvalResult(item);
@@ -3235,6 +3263,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 <p className="text-xs text-slate-500 italic py-6 text-center">
                                   No catalog powers match active filters.
                                 </p>
+                              )}
+                              {filteredCatalogAbilities.length > visibleCatalogCount && (
+                                <div className="py-2 text-center text-xs text-amber-400/80 font-mono bg-slate-950/60 rounded-xl border border-slate-800 shrink-0">
+                                  Showing {Math.min(visibleCatalogCount, filteredCatalogAbilities.length)} of {filteredCatalogAbilities.length} powers • Scroll down for more...
+                                </div>
                               )}
                             </div>
                           </>

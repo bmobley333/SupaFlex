@@ -269,6 +269,19 @@ export const gameApi = {
     return data as Character;
   },
 
+  async getCharactersSummary(): Promise<Character[]> {
+    const { data, error } = await supabase
+      .from('characters')
+      .select('id, name, class, race, hp, might, motion, mind, magic, moxie, skills, inventory, owner_email, updated_at')
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('[gameApi] Error fetching characters summary:', error);
+      throw error;
+    }
+    return (data || []).map((c: any) => normalizeCharacterData(c as Character));
+  },
+
   async updateCharacter(id: number, updates: Partial<Character>): Promise<Character> {
     const payload: any = {
       ...updates,
@@ -289,18 +302,23 @@ export const gameApi = {
       if (sd.gear_slots) payload.inventory = sd.gear_slots;
     }
 
+    // Project scalar columns only to eliminate redundant 70 KB response egress per save
     const { data, error } = await supabase
       .from('characters')
       .update(payload)
       .eq('id', id)
-      .select()
+      .select('id, name, class, race, hp, might, motion, mind, magic, moxie, skills, inventory, owner_email, updated_at')
       .single();
 
     if (error) {
       console.error(`[gameApi] Error updating character ${id}:`, error);
       throw error;
     }
-    return normalizeCharacterData(data as Character);
+    const merged: Character = {
+      ...(data as any),
+      sheet_data: (updates.sheet_data || payload.sheet_data || {}) as any,
+    };
+    return normalizeCharacterData(merged);
   },
 
   async deleteCharacter(id: number): Promise<void> {
@@ -1551,6 +1569,18 @@ export const gameApi = {
     if (cachedSupabaseMonsters && cachedSupabaseMonsters.length > 0) {
       return cachedSupabaseMonsters;
     }
+    if (typeof window !== 'undefined') {
+      try {
+        const local = localStorage.getItem('supaflex_monsters_cache');
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            cachedSupabaseMonsters = parsed;
+            return parsed;
+          }
+        }
+      } catch {}
+    }
     try {
       const { data, error } = await supabase
         .from('monsters')
@@ -1563,6 +1593,11 @@ export const gameApi = {
       }
 
       cachedSupabaseMonsters = (data as SupabaseMonster[]) || [];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('supaflex_monsters_cache', JSON.stringify(cachedSupabaseMonsters));
+        } catch {}
+      }
       return cachedSupabaseMonsters;
     } catch (e) {
       console.error('[gameApi] Error in getSupabaseMonsters:', e);

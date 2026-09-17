@@ -369,6 +369,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       }
 
       heartbeatInterval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
         gameApi.sendGmHeartbeat(selectedParty.id).catch(console.error);
       }, 30000);
     };
