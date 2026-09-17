@@ -12,7 +12,7 @@ import { CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { getTabSessionId } from '../utils/tabSession';
 import { supabase } from '../lib/supabase';
 
-const CATALOGS_CACHE_KEY = 'supaflex_catalogs_cache_v2';
+const CATALOGS_CACHE_KEY = 'supaflex_catalogs_cache_v3';
 const CATALOGS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CatalogsCachePayload {
@@ -36,13 +36,14 @@ interface CatalogsCachePayload {
 function loadCatalogsFromCache(minTimestamp?: number): CatalogsCachePayload['data'] | null {
   if (typeof window === 'undefined') return null;
   try {
-    // Purge old v1 cache if present
+    // Purge old v1 and v2 cache if present
     localStorage.removeItem('supaflex_catalogs_cache_v1');
+    localStorage.removeItem('supaflex_catalogs_cache_v2');
 
     const raw = localStorage.getItem(CATALOGS_CACHE_KEY);
     if (!raw) return null;
     const parsed: CatalogsCachePayload = JSON.parse(raw);
-    if (!parsed || parsed.version !== 2 || !parsed.timestamp || !parsed.data) return null;
+    if (!parsed || parsed.version !== 3 || !parsed.timestamp || !parsed.data) return null;
     // Auto-invalidate if functionsData is empty or missing (e.g. following database migration)
     if (!Array.isArray(parsed.data.functionsData) || parsed.data.functionsData.length === 0) {
       return null;
@@ -66,7 +67,7 @@ function saveCatalogsToCache(data: CatalogsCachePayload['data']): void {
   if (typeof window === 'undefined') return;
   try {
     const payload: CatalogsCachePayload = {
-      version: 2,
+      version: 3,
       timestamp: Date.now(),
       data,
     };
@@ -141,6 +142,14 @@ interface CharacterStore {
   activeRole: 'player' | 'gm';
   activePartyId: string | null;
   tabSessionId: string;
+
+  // Modal Navigation State
+  isGearManagerModalOpen: boolean;
+  setGearManagerModalOpen: (open: boolean) => void;
+  isExoticGearManagerModalOpen: boolean;
+  setExoticGearManagerModalOpen: (open: boolean, targetItem?: string | null) => void;
+  exoticGearManagerTargetItem: string | null;
+  setExoticGearManagerTargetItem: (target: string | null) => void;
 
   // Actions
   fetchInitialData: (options?: { silent?: boolean; forceRefresh?: boolean }) => Promise<void>;
@@ -265,6 +274,15 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     return sessionStorage.getItem('supaflex_active_party_id') || null;
   })(),
   playerLinks: getInitialPlayerLinks(),
+
+  // Modal Navigation State
+  isGearManagerModalOpen: false,
+  setGearManagerModalOpen: (open: boolean) => set({ isGearManagerModalOpen: open }),
+  isExoticGearManagerModalOpen: false,
+  setExoticGearManagerModalOpen: (open: boolean, targetItem: string | null = null) =>
+    set({ isExoticGearManagerModalOpen: open, exoticGearManagerTargetItem: targetItem }),
+  exoticGearManagerTargetItem: null,
+  setExoticGearManagerTargetItem: (target: string | null) => set({ exoticGearManagerTargetItem: target }),
 
   getArtifactsByTier: (tier: ArtifactTier) => {
     return (get().artifactsCatalog || []).filter((a) => a.artifact_tier === tier);

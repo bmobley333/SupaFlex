@@ -33,6 +33,7 @@ import { gameApi } from '../../services/api';
 interface ManageGearPowersModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTargetItem?: string | null;
 }
 
 const parseUsageCount = (usage?: string): number => {
@@ -58,8 +59,6 @@ const MAIN_ABILITY_ICONS = [
 const ACTION_OPTIONS = ['A', 'P', 'F', 'R'];
 const USAGE_OPTIONS = [
   { value: '1', label: '1 Turn' },
-  { value: '2', label: '2 Turns' },
-  { value: '3', label: '3 Turns' },
   { value: '1-Enc', label: '1 / Encounter' },
   { value: '2-Enc', label: '2 / Encounter' },
   { value: '3-Enc', label: '3 / Encounter' },
@@ -69,6 +68,7 @@ const USAGE_OPTIONS = [
 export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
   isOpen,
   onClose,
+  initialTargetItem,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -101,6 +101,8 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
     toggleGearPowerUsage,
     updateActiveSheetData,
     saveActiveCharacter,
+    setGearManagerModalOpen,
+    exoticGearManagerTargetItem,
   } = useCharacterStore();
 
   // Self-healing catalogs: ensure functions & mods are populated even if store cache was cold
@@ -402,6 +404,30 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
   }, [simpleGear, searchQuery, effectiveMods, effectiveFunctions, spellSlots]);
 
+  const targetItem = initialTargetItem || exoticGearManagerTargetItem;
+
+  // Auto-expand and scroll to target item when modal opens
+  useEffect(() => {
+    if (!isOpen || !targetItem) return;
+    const cleanTarget = cleanBelongsToName(targetItem);
+    const matched = exoticGearItems.find(
+      (g) => cleanBelongsToName(g.name) === cleanTarget || g.id === targetItem
+    );
+    if (!matched) return;
+
+    const itemKey = matched.id || matched.name;
+    setCollapsedItems((prev) => ({ ...prev, [itemKey]: false }));
+
+    const domId = `exotic-item-${(matched.name || matched.id || '').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(domId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [isOpen, targetItem, exoticGearItems]);
+
   // Render individual power card
   const renderPowerCard = (
     fn: FunctionItem,
@@ -633,16 +659,30 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
 
         {/* ================= 2. SINGLE LARGE PANE BODY ================= */}
         <div className="flex-1 flex flex-col p-4 overflow-hidden min-h-0 relative">
-          {/* Search Filter */}
-          <div className="relative mb-3 shrink-0">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Filter owned exotic gear, mods, or powers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950/90 text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-800 text-white outline-none focus:border-cyan-500 transition-all placeholder:text-slate-500 shadow-inner"
-            />
+          {/* Search Filter & Buy Gear Shortcut */}
+          <div className="flex items-center gap-2 mb-3 shrink-0">
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Filter owned exotic gear, mods, or powers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-950/90 text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-800 text-white outline-none focus:border-cyan-500 transition-all placeholder:text-slate-500 shadow-inner"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                handleCloseModal();
+                setGearManagerModalOpen(true);
+              }}
+              className="px-3 py-2 bg-teal-950/90 hover:bg-teal-900/90 border border-teal-500/50 hover:border-teal-400 text-teal-200 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 group"
+              title="Open Gear Manager to purchase standard and exotic gear"
+            >
+              <span className="text-sm leading-none group-hover:rotate-12 transition-transform">⚙️</span>
+              <span className="font-outfit uppercase tracking-wider text-[11px] font-extrabold">Buy Gear</span>
+            </button>
           </div>
 
           {/* Scrollable Gear Chassis & Mods Tree */}
@@ -652,6 +692,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                 const hostName = item.name || '';
                 const itemKey = item.id || item.name;
                 const isExpanded = !collapsedItems[itemKey];
+                const domId = `exotic-item-${(item.name || item.id || '').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
                 // Direct inherent functions
                 const directFns = getFunctionsForGearItem(hostName, effectiveFunctions).sort((a, b) =>
@@ -682,7 +723,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                 }
 
                 return (
-                  <div key={itemKey} className="flex flex-col gap-2 pb-3 border-b border-slate-800/50 last:border-none">
+                  <div key={itemKey} id={domId} className="flex flex-col gap-2 pb-3 border-b border-slate-800/50 last:border-none scroll-mt-2">
                     {/* Gear Item Header Row: Compact w-fit Pill + Chassis Trashcan */}
                     <div className="flex items-center gap-2">
                       <button

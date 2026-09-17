@@ -33,7 +33,6 @@ const parseUsageCount = (usage?: string): number => {
 const cleanName = (name: string) => (name || '').replace(/^[⭕\s]+/, '').trim();
 
 export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }) => {
-  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   // Default all items to expanded (open) on page load. Keys in collapsedItems are explicitly closed.
   const [collapsedItems, setCollapsedItems] = useState<Record<string, boolean>>({});
 
@@ -47,6 +46,9 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
     functionsCatalog,
     toggleGearPowerUsage,
     clearAllGearPowerUses,
+    isExoticGearManagerModalOpen,
+    setExoticGearManagerModalOpen,
+    exoticGearManagerTargetItem,
   } = useCharacterStore();
 
   const sheet = activeCharacter?.sheet_data;
@@ -192,7 +194,7 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => setIsManageModalOpen(true)}
+              onClick={() => setExoticGearManagerModalOpen(true)}
               className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
               title="Click to open Exotic Gear Manager"
             >
@@ -222,7 +224,7 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
           <div>
             <button
               type="button"
-              onClick={() => setIsManageModalOpen(true)}
+              onClick={() => setExoticGearManagerModalOpen(true)}
               className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm cursor-pointer group bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300 hover:text-white"
               title="Open Exotic Gear Manager"
             >
@@ -339,7 +341,7 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
               </p>
               <button
                 type="button"
-                onClick={() => setIsManageModalOpen(true)}
+                onClick={() => setExoticGearManagerModalOpen(true)}
                 className="mt-3 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-200 transition shadow-sm cursor-pointer"
               >
                 Open Exotic Gear Manager
@@ -350,10 +352,13 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
       </div>
 
       {/* Exotic Gear Manager Modal */}
-      <ManageGearPowersModal
-        isOpen={isManageModalOpen}
-        onClose={() => setIsManageModalOpen(false)}
-      />
+      {isExoticGearManagerModalOpen && (
+        <ManageGearPowersModal
+          isOpen={isExoticGearManagerModalOpen}
+          onClose={() => setExoticGearManagerModalOpen(false)}
+          initialTargetItem={exoticGearManagerTargetItem}
+        />
+      )}
     </>
   );
 };

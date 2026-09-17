@@ -23,13 +23,11 @@ import {
   SupabaseBundle,
   ModItem,
   FunctionItem,
-  calculateAvailableAp,
   AbilitySlot,
   ApLogEntry,
   cleanAbilityName,
 } from '../../types/game';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
-import { GearModFunctionTree } from '../common/GearModFunctionTree';
 import { gameApi } from '../../services/api';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
@@ -98,9 +96,16 @@ interface GearCardProps {
 
 export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, isGuildSpaceUnlocked: isGsUnlocked, learnGearPower, unlearnGearPower } = useCharacterStore();
+  const {
+    activeCharacter,
+    updateActiveSheetData,
+    saveActiveCharacter,
+    isGuildSpaceUnlocked: isGsUnlocked,
+    isGearManagerModalOpen,
+    setGearManagerModalOpen,
+    setExoticGearManagerModalOpen,
+  } = useCharacterStore();
   const sheet = activeCharacter?.sheet_data;
-  const availableAp = sheet ? calculateAvailableAp(sheet.level || 1, sheet) : 0;
 
   const rawGearList: SimpleGearItem[] = sheet?.simple_gear || [];
   const gearList: SimpleGearItem[] = useMemo(() => {
@@ -109,7 +114,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     );
   }, [rawGearList]);
 
-  const [showManageModal, setShowManageModal] = useState<boolean>(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Active Category Tab: all | supplies | weapons | armor | shields | kits
@@ -165,7 +169,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
   // Fetch all Supabase Catalogs concurrently on modal open
   useEffect(() => {
-    if (showManageModal) {
+    if (isGearManagerModalOpen) {
       setIsLoadingCatalog(true);
       Promise.all([
         gameApi.getSupplies(),
@@ -188,18 +192,18 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         .catch((err) => console.error('Failed to load equipment catalogs:', err))
         .finally(() => setIsLoadingCatalog(false));
     }
-  }, [showManageModal]);
+  }, [isGearManagerModalOpen]);
 
   // Keep local genre synced to active campaign setting when modal opens
   useEffect(() => {
-    if (showManageModal && activeGenre) {
+    if (isGearManagerModalOpen && activeGenre) {
       setLocalGenreFilter(activeGenre);
     }
-  }, [showManageModal, activeGenre]);
+  }, [isGearManagerModalOpen, activeGenre]);
 
   // Reconcile Function Vault with physically owned simple_gear when Gear Manager opens
   useEffect(() => {
-    if (showManageModal && functionsCatalog.length > 0) {
+    if (isGearManagerModalOpen && functionsCatalog.length > 0) {
       updateActiveSheetData((prev) => {
         const res = reconcileCharacterVaultWithGear(prev, functionsCatalog, modsCatalog);
         if (res.addedFunctions.length > 0 || res.removedFunctions.length > 0) {
@@ -208,7 +212,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         return prev;
       });
     }
-  }, [showManageModal, functionsCatalog, modsCatalog, updateActiveSheetData]);
+  }, [isGearManagerModalOpen, functionsCatalog, modsCatalog, updateActiveSheetData]);
 
   // Strict Table- and MSO-aware matcher for mod compatibility
   const isModCompatibleWithItem = useCallback(
@@ -354,6 +358,18 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       return false;
     },
     [gearCatalog, weaponsCatalog, armorCatalog, shieldsCatalog]
+  );
+
+  // Check if item is an exotic/artifact chassis with functions or mods
+  const isExoticGearChassis = useCallback(
+    (item: SimpleGearItem): boolean => {
+      if (!item?.name) return false;
+      if (isItemExotic(item) || isItemArtifact(item)) return true;
+      if (Array.isArray(item.installed_mods) && item.installed_mods.length > 0) return true;
+      if (modsCatalog.some((m) => isModCompatibleWithItem(m, item))) return true;
+      return false;
+    },
+    [isItemExotic, isItemArtifact, modsCatalog, isModCompatibleWithItem]
   );
 
   // Helper to resolve an item's domain from either its own field or catalogs
@@ -836,59 +852,6 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     });
   };
 
-  // Purchase Optional Component / Mod on Owned Item
-  const handlePurchaseOptionalMod = (modItem: any, parentItemName: string, _parentCategory?: string) => {
-    const modName = modItem.name;
-    const costStr = modItem.cost || '0s';
-    const costInSilver = parseCostToSilver(costStr);
-    const modKey = String(modItem.id || modItem.name);
-
-    if (costInSilver > totalAvailableSilver) {
-      triggerNotEnoughMoney(modKey, modName, costStr, costInSilver);
-      return;
-    }
-
-    const deduction = deductFundsWithChange(gold, silver, costInSilver);
-    if (!deduction.success) {
-      triggerNotEnoughMoney(modKey, modName, costStr, costInSilver);
-      return;
-    }
-
-    updateActiveSheetData((prev) => {
-      const currentGear = [...(prev.simple_gear || [])];
-      const hostIdx = currentGear.findIndex(
-        (g) => cleanBelongsToName(g.name) === cleanBelongsToName(parentItemName)
-      );
-      if (hostIdx === -1) return prev;
-
-      const host = currentGear[hostIdx];
-      const installedMods = new Set<string>(host.installed_mods || []);
-      if (installedMods.has(modName)) {
-        return prev;
-      }
-      installedMods.add(modName);
-      currentGear[hostIdx] = {
-        ...host,
-        installed_mods: Array.from(installedMods),
-      };
-
-      const intermediateSheet = {
-        ...prev,
-        simple_gear: currentGear,
-        gold: deduction.newGold,
-        silver: deduction.newSilver,
-      };
-
-      return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog, modsCatalog).updatedSheet;
-    });
-    saveActiveCharacter();
-
-    setGearCatalogFeedback({
-      type: 'success',
-      message: `Purchased and installed "${modName}" on ${parentItemName} for ${costStr}!`,
-    });
-  };
-
   // Helper for Category Badges
   const getCategoryBadgeClass = (category?: string, itemType?: string, cost?: string) => {
     const cat = (category || '').toLowerCase();
@@ -1066,7 +1029,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={() => setShowManageModal(true)}
+            onClick={() => setGearManagerModalOpen(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
             title="Click to open Gear Manager"
           >
@@ -1082,7 +1045,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         {/* Right: Manage Gear Action Button */}
         <button
           type="button"
-          onClick={() => setShowManageModal(true)}
+          onClick={() => setGearManagerModalOpen(true)}
           className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-teal-950/80 hover:bg-teal-900/90 border-teal-500/40 hover:border-teal-400 text-teal-200 hover:text-white cursor-pointer shrink-0 group"
           title="Open Gear Manager"
         >
@@ -1091,7 +1054,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
       </div>
 
       {/* ⚙️ GEAR MANAGER MODAL */}
-      {showManageModal && (
+      {isGearManagerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
           <div
             ref={modalRef}
@@ -1113,8 +1076,23 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                 </div>
               </div>
 
-              {/* Currency Funds & Total Value in Header */}
+              {/* Currency Funds, Exotic Gear Manager Shortcut & Total Value in Header */}
               <div className="flex items-center gap-2 flex-wrap">
+                {/* 🧿 Exotic Gear Manager Shortcut Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGearManagerModalOpen(false);
+                    setExoticGearManagerModalOpen(true);
+                  }}
+                  className="px-2.5 py-1 bg-cyan-950/90 hover:bg-cyan-900/90 border border-cyan-500/50 hover:border-cyan-400 text-cyan-200 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 group"
+                  title="Open Exotic Gear Manager to manage mods and learn combat powers"
+                >
+                  <span className="text-sm leading-none group-hover:scale-110 transition-transform">🧿</span>
+                  <span className="font-outfit uppercase tracking-wider text-[11px] font-extrabold hidden sm:inline">Exotic Gear Manager</span>
+                  <span className="font-outfit uppercase tracking-wider text-[11px] font-extrabold sm:hidden">Exotics</span>
+                </button>
+
                 {/* Character Wallet Funds Pill */}
                 <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-950/80 border border-amber-500/50 rounded-xl font-mono text-xs font-extrabold text-amber-300 shadow-md shadow-amber-950/30">
                   <span className="text-sm leading-none">💰</span>
@@ -1132,7 +1110,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
               <button
                 type="button"
-                onClick={() => setShowManageModal(false)}
+                onClick={() => setGearManagerModalOpen(false)}
                 className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
                 title="Close Gear Manager"
               >
@@ -1380,24 +1358,31 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                             </div>
                           </div>
 
-                          {/* Reusable 2-Level Hierarchy Tree Drawer (Chassis -> Mod -> Functions) */}
-                          <GearModFunctionTree
-                            hostItem={item}
-                            modsCatalog={modsCatalog}
-                            functionsCatalog={functionsCatalog}
-                            mode="gear-manager"
-                            isEditable={true}
-                            onPurchaseMod={(modItem, hostName, hostCat) =>
-                              handlePurchaseOptionalMod(modItem, hostName, hostCat)
-                            }
-                            notEnoughMoneyTarget={notEnoughMoneyTarget}
-                            totalAvailableSilver={totalAvailableSilver}
-                            availableAp={availableAp}
-                            learnedSlots={sheet?.spell_slots}
-                            onLearnPower={(power, hostName, modName) => learnGearPower(power, hostName, modName)}
-                            onUnlearnPower={(powerName) => unlearnGearPower(powerName)}
-                            isGsUnlocked={isGsUnlocked}
-                          />
+                          {/* Exotic Gear Chassis Shortcut to Exotic Gear Manager */}
+                          {isExoticGearChassis(item) && (
+                            <div className="pt-0.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setGearManagerModalOpen(false);
+                                  setExoticGearManagerModalOpen(true, item.name);
+                                }}
+                                className="w-full py-1 px-2.5 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/40 hover:border-cyan-400 text-cyan-200 hover:text-white text-xs font-bold transition-all flex items-center justify-between group cursor-pointer shadow-sm"
+                                title={`Open ${item.name} in Exotic Gear Manager`}
+                              >
+                                <span className="flex items-center gap-1.5">
+                                  <span className="text-sm leading-none">🧿</span>
+                                  <span className="font-outfit uppercase tracking-wider text-[11px] text-cyan-300 group-hover:text-cyan-100 font-extrabold">
+                                    Exotic Gear
+                                  </span>
+                                </span>
+                                <span className="text-[11px] text-cyan-400/80 group-hover:text-cyan-200 flex items-center gap-1 font-semibold">
+                                  <span>Manage Mods & Powers</span>
+                                  <span className="text-xs transition-transform group-hover:translate-x-0.5">→</span>
+                                </span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })
@@ -1898,7 +1883,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
 
               <button
                 type="button"
-                onClick={() => setShowManageModal(false)}
+                onClick={() => setGearManagerModalOpen(false)}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700 transition shadow-sm cursor-pointer text-xs"
               >
                 Done
