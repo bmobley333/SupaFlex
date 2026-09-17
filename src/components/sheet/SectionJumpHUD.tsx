@@ -1,10 +1,11 @@
 // src/components/sheet/SectionJumpHUD.tsx
-// Precision 15-Card Navigation Dock with Clustered Capsules & Exact Card Title Tooltips
+// Precision 16-Card Navigation Dock with Clustered Capsules, Exact Tooltips & Direct Icon Centering
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 interface CardNavItem {
   id: string;
+  targetId?: string;
   title: string;
   icon: string;
   activeColorClass: string;
@@ -22,6 +23,7 @@ interface SectionJumpHUDProps {
 export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBottom = false }) => {
   const [activeCardId, setActiveCardId] = useState<string>('card-hero-hub');
   const [hoveredItem, setHoveredItem] = useState<CardNavItem | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; bottom: number } | null>(null);
 
   const heroCluster: NavCluster = useMemo(
     () => ({
@@ -86,6 +88,13 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
           title: 'Armor SK',
           icon: '🧥',
           activeColorClass: 'bg-amber-500/20 text-amber-200 border-amber-400/80 shadow-[0_0_10px_rgba(245,158,11,0.35)]',
+        },
+        {
+          id: 'card-mr',
+          targetId: 'card-armor',
+          title: 'MR (Movement Rate)',
+          icon: '👣',
+          activeColorClass: 'bg-teal-500/20 text-teal-200 border-teal-400/80 shadow-[0_0_10px_rgba(20,184,166,0.35)]',
         },
         {
           id: 'card-shield',
@@ -160,9 +169,9 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
   const allItems: CardNavItem[] = useMemo(() => clusters.flatMap((c) => c.items), [clusters]);
 
   // Precision Scroll to Target Card directly below the two frozen header rows
-  const scrollToCard = useCallback((id: string) => {
-    setActiveCardId(id);
-    const element = document.getElementById(id);
+  const scrollToCard = useCallback((cardId: string, navItemId: string) => {
+    setActiveCardId(navItemId);
+    const element = document.getElementById(cardId);
     if (!element) return;
 
     // Dynamically calculate the actual pixel height of the frozen top sticky header
@@ -177,10 +186,33 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
     });
   }, []);
 
+  // Hover handlers that calculate direct icon center coordinates with edge clamping
+  const handleItemHover = useCallback(
+    (item: CardNavItem, e: React.MouseEvent<HTMLButtonElement> | React.FocusEvent<HTMLButtonElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      // Clamp to ensure pill never clips screen borders on narrow viewports
+      const clampedX = Math.max(75, Math.min(window.innerWidth - 75, centerX));
+      setHoveredItem(item);
+      setTooltipPos({
+        x: clampedX,
+        bottom: window.innerHeight - rect.top + 8,
+      });
+    },
+    []
+  );
+
+  const handleItemLeave = useCallback(() => {
+    setHoveredItem(null);
+    setTooltipPos(null);
+  }, []);
+
   // IntersectionObserver to dynamically track which card is active on manual scrolling
   useEffect(() => {
-    const elements = allItems
-      .map((item) => document.getElementById(item.id))
+    // Unique list of target element IDs in the DOM
+    const targetElementIds = Array.from(new Set(allItems.map((item) => item.targetId || item.id)));
+    const elements = targetElementIds
+      .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
 
     if (elements.length === 0) return;
@@ -198,7 +230,12 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
         visibleEntries.sort((a, b) => {
           return Math.abs(a.boundingClientRect.top - 110) - Math.abs(b.boundingClientRect.top - 110);
         });
-        setActiveCardId(visibleEntries[0].target.id);
+        const activeDomId = visibleEntries[0].target.id;
+        // Map DOM element ID back to nav item ID
+        const matchedItem = allItems.find((i) => (i.targetId || i.id) === activeDomId);
+        if (matchedItem) {
+          setActiveCardId(matchedItem.id);
+        }
       }
     };
 
@@ -225,61 +262,70 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
   }, [allItems, clusters]);
 
   return (
-    <div className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-1.5 pointer-events-none max-w-[98vw]">
-      {/* Floating Micro-Tooltip displaying EXACT Title name of the target card */}
-      <div
-        className={`transition-all duration-150 transform ${
-          hoveredItem ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'
-        }`}
-      >
-        {hoveredItem && (
-          <div className="bg-slate-950/95 text-slate-100 text-xs font-bold font-outfit px-3 py-1 rounded-full border border-slate-700/80 shadow-2xl backdrop-blur-md tracking-wide select-none pointer-events-none whitespace-nowrap">
+    <>
+      {/* Floating Micro-Tooltip directly centered above the hovered icon with smooth glide */}
+      {hoveredItem && tooltipPos && (
+        <div
+          style={{
+            left: `${tooltipPos.x}px`,
+            bottom: `${tooltipPos.bottom}px`,
+          }}
+          className="fixed -translate-x-1/2 z-50 pointer-events-none transition-all duration-150 ease-out select-none"
+        >
+          <div className="bg-slate-950/95 text-slate-100 text-xs font-bold font-outfit px-3 py-1 rounded-full border border-slate-700/80 shadow-2xl backdrop-blur-md tracking-wide whitespace-nowrap animate-fadeIn">
             {hoveredItem.title}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Floating Glassmorphic Dock Container */}
-      <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-md border border-slate-800/90 shadow-2xl rounded-2xl px-2 py-1 sm:py-1.5 flex items-center gap-0.5 sm:gap-1 max-w-[96vw] overflow-x-auto no-scrollbar">
-        {clusters.map((cluster, clusterIdx) => (
-          <React.Fragment key={cluster.id}>
-            {/* Subtle Vertical Divider between domain clusters */}
-            {clusterIdx > 0 && (
-              <div
-                className="h-4 w-[1px] bg-slate-700/60 mx-1 shrink-0 select-none"
-                aria-hidden="true"
-              />
-            )}
+      <div
+        onMouseLeave={handleItemLeave}
+        className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-1.5 pointer-events-none max-w-[98vw]"
+      >
+        <div
+          onScroll={handleItemLeave}
+          className="pointer-events-auto bg-slate-950/85 backdrop-blur-md border border-slate-800/90 shadow-2xl rounded-2xl px-2 py-1 sm:py-1.5 flex items-center gap-0.5 sm:gap-1 max-w-[96vw] overflow-x-auto no-scrollbar"
+        >
+          {clusters.map((cluster, clusterIdx) => (
+            <React.Fragment key={cluster.id}>
+              {/* Subtle Vertical Divider between domain clusters */}
+              {clusterIdx > 0 && (
+                <div
+                  className="h-4 w-[1px] bg-slate-700/60 mx-1 shrink-0 select-none"
+                  aria-hidden="true"
+                />
+              )}
 
-            {/* Cluster Icon Capsule */}
-            <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-              {cluster.items.map((item) => {
-                const isActive = activeCardId === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => scrollToCard(item.id)}
-                    onMouseEnter={() => setHoveredItem(item)}
-                    onMouseLeave={() => setHoveredItem(null)}
-                    onFocus={() => setHoveredItem(item)}
-                    onBlur={() => setHoveredItem(null)}
-                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center justify-center cursor-pointer select-none shrink-0 ${
-                      isActive
-                        ? `${item.activeColorClass} scale-105`
-                        : 'border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 hover:scale-105'
-                    }`}
-                    title={item.title}
-                    aria-label={`Scroll to ${item.title}`}
-                  >
-                    <span className="leading-none">{item.icon}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </React.Fragment>
-        ))}
+              {/* Cluster Icon Capsule */}
+              <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+                {cluster.items.map((item) => {
+                  const isActive = activeCardId === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => scrollToCard(item.targetId || item.id, item.id)}
+                      onMouseEnter={(e) => handleItemHover(item, e)}
+                      onMouseLeave={handleItemLeave}
+                      onFocus={(e) => handleItemHover(item, e)}
+                      onBlur={handleItemLeave}
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center justify-center cursor-pointer select-none shrink-0 ${
+                        isActive
+                          ? `${item.activeColorClass} scale-105`
+                          : 'border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 hover:scale-105'
+                      }`}
+                      aria-label={`Scroll to ${item.title}`}
+                    >
+                      <span className="leading-none">{item.icon}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
