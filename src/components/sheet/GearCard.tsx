@@ -1076,23 +1076,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                 </div>
               </div>
 
-              {/* Currency Funds, Exotic Gear Manager Shortcut & Total Value in Header */}
+              {/* Currency Funds & Total Value in Header */}
               <div className="flex items-center gap-2 flex-wrap">
-                {/* 🧿 Exotic Gear Manager Shortcut Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGearManagerModalOpen(false);
-                    setExoticGearManagerModalOpen(true);
-                  }}
-                  className="px-2.5 py-1 bg-cyan-950/90 hover:bg-cyan-900/90 border border-cyan-500/50 hover:border-cyan-400 text-cyan-200 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 group"
-                  title="Open Exotic Gear Manager to manage mods and learn combat powers"
-                >
-                  <span className="text-sm leading-none group-hover:scale-110 transition-transform">🧿</span>
-                  <span className="font-outfit uppercase tracking-wider text-[11px] font-extrabold hidden sm:inline">Exotic Gear Manager</span>
-                  <span className="font-outfit uppercase tracking-wider text-[11px] font-extrabold sm:hidden">Exotics</span>
-                </button>
-
                 {/* Character Wallet Funds Pill */}
                 <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-950/80 border border-amber-500/50 rounded-xl font-mono text-xs font-extrabold text-amber-300 shadow-md shadow-amber-950/30">
                   <span className="text-sm leading-none">💰</span>
@@ -1122,14 +1107,28 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 flex-1 min-h-0 overflow-hidden bg-slate-900/40">
               {/* Left Column: Equipped Gear Inventory ("My Gear") */}
               <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
-                {/* Header: My Gear */}
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80 shrink-0">
+                {/* Header: My Gear + Exotic Gear Manager Shortcut */}
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80 shrink-0 gap-2">
                   <div className="flex items-center gap-1.5">
                     <Package className="w-4 h-4 text-teal-400" />
                     <span className="text-xs font-outfit font-bold uppercase tracking-wider text-teal-300">
                       My Gear ({gearList.length})
                     </span>
                   </div>
+
+                  {/* 🧿 Exotic Gear Manager Shortcut Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGearManagerModalOpen(false);
+                      setExoticGearManagerModalOpen(true);
+                    }}
+                    className="px-2.5 py-1 bg-cyan-950/90 hover:bg-cyan-900/90 border border-cyan-500/50 hover:border-cyan-400 text-cyan-200 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 group"
+                    title="Open Exotic Gear Manager to manage mods and learn combat powers"
+                  >
+                    <span className="text-sm leading-none group-hover:scale-110 transition-transform">🧿</span>
+                    <span className="font-outfit uppercase tracking-wider text-[11px] font-extrabold">Exotic Gear Manager</span>
+                  </button>
                 </div>
 
                 {/* 1. 2-Dropdown Filter Strip (Domain, Exotic with Artifacts) */}
@@ -1367,19 +1366,14 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                   setGearManagerModalOpen(false);
                                   setExoticGearManagerModalOpen(true, item.name);
                                 }}
-                                className="w-full py-1 px-2.5 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/40 hover:border-cyan-400 text-cyan-200 hover:text-white text-xs font-bold transition-all flex items-center justify-between group cursor-pointer shadow-sm"
+                                className="w-fit py-0.5 px-2 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/40 hover:border-cyan-400 text-cyan-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 group cursor-pointer shadow-sm"
                                 title={`Open ${item.name} in Exotic Gear Manager`}
                               >
-                                <span className="flex items-center gap-1.5">
-                                  <span className="text-sm leading-none">🧿</span>
-                                  <span className="font-outfit uppercase tracking-wider text-[11px] text-cyan-300 group-hover:text-cyan-100 font-extrabold">
-                                    Exotic Gear
-                                  </span>
+                                <span className="text-xs leading-none">🧿</span>
+                                <span className="font-outfit uppercase tracking-wider text-[11px] text-cyan-300 group-hover:text-cyan-100 font-extrabold">
+                                  Exotic Gear Manager
                                 </span>
-                                <span className="text-[11px] text-cyan-400/80 group-hover:text-cyan-200 flex items-center gap-1 font-semibold">
-                                  <span>Manage Mods & Powers</span>
-                                  <span className="text-xs transition-transform group-hover:translate-x-0.5">→</span>
-                                </span>
+                                <span className="text-xs text-cyan-400/80 group-hover:text-cyan-200 transition-transform group-hover:translate-x-0.5">→</span>
                               </button>
                             </div>
                           )}
