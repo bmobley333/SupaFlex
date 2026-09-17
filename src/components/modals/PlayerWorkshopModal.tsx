@@ -19,11 +19,8 @@ interface PlayerWorkshopModalProps {
 const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
 
 const USAGE_OPTIONS = [
-  '1',
-  '2',
-  '3',
-  '1-🍀',
   '1-⚡',
+  '1-🍀',
   '1-Enc',
   '2-Enc',
   '3-Enc',
@@ -1021,7 +1018,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-300">Usage</span>
-                    <InfoTooltip text="Frequency of activation (e.g. 1, 2, 3, 1-🍀 Luck, 1-⚡ Bolt, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
+                    <InfoTooltip text="Frequency of activation (e.g. 1-⚡ Bolt, 1-🍀 Luck, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
                   </div>
                   <select
                     value={usage}
@@ -1188,7 +1185,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-300">Usage</span>
-                    <InfoTooltip text="Frequency of activation (e.g. 1, 2, 3, 1-🍀 Luck, 1-⚡ Bolt, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
+                    <InfoTooltip text="Frequency of activation (e.g. 1-⚡ Bolt, 1-🍀 Luck, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
                   </div>
                   <select
                     value={usage}
@@ -1275,7 +1272,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-300">Usage</span>
-                    <InfoTooltip text="Frequency of activation (e.g. 1, 2, 3, 1-🍀 Luck, 1-⚡ Bolt, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
+                    <InfoTooltip text="Frequency of activation (e.g. 1-⚡ Bolt, 1-🍀 Luck, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
                   </div>
                   <select
                     value={usage}

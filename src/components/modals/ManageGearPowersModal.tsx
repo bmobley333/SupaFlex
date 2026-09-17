@@ -56,13 +56,14 @@ const MAIN_ABILITY_ICONS = [
   { icon: '⏱️', label: 'Duration' },
 ];
 
-const ACTION_OPTIONS = ['A', 'P', 'F', 'R'];
+const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
 const USAGE_OPTIONS = [
-  { value: '1', label: '1 Turn' },
-  { value: '1-Enc', label: '1 / Encounter' },
-  { value: '2-Enc', label: '2 / Encounter' },
-  { value: '3-Enc', label: '3 / Encounter' },
-  { value: 'At-Will', label: 'At-Will' },
+  { value: '1-⚡', label: '1-⚡ (Bolt)' },
+  { value: '1-🍀', label: '1-🍀 (Luck)' },
+  { value: '1-Enc', label: '1-Enc' },
+  { value: '2-Enc', label: '2-Enc' },
+  { value: '3-Enc', label: '3-Enc' },
+  { value: '1-Rnd', label: '1-Rnd' },
 ];
 
 export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({

@@ -70,9 +70,6 @@ const ACTION_ORDER: Record<string, number> = {
 
 const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
 const USAGE_OPTIONS: { value: string; label: string }[] = [
-  { value: '1', label: '1' },
-  { value: '2', label: '2' },
-  { value: '3', label: '3' },
   { value: '1-⚡', label: '1-⚡' },
   { value: '1-🍀', label: '1-🍀' },
   { value: '1-Enc', label: '1-Enc' },
@@ -426,7 +423,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
     setCreateName(nextVersionedName);
     setCreateAction(item.action || (type === 'powers' ? 'A' : 'P'));
-    setCreateUsage(item.usage || (type === 'powers' ? '1' : '1-Enc'));
+    setCreateUsage(item.usage || '1-Enc');
     setCreateEffect(item.effect || '');
 
     setActiveRightTab('EDITOR');
