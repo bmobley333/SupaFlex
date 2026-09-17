@@ -60,8 +60,12 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
 
   const capabilitiesSection = (
     <div id="section-capabilities" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
-      <SkillsetsPanel onTogglePosition={handleToggleTraitsSkillsPosition} isAtBottom={traitsSkillsAtBottom} />
-      <TraitsQuirksCard onTogglePosition={handleToggleTraitsSkillsPosition} isAtBottom={traitsSkillsAtBottom} />
+      <div id="card-skills" className="w-full scroll-mt-28">
+        <SkillsetsPanel onTogglePosition={handleToggleTraitsSkillsPosition} isAtBottom={traitsSkillsAtBottom} />
+      </div>
+      <div id="card-traits" className="w-full scroll-mt-28">
+        <TraitsQuirksCard onTogglePosition={handleToggleTraitsSkillsPosition} isAtBottom={traitsSkillsAtBottom} />
+      </div>
     </div>
   );
 
@@ -69,8 +73,12 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-[60vh] relative">
       {/* Top Section: Character Card (Left) & Paths Card (Right) */}
       <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch scroll-mt-32">
-        <HeroHubCard onOpenApManager={onOpenApManager} className="w-full h-full" />
-        <PathsCard className="w-full h-full" />
+        <div id="card-hero-hub" className="w-full h-full scroll-mt-28 flex flex-col">
+          <HeroHubCard onOpenApManager={onOpenApManager} className="w-full h-full" />
+        </div>
+        <div id="card-paths" className="w-full h-full scroll-mt-28 flex flex-col">
+          <PathsCard className="w-full h-full" />
+        </div>
       </div>
 
       {/* Symmetrical 2-Column Capabilities Grid: Skills (Left) and Traits (Right) when at top */}
@@ -80,26 +88,40 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
       <div id="section-combat-vitals" className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 scroll-mt-32">
         {/* Column 1: Offense (Weapons & GM Monster Stats) */}
         <div className="flex flex-col gap-4">
-          <WeaponsCard />
-          <GmMonsterTrackerHud />
+          <div id="card-weapons" className="scroll-mt-28">
+            <WeaponsCard />
+          </div>
+          <div id="card-monsters" className="scroll-mt-28">
+            <GmMonsterTrackerHud />
+          </div>
         </div>
 
         {/* Column 2: Protection (Armor with integrated MR, Shield, & Chaos Gauntlet) */}
         <div className="flex flex-col gap-4">
-          <ArmorCard />
-          <ShieldCard />
-          <ChaosGauntletCard />
+          <div id="card-armor" className="scroll-mt-28">
+            <ArmorCard />
+          </div>
+          <div id="card-shield" className="scroll-mt-28">
+            <ShieldCard />
+          </div>
+          <div id="card-chaos-gauntlet" className="scroll-mt-28">
+            <ChaosGauntletCard />
+          </div>
         </div>
 
         {/* Column 3: Survival (Vitality & Party Roster HUD) */}
         <div className="lg:col-span-2 xl:col-span-1 flex flex-col gap-4">
-          <VitalsHeader onOpenVitalityManager={onOpenVitalityManager} />
-          <PartyRosterHud
-            activeCharacter={activeCharacter}
-            playerEmail={playerEmail}
-            tabSessionId={tabSessionId}
-            onOpenPartySelector={onOpenPartySelector}
-          />
+          <div id="card-vitals" className="scroll-mt-28">
+            <VitalsHeader onOpenVitalityManager={onOpenVitalityManager} />
+          </div>
+          <div id="card-party" className="scroll-mt-28">
+            <PartyRosterHud
+              activeCharacter={activeCharacter}
+              playerEmail={playerEmail}
+              tabSessionId={tabSessionId}
+              onOpenPartySelector={onOpenPartySelector}
+            />
+          </div>
         </div>
       </div>
 
@@ -108,18 +130,22 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         {/* Column 1 (Left): Physical Commerce, Inventory & Gear Powers Combat Impacts */}
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch">
-            <div className="sm:col-span-7 flex">
+            <div id="card-money" className="sm:col-span-7 flex scroll-mt-28">
               <MoneyCard className="w-full h-full" />
             </div>
-            <div className="sm:col-span-5 flex">
+            <div id="card-gear" className="sm:col-span-5 flex scroll-mt-28">
               <GearCard className="w-full h-full" />
             </div>
           </div>
-          <GearPowersCard />
+          <div id="card-exotic-gear" className="scroll-mt-28">
+            <GearPowersCard />
+          </div>
         </div>
 
         {/* Column 2 (Right): My Powers */}
-        <AbilitySlotsGrid title="MY POWERS" type="powers" />
+        <div id="card-powers" className="scroll-mt-28">
+          <AbilitySlotsGrid title="MY POWERS" type="powers" />
+        </div>
       </div>
 
       {/* Symmetrical 2-Column Capabilities Grid: Skills (Left) and Traits (Right) when relocated to bottom */}
