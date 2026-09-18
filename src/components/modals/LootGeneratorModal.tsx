@@ -8,12 +8,14 @@ import { gameApi } from '../../services/api';
 import { LootDraftModal } from './LootDraftModal';
 import { EchoVaultModal } from './EchoVaultModal';
 import { ChaosGauntletSocketModal } from './ChaosGauntletSocketModal';
+import { ResolveBaseItemModal } from './ResolveBaseItemModal';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { GearModFunctionTree } from '../common/GearModFunctionTree';
 import { VaultItem, SupabaseChaosGem } from '../../types/game';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 import { resolveLootAbilities, ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
 import { ExoticTier } from '../../utils/exoticCatalogResolver';
+import { hasTemplateBracket } from '../../utils/templateItemResolver';
 
 export interface MoveToSheetPayload {
   title: string;
@@ -153,6 +155,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const [activeRightTab, setActiveRightTab] = useState<'GENERATOR' | 'SPECIFIC' | 'VAULT'>('GENERATOR');
   const [lastDraftTier, setLastDraftTier] = useState<'Minor' | 'Lesser' | 'Greater' | 'Epic'>('Lesser');
   const [partyVault, setPartyVault] = useState<VaultItem[]>([]);
+  const [templateResolutionTarget, setTemplateResolutionTarget] = useState<{
+    templateName: string;
+    action: (resolvedName: string, selectedBase: any) => Promise<void>;
+  } | null>(null);
 
   // Specific Item Tab State
   const [specificCategory, setSpecificCategory] = useState<'coins' | 'weapons' | 'armor' | 'shields' | 'gear' | 'relics' | 'hardware' | 'chaos_gems'>('coins');
@@ -812,12 +818,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   };
 
   // Unified Claim Handler
-  const claimMoveToSheet = async (res: RollResult) => {
-    if (res.claimed) return;
-    if (res.type === 'chaos_gem') {
-      handleClaimChaosGem(res);
-      return;
-    }
+  const executeMoveToSheet = async (res: RollResult, baseTemplate?: string, baseItemName?: string) => {
     const ok = await onMoveToSheet({
       title: res.title,
       categoryKey: res.categoryKey || (res.type === 'art_gem' ? 'art_gems' : res.tableKey) || '',
@@ -826,9 +827,17 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       coinsGold: res.coinsGold,
       valuableVal: res.valuableVal,
       valuableCurrency: res.valuableCurrency || 'gp',
-      magicItem: res.magicItem,
+      magicItem: res.magicItem
+        ? {
+            ...res.magicItem,
+            base_template: baseTemplate || res.magicItem.base_template,
+            base_item_name: baseItemName || res.magicItem.base_item_name,
+          }
+        : undefined,
       type: res.type,
-    });
+      base_template: baseTemplate,
+      base_item_name: baseItemName,
+    } as any);
 
     if (ok) {
       res.claimed = true;
@@ -838,6 +847,34 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     } else {
       showToast(`❌ Failed to move '${res.title}' to Sheet.`);
     }
+  };
+
+  const claimMoveToSheet = async (res: RollResult) => {
+    if (res.claimed) return;
+    if (res.type === 'chaos_gem') {
+      handleClaimChaosGem(res);
+      return;
+    }
+
+    const templateCandidate = res.title || res.magicItem?.name || '';
+    if (hasTemplateBracket(templateCandidate)) {
+      setTemplateResolutionTarget({
+        templateName: templateCandidate,
+        action: async (resolvedName, selectedBase) => {
+          res.title = resolvedName;
+          if (res.magicItem) {
+            res.magicItem.name = resolvedName;
+            res.magicItem.base_template = templateCandidate;
+            res.magicItem.base_item_name = selectedBase.name;
+          }
+          setResults([...results]);
+          await executeMoveToSheet(res, templateCandidate, selectedBase.name);
+        },
+      });
+      return;
+    }
+
+    await executeMoveToSheet(res);
   };
 
   const handleRefineResult = (res: RollResult) => {
@@ -919,7 +956,11 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     showToast(`📥 Passed '${res.title}' to Party Echo Vault!`);
   };
 
-  const handleSelectDraftReward = async (reward: { type: 'magic_item' | 'treasure'; data: any }) => {
+  const executeSelectDraftReward = async (
+    reward: { type: 'magic_item' | 'treasure'; data: any },
+    baseTemplate?: string,
+    baseItemName?: string
+  ) => {
     let categoryKey = 'magic_Lesser';
     if (reward.data?.type === 'coins') {
       categoryKey = 'coins';
@@ -936,9 +977,17 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       coinsSilver: reward.data?.silver,
       coinsGold: reward.data?.gold,
       valuableVal: reward.data?.value,
-      magicItem: reward.type === 'magic_item' ? reward.data : undefined,
+      magicItem: reward.type === 'magic_item'
+        ? {
+            ...reward.data,
+            base_template: baseTemplate || reward.data?.base_template,
+            base_item_name: baseItemName || reward.data?.base_item_name,
+          }
+        : undefined,
       type: reward.type,
-    });
+      base_template: baseTemplate,
+      base_item_name: baseItemName,
+    } as any);
 
     if (ok) {
       showToast(`✅ Claimed Draft Reward '${reward.data?.name || 'Reward'}' to Sheet!`);
@@ -954,6 +1003,26 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     return ok;
   };
 
+  const handleSelectDraftReward = async (reward: { type: 'magic_item' | 'treasure'; data: any }): Promise<boolean> => {
+    const rawName = reward.data?.name || '';
+    if (hasTemplateBracket(rawName)) {
+      setTemplateResolutionTarget({
+        templateName: rawName,
+        action: async (resolvedName, selectedBase) => {
+          if (reward.data) {
+            reward.data.name = resolvedName;
+            reward.data.base_template = rawName;
+            reward.data.base_item_name = selectedBase.name;
+          }
+          await executeSelectDraftReward(reward, rawName, selectedBase.name);
+        },
+      });
+      return true;
+    }
+
+    return executeSelectDraftReward(reward);
+  };
+
   const handleDeconstructDraft = () => {
     updateActiveSheetData((prev) => {
       const current = prev.essence_core || 0;
@@ -966,6 +1035,46 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     });
     saveActiveCharacter();
     showToast(`♻️ Draft Deconstructed! Essence cut in half.`);
+  };
+
+  const executeClaimVaultItem = async (
+    item: VaultItem,
+    baseTemplate?: string,
+    baseItemName?: string
+  ): Promise<boolean> => {
+    let categoryKey = 'gear_quality';
+    if (item.type === 'coins' || item.coinsSilver || item.coinsGold) categoryKey = 'coins';
+    else if (item.magicItem) categoryKey = (item.magicItem.is_hardware || item.magicItem.is_exotic) ? 'hardware' : `magic_${item.rarity || 'Lesser'}`;
+    else categoryKey = 'art_gems';
+
+    const ok = await onMoveToSheet({
+      title: item.title,
+      categoryKey,
+      description: item.description,
+      coinsSilver: item.coinsSilver,
+      coinsGold: item.coinsGold,
+      valuableVal: item.valuableVal,
+      magicItem: item.magicItem
+        ? {
+            ...item.magicItem,
+            base_template: baseTemplate || item.magicItem.base_template,
+            base_item_name: baseItemName || item.magicItem.base_item_name,
+          }
+        : undefined,
+      type: item.type,
+      base_template: baseTemplate,
+      base_item_name: baseItemName,
+    } as any);
+
+    if (ok) {
+      const partyId = activePartyId || 'default';
+      const storageKey = `supaflex_party_echo_vault_${partyId}`;
+      const updated = partyVault.filter((v) => v.id !== item.id);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      setPartyVault(updated);
+      showToast(`✅ Claimed '${item.title}' from Echo Vault!`);
+    }
+    return ok;
   };
 
   const handleClaimVaultItem = async (item: VaultItem): Promise<boolean> => {
@@ -997,31 +1106,24 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       }
     }
 
-    let categoryKey = 'gear_quality';
-    if (item.type === 'coins' || item.coinsSilver || item.coinsGold) categoryKey = 'coins';
-    else if (item.magicItem) categoryKey = (item.magicItem.is_hardware || item.magicItem.is_exotic) ? 'hardware' : `magic_${item.rarity || 'Lesser'}`;
-    else categoryKey = 'art_gems';
-
-    const ok = await onMoveToSheet({
-      title: item.title,
-      categoryKey,
-      description: item.description,
-      coinsSilver: item.coinsSilver,
-      coinsGold: item.coinsGold,
-      valuableVal: item.valuableVal,
-      magicItem: item.magicItem,
-      type: item.type,
-    });
-
-    if (ok) {
-      const partyId = activePartyId || 'default';
-      const storageKey = `supaflex_party_echo_vault_${partyId}`;
-      const updated = partyVault.filter((v) => v.id !== item.id);
-      localStorage.setItem(storageKey, JSON.stringify(updated));
-      setPartyVault(updated);
-      showToast(`✅ Claimed '${item.title}' from Echo Vault!`);
+    const templateCandidate = item.title || item.magicItem?.name || '';
+    if (hasTemplateBracket(templateCandidate)) {
+      setTemplateResolutionTarget({
+        templateName: templateCandidate,
+        action: async (resolvedName, selectedBase) => {
+          item.title = resolvedName;
+          if (item.magicItem) {
+            item.magicItem.name = resolvedName;
+            item.magicItem.base_template = templateCandidate;
+            item.magicItem.base_item_name = selectedBase.name;
+          }
+          await executeClaimVaultItem(item, templateCandidate, selectedBase.name);
+        },
+      });
+      return true;
     }
-    return ok;
+
+    return executeClaimVaultItem(item);
   };
 
   const handleTriggerRestSweep = async () => {
@@ -2004,6 +2106,27 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         onClose={handleSocketCancel}
         onSocketSuccess={handleSocketSuccess}
       />
+
+      {/* Template Bracket Resolution Modal */}
+      {templateResolutionTarget && (
+        <ResolveBaseItemModal
+          isOpen={true}
+          templateName={templateResolutionTarget.templateName}
+          catalogs={{
+            weapons: weaponsCatalog || [],
+            armor: armorCatalog || [],
+            shields: shieldsCatalog || [],
+          }}
+          isGsUnlocked={isGsUnlocked}
+          characterName={characterName}
+          onConfirm={async (resolvedName, selectedBase) => {
+            const target = templateResolutionTarget;
+            setTemplateResolutionTarget(null);
+            await target.action(resolvedName, selectedBase);
+          }}
+          onCancel={() => setTemplateResolutionTarget(null)}
+        />
+      )}
     </div>,
     document.body
   );

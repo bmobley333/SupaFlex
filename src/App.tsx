@@ -487,6 +487,8 @@ export default function App() {
           is_exotic: isHw ? true : undefined,
           cost: m.cost || (isHw ? 'Exotic' : 'Artifact'),
           notes: itemEffect,
+          base_template: m.base_template || (itemPayload as any).base_template,
+          base_item_name: m.base_item_name || (itemPayload as any).base_item_name,
         };
 
         updateActiveSheetData((prev) => {
@@ -530,6 +532,8 @@ export default function App() {
           category: gearCat,
           item_type: itemType,
           notes: itemPayload.description || '',
+          base_template: (itemPayload as any).base_template,
+          base_item_name: (itemPayload as any).base_item_name,
         };
 
         updateActiveSheetData((prev) => {

@@ -573,6 +573,9 @@ export interface SimpleGearItem {
   is_exotic?: boolean;
   installed_mods?: string[];
   removed_mods?: string[];
+  base_template?: string;
+  base_item_name?: string;
+  base_item_id?: string | number;
 }
 
 export interface ApLogEntry {

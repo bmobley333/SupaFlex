@@ -11,6 +11,7 @@ import {
   SimpleGearItem,
   getCategorySlotWeight,
 } from '../types/game';
+import { hasTemplateBracket, replaceTemplateBracket } from './templateItemResolver';
 
 /**
  * Authoritative regular expression matching canonical table and category prefixes in belongs_to strings.
@@ -200,36 +201,65 @@ export const getFunctionsForMod = (
 };
 
 /**
+ * Checks if a candidate host name matches a template belongs_to string with [Weapon], [Armor], or [Shield].
+ * E.g. "Supplies: [Weapon] of Echoes" matches "Broadsword of Echoes" or "TurboPlaz (mso) of Echoes".
+ */
+export const isTemplateBelongsToMatch = (
+  belongsToStr?: string | null,
+  candidateHostName?: string | null
+): boolean => {
+  if (!belongsToStr || !candidateHostName) return false;
+  if (!hasTemplateBracket(belongsToStr)) return false;
+  const cleanHost = cleanBelongsToName(candidateHostName);
+  const parts = splitBelongsToTargets(belongsToStr);
+  return parts.some((p) => {
+    const cleanTemplate = cleanBelongsToName(p);
+    if (!hasTemplateBracket(cleanTemplate)) return false;
+    const escaped = cleanTemplate
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\\\[(weapon|armor|shield)\\\]/gi, '(.+)');
+    try {
+      return new RegExp(`^${escaped}$`, 'i').test(cleanHost);
+    } catch {
+      return false;
+    }
+  });
+};
+
+/**
  * Resolves all direct functions belonging to a physically owned gear item.
- * Prefers exact name matches, falling back to stripped name.
+ * Supports exact name matches, base template matches (e.g. "[Weapon] of Echoes"),
+ * dynamic regex template matching, and inherent functions from base exotic items (e.g. "TurboPlaz (mso)").
  */
 export const getFunctionsForGearItem = (
   itemName: string,
-  functionsCatalog: FunctionItem[]
+  functionsCatalog: FunctionItem[],
+  baseTemplate?: string,
+  baseItemName?: string
 ): FunctionItem[] => {
   if (!itemName || !functionsCatalog || functionsCatalog.length === 0) return [];
   const cleanItem = cleanBelongsToName(itemName);
   const cleanStripped = cleanItem.replace(/\(mso\)/gi, '').trim();
+  const cleanTemplate = baseTemplate ? cleanBelongsToName(baseTemplate) : '';
+  const cleanBaseItem = baseItemName ? cleanBelongsToName(baseItemName) : '';
 
-  // First pass: exact matches
-  const exactMatches = functionsCatalog.filter((fn) => {
-    if (!fn.belongs_to) return false;
+  const matchedIds = new Set<string | number>();
+  const results: FunctionItem[] = [];
+
+  const addFn = (fn: FunctionItem) => {
+    const key = fn.id ?? fn.name;
+    if (!matchedIds.has(key)) {
+      matchedIds.add(key);
+      results.push(fn);
+    }
+  };
+
+  for (const fn of functionsCatalog) {
+    if (!fn.belongs_to) continue;
     const parts = splitBelongsToTargets(fn.belongs_to);
-    return parts.some((p) => {
-      const trimmed = p.trim();
-      if (/^Mod:\s*/i.test(trimmed)) return false;
-      const cleaned = cleanBelongsToName(trimmed);
-      return cleaned === cleanItem;
-    });
-  });
 
-  if (exactMatches.length > 0) return exactMatches;
-
-  // Second pass: stripped (mso) fallback matches
-  return functionsCatalog.filter((fn) => {
-    if (!fn.belongs_to) return false;
-    const parts = splitBelongsToTargets(fn.belongs_to);
-    return parts.some((p) => {
+    // 1. Direct name match (exact or stripped)
+    const hasDirectMatch = parts.some((p) => {
       const trimmed = p.trim();
       if (/^Mod:\s*/i.test(trimmed)) return false;
       const cleaned = cleanBelongsToName(trimmed);
@@ -241,7 +271,47 @@ export const getFunctionsForGearItem = (
         stripped === cleanItem
       );
     });
-  });
+    if (hasDirectMatch) {
+      addFn(fn);
+      continue;
+    }
+
+    // 2. Explicit base_template match (e.g. "[Weapon] of Echoes")
+    if (cleanTemplate) {
+      const hasTemplateMatch = parts.some((p) => {
+        const trimmed = p.trim();
+        if (/^Mod:\s*/i.test(trimmed)) return false;
+        const cleaned = cleanBelongsToName(trimmed);
+        return cleaned === cleanTemplate;
+      });
+      if (hasTemplateMatch) {
+        addFn(fn);
+        continue;
+      }
+    }
+
+    // 3. Dynamic template regex pattern match (e.g. "Broadsword of Echoes" matches "[Weapon] of Echoes")
+    if (isTemplateBelongsToMatch(fn.belongs_to, itemName)) {
+      addFn(fn);
+      continue;
+    }
+
+    // 4. Inherent functions from base exotic item (e.g. "TurboPlaz (mso)" functions)
+    if (cleanBaseItem) {
+      const hasBaseItemMatch = parts.some((p) => {
+        const trimmed = p.trim();
+        if (/^Mod:\s*/i.test(trimmed)) return false;
+        const cleaned = cleanBelongsToName(trimmed);
+        const stripped = cleaned.replace(/\(mso\)/gi, '').trim();
+        return cleaned === cleanBaseItem || stripped === cleanBaseItem;
+      });
+      if (hasBaseItemMatch) {
+        addFn(fn);
+      }
+    }
+  }
+
+  return results;
 };
 
 /**
@@ -250,7 +320,8 @@ export const getFunctionsForGearItem = (
 export const mapFunctionToVaultItem = (
   fn: FunctionItem,
   hostName: string,
-  modName?: string
+  modName?: string,
+  baseItemName?: string
 ): MagicItem => {
   let finalGear = hostName;
   let finalMod = modName;
@@ -264,10 +335,16 @@ export const mapFunctionToVaultItem = (
     ? `${finalGear} > ${finalMod}`
     : `Exotic Gear: ${finalGear}`;
 
+  // If function name itself has template brackets (e.g. "[Weapon] of Echoes"), resolve it
+  let resolvedName = fn.name;
+  if (hasTemplateBracket(resolvedName)) {
+    resolvedName = replaceTemplateBracket(resolvedName, baseItemName || hostName);
+  }
+
   return {
     id: typeof fn.id === 'number' ? fn.id : Date.now() + Math.floor(Math.random() * 10000),
-    name: fn.name,
-    base_name: fn.name.replace(/\s*v\d+$/i, '').trim(),
+    name: resolvedName,
+    base_name: resolvedName.replace(/\s*v\d+$/i, '').trim(),
     version: 1,
     action: (fn.action?.toUpperCase() as any) || 'P',
     usage: fn.usage || '1-Enc',
@@ -389,11 +466,13 @@ export const reconcileCharacterVaultWithGear = (
 
   for (const hostItem of baseGearItems) {
     const hostName = hostItem.name;
+    const baseTemplate = hostItem.base_template;
+    const baseItemName = hostItem.base_item_name;
 
     // A. Direct functions of this gear item
-    const directFns = getFunctionsForGearItem(hostName, functionsCatalog);
+    const directFns = getFunctionsForGearItem(hostName, functionsCatalog, baseTemplate, baseItemName);
     for (const fn of directFns) {
-      registerExpected(mapFunctionToVaultItem(fn, hostName));
+      registerExpected(mapFunctionToVaultItem(fn, hostName, undefined, baseItemName));
     }
 
     // Fallback: If hostItem is an Artifact or Exotic and has no catalog functions
@@ -425,15 +504,17 @@ export const reconcileCharacterVaultWithGear = (
         belongs_to: `Supplies: ${hostName}`,
         genres: ['Fantasy'],
       };
-      registerExpected(mapFunctionToVaultItem(synFn, hostName));
+      registerExpected(mapFunctionToVaultItem(synFn, hostName, undefined, baseItemName));
     }
 
-    // B. Inherent {Free} mods for this host item
-    const freeModsForHost = modsCatalog.filter((m) => isModFreeForHost(m, hostName));
+    // B. Inherent {Free} mods for this host item (checking both host name and base exotic chassis)
+    const freeModsForHost = modsCatalog.filter(
+      (m) => isModFreeForHost(m, hostName) || (baseItemName && isModFreeForHost(m, baseItemName))
+    );
     for (const fm of freeModsForHost) {
       const fns = getFunctionsForMod(fm.name, functionsCatalog);
       for (const fn of fns) {
-        registerExpected(mapFunctionToVaultItem(fn, hostName, fm.name));
+        registerExpected(mapFunctionToVaultItem(fn, hostName, fm.name, baseItemName));
       }
     }
 
@@ -442,7 +523,7 @@ export const reconcileCharacterVaultWithGear = (
       for (const modName of hostItem.installed_mods) {
         const fns = getFunctionsForMod(modName, functionsCatalog);
         for (const fn of fns) {
-          registerExpected(mapFunctionToVaultItem(fn, hostName, modName));
+          registerExpected(mapFunctionToVaultItem(fn, hostName, modName, baseItemName));
         }
       }
     }
