@@ -117,8 +117,6 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     loadCatalog();
   }, [isOpen, activeCategoryTab, weaponsCatalog, armorCatalog, shieldsCatalog, suppliesCatalog, artifactsCatalog, exoticsCatalog]);
 
-  if (!isOpen) return null;
-
   const rollDice = (sides: number) => Math.floor(Math.random() * sides) + 1;
 
   // Evaluate coin formula string into concrete silver and gold numbers
@@ -590,6 +588,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
       .sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
   }, [catalogItems, searchQuery, isGsUnlocked]);
 
+  if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
 
   return createPortal(

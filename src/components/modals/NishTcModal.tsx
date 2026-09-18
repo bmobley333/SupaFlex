@@ -42,8 +42,6 @@ export const NishTcModal: React.FC<NishTcModalProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const hasAutoRolledRef = useRef(false);
 
-  if (!isOpen) return null;
-
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
@@ -122,6 +120,8 @@ export const NishTcModal: React.FC<NishTcModalProps> = ({
       hasAutoRolledRef.current = false;
     }
   }, [isOpen, autoRollType, autoRollCount]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">

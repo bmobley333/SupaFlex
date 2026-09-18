@@ -876,16 +876,18 @@ export default function App() {
 
       {/* 🌟 Nish Tremendous & Critical Generator Modal */}
       <ErrorBoundary fallbackTitle="Nish T/C Generator Error" onClose={() => setShowNishTcModal(false)}>
-        <NishTcModal
-          isOpen={showNishTcModal}
-          onClose={() => {
-            setShowNishTcModal(false);
-            setNishTcAutoRoll(null);
-          }}
-          characterName={activeCharacter?.name || 'Active Hero'}
-          autoRollType={nishTcAutoRoll?.type}
-          autoRollCount={nishTcAutoRoll?.count}
-        />
+        {showNishTcModal && (
+          <NishTcModal
+            isOpen={showNishTcModal}
+            onClose={() => {
+              setShowNishTcModal(false);
+              setNishTcAutoRoll(null);
+            }}
+            characterName={activeCharacter?.name || 'Active Hero'}
+            autoRollType={nishTcAutoRoll?.type}
+            autoRollCount={nishTcAutoRoll?.count}
+          />
+        )}
       </ErrorBoundary>
 
 
