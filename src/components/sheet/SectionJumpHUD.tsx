@@ -90,17 +90,16 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
           activeColorClass: 'bg-amber-500/20 text-amber-200 border-amber-400/80 shadow-[0_0_10px_rgba(245,158,11,0.35)]',
         },
         {
-          id: 'card-mr',
-          targetId: 'card-armor',
-          title: 'MR (Movement Rate)',
-          icon: '👣',
-          activeColorClass: 'bg-teal-500/20 text-teal-200 border-teal-400/80 shadow-[0_0_10px_rgba(20,184,166,0.35)]',
-        },
-        {
           id: 'card-shield',
           title: 'Shield SK',
           icon: '🛡️',
           activeColorClass: 'bg-cyan-500/20 text-cyan-200 border-cyan-400/80 shadow-[0_0_10px_rgba(6,182,212,0.35)]',
+        },
+        {
+          id: 'card-movement',
+          title: 'Movement Rate (MR)',
+          icon: '👣',
+          activeColorClass: 'bg-teal-500/20 text-teal-200 border-teal-400/80 shadow-[0_0_10px_rgba(20,184,166,0.35)]',
         },
         {
           id: 'card-chaos-gauntlet',
