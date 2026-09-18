@@ -10,6 +10,7 @@ import { SkillsetsPanel } from './SkillsetsPanel';
 import { WeaponsCard } from './WeaponsCard';
 import { ArmorCard } from './ArmorCard';
 import { ShieldCard } from './ShieldCard';
+import { MovementCard } from './MovementCard';
 import { ChaosGauntletCard } from './ChaosGauntletCard';
 import { VitalsHeader } from './VitalsHeader';
 import { AbilitySlotsGrid } from './AbilitySlotsGrid';
@@ -96,13 +97,16 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
           </div>
         </div>
 
-        {/* Column 2: Protection (Armor with integrated MR, Shield, & Chaos Gauntlet) */}
+        {/* Column 2: Protection & Mobility (Armor, Shield, Movement Rate, & Chaos Gauntlet) */}
         <div className="flex flex-col gap-4">
           <div id="card-armor" className="scroll-mt-28">
             <ArmorCard />
           </div>
           <div id="card-shield" className="scroll-mt-28">
             <ShieldCard />
+          </div>
+          <div id="card-movement" className="scroll-mt-28">
+            <MovementCard />
           </div>
           <div id="card-chaos-gauntlet" className="scroll-mt-28">
             <ChaosGauntletCard />
