@@ -661,7 +661,7 @@ export const ArmorCard: React.FC = () => {
                               </div>
                             </div>
                             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                              <span>AR: {item.ar} | MR: {item.mr}</span>
+                              <span>AR: {item.ar ? (String(item.ar).startsWith('d') ? item.ar : `d${item.ar}`) : '0'} | MR: {item.mr}</span>
                               <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-slate-300 font-bold">
                                 {item.ap_cost || 1} AP
                               </span>
@@ -917,7 +917,7 @@ export const ArmorCard: React.FC = () => {
                                 </div>
                                 <div className="flex items-center justify-between text-xs font-mono text-slate-400">
                                   <span>Req: <strong className="text-slate-200">{item.requirement}</strong></span>
-                                  <span>AR: <strong className="text-amber-300">{item.ar}</strong></span>
+                                  <span>AR: <strong className="text-amber-300">{item.ar ? (String(item.ar).startsWith('d') ? item.ar : `d${item.ar}`) : '0'}</strong></span>
                                   <span>MR: <strong className="text-cyan-300">{item.mr}</strong></span>
                                   {evalResult.meetsReq && (
                                     <span className="text-[10px] text-emerald-400 font-sans font-bold">
@@ -1028,16 +1028,32 @@ export const ArmorCard: React.FC = () => {
                 : 'Auto-updated matching equipped armor AR rating'
             }
           >
-            {(statHooks.effectiveArOverride !== undefined ? statHooks.effectiveArOverride : (armor.ar ?? 0)) + statHooks.arBonus}
+            {(() => {
+              const rawVal = (statHooks.effectiveArOverride !== undefined ? statHooks.effectiveArOverride : (armor.ar ?? 0)) + statHooks.arBonus;
+              const numericVal = typeof rawVal === 'number' ? rawVal : parseInt(String(rawVal).replace(/[^0-9]/g, ''), 10);
+              return numericVal > 0 ? `d${numericVal}` : '0';
+            })()}
           </div>
         </div>
       </div>
 
       {/* Integrated Movement Rate (MR) Footer Sub-Card */}
       <div className="pt-2.5 mt-1 border-t border-slate-800/80 flex flex-col gap-2">
-        <span className="font-outfit font-bold text-teal-300 flex items-center gap-1.5 uppercase tracking-wider text-xs">
-          <span>👣</span> MR <span className="text-[10px] text-slate-400 normal-case font-normal">(Movement Rate)</span>
-        </span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="font-outfit font-bold text-teal-300 flex items-center gap-1.5 uppercase tracking-wider text-xs">
+              <span>👣</span> MR <span className="text-[10px] text-slate-400 normal-case font-normal">(Movement Rate)</span>
+            </span>
+            <CardHelpButton ruleKey="movement_rate.basics" />
+          </div>
+          <div
+            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-950/80 border border-teal-500/30 text-teal-300 text-xs font-mono font-bold shadow-sm"
+            title="Standing Jump: d👣 sq (Move action M) | Running Jump: 👣+d👣 sq (Attack & Move action AM)"
+          >
+            <span className="text-[11px] text-slate-300 font-sans font-semibold">Jump</span>
+            <span className="text-amber-300 font-extrabold tracking-wide">d👣</span>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           {/* Armored MR Box */}
           <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 w-fit ${

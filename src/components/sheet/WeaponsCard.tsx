@@ -234,7 +234,7 @@ export const WeaponsCard: React.FC = () => {
     const newSlots: WeaponSlot[] = variantsToEquip.map((variant) => {
       const calculatedAtk = calculateWeaponAtk(variant.name, variant.mhs, attributeDice);
       const isSpecialDmg = variant.dmg === '❌' || weapon.dmg === '❌';
-      const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(variant.name, variant.mhs, attributeDice));
+      const calculatedDmg = isSpecialDmg ? '❌' : `d${calculateWeaponDmg(variant.name, variant.mhs, attributeDice)}`;
 
       const cleanBlockNum = variant.max_block ? variant.max_block.replace('🛡️', '') : 'n/a';
       const slotName = weapon.type.includes(',') ? `${variant.name} (${variant.variantType})` : variant.name;
@@ -752,7 +752,7 @@ export const WeaponsCard: React.FC = () => {
                                 {group.slots.map((item) => {
                                   const calculatedAtk = calculateWeaponAtk(item.name, item.mhs, attributeDice);
                                   const isSpecialDmg = item.dmg === '❌';
-                                  const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(item.name, item.mhs, attributeDice));
+                                  const calculatedDmg = isSpecialDmg ? '❌' : `d${calculateWeaponDmg(item.name, item.mhs, attributeDice)}`;
                                   const variantLabel = item.name.includes('(')
                                     ? item.name.substring(item.name.indexOf('(') + 1, item.name.indexOf(')'))
                                     : item.mhs === 'H' ? 'Hurled' : item.mhs === 'S' ? 'Shot' : 'Melee';
@@ -1063,7 +1063,7 @@ export const WeaponsCard: React.FC = () => {
                                     const variantEval = evaluateItemAp(weapon.path, v.requirementStr, attributeDice, knownPaths, v.variantType);
                                     const calculatedAtk = calculateWeaponAtk(v.name, v.mhs, attributeDice);
                                     const isSpecialDmg = v.dmg === '❌' || weapon.dmg === '❌';
-                                    const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(v.name, v.mhs, attributeDice));
+                                    const calculatedDmg = isSpecialDmg ? '❌' : `d${calculateWeaponDmg(v.name, v.mhs, attributeDice)}`;
 
                                     return (
                                       <div
@@ -1154,7 +1154,7 @@ export const WeaponsCard: React.FC = () => {
               const isMso = isMsoEntry(item.name);
               const calculatedAtk = calculateWeaponAtk(item.name, item.mhs, attributeDice);
               const isSpecialDmg = item.dmg === '❌';
-              const calculatedDmg = isSpecialDmg ? '❌' : String(calculateWeaponDmg(item.name, item.mhs, attributeDice));
+              const calculatedDmg = isSpecialDmg ? '❌' : `d${calculateWeaponDmg(item.name, item.mhs, attributeDice)}`;
               const catKey = (item.mhs as string).startsWith('H') || (item.mhs as string) === 'Hurled'
                 ? 'H'
                 : (item.mhs as string).startsWith('S') || (item.mhs as string) === 'Shot'
