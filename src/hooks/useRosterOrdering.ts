@@ -1,7 +1,7 @@
 // src/hooks/useRosterOrdering.ts
 import { useState, useCallback, useMemo } from 'react';
 
-export type SortPreset = 'custom' | 'alphabetical' | 'vit_desc' | 'vit_asc';
+export type SortPreset = 'custom' | 'alphabetical' | 'vit_desc' | 'vit_asc' | 'nish_desc';
 
 export interface UseRosterOrderingOptions<T> {
   items: T[];
@@ -9,6 +9,7 @@ export interface UseRosterOrderingOptions<T> {
   getId: (item: T) => string;
   getName?: (item: T) => string;
   getVitPct?: (item: T) => number;
+  getNish?: (item: T) => number;
 }
 
 export function useRosterOrdering<T>({
@@ -17,6 +18,7 @@ export function useRosterOrdering<T>({
   getId,
   getName,
   getVitPct,
+  getNish,
 }: UseRosterOrderingOptions<T>) {
   const [orderIds, setOrderIds] = useState<string[]>(() => {
     try {
@@ -36,7 +38,7 @@ export function useRosterOrdering<T>({
   const [activePreset, setActivePresetState] = useState<SortPreset>(() => {
     try {
       const saved = localStorage.getItem(presetStorageKey);
-      if (saved && (saved === 'custom' || saved === 'alphabetical' || saved === 'vit_desc' || saved === 'vit_asc')) {
+      if (saved && (saved === 'custom' || saved === 'alphabetical' || saved === 'vit_desc' || saved === 'vit_asc' || saved === 'nish_desc')) {
         return saved as SortPreset;
       }
     } catch (e) {
@@ -105,6 +107,17 @@ export function useRosterOrdering<T>({
         return getId(a).localeCompare(getId(b));
       });
     }
+    if (activePreset === 'nish_desc' && getNish) {
+      return [...items].sort((a, b) => {
+        const diff = getNish(b) - getNish(a); // Descending: Highest Nish first
+        if (Math.abs(diff) > 0.001) return diff;
+        if (getName) {
+          const nameDiff = getName(a).localeCompare(getName(b));
+          if (nameDiff !== 0) return nameDiff;
+        }
+        return getId(a).localeCompare(getId(b));
+      });
+    }
 
     if (orderIds.length === 0) return items;
 
@@ -135,7 +148,7 @@ export function useRosterOrdering<T>({
     });
 
     return result;
-  }, [items, orderIds, activePreset, getId, getName, getVitPct]);
+  }, [items, orderIds, activePreset, getId, getName, getVitPct, getNish]);
 
   // Move item from one index to another
   const moveItem = useCallback(

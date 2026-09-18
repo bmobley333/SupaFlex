@@ -222,3 +222,38 @@ export const executeHybridRoll = (request: RollRequest): RollResult => {
     summary,
   };
 };
+
+export interface NishRollResult {
+  d20Rolls: number[];
+  keptD20: number;
+  motionRoll: ExplodingRoll;
+  total: number;
+  isTremendous: boolean;
+  isCritical: boolean;
+}
+
+/**
+ * Executes a MetaScape Nish (Initiative) Roll:
+ * Always a skilled roll without advantage/disadvantage: 2H20 + d🏃x
+ * where d🏃x is an infinitely exploding Motion die.
+ */
+export const rollNish = (motionDie: DieRating = 'd4'): NishRollResult => {
+  // 1. Roll 2 d20s, keep highest (skilled roll baseline)
+  const d20Res = rollD20Pool('skilled');
+
+  // 2. Roll exploding Motion die (infinite explosion on max roll)
+  const validDie: DieRating = motionDie === 'Exhausted' || !motionDie ? 'd4' : motionDie;
+  const motionRoll = rollExplodingDie(validDie, true);
+
+  const total = d20Res.keptD20 + motionRoll.total;
+
+  return {
+    d20Rolls: d20Res.d20Rolls,
+    keptD20: d20Res.keptD20,
+    motionRoll,
+    total,
+    isTremendous: d20Res.isTremendous,
+    isCritical: d20Res.isCritical,
+  };
+};
+

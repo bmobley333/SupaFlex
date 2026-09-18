@@ -652,6 +652,7 @@ export interface CharacterSheetData {
   is_charged?: boolean; // Alias for is_sparked
   luck?: number; // 0-5 Luck Pool (Default 3, Max 5)
   max_luck?: number; // Default 5
+  current_nish?: number | string; // Active initiative rating (Nish: 2H20 + d🏃x or manual entry)
   gold?: number;
   silver?: number;
   other_treasure?: TreasureItem[];

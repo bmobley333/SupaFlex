@@ -72,6 +72,11 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
   const charClass = char?.class || 'Adventurer';
 
   const sheetData: Partial<CharacterSheetData> = char?.sheet_data || {};
+  const currentNishVal = sheetData.current_nish ?? (char as any)?.current_nish ?? (char as any)?.initiative;
+  const currentNishDisplay =
+    currentNishVal !== undefined && currentNishVal !== null && String(currentNishVal).trim() !== ''
+      ? String(currentNishVal)
+      : '—';
   const currentVit = (char as any)?.current_vitality ?? sheetData.current_vitality ?? char?.hp ?? 28;
   const maxVit = (char as any)?.vitality_max ?? sheetData.vitality_max ?? 28;
   const pct = maxVit > 0 ? Math.min(100, Math.max(0, Math.round((currentVit / maxVit) * 100))) : 0;
@@ -103,7 +108,7 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
           ? 'opacity-40 border-cyan-500/80 bg-cyan-950/20 scale-[0.99]'
           : 'border-slate-800 hover:border-slate-700'
       }`}
-      title={`(${playerFirstName}) ${charFirstName} ${race} ${charClass}, ${currentVit}/${maxVit} ${pct}%`}
+      title={`[Nish: ${currentNishDisplay}] (${playerFirstName}) ${charFirstName} ${race} ${charClass}, ${currentVit}/${maxVit} ${pct}%`}
     >
       {/* Ultra-thin 6px edge drag handle */}
       {isDraggable && (
@@ -116,11 +121,20 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
       {/* 
         S-Tier Party Member Card Layout:
         - Row 1 Right Segment: Vitality readout, pulse dot, and equal-length (w-16 / 64px) health bar are rigidly anchored to Row 1, right-aligned.
-        - Left Segment: Player Name, Character Name, Race, and Class. If horizontal space is constrained, secondary info wraps onto Row 2 without affecting Row 1 Vitality.
+        - Left Segment: Nish Badge FIRST, Player Name, Character Name, Race, and Class. If horizontal space is constrained, secondary info wraps onto Row 2 without affecting Row 1 Vitality.
       */}
       <div className={`flex items-start justify-between gap-2 leading-snug ${isDraggable ? 'pl-2' : ''}`}>
-        {/* Left Segment: Player Name, Character Name, Race, Class */}
+        {/* Left Segment: Nish Badge FIRST, Player Name, Character Name, Race, Class */}
         <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap font-bold text-slate-100">
+          {/* 🚩 VERY FIRST ITEM: Nish Badge */}
+          <span
+            className="font-mono text-[11px] font-black px-1.5 py-0.5 rounded border border-amber-500/50 bg-amber-500/15 text-amber-300 shrink-0 shadow-sm flex items-center gap-0.5"
+            title={`Initiative (Nish): ${currentNishDisplay}`}
+          >
+            <span className="text-[10px] leading-none">🚩</span>
+            <span className="tabular-nums">{currentNishDisplay}</span>
+          </span>
+
           <span className="font-mono text-amber-300 font-extrabold text-xs shrink-0">
             ({playerFirstName})
           </span>

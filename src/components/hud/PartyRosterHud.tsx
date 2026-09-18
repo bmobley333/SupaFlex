@@ -196,6 +196,11 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
       const max = (m.character as any)?.vitality_max ?? sheetData.vitality_max ?? 28;
       return max > 0 ? (current / max) * 100 : 0;
     },
+    getNish: (m) => {
+      const sheetData: Partial<CharacterSheetData> = m.character?.sheet_data || {};
+      const nish = sheetData.current_nish ?? (m.character as any)?.current_nish ?? (m.character as any)?.initiative;
+      return typeof nish === 'number' ? nish : parseInt(String(nish || 0), 10) || 0;
+    },
   });
 
   // Drag & Drop Handlers
@@ -268,6 +273,15 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
                     }`}
                   >
                     <span>🔤</span> Alphabetical
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('nish_desc')}
+                    className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
+                      activePreset === 'nish_desc' ? 'text-amber-400 font-bold' : 'text-slate-300'
+                    }`}
+                  >
+                    <span>🚩</span> Highest Nish First
                   </button>
                   <button
                     type="button"

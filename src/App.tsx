@@ -741,6 +741,7 @@ export default function App() {
             <PersistentHeaderHUD
               onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
               onOpenFocusManager={() => setShowFocusManagerModal(true)}
+              onOpenNishTc={() => setShowNishTcModal(true)}
             />
           </div>
         )}

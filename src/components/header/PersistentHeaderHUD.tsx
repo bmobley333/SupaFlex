@@ -6,6 +6,7 @@ import { stepDownDie } from '../../lib/dice';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
 import { UniversalLinksModal } from '../modals/UniversalLinksModal';
+import { NishInputPill } from '../common/NishInputPill';
 
 interface AttributeConfig {
   key: AttributeKey;
@@ -32,11 +33,13 @@ const dieToNum = (die?: string): string => {
 interface PersistentHeaderHUDProps {
   onOpenAttributeManager?: () => void;
   onOpenFocusManager?: () => void;
+  onOpenNishTc?: () => void;
 }
 
 export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
   onOpenAttributeManager,
   onOpenFocusManager,
+  onOpenNishTc,
 }) => {
   const {
     activeCharacter,
@@ -542,6 +545,9 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
             </div>
           )}
         </div>
+
+        {/* 🚩 Nish Initiative Split Pill & Roller */}
+        <NishInputPill onOpenNishTc={onOpenNishTc} />
       </div>
 
       {/* Right Zone: Dossier Button + Character Notes Dropdown (Row 2, Aligned below Player Notes / Resources) */}
