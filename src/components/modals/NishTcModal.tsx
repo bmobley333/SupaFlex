@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { X, Dices, Trash2 } from 'lucide-react';
 import nishTcDataRaw from '../../data/nish_tc.json';
@@ -7,6 +7,8 @@ interface NishTcModalProps {
   isOpen: boolean;
   onClose: () => void;
   characterName?: string;
+  autoRollType?: 'tremendous' | 'critical' | null;
+  autoRollCount?: number;
 }
 
 export interface NishTcRollResult {
@@ -31,11 +33,14 @@ const LOCAL_NISH_TC: NishTcDataItem[] = nishTcDataRaw as NishTcDataItem[];
 export const NishTcModal: React.FC<NishTcModalProps> = ({
   isOpen,
   onClose,
-  characterName = 'Active Hero'
+  characterName = 'Active Hero',
+  autoRollType,
+  autoRollCount = 1,
 }) => {
   const [isRolling, setIsRolling] = useState(false);
   const [history, setHistory] = useState<NishTcRollResult[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const hasAutoRolledRef = useRef(false);
 
   if (!isOpen) return null;
 
@@ -46,59 +51,77 @@ export const NishTcModal: React.FC<NishTcModalProps> = ({
 
   const rollDice = (sides: number) => Math.floor(Math.random() * sides) + 1;
 
-  const handleRoll = async (targetType: 'tremendous' | 'critical') => {
+  const handleRoll = async (targetType: 'tremendous' | 'critical', count: number = 1) => {
     setIsRolling(true);
-    const rollVal = rollDice(50);
+    const newResults: NishTcRollResult[] = [];
 
-    let name = '';
-    let effect = '';
+    for (let c = 0; c < count; c++) {
+      const rollVal = rollDice(50);
+      let name = '';
+      let effect = '';
 
-    try {
-      const { data, error } = await supabase
-        .from('nish_tc')
-        .select('*')
-        .eq('type', targetType)
-        .eq('roll_value', rollVal)
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from('nish_tc')
+          .select('*')
+          .eq('type', targetType)
+          .eq('roll_value', rollVal)
+          .maybeSingle();
 
-      if (!error && data && data.name && data.effect) {
-        name = data.name;
-        effect = data.effect;
+        if (!error && data && data.name && data.effect) {
+          name = data.name;
+          effect = data.effect;
+        }
+      } catch (err: any) {
+        console.warn('Supabase nish_tc query notice:', err);
       }
-    } catch (err: any) {
-      console.warn('Supabase nish_tc query notice:', err);
+
+      // If Supabase query failed or returned empty data, lookup in bundled local dataset
+      if (!name || !effect) {
+        const localMatch = LOCAL_NISH_TC.find(
+          (item) => item.type === targetType && item.roll_value === rollVal
+        );
+        if (localMatch) {
+          name = localMatch.name;
+          effect = localMatch.effect;
+        } else {
+          name = `${targetType === 'tremendous' ? 'Tremendous' : 'Critical'} Result #${rollVal}`;
+          effect =
+            targetType === 'tremendous'
+              ? 'Gain advantage or minor tactical bonus.'
+              : 'Suffer minor penalty or complication.';
+        }
+      }
+
+      newResults.push({
+        id: `nish-${Date.now()}-${c}-${Math.random().toString(36).substr(2, 4)}`,
+        type: targetType,
+        rollVal,
+        name,
+        effect,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      });
     }
 
-    // If Supabase query failed or returned empty data, lookup in bundled local dataset
-    if (!name || !effect) {
-      const localMatch = LOCAL_NISH_TC.find(
-        (item) => item.type === targetType && item.roll_value === rollVal
-      );
-      if (localMatch) {
-        name = localMatch.name;
-        effect = localMatch.effect;
-      } else {
-        name = `${targetType === 'tremendous' ? 'Tremendous' : 'Critical'} Result #${rollVal}`;
-        effect =
-          targetType === 'tremendous'
-            ? 'Gain advantage or minor tactical bonus.'
-            : 'Suffer minor penalty or complication.';
-      }
+    setHistory((prev) => [...newResults, ...prev]);
+    if (count > 1) {
+      showToast(`Rolled 2x ${targetType === 'tremendous' ? 'Double Tremendous' : 'Double Critical'}!`);
+    } else if (newResults[0]) {
+      showToast(`Rolled d50 #${newResults[0].rollVal}: ${newResults[0].name}`);
     }
-
-    const newResult: NishTcRollResult = {
-      id: `nish-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      type: targetType,
-      rollVal,
-      name,
-      effect,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    };
-
-    setHistory((prev) => [newResult, ...prev]);
-    showToast(`Rolled d50 #${rollVal}: ${name}`);
     setIsRolling(false);
   };
+
+  // Auto-roll upon modal opening if autoRollType is provided
+  useEffect(() => {
+    if (isOpen && autoRollType && !hasAutoRolledRef.current) {
+      hasAutoRolledRef.current = true;
+      handleRoll(autoRollType, autoRollCount || 1);
+    }
+    if (!isOpen) {
+      hasAutoRolledRef.current = false;
+    }
+  }, [isOpen, autoRollType, autoRollCount]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">

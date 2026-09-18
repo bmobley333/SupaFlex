@@ -46,6 +46,7 @@ export default function App() {
   const [showMasterArchitectDeskModal, setShowMasterArchitectDeskModal] = useState(false);
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
   const [showNishTcModal, setShowNishTcModal] = useState(false);
+  const [nishTcAutoRoll, setNishTcAutoRoll] = useState<{ type: 'tremendous' | 'critical'; count: number } | null>(null);
   const [showApManagerModal, setShowApManagerModal] = useState(false);
   const [showAttributeManagerModal, setShowAttributeManagerModal] = useState(false);
   const [showVitalityManagerModal, setShowVitalityManagerModal] = useState(false);
@@ -741,7 +742,10 @@ export default function App() {
             <PersistentHeaderHUD
               onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
               onOpenFocusManager={() => setShowFocusManagerModal(true)}
-              onOpenNishTc={() => setShowNishTcModal(true)}
+              onOpenNishTc={(type, count = 1) => {
+                setNishTcAutoRoll({ type, count });
+                setShowNishTcModal(true);
+              }}
             />
           </div>
         )}
@@ -874,8 +878,13 @@ export default function App() {
       <ErrorBoundary fallbackTitle="Nish T/C Generator Error" onClose={() => setShowNishTcModal(false)}>
         <NishTcModal
           isOpen={showNishTcModal}
-          onClose={() => setShowNishTcModal(false)}
+          onClose={() => {
+            setShowNishTcModal(false);
+            setNishTcAutoRoll(null);
+          }}
           characterName={activeCharacter?.name || 'Active Hero'}
+          autoRollType={nishTcAutoRoll?.type}
+          autoRollCount={nishTcAutoRoll?.count}
         />
       </ErrorBoundary>
 

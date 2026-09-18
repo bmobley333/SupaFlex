@@ -33,7 +33,7 @@ const dieToNum = (die?: string): string => {
 interface PersistentHeaderHUDProps {
   onOpenAttributeManager?: () => void;
   onOpenFocusManager?: () => void;
-  onOpenNishTc?: () => void;
+  onOpenNishTc?: (type: 'tremendous' | 'critical', count?: number) => void;
 }
 
 export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
@@ -246,8 +246,11 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
         )}
       </div>
 
-      {/* Center Zone: Centered Split-Pill Control Deck (Focus, Spark, Luck) */}
+      {/* Center Zone: Centered Split-Pill Control Deck (Nish, Focus, Luck, Spark) */}
       <div className="flex-1 flex justify-center items-center gap-3 flex-wrap">
+        {/* 🚩 Nish Initiative Split Pill & Roller (1st position) */}
+        <NishInputPill onOpenNishTc={onOpenNishTc} />
+
         {/* 🎯 Focus Split Pill Container */}
         <div className="relative">
           <div className="flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-xs font-semibold transition-all bg-purple-950/40 border-purple-500/30 text-purple-200 hover:border-purple-400">
@@ -545,9 +548,6 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
             </div>
           )}
         </div>
-
-        {/* 🚩 Nish Initiative Split Pill & Roller */}
-        <NishInputPill onOpenNishTc={onOpenNishTc} />
       </div>
 
       {/* Right Zone: Dossier Button + Character Notes Dropdown (Row 2, Aligned below Player Notes / Resources) */}
