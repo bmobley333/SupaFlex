@@ -561,8 +561,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
     const initRoom = async () => {
       try {
-        const { roomCode } = await gameApi.checkoutPartyRoomCode(selectedParty.id);
+        const { roomCode, isNewSession } = await gameApi.checkoutPartyRoomCode(selectedParty.id);
         if (onRoomCodeReady) onRoomCodeReady(roomCode);
+        if (isNewSession) {
+          setSessionMembers([]);
+        }
       } catch (err) {
         console.error('Failed to checkout room code:', err);
         const fallback = selectedParty.room_code || selectedParty.party_code;
@@ -580,7 +583,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     initRoom();
 
     const handleBeforeUnload = () => {
-      gameApi.closePartyRoom(selectedParty.id).catch(console.error);
+      gameApi.closePartyRoomBeacon(selectedParty.id);
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -675,6 +678,12 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       })
       .on('broadcast', { event: 'party.left' }, () => {
         loadSessionMembers(partyId, true);
+      })
+      .on('broadcast', { event: 'party.disbanded' }, () => {
+        setSessionMembers([]);
+      })
+      .on('broadcast', { event: 'party.closed' }, () => {
+        setSessionMembers([]);
       })
       .subscribe();
 

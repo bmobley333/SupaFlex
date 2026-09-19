@@ -1251,18 +1251,41 @@ export const gameApi = {
     }
   },
 
-  async ensureTabPartySession(partyIdOrCode: string, tabSessionId: string, characterId: number, playerEmail: string) {
-    if (!partyIdOrCode || !tabSessionId || !characterId) return;
+  async ensureTabPartySession(partyIdOrCode: string, tabSessionId: string, characterId: number, playerEmail: string): Promise<boolean> {
+    if (!partyIdOrCode || !tabSessionId || !characterId) return false;
 
     let targetPartyUuid = partyIdOrCode;
     if (partyIdOrCode.length === 4) {
       const party = await this.findActivePartyByRoomCode(partyIdOrCode);
       if (party) {
         targetPartyUuid = party.id;
+      } else {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('supaflex_active_party_id');
+        }
+        return false;
       }
     }
 
     try {
+      // 1. Verify that the GM party is still active, has a valid room code, and is not stale (>90s absence/power loss)
+      const { data: partyRecord } = await supabase
+        .from('parties')
+        .select('id, is_active, status, room_code, last_active_at')
+        .eq('id', targetPartyUuid)
+        .maybeSingle();
+
+      const lastActiveTime = partyRecord?.last_active_at ? new Date(partyRecord.last_active_at).getTime() : 0;
+      const elapsedSeconds = (Date.now() - lastActiveTime) / 1000;
+      const isStale = elapsedSeconds > 90;
+
+      if (!partyRecord || !partyRecord.is_active || partyRecord.status === 'expired' || !partyRecord.room_code || isStale) {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('supaflex_active_party_id');
+        }
+        return false;
+      }
+
       const { data } = await supabase
         .from('party_session_members')
         .select('id')
@@ -1276,8 +1299,10 @@ export const gameApi = {
       } else {
         await this.sendPlayerHeartbeat(tabSessionId);
       }
+      return true;
     } catch (e) {
       console.warn('[gameApi] Error in ensureTabPartySession:', e);
+      return false;
     }
   },
 
@@ -1421,7 +1446,35 @@ export const gameApi = {
   },
 
   // --- ROOM CODES & DISCONNECT HEARTBEAT ---
-  async checkoutPartyRoomCodeForGmEmail(gmEmail: string, forceNew: boolean = false): Promise<{ party: any; roomCode: string }> {
+  async disbandPartySession(partyId: string) {
+    if (!partyId) return;
+    try {
+      const channel = supabase.channel(`party:${partyId}`);
+      await channel.send({
+        type: 'broadcast',
+        event: 'party.disbanded',
+        payload: { partyId, timestamp: new Date().toISOString() },
+      });
+      await channel.send({
+        type: 'broadcast',
+        event: 'party.closed',
+        payload: { partyId, timestamp: new Date().toISOString() },
+      });
+    } catch (e) {
+      console.warn('[gameApi] Notice broadcasting party disband:', e);
+    }
+
+    try {
+      await supabase
+        .from('party_session_members')
+        .delete()
+        .eq('party_id', partyId);
+    } catch (e) {
+      console.warn('[gameApi] Error clearing party session members:', e);
+    }
+  },
+
+  async checkoutPartyRoomCodeForGmEmail(gmEmail: string, forceNew: boolean = false): Promise<{ party: any; roomCode: string; isNewSession?: boolean }> {
     try {
       const cleanEmail = gmEmail.trim().toLowerCase();
       const existing = await this.getPartiesForUser(cleanEmail);
@@ -1438,27 +1491,34 @@ export const gameApi = {
       return {
         party: { id: 'fallback-party-id', gm_email: gmEmail },
         roomCode: fallbackCode,
+        isNewSession: true,
       };
     }
   },
 
-  async checkoutPartyRoomCode(partyId: string, forceNew: boolean = false): Promise<{ party: any; roomCode: string }> {
+  async checkoutPartyRoomCode(partyId: string, forceNew: boolean = false): Promise<{ party: any; roomCode: string; isNewSession: boolean }> {
     await this.cleanupStaleRooms();
 
-    // If not explicitly forced to generate a new code, check if party already has an active, valid room code
-    if (!forceNew) {
-      const { data: existingParty } = await supabase
-        .from('parties')
-        .select('*')
-        .eq('id', partyId)
-        .maybeSingle();
+    const { data: existingParty } = await supabase
+      .from('parties')
+      .select('*')
+      .eq('id', partyId)
+      .maybeSingle();
 
-      const existingCode = existingParty?.room_code || existingParty?.party_code;
-      if (existingParty?.is_active && existingCode && existingCode.trim().length === 4) {
-        await this.sendGmHeartbeat(partyId);
-        return { party: existingParty, roomCode: existingCode.trim().toUpperCase() };
-      }
+    const lastActiveTime = existingParty?.last_active_at ? new Date(existingParty.last_active_at).getTime() : 0;
+    const elapsedSeconds = (Date.now() - lastActiveTime) / 1000;
+    const isStale = elapsedSeconds > 90; // GM absence / power outage > 90s
+    const isInactive = !existingParty?.is_active || !existingParty?.room_code || existingParty?.status === 'expired';
+    const existingCode = existingParty?.room_code || existingParty?.party_code;
+
+    // Quick F5 reload (<90 seconds): If active, valid code, and within threshold, preserve table & connected players
+    if (!forceNew && !isStale && !isInactive && existingCode && existingCode.trim().length === 4) {
+      await this.sendGmHeartbeat(partyId);
+      return { party: existingParty, roomCode: existingCode.trim().toUpperCase(), isNewSession: false };
     }
+
+    // New Session: Clean up previous session members and broadcast disband to lingering tabs
+    await this.disbandPartySession(partyId);
 
     let attempts = 0;
     let candidate = '';
@@ -1494,10 +1554,10 @@ export const gameApi = {
 
     if (error) {
       console.warn('[gameApi] Local room code checkout fallback due to DB update:', error.message);
-      return { party: { id: partyId, room_code: candidate, party_code: candidate, is_active: true }, roomCode: candidate };
+      return { party: { id: partyId, room_code: candidate, party_code: candidate, is_active: true }, roomCode: candidate, isNewSession: true };
     }
 
-    return { party: data, roomCode: candidate };
+    return { party: data, roomCode: candidate, isNewSession: true };
   },
 
   async sendGmHeartbeat(partyId: string) {
@@ -1512,26 +1572,74 @@ export const gameApi = {
   },
 
   async closePartyRoom(partyId: string) {
+    await this.disbandPartySession(partyId);
     await supabase
       .from('parties')
       .update({
         is_active: false,
         room_code: null,
+        status: 'expired',
       })
       .eq('id', partyId);
   },
 
+  closePartyRoomBeacon(partyId: string) {
+    if (!partyId) return;
+    try {
+      // 1. Wipe party session members
+      fetch(`${supabaseUrl}/rest/v1/party_session_members?party_id=eq.${encodeURIComponent(partyId)}`, {
+        method: 'DELETE',
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        keepalive: true,
+      }).catch(() => {});
+
+      // 2. Mark party inactive/expired
+      fetch(`${supabaseUrl}/rest/v1/parties?id=eq.${encodeURIComponent(partyId)}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({ is_active: false, room_code: null, status: 'expired' }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (e) {
+      console.warn('[gameApi] Beacon error closing party room:', e);
+    }
+  },
+
   async cleanupStaleRooms() {
-    // Extended to 10 minutes to tolerate browser JS interval throttling in background tabs.
-    const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    await supabase
-      .from('parties')
-      .update({
-        is_active: false,
-        room_code: null,
-      })
-      .eq('is_active', true)
-      .lt('last_active_at', tenMinsAgo);
+    const ninetySecsAgo = new Date(Date.now() - 90 * 1000).toISOString();
+    try {
+      const { data: staleParties } = await supabase
+        .from('parties')
+        .select('id')
+        .eq('is_active', true)
+        .lt('last_active_at', ninetySecsAgo);
+
+      if (staleParties && staleParties.length > 0) {
+        const ids = staleParties.map((p) => p.id);
+        await supabase
+          .from('party_session_members')
+          .delete()
+          .in('party_id', ids);
+
+        await supabase
+          .from('parties')
+          .update({
+            is_active: false,
+            room_code: null,
+            status: 'expired',
+          })
+          .in('id', ids);
+      }
+    } catch (e) {
+      console.warn('[gameApi] Error cleaning up stale rooms:', e);
+    }
   },
 
   async findActivePartyByRoomCode(rawCode: string) {

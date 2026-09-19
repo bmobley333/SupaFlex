@@ -151,9 +151,10 @@ export const CharacterPartyModal: React.FC<CharacterPartyModalProps> = ({
 
       setActivePartyId(party.id);
       setActiveParty(party);
-      setSuccessMsg(`Successfully joined party "${party.name}" (ID: ${sanitized}) as ${charFirstName}!`);
       setRoomCodeInput('');
       if (onPartyChanged) onPartyChanged();
+      // S-Tier Streamlined UX: Immediately close modal upon joining (no intermediate screen)
+      if (onClose) onClose();
     } catch (err: any) {
       console.error('[CharacterPartyModal] Error joining party:', err);
       setErrorMsg(err.message || 'Failed to join party room.');

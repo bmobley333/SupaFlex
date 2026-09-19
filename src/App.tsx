@@ -184,7 +184,13 @@ export default function App() {
 
       const { tabSessionId, activePartyId, activeCharacter } = useCharacterStore.getState();
       if (activePartyId && tabSessionId && activeCharacter?.id) {
-        gameApi.ensureTabPartySession(activePartyId, tabSessionId, activeCharacter.id, userEmail).catch(console.error);
+        gameApi.ensureTabPartySession(activePartyId, tabSessionId, activeCharacter.id, userEmail)
+          .then((isValid) => {
+            if (!isValid) {
+              useCharacterStore.setState({ activePartyId: null });
+            }
+          })
+          .catch(console.error);
       }
     };
 

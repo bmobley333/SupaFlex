@@ -22,6 +22,7 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
   onOpenPartySelector,
 }) => {
   const activePartyId = useCharacterStore((state) => state.activePartyId);
+  const setActivePartyId = useCharacterStore((state) => state.setActivePartyId);
   const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
   const [markedTurnIds, setMarkedTurnIds] = useState<string[]>([]);
   const [displayRoomCode, setDisplayRoomCode] = useState<string | null>(null);
@@ -59,18 +60,41 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
 
     const loadMembers = async () => {
       try {
-        const members = await gameApi.getPartySessionMembers(activePartyId);
-
-        // Fetch friendly 4-character room code from database for active UUID session
+        // 1. Verify that the GM party is still active, has a valid room code, and is not stale (>90s)
+        let resolvedPartyId = activePartyId;
         if (activePartyId.length === 4) {
+          const p = await gameApi.findActivePartyByRoomCode(activePartyId);
+          if (!p) {
+            if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
+            setActivePartyId(null);
+            return;
+          }
+          resolvedPartyId = p.id;
           setDisplayRoomCode(activePartyId.toUpperCase());
         } else {
-          const { data: p } = await supabase.from('parties').select('room_code, party_code').eq('id', activePartyId).maybeSingle();
+          const { data: p } = await supabase
+            .from('parties')
+            .select('room_code, party_code, is_active, status, last_active_at')
+            .eq('id', activePartyId)
+            .maybeSingle();
+
+          const lastActiveTime = p?.last_active_at ? new Date(p.last_active_at).getTime() : 0;
+          const elapsedSeconds = (Date.now() - lastActiveTime) / 1000;
+          const isStale = elapsedSeconds > 90;
+
+          if (!p || !p.is_active || p.status === 'expired' || !p.room_code || isStale) {
+            if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
+            setActivePartyId(null);
+            return;
+          }
+
           const code = p?.room_code || p?.party_code;
           if (code) {
             setDisplayRoomCode(code.toUpperCase());
           }
         }
+
+        const members = await gameApi.getPartySessionMembers(resolvedPartyId);
 
         // Verify active session with Supabase and self-heal missing DB session rows
         if (tabSessionId && activeCharacter?.id) {
@@ -79,8 +103,13 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
           );
           if (!isRegisteredInDb) {
             const playerEmail = useCharacterStore.getState().playerEmail;
-            await gameApi.ensureTabPartySession(activePartyId, tabSessionId, activeCharacter.id, playerEmail);
-            const updatedMembers = await gameApi.getPartySessionMembers(activePartyId);
+            const isValid = await gameApi.ensureTabPartySession(resolvedPartyId, tabSessionId, activeCharacter.id, playerEmail);
+            if (!isValid) {
+              if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
+              setActivePartyId(null);
+              return;
+            }
+            const updatedMembers = await gameApi.getPartySessionMembers(resolvedPartyId);
             setSessionMembers((prev) => (areMembersEqual(prev, updatedMembers) ? prev : updatedMembers));
             return;
           }
@@ -115,7 +144,12 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
           schema: 'public',
           table: 'party_session_members',
         },
-        () => {
+        (payload: any) => {
+          if (payload?.old?.tab_session_id === tabSessionId) {
+            if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
+            setActivePartyId(null);
+            return;
+          }
           loadMembers();
         }
       )
@@ -123,6 +157,14 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
 
     const broadcastChannel = supabase.channel(`party:${activePartyId}`);
     broadcastChannel
+      .on('broadcast', { event: 'party.disbanded' }, () => {
+        if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
+        setActivePartyId(null);
+      })
+      .on('broadcast', { event: 'party.closed' }, () => {
+        if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
+        setActivePartyId(null);
+      })
       .on('broadcast', { event: 'party_members_updated' }, (payload: any) => {
         // Instant optimistic vitals & nish update (< 50ms peer-to-peer sync, zero extra REST egress)
         const data = payload?.payload;
