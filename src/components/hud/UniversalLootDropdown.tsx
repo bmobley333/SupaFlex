@@ -16,7 +16,7 @@ export interface UniversalLootDropdownProps {
   disabled?: boolean;
   disabledTooltip?: string;
   topLabel?: string;
-  themeColor?: 'amber' | 'cyan' | 'rose' | 'indigo' | 'emerald';
+  themeColor?: 'amber' | 'cyan' | 'rose' | 'indigo' | 'emerald' | 'yellow';
   className?: string;
 }
 
@@ -37,6 +37,13 @@ export const UniversalLootDropdown: React.FC<UniversalLootDropdownProps> = ({
 
   const getThemeClasses = () => {
     switch (themeColor) {
+      case 'yellow':
+        return {
+          btn: 'bg-yellow-950/80 hover:bg-yellow-900/90 text-yellow-200 border-yellow-500/50 shadow-sm',
+          icon: 'text-yellow-400',
+          accent: 'text-yellow-300',
+          badge: 'bg-yellow-900/80 text-yellow-300 border-yellow-700',
+        };
       case 'rose':
         return {
           btn: 'bg-rose-950/70 hover:bg-rose-900/80 text-rose-200 border-rose-500/40',
@@ -122,7 +129,7 @@ export const UniversalLootDropdown: React.FC<UniversalLootDropdownProps> = ({
         onDeleteLoot={onDeleteLoot}
         onClearLoot={onClearLoot}
         onSendToPartyVault={onSendToPartyVault}
-        themeColor={themeColor}
+        themeColor={themeColor === 'yellow' ? 'amber' : themeColor}
       />
     </>
   );

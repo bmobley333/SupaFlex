@@ -2,19 +2,19 @@
 // Game Master Command Console: Party Roster, Party Management & Monster Roster View
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ArrowUpDown, StickyNote } from 'lucide-react';
+import { StickyNote, RotateCcw } from 'lucide-react';
 import { gameApi } from '../../services/api';
 import { supabase } from '../../lib/supabase';
-import { Party, PartySessionMember, CharacterSheetData, SupabaseMonster } from '../../types/game';
-import { parseMonsterLine, ParsedMonster, sortMonstersByPreset, MonsterSortPreset, resolveCodexMonsterNotes, formatMonsterDataToStatblock } from '../../utils/monsterStatParser';
+import { Party, PartySessionMember, SupabaseMonster } from '../../types/game';
+import { parseMonsterLine, ParsedMonster, resolveCodexMonsterNotes, formatMonsterDataToStatblock } from '../../utils/monsterStatParser';
 import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
-import { useRosterOrdering } from '../../hooks/useRosterOrdering';
 import { MonsterManagerModal } from '../modals/MonsterManagerModal';
 import { GmCompactDifficultyBar } from '../common/GmCompactDifficultyBar';
-import { EncounterNavigationRibbon } from '../hud/EncounterNavigationRibbon';
 import { AdventureActBar } from '../hud/AdventureActBar';
 import { EncounterSelectorBar } from '../hud/EncounterSelectorBar';
+import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
+import { UniversalLootDropdown } from '../hud/UniversalLootDropdown';
 import { EncounterLinksDropdown } from '../hud/EncounterLinksDropdown';
 import { EncounterLootDropdown } from '../hud/EncounterLootDropdown';
 import { useAdventureStore } from '../../store/useAdventureStore';
@@ -159,22 +159,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     });
   }, []);
 
-  // Storage Keys
-  const partyIdOrDef = selectedParty?.id || 'default';
-  const monsterPresetKey = `supaflex_gm_monster_preset_${partyIdOrDef}`;
-
-  const [monsterPreset, setMonsterPreset] = useState<MonsterSortPreset>(() => {
-    try {
-      const saved = localStorage.getItem(monsterPresetKey);
-      if (saved && (saved === 'alphabetical' || saved === 'nish' || saved === 'vitality')) {
-        return saved as MonsterSortPreset;
-      }
-    } catch {}
-    return 'alphabetical';
-  });
-
-  const [isMonsterSortMenuOpen, setIsMonsterSortMenuOpen] = useState(false);
-
   // Modal triggers
   const [isMonsterManagerOpen, setIsMonsterManagerOpen] = useState(false);
 
@@ -188,6 +172,15 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const updateEncounter = useAdventureStore((state) => state.updateEncounter);
   const setEncounterMonsters = useAdventureStore((state) => state.setEncounterMonsters);
   const setEncounterNotes = useAdventureStore((state) => state.setEncounterNotes);
+  const resetEncounterAll = useAdventureStore((state) => state.resetEncounterAll);
+  const addAdventureLink = useAdventureStore((state) => state.addAdventureLink);
+  const updateAdventureLink = useAdventureStore((state) => state.updateAdventureLink);
+  const deleteAdventureLink = useAdventureStore((state) => state.deleteAdventureLink);
+  const reorderAdventureLinkByIndex = useAdventureStore((state) => state.reorderAdventureLinkByIndex);
+  const addAdventureLoot = useAdventureStore((state) => state.addAdventureLoot);
+  const deleteAdventureLoot = useAdventureStore((state) => state.deleteAdventureLoot);
+  const clearAdventureLoot = useAdventureStore((state) => state.clearAdventureLoot);
+  const sendLootToPartyVault = useAdventureStore((state) => state.sendLootToPartyVault);
 
   // Modal dual-targeting: 'roster' (live game Encounter Roster) vs 'adventure' (pre-staged adventure)
   const [monsterManagerTarget, setMonsterManagerTarget] = useState<'roster' | 'adventure'>('roster');
@@ -334,27 +327,13 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const effectiveMonsters = activeMonsters;
 
   // Re-sync Monster Preset when selected party changes
-  useEffect(() => {
-    try {
-      const savedPreset = localStorage.getItem(`supaflex_gm_monster_preset_${selectedParty?.id || 'default'}`);
-      if (savedPreset && (savedPreset === 'alphabetical' || savedPreset === 'nish' || savedPreset === 'vitality')) {
-        setMonsterPreset(savedPreset as MonsterSortPreset);
-      }
-    } catch (e) {}
-  }, [selectedParty?.id]);
-
   const handleSaveMonsters = (updated: ParsedMonster[]) => {
-    const sorted = sortMonstersByPreset(updated, monsterPreset);
+    const sorted = [...updated].sort((a, b) => {
+      const nameA = (a.nameWithEquip || a.fullText || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+      const nameB = (b.nameWithEquip || b.fullText || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
     setEncounterMonsters(sorted);
-  };
-
-  const applyMonsterPreset = (preset: MonsterSortPreset) => {
-    setMonsterPreset(preset);
-    try {
-      localStorage.setItem(monsterPresetKey, preset);
-    } catch {}
-    handleSaveMonsters(sortMonstersByPreset(effectiveMonsters, preset));
-    setIsMonsterSortMenuOpen(false);
   };
 
   const handleStartEdit = (m: ParsedMonster, encounterId?: string) => {
@@ -398,6 +377,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   };
 
   // Pushed Monsters for GM Screen Encounter Roster
+  const partyIdOrDef = selectedParty?.id || 'default';
   const gmPushedMonstersKey = `supaflex_gm_pushed_monsters_${partyIdOrDef}`;
   const [pushedMonsters, setPushedMonsters] = useState<GmRosterMonster[]>(() => {
     try {
@@ -578,8 +558,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Party Session Roster State
   const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
   const [isMembersLoading, setIsMembersLoading] = useState(false);
-  const [isGmSortMenuOpen, setIsGmSortMenuOpen] = useState(false);
-
   // Combined Party Members + Pushed Monsters Roster
   const combinedRosterItems = useMemo<GmUnifiedRosterItem[]>(() => {
     const members: GmUnifiedRosterItem[] = sessionMembers.map((m) => ({
@@ -595,61 +573,49 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     return [...members, ...monsters];
   }, [sessionMembers, pushedMonsters]);
 
-  const gmPartyStorageKey = `supaflex_gm_roster_order_${selectedParty?.id || 'default'}`;
-  const {
-    orderedItems: orderedSessionMembers,
-    moveItem: movePartyItem,
-    nudgeItem: nudgePartyItem,
-    applyPreset: applyPartyPreset,
-    activePreset: gmPartyPreset,
-    draggedIndex: partyDraggedIndex,
-    setDraggedIndex: setPartyDraggedIndex,
-  } = useRosterOrdering<GmUnifiedRosterItem>({
-    items: combinedRosterItems,
-    storageKey: gmPartyStorageKey,
-    defaultPreset: 'nish_desc',
-    isMonster: (item) => item.type === 'monster',
-    getId: (item) => item.id,
-    getName: (item) =>
-      item.type === 'member'
-        ? resolveCharFirstName(item.member.character?.name || `Hero #${item.member.character_id}`)
-        : item.monster.name,
-    getVitPct: (item) => {
-      if (item.type === 'member') {
-        const sheetData: Partial<CharacterSheetData> = item.member.character?.sheet_data || {};
-        const current = (item.member.character as any)?.current_vitality ?? sheetData.current_vitality ?? item.member.character?.hp ?? 28;
-        const max = (item.member.character as any)?.vitality_max ?? sheetData.vitality_max ?? 28;
-        return max > 0 ? (current / max) * 100 : 0;
+  // Always sorted: Nish order (descending) as primary, alphabetically (A-Z) within Nish ties
+  const orderedSessionMembers = useMemo<GmUnifiedRosterItem[]>(() => {
+    return [...combinedRosterItems].sort((a, b) => {
+      // 1. Primary: Nish descending
+      const nishA =
+        a.type === 'member'
+          ? (a.member.character?.sheet_data?.current_nish ??
+            (a.member.character as any)?.current_nish ??
+            (a.member.character as any)?.initiative ??
+            10)
+          : (a.monster.nish ?? 10);
+      const nishB =
+        b.type === 'member'
+          ? (b.member.character?.sheet_data?.current_nish ??
+            (b.member.character as any)?.current_nish ??
+            (b.member.character as any)?.initiative ??
+            10)
+          : (b.monster.nish ?? 10);
+
+      const numNishA = typeof nishA === 'number' ? nishA : parseInt(String(nishA || 0), 10) || 0;
+      const numNishB = typeof nishB === 'number' ? nishB : parseInt(String(nishB || 0), 10) || 0;
+
+      if (numNishB !== numNishA) {
+        return numNishB - numNishA;
       }
-      return 100;
-    },
-    getNish: (item) => {
-      if (item.type === 'member') {
-        const sheetData: Partial<CharacterSheetData> = item.member.character?.sheet_data || {};
-        const nish = sheetData.current_nish ?? (item.member.character as any)?.current_nish ?? (item.member.character as any)?.initiative;
-        return typeof nish === 'number' ? nish : parseInt(String(nish || 0), 10) || 0;
-      }
-      return item.monster.nish;
-    },
-  });
 
-  const handlePartyDragStart = (e: React.DragEvent, index: number) => {
-    setPartyDraggedIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(index));
-  };
+      // 2. Secondary: Alphabetical (A-Z) by first name / monster clean name
+      const nameA =
+        a.type === 'member'
+          ? resolveCharFirstName(a.member.character?.name || `Hero #${a.member.character_id}`)
+          : a.monster.name;
+      const nameB =
+        b.type === 'member'
+          ? resolveCharFirstName(b.member.character?.name || `Hero #${b.member.character_id}`)
+          : b.monster.name;
 
-  const handlePartyDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
+      const nameDiff = nameA.localeCompare(nameB);
+      if (nameDiff !== 0) return nameDiff;
 
-  const handlePartyDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    if (partyDraggedIndex === null) return;
-    movePartyItem(partyDraggedIndex, dropIndex);
-    setPartyDraggedIndex(null);
-  };
+      // 3. Deterministic tiebreaker: ID
+      return a.id.localeCompare(b.id);
+    });
+  }, [combinedRosterItems]);
 
   // Load GM Parties on Mount
   useEffect(() => {
@@ -950,76 +916,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 <h3 className="text-xs font-extrabold text-sky-200 uppercase tracking-wider font-outfit">
                   Encounter Roster
                 </h3>
-                {orderedSessionMembers.length > 1 && (
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setIsGmSortMenuOpen(!isGmSortMenuOpen)}
-                      className={`p-1 rounded text-xs transition-colors flex items-center gap-1 border ${
-                        gmPartyPreset !== 'custom'
-                          ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/50'
-                          : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
-                      }`}
-                      title="Quick Sort GM Roster Presets"
-                    >
-                      <ArrowUpDown className="w-3 h-3" />
-                    </button>
-
-                    {isGmSortMenuOpen && (
-                      <div
-                        className="absolute left-0 mt-1 w-44 bg-slate-950 border border-slate-800 rounded-lg shadow-xl z-50 py-1 text-xs font-outfit"
-                        onClick={() => setIsGmSortMenuOpen(false)}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => applyPartyPreset('custom')}
-                          className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
-                            gmPartyPreset === 'custom' ? 'text-cyan-400 font-bold' : 'text-slate-300'
-                          }`}
-                        >
-                          <span>🎲</span> Custom Drag Order
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyPartyPreset('alphabetical')}
-                          className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
-                            gmPartyPreset === 'alphabetical' ? 'text-cyan-400 font-bold' : 'text-slate-300'
-                          }`}
-                        >
-                          <span>🔤</span> Alphabetical
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyPartyPreset('nish_desc')}
-                          className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
-                            gmPartyPreset === 'nish_desc' ? 'text-amber-400 font-bold' : 'text-slate-300'
-                          }`}
-                        >
-                          <span>🚩</span> Highest Nish First
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyPartyPreset('vit_desc')}
-                          className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
-                            gmPartyPreset === 'vit_desc' ? 'text-cyan-400 font-bold' : 'text-slate-300'
-                          }`}
-                        >
-                          <span>🫀</span> Highest Vit First
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyPartyPreset('vit_asc')}
-                          className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
-                            gmPartyPreset === 'vit_asc' ? 'text-cyan-400 font-bold' : 'text-slate-300'
-                          }`}
-                        >
-                          <span>🩸</span> Lowest Vit First
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {/* 🔄 New Nish Round Reset Button */}
                 <button
                   type="button"
@@ -1075,7 +971,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
               </div>
             ) : (
               <div className="space-y-2.5 overflow-y-auto lg:flex-1 lg:min-h-0 pr-1">
-                {orderedSessionMembers.map((item, idx) => {
+                {orderedSessionMembers.map((item) => {
                   if (item.type === 'member') {
                     const member = item.member;
                     const memberId = String(member.character_id || member.id);
@@ -1086,16 +982,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                           member={member}
                           isTurnMarked={isMarked}
                           onToggleTurnMark={() => toggleTurnMark(memberId)}
-                          isDraggable={orderedSessionMembers.length > 1}
-                          onDragStart={(e) => handlePartyDragStart(e, idx)}
-                          onDragOver={handlePartyDragOver}
-                          onDrop={(e) => handlePartyDrop(e, idx)}
-                          onDragEnd={() => setPartyDraggedIndex(null)}
-                          isDragging={partyDraggedIndex === idx}
-                          onNudgeUp={() => nudgePartyItem(idx, 'up')}
-                          onNudgeDown={() => nudgePartyItem(idx, 'down')}
-                          canNudgeUp={idx > 0}
-                          canNudgeDown={idx < orderedSessionMembers.length - 1}
                           onDismiss={() => handleDismissMember(member)}
                         />
                       </div>
@@ -1106,24 +992,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     return (
                       <div
                         key={monster.id}
-                        draggable={orderedSessionMembers.length > 1}
-                        onDragStart={(e) => handlePartyDragStart(e, idx)}
-                        onDragOver={handlePartyDragOver}
-                        onDrop={(e) => handlePartyDrop(e, idx)}
-                        onDragEnd={() => setPartyDraggedIndex(null)}
-                        className={`group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-mono text-xs text-slate-200 border-amber-900/40 hover:border-amber-700/60 bg-gradient-to-r from-amber-950/20 via-slate-950/80 to-slate-950/90 w-full ${
-                          partyDraggedIndex === idx
-                            ? 'opacity-40 border-cyan-500/80 bg-cyan-950/20 scale-[0.99]'
-                            : ''
-                        }`}
+                        className="group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-mono text-xs text-slate-200 border-amber-900/40 hover:border-amber-700/60 bg-gradient-to-r from-amber-950/20 via-slate-950/80 to-slate-950/90 w-full"
                       >
-                        {orderedSessionMembers.length > 1 && (
-                          <div
-                            className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl bg-amber-800/40 group-hover:bg-amber-500/60 cursor-grab active:cursor-grabbing transition-colors"
-                            title="Drag to reorder roster position"
-                          />
-                        )}
-
                         {editingRosterMonsterId === monster.id ? (
                           <div className="p-1.5 bg-slate-950 border border-amber-500/60 rounded-lg flex items-center gap-2 w-full font-mono">
                             <input
@@ -1153,7 +1023,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             </button>
                           </div>
                         ) : (
-                          <div className={`flex items-center justify-between gap-2 leading-snug ${orderedSessionMembers.length > 1 ? 'pl-2' : ''}`}>
+                          <div className="flex items-center justify-between gap-2 leading-snug">
                             {/* Left Segment: 🐉 [Monster Name] [🚩 Nish Button] [Combat Metrics] [System Attributes] */}
                             <div className="flex-1 min-w-0 flex items-center gap-x-2.5 gap-y-1 flex-wrap font-mono text-xs text-slate-200">
                               <span className="text-xs leading-none shrink-0 select-none">🐉</span>
@@ -1255,94 +1125,118 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
         {/* Right Column: Adventure Encounters Suite (6 cols - 50/50 balanced layout) */}
         <div className="lg:col-span-6 bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 p-4 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 shadow-lg shadow-amber-950/20 flex flex-col lg:h-full lg:min-h-0 font-outfit">
-          {/* Pinned Title Bar (Never scrolls off screen) */}
-          <div className="flex items-center justify-between border-b border-amber-500/20 pb-3 shrink-0 flex-wrap gap-2 relative z-30">
-            <div className="flex items-center gap-2.5 flex-wrap flex-1 min-w-0">
-              <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] shrink-0">
-                <span className="text-base leading-none">🗺️</span>
+          {/* ====================================================================== */}
+          {/* FROZEN CONTROLS ZONE: Vertically pinned down to and including Image 3  */}
+          {/* ====================================================================== */}
+          <div className="shrink-0 flex flex-col gap-2.5 border-b border-amber-500/20 pb-3 relative z-30">
+            {/* 1. Main Adventure Header Row */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              {/* Left Group: 🗺️ Icon + Adventure Name Dropdown + Act Dropdown */}
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] shrink-0 self-end mb-0.5">
+                  <span className="text-base leading-none">🗺️</span>
+                </div>
+
+                {/* Adventure & Act Selectors with Centered Labels Above */}
+                <AdventureActBar />
               </div>
-              <h3 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider font-outfit shrink-0">
-                Adventure
-              </h3>
 
-              {/* Pinned Adventure & Act Selectors */}
-              <AdventureActBar />
+              {/* Distinct Vertical Separator */}
+              <div className="hidden sm:block h-10 w-px bg-gradient-to-b from-slate-800 via-amber-500/40 to-slate-800 mx-1 shrink-0" />
+
+              {/* Right Group: Stacked Notes & Loot (Notes on Top, Loot on Bottom) */}
+              <div className="flex flex-col gap-1 items-end ml-auto shrink-0">
+                {/* Notes Dropdown (Teal, DRY/KISS - "Adventure" removed) */}
+                <UniversalLinksDropdown
+                  label="Notes"
+                  scope="adventure"
+                  links={activeAdventure?.links || activeAdventure?.structure?.links || []}
+                  disabled={!activeAdventure}
+                  disabledTooltip="Select an adventure first"
+                  themeColor="teal"
+                  onAddLink={async (name, url) => {
+                    if (!activeAdventure) return;
+                    await addAdventureLink(activeAdventure.id, name, url);
+                  }}
+                  onUpdateLink={async (linkId, name, url) => {
+                    if (!activeAdventure) return;
+                    await updateAdventureLink(activeAdventure.id, linkId, name, url);
+                  }}
+                  onDeleteLink={async (linkId) => {
+                    if (!activeAdventure) return;
+                    await deleteAdventureLink(activeAdventure.id, linkId);
+                  }}
+                  onReorderLinkByIndex={async (fromIdx, toIdx) => {
+                    if (!activeAdventure) return;
+                    await reorderAdventureLinkByIndex(activeAdventure.id, fromIdx, toIdx);
+                  }}
+                />
+
+                {/* Loot Dropdown (Yellow/Gold, DRY/KISS - "Adventure" removed) */}
+                <UniversalLootDropdown
+                  label="Loot"
+                  loot={activeAdventure?.loot || activeAdventure?.structure?.loot || []}
+                  disabled={!activeAdventure}
+                  disabledTooltip="Select an adventure first"
+                  themeColor="yellow"
+                  onAddLoot={async (item) => {
+                    if (!activeAdventure) return;
+                    await addAdventureLoot(activeAdventure.id, item);
+                  }}
+                  onDeleteLoot={async (lootId) => {
+                    if (!activeAdventure) return;
+                    await deleteAdventureLoot(activeAdventure.id, lootId);
+                  }}
+                  onClearLoot={async () => {
+                    if (!activeAdventure) return;
+                    await clearAdventureLoot(activeAdventure.id);
+                  }}
+                  onSendToPartyVault={async (items, sourceLabel) => {
+                    return await sendLootToPartyVault(items, selectedParty?.id || 'default', sourceLabel);
+                  }}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Scrollable Content Container for Right Pane */}
-          <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto pr-1.5 space-y-4 pt-3">
-            {/* Staged Encounter Navigation Ribbon */}
-            <EncounterNavigationRibbon />
+            {/* 2. Ad-Lib Encounter Reset Banner (when active encounter is Ad-Lib) */}
+            {(activeEncounter?.is_adlib || activeEncounter?.title === 'Ad-Lib Encounter') && (
+              <div className="flex items-center justify-between p-1.5 bg-rose-950/40 border border-rose-500/40 rounded-xl">
+                <span className="text-xs text-rose-300 font-bold flex items-center gap-1.5 pl-1.5">
+                  <span>⚡</span> Ad-Lib Encounter Active
+                </span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!activeAdventure || !activeAct || !activeEncounter) return;
+                    if (confirm('Reset all Encounter Monsters, Loot, and Notes to empty for this Ad-Lib Encounter?')) {
+                      await resetEncounterAll(activeAdventure.id, activeAct.id, activeEncounter.id);
+                    }
+                  }}
+                  className="px-2.5 py-0.5 bg-rose-950/90 hover:bg-rose-900 border border-rose-500/60 hover:border-rose-400 text-rose-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow cursor-pointer"
+                  title="Reset all Encounter Monsters, Encounter Loot, and Encounter Notes to empty"
+                >
+                  <RotateCcw className="w-3 h-3 text-rose-400" />
+                  <span>Reset Ad-Lib Encounter 🧹</span>
+                </button>
+              </div>
+            )}
 
-            {/* On-Screen Master Difficulty Scaling Bar */}
+            {/* 3. On-Screen Master Difficulty Scaling Bar */}
             <GmCompactDifficultyBar />
 
-            {/* Encounter Monsters Header Controls */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 pb-3 pt-1">
-              {/* Left: Title, Encounter Selector Bar & Quick Sort */}
+            {/* 4. Image 3 Header Controls (Renamed to "Encounter Rooms", Sort Excised) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+              {/* Left: 🐉 Title & Encounter Selector Bar */}
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="p-1 rounded-lg bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.25)]">
                   <span className="text-xs leading-none">🐉</span>
                 </div>
                 <h3 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider font-outfit shrink-0">
-                  ENCOUNTER MONSTERS
+                  Encounter Rooms
                 </h3>
 
                 {/* Encounter Selector Dropdown & Stepper */}
                 <EncounterSelectorBar />
-
-                {effectiveMonsters.length > 1 && (
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setIsMonsterSortMenuOpen(!isMonsterSortMenuOpen)}
-                      className={`p-1 rounded text-xs transition-colors flex items-center gap-1 border ${
-                        monsterPreset !== 'alphabetical'
-                          ? 'bg-amber-950/80 text-amber-300 border-amber-500/50'
-                          : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
-                      }`}
-                      title="Quick Sort Monster Presets"
-                    >
-                      <ArrowUpDown className="w-3 h-3" />
-                    </button>
-
-                    {isMonsterSortMenuOpen && (
-                      <div
-                        className="absolute left-0 mt-1 w-44 bg-slate-950 border border-slate-800 rounded-lg shadow-xl z-50 py-1 text-xs font-outfit"
-                        onClick={() => setIsMonsterSortMenuOpen(false)}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => applyMonsterPreset('alphabetical')}
-                          className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
-                            monsterPreset === 'alphabetical' ? 'text-amber-400 font-bold' : 'text-slate-300'
-                          }`}
-                        >
-                          <span>🔤</span> Alphabetical
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyMonsterPreset('nish')}
-                          className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
-                            monsterPreset === 'nish' ? 'text-amber-400 font-bold' : 'text-slate-300'
-                          }`}
-                        >
-                          <span>🚩</span> Nish
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyMonsterPreset('vitality')}
-                          className={`w-full text-left px-2.5 py-1.5 hover:bg-slate-900 flex items-center gap-2 ${
-                            monsterPreset === 'vitality' ? 'text-amber-400 font-bold' : 'text-slate-300'
-                          }`}
-                        >
-                          <span>❤️</span> Vitality
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Right: +🐉 Button to open MonsterManagerModal for active encounter */}
@@ -1357,33 +1251,44 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 </button>
               </div>
             </div>
+          </div>
 
+          {/* ====================================================================== */}
+          {/* SCROLLABLE CONTENT ZONE: Encounter room tree & Encounter Notes scroll   */}
+          {/* ====================================================================== */}
+          <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto pr-1.5 space-y-3 pt-3">
             {/* Act-Wide Encounter Monsters Tree */}
             {!activeAct || (activeAct.encounters || []).length === 0 ? (
               <div className="text-xs font-medium text-slate-400 italic p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center space-y-2 font-outfit">
                 <div>No encounters in active act.</div>
                 <div className="text-[11px] text-slate-500 font-outfit">
-                  Use the Adventure Ribbon above to add acts and encounters.
+                  Use the Adventure Selectors above to add acts and encounters.
                 </div>
               </div>
             ) : (
-              <div className="space-y-3 overflow-y-auto max-h-[600px] pr-1">
+              <div className="space-y-3 pr-1">
                 {(activeAct.encounters || []).map((enc) => {
                   const isCurrentEncounter = enc.id === activeEncounter?.id;
                   const monCount = (enc.monsters || []).length;
+                  const sortedMonsters = [...(enc.monsters || [])].sort((a, b) => {
+                    const nameA = (a.fullText || a.nameWithEquip || (a as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+                    const nameB = (b.fullText || b.nameWithEquip || (b as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+                    return nameA.localeCompare(nameB);
+                  });
 
                   return (
                     <div key={enc.id} className="flex flex-col">
-                      {/* Level 1: Encounter Chassis Pill */}
+                      {/* Level 1: Encounter Chassis Pill with Centered Action Button */}
                       <div
-                        className={`flex items-center justify-between p-2 rounded-xl border text-xs font-outfit transition-all ${
+                        className={`relative flex items-center justify-between p-2 rounded-xl border text-xs font-outfit transition-all ${
                           isCurrentEncounter
                             ? 'bg-amber-950/80 border-amber-500/80 shadow-md shadow-amber-950/40 text-amber-200'
                             : 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-slate-300'
                         }`}
                       >
+                        {/* Left: 🏰 Room Title & Active Room Badge */}
                         <div
-                          className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
+                          className="flex items-center gap-2 cursor-pointer max-w-[42%] min-w-0"
                           onClick={() => selectEncounter(enc.id)}
                           title="Click to select this encounter as active"
                         >
@@ -1398,31 +1303,36 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                           )}
                         </div>
 
-                        {/* Right side: Either '⬅️ Add all X monsters' button or '(No monsters staged)' */}
-                        {monCount > 0 ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddAllMonstersToRoster(enc);
-                            }}
-                            className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-100 border border-amber-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ml-2 shadow-sm"
-                            title={`Copy all ${monCount} monsters to 👥&🐉 Encounter Roster`}
-                          >
-                            <span>⬅️</span>
-                            <span>Add all {monCount} monsters</span>
-                          </button>
-                        ) : (
-                          <span className="text-[11px] text-slate-500 italic shrink-0 ml-2 select-none">
-                            (No monsters staged)
-                          </span>
-                        )}
+                        {/* Center: Absolutely Centered "⬅️ Add all X monsters" or "(No monsters staged)" */}
+                        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+                          {monCount > 0 ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddAllMonstersToRoster(enc);
+                              }}
+                              className="px-2.5 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-100 border border-amber-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                              title={`Copy all ${monCount} monsters to 👥&🐉 Encounter Roster`}
+                            >
+                              <span>⬅️</span>
+                              <span>Add all {monCount} monsters</span>
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-slate-500 italic select-none">
+                              (No monsters staged)
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Right: Spacer to balance layout */}
+                        <div className="w-12 shrink-0" />
                       </div>
 
-                      {/* Level 2: Nested Monsters with Vertical Line Indentation (strictly when monCount > 0) */}
+                      {/* Level 2: Nested Monsters with Vertical Line Indentation (strictly when monCount > 0, always alphabetical) */}
                       {monCount > 0 && (
                         <div className="flex flex-col gap-1.5 pl-3 ml-3 border-l-2 border-amber-500/40 my-1.5">
-                          {(enc.monsters || []).map((m) =>
+                          {sortedMonsters.map((m) =>
                             editingId === m.id && editingEncounterId === enc.id ? (
                               <div key={m.id} className="p-2 bg-slate-950 border border-amber-500/60 rounded-lg flex items-center gap-2">
                                 <input

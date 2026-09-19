@@ -61,9 +61,13 @@ export const AdventureActBar: React.FC<AdventureActBarProps> = ({ className = ''
   const acts = activeAdv?.structure?.acts || [];
 
   return (
-    <div className={`flex items-center gap-1.5 font-outfit ${className}`}>
+    <div className={`flex items-end gap-2 font-outfit ${className}`}>
       {/* 1. ADVENTURE Dropdown */}
-      <div className="relative" ref={advMenuRef}>
+      <div className="flex flex-col items-center">
+        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 leading-tight mb-1 select-none">
+          Adventure Name
+        </span>
+        <div className="relative" ref={advMenuRef}>
         <button
           type="button"
           onClick={() => {
@@ -178,11 +182,16 @@ export const AdventureActBar: React.FC<AdventureActBarProps> = ({ className = ''
           </div>
         )}
       </div>
+      </div>
 
-      <span className="text-slate-600 font-bold text-xs">›</span>
+      <span className="text-slate-600 font-bold text-xs self-end mb-2">›</span>
 
       {/* 2. ACT Dropdown */}
-      <div className="relative" ref={actMenuRef}>
+      <div className="flex flex-col items-center">
+        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 leading-tight mb-1 select-none">
+          Act
+        </span>
+        <div className="relative" ref={actMenuRef}>
         <button
           type="button"
           onClick={() => {
@@ -300,6 +309,7 @@ export const AdventureActBar: React.FC<AdventureActBarProps> = ({ className = ''
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
