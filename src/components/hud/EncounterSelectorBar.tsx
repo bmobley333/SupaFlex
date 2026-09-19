@@ -122,7 +122,7 @@ export const EncounterSelectorBar: React.FC<EncounterSelectorBarProps> = ({ clas
                         setIsEncMenuOpen(false);
                       }}
                       className={`w-full px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer hover:bg-slate-900 transition ${
-                        isActive ? 'bg-rose-950/50 text-rose-200 font-bold' : 'text-slate-300'
+                        isActive ? 'bg-rose-950/50 text-red-400 font-bold' : 'text-red-400/90 hover:text-red-300 font-medium'
                       }`}
                     >
                       <div className="flex items-center gap-1.5 truncate flex-1">
