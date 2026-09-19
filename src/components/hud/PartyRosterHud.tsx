@@ -179,16 +179,72 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
     };
   }, [activePartyId, tabSessionId]);
 
-  // Filter out current active character ($N - 1$)
-  const otherMembers = sessionMembers.filter((m) => {
-    if (!activeCharacter) return true;
-    return String(m.character_id) !== String(activeCharacter.id);
-  });
+  // Combine all session members with active character reactivity
+  const allMembers = React.useMemo(() => {
+    let foundSelf = false;
+    const mapped = sessionMembers.map((m) => {
+      if (activeCharacter && Number(m.character_id) === Number(activeCharacter.id)) {
+        foundSelf = true;
+        const curVit = activeCharacter.sheet_data?.current_vitality ?? activeCharacter.hp ?? 28;
+        const maxVit = activeCharacter.sheet_data?.vitality_max ?? 28;
+        const curNish = activeCharacter.sheet_data?.current_nish;
+        return {
+          ...m,
+          character: {
+            ...m.character,
+            ...activeCharacter,
+            current_vitality: curVit,
+            vitality_max: maxVit,
+            current_nish: curNish,
+            sheet_data: {
+              ...(m.character?.sheet_data || {}),
+              ...(activeCharacter.sheet_data || {}),
+              current_vitality: curVit,
+              vitality_max: maxVit,
+              current_nish: curNish,
+            },
+          } as any,
+        };
+      }
+      return m;
+    });
+
+    // If active character is in a party but DB session member row is still resolving, synthesize self entry
+    if (!foundSelf && activeCharacter && activePartyId) {
+      const curVit = activeCharacter.sheet_data?.current_vitality ?? activeCharacter.hp ?? 28;
+      const maxVit = activeCharacter.sheet_data?.vitality_max ?? 28;
+      const curNish = activeCharacter.sheet_data?.current_nish;
+      const selfMember: PartySessionMember = {
+        id: `self_${activeCharacter.id}`,
+        party_id: activePartyId,
+        player_email: useCharacterStore.getState().playerEmail,
+        character_id: activeCharacter.id,
+        tab_session_id: tabSessionId || 'self_tab',
+        joined_at: new Date().toISOString(),
+        last_seen: new Date().toISOString(),
+        character: {
+          ...activeCharacter,
+          current_vitality: curVit,
+          vitality_max: maxVit,
+          current_nish: curNish,
+          sheet_data: {
+            ...(activeCharacter.sheet_data || {}),
+            current_vitality: curVit,
+            vitality_max: maxVit,
+            current_nish: curNish,
+          },
+        } as any,
+        player_first_name: useCharacterStore.getState().playerName || 'Player',
+      };
+      return [selfMember, ...mapped];
+    }
+    return mapped;
+  }, [sessionMembers, activeCharacter, activePartyId, tabSessionId]);
 
   // Custom Local Storage Roster Ordering
   const storageKey = `supaflex_roster_order_${activeCharacter?.id || 'default'}`;
   const {
-    orderedItems: orderedOtherMembers,
+    orderedItems: orderedMembers,
     moveItem,
     nudgeItem,
     applyPreset,
@@ -196,7 +252,7 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
     draggedIndex,
     setDraggedIndex,
   } = useRosterOrdering<PartySessionMember>({
-    items: otherMembers,
+    items: allMembers,
     storageKey,
     getId: (m) => String(m.character_id || m.id),
     getName: (m) => resolveCharFirstName(m.character?.name || `Hero #${m.character_id}`),
@@ -241,11 +297,11 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
             <span className="text-xs leading-none">👥</span>
           </div>
           <h3 className="text-xs font-extrabold text-sky-200 uppercase tracking-wider font-outfit">
-            PARTY ROSTER ({orderedOtherMembers.length})
+            PARTY ROSTER ({orderedMembers.length})
           </h3>
 
           {/* Quick-Sort Presets Trigger */}
-          {orderedOtherMembers.length > 1 && (
+          {orderedMembers.length > 1 && (
             <div className="relative">
               <button
                 type="button"
@@ -337,28 +393,36 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
       </div>
 
       {/* Roster Cards List */}
-      {orderedOtherMembers.length === 0 ? (
+      {orderedMembers.length === 0 ? (
         <div className="text-[11px] text-slate-500 italic p-3 bg-slate-950/40 rounded-lg border border-slate-800/50 text-center">
-          No other party members in session.
+          No party members in session.
         </div>
       ) : (
         <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
-          {orderedOtherMembers.map((member, idx) => (
-            <PartyCharacterCard
-              key={member.id || member.character_id || `pm_${idx}`}
-              member={member}
-              isDraggable={orderedOtherMembers.length > 1}
-              onDragStart={(e) => handleDragStart(e, idx)}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, idx)}
-              onDragEnd={() => setDraggedIndex(null)}
-              isDragging={draggedIndex === idx}
-              onNudgeUp={() => nudgeItem(idx, 'up')}
-              onNudgeDown={() => nudgeItem(idx, 'down')}
-              canNudgeUp={idx > 0}
-              canNudgeDown={idx < orderedOtherMembers.length - 1}
-            />
-          ))}
+          {orderedMembers.map((member, idx) => {
+            const isSelf = Boolean(
+              activeCharacter &&
+                (Number(member.character_id) === Number(activeCharacter.id) ||
+                  (tabSessionId && member.tab_session_id === tabSessionId))
+            );
+            return (
+              <PartyCharacterCard
+                key={member.id || member.character_id || `pm_${idx}`}
+                member={member}
+                isCurrentPlayer={isSelf}
+                isDraggable={orderedMembers.length > 1}
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={() => setDraggedIndex(null)}
+                isDragging={draggedIndex === idx}
+                onNudgeUp={() => nudgeItem(idx, 'up')}
+                onNudgeDown={() => nudgeItem(idx, 'down')}
+                canNudgeUp={idx > 0}
+                canNudgeDown={idx < orderedMembers.length - 1}
+              />
+            );
+          })}
         </div>
       )}
     </div>

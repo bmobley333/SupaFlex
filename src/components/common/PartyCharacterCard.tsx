@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 interface PartyCharacterCardProps {
   member: PartySessionMember;
   playerNameOverride?: string;
+  isCurrentPlayer?: boolean;
   isDraggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onDragOver?: (e: React.DragEvent) => void;
@@ -53,6 +54,7 @@ export const resolveCharFirstName = (rawCharName?: string): string => {
 export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
   member,
   playerNameOverride,
+  isCurrentPlayer = false,
   isDraggable = false,
   onDragStart,
   onDragOver,
@@ -121,12 +123,33 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
       {/* 
         S-Tier Party Member Card Layout:
         - Row 1 Right Segment: Vitality readout, pulse dot, and equal-length (w-16 / 64px) health bar are rigidly anchored to Row 1, right-aligned.
-        - Left Segment: Nish Badge FIRST, Player Name, Character Name, Race, and Class. If horizontal space is constrained, secondary info wraps onto Row 2 without affecting Row 1 Vitality.
+        - Left Segment: [Self Emoji 👤], Player Name, Character Name, [🚩 Nish Badge], Race, and Class.
       */}
       <div className={`flex items-start justify-between gap-2 leading-snug ${isDraggable ? 'pl-2' : ''}`}>
-        {/* Left Segment: Nish Badge FIRST, Player Name, Character Name, Race, Class */}
+        {/* Left Segment: [Self Emoji 👤], Player Name, Character Name, Nish Badge, Race, Class */}
         <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap font-bold text-slate-100">
-          {/* 🚩 VERY FIRST ITEM: Nish Badge */}
+          {/* 👤 Fast-Find Self Indicator: Rendered as first item on the line for active player */}
+          {isCurrentPlayer && (
+            <span
+              className="text-xs leading-none shrink-0 select-none"
+              title="Your Character"
+            >
+              👤
+            </span>
+          )}
+
+          <span
+            className={`font-mono font-extrabold text-xs shrink-0 ${
+              isCurrentPlayer ? 'text-emerald-400' : 'text-amber-300'
+            }`}
+          >
+            ({playerFirstName})
+          </span>
+          <span className="text-slate-100 font-extrabold text-xs">
+            {charFirstName}
+          </span>
+
+          {/* 🚩 Relocated Nish Badge: Immediately after character name and before race */}
           <span
             className="font-mono text-[11px] font-black px-1.5 py-0.5 rounded border border-amber-500/50 bg-amber-500/15 text-amber-300 shrink-0 shadow-sm flex items-center gap-0.5"
             title={`Initiative (Nish): ${currentNishDisplay}`}
@@ -135,12 +158,6 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
             <span className="tabular-nums">{currentNishDisplay}</span>
           </span>
 
-          <span className="font-mono text-amber-300 font-extrabold text-xs shrink-0">
-            ({playerFirstName})
-          </span>
-          <span className="text-slate-100 font-extrabold text-xs">
-            {charFirstName}
-          </span>
           <span className="text-purple-300 font-semibold text-[11px]">
             {race}
           </span>
