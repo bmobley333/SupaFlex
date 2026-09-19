@@ -83,7 +83,7 @@ export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) =>
           }
         : {}),
     }));
-    saveActiveCharacter();
+    saveActiveCharacter(true);
 
     setTimeout(() => {
       setIsRolling(false);
@@ -98,7 +98,7 @@ export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) =>
         delete next.current_nish;
         return next;
       });
-      saveActiveCharacter();
+      saveActiveCharacter(true);
       setTcData(null);
       return;
     }
@@ -110,7 +110,7 @@ export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) =>
       ...prev,
       current_nish: valToSave,
     }));
-    saveActiveCharacter();
+    saveActiveCharacter(true);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

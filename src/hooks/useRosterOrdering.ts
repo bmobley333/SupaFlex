@@ -210,11 +210,21 @@ export function useRosterOrdering<T>({
             }
             return getId(a).localeCompare(getId(b));
           });
+        } else if (preset === 'nish_desc' && getNish) {
+          sorted.sort((a, b) => {
+            const diff = getNish(b) - getNish(a);
+            if (Math.abs(diff) > 0.001) return diff;
+            if (getName) {
+              const nameDiff = getName(a).localeCompare(getName(b));
+              if (nameDiff !== 0) return nameDiff;
+            }
+            return getId(a).localeCompare(getId(b));
+          });
         }
         saveOrder(sorted.map(getId));
       }
     },
-    [items, getName, getVitPct, getId, saveOrder, setActivePreset]
+    [items, getName, getVitPct, getNish, getId, saveOrder, setActivePreset]
   );
 
   // Reset to initial backend order

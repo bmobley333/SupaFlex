@@ -432,33 +432,40 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const broadcastChannel = supabase.channel(`party:${partyId}`);
     broadcastChannel
       .on('broadcast', { event: 'party_members_updated' }, (payload: any) => {
-        // Instant optimistic vitals update (< 50ms peer-to-peer sync)
+        // Instant optimistic vitals & nish update (< 50ms peer-to-peer sync, zero extra REST egress)
         const data = payload?.payload;
-        if (data?.character_id && (data.current_vitality !== undefined || data.hp !== undefined)) {
+        if (data?.character_id && (data.current_vitality !== undefined || data.hp !== undefined || data.current_nish !== undefined)) {
           const charId = Number(data.character_id);
           const newCurrentVit = data.current_vitality ?? data.hp;
           const newMaxVit = data.vitality_max;
+          const newNish = data.current_nish;
           setSessionMembers((prev) =>
             prev.map((m) => {
               if (Number(m.character_id) === charId && m.character) {
+                const updatedSheet = {
+                  ...(m.character.sheet_data || {}),
+                  ...(newCurrentVit !== undefined ? { current_vitality: newCurrentVit } : {}),
+                  ...(newMaxVit !== undefined ? { vitality_max: newMaxVit } : {}),
+                  ...(newNish !== undefined ? { current_nish: newNish } : {}),
+                };
+                if (newNish === null) {
+                  delete updatedSheet.current_nish;
+                }
                 const updatedChar = {
                   ...m.character,
-                  hp: newCurrentVit,
-                  current_vitality: newCurrentVit,
+                  ...(newCurrentVit !== undefined ? { hp: newCurrentVit, current_vitality: newCurrentVit } : {}),
                   ...(newMaxVit !== undefined ? { vitality_max: newMaxVit } : {}),
-                  sheet_data: {
-                    ...(m.character.sheet_data || {}),
-                    current_vitality: newCurrentVit,
-                    ...(newMaxVit !== undefined ? { vitality_max: newMaxVit } : {}),
-                  },
+                  current_nish: newNish === null ? undefined : newNish ?? (m.character as any)?.current_nish,
+                  sheet_data: updatedSheet,
                 };
                 return { ...m, character: updatedChar as any };
               }
               return m;
             })
           );
+        } else {
+          loadSessionMembers(partyId, true);
         }
-        loadSessionMembers(partyId, true);
       })
       .on('broadcast', { event: 'party.joined' }, () => {
         loadSessionMembers(partyId, true);
@@ -495,6 +502,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       const maxVitA = ma.character?.sheet_data?.vitality_max;
       const maxVitB = mb.character?.sheet_data?.vitality_max;
       if (maxVitA !== maxVitB) return false;
+      const nishA = ma.character?.sheet_data?.current_nish ?? (ma.character as any)?.current_nish;
+      const nishB = mb.character?.sheet_data?.current_nish ?? (mb.character as any)?.current_nish;
+      if (nishA !== nishB) return false;
       if (ma.character?.name !== mb.character?.name) return false;
     }
     return true;

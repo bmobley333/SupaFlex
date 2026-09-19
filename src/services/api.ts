@@ -1297,7 +1297,7 @@ export const gameApi = {
 
     let query = supabase
       .from('party_session_members')
-      .select('id, party_id, character_id, player_email, tab_session_id, last_seen, character:characters(id, name, race, class, hp, current_vitality:sheet_data->current_vitality, vitality_max:sheet_data->vitality_max)')
+      .select('id, party_id, character_id, player_email, tab_session_id, last_seen, character:characters(id, name, race, class, hp, current_vitality:sheet_data->current_vitality, vitality_max:sheet_data->vitality_max, current_nish:sheet_data->current_nish)')
       .order('character_id', { ascending: true });
 
     if (isUuid) {
@@ -1331,17 +1331,23 @@ export const gameApi = {
     // Strict deduplication by character_id (keeping newest last_seen row)
     const memberMap = new Map<number, any>();
     (data || []).forEach((m: any) => {
-      // Normalize character vitals for 100% backward compatibility with components reading sheet_data
+      // Normalize character vitals and nish for 100% backward compatibility with components reading sheet_data
       if (m.character) {
         const curVit = m.character.current_vitality ?? m.character.hp ?? 28;
         const maxVit = m.character.vitality_max ?? 28;
+        const rawNish = m.character.current_nish ?? (m.character as any)?.sheet_data?.current_nish;
+        const curNish = rawNish !== undefined && rawNish !== null && String(rawNish).trim() !== '' ? rawNish : undefined;
         m.character.sheet_data = {
           ...(m.character.sheet_data || {}),
           current_vitality: curVit,
           vitality_max: maxVit,
+          ...(curNish !== undefined ? { current_nish: curNish } : {}),
         };
         m.character.current_vitality = curVit;
         m.character.vitality_max = maxVit;
+        if (curNish !== undefined) {
+          (m.character as any).current_nish = curNish;
+        }
       }
 
       const existing = memberMap.get(m.character_id);

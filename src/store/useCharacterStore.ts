@@ -723,12 +723,13 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
             isSaving: false,
           }));
 
-          // Instant optimistic vitals broadcast to active party members (< 50ms peer-to-peer sync)
+          // Instant optimistic vitals & nish broadcast to active party members (< 50ms peer-to-peer sync)
           const activePartyId = get().activePartyId;
           if (activePartyId) {
             try {
               const curVit = saved.sheet_data?.current_vitality ?? saved.hp ?? 28;
               const maxVit = saved.sheet_data?.vitality_max ?? 28;
+              const curNish = saved.sheet_data?.current_nish ?? null;
               const channel = supabase.channel(`party:${activePartyId}`);
               channel.send({
                 type: 'broadcast',
@@ -738,6 +739,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
                   character_id: saved.id,
                   current_vitality: curVit,
                   vitality_max: maxVit,
+                  current_nish: curNish,
                   hp: curVit,
                   timestamp: new Date().toISOString(),
                 },
