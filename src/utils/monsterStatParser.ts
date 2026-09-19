@@ -3,6 +3,9 @@ import { SupabaseMonster } from '../types/game';
 export interface ParsedMonster {
   id: string;
   nameWithEquip: string;
+  name?: string;
+  gear?: string;
+  abilities?: string;
   attackStat: string;
   defenseStat: string;
   vitalityStat: string;
@@ -53,6 +56,40 @@ export function parseMonsterLine(line: string): ParsedMonster {
     nameWithEquip = nameWithEquip.replace(/[\:\–\-]+$/, '').trim();
   }
 
+  // 4b. Extract Gear/Weapons&Armor (⚔️🧥) from () before 🚩, and Clean Name
+  let cleanName = nameWithEquip;
+  let extractedGear = '';
+  const parenMatch = nameWithEquip.match(/\(([^)]+)\)/);
+  if (parenMatch) {
+    extractedGear = parenMatch[1].trim();
+    cleanName = nameWithEquip.replace(/\([^)]+\)/, '').replace(/\s+/g, ' ').trim();
+  } else {
+    const bracketMatch = nameWithEquip.match(/\[([^\]]+)\]/);
+    if (bracketMatch) {
+      extractedGear = bracketMatch[1].trim();
+      cleanName = nameWithEquip.replace(/\[[^\]]+\]/, '').replace(/\s+/g, ' ').trim();
+    }
+  }
+  cleanName = cleanName.replace(/[\:\–\-]+$/, '').trim() || nameWithEquip;
+
+  // 4c. Extract Abilities/Notes (🔥) from all text after [✨.../🫀#] or [✨.../💖#]
+  let extractedAbilities = '';
+  const attrEndMatch = trimmed.match(/(?:🫀|💖)\s*\d+\s*\]\s*(.*)$/u);
+  if (attrEndMatch && attrEndMatch[1]) {
+    let trailing = attrEndMatch[1].trim();
+    const outerParen = trailing.match(/^\((.*)\)$/);
+    if (outerParen) {
+      trailing = outerParen[1].trim();
+    }
+    extractedAbilities = trailing;
+  } else {
+    // Fallback: If no attribute block, look for trailing parenthetical notes after vitality
+    const vitEndMatch = trimmed.match(/❤️\s*\d+\s*(?:–|-)?\s*\(([^)]+)\)\s*$/u);
+    if (vitEndMatch && vitEndMatch[1]) {
+      extractedAbilities = vitEndMatch[1].trim();
+    }
+  }
+
   // 5. Construct Reduced Text for Player View
   let reducedText = '';
   if (nameWithEquip || attackStat || defenseStat || vitalityStat) {
@@ -65,6 +102,9 @@ export function parseMonsterLine(line: string): ParsedMonster {
   return {
     id,
     nameWithEquip,
+    name: cleanName,
+    gear: extractedGear,
+    abilities: extractedAbilities,
     attackStat,
     defenseStat,
     vitalityStat,
@@ -79,6 +119,8 @@ export interface MonsterStatData {
   name: string;
   count?: number;
   equipment?: string;
+  gear?: string;
+  abilities?: string;
   initiative?: number;
   mr?: number;
   attack?: number;
@@ -169,7 +211,7 @@ export function isMonsterContinuationLine(line: string): boolean {
   }
 
   // 5. Starts with keyword labels like "Abilities:", "Notes:", "Gear:", "Equipment:", "Special:"
-  if (/^(?:abilities|notes|gear|equipment|special|traits|spells|weapons|armor)\s*:/iu.test(trimmed)) {
+  if (/^(?:abilities|notes|gear|equipment|special|traits|spells|weapons|armor|⚔️🧥|🔥)\s*:/iu.test(trimmed)) {
     return true;
   }
 
@@ -238,7 +280,8 @@ export function stitchMultiRowMonsterLines(rawText: string): string[] {
  */
 export function formatMonsterDataToStatblock(m: MonsterStatData): string {
   const countPrefix = m.count && m.count > 1 ? `${m.count} ` : '';
-  const equipStr = m.equipment && !m.name.includes(m.equipment) ? ` (${m.equipment})` : '';
+  const gearVal = m.equipment || m.gear || '';
+  const equipStr = gearVal && !m.name.includes(gearVal) ? ` (${gearVal})` : '';
   const fullName = `${countPrefix}${m.name}${equipStr}`.trim();
 
   const init = m.initiative ?? 10;
@@ -258,7 +301,8 @@ export function formatMonsterDataToStatblock(m: MonsterStatData): string {
   const moxie = attrs.moxie ?? 10;
   const attrBlock = `– [✨${magic}/💪${might}/👁️${mind}/🏃${motion}/🫀${moxie}]`;
 
-  const notesStr = m.gm_notes ? ` (${m.gm_notes})` : '';
+  const notesVal = m.abilities || m.gm_notes || '';
+  const notesStr = notesVal ? ` (${notesVal})` : '';
 
   return `${fullName} 🚩${init} 👣${mr} ⚔️${atk}/${dmg}${minWounds} 🧥${def}/${armor} ❤️${vit} ${attrBlock}${notesStr}`.trim();
 }

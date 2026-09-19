@@ -33,6 +33,9 @@ export interface GmRosterMonster {
   armor?: number;
   max_vit?: number;
   attributes?: { magic: number; might: number; mind: number; motion: number; moxie: number };
+  gear?: string;
+  abilities?: string;
+  gm_notes?: string;
 }
 
 export type GmUnifiedRosterItem =
@@ -55,11 +58,26 @@ export function parseMonsterForGmRoster(
   }
 
   // Clean Name: remove leading punctuation/dashes, preserve numbers & equipment
-  const cleanName =
+  let cleanName =
     rawName
       .replace(/^[\:\–\-\s]+/, '')
       .replace(/[\:\–\-]+$/, '')
       .trim() || 'Monster';
+
+  // Extract Gear (⚔️🧥) from () before 🚩
+  let gear = '';
+  const parenMatch = cleanName.match(/\(([^)]+)\)/);
+  if (parenMatch) {
+    gear = parenMatch[1].trim();
+    cleanName = cleanName.replace(/\([^)]+\)/, '').replace(/\s+/g, ' ').trim();
+  } else {
+    const bracketMatch = cleanName.match(/\[([^\]]+)\]/);
+    if (bracketMatch) {
+      gear = bracketMatch[1].trim();
+      cleanName = cleanName.replace(/\[[^\]]+\]/, '').replace(/\s+/g, ' ').trim();
+    }
+  }
+  cleanName = cleanName.replace(/[\:\–\-]+$/, '').trim() || 'Monster';
 
   // Extract stats
   const initMatch = trimmed.match(/🚩\s*(\d+)/u);
@@ -103,6 +121,18 @@ export function parseMonsterForGmRoster(
     }
   }
 
+  // Extract Abilities (🔥) from text after attributes
+  let abilities = '';
+  const attrEndMatch = trimmed.match(/(?:🫀|💖)\s*\d+\s*\]\s*(.*)$/u);
+  if (attrEndMatch && attrEndMatch[1]) {
+    let trailing = attrEndMatch[1].trim();
+    const outerParen = trailing.match(/^\((.*)\)$/);
+    if (outerParen) {
+      trailing = outerParen[1].trim();
+    }
+    abilities = trailing;
+  }
+
   // Canonical full-color emoji presentation:
   // ⚔️ (\u2694\uFE0F) and ❤️ (\u2764\uFE0F) with standardized spacing
   const coreStatsText = `👣${mr} ⚔️${atk}/${dmg}${wounds} 🧥${def}/${arm} ❤️${vit} ${attrBlock}`.trim();
@@ -120,6 +150,9 @@ export function parseMonsterForGmRoster(
     defense: parseInt(def, 10) || 10,
     armor: parseInt(arm, 10) || 0,
     max_vit: parseInt(vit, 10) || 10,
+    gear: gear || undefined,
+    abilities: abilities || undefined,
+    gm_notes: abilities || undefined,
     attributes: attrMatch ? {
       magic: parseInt(attrMatch[1], 10) || 10,
       might: parseInt(attrMatch[2], 10) || 10,
@@ -318,10 +351,12 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     );
   };
 
-  // Inline Monster Edit State for Adventure Encounters
+  // Inline Monster Edit State for Adventure Encounters (3-row layout)
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingEncounterId, setEditingEncounterId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [editGearText, setEditGearText] = useState('');
+  const [editAbilitiesText, setEditAbilitiesText] = useState('');
 
   // Effective monsters list displayed in the GM Monster Tracker strictly mirrors the active encounter
   const effectiveMonsters = activeMonsters;
@@ -339,23 +374,62 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const handleStartEdit = (m: ParsedMonster, encounterId?: string) => {
     setEditingEncounterId(encounterId || activeEncounter?.id || null);
     setEditingId(m.id);
-    setEditText(m.fullText || m.nameWithEquip);
+    const parsed = parseMonsterLine(m.fullText || m.nameWithEquip || '');
+    let gear = m.gear || parsed.gear || '';
+    let abilities = m.abilities || parsed.abilities || m.codex_notes || '';
+
+    // Auto-resolve from Supabase Codex if matching by name and missing
+    const cleanMonsterName = (parsed.name || parsed.nameWithEquip || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const codexMatch = supabaseMonsters.find(
+      (sm) => sm.name?.toLowerCase().trim() === cleanMonsterName
+    );
+    if (codexMatch) {
+      if (!gear) gear = [codexMatch.weapons, codexMatch.armor].filter(Boolean).join(', ');
+      if (!abilities) abilities = codexMatch.abilities || codexMatch.notes || '';
+    }
+
+    let mainLine = m.fullText || m.nameWithEquip || '';
+    if (gear) {
+      mainLine = mainLine.replace(`(${gear})`, '').replace(`[${gear}]`, '').replace(/\s+/g, ' ').trim();
+    }
+    if (abilities) {
+      mainLine = mainLine.replace(new RegExp(`\\s*\\(?${abilities.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)?\\s*$`), '').trim();
+    }
+
+    setEditText(mainLine);
+    setEditGearText(gear);
+    setEditAbilitiesText(abilities);
   };
 
   const handleSaveEdit = (encounterId: string, monsterId: string) => {
     if (!editText.trim()) return;
-    const parsed = parseMonsterLine(editText.trim());
-    
+    const gearPart = editGearText.trim() ? ` (${editGearText.trim()})` : '';
+    const abilitiesPart = editAbilitiesText.trim() ? ` (${editAbilitiesText.trim()})` : '';
+
+    const iconPosMatch = editText.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
+    let reconstructed = '';
+    if (iconPosMatch && iconPosMatch.index !== undefined) {
+      const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').trim();
+      const statsPart = editText.substring(iconPosMatch.index).trim();
+      reconstructed = `${namePart}${gearPart} ${statsPart}${abilitiesPart}`.trim();
+    } else {
+      reconstructed = `${editText.trim()}${gearPart}${abilitiesPart}`.trim();
+    }
+
+    const parsed = parseMonsterLine(reconstructed);
+    parsed.gear = editGearText.trim() || undefined;
+    parsed.abilities = editAbilitiesText.trim() || undefined;
+
     if (encounterId === activeEncounter?.id) {
       const updated = effectiveMonsters.map((m) =>
-        m.id === monsterId ? { ...parsed, id: monsterId, baseFullText: editText.trim() } : m
+        m.id === monsterId ? { ...parsed, id: monsterId, baseFullText: reconstructed } : m
       );
       handleSaveMonsters(updated);
     } else if (activeAdventure && activeAct) {
       const targetEnc = activeAct.encounters?.find((e) => e.id === encounterId);
       if (targetEnc) {
         const updated = (targetEnc.monsters || []).map((m) =>
-          m.id === monsterId ? { ...parsed, id: monsterId, baseFullText: editText.trim() } : m
+          m.id === monsterId ? { ...parsed, id: monsterId, baseFullText: reconstructed } : m
         );
         updateEncounter(activeAdventure.id, activeAct.id, encounterId, { monsters: updated });
       }
@@ -450,18 +524,59 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     });
   };
 
-  // Live Inline Editing for Encounter Roster Monsters
+  // Live Inline Editing for Encounter Roster Monsters (3-row layout)
   const [editingRosterMonsterId, setEditingRosterMonsterId] = useState<string | null>(null);
   const [rosterMonsterEditText, setRosterMonsterEditText] = useState('');
+  const [rosterMonsterEditGear, setRosterMonsterEditGear] = useState('');
+  const [rosterMonsterEditAbilities, setRosterMonsterEditAbilities] = useState('');
 
   const handleStartRosterMonsterEdit = (monster: GmRosterMonster) => {
     setEditingRosterMonsterId(monster.id);
-    setRosterMonsterEditText(monster.fullText || `${monster.name} 🚩${monster.nish} ${monster.coreStatsText}`);
+    let gear = monster.gear || '';
+    let abilities = monster.abilities || monster.gm_notes || '';
+
+    // Codex fallback if missing
+    const cleanName = monster.name.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const codexMatch = supabaseMonsters.find(
+      (sm) => sm.name?.toLowerCase().trim() === cleanName
+    );
+    if (codexMatch) {
+      if (!gear) gear = [codexMatch.weapons, codexMatch.armor].filter(Boolean).join(', ');
+      if (!abilities) abilities = codexMatch.abilities || codexMatch.notes || '';
+    }
+
+    let mainLine = monster.fullText || `${monster.name} 🚩${monster.nish} ${monster.coreStatsText}`;
+    if (gear) {
+      mainLine = mainLine.replace(`(${gear})`, '').replace(`[${gear}]`, '').replace(/\s+/g, ' ').trim();
+    }
+    if (abilities) {
+      mainLine = mainLine.replace(new RegExp(`\\s*\\(?${abilities.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)?\\s*$`), '').trim();
+    }
+
+    setRosterMonsterEditText(mainLine);
+    setRosterMonsterEditGear(gear);
+    setRosterMonsterEditAbilities(abilities);
   };
 
   const handleSaveRosterMonsterEdit = (monsterId: string) => {
     if (!rosterMonsterEditText.trim()) return;
-    const parsed = parseMonsterForGmRoster(rosterMonsterEditText.trim(), monsterId, monsterId);
+    const gearPart = rosterMonsterEditGear.trim() ? ` (${rosterMonsterEditGear.trim()})` : '';
+    const abilitiesPart = rosterMonsterEditAbilities.trim() ? ` (${rosterMonsterEditAbilities.trim()})` : '';
+
+    const iconPosMatch = rosterMonsterEditText.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
+    let reconstructed = '';
+    if (iconPosMatch && iconPosMatch.index !== undefined) {
+      const namePart = rosterMonsterEditText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').trim();
+      const statsPart = rosterMonsterEditText.substring(iconPosMatch.index).trim();
+      reconstructed = `${namePart}${gearPart} ${statsPart}${abilitiesPart}`.trim();
+    } else {
+      reconstructed = `${rosterMonsterEditText.trim()}${gearPart}${abilitiesPart}`.trim();
+    }
+
+    const parsed = parseMonsterForGmRoster(reconstructed, monsterId, monsterId);
+    parsed.gear = rosterMonsterEditGear.trim() || undefined;
+    parsed.abilities = rosterMonsterEditAbilities.trim() || undefined;
+
     setPushedMonsters((prev) => {
       const next = prev.map((m) => (m.id === monsterId ? { ...parsed, id: monsterId } : m));
       try {
@@ -475,7 +590,22 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Add monster directly to live Encounter Roster (via ⬅️ on adventure monster cards)
   const handleAddMonsterToRoster = (m: ParsedMonster | MonsterData) => {
     const rawText = (m as any).fullText || (m as any).nameWithEquip || formatMonsterDataToStatblock(m as any);
+    const cleanName = ((m as any).name || (m as any).nameWithEquip || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const codexMatch = supabaseMonsters.find(
+      (sm) => sm.name?.toLowerCase().trim() === cleanName
+    );
+    let gear = (m as any).gear || (m as any).equipment;
+    let abilities = (m as any).abilities || (m as any).gm_notes;
+    if (codexMatch) {
+      if (!gear) gear = [codexMatch.weapons, codexMatch.armor].filter(Boolean).join(', ');
+      if (!abilities) abilities = codexMatch.abilities || codexMatch.notes;
+    }
     const newRosterMonster = parseMonsterForGmRoster(rawText, `gm_mon_${Date.now()}_`);
+    if (!newRosterMonster.gear && gear) newRosterMonster.gear = gear;
+    if (!newRosterMonster.abilities && abilities) {
+      newRosterMonster.abilities = abilities;
+      newRosterMonster.gm_notes = abilities;
+    }
     setPushedMonsters((prev) => {
       const next = [...prev, newRosterMonster];
       try {
@@ -491,11 +621,27 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     if (monsters.length === 0) return;
     const newRosterMonsters = monsters.map((m: any, idx: number) => {
       const rawText = m.fullText || m.nameWithEquip || formatMonsterDataToStatblock(m);
-      return parseMonsterForGmRoster(
+      const mon = parseMonsterForGmRoster(
         rawText,
         'gm_mon_',
         `gm_mon_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`
       );
+      const cleanName = (m.name || m.nameWithEquip || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      const codexMatch = supabaseMonsters.find(
+        (sm) => sm.name?.toLowerCase().trim() === cleanName
+      );
+      let gear = m.gear || m.equipment;
+      let abilities = m.abilities || m.gm_notes;
+      if (codexMatch) {
+        if (!gear) gear = [codexMatch.weapons, codexMatch.armor].filter(Boolean).join(', ');
+        if (!abilities) abilities = codexMatch.abilities || codexMatch.notes;
+      }
+      if (!mon.gear && gear) mon.gear = gear;
+      if (!mon.abilities && abilities) {
+        mon.abilities = abilities;
+        mon.gm_notes = abilities;
+      }
+      return mon;
     });
     setPushedMonsters((prev) => {
       const next = [...prev, ...newRosterMonsters];
@@ -509,15 +655,28 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Convert pushedMonsters to ParsedMonster[] format for MonsterManagerModal
   const rosterMonstersAsParsed: ParsedMonster[] = useMemo(() => {
     return pushedMonsters.map((m) => {
-      const parsed = parseMonsterLine(m.fullText || `${m.name} 🚩${m.nish} ${m.coreStatsText}`);
-      return { ...parsed, id: m.id };
+      const parsed = parseMonsterLine(
+        m.fullText || `${m.name}${m.gear ? ` (${m.gear})` : ''} 🚩${m.nish} ${m.coreStatsText}${m.abilities ? ` (${m.abilities})` : ''}`
+      );
+      return {
+        ...parsed,
+        id: m.id,
+        gear: m.gear || parsed.gear,
+        abilities: m.abilities || parsed.abilities || m.gm_notes,
+      };
     });
   }, [pushedMonsters]);
 
   const handleSaveRosterMonstersFromModal = (updated: ParsedMonster[]) => {
-    const newRoster: GmRosterMonster[] = updated.map((p) =>
-      parseMonsterForGmRoster(p.fullText || p.nameWithEquip || '', p.id, p.id)
-    );
+    const newRoster: GmRosterMonster[] = updated.map((p) => {
+      const mon = parseMonsterForGmRoster(p.fullText || p.nameWithEquip || '', p.id, p.id);
+      if (p.gear && !mon.gear) mon.gear = p.gear;
+      if (p.abilities && !mon.abilities) {
+        mon.abilities = p.abilities;
+        mon.gm_notes = p.abilities;
+      }
+      return mon;
+    });
     setPushedMonsters(newRoster);
     try {
       localStorage.setItem(gmPushedMonstersKey, JSON.stringify(newRoster));
@@ -541,7 +700,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         max_vit: mon.max_vit ?? 10,
         current_vit: mon.max_vit ?? 10,
         attributes: mon.attributes ?? { magic: 10, might: 10, mind: 10, motion: 10, moxie: 10 },
-        fullText: mon.fullText || `${mon.name} 🚩${mon.nish} ${mon.coreStatsText}`,
+        equipment: mon.gear,
+        gear: mon.gear,
+        abilities: mon.abilities,
+        gm_notes: mon.abilities || mon.gm_notes,
+        fullText: mon.fullText || `${mon.name}${mon.gear ? ` (${mon.gear})` : ''} 🚩${mon.nish} ${mon.coreStatsText}${mon.abilities ? ` (${mon.abilities})` : ''}`,
       }));
 
       await gameApi.savePartyMonsters(selectedParty.id, monstersToPush);
@@ -867,12 +1030,33 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
     const attrMatch = raw.match(/\[✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*👁️\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(?:🫀|💖)\s*(\d+)\]/u);
 
+    // Resolve gear and abilities
+    let gear = m.gear || parsed.gear || undefined;
+    let abilities = m.abilities || parsed.abilities || undefined;
+
+    // Auto-resolve from Supabase Codex if matching by name
+    const cleanMonsterName = (parsed.name || parsed.nameWithEquip || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const codexMatch = supabaseMonsters.find(
+      (sm) => sm.name?.toLowerCase().trim() === cleanMonsterName
+    );
+    if (codexMatch) {
+      if (!gear) {
+        gear = [codexMatch.weapons, codexMatch.armor].filter(Boolean).join(', ') || undefined;
+      }
+      if (!abilities) {
+        abilities = codexMatch.abilities || undefined;
+      }
+    }
+
     // Resolve notes ONLY from Supabase Codex
-    const codexNotes = m.codex_notes || resolveCodexMonsterNotes(parsed.nameWithEquip, supabaseMonsters);
+    const codexNotes = m.codex_notes || abilities || (codexMatch ? codexMatch.notes || codexMatch.abilities : undefined) || resolveCodexMonsterNotes(parsed.nameWithEquip, supabaseMonsters);
 
     return {
       id: m.id,
-      name: parsed.nameWithEquip || 'Monster',
+      name: parsed.name || parsed.nameWithEquip || 'Monster',
+      equipment: gear,
+      gear: gear,
+      abilities: abilities,
       initiative: initMatch ? parseInt(initMatch[1], 10) : 10,
       mr: mrMatch ? parseInt(mrMatch[1], 10) : 10,
       attack: atkNums[0] ? parseInt(atkNums[0], 10) : 10,
@@ -897,6 +1081,43 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       },
       gm_notes: codexNotes,
       is_codex: !!codexNotes || m.is_codex,
+    };
+  };
+
+  const mapRosterMonsterToCardData = (monster: GmRosterMonster): MonsterData => {
+    let gear = monster.gear;
+    let abilities = monster.abilities;
+
+    // Codex fallback if missing
+    const cleanName = monster.name.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const codexMatch = supabaseMonsters.find(
+      (sm) => sm.name?.toLowerCase().trim() === cleanName
+    );
+    if (codexMatch) {
+      if (!gear) gear = [codexMatch.weapons, codexMatch.armor].filter(Boolean).join(', ') || undefined;
+      if (!abilities) abilities = codexMatch.abilities || undefined;
+    }
+
+    const codexNotes = monster.gm_notes || abilities || (codexMatch ? codexMatch.notes || codexMatch.abilities : undefined) || resolveCodexMonsterNotes(monster.name, supabaseMonsters);
+
+    return {
+      id: monster.id,
+      name: monster.name,
+      equipment: gear,
+      gear: gear,
+      abilities: abilities,
+      initiative: monster.nish,
+      mr: monster.mr ?? 10,
+      attack: monster.attack ?? 10,
+      damage: monster.damage ?? 5,
+      min_wounds: monster.wounds ? (parseInt(monster.wounds.replace(/\D/g, ''), 10) || 1) : 1,
+      defense: monster.defense ?? 10,
+      armor: monster.armor ?? 0,
+      max_vit: monster.max_vit ?? 10,
+      current_vit: monster.max_vit ?? 10,
+      attributes: monster.attributes ?? { magic: 10, might: 10, mind: 10, motion: 10, moxie: 10 },
+      gm_notes: codexNotes,
+      is_codex: !!codexNotes,
     };
   };
 
@@ -990,129 +1211,73 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     const monster = item.monster;
                     const isMarked = markedTurnIds.includes(monster.id);
                     return (
-                      <div
-                        key={monster.id}
-                        className="group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-mono text-xs text-slate-200 border-rose-900/40 hover:border-rose-700/60 bg-gradient-to-r from-rose-950/20 via-slate-950/80 to-slate-950/90 w-full"
-                      >
+                      <div key={monster.id} className="w-full">
                         {editingRosterMonsterId === monster.id ? (
-                          <div className="p-1.5 bg-slate-950 border border-rose-500/60 rounded-lg flex items-center gap-2 w-full font-mono">
-                            <input
-                              type="text"
-                              value={rosterMonsterEditText}
-                              onChange={(e) => setRosterMonsterEditText(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveRosterMonsterEdit(monster.id);
-                                if (e.key === 'Escape') setEditingRosterMonsterId(null);
-                              }}
-                              className="flex-1 bg-slate-900 border border-rose-500/60 text-xs text-slate-100 px-2 py-1 rounded"
-                              autoFocus
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleSaveRosterMonsterEdit(monster.id)}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold rounded cursor-pointer"
-                            >
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditingRosterMonsterId(null)}
-                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded cursor-pointer"
-                            >
-                              Cancel
-                            </button>
+                          <div className="p-3 bg-slate-950 border border-rose-500/60 rounded-xl flex flex-col gap-2 font-mono w-full">
+                            <span className="text-[10px] font-bold text-rose-300 uppercase tracking-wider font-outfit">
+                              Edit Monster (3-Row Layout)
+                            </span>
+                            {/* Row 1: Main Statline */}
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 mb-0.5">
+                                Main Statline (Name, 🚩, 👣, ⚔️, 🧥, ❤️, [Attributes]):
+                              </label>
+                              <input
+                                type="text"
+                                value={rosterMonsterEditText}
+                                onChange={(e) => setRosterMonsterEditText(e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-rose-500"
+                                autoFocus
+                              />
+                            </div>
+                            {/* Row 2: ⚔️🧥 Gear / Subtitle */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-amber-400 shrink-0 select-none">⚔️🧥:</span>
+                              <input
+                                type="text"
+                                placeholder="Weapons & Armor / Gear (e.g. Scimitar (1d6), Leather Armor)"
+                                value={rosterMonsterEditGear}
+                                onChange={(e) => setRosterMonsterEditGear(e.target.value)}
+                                className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-amber-500"
+                              />
+                            </div>
+                            {/* Row 3: 🔥 Abilities / Special Notes */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-rose-400 shrink-0 select-none">🔥:</span>
+                              <input
+                                type="text"
+                                placeholder="Abilities / Special Notes (e.g. Acid Spit, Pack Tactics, Darkvision)"
+                                value={rosterMonsterEditAbilities}
+                                onChange={(e) => setRosterMonsterEditAbilities(e.target.value)}
+                                className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-rose-500"
+                              />
+                            </div>
+                            <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800/80">
+                              <button
+                                type="button"
+                                onClick={() => setEditingRosterMonsterId(null)}
+                                className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSaveRosterMonsterEdit(monster.id)}
+                                className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg cursor-pointer"
+                              >
+                                Save Changes
+                              </button>
+                            </div>
                           </div>
                         ) : (
-                          <div className="flex items-center justify-between gap-2 leading-snug">
-                            {/* Left Segment: 🐉 [Monster Name] [🚩 Nish Button] [Combat Metrics] [System Attributes] */}
-                            <div className="flex-1 min-w-0 flex items-center gap-x-2.5 gap-y-1 flex-wrap font-mono text-xs text-slate-200">
-                              <span className="text-xs leading-none shrink-0 select-none">🐉</span>
-                              <span className="font-extrabold text-rose-200 tracking-wide text-xs shrink-0">
-                                {monster.name}
-                              </span>
-
-                              {/* Clickable Monster Nish Button with diagonal slash */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleTurnMark(monster.id);
-                                }}
-                                className={`relative font-mono text-[11px] font-black min-w-[40px] justify-center px-1.5 py-0.5 rounded border shrink-0 shadow-sm flex items-center gap-0.5 cursor-pointer transition-all overflow-hidden ${
-                                  isMarked
-                                    ? 'border-slate-700/60 bg-slate-900/90 text-slate-500 opacity-60'
-                                    : 'border-rose-500/50 bg-rose-500/15 text-rose-300 hover:border-rose-400 hover:bg-rose-500/25'
-                                }`}
-                                title={
-                                  isMarked
-                                    ? `Initiative: ${monster.nish} (Turn Completed - Click to unmark)`
-                                    : `Initiative: ${monster.nish} (Click to mark turn completed)`
-                                }
-                              >
-                                <span className="text-[10px] leading-none">🚩</span>
-                                <span className="tabular-nums">{monster.nish}</span>
-
-                                {/* Diagonal Red Slash Line */}
-                                {isMarked && (
-                                  <span
-                                    className="absolute inset-0 pointer-events-none flex items-center justify-center"
-                                    aria-hidden="true"
-                                  >
-                                    <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-                                      <line
-                                        x1="12"
-                                        y1="88"
-                                        x2="88"
-                                        y2="12"
-                                        stroke="#ef4444"
-                                        strokeWidth="14"
-                                        strokeLinecap="round"
-                                      />
-                                    </svg>
-                                  </span>
-                                )}
-                              </button>
-
-                              {/* Combat Metrics (Strict GmMonsterCard match) */}
-                              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-slate-300 text-[11px] shrink-0">
-                                <span>👣{monster.mr ?? 10}</span>
-                                <span>⚔️{monster.attack ?? 10}/{monster.damage ?? 5}{monster.wounds || ''}</span>
-                                <span>🧥{monster.defense ?? 10}/{monster.armor ?? 0}</span>
-                                <span>❤️{monster.max_vit ?? 10}</span>
-                              </div>
-
-                              {/* System Attributes (Strict Alphabetical Order: ✨ Magic, 💪 Might, 👁️ Mind, 🏃 Motion, 🫀 Moxie) */}
-                              <span className="text-amber-300/90 font-semibold text-[11px] shrink-0">
-                                – [✨{monster.attributes?.magic ?? 10}/💪{monster.attributes?.might ?? 10}/👁️{monster.attributes?.mind ?? 10}/🏃{monster.attributes?.motion ?? 10}/🫀{monster.attributes?.moxie ?? 10}]
-                              </span>
-                            </div>
-
-                            {/* Right Segment: Edit ✏️ and Trashcan 🗑️ */}
-                            <div className="flex items-center gap-1 shrink-0 ml-auto select-none">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStartRosterMonsterEdit(monster);
-                                }}
-                                className="p-1 text-slate-400 hover:text-rose-300 hover:bg-rose-950/50 rounded transition-all cursor-pointer text-xs"
-                                title="Edit monster stats inline"
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDismissRosterMonster(monster.id);
-                                }}
-                                className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 rounded transition-all cursor-pointer text-xs"
-                                title="Remove monster from Encounter Roster"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          </div>
+                          <GmMonsterCard
+                            monster={mapRosterMonsterToCardData(monster)}
+                            showDragonIcon
+                            isTurnMarked={isMarked}
+                            onToggleTurnMark={() => toggleTurnMark(monster.id)}
+                            onEdit={() => handleStartRosterMonsterEdit(monster)}
+                            onDelete={() => handleDismissRosterMonster(monster.id)}
+                          />
                         )}
                       </div>
                     );
@@ -1355,28 +1520,64 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                         <div className="flex flex-col gap-1.5 pl-3 ml-3 border-l-2 border-rose-500/40 my-1.5">
                           {sortedMonsters.map((m) =>
                             editingId === m.id && editingEncounterId === enc.id ? (
-                              <div key={m.id} className="p-2 bg-slate-950 border border-rose-500/60 rounded-lg flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={editText}
-                                  onChange={(e) => setEditText(e.target.value)}
-                                  className="flex-1 bg-slate-900 border border-rose-500/60 text-xs font-mono text-slate-100 px-2 py-1 rounded"
-                                />
-                                <button
-                                  onClick={() => handleSaveEdit(enc.id, m.id)}
-                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold rounded cursor-pointer"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setEditingId(null);
-                                    setEditingEncounterId(null);
-                                  }}
-                                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded cursor-pointer"
-                                >
-                                  Cancel
-                                </button>
+                              <div key={m.id} className="p-3 bg-slate-950 border border-rose-500/60 rounded-xl flex flex-col gap-2 font-mono w-full">
+                                <span className="text-[10px] font-bold text-rose-300 uppercase tracking-wider font-outfit">
+                                  Edit Monster (3-Row Layout)
+                                </span>
+                                {/* Row 1: Main Statline */}
+                                <div>
+                                  <label className="block text-[9px] font-bold text-slate-400 mb-0.5">
+                                    Main Statline (Name, 🚩, 👣, ⚔️, 🧥, ❤️, [Attributes]):
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editText}
+                                    onChange={(e) => setEditText(e.target.value)}
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-rose-500"
+                                    autoFocus
+                                  />
+                                </div>
+                                {/* Row 2: ⚔️🧥 Gear / Subtitle */}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] font-bold text-amber-400 shrink-0 select-none">⚔️🧥:</span>
+                                  <input
+                                    type="text"
+                                    placeholder="Weapons & Armor / Gear (e.g. Scimitar (1d6), Leather Armor)"
+                                    value={editGearText}
+                                    onChange={(e) => setEditGearText(e.target.value)}
+                                    className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-amber-500"
+                                  />
+                                </div>
+                                {/* Row 3: 🔥 Abilities / Special Notes */}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] font-bold text-rose-400 shrink-0 select-none">🔥:</span>
+                                  <input
+                                    type="text"
+                                    placeholder="Abilities / Special Notes (e.g. Acid Spit, Pack Tactics, Darkvision)"
+                                    value={editAbilitiesText}
+                                    onChange={(e) => setEditAbilitiesText(e.target.value)}
+                                    className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-rose-500"
+                                  />
+                                </div>
+                                <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800/80">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingId(null);
+                                      setEditingEncounterId(null);
+                                    }}
+                                    className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 cursor-pointer"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveEdit(enc.id, m.id)}
+                                    className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg cursor-pointer"
+                                  >
+                                    Save Changes
+                                  </button>
+                                </div>
                               </div>
                             ) : (
                               <GmMonsterCard

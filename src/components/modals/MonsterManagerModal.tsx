@@ -94,6 +94,8 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   // Inline Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [editGearText, setEditGearText] = useState('');
+  const [editAbilitiesText, setEditAbilitiesText] = useState('');
 
   // Fetch Supabase Codex monsters when modal opens
   useEffect(() => {
@@ -155,12 +157,33 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
       }
     }
 
+    // Resolve gear and abilities
+    let gear = m.gear || parsed.gear || undefined;
+    let abilities = m.abilities || parsed.abilities || undefined;
+
+    // Auto-resolve from Supabase Codex if matching by name
+    const cleanMonsterName = (parsed.name || parsed.nameWithEquip || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const codexMatch = supabaseMonsters.find(
+      (sm) => sm.name?.toLowerCase().trim() === cleanMonsterName
+    );
+    if (codexMatch) {
+      if (!gear) {
+        gear = [codexMatch.weapons, codexMatch.armor].filter(Boolean).join(', ') || undefined;
+      }
+      if (!abilities) {
+        abilities = codexMatch.abilities || undefined;
+      }
+    }
+
     // Resolve notes ONLY from Supabase Codex
-    const codexNotes = m.codex_notes || resolveCodexMonsterNotes(parsed.nameWithEquip, supabaseMonsters);
+    const codexNotes = m.codex_notes || abilities || (codexMatch ? codexMatch.notes || codexMatch.abilities : undefined) || resolveCodexMonsterNotes(parsed.nameWithEquip, supabaseMonsters);
 
     return {
       id: m.id,
-      name: parsed.nameWithEquip || 'Monster',
+      name: parsed.name || parsed.nameWithEquip || 'Monster',
+      equipment: gear,
+      gear: gear,
+      abilities: abilities,
       initiative: initMatch ? parseInt(initMatch[1], 10) : 10,
       mr: mrMatch ? parseInt(mrMatch[1], 10) : 10,
       attack: atkNums[0] ? parseInt(atkNums[0], 10) : 10,
@@ -187,13 +210,51 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
 
   const handleStartEdit = (m: ParsedMonster) => {
     setEditingId(m.id);
-    setEditText(m.fullText || m.nameWithEquip);
+    const parsed = parseMonsterLine(m.fullText || m.nameWithEquip || '');
+    let gear = m.gear || parsed.gear || '';
+    let abilities = m.abilities || parsed.abilities || m.codex_notes || '';
+
+    // Auto-resolve from Supabase Codex if matching by name and missing
+    const cleanMonsterName = (parsed.name || parsed.nameWithEquip || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const codexMatch = supabaseMonsters.find(
+      (sm) => sm.name?.toLowerCase().trim() === cleanMonsterName
+    );
+    if (codexMatch) {
+      if (!gear) gear = [codexMatch.weapons, codexMatch.armor].filter(Boolean).join(', ');
+      if (!abilities) abilities = codexMatch.abilities || codexMatch.notes || '';
+    }
+
+    let mainLine = m.fullText || m.nameWithEquip || '';
+    if (gear) {
+      mainLine = mainLine.replace(`(${gear})`, '').replace(`[${gear}]`, '').replace(/\s+/g, ' ').trim();
+    }
+    if (abilities) {
+      mainLine = mainLine.replace(new RegExp(`\\s*\\(?${abilities.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)?\\s*$`), '').trim();
+    }
+    setEditText(mainLine);
+    setEditGearText(gear);
+    setEditAbilitiesText(abilities);
   };
 
   const handleSaveEdit = (id: string) => {
     if (!editText.trim()) return;
-    const parsed = parseMonsterLine(editText.trim());
-    const updated = monsters.map((m) => (m.id === id ? { ...parsed, id, baseFullText: editText.trim() } : m));
+    const gearPart = editGearText.trim() ? ` (${editGearText.trim()})` : '';
+    const abilitiesPart = editAbilitiesText.trim() ? ` (${editAbilitiesText.trim()})` : '';
+
+    const iconPosMatch = editText.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
+    let reconstructed = '';
+    if (iconPosMatch && iconPosMatch.index !== undefined) {
+      const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').trim();
+      const statsPart = editText.substring(iconPosMatch.index).trim();
+      reconstructed = `${namePart}${gearPart} ${statsPart}${abilitiesPart}`.trim();
+    } else {
+      reconstructed = `${editText.trim()}${gearPart}${abilitiesPart}`.trim();
+    }
+
+    const parsed = parseMonsterLine(reconstructed);
+    parsed.gear = editGearText.trim() || undefined;
+    parsed.abilities = editAbilitiesText.trim() || undefined;
+    const updated = monsters.map((m) => (m.id === id ? { ...parsed, id, baseFullText: reconstructed } : m));
     onSaveMonsters(updated);
     setEditingId(null);
   };
@@ -214,18 +275,22 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   const handleSaveQuickMonster = (e: React.FormEvent) => {
     e.preventDefault();
     const nameStr = quickAdd.name.trim() || 'Custom Monster';
-    const gearStr = quickAdd.gear.trim() ? ` [${quickAdd.gear.trim()}]` : '';
+    const gearStr = quickAdd.gear.trim() ? ` (${quickAdd.gear.trim()})` : '';
     const fullTitle = `${nameStr}${gearStr}`;
     const notesStr = quickAdd.abilities.trim() ? ` (${quickAdd.abilities.trim()})` : '';
 
-    const fullStatStr = `${fullTitle} 🚩${quickAdd.init} 👣${quickAdd.mr} ⚔️${quickAdd.atk}/${quickAdd.dmg} 🧥${quickAdd.def}/${quickAdd.armor} ❤️${quickAdd.vit} [✨${quickAdd.magic}/💪${quickAdd.might}/👁️${quickAdd.mind}/🏃${quickAdd.motion}/🫀${quickAdd.moxie}]${notesStr}`;
+    const fullStatStr = `${fullTitle} 🚩${quickAdd.init} 👣${quickAdd.mr} ⚔️${quickAdd.atk}/${quickAdd.dmg} 🧥${quickAdd.def}/${quickAdd.armor} ❤️${quickAdd.vit} – [✨${quickAdd.magic}/💪${quickAdd.might}/👁️${quickAdd.mind}/🏃${quickAdd.motion}/🫀${quickAdd.moxie}]${notesStr}`;
     const parsed = parseMonsterLine(fullStatStr);
+    parsed.gear = quickAdd.gear.trim() || undefined;
+    parsed.abilities = quickAdd.abilities.trim() || undefined;
     onSaveMonsters([...monsters, parsed]);
     setQuickAdd(DEFAULT_QUICK_ADD);
   };
 
   const getCodexMonsterStatblock = (sm: SupabaseMonster): string => {
     const nameStr = sm.name || 'Codex Monster';
+    const weaponsArmor = [sm.weapons, sm.armor].filter(Boolean).join(', ');
+    const gearStr = weaponsArmor ? ` (${weaponsArmor})` : '';
     const nish = extractFirstInt(sm.nish, 10);
     const mr = extractFirstInt(sm.mr, 10);
     const vit = extractFirstInt(sm.vit, 10);
@@ -235,15 +300,17 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     let attrNums = extractAllInts(sm.attributes);
     while (attrNums.length < 5) attrNums.push(10);
     const attrStr = `– [✨${attrNums[0]}/💪${attrNums[1]}/👁️${attrNums[2]}/🏃${attrNums[3]}/🫀${attrNums[4]}]`;
-    const notes = sm.abilities ? ` (${sm.abilities})` : '';
+    const notes = sm.abilities ? ` (${sm.abilities})` : (sm.notes ? ` (${sm.notes})` : '');
 
-    return `${nameStr} 🚩${nish} 👣${mr} ⚔️${atk} 🧥${def} ❤️${vit} ${attrStr}${notes}`.trim();
+    return `${nameStr}${gearStr} 🚩${nish} 👣${mr} ⚔️${atk} 🧥${def} ❤️${vit} ${attrStr}${notes}`.trim();
   };
 
   const handleAddCodexMonster = (sm: SupabaseMonster) => {
     const fullStatStr = getCodexMonsterStatblock(sm);
     const parsed = parseMonsterLine(fullStatStr);
     parsed.is_codex = true;
+    parsed.gear = [sm.weapons, sm.armor].filter(Boolean).join(', ') || undefined;
+    parsed.abilities = sm.abilities || sm.notes || undefined;
     parsed.codex_notes = sm.notes || sm.abilities || undefined;
     parsed.codex_id = sm.id;
     onSaveMonsters([...monsters, parsed]);
@@ -315,28 +382,56 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
               ) : (
                 monsters.map((m) =>
                   editingId === m.id ? (
-                    <div key={m.id} className="p-3 bg-slate-950 border border-rose-500/60 rounded-xl flex flex-col gap-2">
+                    <div key={m.id} className="p-3 bg-slate-950 border border-rose-500/60 rounded-xl flex flex-col gap-2 font-mono">
                       <span className="text-[10px] font-bold text-rose-300 uppercase tracking-wider font-outfit">
-                        Edit Monster Statblock
+                        Edit Monster (3-Row Layout)
                       </span>
-                      <textarea
-                        rows={2}
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs font-mono text-slate-100 outline-none focus:border-rose-500"
-                      />
-                      <div className="flex items-center justify-end gap-2">
+                      {/* Row 1: Main Statline */}
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 mb-0.5">
+                          Main Statline (Name, 🚩, 👣, ⚔️, 🧥, ❤️, [Attributes]):
+                        </label>
+                        <input
+                          type="text"
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-rose-500"
+                        />
+                      </div>
+                      {/* Row 2: ⚔️🧥 Gear / Subtitle */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-amber-400 shrink-0 select-none">⚔️🧥:</span>
+                        <input
+                          type="text"
+                          placeholder="Weapons & Armor / Gear (e.g. Scimitar (1d6), Leather Armor)"
+                          value={editGearText}
+                          onChange={(e) => setEditGearText(e.target.value)}
+                          className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      {/* Row 3: 🔥 Abilities / Special Notes */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-rose-400 shrink-0 select-none">🔥:</span>
+                        <input
+                          type="text"
+                          placeholder="Abilities / Special Notes (e.g. Acid Spit, Pack Tactics, Darkvision)"
+                          value={editAbilitiesText}
+                          onChange={(e) => setEditAbilitiesText(e.target.value)}
+                          className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-rose-500"
+                        />
+                      </div>
+                      <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800/80">
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
-                          className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700"
+                          className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 cursor-pointer"
                         >
                           Cancel
                         </button>
                         <button
                           type="button"
                           onClick={() => handleSaveEdit(m.id)}
-                          className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg"
+                          className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg cursor-pointer"
                         >
                           Save Changes
                         </button>
@@ -435,7 +530,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-0.5">Gear / Subtitle (Optional)</label>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-0.5">⚔️🧥 Gear / Subtitle (Optional)</label>
                       <input
                         type="text"
                         placeholder="e.g. Scythe & Plate"
@@ -446,7 +541,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                     <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800/80 text-center">
                       <label className="block text-[9px] font-bold text-amber-400">🚩 Init</label>
                       <input
@@ -501,6 +596,15 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                         className="w-full bg-transparent text-center text-slate-100 font-mono text-xs font-bold outline-none"
                       />
                     </div>
+                    <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800/80 text-center">
+                      <label className="block text-[9px] font-bold text-rose-400">❤️ Vit</label>
+                      <input
+                        type="number"
+                        value={quickAdd.vit}
+                        onChange={(e) => handleQuickAddChange('vit', parseInt(e.target.value, 10) || 0)}
+                        className="w-full bg-transparent text-center text-slate-100 font-mono text-xs font-bold outline-none"
+                      />
+                    </div>
                   </div>
 
                   <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800/80 flex flex-col gap-1">
@@ -547,7 +651,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-0.5">Abilities / Special Notes</label>
+                    <label className="block text-[10px] font-bold text-slate-400 mb-0.5">🔥 Abilities / Special Notes</label>
                     <input
                       type="text"
                       value={quickAdd.abilities}
