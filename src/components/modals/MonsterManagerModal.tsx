@@ -11,6 +11,7 @@ import {
   parseMonsterLine,
   parseMultiRowMonsterBlock,
   resolveCodexMonsterNotes,
+  decomposeMonsterStatblock,
 } from '../../utils/monsterStatParser';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import {
@@ -210,12 +211,13 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
 
   const handleStartEdit = (m: ParsedMonster) => {
     setEditingId(m.id);
-    const parsed = parseMonsterLine(m.fullText || m.nameWithEquip || '');
-    let gear = m.gear || parsed.gear || '';
-    let abilities = m.abilities || parsed.abilities || m.codex_notes || '';
+    const raw = m.fullText || m.nameWithEquip || '';
+    const decomposed = decomposeMonsterStatblock(raw);
+    let gear = decomposed.gear || m.gear || '';
+    let abilities = decomposed.abilities || m.abilities || m.codex_notes || '';
 
     // Auto-resolve from Supabase Codex if matching by name and missing
-    const cleanMonsterName = (parsed.name || parsed.nameWithEquip || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const cleanMonsterName = (m.name || m.nameWithEquip || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
     const codexMatch = supabaseMonsters.find(
       (sm) => sm.name?.toLowerCase().trim() === cleanMonsterName
     );
@@ -224,14 +226,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
       if (!abilities) abilities = codexMatch.abilities || codexMatch.notes || '';
     }
 
-    let mainLine = m.fullText || m.nameWithEquip || '';
-    if (gear) {
-      mainLine = mainLine.replace(`(${gear})`, '').replace(`[${gear}]`, '').replace(/\s+/g, ' ').trim();
-    }
-    if (abilities) {
-      mainLine = mainLine.replace(new RegExp(`\\s*\\(?${abilities.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)?\\s*$`), '').trim();
-    }
-    setEditText(mainLine);
+    setEditText(decomposed.statline || raw);
     setEditGearText(gear);
     setEditAbilitiesText(abilities);
   };
@@ -383,27 +378,19 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                 monsters.map((m) =>
                   editingId === m.id ? (
                     <div key={m.id} className="p-3 bg-slate-950 border border-rose-500/60 rounded-xl flex flex-col gap-2 font-mono">
-                      <span className="text-[10px] font-bold text-rose-300 uppercase tracking-wider font-outfit">
-                        Edit Monster (3-Row Layout)
-                      </span>
                       {/* Row 1: Main Statline */}
-                      <div>
-                        <label className="block text-[9px] font-bold text-slate-400 mb-0.5">
-                          Main Statline (Name, 🚩, 👣, ⚔️, 🧥, ❤️, [Attributes]):
-                        </label>
-                        <input
-                          type="text"
-                          value={editText}
-                          onChange={(e) => setEditText(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-rose-500"
-                        />
-                      </div>
+                      <input
+                        type="text"
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-rose-500"
+                        autoFocus
+                      />
                       {/* Row 2: ⚔️🧥 Gear / Subtitle */}
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] font-bold text-amber-400 shrink-0 select-none">⚔️🧥:</span>
                         <input
                           type="text"
-                          placeholder="Weapons & Armor / Gear (e.g. Scimitar (1d6), Leather Armor)"
                           value={editGearText}
                           onChange={(e) => setEditGearText(e.target.value)}
                           className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-amber-500"
@@ -414,7 +401,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                         <span className="text-[11px] font-bold text-rose-400 shrink-0 select-none">🔥:</span>
                         <input
                           type="text"
-                          placeholder="Abilities / Special Notes (e.g. Acid Spit, Pack Tactics, Darkvision)"
                           value={editAbilitiesText}
                           onChange={(e) => setEditAbilitiesText(e.target.value)}
                           className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-rose-500"

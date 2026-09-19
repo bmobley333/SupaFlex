@@ -72,12 +72,12 @@ export function parseMonsterLine(line: string): ParsedMonster {
   }
   cleanName = cleanName.replace(/[\:\–\-]+$/, '').trim() || nameWithEquip;
 
-  // 4c. Extract Abilities/Notes (🔥) from all text after [✨.../🫀#] or [✨.../💖#]
+  // 4c. Extract Abilities/Notes (🔥) from all text after [✨.../🫀#] or [✨.../💖#] or attribute bracket ']'
   let extractedAbilities = '';
-  const attrEndMatch = trimmed.match(/(?:🫀|💖)\s*\d+\s*\]\s*(.*)$/u);
+  const attrEndMatch = trimmed.match(/(?:🫀|💖)\s*\d+\s*\]\s*(.*)$/u) || trimmed.match(/^(?:.*?\[[^\]]*\])\s*(.+)$/su);
   if (attrEndMatch && attrEndMatch[1]) {
     let trailing = attrEndMatch[1].trim();
-    const outerParen = trailing.match(/^\((.*)\)$/);
+    const outerParen = trailing.match(/^\((.*)\)$/s);
     if (outerParen) {
       trailing = outerParen[1].trim();
     }
@@ -273,6 +273,67 @@ export function stitchMultiRowMonsterLines(rawText: string): string[] {
   }
 
   return groups;
+}
+
+/**
+ * Decomposes a monster statblock string into:
+ * 1. statline: Clean statblock (name + stats) stripped of gear parens before 🚩 and abilities past ']'
+ * 2. gear: Weapons & Armor / Subtitle extracted from () before 🚩
+ * 3. abilities: Abilities / Special Notes extracted from all text following attribute bracket ']'
+ */
+export function decomposeMonsterStatblock(raw: string): {
+  statline: string;
+  gear: string;
+  abilities: string;
+} {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return { statline: '', gear: '', abilities: '' };
+
+  // 1. Separate abilities past attributes bracket ']' (or trailing parens)
+  let statline = trimmed;
+  let abilities = '';
+
+  // Match closing bracket of attributes block
+  const attrCloseMatch = trimmed.match(/^(.*?\[[^\]]*(?:🫀|💖)[^\]]*\])\s*(.*)$/su) || trimmed.match(/^(.*?\[[^\]]*\])\s*(.*)$/su);
+  if (attrCloseMatch) {
+    statline = attrCloseMatch[1].trim();
+    let trailing = (attrCloseMatch[2] || '').trim();
+    if (trailing) {
+      const outerParen = trailing.match(/^\((.*)\)$/s);
+      abilities = outerParen ? outerParen[1].trim() : trailing;
+    }
+  } else {
+    // If no attribute block, check for trailing parenthetical after ❤️
+    const vitEndMatch = trimmed.match(/^(.*?❤️\s*\d+)\s*(?:–|-)?\s*\(([^)]+)\)\s*$/u);
+    if (vitEndMatch) {
+      statline = vitEndMatch[1].trim();
+      abilities = vitEndMatch[2].trim();
+    }
+  }
+
+  // 2. Extract gear from () before first combat icon (🚩, 👣, ⚔️, ⚔, 🛡️, 🧥, ❤️)
+  let gear = '';
+  const firstIconMatch = statline.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
+  if (firstIconMatch && firstIconMatch.index !== undefined) {
+    const preIcon = statline.substring(0, firstIconMatch.index);
+    const postIcon = statline.substring(firstIconMatch.index);
+
+    const parenMatch = preIcon.match(/\(([^)]+)\)/);
+    if (parenMatch) {
+      gear = parenMatch[1].trim();
+      const cleanPreIcon = preIcon.replace(/\([^)]+\)/, '').replace(/\s+/g, ' ').trim();
+      statline = `${cleanPreIcon} ${postIcon}`.trim();
+    } else {
+      const bracketMatch = preIcon.match(/\[([^\]]+)\]/);
+      if (bracketMatch) {
+        gear = bracketMatch[1].trim();
+        const cleanPreIcon = preIcon.replace(/\[[^\]]+\]/, '').replace(/\s+/g, ' ').trim();
+        statline = `${cleanPreIcon} ${postIcon}`.trim();
+      }
+    }
+  }
+
+  return { statline, gear, abilities };
 }
 
 /**

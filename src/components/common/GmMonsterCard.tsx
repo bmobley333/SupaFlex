@@ -55,7 +55,13 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
   const notesText = monster.gm_notes || abilitiesText || '';
 
   return (
-    <div className="bg-slate-900/90 border border-rose-500/30 hover:border-rose-500/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono shadow-sm flex flex-col gap-1 transition-all w-full">
+    <div
+      onDoubleClick={(e) => {
+        e.preventDefault();
+        setIsExpanded((prev) => !prev);
+      }}
+      className="bg-slate-900/90 border border-rose-500/30 hover:border-rose-500/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono shadow-sm flex flex-col gap-1 transition-all w-full cursor-pointer select-none"
+    >
       {/* Main Row */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 w-full">
         {/* Main Content */}
@@ -79,9 +85,8 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
             </button>
           )}
 
-          <span className="font-extrabold text-rose-200 tracking-wide text-xs shrink-0 inline-flex items-center align-baseline gap-1">
-            <span>{countPrefix}{cleanName}{equipStr}</span>
-            <ItemNotesPopover notes={notesText} itemName={cleanName} inline />
+          <span className="font-extrabold text-rose-200 tracking-wide text-xs shrink-0">
+            {countPrefix}{cleanName}{equipStr}
           </span>
 
           {/* Initiative Button or Static Display */}
@@ -148,10 +153,14 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
           >
             {isExpanded ? '▲' : '▼'}
           </button>
+          <ItemNotesPopover notes={notesText} itemName={cleanName} />
           {onEdit && (
             <button
               type="button"
-              onClick={() => onEdit(monster)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(monster);
+              }}
               className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors text-xs cursor-pointer select-none"
               title="Edit Monster"
               aria-label="Edit Monster"
@@ -162,7 +171,10 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
           {onDelete && (
             <button
               type="button"
-              onClick={() => onDelete(monster.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(monster.id);
+              }}
               className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors text-xs cursor-pointer select-none"
               title="Delete Monster"
               aria-label="Delete Monster"
@@ -178,11 +190,11 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
         <div className="w-full pt-1.5 mt-0.5 border-t border-rose-900/40 text-[11px] font-mono space-y-1 text-slate-300 animate-in fade-in duration-150">
           <div className="flex items-start gap-1.5 leading-snug">
             <span className="text-amber-400 font-bold shrink-0 select-none">⚔️🧥:</span>
-            <span className="text-slate-200 break-words">{gearText || <span className="italic text-slate-500">None</span>}</span>
+            <span className="text-slate-200 break-words">{gearText}</span>
           </div>
           <div className="flex items-start gap-1.5 leading-snug">
             <span className="text-rose-400 font-bold shrink-0 select-none">🔥:</span>
-            <span className="text-slate-200 break-words">{abilitiesText || notesText || <span className="italic text-slate-500">None</span>}</span>
+            <span className="text-slate-200 break-words">{abilitiesText || notesText}</span>
           </div>
         </div>
       )}
