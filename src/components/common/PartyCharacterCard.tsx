@@ -110,8 +110,6 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
       onDrop={onDrop}
       onDragEnd={onDragEnd}
       className={`group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-outfit text-xs text-slate-200 ${
-        isTurnMarked ? 'opacity-60 bg-slate-950/50' : ''
-      } ${
         isDragging
           ? 'opacity-40 border-cyan-500/80 bg-cyan-950/20 scale-[0.99]'
           : 'border-slate-800 hover:border-slate-700'

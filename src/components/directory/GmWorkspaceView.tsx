@@ -934,8 +934,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                         onDrop={(e) => handlePartyDrop(e, idx)}
                         onDragEnd={() => setPartyDraggedIndex(null)}
                         className={`group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-outfit text-xs text-slate-200 border-amber-900/40 hover:border-amber-700/60 bg-gradient-to-r from-amber-950/20 via-slate-950/80 to-slate-950/90 ${
-                          isMarked ? 'opacity-60 bg-slate-950/50' : ''
-                        } ${
                           partyDraggedIndex === idx
                             ? 'opacity-40 border-cyan-500/80 bg-cyan-950/20 scale-[0.99]'
                             : ''
