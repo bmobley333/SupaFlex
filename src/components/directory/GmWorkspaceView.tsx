@@ -1237,7 +1237,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   <span className="text-xs leading-none">🐉</span>
                 </div>
                 <h3 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider font-outfit shrink-0">
-                  Encounter Rooms
+                  Encounters
                 </h3>
 
                 {/* Encounter Selector Dropdown & Stepper */}

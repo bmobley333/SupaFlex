@@ -3,8 +3,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   Plus,
   Swords,
@@ -25,8 +23,6 @@ export const EncounterSelectorBar: React.FC<EncounterSelectorBarProps> = ({ clas
   const activeMonsters = useAdventureStore((state) => state.getActiveMonsters());
 
   const selectEncounter = useAdventureStore((state) => state.selectEncounter);
-  const nextEncounter = useAdventureStore((state) => state.nextEncounter);
-  const prevEncounter = useAdventureStore((state) => state.prevEncounter);
   const ensureAdLibEncounter = useAdventureStore((state) => state.ensureAdLibEncounter);
   const addEncounter = useAdventureStore((state) => state.addEncounter);
   const deleteEncounter = useAdventureStore((state) => state.deleteEncounter);
@@ -193,31 +189,6 @@ export const EncounterSelectorBar: React.FC<EncounterSelectorBarProps> = ({ clas
             </div>
           </div>
         )}
-      </div>
-
-      {/* Prev / Next Encounter Stepper */}
-      <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg p-0.5 shadow-inner">
-        <button
-          type="button"
-          onClick={prevEncounter}
-          disabled={!activeEnc}
-          className="px-2 py-0.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition cursor-pointer text-xs font-bold flex items-center gap-0.5 disabled:opacity-30"
-          title="Previous Encounter (Traverses across Acts)"
-        >
-          <ChevronLeft className="w-3.5 h-3.5" />
-          <span>Prev</span>
-        </button>
-        <div className="h-3.5 w-[1px] bg-slate-800 mx-0.5" />
-        <button
-          type="button"
-          onClick={nextEncounter}
-          disabled={!activeEnc}
-          className="px-2 py-0.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition cursor-pointer text-xs font-bold flex items-center gap-0.5 disabled:opacity-30"
-          title="Next Encounter (Traverses across Acts)"
-        >
-          <span>Next</span>
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
       </div>
     </div>
   );
