@@ -1298,7 +1298,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                           title="Click to select this encounter as the Active Room"
                         >
                           <span className="text-sm shrink-0">🏰</span>
-                          <span className="font-extrabold text-xs truncate text-red-400 transition-colors">
+                          <span className={`font-extrabold text-xs truncate transition-colors ${
+                            isCurrentEncounter ? 'text-red-400' : 'text-slate-300 group-hover:text-red-400'
+                          }`}>
                             {enc.title || 'Untitled Encounter'}
                           </span>
                           {isCurrentEncounter ? (
@@ -1404,7 +1406,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   </div>
                   <span>Encounter Notes</span>
                   {activeEncounter && (
-                    <span className="text-red-400 font-semibold">({activeEncounter.title})</span>
+                    <span className="text-slate-400 font-normal">({activeEncounter.title})</span>
                   )}
                 </h4>
 
