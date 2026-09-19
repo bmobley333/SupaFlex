@@ -56,7 +56,7 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
             ⬅️
           </button>
         )}
-        <span className="font-extrabold text-red-400 tracking-wide text-xs shrink-0 inline-flex items-center align-baseline gap-1">
+        <span className="font-extrabold text-rose-200 tracking-wide text-xs shrink-0 inline-flex items-center align-baseline gap-1">
           <span>{countPrefix}{monster.name}{equipStr}</span>
           <ItemNotesPopover notes={monster.gm_notes} itemName={monster.name} inline />
         </span>

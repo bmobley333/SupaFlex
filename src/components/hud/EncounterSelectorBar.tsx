@@ -56,7 +56,7 @@ export const EncounterSelectorBar: React.FC<EncounterSelectorBarProps> = ({ clas
         >
           <div className="flex items-center gap-1.5 truncate">
             <Swords className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-            <span className="truncate">{activeEnc?.title || (activeAct ? 'No Encounters' : 'Select Act')}</span>
+            <span className="truncate text-red-400 font-extrabold">{activeEnc?.title || (activeAct ? 'No Encounters' : 'Select Act')}</span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <span className="px-1.5 py-0.2 bg-rose-900/80 border border-rose-700 text-[10px] font-mono rounded text-rose-300 font-bold">
