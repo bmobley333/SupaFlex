@@ -1027,7 +1027,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             {/* Left Segment: 🐉 [Monster Name] [🚩 Nish Button] [Combat Metrics] [System Attributes] */}
                             <div className="flex-1 min-w-0 flex items-center gap-x-2.5 gap-y-1 flex-wrap font-mono text-xs text-slate-200">
                               <span className="text-xs leading-none shrink-0 select-none">🐉</span>
-                              <span className="font-extrabold text-rose-100 tracking-wide text-xs shrink-0">
+                              <span className="font-extrabold text-red-400 tracking-wide text-xs shrink-0">
                                 {monster.name}
                               </span>
 
