@@ -179,9 +179,14 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     // Resolve notes ONLY from Supabase Codex
     const codexNotes = m.codex_notes || abilities || (codexMatch ? codexMatch.notes || codexMatch.abilities : undefined) || resolveCodexMonsterNotes(parsed.nameWithEquip, supabaseMonsters);
 
+    const finalCleanName = (parsed.name || parsed.nameWithEquip || m.name || 'Monster')
+      .replace(/\s*\([^)]*\)/g, '')
+      .replace(/\s*\[[^\]]*\]/g, '')
+      .trim() || 'Monster';
+
     return {
       id: m.id,
-      name: parsed.name || parsed.nameWithEquip || 'Monster',
+      name: finalCleanName,
       equipment: gear,
       gear: gear,
       abilities: abilities,
@@ -239,11 +244,11 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const iconPosMatch = editText.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
-      const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').trim();
+      const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
       const statsPart = editText.substring(iconPosMatch.index).trim();
       reconstructed = `${namePart}${gearPart} ${statsPart}${abilitiesPart}`.trim();
     } else {
-      reconstructed = `${editText.trim()}${gearPart}${abilitiesPart}`.trim();
+      reconstructed = `${editText.trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim()}${gearPart}${abilitiesPart}`.trim();
     }
 
     const parsed = parseMonsterLine(reconstructed);
@@ -283,7 +288,10 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   };
 
   const getCodexMonsterStatblock = (sm: SupabaseMonster): string => {
-    const nameStr = sm.name || 'Codex Monster';
+    const nameStr = (sm.name || 'Codex Monster')
+      .replace(/\s*\([^)]*\)/g, '')
+      .replace(/\s*\[[^\]]*\]/g, '')
+      .trim() || 'Codex Monster';
     const weaponsArmor = [sm.weapons, sm.armor].filter(Boolean).join(', ');
     const gearStr = weaponsArmor ? ` (${weaponsArmor})` : '';
     const nish = extractFirstInt(sm.nish, 10);

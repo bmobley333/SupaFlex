@@ -31,9 +31,22 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const countPrefix = monster.count && monster.count > 1 ? `${monster.count} ` : '';
-  const gearText = monster.gear || monster.equipment || '';
-  const cleanName = (monster.name || 'Monster').replace(/\s*\([^)]*\)/g, '').trim();
-  const equipStr = gearText ? ` (${gearText})` : '';
+  let extractedNameGear = '';
+  const parenMatch = (monster.name || '').match(/\(([^)]+)\)/);
+  if (parenMatch) {
+    extractedNameGear = parenMatch[1].trim();
+  } else {
+    const bracketMatch = (monster.name || '').match(/\[([^\]]+)\]/);
+    if (bracketMatch) {
+      extractedNameGear = bracketMatch[1].trim();
+    }
+  }
+
+  const gearText = monster.gear || monster.equipment || extractedNameGear;
+  const cleanName = (monster.name || 'Monster')
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s*\[[^\]]*\]/g, '')
+    .trim() || 'Monster';
 
   const initVal = monster.initiative ?? 10;
   const mrVal = monster.mr ?? 10;
@@ -86,7 +99,7 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
           )}
 
           <span className="font-extrabold text-rose-200 tracking-wide text-xs shrink-0">
-            {countPrefix}{cleanName}{equipStr}
+            {countPrefix}{cleanName}
           </span>
 
           {/* Initiative Button or Static Display */}

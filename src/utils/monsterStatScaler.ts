@@ -96,8 +96,12 @@ export function scaleMonsterData(monster: MonsterData, dif: number): MonsterData
  */
 export function serializeMonsterDataLine(m: MonsterData): string {
   const countPrefix = m.count && m.count > 1 ? `${m.count} ` : '';
+  const cleanName = (m.name || 'Monster')
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s*\[[^\]]*\]/g, '')
+    .trim() || 'Monster';
   const equipStr = m.equipment ? ` [${m.equipment}]` : '';
-  const fullTitle = `${countPrefix}${m.name}${equipStr}`;
+  const fullTitle = `${countPrefix}${cleanName}${equipStr}`;
   const notesStr = m.gm_notes ? ` (${m.gm_notes})` : '';
 
   const initVal = m.initiative ?? 10;
@@ -243,9 +247,15 @@ export function parseMonsterLineToData(raw: string, id: string = 'mon_tmp'): Mon
     }
   }
 
+  const cleanName = (parsed.name || parsed.nameWithEquip || 'Monster')
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s*\[[^\]]*\]/g, '')
+    .trim() || 'Monster';
+
   return {
     id,
-    name: parsed.nameWithEquip || 'Monster',
+    name: cleanName,
+    equipment: parsed.gear || undefined,
     initiative: initMatch ? parseInt(initMatch[1], 10) : 10,
     mr: mrMatch ? parseInt(mrMatch[1], 10) : 10,
     attack: atkNums[0] ? parseInt(atkNums[0], 10) : 10,

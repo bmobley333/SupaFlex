@@ -380,9 +380,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     let abilities = decomposed.abilities || m.abilities || m.codex_notes || '';
 
     // Auto-resolve from Supabase Codex if matching by name and missing
-    const cleanMonsterName = (m.name || m.nameWithEquip || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const cleanMonsterName = (m.name || m.nameWithEquip || '').replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim().toLowerCase();
     const codexMatch = supabaseMonsters.find(
-      (sm) => sm.name?.toLowerCase().trim() === cleanMonsterName
+      (sm) => (sm.name || '').replace(/\s*\([^)]*\)/g, '').toLowerCase().trim() === cleanMonsterName
     );
     if (codexMatch) {
       if (!gear) gear = [codexMatch.weapons, codexMatch.armor].filter(Boolean).join(', ');
@@ -402,11 +402,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const iconPosMatch = editText.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
-      const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').trim();
+      const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
       const statsPart = editText.substring(iconPosMatch.index).trim();
       reconstructed = `${namePart}${gearPart} ${statsPart}${abilitiesPart}`.trim();
     } else {
-      reconstructed = `${editText.trim()}${gearPart}${abilitiesPart}`.trim();
+      reconstructed = `${editText.trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim()}${gearPart}${abilitiesPart}`.trim();
     }
 
     const parsed = parseMonsterLine(reconstructed);
@@ -532,15 +532,16 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
   const handleStartRosterMonsterEdit = (monster: GmRosterMonster) => {
     setEditingRosterMonsterId(monster.id);
-    const raw = monster.fullText || `${monster.name}${monster.gear ? ` (${monster.gear})` : ''} 🚩${monster.nish} ${monster.coreStatsText}${monster.abilities ? ` (${monster.abilities})` : ''}`;
+    const cleanMonName = (monster.name || 'Monster').replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
+    const raw = monster.fullText || `${cleanMonName}${monster.gear ? ` (${monster.gear})` : ''} 🚩${monster.nish} ${monster.coreStatsText}${monster.abilities ? ` (${monster.abilities})` : ''}`;
     const decomposed = decomposeMonsterStatblock(raw);
     let gear = decomposed.gear || monster.gear || '';
     let abilities = decomposed.abilities || monster.abilities || monster.gm_notes || '';
 
     // Codex fallback if missing
-    const cleanName = monster.name.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    const cleanName = cleanMonName.toLowerCase();
     const codexMatch = supabaseMonsters.find(
-      (sm) => sm.name?.toLowerCase().trim() === cleanName
+      (sm) => (sm.name || '').replace(/\s*\([^)]*\)/g, '').toLowerCase().trim() === cleanName
     );
     if (codexMatch) {
       if (!gear) gear = [codexMatch.weapons, codexMatch.armor].filter(Boolean).join(', ');
@@ -560,11 +561,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const iconPosMatch = rosterMonsterEditText.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
-      const namePart = rosterMonsterEditText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').trim();
+      const namePart = rosterMonsterEditText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
       const statsPart = rosterMonsterEditText.substring(iconPosMatch.index).trim();
       reconstructed = `${namePart}${gearPart} ${statsPart}${abilitiesPart}`.trim();
     } else {
-      reconstructed = `${rosterMonsterEditText.trim()}${gearPart}${abilitiesPart}`.trim();
+      reconstructed = `${rosterMonsterEditText.trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim()}${gearPart}${abilitiesPart}`.trim();
     }
 
     const parsed = parseMonsterForGmRoster(reconstructed, monsterId, monsterId);
@@ -1045,9 +1046,14 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     // Resolve notes ONLY from Supabase Codex
     const codexNotes = m.codex_notes || abilities || (codexMatch ? codexMatch.notes || codexMatch.abilities : undefined) || resolveCodexMonsterNotes(parsed.nameWithEquip, supabaseMonsters);
 
+    const finalCleanName = (parsed.name || parsed.nameWithEquip || m.name || 'Monster')
+      .replace(/\s*\([^)]*\)/g, '')
+      .replace(/\s*\[[^\]]*\]/g, '')
+      .trim() || 'Monster';
+
     return {
       id: m.id,
-      name: parsed.name || parsed.nameWithEquip || 'Monster',
+      name: finalCleanName,
       equipment: gear,
       gear: gear,
       abilities: abilities,
@@ -1094,9 +1100,14 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
     const codexNotes = monster.gm_notes || abilities || (codexMatch ? codexMatch.notes || codexMatch.abilities : undefined) || resolveCodexMonsterNotes(monster.name, supabaseMonsters);
 
+    const finalCleanName = (monster.name || 'Monster')
+      .replace(/\s*\([^)]*\)/g, '')
+      .replace(/\s*\[[^\]]*\]/g, '')
+      .trim() || 'Monster';
+
     return {
       id: monster.id,
-      name: monster.name,
+      name: finalCleanName,
       equipment: gear,
       gear: gear,
       abilities: abilities,

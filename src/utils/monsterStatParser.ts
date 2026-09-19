@@ -57,20 +57,21 @@ export function parseMonsterLine(line: string): ParsedMonster {
   }
 
   // 4b. Extract Gear/Weapons&Armor (⚔️🧥) from () before 🚩, and Clean Name
-  let cleanName = nameWithEquip;
   let extractedGear = '';
   const parenMatch = nameWithEquip.match(/\(([^)]+)\)/);
   if (parenMatch) {
     extractedGear = parenMatch[1].trim();
-    cleanName = nameWithEquip.replace(/\([^)]+\)/, '').replace(/\s+/g, ' ').trim();
   } else {
     const bracketMatch = nameWithEquip.match(/\[([^\]]+)\]/);
     if (bracketMatch) {
       extractedGear = bracketMatch[1].trim();
-      cleanName = nameWithEquip.replace(/\[[^\]]+\]/, '').replace(/\s+/g, ' ').trim();
     }
   }
-  cleanName = cleanName.replace(/[\:\–\-]+$/, '').trim() || nameWithEquip;
+  const cleanName = nameWithEquip
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s*\[[^\]]*\]/g, '')
+    .replace(/[\:\–\-]+$/, '')
+    .trim() || nameWithEquip;
 
   // 4c. Extract Abilities/Notes (🔥) from all text after [✨.../🫀#] or [✨.../💖#] or attribute bracket ']'
   let extractedAbilities = '';
@@ -341,9 +342,13 @@ export function decomposeMonsterStatblock(raw: string): {
  */
 export function formatMonsterDataToStatblock(m: MonsterStatData): string {
   const countPrefix = m.count && m.count > 1 ? `${m.count} ` : '';
+  const cleanMonsterName = (m.name || 'Monster')
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s*\[[^\]]*\]/g, '')
+    .trim() || 'Monster';
   const gearVal = m.equipment || m.gear || '';
-  const equipStr = gearVal && !m.name.includes(gearVal) ? ` (${gearVal})` : '';
-  const fullName = `${countPrefix}${m.name}${equipStr}`.trim();
+  const equipStr = gearVal ? ` (${gearVal})` : '';
+  const fullName = `${countPrefix}${cleanMonsterName}${equipStr}`.trim();
 
   const init = m.initiative ?? 10;
   const mr = m.mr ?? 10;

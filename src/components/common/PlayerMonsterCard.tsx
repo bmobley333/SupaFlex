@@ -16,7 +16,11 @@ export const PlayerMonsterCard: React.FC<PlayerMonsterCardProps> = ({ monster })
   const armorVal = monster.armor ?? 0;
   const maxVitVal = monster.max_vit ?? 10;
 
-  const cleanName = (monster.name || '').replace(/^\d+\s*/, '');
+  const cleanName = (monster.name || '')
+    .replace(/^\d+\s*/, '')
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s*\[[^\]]*\]/g, '')
+    .trim();
 
   return (
     <div className="bg-slate-900/80 border border-slate-700/60 rounded-lg p-2.5 text-xs text-slate-200 font-mono shadow-sm flex flex-wrap items-center justify-start gap-x-4 gap-y-1">
