@@ -6,7 +6,7 @@ import { ArrowUpDown, StickyNote, Rocket, X } from 'lucide-react';
 import { gameApi } from '../../services/api';
 import { supabase } from '../../lib/supabase';
 import { Party, PartySessionMember, CharacterSheetData, SupabaseMonster } from '../../types/game';
-import { parseMonsterLine, ParsedMonster, sortMonstersByPreset, MonsterSortPreset, resolveCodexMonsterNotes, getMonsterNish } from '../../utils/monsterStatParser';
+import { parseMonsterLine, ParsedMonster, sortMonstersByPreset, MonsterSortPreset, resolveCodexMonsterNotes } from '../../utils/monsterStatParser';
 import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { useRosterOrdering } from '../../hooks/useRosterOrdering';
@@ -34,17 +34,11 @@ export function parseMonsterForGmRoster(raw: string, idPrefix = 'gm_mon_'): GmRo
   const trimmed = (raw || '').trim();
   const monId = `${idPrefix}${Math.random().toString(36).substring(2, 9)}`;
 
-  // Extract Nish (🚩\d+)
-  const nishMatch = trimmed.match(/🚩\s*(\d+)/u);
-  const nish = nishMatch ? parseInt(nishMatch[1], 10) : 10;
-
   // Extract Name (before first combat stat icon 🚩, 👣, ⚔️, ⚔, 🛡️, 🧥, ❤️)
   const firstIconMatch = trimmed.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
   let rawName = trimmed;
-  let afterName = '';
   if (firstIconMatch && firstIconMatch.index !== undefined) {
     rawName = trimmed.substring(0, firstIconMatch.index).trim();
-    afterName = trimmed.substring(firstIconMatch.index).trim();
   }
 
   // Clean Name: remove leading numbers and text in parentheses
@@ -55,31 +49,57 @@ export function parseMonsterForGmRoster(raw: string, idPrefix = 'gm_mon_'): GmRo
       .replace(/[\:\–\-]+$/, '')
       .trim() || 'Monster';
 
-  // Core Stats text: strip 🚩\s*\d+ so we don't duplicate the interactive 🚩 badge
-  let statsPart = afterName.replace(/🚩\s*\d+\s*/u, '').trim();
+  // Extract stats
+  const initMatch = trimmed.match(/🚩\s*(\d+)/u);
+  const nish = initMatch ? parseInt(initMatch[1], 10) : 10;
 
-  // Remove notes emojis: 📝, 📋, ✏️, ℹ️
-  statsPart = statsPart.replace(/[📝📋✏️ℹ️]/gu, '');
+  const mrMatch = trimmed.match(/👣\s*(\d+)/u);
+  const mr = mrMatch ? parseInt(mrMatch[1], 10) : 10;
 
-  // Truncate any trailing text after closing attribute bracket: e.g. [✨9/💪15/👁️16/🏃24/🫀5]
-  const attrEndMatch = statsPart.match(/(\[[^\]]*?(?:🫀|💖)[^\]]*?\])/u);
-  if (attrEndMatch && attrEndMatch.index !== undefined) {
-    const cutIndex = attrEndMatch.index + attrEndMatch[0].length;
-    statsPart = statsPart.substring(0, cutIndex).trim();
+  // Attack & Damage: match ⚔️ or ⚔
+  const atkMatch = trimmed.match(/(?:⚔️|⚔)\s*(\d+)\s*\/\s*(\d+)(?:\s*\((\d+)\))?/u);
+  const atk = atkMatch ? atkMatch[1] : '10';
+  const dmg = atkMatch ? atkMatch[2] : '5';
+  const wounds = atkMatch && atkMatch[3] ? `(${atkMatch[3]})` : '';
+
+  // Defense & Armor: match 🧥 or 🛡️
+  const defMatch = trimmed.match(/(?:🧥|🛡️)\s*(\d+)\s*\/\s*(\d+)/u);
+  const def = defMatch ? defMatch[1] : '10';
+  const arm = defMatch ? defMatch[2] : '0';
+
+  // Vitality: match ❤️ or ❤
+  const vitMatch = trimmed.match(/(?:❤️|❤)\s*(\d+)/u);
+  const vit = vitMatch ? vitMatch[1] : '10';
+
+  // Attributes: [✨.../💪.../👁️.../🏃.../(🫀|💖)...]
+  const attrMatch = trimmed.match(/\[\s*✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*(?:👁️|👁)\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(🫀|💖)\s*(\d+)\s*\]/u);
+
+  let attrBlock = '';
+  if (attrMatch) {
+    const magic = attrMatch[1];
+    const might = attrMatch[2];
+    const mind = attrMatch[3];
+    const motion = attrMatch[4];
+    const moxieIcon = attrMatch[5]; // preserves 💖 or 🫀 exactly
+    const moxie = attrMatch[6];
+    attrBlock = `– [✨${magic}/💪${might}/👁️${mind}/🏃${motion}/${moxieIcon}${moxie}]`;
   } else {
-    // If no attribute block, truncate after vitality ❤️\d+
-    const vitMatch = statsPart.match(/❤️\s*\d+/u);
-    if (vitMatch && vitMatch.index !== undefined) {
-      const cutIndex = vitMatch.index + vitMatch[0].length;
-      statsPart = statsPart.substring(0, cutIndex).trim();
+    // Fallback if bracket notation has non-standard tokens
+    const rawAttrMatch = trimmed.match(/(\[[^\]]*?(?:🫀|💖)[^\]]*?\])/u);
+    if (rawAttrMatch) {
+      attrBlock = `– ${rawAttrMatch[1]}`;
     }
   }
+
+  // Canonical full-color emoji presentation:
+  // ⚔️ (\u2694\uFE0F) and ❤️ (\u2764\uFE0F) with standardized spacing
+  const coreStatsText = `👣${mr} ⚔️${atk}/${dmg}${wounds} 🧥${def}/${arm} ❤️${vit} ${attrBlock}`.trim();
 
   return {
     id: monId,
     name: cleanName,
     nish,
-    coreStatsText: statsPart,
+    coreStatsText,
     fullText: trimmed,
   };
 }
@@ -316,24 +336,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     setEditingId(null);
   };
 
-  // Monster Nish Mode: 'all' | 'fastest'
-  const monsterNishModeKey = `supaflex_gm_monster_nish_mode_${partyIdOrDef}`;
-  const [monsterNishMode, setMonsterNishMode] = useState<'all' | 'fastest'>(() => {
-    try {
-      const saved = localStorage.getItem(monsterNishModeKey);
-      if (saved === 'all' || saved === 'fastest') return saved;
-    } catch {}
-    return 'all';
-  });
-
-  const handleSetMonsterNishMode = (mode: 'all' | 'fastest') => {
-    setMonsterNishMode(mode);
-    try {
-      localStorage.setItem(monsterNishModeKey, mode);
-    } catch {}
-  };
-
-  // Pushed Monsters for GM Screen Party Roster
+  // Pushed Monsters for GM Screen Party Roster (Always shows all active monsters)
   const gmPushedMonstersKey = `supaflex_gm_pushed_monsters_${partyIdOrDef}`;
   const [pushedMonsters, setPushedMonsters] = useState<GmRosterMonster[]>(() => {
     try {
@@ -346,12 +349,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     return [];
   });
 
-  // Re-sync pushed monsters and nish mode when selectedParty changes
+  // Re-sync pushed monsters when selectedParty changes
   useEffect(() => {
     if (!selectedParty?.id) return;
     try {
-      const savedMode = localStorage.getItem(`supaflex_gm_monster_nish_mode_${selectedParty.id}`);
-      if (savedMode === 'all' || savedMode === 'fastest') setMonsterNishMode(savedMode);
       const savedMons = localStorage.getItem(`supaflex_gm_pushed_monsters_${selectedParty.id}`);
       if (savedMons) {
         const parsed = JSON.parse(savedMons);
@@ -364,15 +365,38 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
   // Turn Marked IDs (diagonal slash for turn tracking)
   const [markedTurnIds, setMarkedTurnIds] = useState<string[]>([]);
+  const markedTurnIdsRef = useRef<string[]>([]);
+  markedTurnIdsRef.current = markedTurnIds;
+  const broadcastChannelRef = useRef<any>(null);
+
+  const broadcastTurnMarks = (newMarks: string[]) => {
+    if (broadcastChannelRef.current) {
+      broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event: 'party_turn_marks_updated',
+        payload: { markedTurnIds: newMarks },
+      });
+    } else if (selectedParty?.id) {
+      const ch = supabase.channel(`party:${selectedParty.id}`);
+      ch.send({
+        type: 'broadcast',
+        event: 'party_turn_marks_updated',
+        payload: { markedTurnIds: newMarks },
+      });
+    }
+  };
 
   const toggleTurnMark = (id: string) => {
-    setMarkedTurnIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setMarkedTurnIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      broadcastTurnMarks(next);
+      return next;
+    });
   };
 
   const handleResetTurnMarks = () => {
     setMarkedTurnIds([]);
+    broadcastTurnMarks([]);
   };
 
   const handleDismissRosterMonster = (monsterId: string) => {
@@ -391,28 +415,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     try {
       await deployToLiveParty(selectedParty.id);
 
-      // Ingest encounter monsters into GM Party Roster based on monsterNishMode
+      // Ingest all active encounter monsters into GM Party Roster
       if (effectiveMonsters.length > 0) {
-        let selectedMonsters: ParsedMonster[] = [];
-        if (monsterNishMode === 'fastest') {
-          // Find single monster with maximum Nish
-          let maxNish = -1;
-          let topMonster: ParsedMonster | null = null;
-          for (const m of effectiveMonsters) {
-            const nish = getMonsterNish(m);
-            if (nish > maxNish) {
-              maxNish = nish;
-              topMonster = m;
-            }
-          }
-          if (topMonster) {
-            selectedMonsters = [topMonster];
-          }
-        } else {
-          selectedMonsters = effectiveMonsters;
-        }
-
-        const rosterMonsters: GmRosterMonster[] = selectedMonsters.map((m) =>
+        const rosterMonsters: GmRosterMonster[] = effectiveMonsters.map((m) =>
           parseMonsterForGmRoster(m.fullText || m.nameWithEquip || '', `gm_mon_${m.id}_`)
         );
 
@@ -621,8 +626,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       )
       .subscribe();
 
-    // 2. Broadcast channel for instantaneous player arrival and vitals updates
+    // 2. Broadcast channel for instantaneous player arrival, vitals updates, and turn mark sync
     const broadcastChannel = supabase.channel(`party:${partyId}`);
+    broadcastChannelRef.current = broadcastChannel;
     broadcastChannel
       .on('broadcast', { event: 'party_members_updated' }, (payload: any) => {
         // Instant optimistic vitals & nish update (< 50ms peer-to-peer sync, zero extra REST egress)
@@ -660,8 +666,12 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           loadSessionMembers(partyId, true);
         }
       })
+      .on('broadcast', { event: 'request_turn_marks' }, () => {
+        broadcastTurnMarks(markedTurnIdsRef.current);
+      })
       .on('broadcast', { event: 'party.joined' }, () => {
         loadSessionMembers(partyId, true);
+        broadcastTurnMarks(markedTurnIdsRef.current);
       })
       .on('broadcast', { event: 'party.left' }, () => {
         loadSessionMembers(partyId, true);
@@ -676,6 +686,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     }, 60000);
 
     return () => {
+      broadcastChannelRef.current = null;
       supabase.removeChannel(cdcChannel);
       supabase.removeChannel(broadcastChannel);
       clearInterval(pollInterval);
@@ -869,37 +880,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   <span>🔄</span>
                   <span>New Nish</span>
                 </button>
-              </div>
-
-              {/* Monster Nish: All / Fastest Pill Switch */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold text-slate-400 font-outfit">Monster Nish:</span>
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                  <button
-                    type="button"
-                    onClick={() => handleSetMonsterNishMode('all')}
-                    className={`px-2 py-0.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                      monsterNishMode === 'all'
-                        ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200 border-transparent'
-                    }`}
-                  >
-                    <span>🐉</span>
-                    <span>All</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSetMonsterNishMode('fastest')}
-                    className={`px-2 py-0.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                      monsterNishMode === 'fastest'
-                        ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200 border-transparent'
-                    }`}
-                  >
-                    <span>⚡</span>
-                    <span>Fastest</span>
-                  </button>
-                </div>
               </div>
             </div>
 

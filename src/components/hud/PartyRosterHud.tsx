@@ -23,6 +23,7 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
 }) => {
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
+  const [markedTurnIds, setMarkedTurnIds] = useState<string[]>([]);
   const [displayRoomCode, setDisplayRoomCode] = useState<string | null>(null);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
 
@@ -51,6 +52,7 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
   useEffect(() => {
     if (!activePartyId) {
       setSessionMembers([]);
+      setMarkedTurnIds([]);
       setDisplayRoomCode(null);
       return;
     }
@@ -157,13 +159,28 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
           loadMembers();
         }
       })
+      .on('broadcast', { event: 'party_turn_marks_updated' }, (payload: any) => {
+        const ids = payload?.payload?.markedTurnIds;
+        if (Array.isArray(ids)) {
+          setMarkedTurnIds(ids);
+        }
+      })
       .on('broadcast', { event: 'party.joined' }, () => {
         loadMembers();
       })
       .on('broadcast', { event: 'party.left' }, () => {
         loadMembers();
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          // Request current round turn marks from GM
+          broadcastChannel.send({
+            type: 'broadcast',
+            event: 'request_turn_marks',
+            payload: { requester: tabSessionId || 'cs' },
+          });
+        }
+      });
 
     // S-Tier Adaptive Polling: 60s fallback interval, muted when tab is inactive/hidden
     const pollInterval = setInterval(() => {
@@ -405,11 +422,14 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
                 (Number(member.character_id) === Number(activeCharacter.id) ||
                   (tabSessionId && member.tab_session_id === tabSessionId))
             );
+            const memberId = String(member.character_id || member.id);
+            const isMarked = markedTurnIds.includes(memberId);
             return (
               <PartyCharacterCard
                 key={member.id || member.character_id || `pm_${idx}`}
                 member={member}
                 isCurrentPlayer={isSelf}
+                isTurnMarked={isMarked}
                 isDraggable={orderedMembers.length > 1}
                 onDragStart={(e) => handleDragStart(e, idx)}
                 onDragOver={handleDragOver}

@@ -141,7 +141,9 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
               e.stopPropagation();
               if (onToggleTurnMark) onToggleTurnMark();
             }}
-            className={`relative font-mono text-[11px] font-black min-w-[40px] justify-center px-1.5 py-0.5 rounded border shrink-0 shadow-sm flex items-center gap-0.5 transition-all overflow-hidden cursor-pointer ${
+            className={`relative font-mono text-[11px] font-black min-w-[40px] justify-center px-1.5 py-0.5 rounded border shrink-0 shadow-sm flex items-center gap-0.5 transition-all overflow-hidden ${
+              onToggleTurnMark ? 'cursor-pointer' : 'cursor-default'
+            } ${
               isTurnMarked
                 ? 'border-slate-700/60 bg-slate-900/90 text-slate-500 opacity-60'
                 : 'border-amber-500/50 bg-amber-500/15 text-amber-300 hover:border-amber-400 hover:bg-amber-500/25'
@@ -151,7 +153,7 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
                 ? isTurnMarked
                   ? `Initiative: ${currentNishDisplay} (Turn Completed - Click to unmark)`
                   : `Initiative: ${currentNishDisplay} (Click to mark turn completed)`
-                : `Initiative (Nish): ${currentNishDisplay}`
+                : `Initiative (Nish): ${currentNishDisplay}${isTurnMarked ? ' (Turn Completed)' : ''}`
             }
           >
             <span className="text-[10px] leading-none">🚩</span>
