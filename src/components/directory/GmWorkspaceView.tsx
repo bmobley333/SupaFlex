@@ -1027,7 +1027,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             {/* Left Segment: 🐉 [Monster Name] [🚩 Nish Button] [Combat Metrics] [System Attributes] */}
                             <div className="flex-1 min-w-0 flex items-center gap-x-2.5 gap-y-1 flex-wrap font-mono text-xs text-slate-200">
                               <span className="text-xs leading-none shrink-0 select-none">🐉</span>
-                              <span className="font-bold text-rose-300 text-xs shrink-0">
+                              <span className="font-extrabold text-rose-200 tracking-wide text-xs shrink-0">
                                 {monster.name}
                               </span>
 
@@ -1082,7 +1082,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                               </div>
 
                               {/* System Attributes (Strict Alphabetical Order: ✨ Magic, 💪 Might, 👁️ Mind, 🏃 Motion, 🫀 Moxie) */}
-                              <span className="text-rose-200/90 font-semibold text-[11px] shrink-0">
+                              <span className="text-amber-300/90 font-semibold text-[11px] shrink-0">
                                 – [✨{monster.attributes?.magic ?? 10}/💪{monster.attributes?.might ?? 10}/👁️{monster.attributes?.mind ?? 10}/🏃{monster.attributes?.motion ?? 10}/🫀{monster.attributes?.moxie ?? 10}]
                               </span>
                             </div>

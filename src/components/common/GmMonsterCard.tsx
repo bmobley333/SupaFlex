@@ -56,7 +56,7 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
             ⬅️
           </button>
         )}
-        <span className="font-bold text-rose-300 text-xs shrink-0 inline-flex items-center align-baseline gap-1">
+        <span className="font-extrabold text-rose-200 tracking-wide text-xs shrink-0 inline-flex items-center align-baseline gap-1">
           <span>{countPrefix}{monster.name}{equipStr}</span>
           <ItemNotesPopover notes={monster.gm_notes} itemName={monster.name} inline />
         </span>
@@ -71,7 +71,7 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
         </div>
 
         {/* System Attributes (Strict Alphabetical Order: ✨ Magic, 💪 Might, 👁️ Mind, 🏃 Motion, 🫀 Moxie) */}
-        <span className="text-rose-200/90 font-semibold text-[11px] shrink-0">
+        <span className="text-amber-300/90 font-semibold text-[11px] shrink-0">
           – [✨{magic}/💪{might}/👁️{mind}/🏃{motion}/🫀{moxie}]
         </span>
       </div>
