@@ -1,9 +1,9 @@
 // src/components/common/GmMonsterCard.tsx
 // GM Monster Card - Single-line high-density layout with full combat specs, alphabetical attributes, & private GM notes.
 
-import React, { useState } from 'react';
+import React from 'react';
 import { ItemNotesPopover } from './ItemNotesPopover';
-import { formatMonsterDataToStatblock, MonsterStatData } from '../../utils/monsterStatParser';
+import { MonsterStatData } from '../../utils/monsterStatParser';
 
 export interface MonsterData extends MonsterStatData {
   id: string | number;
@@ -17,16 +17,6 @@ interface GmMonsterCardProps {
 }
 
 export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, onDelete, onAddToRoster }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const statblock = formatMonsterDataToStatblock(monster);
-    navigator.clipboard.writeText(statblock);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
 
   const countPrefix = monster.count && monster.count > 1 ? `${monster.count} ` : '';
   const equipStr = monster.equipment ? ` (${monster.equipment})` : '';
@@ -88,15 +78,6 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
 
       {/* Action Controls */}
       <div className="flex items-center gap-1 shrink-0 select-none">
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="text-slate-400 hover:text-amber-300 p-0.5 rounded transition-colors text-xs cursor-pointer select-none"
-          title={copied ? "Copied clean statblock!" : "Copy Statblock (Clipboard)"}
-          aria-label="Copy Monster Statblock"
-        >
-          {copied ? '✅' : '📋'}
-        </button>
         {onEdit && (
           <button
             type="button"

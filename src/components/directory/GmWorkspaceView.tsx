@@ -2,7 +2,7 @@
 // Game Master Command Console: Party Roster, Party Management & Monster Roster View
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ArrowUpDown, StickyNote, Rocket, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowUpDown, StickyNote, ChevronDown, ChevronRight } from 'lucide-react';
 import { gameApi } from '../../services/api';
 import { supabase } from '../../lib/supabase';
 import { Party, PartySessionMember, CharacterSheetData, SupabaseMonster } from '../../types/game';
@@ -13,6 +13,7 @@ import { useRosterOrdering } from '../../hooks/useRosterOrdering';
 import { MonsterManagerModal } from '../modals/MonsterManagerModal';
 import { GmCompactDifficultyBar } from '../common/GmCompactDifficultyBar';
 import { EncounterNavigationRibbon } from '../hud/EncounterNavigationRibbon';
+import { AdventureActBar } from '../hud/AdventureActBar';
 import { EncounterLinksDropdown } from '../hud/EncounterLinksDropdown';
 import { EncounterLootDropdown } from '../hud/EncounterLootDropdown';
 import { useAdventureStore } from '../../store/useAdventureStore';
@@ -1018,7 +1019,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   <span>New Nish</span>
                 </button>
 
-                {/* 🚀 Push 🐉s Button */}
+                {/* Push 🐉s Button */}
                 <button
                   type="button"
                   onClick={handlePushToPlayers}
@@ -1030,7 +1031,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   }`}
                   title="Push current Encounter Roster monsters directly to players' Monster Tracker HUD"
                 >
-                  <Rocket className={`w-3.5 h-3.5 ${isDeploying ? 'animate-bounce' : ''}`} />
                   <span>{deploySuccess ? 'Pushed!' : 'Push 🐉s'}</span>
                 </button>
               </div>
@@ -1043,7 +1043,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer"
                   title="Add monster directly into live Encounter Roster"
                 >
-                  <span className="text-xs leading-none">➕🐉</span>
                   <span>+🐉</span>
                 </button>
               </div>
@@ -1235,18 +1234,23 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
         {/* Right Column: Adventure Encounters Suite (6 cols - 50/50 balanced layout) */}
         <div className="lg:col-span-6 bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 p-4 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 shadow-lg shadow-amber-950/20 flex flex-col lg:h-full lg:min-h-0 font-outfit">
-          {/* Scrollable Content Container for Right Pane */}
-          <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto pr-1.5 space-y-4">
-            {/* Section Header: Adventure Encounters */}
-            <div className="flex items-center gap-2.5 border-b border-amber-500/20 pb-2.5">
-              <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+          {/* Pinned Title Bar (Never scrolls off screen) */}
+          <div className="flex items-center justify-between border-b border-amber-500/20 pb-3 shrink-0 flex-wrap gap-2 relative z-30">
+            <div className="flex items-center gap-2.5 flex-wrap flex-1 min-w-0">
+              <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] shrink-0">
                 <span className="text-base leading-none">🗺️</span>
               </div>
-              <h2 className="text-sm font-extrabold text-amber-200 uppercase tracking-wider font-outfit">
-                Adventure Encounters
-              </h2>
-            </div>
+              <h3 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider font-outfit shrink-0">
+                Adventure
+              </h3>
 
+              {/* Pinned Adventure & Act Selectors */}
+              <AdventureActBar />
+            </div>
+          </div>
+
+          {/* Scrollable Content Container for Right Pane */}
+          <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto pr-1.5 space-y-4 pt-3">
             {/* Staged Encounter Navigation Ribbon */}
             <EncounterNavigationRibbon />
 
@@ -1316,16 +1320,15 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 )}
               </div>
 
-              {/* Right: Manage Monsters Button */}
-              <div className="flex items-center gap-2">
+              {/* Right: +🐉 Button to open MonsterManagerModal for active encounter */}
+              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                 <button
                   type="button"
                   onClick={() => handleOpenMonsterManager('adventure')}
-                  className="px-3 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-600/30 text-xs font-bold rounded-lg transition-all shrink-0 font-outfit cursor-pointer flex items-center gap-1"
-                  title="Manage monsters for the selected adventure encounter"
+                  className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+                  title="Add or manage monsters for the active adventure encounter"
                 >
-                  <span>🐉</span>
-                  <span>Manage Encounter Monsters</span>
+                  <span>+🐉</span>
                 </button>
               </div>
             </div>

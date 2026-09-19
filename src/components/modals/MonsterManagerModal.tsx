@@ -87,7 +87,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   const [supabaseMonsters, setSupabaseMonsters] = useState<SupabaseMonster[]>([]);
   const [isLoadingCodex, setIsLoadingCodex] = useState(false);
   const [addedCodexIds, setAddedCodexIds] = useState<Record<string, boolean>>({});
-  const [copiedCodexId, setCopiedCodexId] = useState<string | null>(null);
 
   // Right Pane Tab Navigation State ('paste_quick' | 'codex')
   const [activeRightTab, setActiveRightTab] = useState<'paste_quick' | 'codex'>('paste_quick');
@@ -252,16 +251,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     setAddedCodexIds((prev) => ({ ...prev, [sm.id || sm.name]: true }));
     setTimeout(() => {
       setAddedCodexIds((prev) => ({ ...prev, [sm.id || sm.name]: false }));
-    }, 1500);
-  };
-
-  const handleCopyCodexMonster = (sm: SupabaseMonster) => {
-    const fullStatStr = getCodexMonsterStatblock(sm);
-    navigator.clipboard.writeText(fullStatStr);
-    const key = String(sm.id || sm.name);
-    setCopiedCodexId(key);
-    setTimeout(() => {
-      setCopiedCodexId((prev) => (prev === key ? null : prev));
     }, 1500);
   };
 
@@ -632,15 +621,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                               </span>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0 select-none">
-                              <button
-                                type="button"
-                                onClick={() => handleCopyCodexMonster(sm)}
-                                className="p-1.5 text-slate-400 hover:text-amber-300 rounded transition-colors text-xs cursor-pointer select-none"
-                                title={copiedCodexId === (sm.id || sm.name) ? "Copied clean statblock!" : "Copy Statblock (Clipboard)"}
-                                aria-label="Copy Codex Monster Statblock"
-                              >
-                                {copiedCodexId === (sm.id || sm.name) ? '✅' : '📋'}
-                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleAddCodexMonster(sm)}
