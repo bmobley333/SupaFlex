@@ -2,7 +2,7 @@
 // Game Master Command Console: Party Roster, Party Management & Monster Roster View
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ArrowUpDown, StickyNote, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowUpDown, StickyNote } from 'lucide-react';
 import { gameApi } from '../../services/api';
 import { supabase } from '../../lib/supabase';
 import { Party, PartySessionMember, CharacterSheetData, SupabaseMonster } from '../../types/game';
@@ -14,6 +14,7 @@ import { MonsterManagerModal } from '../modals/MonsterManagerModal';
 import { GmCompactDifficultyBar } from '../common/GmCompactDifficultyBar';
 import { EncounterNavigationRibbon } from '../hud/EncounterNavigationRibbon';
 import { AdventureActBar } from '../hud/AdventureActBar';
+import { EncounterSelectorBar } from '../hud/EncounterSelectorBar';
 import { EncounterLinksDropdown } from '../hud/EncounterLinksDropdown';
 import { EncounterLootDropdown } from '../hud/EncounterLootDropdown';
 import { useAdventureStore } from '../../store/useAdventureStore';
@@ -27,6 +28,7 @@ export interface GmRosterMonster {
   mr?: number;
   attack?: number;
   damage?: number;
+  wounds?: string;
   defense?: number;
   armor?: number;
   max_vit?: number;
@@ -114,6 +116,7 @@ export function parseMonsterForGmRoster(
     mr,
     attack: parseInt(atk, 10) || 10,
     damage: parseInt(dmg, 10) || 5,
+    wounds,
     defense: parseInt(def, 10) || 10,
     armor: parseInt(arm, 10) || 0,
     max_vit: parseInt(vit, 10) || 10,
@@ -192,18 +195,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     setMonsterManagerTarget(target);
     setIsMonsterManagerOpen(true);
   };
-
-  // Encounter Collapse State (default expanded)
-  const [collapsedEncounters, setCollapsedEncounters] = useState<Record<string, boolean>>({});
-  const toggleEncounterCollapse = (encId: string) => {
-    setCollapsedEncounters((prev) => ({ ...prev, [encId]: !prev[encId] }));
-  };
-
-  // Total monsters across all encounters in active act
-  const totalActMonsters = useMemo(() => {
-    if (!activeAct?.encounters) return 0;
-    return activeAct.encounters.reduce((acc, enc) => acc + (enc.monsters?.length || 0), 0);
-  }, [activeAct]);
 
   useEffect(() => {
     if (currentEmail) {
@@ -507,6 +498,27 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const newRosterMonster = parseMonsterForGmRoster(rawText, `gm_mon_${Date.now()}_`);
     setPushedMonsters((prev) => {
       const next = [...prev, newRosterMonster];
+      try {
+        localStorage.setItem(gmPushedMonstersKey, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Add all monsters in an encounter directly to live Encounter Roster
+  const handleAddAllMonstersToRoster = (enc: any) => {
+    const monsters = enc?.monsters || [];
+    if (monsters.length === 0) return;
+    const newRosterMonsters = monsters.map((m: any, idx: number) => {
+      const rawText = m.fullText || m.nameWithEquip || formatMonsterDataToStatblock(m);
+      return parseMonsterForGmRoster(
+        rawText,
+        'gm_mon_',
+        `gm_mon_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`
+      );
+    });
+    setPushedMonsters((prev) => {
+      const next = [...prev, ...newRosterMonsters];
       try {
         localStorage.setItem(gmPushedMonstersKey, JSON.stringify(next));
       } catch {}
@@ -1069,23 +1081,24 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     const memberId = String(member.character_id || member.id);
                     const isMarked = markedTurnIds.includes(memberId);
                     return (
-                      <PartyCharacterCard
-                        key={memberId}
-                        member={member}
-                        isTurnMarked={isMarked}
-                        onToggleTurnMark={() => toggleTurnMark(memberId)}
-                        isDraggable={orderedSessionMembers.length > 1}
-                        onDragStart={(e) => handlePartyDragStart(e, idx)}
-                        onDragOver={handlePartyDragOver}
-                        onDrop={(e) => handlePartyDrop(e, idx)}
-                        onDragEnd={() => setPartyDraggedIndex(null)}
-                        isDragging={partyDraggedIndex === idx}
-                        onNudgeUp={() => nudgePartyItem(idx, 'up')}
-                        onNudgeDown={() => nudgePartyItem(idx, 'down')}
-                        canNudgeUp={idx > 0}
-                        canNudgeDown={idx < orderedSessionMembers.length - 1}
-                        onDismiss={() => handleDismissMember(member)}
-                      />
+                      <div key={memberId} className="w-full max-w-[68%]">
+                        <PartyCharacterCard
+                          member={member}
+                          isTurnMarked={isMarked}
+                          onToggleTurnMark={() => toggleTurnMark(memberId)}
+                          isDraggable={orderedSessionMembers.length > 1}
+                          onDragStart={(e) => handlePartyDragStart(e, idx)}
+                          onDragOver={handlePartyDragOver}
+                          onDrop={(e) => handlePartyDrop(e, idx)}
+                          onDragEnd={() => setPartyDraggedIndex(null)}
+                          isDragging={partyDraggedIndex === idx}
+                          onNudgeUp={() => nudgePartyItem(idx, 'up')}
+                          onNudgeDown={() => nudgePartyItem(idx, 'down')}
+                          canNudgeUp={idx > 0}
+                          canNudgeDown={idx < orderedSessionMembers.length - 1}
+                          onDismiss={() => handleDismissMember(member)}
+                        />
+                      </div>
                     );
                   } else {
                     const monster = item.monster;
@@ -1098,7 +1111,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                         onDragOver={handlePartyDragOver}
                         onDrop={(e) => handlePartyDrop(e, idx)}
                         onDragEnd={() => setPartyDraggedIndex(null)}
-                        className={`group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-outfit text-xs text-slate-200 border-amber-900/40 hover:border-amber-700/60 bg-gradient-to-r from-amber-950/20 via-slate-950/80 to-slate-950/90 ${
+                        className={`group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-mono text-xs text-slate-200 border-amber-900/40 hover:border-amber-700/60 bg-gradient-to-r from-amber-950/20 via-slate-950/80 to-slate-950/90 w-full ${
                           partyDraggedIndex === idx
                             ? 'opacity-40 border-cyan-500/80 bg-cyan-950/20 scale-[0.99]'
                             : ''
@@ -1141,10 +1154,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                           </div>
                         ) : (
                           <div className={`flex items-center justify-between gap-2 leading-snug ${orderedSessionMembers.length > 1 ? 'pl-2' : ''}`}>
-                            {/* Left Segment: 🐉 [Monster Name] [🚩 Nish Button] [Core Stats] */}
-                            <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap font-bold text-slate-100">
+                            {/* Left Segment: 🐉 [Monster Name] [🚩 Nish Button] [Combat Metrics] [System Attributes] */}
+                            <div className="flex-1 min-w-0 flex items-center gap-x-2.5 gap-y-1 flex-wrap font-mono text-xs text-slate-200">
                               <span className="text-xs leading-none shrink-0 select-none">🐉</span>
-                              <span className="text-amber-200 font-extrabold text-xs shrink-0">
+                              <span className="font-bold text-amber-300 text-xs shrink-0">
                                 {monster.name}
                               </span>
 
@@ -1190,9 +1203,17 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                 )}
                               </button>
 
-                              {/* Core stats text */}
-                              <span className="text-slate-300 font-medium text-[11px]">
-                                {monster.coreStatsText}
+                              {/* Combat Metrics (Strict GmMonsterCard match) */}
+                              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-slate-300 text-[11px] shrink-0">
+                                <span>👣{monster.mr ?? 10}</span>
+                                <span>⚔️{monster.attack ?? 10}/{monster.damage ?? 5}{monster.wounds || ''}</span>
+                                <span>🧥{monster.defense ?? 10}/{monster.armor ?? 0}</span>
+                                <span>❤️{monster.max_vit ?? 10}</span>
+                              </div>
+
+                              {/* System Attributes (Strict Alphabetical Order: ✨ Magic, 💪 Might, 👁️ Mind, 🏃 Motion, 🫀 Moxie) */}
+                              <span className="text-amber-200/90 font-semibold text-[11px] shrink-0">
+                                – [✨{monster.attributes?.magic ?? 10}/💪{monster.attributes?.might ?? 10}/👁️{monster.attributes?.mind ?? 10}/🏃{monster.attributes?.motion ?? 10}/🫀{monster.attributes?.moxie ?? 10}]
                               </span>
                             </div>
 
@@ -1259,14 +1280,18 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
             {/* Encounter Monsters Header Controls */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 pb-3 pt-1">
-              {/* Left: Title & Quick Sort */}
-              <div className="flex items-center gap-2">
+              {/* Left: Title, Encounter Selector Bar & Quick Sort */}
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="p-1 rounded-lg bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.25)]">
                   <span className="text-xs leading-none">🐉</span>
                 </div>
-                <h3 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider font-outfit">
-                  ENCOUNTER MONSTERS {activeAct ? `(${totalActMonsters})` : ''}
+                <h3 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider font-outfit shrink-0">
+                  ENCOUNTER MONSTERS
                 </h3>
+
+                {/* Encounter Selector Dropdown & Stepper */}
+                <EncounterSelectorBar />
+
                 {effectiveMonsters.length > 1 && (
                   <div className="relative">
                     <button
@@ -1333,7 +1358,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
               </div>
             </div>
 
-            {/* Act-Wide Encounter Monsters Tree (Exotic Gear / Mod Tree Chassis Architecture) */}
+            {/* Act-Wide Encounter Monsters Tree */}
             {!activeAct || (activeAct.encounters || []).length === 0 ? (
               <div className="text-xs font-medium text-slate-400 italic p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center space-y-2 font-outfit">
                 <div>No encounters in active act.</div>
@@ -1345,7 +1370,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
               <div className="space-y-3 overflow-y-auto max-h-[600px] pr-1">
                 {(activeAct.encounters || []).map((enc) => {
                   const isCurrentEncounter = enc.id === activeEncounter?.id;
-                  const isCollapsed = !!collapsedEncounters[enc.id];
                   const monCount = (enc.monsters || []).length;
 
                   return (
@@ -1372,63 +1396,65 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                               Active Room
                             </span>
                           )}
-                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 text-amber-400 border border-slate-700/60 shrink-0">
-                            {monCount} {monCount === 1 ? 'monster' : 'monsters'}
-                          </span>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => toggleEncounterCollapse(enc.id)}
-                          className="p-1 text-slate-400 hover:text-slate-200 rounded transition-colors shrink-0 cursor-pointer ml-2"
-                          title={isCollapsed ? 'Expand encounter monsters' : 'Collapse encounter monsters'}
-                        >
-                          {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                        </button>
+                        {/* Right side: Either '⬅️ Add all X monsters' button or '(No monsters staged)' */}
+                        {monCount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddAllMonstersToRoster(enc);
+                            }}
+                            className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-100 border border-amber-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 ml-2 shadow-sm"
+                            title={`Copy all ${monCount} monsters to 👥&🐉 Encounter Roster`}
+                          >
+                            <span>⬅️</span>
+                            <span>Add all {monCount} monsters</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-500 italic shrink-0 ml-2 select-none">
+                            (No monsters staged)
+                          </span>
+                        )}
                       </div>
 
-                      {/* Level 2: Nested Monsters with Vertical Line Indentation */}
-                      {!isCollapsed && (
+                      {/* Level 2: Nested Monsters with Vertical Line Indentation (strictly when monCount > 0) */}
+                      {monCount > 0 && (
                         <div className="flex flex-col gap-1.5 pl-3 ml-3 border-l-2 border-amber-500/40 my-1.5">
-                          {monCount === 0 ? (
-                            <div className="text-[11px] font-medium text-slate-500 italic py-1 pl-1">
-                              (No monsters staged for this encounter)
-                            </div>
-                          ) : (
-                            (enc.monsters || []).map((m) =>
-                              editingId === m.id && editingEncounterId === enc.id ? (
-                                <div key={m.id} className="p-2 bg-slate-950 border border-amber-500/60 rounded-lg flex items-center gap-2">
-                                  <input
-                                    type="text"
-                                    value={editText}
-                                    onChange={(e) => setEditText(e.target.value)}
-                                    className="flex-1 bg-slate-900 border border-amber-500/60 text-xs font-mono text-slate-100 px-2 py-1 rounded"
-                                  />
-                                  <button
-                                    onClick={() => handleSaveEdit(enc.id, m.id)}
-                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold rounded cursor-pointer"
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setEditingId(null);
-                                      setEditingEncounterId(null);
-                                    }}
-                                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <GmMonsterCard
-                                  key={m.id}
-                                  monster={mapToMonsterData(m)}
-                                  onAddToRoster={() => handleAddMonsterToRoster(m)}
-                                  onEdit={() => handleStartEdit(m, enc.id)}
-                                  onDelete={() => handleDeleteEncounterMonster(enc.id, m.id)}
+                          {(enc.monsters || []).map((m) =>
+                            editingId === m.id && editingEncounterId === enc.id ? (
+                              <div key={m.id} className="p-2 bg-slate-950 border border-amber-500/60 rounded-lg flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={editText}
+                                  onChange={(e) => setEditText(e.target.value)}
+                                  className="flex-1 bg-slate-900 border border-amber-500/60 text-xs font-mono text-slate-100 px-2 py-1 rounded"
                                 />
-                              )
+                                <button
+                                  onClick={() => handleSaveEdit(enc.id, m.id)}
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold rounded cursor-pointer"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingId(null);
+                                    setEditingEncounterId(null);
+                                  }}
+                                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <GmMonsterCard
+                                key={m.id}
+                                monster={mapToMonsterData(m)}
+                                onAddToRoster={() => handleAddMonsterToRoster(m)}
+                                onEdit={() => handleStartEdit(m, enc.id)}
+                                onDelete={() => handleDeleteEncounterMonster(enc.id, m.id)}
+                              />
                             )
                           )}
                         </div>
