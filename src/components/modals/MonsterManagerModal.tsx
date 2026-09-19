@@ -288,7 +288,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
           {/* Left Pane (md:col-span-7): Active Monster Roster Stream */}
           <div className="md:col-span-7 border-r border-slate-800/80 pr-6 flex flex-col gap-3 min-h-0">
             <div className="flex items-center justify-between shrink-0">
-              <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-xs font-extrabold text-rose-400 uppercase tracking-wider flex items-center gap-2">
                 <span>🐉</span> {title ? `${title.toUpperCase()} (${monsters.length})` : `ACTIVE ENCOUNTER ROSTER (${monsters.length})`}
               </h3>
               {monsters.length > 0 && (
@@ -315,15 +315,15 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
               ) : (
                 monsters.map((m) =>
                   editingId === m.id ? (
-                    <div key={m.id} className="p-3 bg-slate-950 border border-amber-500/60 rounded-xl flex flex-col gap-2">
-                      <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider font-outfit">
+                    <div key={m.id} className="p-3 bg-slate-950 border border-rose-500/60 rounded-xl flex flex-col gap-2">
+                      <span className="text-[10px] font-bold text-rose-300 uppercase tracking-wider font-outfit">
                         Edit Monster Statblock
                       </span>
                       <textarea
                         rows={2}
                         value={editText}
                         onChange={(e) => setEditText(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs font-mono text-slate-100 outline-none focus:border-amber-500"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs font-mono text-slate-100 outline-none focus:border-rose-500"
                       />
                       <div className="flex items-center justify-end gap-2">
                         <button
@@ -336,7 +336,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleSaveEdit(m.id)}
-                          className="px-3.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-600/30 text-xs font-bold rounded-lg"
+                          className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg"
                         >
                           Save Changes
                         </button>

@@ -38,7 +38,7 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
 
 
   return (
-    <div className="bg-slate-900/90 border border-amber-500/30 hover:border-amber-500/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono shadow-sm flex flex-wrap items-center justify-between gap-x-3 gap-y-1 transition-all">
+    <div className="bg-slate-900/90 border border-rose-500/30 hover:border-rose-500/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono shadow-sm flex flex-wrap items-center justify-between gap-x-3 gap-y-1 transition-all">
       {/* Main Content: Left Arrow (if provided), Name, Combat Specs, and Alphabetical System Attributes */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 flex-1 min-w-0">
         {onAddToRoster && (
@@ -49,14 +49,14 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
               e.stopPropagation();
               onAddToRoster(monster);
             }}
-            className="text-xs text-amber-300 hover:text-amber-100 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none shrink-0"
+            className="text-xs text-rose-300 hover:text-rose-100 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none shrink-0"
             title="Copy monster to 👥&🐉 Encounter Roster"
             aria-label="Copy to Encounter Roster"
           >
             ⬅️
           </button>
         )}
-        <span className="font-bold text-amber-300 text-xs shrink-0 inline-flex items-center align-baseline gap-1">
+        <span className="font-bold text-rose-300 text-xs shrink-0 inline-flex items-center align-baseline gap-1">
           <span>{countPrefix}{monster.name}{equipStr}</span>
           <ItemNotesPopover notes={monster.gm_notes} itemName={monster.name} inline />
         </span>
@@ -71,7 +71,7 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
         </div>
 
         {/* System Attributes (Strict Alphabetical Order: ✨ Magic, 💪 Might, 👁️ Mind, 🏃 Motion, 🫀 Moxie) */}
-        <span className="text-amber-200/90 font-semibold text-[11px] shrink-0">
+        <span className="text-rose-200/90 font-semibold text-[11px] shrink-0">
           – [✨{magic}/💪{might}/👁️{mind}/🏃{motion}/🫀{moxie}]
         </span>
       </div>
@@ -82,7 +82,7 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
           <button
             type="button"
             onClick={() => onEdit(monster)}
-            className="text-slate-400 hover:text-amber-400 p-0.5 rounded transition-colors text-xs cursor-pointer select-none"
+            className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors text-xs cursor-pointer select-none"
             title="Edit Monster"
             aria-label="Edit Monster"
           >

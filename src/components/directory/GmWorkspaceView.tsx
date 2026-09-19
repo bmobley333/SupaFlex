@@ -948,7 +948,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleOpenMonsterManager('roster')}
-                  className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+                  className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-xs font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer"
                   title="Add monster directly into live Encounter Roster"
                 >
                   <span>+🐉</span>
@@ -992,10 +992,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     return (
                       <div
                         key={monster.id}
-                        className="group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-mono text-xs text-slate-200 border-amber-900/40 hover:border-amber-700/60 bg-gradient-to-r from-amber-950/20 via-slate-950/80 to-slate-950/90 w-full"
+                        className="group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-mono text-xs text-slate-200 border-rose-900/40 hover:border-rose-700/60 bg-gradient-to-r from-rose-950/20 via-slate-950/80 to-slate-950/90 w-full"
                       >
                         {editingRosterMonsterId === monster.id ? (
-                          <div className="p-1.5 bg-slate-950 border border-amber-500/60 rounded-lg flex items-center gap-2 w-full font-mono">
+                          <div className="p-1.5 bg-slate-950 border border-rose-500/60 rounded-lg flex items-center gap-2 w-full font-mono">
                             <input
                               type="text"
                               value={rosterMonsterEditText}
@@ -1004,7 +1004,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                 if (e.key === 'Enter') handleSaveRosterMonsterEdit(monster.id);
                                 if (e.key === 'Escape') setEditingRosterMonsterId(null);
                               }}
-                              className="flex-1 bg-slate-900 border border-amber-500/60 text-xs text-slate-100 px-2 py-1 rounded"
+                              className="flex-1 bg-slate-900 border border-rose-500/60 text-xs text-slate-100 px-2 py-1 rounded"
                               autoFocus
                             />
                             <button
@@ -1017,7 +1017,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             <button
                               type="button"
                               onClick={() => setEditingRosterMonsterId(null)}
-                              className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded cursor-pointer"
+                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded cursor-pointer"
                             >
                               Cancel
                             </button>
@@ -1027,7 +1027,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             {/* Left Segment: 🐉 [Monster Name] [🚩 Nish Button] [Combat Metrics] [System Attributes] */}
                             <div className="flex-1 min-w-0 flex items-center gap-x-2.5 gap-y-1 flex-wrap font-mono text-xs text-slate-200">
                               <span className="text-xs leading-none shrink-0 select-none">🐉</span>
-                              <span className="font-bold text-amber-300 text-xs shrink-0">
+                              <span className="font-bold text-rose-300 text-xs shrink-0">
                                 {monster.name}
                               </span>
 
@@ -1041,7 +1041,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                 className={`relative font-mono text-[11px] font-black min-w-[40px] justify-center px-1.5 py-0.5 rounded border shrink-0 shadow-sm flex items-center gap-0.5 cursor-pointer transition-all overflow-hidden ${
                                   isMarked
                                     ? 'border-slate-700/60 bg-slate-900/90 text-slate-500 opacity-60'
-                                    : 'border-amber-500/50 bg-amber-500/15 text-amber-300 hover:border-amber-400 hover:bg-amber-500/25'
+                                    : 'border-rose-500/50 bg-rose-500/15 text-rose-300 hover:border-rose-400 hover:bg-rose-500/25'
                                 }`}
                                 title={
                                   isMarked
@@ -1082,7 +1082,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                               </div>
 
                               {/* System Attributes (Strict Alphabetical Order: ✨ Magic, 💪 Might, 👁️ Mind, 🏃 Motion, 🫀 Moxie) */}
-                              <span className="text-amber-200/90 font-semibold text-[11px] shrink-0">
+                              <span className="text-rose-200/90 font-semibold text-[11px] shrink-0">
                                 – [✨{monster.attributes?.magic ?? 10}/💪{monster.attributes?.might ?? 10}/👁️{monster.attributes?.mind ?? 10}/🏃{monster.attributes?.motion ?? 10}/🫀{monster.attributes?.moxie ?? 10}]
                               </span>
                             </div>
@@ -1095,7 +1095,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                   e.stopPropagation();
                                   handleStartRosterMonsterEdit(monster);
                                 }}
-                                className="p-1 text-slate-400 hover:text-amber-300 hover:bg-amber-950/50 rounded transition-all cursor-pointer text-xs"
+                                className="p-1 text-slate-400 hover:text-rose-300 hover:bg-rose-950/50 rounded transition-all cursor-pointer text-xs"
                                 title="Edit monster stats inline"
                               >
                                 ✏️
@@ -1233,10 +1233,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
               {/* Left: 🐉 Title & Encounter Selector Bar */}
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="p-1 rounded-lg bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.25)]">
+                <div className="p-1 rounded-lg bg-rose-950/90 border border-rose-500/50 text-rose-300 flex items-center justify-center shadow-[0_0_10px_rgba(244,63,94,0.25)]">
                   <span className="text-xs leading-none">🐉</span>
                 </div>
-                <h3 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider font-outfit shrink-0">
+                <h3 className="text-xs font-extrabold text-rose-200 uppercase tracking-wider font-outfit shrink-0">
                   Encounters
                 </h3>
 
@@ -1249,7 +1249,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleOpenMonsterManager('adventure')}
-                  className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+                  className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-xs font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer"
                   title="Add or manage monsters for the active adventure encounter"
                 >
                   <span>+🐉</span>
@@ -1287,7 +1287,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                       <div
                         className={`relative flex items-center justify-between p-2 rounded-xl border text-xs font-outfit transition-all ${
                           isCurrentEncounter
-                            ? 'bg-amber-950/80 border-amber-500/80 shadow-md shadow-amber-950/40 text-amber-200'
+                            ? 'bg-rose-950/80 border-rose-500/80 shadow-md shadow-rose-950/40 text-rose-200'
                             : 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-slate-300'
                         }`}
                       >
@@ -1298,11 +1298,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                           title="Click to select this encounter as the Active Room"
                         >
                           <span className="text-sm shrink-0">🏰</span>
-                          <span className="font-extrabold text-xs truncate group-hover:text-amber-200 transition-colors">
+                          <span className="font-extrabold text-xs truncate group-hover:text-rose-200 transition-colors">
                             {enc.title || 'Untitled Encounter'}
                           </span>
                           {isCurrentEncounter ? (
-                            <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-amber-500/25 text-amber-200 border border-amber-500/50 shrink-0 flex items-center gap-1 shadow-sm">
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-rose-500/25 text-rose-200 border border-rose-500/50 shrink-0 flex items-center gap-1 shadow-sm">
                               <span>👑</span>
                               <span>Active Room</span>
                             </span>
@@ -1313,7 +1313,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                 e.stopPropagation();
                                 selectEncounter(enc.id);
                               }}
-                              className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-900/90 hover:bg-amber-950/80 text-slate-400 hover:text-amber-300 border border-slate-700/80 hover:border-amber-500/50 shrink-0 flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
+                              className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-900/90 hover:bg-rose-950/80 text-slate-400 hover:text-rose-300 border border-slate-700/80 hover:border-rose-500/50 shrink-0 flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
                               title="Click to select this encounter as the Active Room"
                             >
                               <span>🎯</span>
@@ -1331,7 +1331,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                 e.stopPropagation();
                                 handleAddAllMonstersToRoster(enc);
                               }}
-                              className="px-2.5 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-100 border border-amber-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                              className="px-2.5 py-0.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-rose-100 border border-rose-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
                               title={`Copy all ${monCount} monsters to 👥&🐉 Encounter Roster`}
                             >
                               <span>⬅️</span>
@@ -1350,15 +1350,15 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
                       {/* Level 2: Nested Monsters with Vertical Line Indentation (strictly when monCount > 0, always alphabetical) */}
                       {monCount > 0 && (
-                        <div className="flex flex-col gap-1.5 pl-3 ml-3 border-l-2 border-amber-500/40 my-1.5">
+                        <div className="flex flex-col gap-1.5 pl-3 ml-3 border-l-2 border-rose-500/40 my-1.5">
                           {sortedMonsters.map((m) =>
                             editingId === m.id && editingEncounterId === enc.id ? (
-                              <div key={m.id} className="p-2 bg-slate-950 border border-amber-500/60 rounded-lg flex items-center gap-2">
+                              <div key={m.id} className="p-2 bg-slate-950 border border-rose-500/60 rounded-lg flex items-center gap-2">
                                 <input
                                   type="text"
                                   value={editText}
                                   onChange={(e) => setEditText(e.target.value)}
-                                  className="flex-1 bg-slate-900 border border-amber-500/60 text-xs font-mono text-slate-100 px-2 py-1 rounded"
+                                  className="flex-1 bg-slate-900 border border-rose-500/60 text-xs font-mono text-slate-100 px-2 py-1 rounded"
                                 />
                                 <button
                                   onClick={() => handleSaveEdit(enc.id, m.id)}
@@ -1395,11 +1395,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
             )}
 
           {/* Permanent Always-Open Encounter Notes Card */}
-          <div className="bg-slate-950/90 border border-slate-800 border-t-2 border-t-amber-500/50 p-3.5 rounded-xl shadow-inner flex flex-col gap-2.5 font-outfit mt-2">
+          <div className="bg-slate-950/90 border border-slate-800 border-t-2 border-t-rose-500/50 p-3.5 rounded-xl shadow-inner flex flex-col gap-2.5 font-outfit mt-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-3 flex-wrap">
-                <h4 className="text-xs font-extrabold text-amber-200 uppercase tracking-wider flex items-center gap-2 font-mono">
-                  <div className="p-1 rounded-lg bg-amber-950/90 border border-amber-500/40 text-amber-300 flex items-center justify-center shadow-sm">
+                <h4 className="text-xs font-extrabold text-rose-200 uppercase tracking-wider flex items-center gap-2 font-mono">
+                  <div className="p-1 rounded-lg bg-rose-950/90 border border-rose-500/40 text-rose-300 flex items-center justify-center shadow-sm">
                     <StickyNote className="w-3.5 h-3.5" />
                   </div>
                   <span>Encounter Notes</span>
