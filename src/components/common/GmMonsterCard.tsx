@@ -13,9 +13,10 @@ interface GmMonsterCardProps {
   monster: MonsterData;
   onEdit?: (monster: MonsterData) => void;
   onDelete?: (id: string | number) => void;
+  onAddToRoster?: (monster: MonsterData) => void;
 }
 
-export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, onDelete }) => {
+export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, onDelete, onAddToRoster }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -48,8 +49,23 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({ monster, onEdit, o
 
   return (
     <div className="bg-slate-900/90 border border-amber-500/30 hover:border-amber-500/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono shadow-sm flex flex-wrap items-center justify-between gap-x-3 gap-y-1 transition-all">
-      {/* Main Content: Name, Combat Specs, and Alphabetical System Attributes */}
+      {/* Main Content: Left Arrow (if provided), Name, Combat Specs, and Alphabetical System Attributes */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 flex-1 min-w-0">
+        {onAddToRoster && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onAddToRoster(monster);
+            }}
+            className="text-xs text-amber-300 hover:text-amber-100 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none shrink-0"
+            title="Copy monster to 👥&🐉 Encounter Roster"
+            aria-label="Copy to Encounter Roster"
+          >
+            ⬅️
+          </button>
+        )}
         <span className="font-bold text-amber-300 text-xs shrink-0 inline-flex items-center align-baseline gap-1">
           <span>{countPrefix}{monster.name}{equipStr}</span>
           <ItemNotesPopover notes={monster.gm_notes} itemName={monster.name} inline />

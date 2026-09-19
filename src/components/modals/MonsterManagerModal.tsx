@@ -26,6 +26,7 @@ interface MonsterManagerModalProps {
   monsters: ParsedMonster[];
   onSaveMonsters: (monsters: ParsedMonster[]) => void;
   partyName?: string;
+  title?: string;
 }
 
 interface QuickAddState {
@@ -72,6 +73,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   monsters,
   onSaveMonsters,
   partyName,
+  title,
 }) => {
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   // Paste Statblock Area State
@@ -274,7 +276,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
             </div>
             <div>
               <h2 className="text-xl font-bold text-amber-400 tracking-wide flex items-center gap-2">
-                Manage Monsters
+                {title || 'Manage Monsters'}
                 <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 font-bold border border-slate-700">
                   {monsters.length}
                 </span>
@@ -298,7 +300,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
           <div className="md:col-span-7 border-r border-slate-800/80 pr-6 flex flex-col gap-3 min-h-0">
             <div className="flex items-center justify-between shrink-0">
               <h3 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-2">
-                <span>🐉</span> ACTIVE ENCOUNTER ROSTER ({monsters.length})
+                <span>🐉</span> {title ? `${title.toUpperCase()} (${monsters.length})` : `ACTIVE ENCOUNTER ROSTER (${monsters.length})`}
               </h3>
               {monsters.length > 0 && (
                 <button
