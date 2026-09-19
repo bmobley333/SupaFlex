@@ -1126,15 +1126,20 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         {/* Right Column: Adventure Encounters Suite (6 cols - 50/50 balanced layout) */}
         <div className="lg:col-span-6 bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 p-4 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 shadow-lg shadow-amber-950/20 flex flex-col lg:h-full lg:min-h-0 font-outfit">
           {/* ====================================================================== */}
-          {/* FROZEN CONTROLS ZONE: Vertically pinned down to and including Image 3  */}
+          {/* FROZEN CONTROLS ZONE: Vertically pinned Command Deck with Shelf Horizon*/}
           {/* ====================================================================== */}
-          <div className="shrink-0 flex flex-col gap-2.5 border-b border-amber-500/20 pb-3 relative z-30">
+          <div className="shrink-0 flex flex-col gap-2.5 bg-slate-950/95 backdrop-blur-md p-3 rounded-2xl border border-slate-800/90 border-b-2 border-b-amber-500/60 shadow-2xl shadow-black/60 relative z-30 mb-2">
             {/* 1. Main Adventure Header Row */}
             <div className="flex items-center justify-between flex-wrap gap-2">
-              {/* Left Group: 🗺️ Icon + Adventure Name Dropdown + Act Dropdown */}
+              {/* Left Group: 🗺️ Icon + Adventure Title + Adventure Name Dropdown + Act Dropdown */}
               <div className="flex items-center gap-2.5 flex-wrap">
-                <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] shrink-0 self-end mb-0.5">
-                  <span className="text-base leading-none">🗺️</span>
+                <div className="flex items-center gap-2 shrink-0 self-end mb-1">
+                  <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+                    <span className="text-base leading-none">🗺️</span>
+                  </div>
+                  <h2 className="text-sm font-extrabold text-amber-200 uppercase tracking-wider font-outfit">
+                    Adventure
+                  </h2>
                 </div>
 
                 {/* Adventure & Act Selectors with Centered Labels Above */}
@@ -1286,20 +1291,34 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             : 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-slate-300'
                         }`}
                       >
-                        {/* Left: 🏰 Room Title & Active Room Badge */}
+                        {/* Left: 🏰 Room Title & Active Room Badge / Set Active Affordance */}
                         <div
-                          className="flex items-center gap-2 cursor-pointer max-w-[42%] min-w-0"
+                          className="flex items-center gap-2 cursor-pointer max-w-[42%] min-w-0 group"
                           onClick={() => selectEncounter(enc.id)}
-                          title="Click to select this encounter as active"
+                          title="Click to select this encounter as the Active Room"
                         >
                           <span className="text-sm shrink-0">🏰</span>
-                          <span className="font-extrabold text-xs truncate">
+                          <span className="font-extrabold text-xs truncate group-hover:text-amber-200 transition-colors">
                             {enc.title || 'Untitled Encounter'}
                           </span>
-                          {isCurrentEncounter && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
-                              Active Room
+                          {isCurrentEncounter ? (
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-amber-500/25 text-amber-200 border border-amber-500/50 shrink-0 flex items-center gap-1 shadow-sm">
+                              <span>👑</span>
+                              <span>Active Room</span>
                             </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectEncounter(enc.id);
+                              }}
+                              className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-900/90 hover:bg-amber-950/80 text-slate-400 hover:text-amber-300 border border-slate-700/80 hover:border-amber-500/50 shrink-0 flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
+                              title="Click to select this encounter as the Active Room"
+                            >
+                              <span>🎯</span>
+                              <span>Set Active</span>
+                            </button>
                           )}
                         </div>
 
