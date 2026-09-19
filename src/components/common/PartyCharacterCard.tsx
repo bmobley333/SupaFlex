@@ -123,12 +123,21 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
       {/* 
         S-Tier Party Member Card Layout:
         - Row 1 Right Segment: Vitality readout, pulse dot, and equal-length (w-16 / 64px) health bar are rigidly anchored to Row 1, right-aligned.
-        - Left Segment: [Self Emoji 👤], Player Name, Character Name, [🚩 Nish Badge], Race, and Class.
+        - Left Segment: [🚩 Nish Badge FIRST (Columnar)], [Self Emoji 👤], Player Name, Character Name, Race, and Class.
       */}
       <div className={`flex items-start justify-between gap-2 leading-snug ${isDraggable ? 'pl-2' : ''}`}>
-        {/* Left Segment: [Self Emoji 👤], Player Name, Character Name, Nish Badge, Race, Class */}
+        {/* Left Segment: [🚩 Nish Badge FIRST], [Self Emoji 👤], Player Name, Character Name, Race, Class */}
         <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap font-bold text-slate-100">
-          {/* 👤 Fast-Find Self Indicator: Rendered as first item on the line for active player */}
+          {/* 🚩 VERY FIRST ITEM: Vertically aligned fixed-width Nish Badge */}
+          <span
+            className="font-mono text-[11px] font-black min-w-[40px] justify-center px-1.5 py-0.5 rounded border border-amber-500/50 bg-amber-500/15 text-amber-300 shrink-0 shadow-sm flex items-center gap-0.5"
+            title={`Initiative (Nish): ${currentNishDisplay}`}
+          >
+            <span className="text-[10px] leading-none">🚩</span>
+            <span className="tabular-nums">{currentNishDisplay}</span>
+          </span>
+
+          {/* 👤 Fast-Find Self Indicator: Rendered immediately after Nish badge for active player */}
           {isCurrentPlayer && (
             <span
               className="text-xs leading-none shrink-0 select-none"
@@ -148,16 +157,6 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
           <span className="text-slate-100 font-extrabold text-xs">
             {charFirstName}
           </span>
-
-          {/* 🚩 Relocated Nish Badge: Immediately after character name and before race */}
-          <span
-            className="font-mono text-[11px] font-black px-1.5 py-0.5 rounded border border-amber-500/50 bg-amber-500/15 text-amber-300 shrink-0 shadow-sm flex items-center gap-0.5"
-            title={`Initiative (Nish): ${currentNishDisplay}`}
-          >
-            <span className="text-[10px] leading-none">🚩</span>
-            <span className="tabular-nums">{currentNishDisplay}</span>
-          </span>
-
           <span className="text-purple-300 font-semibold text-[11px]">
             {race}
           </span>
