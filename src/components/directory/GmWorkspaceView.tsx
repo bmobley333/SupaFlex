@@ -1,12 +1,12 @@
 // src/components/directory/GmWorkspaceView.tsx
 // Game Master Command Console: Party Roster, Party Management & Monster Roster View
 
-import React, { useState, useEffect, useRef } from 'react';
-import { ArrowUpDown, StickyNote, Rocket } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { ArrowUpDown, StickyNote, Rocket, X } from 'lucide-react';
 import { gameApi } from '../../services/api';
 import { supabase } from '../../lib/supabase';
 import { Party, PartySessionMember, CharacterSheetData, SupabaseMonster } from '../../types/game';
-import { parseMonsterLine, ParsedMonster, sortMonstersByPreset, MonsterSortPreset, resolveCodexMonsterNotes } from '../../utils/monsterStatParser';
+import { parseMonsterLine, ParsedMonster, sortMonstersByPreset, MonsterSortPreset, resolveCodexMonsterNotes, getMonsterNish } from '../../utils/monsterStatParser';
 import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { useRosterOrdering } from '../../hooks/useRosterOrdering';
@@ -17,6 +17,72 @@ import { EncounterNavigationRibbon } from '../hud/EncounterNavigationRibbon';
 import { EncounterLinksDropdown } from '../hud/EncounterLinksDropdown';
 import { EncounterLootDropdown } from '../hud/EncounterLootDropdown';
 import { useAdventureStore } from '../../store/useAdventureStore';
+
+export interface GmRosterMonster {
+  id: string;
+  name: string;
+  nish: number;
+  coreStatsText: string;
+  fullText: string;
+}
+
+export type GmUnifiedRosterItem =
+  | { type: 'member'; id: string; member: PartySessionMember }
+  | { type: 'monster'; id: string; monster: GmRosterMonster };
+
+export function parseMonsterForGmRoster(raw: string, idPrefix = 'gm_mon_'): GmRosterMonster {
+  const trimmed = (raw || '').trim();
+  const monId = `${idPrefix}${Math.random().toString(36).substring(2, 9)}`;
+
+  // Extract Nish (🚩\d+)
+  const nishMatch = trimmed.match(/🚩\s*(\d+)/u);
+  const nish = nishMatch ? parseInt(nishMatch[1], 10) : 10;
+
+  // Extract Name (before first combat stat icon 🚩, 👣, ⚔️, ⚔, 🛡️, 🧥, ❤️)
+  const firstIconMatch = trimmed.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
+  let rawName = trimmed;
+  let afterName = '';
+  if (firstIconMatch && firstIconMatch.index !== undefined) {
+    rawName = trimmed.substring(0, firstIconMatch.index).trim();
+    afterName = trimmed.substring(firstIconMatch.index).trim();
+  }
+
+  // Clean Name: remove leading numbers and text in parentheses
+  const cleanName =
+    rawName
+      .replace(/^\d+\s*/, '')
+      .replace(/\s*\([^)]*\)/g, '')
+      .replace(/[\:\–\-]+$/, '')
+      .trim() || 'Monster';
+
+  // Core Stats text: strip 🚩\s*\d+ so we don't duplicate the interactive 🚩 badge
+  let statsPart = afterName.replace(/🚩\s*\d+\s*/u, '').trim();
+
+  // Remove notes emojis: 📝, 📋, ✏️, ℹ️
+  statsPart = statsPart.replace(/[📝📋✏️ℹ️]/gu, '');
+
+  // Truncate any trailing text after closing attribute bracket: e.g. [✨9/💪15/👁️16/🏃24/🫀5]
+  const attrEndMatch = statsPart.match(/(\[[^\]]*?(?:🫀|💖)[^\]]*?\])/u);
+  if (attrEndMatch && attrEndMatch.index !== undefined) {
+    const cutIndex = attrEndMatch.index + attrEndMatch[0].length;
+    statsPart = statsPart.substring(0, cutIndex).trim();
+  } else {
+    // If no attribute block, truncate after vitality ❤️\d+
+    const vitMatch = statsPart.match(/❤️\s*\d+/u);
+    if (vitMatch && vitMatch.index !== undefined) {
+      const cutIndex = vitMatch.index + vitMatch[0].length;
+      statsPart = statsPart.substring(0, cutIndex).trim();
+    }
+  }
+
+  return {
+    id: monId,
+    name: cleanName,
+    nish,
+    coreStatsText: statsPart,
+    fullText: trimmed,
+  };
+}
 
 interface GmWorkspaceViewProps {
   activeParty: Party | null;
@@ -82,18 +148,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Deploy / Push to Players state
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploySuccess, setDeploySuccess] = useState(false);
-
-  const handlePushToPlayers = async () => {
-    if (!selectedParty?.id || sessionMode === 'design') return;
-    setIsDeploying(true);
-    try {
-      await deployToLiveParty(selectedParty.id);
-      setDeploySuccess(true);
-      setTimeout(() => setDeploySuccess(false), 2000);
-    } finally {
-      setIsDeploying(false);
-    }
-  };
 
   // Notes Textarea Ref & Formatting Mode
   const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -262,10 +316,138 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     setEditingId(null);
   };
 
+  // Monster Nish Mode: 'all' | 'fastest'
+  const monsterNishModeKey = `supaflex_gm_monster_nish_mode_${partyIdOrDef}`;
+  const [monsterNishMode, setMonsterNishMode] = useState<'all' | 'fastest'>(() => {
+    try {
+      const saved = localStorage.getItem(monsterNishModeKey);
+      if (saved === 'all' || saved === 'fastest') return saved;
+    } catch {}
+    return 'all';
+  });
+
+  const handleSetMonsterNishMode = (mode: 'all' | 'fastest') => {
+    setMonsterNishMode(mode);
+    try {
+      localStorage.setItem(monsterNishModeKey, mode);
+    } catch {}
+  };
+
+  // Pushed Monsters for GM Screen Party Roster
+  const gmPushedMonstersKey = `supaflex_gm_pushed_monsters_${partyIdOrDef}`;
+  const [pushedMonsters, setPushedMonsters] = useState<GmRosterMonster[]>(() => {
+    try {
+      const saved = localStorage.getItem(gmPushedMonstersKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+
+  // Re-sync pushed monsters and nish mode when selectedParty changes
+  useEffect(() => {
+    if (!selectedParty?.id) return;
+    try {
+      const savedMode = localStorage.getItem(`supaflex_gm_monster_nish_mode_${selectedParty.id}`);
+      if (savedMode === 'all' || savedMode === 'fastest') setMonsterNishMode(savedMode);
+      const savedMons = localStorage.getItem(`supaflex_gm_pushed_monsters_${selectedParty.id}`);
+      if (savedMons) {
+        const parsed = JSON.parse(savedMons);
+        if (Array.isArray(parsed)) setPushedMonsters(parsed);
+      } else {
+        setPushedMonsters([]);
+      }
+    } catch {}
+  }, [selectedParty?.id]);
+
+  // Turn Marked IDs (diagonal slash for turn tracking)
+  const [markedTurnIds, setMarkedTurnIds] = useState<string[]>([]);
+
+  const toggleTurnMark = (id: string) => {
+    setMarkedTurnIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleResetTurnMarks = () => {
+    setMarkedTurnIds([]);
+  };
+
+  const handleDismissRosterMonster = (monsterId: string) => {
+    setPushedMonsters((prev) => {
+      const next = prev.filter((m) => m.id !== monsterId);
+      try {
+        localStorage.setItem(gmPushedMonstersKey, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handlePushToPlayers = async () => {
+    if (!selectedParty?.id || sessionMode === 'design') return;
+    setIsDeploying(true);
+    try {
+      await deployToLiveParty(selectedParty.id);
+
+      // Ingest encounter monsters into GM Party Roster based on monsterNishMode
+      if (effectiveMonsters.length > 0) {
+        let selectedMonsters: ParsedMonster[] = [];
+        if (monsterNishMode === 'fastest') {
+          // Find single monster with maximum Nish
+          let maxNish = -1;
+          let topMonster: ParsedMonster | null = null;
+          for (const m of effectiveMonsters) {
+            const nish = getMonsterNish(m);
+            if (nish > maxNish) {
+              maxNish = nish;
+              topMonster = m;
+            }
+          }
+          if (topMonster) {
+            selectedMonsters = [topMonster];
+          }
+        } else {
+          selectedMonsters = effectiveMonsters;
+        }
+
+        const rosterMonsters: GmRosterMonster[] = selectedMonsters.map((m) =>
+          parseMonsterForGmRoster(m.fullText || m.nameWithEquip || '', `gm_mon_${m.id}_`)
+        );
+
+        setPushedMonsters(rosterMonsters);
+        try {
+          localStorage.setItem(gmPushedMonstersKey, JSON.stringify(rosterMonsters));
+        } catch {}
+      }
+
+      setDeploySuccess(true);
+      setTimeout(() => setDeploySuccess(false), 2000);
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
   // Party Session Roster State
   const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
   const [isMembersLoading, setIsMembersLoading] = useState(false);
   const [isGmSortMenuOpen, setIsGmSortMenuOpen] = useState(false);
+
+  // Combined Party Members + Pushed Monsters Roster
+  const combinedRosterItems = useMemo<GmUnifiedRosterItem[]>(() => {
+    const members: GmUnifiedRosterItem[] = sessionMembers.map((m) => ({
+      type: 'member',
+      id: String(m.character_id || m.id),
+      member: m,
+    }));
+    const monsters: GmUnifiedRosterItem[] = pushedMonsters.map((mon) => ({
+      type: 'monster',
+      id: mon.id,
+      monster: mon,
+    }));
+    return [...members, ...monsters];
+  }, [sessionMembers, pushedMonsters]);
 
   const gmPartyStorageKey = `supaflex_gm_roster_order_${selectedParty?.id || 'default'}`;
   const {
@@ -276,21 +458,32 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     activePreset: gmPartyPreset,
     draggedIndex: partyDraggedIndex,
     setDraggedIndex: setPartyDraggedIndex,
-  } = useRosterOrdering<PartySessionMember>({
-    items: sessionMembers,
+  } = useRosterOrdering<GmUnifiedRosterItem>({
+    items: combinedRosterItems,
     storageKey: gmPartyStorageKey,
-    getId: (m) => String(m.character_id || m.id),
-    getName: (m) => resolveCharFirstName(m.character?.name || `Hero #${m.character_id}`),
-    getVitPct: (m) => {
-      const sheetData: Partial<CharacterSheetData> = m.character?.sheet_data || {};
-      const current = (m.character as any)?.current_vitality ?? sheetData.current_vitality ?? m.character?.hp ?? 28;
-      const max = (m.character as any)?.vitality_max ?? sheetData.vitality_max ?? 28;
-      return max > 0 ? (current / max) * 100 : 0;
+    defaultPreset: 'nish_desc',
+    isMonster: (item) => item.type === 'monster',
+    getId: (item) => item.id,
+    getName: (item) =>
+      item.type === 'member'
+        ? resolveCharFirstName(item.member.character?.name || `Hero #${item.member.character_id}`)
+        : item.monster.name,
+    getVitPct: (item) => {
+      if (item.type === 'member') {
+        const sheetData: Partial<CharacterSheetData> = item.member.character?.sheet_data || {};
+        const current = (item.member.character as any)?.current_vitality ?? sheetData.current_vitality ?? item.member.character?.hp ?? 28;
+        const max = (item.member.character as any)?.vitality_max ?? sheetData.vitality_max ?? 28;
+        return max > 0 ? (current / max) * 100 : 0;
+      }
+      return 100;
     },
-    getNish: (m) => {
-      const sheetData: Partial<CharacterSheetData> = m.character?.sheet_data || {};
-      const nish = sheetData.current_nish ?? (m.character as any)?.current_nish ?? (m.character as any)?.initiative;
-      return typeof nish === 'number' ? nish : parseInt(String(nish || 0), 10) || 0;
+    getNish: (item) => {
+      if (item.type === 'member') {
+        const sheetData: Partial<CharacterSheetData> = item.member.character?.sheet_data || {};
+        const nish = sheetData.current_nish ?? (item.member.character as any)?.current_nish ?? (item.member.character as any)?.initiative;
+        return typeof nish === 'number' ? nish : parseInt(String(nish || 0), 10) || 0;
+      }
+      return item.monster.nish;
     },
   });
 
@@ -588,8 +781,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         <div className="lg:col-span-4 flex flex-col lg:h-full lg:min-h-0">
           {/* Card 1: Party Roster */}
           <div className="bg-gradient-to-b from-sky-950/30 via-slate-900/90 to-slate-950/95 p-4 rounded-2xl border border-slate-800 border-t-2 border-t-sky-500/90 space-y-4 shadow-lg shadow-sky-950/20 flex flex-col lg:h-full lg:min-h-0">
-            <div className="flex items-center justify-between border-b border-sky-500/20 pb-3 shrink-0">
-              <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-between border-b border-sky-500/20 pb-3 shrink-0 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-xl bg-sky-950/90 border border-sky-500/50 text-sky-300 flex items-center justify-center shadow-[0_0_12px_rgba(14,165,233,0.25)]">
                   <span className="text-base leading-none">👥</span>
                 </div>
@@ -665,6 +858,48 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     )}
                   </div>
                 )}
+
+                {/* 🔄 New Nish Round Reset Button */}
+                <button
+                  type="button"
+                  onClick={handleResetTurnMarks}
+                  className="px-2 py-1 bg-sky-950/80 hover:bg-sky-900 border border-sky-500/40 text-sky-300 hover:text-sky-100 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer ml-0.5"
+                  title="Start new round: Clear all turn/nish marked-off slashes"
+                >
+                  <span>🔄</span>
+                  <span>New Nish</span>
+                </button>
+              </div>
+
+              {/* Monster Nish: All / Fastest Pill Switch */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-slate-400 font-outfit">Monster Nish:</span>
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                  <button
+                    type="button"
+                    onClick={() => handleSetMonsterNishMode('all')}
+                    className={`px-2 py-0.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                      monsterNishMode === 'all'
+                        ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 border-transparent'
+                    }`}
+                  >
+                    <span>🐉</span>
+                    <span>All</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetMonsterNishMode('fastest')}
+                    className={`px-2 py-0.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                      monsterNishMode === 'fastest'
+                        ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 border-transparent'
+                    }`}
+                  >
+                    <span>⚡</span>
+                    <span>Fastest</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -683,23 +918,131 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
               </div>
             ) : (
               <div className="space-y-2.5 overflow-y-auto lg:flex-1 lg:min-h-0 pr-1">
-                {orderedSessionMembers.map((member, idx) => (
-                  <PartyCharacterCard
-                    key={member.id || member.character_id || `pm_${idx}`}
-                    member={member}
-                    isDraggable={orderedSessionMembers.length > 1}
-                    onDragStart={(e) => handlePartyDragStart(e, idx)}
-                    onDragOver={handlePartyDragOver}
-                    onDrop={(e) => handlePartyDrop(e, idx)}
-                    onDragEnd={() => setPartyDraggedIndex(null)}
-                    isDragging={partyDraggedIndex === idx}
-                    onNudgeUp={() => nudgePartyItem(idx, 'up')}
-                    onNudgeDown={() => nudgePartyItem(idx, 'down')}
-                    canNudgeUp={idx > 0}
-                    canNudgeDown={idx < orderedSessionMembers.length - 1}
-                    onDismiss={() => handleDismissMember(member)}
-                  />
-                ))}
+                {orderedSessionMembers.map((item, idx) => {
+                  if (item.type === 'member') {
+                    const member = item.member;
+                    const memberId = String(member.character_id || member.id);
+                    const isMarked = markedTurnIds.includes(memberId);
+                    return (
+                      <PartyCharacterCard
+                        key={memberId}
+                        member={member}
+                        isTurnMarked={isMarked}
+                        onToggleTurnMark={() => toggleTurnMark(memberId)}
+                        isDraggable={orderedSessionMembers.length > 1}
+                        onDragStart={(e) => handlePartyDragStart(e, idx)}
+                        onDragOver={handlePartyDragOver}
+                        onDrop={(e) => handlePartyDrop(e, idx)}
+                        onDragEnd={() => setPartyDraggedIndex(null)}
+                        isDragging={partyDraggedIndex === idx}
+                        onNudgeUp={() => nudgePartyItem(idx, 'up')}
+                        onNudgeDown={() => nudgePartyItem(idx, 'down')}
+                        canNudgeUp={idx > 0}
+                        canNudgeDown={idx < orderedSessionMembers.length - 1}
+                        onDismiss={() => handleDismissMember(member)}
+                      />
+                    );
+                  } else {
+                    const monster = item.monster;
+                    const isMarked = markedTurnIds.includes(monster.id);
+                    return (
+                      <div
+                        key={monster.id}
+                        draggable={orderedSessionMembers.length > 1}
+                        onDragStart={(e) => handlePartyDragStart(e, idx)}
+                        onDragOver={handlePartyDragOver}
+                        onDrop={(e) => handlePartyDrop(e, idx)}
+                        onDragEnd={() => setPartyDraggedIndex(null)}
+                        className={`group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-outfit text-xs text-slate-200 border-amber-900/40 hover:border-amber-700/60 bg-gradient-to-r from-amber-950/20 via-slate-950/80 to-slate-950/90 ${
+                          isMarked ? 'opacity-60 bg-slate-950/50' : ''
+                        } ${
+                          partyDraggedIndex === idx
+                            ? 'opacity-40 border-cyan-500/80 bg-cyan-950/20 scale-[0.99]'
+                            : ''
+                        }`}
+                      >
+                        {orderedSessionMembers.length > 1 && (
+                          <div
+                            className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl bg-amber-800/40 group-hover:bg-amber-500/60 cursor-grab active:cursor-grabbing transition-colors"
+                            title="Drag to reorder roster position"
+                          />
+                        )}
+
+                        <div className={`flex items-center justify-between gap-2 leading-snug ${orderedSessionMembers.length > 1 ? 'pl-2' : ''}`}>
+                          {/* Left Segment: 🐉 [Monster Name] [🚩 Nish Button] [Core Stats] */}
+                          <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap font-bold text-slate-100">
+                            <span className="text-xs leading-none shrink-0 select-none">🐉</span>
+                            <span className="text-amber-200 font-extrabold text-xs shrink-0">
+                              {monster.name}
+                            </span>
+
+                            {/* Clickable Monster Nish Button with diagonal slash */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleTurnMark(monster.id);
+                              }}
+                              className={`relative font-mono text-[11px] font-black min-w-[40px] justify-center px-1.5 py-0.5 rounded border shrink-0 shadow-sm flex items-center gap-0.5 cursor-pointer transition-all overflow-hidden ${
+                                isMarked
+                                  ? 'border-slate-700/60 bg-slate-900/90 text-slate-500 opacity-60'
+                                  : 'border-amber-500/50 bg-amber-500/15 text-amber-300 hover:border-amber-400 hover:bg-amber-500/25'
+                              }`}
+                              title={
+                                isMarked
+                                  ? `Initiative: ${monster.nish} (Turn Completed - Click to unmark)`
+                                  : `Initiative: ${monster.nish} (Click to mark turn completed)`
+                              }
+                            >
+                              <span className="text-[10px] leading-none">🚩</span>
+                              <span className="tabular-nums">{monster.nish}</span>
+
+                              {/* Diagonal Red Slash Line */}
+                              {isMarked && (
+                                <span
+                                  className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                                  aria-hidden="true"
+                                >
+                                  <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                                    <line
+                                      x1="12"
+                                      y1="88"
+                                      x2="88"
+                                      y2="12"
+                                      stroke="#ef4444"
+                                      strokeWidth="14"
+                                      strokeLinecap="round"
+                                    />
+                                  </svg>
+                                </span>
+                              )}
+                            </button>
+
+                            {/* Core stats text (no notes emoji, no trailing text after 🫀5]) */}
+                            <span className="text-slate-300 font-medium text-[11px]">
+                              {monster.coreStatsText}
+                            </span>
+                          </div>
+
+                          {/* Right Segment: ONLY Dismiss (X) button! No health bar! */}
+                          <div className="flex items-center shrink-0 ml-auto">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDismissRosterMonster(monster.id);
+                              }}
+                              className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-950/50 border border-transparent hover:border-red-500/40 rounded transition-all cursor-pointer"
+                              title="Remove monster from Party Roster initiative (Encounter monster remains intact)"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                })}
               </div>
             )}
           </div>

@@ -17,6 +17,8 @@ interface PartyCharacterCardProps {
   canNudgeUp?: boolean;
   canNudgeDown?: boolean;
   onDismiss?: () => void;
+  isTurnMarked?: boolean;
+  onToggleTurnMark?: () => void;
 }
 
 /**
@@ -66,6 +68,8 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
   canNudgeUp = false,
   canNudgeDown = false,
   onDismiss,
+  isTurnMarked = false,
+  onToggleTurnMark,
 }) => {
   const char = member.character;
   const playerFirstName = resolvePlayerFirstName(playerNameOverride || member.player_first_name, member.player_email);
@@ -106,6 +110,8 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
       onDrop={onDrop}
       onDragEnd={onDragEnd}
       className={`group relative p-2.5 bg-slate-950/80 border rounded-xl space-y-1.5 transition-all font-outfit text-xs text-slate-200 ${
+        isTurnMarked ? 'opacity-60 bg-slate-950/50' : ''
+      } ${
         isDragging
           ? 'opacity-40 border-cyan-500/80 bg-cyan-950/20 scale-[0.99]'
           : 'border-slate-800 hover:border-slate-700'
@@ -122,20 +128,55 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
 
       {/* 
         S-Tier Party Member Card Layout:
-        - Row 1 Right Segment: Vitality readout, pulse dot, and equal-length (w-16 / 64px) health bar are rigidly anchored to Row 1, right-aligned.
-        - Left Segment: [🚩 Nish Badge FIRST (Columnar)], [Self Emoji 👤], Player Name, Character Name, Race, and Class.
+        - Row 1 Right Segment: Vitality readout, pulse dot, and health bar are flush right.
+        - Left Segment: [🚩 Nish Badge / Turn-Mark Button FIRST (Columnar)], [Self Emoji 👤], Player Name, Character Name, Race, Class.
       */}
       <div className={`flex items-start justify-between gap-2 leading-snug ${isDraggable ? 'pl-2' : ''}`}>
         {/* Left Segment: [🚩 Nish Badge FIRST], [Self Emoji 👤], Player Name, Character Name, Race, Class */}
         <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap font-bold text-slate-100">
-          {/* 🚩 VERY FIRST ITEM: Vertically aligned fixed-width Nish Badge */}
-          <span
-            className="font-mono text-[11px] font-black min-w-[40px] justify-center px-1.5 py-0.5 rounded border border-amber-500/50 bg-amber-500/15 text-amber-300 shrink-0 shadow-sm flex items-center gap-0.5"
-            title={`Initiative (Nish): ${currentNishDisplay}`}
+          {/* 🚩 VERY FIRST ITEM: Interactive fixed-width Nish Badge / Turn-Mark Toggle Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onToggleTurnMark) onToggleTurnMark();
+            }}
+            className={`relative font-mono text-[11px] font-black min-w-[40px] justify-center px-1.5 py-0.5 rounded border shrink-0 shadow-sm flex items-center gap-0.5 transition-all overflow-hidden cursor-pointer ${
+              isTurnMarked
+                ? 'border-slate-700/60 bg-slate-900/90 text-slate-500 opacity-60'
+                : 'border-amber-500/50 bg-amber-500/15 text-amber-300 hover:border-amber-400 hover:bg-amber-500/25'
+            }`}
+            title={
+              onToggleTurnMark
+                ? isTurnMarked
+                  ? `Initiative: ${currentNishDisplay} (Turn Completed - Click to unmark)`
+                  : `Initiative: ${currentNishDisplay} (Click to mark turn completed)`
+                : `Initiative (Nish): ${currentNishDisplay}`
+            }
           >
             <span className="text-[10px] leading-none">🚩</span>
             <span className="tabular-nums">{currentNishDisplay}</span>
-          </span>
+
+            {/* Diagonal Red Slash Line when Turn is Marked Off */}
+            {isTurnMarked && (
+              <span
+                className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                aria-hidden="true"
+              >
+                <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                  <line
+                    x1="12"
+                    y1="88"
+                    x2="88"
+                    y2="12"
+                    stroke="#ef4444"
+                    strokeWidth="14"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+            )}
+          </button>
 
           {/* 👤 Fast-Find Self Indicator: Rendered immediately after Nish badge for active player */}
           {isCurrentPlayer && (
@@ -165,7 +206,7 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
           </span>
         </div>
 
-        {/* Right Segment: Vitality readout, fixed-width bar graphic, & touch nudge arrows - Rigorously Row 1, Right Aligned */}
+        {/* Right Segment: Vitality readout & fixed-width bar graphic - Anchored Flush Right */}
         <div className="flex items-center gap-1.5 shrink-0 ml-auto pt-0.5">
           <span className={`font-mono text-[11px] font-extrabold min-w-[64px] text-center px-1.5 py-0.5 rounded border shrink-0 ${badgeColorClass}`}>
             {currentVit}/{maxVit} {pct}%
@@ -179,42 +220,40 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
               />
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Micro Nudge Arrows (Visible on card hover/focus) */}
-          {(onNudgeUp || onNudgeDown) && (
-            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity ml-1 shrink-0">
-              {onNudgeUp && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onNudgeUp();
-                  }}
-                  disabled={!canNudgeUp}
-                  className="px-1 py-0.2 text-[10px] font-bold text-slate-400 hover:text-cyan-300 disabled:opacity-30 disabled:hover:text-slate-400 bg-slate-900 border border-slate-700/60 rounded"
-                  title="Move Up"
-                >
-                  ▲
-                </button>
-              )}
-              {onNudgeDown && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onNudgeDown();
-                  }}
-                  disabled={!canNudgeDown}
-                  className="px-1 py-0.2 text-[10px] font-bold text-slate-400 hover:text-cyan-300 disabled:opacity-30 disabled:hover:text-slate-400 bg-slate-900 border border-slate-700/60 rounded"
-                  title="Move Down"
-                >
-                  ▼
-                </button>
-              )}
-            </div>
+      {/* Hover Action Toolbar: Overlaid smoothly on hover without consuming idle layout width */}
+      {(onNudgeUp || onNudgeDown || onDismiss) && (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-slate-950/95 border border-slate-700/80 rounded-lg px-1.5 py-0.5 shadow-lg flex items-center gap-1 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-10 backdrop-blur-sm">
+          {onNudgeUp && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onNudgeUp();
+              }}
+              disabled={!canNudgeUp}
+              className="px-1 py-0.5 text-[10px] font-bold text-slate-400 hover:text-cyan-300 disabled:opacity-30 disabled:hover:text-slate-400 bg-slate-900 border border-slate-700/60 rounded cursor-pointer"
+              title="Move Up"
+            >
+              ▲
+            </button>
           )}
-
-          {/* Dismiss from Live Party button (Visible on hover) */}
+          {onNudgeDown && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onNudgeDown();
+              }}
+              disabled={!canNudgeDown}
+              className="px-1 py-0.5 text-[10px] font-bold text-slate-400 hover:text-cyan-300 disabled:opacity-30 disabled:hover:text-slate-400 bg-slate-900 border border-slate-700/60 rounded cursor-pointer"
+              title="Move Down"
+            >
+              ▼
+            </button>
+          )}
           {onDismiss && (
             <button
               type="button"
@@ -222,14 +261,14 @@ export const PartyCharacterCard: React.FC<PartyCharacterCardProps> = ({
                 e.stopPropagation();
                 onDismiss();
               }}
-              className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-400 hover:bg-red-950/50 border border-transparent hover:border-red-500/40 rounded transition-all ml-0.5"
+              className="p-0.5 text-slate-400 hover:text-red-400 hover:bg-red-950/50 border border-transparent hover:border-red-500/40 rounded transition-all cursor-pointer ml-0.5"
               title="Dismiss from Party"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 };

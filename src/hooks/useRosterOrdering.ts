@@ -10,6 +10,8 @@ export interface UseRosterOrderingOptions<T> {
   getName?: (item: T) => string;
   getVitPct?: (item: T) => number;
   getNish?: (item: T) => number;
+  defaultPreset?: SortPreset;
+  isMonster?: (item: T) => boolean;
 }
 
 export function useRosterOrdering<T>({
@@ -19,6 +21,8 @@ export function useRosterOrdering<T>({
   getName,
   getVitPct,
   getNish,
+  defaultPreset,
+  isMonster,
 }: UseRosterOrderingOptions<T>) {
   const [orderIds, setOrderIds] = useState<string[]>(() => {
     try {
@@ -44,7 +48,7 @@ export function useRosterOrdering<T>({
     } catch (e) {
       console.warn(`[useRosterOrdering] Error reading preset key ${presetStorageKey}:`, e);
     }
-    return 'custom';
+    return defaultPreset || 'custom';
   });
 
   const setActivePreset = useCallback(
@@ -111,6 +115,13 @@ export function useRosterOrdering<T>({
       return [...items].sort((a, b) => {
         const diff = getNish(b) - getNish(a); // Descending: Highest Nish first
         if (Math.abs(diff) > 0.001) return diff;
+        // Tie-breaker: If Nish matches, player characters list before monsters
+        if (isMonster) {
+          const aMon = isMonster(a);
+          const bMon = isMonster(b);
+          if (!aMon && bMon) return -1;
+          if (aMon && !bMon) return 1;
+        }
         if (getName) {
           const nameDiff = getName(a).localeCompare(getName(b));
           if (nameDiff !== 0) return nameDiff;
