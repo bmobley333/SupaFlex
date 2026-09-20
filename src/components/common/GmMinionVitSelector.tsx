@@ -140,16 +140,16 @@ export const GmMinionVitSelector: React.FC<GmMinionVitSelectorProps> = ({
           onClick={handleToggle}
           disabled={disabled}
           title={minionTooltip}
-          className={`shrink-0 inline-flex items-center gap-0.5 rounded transition-all cursor-pointer select-none leading-none ${
+          className={`shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-all duration-150 cursor-pointer select-none leading-none active:scale-95 ${
             isMinion
-              ? 'bg-purple-950/50 border border-purple-500/50 hover:border-purple-400 text-purple-300 font-bold px-1.5 py-0.5 shadow-[0_0_8px_rgba(168,85,247,0.25)]'
-              : 'text-slate-300 hover:text-rose-300 hover:bg-slate-800/80 px-1 py-0.5 border border-transparent hover:border-slate-700/60'
+              ? 'bg-purple-950/60 border border-purple-500/60 hover:border-purple-400 hover:bg-purple-900/60 text-purple-300 hover:text-purple-200 font-bold shadow-[0_0_8px_rgba(168,85,247,0.25)] hover:shadow-[0_0_12px_rgba(168,85,247,0.45)]'
+              : 'bg-slate-900/80 border border-slate-700/80 hover:border-rose-500/70 hover:bg-rose-950/40 text-slate-200 hover:text-rose-200 shadow-sm hover:shadow-[0_0_8px_rgba(244,63,94,0.3)]'
           } ${className}`}
         >
           <span className="text-[11px] leading-none">{isMinion ? '💔' : '❤️'}</span>
           <span
             className={`text-[11px] tabular-nums ${
-              isMinion ? 'font-extrabold text-purple-300' : 'font-mono'
+              isMinion ? 'font-extrabold text-purple-300' : 'font-bold text-slate-200'
             }`}
           >
             {isMinion ? effectiveMinionVit : effectiveCurrentVit}
