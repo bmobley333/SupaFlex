@@ -1859,6 +1859,124 @@ export const gameApi = {
     }
   },
 
+  async createPower(power: any): Promise<Power | null> {
+    try {
+      const payload: any = {
+        name: power.name,
+        action: power.action || 'A',
+        usage: power.usage || '1-Enc',
+        effect: power.effect || '',
+        genres: power.genres && power.genres.length > 0 ? power.genres : ['Medieval', 'Modern', 'SciFi'],
+        path: power.path || 'General',
+        discipline: power.discipline || 'Universal',
+        notes: power.notes || null,
+        category: power.category || 'Class',
+        created_at: new Date().toISOString(),
+      };
+      const { data, error } = await supabase.from('powers').insert([payload]).select('*').single();
+      if (error) {
+        console.warn('[gameApi] Warning inserting into powers:', error.message);
+        return null;
+      }
+      return data as Power;
+    } catch (e) {
+      console.error('[gameApi] Error in createPower:', e);
+      return null;
+    }
+  },
+
+  async createPath(pathItem: { name: string; category?: string; description?: string }): Promise<any | null> {
+    try {
+      const payload = {
+        name: pathItem.name,
+        category: pathItem.category || 'General',
+        description: pathItem.description || '',
+        created_at: new Date().toISOString(),
+      };
+      const { data, error } = await supabase.from('paths').insert([payload]).select('*').single();
+      if (error) {
+        console.warn('[gameApi] Warning inserting into paths:', error.message);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.error('[gameApi] Error in createPath:', e);
+      return null;
+    }
+  },
+
+  async createSkill(skill: { name: string; attribute: string; skillset?: string[]; genres?: string[]; notes?: string; discipline?: string }): Promise<any | null> {
+    try {
+      const payload = {
+        name: skill.name,
+        attribute: skill.attribute,
+        skillset: skill.skillset || ['General'],
+        genres: skill.genres && skill.genres.length > 0 ? skill.genres : ['Medieval', 'Modern', 'SciFi'],
+        notes: skill.notes || null,
+        discipline: skill.discipline || 'General',
+        created_at: new Date().toISOString(),
+      };
+      const { data, error } = await supabase.from('skills').insert([payload]).select('*').single();
+      if (error) {
+        console.warn('[gameApi] Warning inserting into skills:', error.message);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.error('[gameApi] Error in createSkill:', e);
+      return null;
+    }
+  },
+
+  async createGearPower(gearPower: { name: string; action?: string; usage?: string; effect: string; tier?: string; belongs_to?: string; genres?: string[]; notes?: string }): Promise<any | null> {
+    try {
+      const payload = {
+        name: gearPower.name,
+        action: gearPower.action || 'F',
+        usage: gearPower.usage || '1-Enc',
+        effect: gearPower.effect,
+        tier: gearPower.tier || 'Minor',
+        belongs_to: gearPower.belongs_to || '',
+        genres: gearPower.genres && gearPower.genres.length > 0 ? gearPower.genres : ['Medieval', 'Modern', 'SciFi'],
+        notes: gearPower.notes || null,
+        created_at: new Date().toISOString(),
+      };
+      const { data, error } = await supabase.from('gear_powers').insert([payload]).select('*').single();
+      if (error) {
+        console.warn('[gameApi] Warning inserting into gear_powers:', error.message);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.error('[gameApi] Error in createGearPower:', e);
+      return null;
+    }
+  },
+
+  async createKit(kitItem: { name: string; category?: string; description?: string; cost?: string; genres?: string[]; notes?: string }): Promise<any | null> {
+    try {
+      const payload = {
+        name: kitItem.name,
+        category: kitItem.category || 'General',
+        description: kitItem.description || '',
+        cost: kitItem.cost || '1g',
+        genres: kitItem.genres && kitItem.genres.length > 0 ? kitItem.genres : ['Medieval', 'Modern', 'SciFi'],
+        notes: kitItem.notes || null,
+        domain: 'Tech',
+        created_at: new Date().toISOString(),
+      };
+      const { data, error } = await supabase.from('kits').insert([payload]).select('*').single();
+      if (error) {
+        console.warn('[gameApi] Warning inserting into kits:', error.message);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.error('[gameApi] Error in createKit:', e);
+      return null;
+    }
+  },
+
   // --- MASTER LOOT MATRIX (LOOT_MAIN) ---
   async getLootMainEntries(): Promise<LootMainEntry[]> {
     try {

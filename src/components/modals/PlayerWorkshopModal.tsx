@@ -1,14 +1,14 @@
 // src/components/modals/PlayerWorkshopModal.tsx
-// Unified Player's Workshop / Player's Forge: Craft custom Powers, Relics, Hardware, Skills, & Skillsets.
+// Unified Player's Forge: Master Modal Blueprint 2-Pane Architecture (Live Preview + Forge Controls)
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Check, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationType, CustomCreationItem } from '../../types/game';
+import { CustomCreationType, CustomCreationItem, CustomCreationData } from '../../types/game';
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
 import { InfoTooltip } from '../common/InfoTooltip';
-import { sanitizeKitInput, isMsoEntry, compareMsoOptions } from '../../utils/kitUtils';
+import { compareMsoOptions } from '../../utils/kitUtils';
 
 interface PlayerWorkshopModalProps {
   isOpen: boolean;
@@ -16,32 +16,46 @@ interface PlayerWorkshopModalProps {
   onItemSaved?: () => void;
 }
 
-const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
+// Canonical SupaFlex Rules Constants
+const ACTION_OPTIONS = [
+  { id: 'AM', label: 'AM (Attack & Move)' },
+  { id: 'A', label: 'A (Attack)' },
+  { id: 'M', label: 'M (Move)' },
+  { id: 'P', label: 'P (Partial)' },
+  { id: 'F', label: 'F (Free)' },
+];
 
 const USAGE_OPTIONS = [
-  '1-⚡',
-  '1-🍀',
-  '1-Enc',
-  '2-Enc',
-  '3-Enc',
-  '1-Rnd',
+  { id: '1-🍀', label: '1-🍀 (1-Luck)' },
+  { id: '1-⚡', label: '1-⚡ (1-Bolt)' },
+  { id: '1-Enc', label: '1-Enc (1/Encounter)' },
+  { id: '2-Enc', label: '2-Enc (2/Encounter)' },
+  { id: '3-Enc', label: '3-Enc (3/Encounter - Max)' },
+  { id: '1-Rnd', label: '1-Rnd (1/Round)' },
 ];
 
-const ATTRIBUTE_EFFECT_ICONS = [
-  { label: 'Magic✨', name: 'Magic', icon: '✨' },
-  { label: 'Might💪', name: 'Might', icon: '💪' },
-  { label: 'Mind👁️', name: 'Mind', icon: '👁️' },
-  { label: 'Motion🏃', name: 'Motion', icon: '🏃' },
-  { label: 'Moxie🫀', name: 'Moxie', icon: '🫀' },
+// 7 Canonical Range Bands
+const RANGE_BANDS = [
+  { id: 'Touch', label: 'Touch', text: 'Rng Touch; ' },
+  { id: '1sq', label: '1sq', text: 'Rng 1sq; ' },
+  { id: '2sq', label: '2sq', text: 'Rng 2sq; ' },
+  { id: 'Short', label: 'Short (≤6sq)', text: 'Rng Short; ' },
+  { id: 'Medium', label: 'Medium (≤12sq)', text: 'Rng Medium; ' },
+  { id: 'Long', label: 'Long (≤24sq)', text: 'Rng Long; ' },
+  { id: 'Extreme', label: 'Extreme (≥25sq)', text: 'Rng Extreme; ' },
 ];
 
-const SKILLSET_ATTRIBUTE_OPTIONS = [
-  { label: 'Magic✨', icon: '✨' },
-  { label: 'Might💪', icon: '💪' },
-  { label: 'Mind👁️', icon: '👁️' },
-  { label: 'Motion🏃', icon: '🏃' },
-  { label: 'Moxie🫀', icon: '🫀' },
+// Canonical AoE Formats
+const AOE_PRESETS = [
+  { id: 'AoE 1r', text: 'AoE 1r; ' },
+  { id: 'AoE 2r', text: 'AoE 2r; ' },
+  { id: 'AoE 3r', text: 'AoE 3r; ' },
+  { id: 'AoE 2x2', text: 'AoE 2x2; ' },
+  { id: 'AoE 3x3', text: 'AoE 3x3; ' },
 ];
+
+// Attributes Without Labels per Directive
+const ATTRIBUTE_CHIPS = ['✨', '💪', '👁️', '🏃', '🫀', '👣'];
 
 const POWER_READY_CATEGORIES = [
   { id: 'primary_arsenal', label: 'Primary / Arsenal', icon: '⚔️' },
@@ -58,6 +72,7 @@ const GENRE_OPTIONS = [
 const WEAPON_REQ_NUMBERS = [4, 6, 8, 10, 12];
 const ARMOR_REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
 const SHIELD_REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
+
 const GEAR_DEFAULT_CATEGORIES = [
   'Adventure',
   'Clothing',
@@ -71,6 +86,17 @@ const GEAR_DEFAULT_CATEGORIES = [
   'Survival',
   'Tools',
 ];
+
+const KIT_DEFAULT_CATEGORIES = [
+  'Medical',
+  'Survival',
+  'Tools',
+  'Engineering',
+  'Infiltration',
+  'General',
+];
+
+const PATH_CATEGORIES = ['Race', 'Class', 'Origin', 'General'];
 
 const getWeaponAtkDmg = (typeMode: string): string => {
   if (typeMode === 'Melee, Hurled') return '💪, 🏃';
@@ -135,7 +161,7 @@ export const AnvilIcon: React.FC<{ className?: string }> = ({ className = "w-5 h
 
 export const GuardrailBadge: React.FC<{ isValid: boolean }> = ({ isValid }) => (
   <span
-    className={`inline-flex items-center justify-center text-[10px] font-extrabold px-1.5 py-0.5 rounded transition-all select-none ${
+    className={`inline-flex items-center justify-center text-[10px] font-extrabold px-1.5 py-0.2 rounded transition-all select-none ${
       isValid
         ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/50 shadow-sm'
         : 'bg-rose-950/80 text-rose-400 border border-rose-500/50 shadow-sm'
@@ -155,29 +181,31 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   const skills = useCharacterStore((state) => state.skills);
   const powers = useCharacterStore((state) => state.powers);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
-  const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
-  const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
 
   const isGm = activeRole === 'gm';
 
-  // Form State
+  // Form Core State
   const [creationType, setCreationType] = useState<CustomCreationType>('power');
   const [name, setName] = useState('');
   const [action, setAction] = useState('AM');
-  const [usage, setUsage] = useState('1');
+  const [usage, setUsage] = useState('1-Enc');
   const [tier, setTier] = useState<'Minor' | 'Lesser' | 'Greater' | 'Epic'>('Minor');
   const [costVal, setCostVal] = useState<number>(10);
   const [costUnit, setCostUnit] = useState<'s' | 'g'>('g');
   const [powerReady, setPowerReady] = useState<string>('primary_arsenal');
   const [skillAttribute, setSkillAttribute] = useState<string>('💪');
+  const [skillDiscipline, setSkillDiscipline] = useState<string>('General');
+  const [traitCost, setTraitCost] = useState<string>('1 AP');
+  const [pathCategory, setPathCategory] = useState<string>('General');
+  const [pathDescription, setPathDescription] = useState<string>('');
+  const [kitCategory, setKitCategory] = useState<string>('Survival');
+  const [kitDescription, setKitDescription] = useState<string>('');
   const [effect, setEffect] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
   // Power & Power Table State
   const [selectedPowerTable, setSelectedPowerTable] = useState('');
-  const [tableCategory, setTableCategory] = useState('');
-  const [customCategoryInput, setCustomCategoryInput] = useState('');
 
   // Skillset State (2 to 5 selected existing skill strings)
   const [selectedSkillsetSkills, setSelectedSkillsetSkills] = useState<string[]>(['', '']);
@@ -204,7 +232,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
   const effectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Switch tabs and reset genres to none selected per directive
+  // Switch tabs cleanly
   const handleSwitchTab = (newType: CustomCreationType) => {
     if (newType !== creationType) {
       setCreationType(newType);
@@ -216,9 +244,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   // Real-time Guardrail Validation Flags
   const isNameValid = name.trim().length > 0;
   const isPowerTableValid = selectedPowerTable.trim().length > 0;
-  const isTableCategoryValid =
-    tableCategory.trim().length > 0 &&
-    (tableCategory !== 'Custom' || customCategoryInput.trim().length > 0);
   const isEffectValid = effect.trim().length > 0;
   const isGenresValid = selectedGenres.length > 0;
   const isSkillAttributeValid = !!skillAttribute && skillAttribute.trim().length > 0;
@@ -236,11 +261,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     if (creationType === 'power') {
       return isPowerTableValid && isEffectValid;
     }
-    if (creationType === 'power_table') {
-      return isTableCategoryValid;
-    }
-    if (creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
-      return isEffectValid;
+    if (creationType === 'path') {
+      return pathDescription.trim().length > 0;
     }
     if (creationType === 'skill') {
       return isSkillAttributeValid;
@@ -248,27 +270,37 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     if (creationType === 'skillset') {
       return isSkillsetSkillsValid;
     }
+    if (creationType === 'trait') {
+      return isEffectValid;
+    }
     if (creationType === 'weapon' || creationType === 'armor' || creationType === 'shield') {
       return costVal >= 1;
     }
     if (creationType === 'gear') {
       return isGearCategoryValid && costVal >= 1;
     }
-    return false;
+    if (creationType === 'exotic' || creationType === 'artifact' || creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
+      return isEffectValid;
+    }
+    if (creationType === 'kit') {
+      return kitDescription.trim().length > 0 && costVal >= 1;
+    }
+    return true;
   }, [
     creationType,
     isNameValid,
     isGenresValid,
     isPowerTableValid,
-    isTableCategoryValid,
     isEffectValid,
     isSkillAttributeValid,
     isSkillsetSkillsValid,
     isGearCategoryValid,
+    pathDescription,
+    kitDescription,
     costVal,
   ]);
 
-  // Load custom items when modal is opened and reset genres to empty on open/blur
+  // Load custom items when modal is opened
   useEffect(() => {
     if (isOpen) {
       setSelectedGenres([]);
@@ -292,11 +324,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     }
   }, [isOpen, playerEmail, activePartyId]);
 
-  // Aggregate all unique skills across stock database skills, custom sheet skills, and custom creations
+  // Aggregate all unique skills
   const availableSkillsCatalog = useMemo(() => {
-    const map = new Map<string, string>(); // cleanNameKey -> formattedSkillString
-
-    // 1. Stock database atomic skills
+    const map = new Map<string, string>();
     if (Array.isArray(skills)) {
       skills.forEach((sk) => {
         const cleanKey = (sk.name || '').trim().toLowerCase();
@@ -306,7 +336,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       });
     }
 
-    // 2. Character sheet custom skillsets & individual skills
     const customSkillsets = activeCharacter?.sheet_data?.custom_skillsets || [];
     customSkillsets.forEach((cs) => {
       if (Array.isArray(cs.skills)) {
@@ -314,7 +343,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
           if (typeof rawSkill === 'string' && rawSkill.trim()) {
             const trimmed = rawSkill.trim();
             let cleanName = trimmed;
-            for (const icon of ['✨', '💪', '👁️', '🏃', '🫀']) {
+            for (const icon of ATTRIBUTE_CHIPS) {
               cleanName = cleanName.replace(icon, '').trim();
             }
             if (cleanName && !map.has(cleanName.toLowerCase())) {
@@ -330,7 +359,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       if (typeof rawSkill === 'string' && rawSkill.trim()) {
         const trimmed = rawSkill.trim();
         let cleanName = trimmed;
-        for (const icon of ['✨', '💪', '👁️', '🏃', '🫀']) {
+        for (const icon of ATTRIBUTE_CHIPS) {
           cleanName = cleanName.replace(icon, '').trim();
         }
         if (cleanName && !map.has(cleanName.toLowerCase())) {
@@ -339,7 +368,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       }
     });
 
-    // 3. Custom creation skills & skillsets from API
     customSkillsList.forEach((it) => {
       if (it.type === 'skill' && it.name) {
         const attr = it.item_data?.attribute || '✨';
@@ -353,7 +381,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
           if (typeof rawSkill === 'string' && rawSkill.trim()) {
             const trimmed = rawSkill.trim();
             let cleanName = trimmed;
-            for (const icon of ['✨', '💪', '👁️', '🏃', '🫀']) {
+            for (const icon of ATTRIBUTE_CHIPS) {
               cleanName = cleanName.replace(icon, '').trim();
             }
             if (cleanName && !map.has(cleanName.toLowerCase())) {
@@ -364,13 +392,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
       }
     });
 
-    // Sort alphabetically by clean skill name with MSO priority
     return Array.from(map.entries())
-      .sort((a, b) => compareMsoOptions(a[0], b[0], isGsUnlocked))
+      .sort((a, b) => compareMsoOptions(a[1], b[1], isGsUnlocked))
       .map((entry) => entry[1]);
   }, [skills, activeCharacter, customSkillsList, isGsUnlocked]);
 
-  // Group all available power tables by Category for clean <optgroup> dropdown selection
+  // Group power tables
   const groupedPowerTables = useMemo(() => {
     const groups: Record<string, { name: string }[]> = {};
     const tableNames = Array.from(new Set(powers.map((p) => p.kit || p.table_group || p.table_name || 'General').filter(Boolean)));
@@ -385,20 +412,20 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
   if (!isOpen) return null;
 
-  const insertIconAtCursor = (iconStr: string) => {
+  const insertTextAtCursor = (insertStr: string) => {
     const textarea = effectTextareaRef.current;
     if (!textarea) {
-      setEffect((prev) => (prev ? prev + iconStr : iconStr));
+      setEffect((prev) => (prev ? prev + insertStr : insertStr));
       return;
     }
     const start = textarea.selectionStart ?? 0;
     const end = textarea.selectionEnd ?? 0;
     const currentVal = effect;
-    const nextVal = currentVal.substring(0, start) + iconStr + currentVal.substring(end);
+    const nextVal = currentVal.substring(0, start) + insertStr + currentVal.substring(end);
     setEffect(nextVal);
     setTimeout(() => {
       textarea.focus();
-      textarea.setSelectionRange(start + iconStr.length, start + iconStr.length);
+      textarea.setSelectionRange(start + insertStr.length, start + insertStr.length);
     }, 0);
   };
 
@@ -430,20 +457,24 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
 
   const handleResetForm = () => {
     setName('');
-    setEffect('');
-    setNotes('');
-    setSelectedGenres([]);
-    setSelectedSkillsetSkills(['', '']);
-    setSelectedPowerTable('');
-    setTableCategory('');
-    setCustomCategoryInput('');
     setAction('AM');
-    setUsage('1');
+    setUsage('1-Enc');
     setTier('Minor');
     setCostVal(10);
     setCostUnit('g');
     setPowerReady('primary_arsenal');
     setSkillAttribute('💪');
+    setSkillDiscipline('General');
+    setTraitCost('1 AP');
+    setPathCategory('General');
+    setPathDescription('');
+    setKitCategory('Survival');
+    setKitDescription('');
+    setEffect('');
+    setNotes('');
+    setSelectedGenres([]);
+    setSelectedPowerTable('');
+    setSelectedSkillsetSkills(['', '']);
     setWeaponTypeMode('Melee');
     setWeaponReqNum(4);
     setArmorReq('💪 4');
@@ -452,231 +483,112 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
     setGearCategoryNewText('');
   };
 
+  const costStr = creationType === 'artifact' ? 'Artifact' : `${costVal}${costUnit}`;
+
+  let weaponReqStr = `💪 ${weaponReqNum}`;
+  if (weaponTypeMode === 'Hurled') weaponReqStr = `🏃 ${weaponReqNum}`;
+  if (weaponTypeMode === 'Shot') weaponReqStr = `👁️ ${weaponReqNum}`;
+  if (weaponTypeMode === 'Melee, Hurled') weaponReqStr = `💪 ${weaponReqNum}, 🏃 ${weaponReqNum}`;
+
+  const finalGearCat = gearCategory === 'CUSTOM_NEW' ? gearCategoryNewText.trim() || 'Custom' : gearCategory;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setFeedback({ type: 'error', message: 'Creation name is required.' });
-      return;
-    }
-
-    if (creationType === 'power_table') {
-      const finalCategory = tableCategory === 'Custom' ? customCategoryInput.trim() : tableCategory.trim();
-      if (!finalCategory) {
-        setFeedback({ type: 'error', message: 'Please specify a category for this Power Table.' });
-        return;
-      }
-      if (selectedGenres.length === 0) {
-        setFeedback({
-          type: 'error',
-          message: 'Please select at least one compatible Genre (Medieval, Modern, or SciFi).',
-        });
-        return;
-      }
-
-      setIsSubmitting(true);
-      setFeedback(null);
-
-      try {
-        const newTable = {
-          name: name.trim(),
-          category: finalCategory,
-          genres: selectedGenres,
-        };
-
-        if (activeCharacter) {
-          const currentCustom = activeCharacter.sheet_data?.custom_power_tables || [];
-          if (!currentCustom.some((t: any) => t.name.toLowerCase() === name.trim().toLowerCase())) {
-            updateActiveSheetData((prev) => ({
-              ...prev,
-              custom_power_tables: [...(prev.custom_power_tables || []), newTable],
-            }));
-            await saveActiveCharacter();
-          }
-        }
-
-        setFeedback({
-          type: 'success',
-          message: isGm
-            ? `📜 Successfully forged Power Table '${name.trim()}' [${finalCategory}] and published live!`
-            : `📜 Successfully forged Power Table '${name.trim()}' [${finalCategory}]!`,
-        });
-
-        handleResetForm();
-        if (onItemSaved) onItemSaved();
-      } catch (err: any) {
-        console.error('[PlayerWorkshopModal] Error forging power table:', err);
-        setFeedback({ type: 'error', message: `❌ Error: ${err.message || 'Failed to save power table.'}` });
-      } finally {
-        setIsSubmitting(false);
-      }
-      return;
-    }
-
-    if (creationType === 'power') {
-      if (!selectedPowerTable) {
-        setFeedback({ type: 'error', message: 'Please select a required Power Table for this power.' });
-        return;
-      }
-      if (!effect.trim()) {
-        setFeedback({ type: 'error', message: 'Effect (rules) description is required.' });
-        return;
-      }
-    } else if (creationType === 'skillset') {
-      if (selectedSkillsetSkills.length < 2 || selectedSkillsetSkills.length > 5) {
-        setFeedback({ type: 'error', message: 'A Skillset must contain between 2 and 5 skills.' });
-        return;
-      }
-      for (let i = 0; i < selectedSkillsetSkills.length; i++) {
-        if (!selectedSkillsetSkills[i]) {
-          setFeedback({ type: 'error', message: `Please select a valid skill for slot #${i + 1}.` });
-          return;
-        }
-      }
-      const uniqueSelected = new Set(selectedSkillsetSkills);
-      if (uniqueSelected.size !== selectedSkillsetSkills.length) {
-        setFeedback({ type: 'error', message: 'Duplicate skills detected. Each skill in a skillset must be unique.' });
-        return;
-      }
-    } else if (creationType === 'skill') {
-      if (!skillAttribute) {
-        setFeedback({ type: 'error', message: 'Please select a required attribute for this skill.' });
-        return;
-      }
-    } else if (creationType === 'gear') {
-      const finalGearCat = gearCategory === 'CUSTOM_NEW' ? gearCategoryNewText.trim() : gearCategory.trim();
-      if (!finalGearCat) {
-        setFeedback({ type: 'error', message: 'Please select or provide a category for this gear.' });
-        return;
-      }
-    } else if (creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
-      if (!effect.trim()) {
-        setFeedback({ type: 'error', message: 'Effect (rules) description is required.' });
-        return;
-      }
-    }
-
-    if (selectedGenres.length === 0) {
-      setFeedback({
-        type: 'error',
-        message: 'Please select at least one compatible Genre (Medieval, Modern, or SciFi).',
-      });
-      return;
-    }
+    if (!isFormValid) return;
 
     setIsSubmitting(true);
     setFeedback(null);
 
-    const authorDisplayName = playerName?.trim() || playerEmail?.split('@')[0] || 'Hero';
-    const tierIcon = tier === 'Minor' ? '🍺' : tier === 'Lesser' ? '🪄' : tier === 'Greater' ? '✨' : '💫';
-    const samplePower = powers.find((p) => (p.kit || p.table_group || p.table_name) === selectedPowerTable);
-    const assignedCategory = samplePower?.category || samplePower?.discipline || 'Class';
-
+    const authorDisplayName = playerName || playerEmail?.split('@')[0] || 'Unknown Forger';
     const categoryStr =
-      creationType === 'relic'
-        ? `${tierIcon} ${tier}`
-        : creationType === 'power'
-        ? assignedCategory
-        : creationType === 'hardware'
-        ? 'Custom Hardware'
+      creationType === 'power'
+        ? selectedPowerTable
+        : creationType === 'path'
+        ? pathCategory
+        : creationType === 'trait'
+        ? 'Trait'
         : creationType === 'skill'
-        ? `${skillAttribute} Skill`
-        : creationType === 'skillset'
-        ? 'Custom Skillset'
+        ? skillDiscipline
         : creationType === 'weapon'
         ? weaponTypeMode
         : creationType === 'armor'
-        ? 'Custom Armor'
+        ? 'Armor'
         : creationType === 'shield'
-        ? 'Custom Shield'
-        : creationType === 'chaos_gem'
-        ? '💎 Chaos Gem'
-        : gearCategory === 'CUSTOM_NEW'
-        ? gearCategoryNewText.trim()
-        : gearCategory.trim();
+        ? 'Shield'
+        : creationType === 'gear'
+        ? finalGearCat
+        : creationType === 'kit'
+        ? kitCategory
+        : tier;
 
-    const costStr =
-      creationType === 'hardware' ||
-      creationType === 'weapon' ||
-      creationType === 'armor' ||
-      creationType === 'shield' ||
-      creationType === 'gear'
-        ? `${Math.max(1, costVal)}${costUnit}`
-        : undefined;
-
-    const formattedSkills =
-      creationType === 'skillset'
-        ? selectedSkillsetSkills.map((s) => s.trim()).filter(Boolean)
-        : undefined;
-
-    const itemDataPayload: any = {
+    const itemDataPayload: CustomCreationData = {
+      notes: notes.trim() || undefined,
       genres: selectedGenres,
-      created_at: new Date().toISOString(),
+      category: categoryStr,
+      allow_cloning: true,
     };
 
     if (creationType === 'power') {
       itemDataPayload.action = action;
       itemDataPayload.usage = usage;
       itemDataPayload.effect = effect.trim();
-      itemDataPayload.ready = powerReady;
-      itemDataPayload.ready_category = powerReady;
-      itemDataPayload.kit = selectedPowerTable;
-      itemDataPayload.table_group = selectedPowerTable;
       itemDataPayload.table = selectedPowerTable;
-      itemDataPayload.category = assignedCategory;
-    } else if (creationType === 'relic') {
-      itemDataPayload.action = action;
-      itemDataPayload.usage = usage;
+      itemDataPayload.table_group = selectedPowerTable;
+      itemDataPayload.ready_category = powerReady;
+    } else if (creationType === 'path') {
+      itemDataPayload.category = pathCategory;
+      itemDataPayload.description = pathDescription.trim();
+    } else if (creationType === 'trait') {
       itemDataPayload.effect = effect.trim();
-      itemDataPayload.slot_weight = getItemSlotWeight({ name: name.trim(), category: categoryStr }) as 1 | 2 | 3 | 4;
-      itemDataPayload.is_hardware = false;
-    } else if (creationType === 'hardware') {
-      itemDataPayload.action = action;
-      itemDataPayload.usage = usage;
-      itemDataPayload.effect = effect.trim();
-      itemDataPayload.cost = costStr;
-      itemDataPayload.is_hardware = true;
-      itemDataPayload.slot_weight = getItemSlotWeight({ name: name.trim(), category: categoryStr }) as 1 | 2 | 3 | 4;
+      itemDataPayload.cost = traitCost;
     } else if (creationType === 'skill') {
       itemDataPayload.attribute = skillAttribute;
+      itemDataPayload.discipline = skillDiscipline;
       itemDataPayload.formatted_skill = `${name.trim()} ${skillAttribute}`;
     } else if (creationType === 'skillset') {
-      itemDataPayload.skills = formattedSkills;
+      itemDataPayload.skills = selectedSkillsetSkills.filter(Boolean);
     } else if (creationType === 'weapon') {
-      let weaponReqStr = `💪 ${weaponReqNum}`;
-      if (weaponTypeMode === 'Hurled') weaponReqStr = `🏃 ${weaponReqNum}`;
-      if (weaponTypeMode === 'Shot') weaponReqStr = `👁️ ${weaponReqNum}`;
-      if (weaponTypeMode === 'Melee, Hurled') weaponReqStr = `💪 ${weaponReqNum}, 🏃 ${weaponReqNum}`;
-
-      const weaponAtkDmg = getWeaponAtkDmg(weaponTypeMode);
-      const weaponMaxBlock = getWeaponMaxBlock(weaponTypeMode, weaponReqNum);
       itemDataPayload.type = weaponTypeMode;
       itemDataPayload.requirement = weaponReqStr;
-      itemDataPayload.atk = weaponAtkDmg;
-      itemDataPayload.dmg = weaponAtkDmg;
-      itemDataPayload.max_block = weaponMaxBlock;
+      itemDataPayload.atk = getWeaponAtkDmg(weaponTypeMode);
+      itemDataPayload.dmg = getWeaponAtkDmg(weaponTypeMode);
+      itemDataPayload.max_block = getWeaponMaxBlock(weaponTypeMode, weaponReqNum);
       itemDataPayload.cost = costStr;
     } else if (creationType === 'armor') {
-      const armorAr = getArmorArStr(armorReq);
-      const armorMr = getArmorMrStr(armorReq);
       itemDataPayload.requirement = armorReq;
-      itemDataPayload.ar = armorAr;
-      itemDataPayload.mr = armorMr;
+      itemDataPayload.ar = getArmorArStr(armorReq);
+      itemDataPayload.mr = getArmorMrStr(armorReq);
       itemDataPayload.cost = costStr;
     } else if (creationType === 'shield') {
-      const shieldMaxBlock = getShieldMaxBlockStr(shieldReq);
-      const shieldMr = getShieldMrStr(shieldReq);
       itemDataPayload.requirement = shieldReq;
-      itemDataPayload.max_block = shieldMaxBlock;
-      itemDataPayload.mr = shieldMr;
+      itemDataPayload.max_block = getShieldMaxBlockStr(shieldReq);
+      itemDataPayload.mr = getShieldMrStr(shieldReq);
       itemDataPayload.cost = costStr;
     } else if (creationType === 'gear') {
-      const finalGearCat = gearCategory === 'CUSTOM_NEW' ? gearCategoryNewText.trim() : gearCategory.trim();
       itemDataPayload.category = finalGearCat;
       itemDataPayload.cost = costStr;
+    } else if (creationType === 'exotic') {
+      itemDataPayload.action = action;
+      itemDataPayload.usage = usage;
+      itemDataPayload.effect = effect.trim();
+      itemDataPayload.cost = costStr;
+      itemDataPayload.tier = tier;
+      itemDataPayload.slot_weight = (getItemSlotWeight({ name: name.trim(), category: tier }) as 1 | 2 | 3 | 4);
+    } else if (creationType === 'artifact') {
+      itemDataPayload.action = action;
+      itemDataPayload.usage = usage;
+      itemDataPayload.effect = effect.trim();
+      itemDataPayload.cost = 'Artifact';
+      itemDataPayload.tier = tier;
+      itemDataPayload.slot_weight = (getItemSlotWeight({ name: name.trim(), category: tier }) as 1 | 2 | 3 | 4);
     } else if (creationType === 'chaos_gem') {
       itemDataPayload.action = 'F';
       itemDataPayload.usage = '3';
       itemDataPayload.effect = effect.trim();
+    } else if (creationType === 'kit') {
+      itemDataPayload.category = kitCategory;
+      itemDataPayload.description = kitDescription.trim();
+      itemDataPayload.cost = costStr;
     }
 
     try {
@@ -737,6 +649,57 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
             action: 'F',
             usage: '3',
           });
+        } else if (creationType === 'power') {
+          await gameApi.createPower({
+            name: name.trim(),
+            action: action,
+            usage: usage,
+            effect: effect.trim(),
+            path: selectedPowerTable,
+            category: powerReady,
+            genres: selectedGenres,
+            notes: notes.trim() || undefined,
+          });
+        } else if (creationType === 'path') {
+          await gameApi.createPath({
+            name: name.trim(),
+            category: pathCategory,
+            description: pathDescription.trim(),
+          });
+        } else if (creationType === 'trait') {
+          await gameApi.createTrait({
+            name: name.trim(),
+            effect: effect.trim(),
+            genres: selectedGenres,
+            notes: traitCost ? `[${traitCost}] ${notes.trim()}`.trim() : notes.trim(),
+          });
+        } else if (creationType === 'skill') {
+          await gameApi.createSkill({
+            name: name.trim(),
+            attribute: skillAttribute,
+            discipline: skillDiscipline,
+            genres: selectedGenres,
+            notes: notes.trim() || undefined,
+          });
+        } else if (creationType === 'exotic' || creationType === 'artifact') {
+          await gameApi.createGearPower({
+            name: name.trim(),
+            action: action,
+            usage: usage,
+            effect: effect.trim(),
+            tier: tier,
+            genres: selectedGenres,
+            notes: notes.trim() || undefined,
+          });
+        } else if (creationType === 'kit') {
+          await gameApi.createKit({
+            name: name.trim(),
+            category: kitCategory,
+            description: kitDescription.trim(),
+            cost: costStr,
+            genres: selectedGenres,
+            notes: notes.trim() || undefined,
+          });
         }
       } catch (catErr) {
         console.warn('[PlayerWorkshopModal] Direct catalog sync notice (RLS or duplicate):', catErr);
@@ -760,12 +723,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-      <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-xl shadow-2xl shadow-amber-950/50 flex flex-col h-[660px] max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn font-outfit">
+      <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-5xl lg:max-w-6xl shadow-2xl shadow-amber-950/50 flex flex-col h-[90vh] max-h-[92vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 bg-slate-950/60 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+        <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/70 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center">
               <AnvilIcon className="w-5 h-5" />
             </div>
             <div>
@@ -784,1165 +747,1204 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 )}
               </h3>
               <p className="text-xs text-slate-400">
-                {isGm
-                  ? 'Craft custom Powers, Relics, Hardware, Skills & Skillsets with instant Party Mall auto-approval.'
-                  : 'Craft custom Powers, Relics, Hardware, Skills & Skillsets.'}
+                Craft custom Powers, Paths, Skills, Traits, Weapons, Armor, Shields, Gear, Exotics & Artifacts.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Close Forge"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Primary Classification Tabs (Multi-Option Pill Switch) */}
-        <div className="px-5 pt-3 pb-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0">
-          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('power')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                creationType === 'power'
-                  ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🔥 Power
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('power_table')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                creationType === 'power_table'
-                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              📜 Table
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('relic')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                creationType === 'relic'
-                  ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🏺 Relic
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('hardware')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                creationType === 'hardware'
-                  ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              ⚙️ Hardware
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('skill')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                creationType === 'skill'
-                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🎯 Skill
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('skillset')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                creationType === 'skillset'
-                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🎓 Skillset
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('weapon')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                creationType === 'weapon'
-                  ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              ⚔️ Weapon
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('armor')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                creationType === 'armor'
-                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🧥 Armor
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('shield')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                creationType === 'shield'
-                  ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🛡️ Shield
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('gear')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                creationType === 'gear'
-                  ? 'bg-teal-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🎒 Gear
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('chaos_gem')}
-              className={`py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                creationType === 'chaos_gem'
-                  ? 'bg-violet-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              💎 Chaos Gem
-            </button>
+        {/* Primary Classification Tabs (Two Symmetrical Rows matching Character Sheet Cards) */}
+        <div className="px-6 py-2.5 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex flex-col gap-1.5">
+          {/* Row 1: Capabilities & Powers */}
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Capabilities:</span>
+            <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('power')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'power'
+                    ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🔥 Powers
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('path')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'path'
+                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🧭 Paths
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('skill')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'skill'
+                    ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🎓 Skills
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('skillset')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'skillset'
+                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🎓 Skillsets
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('trait')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'trait'
+                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🧬 Traits
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('chaos_gem')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'chaos_gem'
+                    ? 'bg-violet-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                💎 Chaos Gems
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2: Equipment & Gear */}
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Equipment:</span>
+            <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('weapon')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'weapon'
+                    ? 'bg-orange-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                ⚔️ Weapons
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('armor')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'armor'
+                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🧥 Armor
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('shield')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'shield'
+                    ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🛡️ Shields
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('gear')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'gear'
+                    ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                ⚙️ Gear
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('exotic')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'exotic'
+                    ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🧿 Exotics
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('artifact')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'artifact'
+                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🔮 Artifacts
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('kit')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  creationType === 'kit'
+                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                📦 Kits
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 flex-1 flex flex-col gap-4 overflow-y-auto min-h-0 text-xs">
-          {/* Feedback Alert */}
-          {feedback && (
-            <div
-              className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-semibold animate-fadeIn ${
-                feedback.type === 'success'
-                  ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200'
-                  : 'bg-rose-950/60 border-rose-500/50 text-rose-200'
-              }`}
-            >
-              {feedback.type === 'success' ? (
-                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-              ) : (
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              )}
-              <span>{feedback.message}</span>
+        {/* 2-Pane Grid Architecture */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-800/80 overflow-hidden">
+          {/* ========================================================================= */}
+          {/* PANE 1 (LEFT): LIVE CARD PREVIEW & CANONICAL NOTATION CHEAT SHEET         */}
+          {/* ========================================================================= */}
+          <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-5 overflow-y-auto gap-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <span className="font-outfit font-extrabold text-xs uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                <span>⚒️</span> Live Card Preview
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">Character Sheet Parity</span>
             </div>
-          )}
 
-          {/* --- TAB 1: POWER MODE --- */}
-          {creationType === 'power' && (
-            <>
-              {/* Row 1: Power Name + Power Table (Required) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Power Name</span>
-                    <GuardrailBadge isValid={isNameValid} />
-                    <InfoTooltip text="Enter the unique name of your custom power." />
+            {/* Dynamic Card Preview Container */}
+            <div className="flex-1 flex flex-col justify-start">
+              {creationType === 'power' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-rose-500/40 shadow-xl flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-rose-200 truncate">{name || 'Unnamed Power'}</span>
+                    <div className="flex items-center gap-1 text-[10px] font-mono shrink-0">
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold border border-slate-700">{action}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Flame Surge, Astral Aegis"
-                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
-                    required
-                  />
+                  <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                    <span>Path: <strong className="text-slate-200">{selectedPowerTable || 'General'}</strong></span>
+                    <span>•</span>
+                    <span className="capitalize">{powerReady.replace('_', ' ')}</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                    {effect || 'Effect rules syntax will render here...'}
+                  </div>
+                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
                 </div>
+              )}
 
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Power Table (Required)</span>
-                    <GuardrailBadge isValid={isPowerTableValid} />
-                    <InfoTooltip text="Select the Power Table this power belongs to. This categorizes the power and establishes its table classification." />
+              {creationType === 'path' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-purple-200 text-sm font-outfit flex items-center gap-1.5">
+                      <span>🧭</span>
+                      <span>{name || 'Unnamed Path'}</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
+                      {pathCategory} Path
+                    </span>
                   </div>
-                  <select
-                    value={selectedPowerTable}
-                    onChange={(e) => setSelectedPowerTable(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer"
-                    required
-                  >
-                    <option value="">-- Select a Power Table --</option>
-                    {Object.entries(groupedPowerTables).map(([category, tables]) => (
-                      <optgroup key={category} label={category}>
-                        {tables.map((t) => {
-                          const isMso = isGsUnlocked && isMsoEntry(t.name);
-                          return (
-                            <option key={t.name} value={t.name} className={isMso ? 'text-purple-300 font-bold' : ''}>
-                              {isMso ? `🌌 ${t.name}` : t.name}
-                            </option>
-                          );
-                        })}
-                      </optgroup>
+                  <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
+                    {pathDescription || 'Path description, heritage lore, and capabilities...'}
+                  </p>
+                </div>
+              )}
+
+              {creationType === 'skill' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-indigo-500/40 shadow-xl flex flex-col gap-2">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-indigo-200 text-sm font-outfit flex items-center gap-1.5">
+                      <span>🎓</span>
+                      <span>{name || 'Unnamed Skill'}</span>
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-500/40 text-xs font-extrabold">
+                      {skillAttribute}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    Discipline: <strong className="text-slate-200">{skillDiscipline}</strong>
+                  </div>
+                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
+                </div>
+              )}
+
+              {creationType === 'skillset' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/40 shadow-xl flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-emerald-200 text-sm font-outfit flex items-center gap-1.5">
+                      <span>🎓</span>
+                      <span>{name || 'Unnamed Skillset'}</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
+                      {selectedSkillsetSkills.filter(Boolean).length} Skills
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedSkillsetSkills.filter(Boolean).map((s) => (
+                      <span key={s} className="px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-200 border border-emerald-500/30 text-[11px] font-semibold">
+                        {s}
+                      </span>
                     ))}
-                  </select>
+                  </div>
                 </div>
+              )}
+
+              {creationType === 'trait' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-purple-200 text-sm font-outfit flex items-center gap-1.5">
+                      <span>🧬</span>
+                      <span>{name || 'Unnamed Trait'}</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
+                      {traitCost}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                    {effect || 'Trait mechanical effects...'}
+                  </div>
+                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
+                </div>
+              )}
+
+              {creationType === 'weapon' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-orange-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Weapon'}</span>
+                    <span className="px-2 py-0.5 rounded bg-orange-950/80 text-orange-300 border border-orange-500/40 text-[10px]">{weaponTypeMode}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+                    <div>Req: <strong className="text-slate-100">{weaponReqStr}</strong></div>
+                    <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
+                    <div>Atk: <strong className="text-amber-300">{getWeaponAtkDmg(weaponTypeMode)}</strong></div>
+                    <div>Dmg: <strong className="text-rose-300">d{getWeaponAtkDmg(weaponTypeMode)}</strong></div>
+                    <div>Block: <strong className="text-cyan-300">{getWeaponMaxBlock(weaponTypeMode, weaponReqNum)}</strong></div>
+                  </div>
+                  {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
+                </div>
+              )}
+
+              {creationType === 'armor' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Armor'}</span>
+                    <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px]">Armor SK</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+                    <div>Req: <strong className="text-slate-100">{armorReq}</strong></div>
+                    <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
+                    <div>AR: <strong className="text-amber-300">🧥 {getArmorArStr(armorReq)}</strong></div>
+                    <div>MR: <strong className="text-cyan-300">👣 {getArmorMrStr(armorReq)}</strong></div>
+                  </div>
+                  {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
+                </div>
+              )}
+
+              {creationType === 'shield' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-cyan-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Shield'}</span>
+                    <span className="px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 text-[10px]">Shield SK</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+                    <div>Req: <strong className="text-slate-100">{shieldReq}</strong></div>
+                    <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
+                    <div>Max Block: <strong className="text-cyan-300">{getShieldMaxBlockStr(shieldReq)}</strong></div>
+                    <div>MR Adj: <strong className="text-cyan-300">👣 {getShieldMrStr(shieldReq)}</strong></div>
+                  </div>
+                  {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
+                </div>
+              )}
+
+              {creationType === 'gear' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-teal-500/40 shadow-xl flex flex-col gap-2 text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Gear'}</span>
+                    <span className="px-2 py-0.5 rounded bg-teal-950/80 text-teal-300 border border-teal-500/40 text-[10px]">{finalGearCat}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 flex items-center justify-between">
+                    <span>Category: <strong className="text-teal-300">{finalGearCat}</strong></span>
+                    <span>Cost: <strong className="text-amber-300">{costStr}</strong></span>
+                  </div>
+                  {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
+                </div>
+              )}
+
+              {creationType === 'exotic' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-cyan-500/40 shadow-xl flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-cyan-200">{name || 'Unnamed Exotic'}</span>
+                    <div className="flex items-center gap-1 text-[10px] font-mono">
+                      <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-bold">{tier} 🧿</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold border border-slate-700">{action}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                    <span>Cost: <strong className="text-amber-300">{costStr}</strong></span>
+                    <span>Loadout: <strong className="text-cyan-300">{getItemSlotWeight({ name, category: tier })} Slot(s)</strong></span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                    {effect || 'Effect rules text...'}
+                  </div>
+                  {notes && <p className="text-[10px] text-slate-500 italic">"{notes}"</p>}
+                </div>
+              )}
+
+              {creationType === 'artifact' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-purple-200">{name || 'Unnamed Artifact'}</span>
+                    <div className="flex items-center gap-1 text-[10px] font-mono">
+                      <span className="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40 font-bold">{tier} 🔮</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold border border-slate-700">{action}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded bg-purple-950/70 border border-purple-500/30 text-purple-300 font-bold text-[10px]">Cost: Artifact</span>
+                    <span>Loadout: <strong className="text-purple-300">{getItemSlotWeight({ name, category: tier })} Slot(s)</strong></span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                    {effect || 'Effect rules text...'}
+                  </div>
+                  {notes && <p className="text-[10px] text-slate-500 italic">"{notes}"</p>}
+                </div>
+              )}
+
+              {creationType === 'chaos_gem' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-violet-500/40 shadow-xl flex flex-col gap-2 text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-violet-200 text-sm font-outfit flex items-center gap-1.5">
+                      <span>💎</span>
+                      <span>{name || 'Unnamed Chaos Gem'}</span>
+                    </span>
+                    <div className="flex items-center gap-1 font-mono text-[10px]">
+                      <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">F</span>
+                      <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">3 Uses</span>
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                    {effect || 'Socket activation effect will render here...'}
+                  </div>
+                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
+                </div>
+              )}
+
+              {creationType === 'kit' && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/40 shadow-xl flex flex-col gap-2 text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-amber-200 text-sm font-outfit flex items-center gap-1.5">
+                      <span>📦</span>
+                      <span>{name || 'Unnamed Kit'}</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
+                      {costStr}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">Category: <strong className="text-amber-300">{kitCategory}</strong></div>
+                  <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">{kitDescription || 'Kit description and equipment bundle contents...'}</p>
+                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
+                </div>
+              )}
+            </div>
+
+            {/* Notation Anchor Cheat Sheet */}
+            <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-xl flex flex-col gap-1.5 text-[11px] text-slate-400 shrink-0">
+              <span className="font-bold text-slate-300 text-xs flex items-center gap-1">
+                <span>📜</span> Rules & Notation Guide
+              </span>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
+                <div>• <strong className="text-amber-300">Attributes:</strong> ✨ 💪 👁️ 🏃 🫀 👣</div>
+                <div>• <strong className="text-cyan-300">Actions:</strong> AM, A, M, P, F</div>
+                <div>• <strong className="text-emerald-300">Usage:</strong> 1-🍀, 1-⚡, 1,2,3-Enc, 1-Rnd</div>
+                <div>• <strong className="text-rose-300">AoE:</strong> AoE [#]r, [#]x[#]</div>
               </div>
-
-              {/* Row 2: Action & Usage (2-col grid) */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Action</span>
-                    <InfoTooltip text="AM = Action/Move, A = Action, M = Move, P = Passive, F = Free." />
-                  </div>
-                  <select
-                    value={action}
-                    onChange={(e) => setAction(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
-                  >
-                    {ACTION_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Usage</span>
-                    <InfoTooltip text="Frequency of activation (e.g. 1-⚡ Bolt, 1-🍀 Luck, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
-                  </div>
-                  <select
-                    value={usage}
-                    onChange={(e) => setUsage(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
-                  >
-                    {USAGE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="text-[10px] border-t border-slate-800 pt-1 text-slate-500 truncate">
+                Range: Touch, 1sq, 2sq, Short (≤6sq), Med (≤12sq), Long (≤24sq), Extreme (≥25sq)
               </div>
+            </div>
+          </div>
 
-              {/* Row 3: Ready Category Selector Pill Switch */}
-              <div className="flex flex-col gap-1.5">
+          {/* ========================================================================= */}
+          {/* PANE 2 (RIGHT): FORGE CONTROLS & FORM INPUTS                              */}
+          {/* ========================================================================= */}
+          <form onSubmit={handleSubmit} className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-5 overflow-y-auto gap-4 text-xs">
+            {/* Feedback Alert */}
+            {feedback && (
+              <div
+                className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-semibold animate-fadeIn ${
+                  feedback.type === 'success'
+                    ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200'
+                    : 'bg-rose-950/60 border-rose-500/50 text-rose-200'
+                }`}
+              >
+                {feedback.type === 'success' ? (
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                )}
+                <span>{feedback.message}</span>
+              </div>
+            )}
+
+            {/* Row 1: Item Name */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-300">Ready Category</span>
-                  <InfoTooltip text="Classify this power for the Ready Matrix: Primary / Arsenal (attacks/damage), Mobility & Defense (movement/shields), or Support & Passives (buffs/utility)." />
+                  <span className="font-bold text-slate-300">Name</span>
+                  <GuardrailBadge isValid={isNameValid} />
+                  <InfoTooltip text="Enter the unique name of this creation." />
                 </div>
-                <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                  {POWER_READY_CATEGORIES.map((cat) => {
-                    const isSelected = powerReady === cat.id;
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setPowerReady(cat.id)}
-                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          isSelected
-                            ? cat.id === 'primary_arsenal'
+                <span className="text-[10px] text-slate-500 font-mono">Required</span>
+              </div>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={`e.g. Flame Surge, Astral Greatsword, Voidrunner Plate...`}
+                className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+                required
+              />
+            </div>
+
+            {/* CREATION-SPECIFIC CONTROLS */}
+            {/* A. POWERS */}
+            {creationType === 'power' && (
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-slate-300">Path / Table</span>
+                      <GuardrailBadge isValid={isPowerTableValid} />
+                    </div>
+                    <select
+                      value={selectedPowerTable}
+                      onChange={(e) => setSelectedPowerTable(e.target.value)}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-1.5 rounded-xl outline-none focus:border-amber-400 cursor-pointer"
+                      required
+                    >
+                      <option value="">-- Select Table --</option>
+                      {Object.entries(groupedPowerTables).map(([category, tables]) => (
+                        <optgroup key={category} label={category}>
+                          {tables.map((t) => (
+                            <option key={t.name} value={t.name}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-slate-300">Action</span>
+                    <select
+                      value={action}
+                      onChange={(e) => setAction(e.target.value)}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
+                    >
+                      {ACTION_OPTIONS.map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-slate-300">Usage</span>
+                    <select
+                      value={usage}
+                      onChange={(e) => setUsage(e.target.value)}
+                      className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
+                    >
+                      {USAGE_OPTIONS.map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">Ready Category</span>
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                    {POWER_READY_CATEGORIES.map((cat) => {
+                      const isSelected = powerReady === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setPowerReady(cat.id)}
+                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            isSelected
                               ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                              : cat.id === 'mobility_defense'
-                              ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                              : 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          <span>{cat.icon}</span>
+                          <span className="truncate">{cat.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* B. PATHS */}
+            {creationType === 'path' && (
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">Path Category</span>
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                    {PATH_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setPathCategory(cat)}
+                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center cursor-pointer ${
+                          pathCategory === cat
+                            ? 'bg-purple-600 text-white shadow-sm font-extrabold'
                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                         }`}
                       >
-                        <span>{cat.icon}</span>
-                        <span>{cat.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* --- TAB 2: POWER TABLE MODE --- */}
-          {creationType === 'power_table' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Power Table Name */}
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-300">Power Table Name</span>
-                  <GuardrailBadge isValid={isNameValid} />
-                  <InfoTooltip text="Enter the unique name of your custom power table." />
-                </div>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(sanitizeKitInput(e.target.value))}
-                  placeholder="e.g. Chronomancer, Shadowblade, Vampire"
-                  className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
-                  required
-                />
-              </div>
-
-              {/* Table Category */}
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-300">Table Category</span>
-                  <GuardrailBadge isValid={isTableCategoryValid} />
-                  <InfoTooltip text="Classify this power table (Class, Combat Style, Luck, Race, or Custom category)." />
-                </div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={tableCategory}
-                    onChange={(e) => setTableCategory(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer flex-1"
-                  >
-                    <option value="">-- Select a Category --</option>
-                    {['Class', 'Combat Style', 'Luck', 'Race', 'Custom'].map((cat) => (
-                      <option key={cat} value={cat}>
                         {cat}
-                      </option>
+                      </button>
                     ))}
-                  </select>
-                  {tableCategory === 'Custom' && (
-                    <input
-                      type="text"
-                      placeholder="Enter custom category..."
-                      value={customCategoryInput}
-                      onChange={(e) => setCustomCategoryInput(sanitizeKitInput(e.target.value))}
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 flex-1"
-                      required
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* --- TAB 3: RELIC MODE --- */}
-          {creationType === 'relic' && (
-            <>
-              {/* Row 1: Relic Name + Tier */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Relic Name</span>
-                    <GuardrailBadge isValid={isNameValid} />
-                    <InfoTooltip text="Enter the unique name of your custom relic." />
                   </div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Ring of Celerity, Sunblade"
-                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-300">Path Description & Lore</span>
+                    <GuardrailBadge isValid={pathDescription.trim().length > 0} />
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={pathDescription}
+                    onChange={(e) => setPathDescription(e.target.value)}
+                    placeholder="Describe this Path, training archetype, and key abilities..."
+                    className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
                     required
                   />
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Tier</span>
-                    <InfoTooltip text="Relic tier classification (Minor, Lesser, Greater, Epic)." />
-                  </div>
-                  <select
-                    value={tier}
-                    onChange={(e) => setTier(e.target.value as any)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                  >
-                    <option value="Minor">🍺 Minor</option>
-                    <option value="Lesser">🪄 Lesser</option>
-                    <option value="Greater">✨ Greater</option>
-                    <option value="Epic">💫 Epic</option>
-                  </select>
-                </div>
               </div>
+            )}
 
-              {/* Row 2: Action & Usage (2-col grid) */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Action</span>
-                    <InfoTooltip text="AM = Action/Move, A = Action, M = Move, P = Passive, F = Free." />
-                  </div>
-                  <select
-                    value={action}
-                    onChange={(e) => setAction(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
-                  >
-                    {ACTION_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Usage</span>
-                    <InfoTooltip text="Frequency of activation (e.g. 1-⚡ Bolt, 1-🍀 Luck, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
-                  </div>
-                  <select
-                    value={usage}
-                    onChange={(e) => setUsage(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
-                  >
-                    {USAGE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* --- TAB 4: HARDWARE MODE --- */}
-          {creationType === 'hardware' && (
-            <>
-              {/* Row 1: Hardware Name + Store Cost */}
+            {/* C. SKILLS */}
+            {creationType === 'skill' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Hardware Name</span>
-                    <GuardrailBadge isValid={isNameValid} />
-                    <InfoTooltip text="Enter the unique name of your custom hardware item." />
+                  <span className="font-bold text-slate-300">Assigned Attribute</span>
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                    {['✨', '💪', '👁️', '🏃', '🫀'].map((attr) => (
+                      <button
+                        key={attr}
+                        type="button"
+                        onClick={() => setSkillAttribute(attr)}
+                        className={`flex-1 py-1.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center cursor-pointer ${
+                          skillAttribute === attr
+                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        {attr}
+                      </button>
+                    ))}
                   </div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Grappling Hook, Field Medic Kit"
-                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
-                    required
-                  />
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-cyan-300">Store Cost</span>
-                    <InfoTooltip text="Enter the purchase cost in silver or gold pieces." />
+                  <span className="font-bold text-slate-300">Discipline</span>
+                  <select
+                    value={skillDiscipline}
+                    onChange={(e) => setSkillDiscipline(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                  >
+                    <option value="General">General</option>
+                    <option value="Martial">Martial</option>
+                    <option value="Arcane">Arcane</option>
+                    <option value="Roguish">Roguish</option>
+                    <option value="Technical">Technical</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* D. SKILLSETS */}
+            {creationType === 'skillset' && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-300">Select Included Skills (2–5)</span>
+                  <GuardrailBadge isValid={isSkillsetSkillsValid} />
+                </div>
+                {selectedSkillsetSkills.map((skVal, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <select
+                      value={skVal}
+                      onChange={(e) => handleSelectSkill(idx, e.target.value)}
+                      className="flex-1 bg-slate-950 border border-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-xl outline-none cursor-pointer"
+                    >
+                      <option value="">-- Choose Skill {idx + 1} --</option>
+                      {availableSkillsCatalog.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedSkillsetSkills.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSkillsetRow(idx)}
+                        className="p-1 rounded text-slate-500 hover:text-rose-400"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
+                ))}
+                {selectedSkillsetSkills.length < 5 && (
+                  <button
+                    type="button"
+                    onClick={handleAddSkillsetRow}
+                    className="self-start text-[11px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Another Skill ({selectedSkillsetSkills.length}/5)</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* E. TRAITS */}
+            {creationType === 'trait' && (
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">AP Cost</span>
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                    {['0 AP', '1 AP', '2 AP', '3 AP', '4 AP'].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setTraitCost(c)}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center cursor-pointer ${
+                          traitCost === c
+                            ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* F. WEAPONS */}
+            {creationType === 'weapon' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">Type</span>
+                  <select
+                    value={weaponTypeMode}
+                    onChange={(e) => setWeaponTypeMode(e.target.value as any)}
+                    className="bg-slate-950 border border-slate-700 text-orange-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                  >
+                    <option value="Melee">Melee</option>
+                    <option value="Shot">Shot</option>
+                    <option value="Hurled">Hurled</option>
+                    <option value="Melee, Hurled">Melee, Hurled</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">Requirement</span>
+                  <select
+                    value={weaponReqNum}
+                    onChange={(e) => setWeaponReqNum(parseInt(e.target.value, 10))}
+                    className="bg-slate-950 border border-slate-700 text-slate-200 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                  >
+                    {WEAPON_REQ_NUMBERS.map((n) => (
+                      <option key={n} value={n}>
+                        Requirement: {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">Cost</span>
+                  <div className="flex items-center gap-1">
                     <input
                       type="number"
                       min={1}
                       value={costVal}
                       onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      className="bg-slate-950 border border-slate-700 text-slate-100 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none focus:border-cyan-400 w-24"
+                      className="w-20 bg-slate-950 text-slate-100 text-xs font-semibold px-2.5 py-2 rounded-xl border border-slate-700 outline-none"
                     />
                     <select
                       value={costUnit}
-                      onChange={(e) => setCostUnit(e.target.value as 's' | 'g')}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer flex-1"
+                      onChange={(e) => setCostUnit(e.target.value as any)}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2.5 py-2 rounded-xl outline-none cursor-pointer"
                     >
-                      <option value="s">Silver (s)</option>
-                      <option value="g">Gold (g)</option>
+                      <option value="g">g (Gold)</option>
+                      <option value="s">s (Silver)</option>
                     </select>
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Row 2: Action & Usage (2-col grid) */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Action</span>
-                    <InfoTooltip text="AM = Action/Move, A = Action, M = Move, P = Passive, F = Free." />
-                  </div>
-                  <select
-                    value={action}
-                    onChange={(e) => setAction(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
-                  >
-                    {ACTION_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Usage</span>
-                    <InfoTooltip text="Frequency of activation (e.g. 1-⚡ Bolt, 1-🍀 Luck, 1-Enc, 2-Enc, 3-Enc, 1-Rnd)." />
-                  </div>
-                  <select
-                    value={usage}
-                    onChange={(e) => setUsage(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
-                  >
-                    {USAGE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* --- TAB 5: SKILL MODE --- */}
-          {creationType === 'skill' && (
-            <>
-              {/* Row 1: Skill Name (Half-width) */}
+            {/* G. ARMOR */}
+            {creationType === 'armor' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Skill Name</span>
-                    <GuardrailBadge isValid={isNameValid} />
-                    <InfoTooltip text="Enter the unique name of your custom skill." />
-                  </div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Acrobatics, Lockpicking"
-                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Row 2: Single Skill Attribute Selector */}
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-300">Required Attribute</span>
-                  <GuardrailBadge isValid={isSkillAttributeValid} />
-                  <InfoTooltip text="Assign exactly one core attribute icon (Magic✨, Might💪, Mind👁️, Motion🏃, Moxie🫀) to this skill." />
-                </div>
-                <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                  {SKILLSET_ATTRIBUTE_OPTIONS.map((attr) => {
-                    const isSelected = skillAttribute === attr.icon;
-                    return (
-                      <button
-                        key={attr.icon}
-                        type="button"
-                        onClick={() => setSkillAttribute(attr.icon)}
-                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                          isSelected
-                            ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        <span>{attr.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* --- TAB 6: SKILLSET MODE --- */}
-          {creationType === 'skillset' && (
-            <>
-              {/* Row 1: Skillset Name (Half-width) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Skillset Name</span>
-                    <GuardrailBadge isValid={isNameValid} />
-                    <InfoTooltip text="Enter the unique name of your custom skillset." />
-                  </div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Infiltrator, Elementalist"
-                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Dynamic Skills List (2 to 5 Required) */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300 font-outfit uppercase tracking-wider text-[11px]">
-                      Included Skills (2–5 Required)
-                    </span>
-                    <GuardrailBadge isValid={isSkillsetSkillsValid} />
-                    <InfoTooltip text="Select 2 to 5 existing skills from the alphabetized catalog (stock, personal, and party creations) to compose this skillset." />
-                  </div>
-                  <span className="text-[10px] text-slate-400 font-semibold">
-                    {selectedSkillsetSkills.length} of 5 Skills
-                  </span>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  {selectedSkillsetSkills.map((skillVal, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center gap-2"
-                    >
-                      <span className="text-[11px] font-mono font-bold text-slate-500 w-5 shrink-0 text-center">
-                        #{idx + 1}
-                      </span>
-                      <select
-                        value={skillVal}
-                        onChange={(e) => handleSelectSkill(idx, e.target.value)}
-                        className="flex-1 bg-slate-900 text-slate-100 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400 font-semibold min-w-0 cursor-pointer"
-                        required
-                      >
-                        <option value="">
-                          -- Select Skill #{idx + 1} {idx < 2 ? '(Required)' : ''} --
-                        </option>
-                        {availableSkillsCatalog.map((sk) => {
-                          const isMso = isGsUnlocked && isMsoEntry(sk);
-                          return (
-                            <option key={sk} value={sk} className={isMso ? 'text-purple-300 font-bold' : ''}>
-                              {isMso ? `🌌 ${sk}` : sk}
-                            </option>
-                          );
-                        })}
-                      </select>
-
-                      {/* Remove Button */}
-                      {selectedSkillsetSkills.length > 2 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSkillsetRow(idx)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-500/40 transition-colors shrink-0 cursor-pointer"
-                          title="Remove skill"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {selectedSkillsetSkills.length < 5 && (
-                  <button
-                    type="button"
-                    onClick={handleAddSkillsetRow}
-                    className="py-1.5 px-3 rounded-xl border border-dashed border-slate-700 hover:border-amber-500/60 bg-slate-950/40 hover:bg-slate-900 text-slate-300 hover:text-amber-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-0.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>+ Add Skill ({selectedSkillsetSkills.length}/5)</span>
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* --- TAB 7: WEAPON MODE --- */}
-          {creationType === 'weapon' && (
-            <>
-              {/* Row 1: Weapon Name + Cost */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Weapon Name</span>
-                    <GuardrailBadge isValid={isNameValid} />
-                    <InfoTooltip text="Enter the unique name of your custom weapon." />
-                  </div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Battle Greataxe, Elven Shortbow"
-                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-rose-400"
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Cost</span>
-                    <InfoTooltip text="Purchase or craft cost in Gold (g) or Silver (s)." />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="1"
-                      value={costVal}
-                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      className="w-24 bg-slate-950 text-rose-300 font-mono font-bold text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-rose-400 text-center"
-                      required
-                    />
-                    <select
-                      value={costUnit}
-                      onChange={(e) => setCostUnit(e.target.value as 's' | 'g')}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer flex-1"
-                    >
-                      <option value="g">Gold (g 🪙)</option>
-                      <option value="s">Silver (s 🥈)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 2: Type Category + Req Rating # */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Type Category</span>
-                    <InfoTooltip text="Governs which attribute die scales attack and damage rolls." />
-                  </div>
-                  <select
-                    value={weaponTypeMode}
-                    onChange={(e) => setWeaponTypeMode(e.target.value as any)}
-                    className="bg-slate-950 border border-slate-700 text-rose-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-rose-400 cursor-pointer"
-                  >
-                    <option value="Melee">Melee (Might 💪)</option>
-                    <option value="Hurled">Hurled (Motion 🏃)</option>
-                    <option value="Shot">Shot (Mind 👁️)</option>
-                    <option value="Melee, Hurled">Melee & Hurled (💪 & 🏃)</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Requirement Rating #</span>
-                    <InfoTooltip text="Minimum attribute requirement to wield without penalty." />
-                  </div>
-                  <select
-                    value={weaponReqNum}
-                    onChange={(e) => setWeaponReqNum(parseInt(e.target.value, 10))}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none focus:border-rose-400 cursor-pointer"
-                  >
-                    {WEAPON_REQ_NUMBERS.map((num) => (
-                      <option key={num} value={num}>
-                        Rating {num} (d{num})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Row 3: Read-Only Calculated Attributes */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
-                  <span className="text-[11px] font-bold text-slate-400">Atk/Dmg Attribute:</span>
-                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-rose-300 shadow-sm">
-                    {getWeaponAtkDmg(weaponTypeMode)}
-                  </div>
-                </div>
-                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
-                  <span className="text-[11px] font-bold text-slate-400">Block Cap:</span>
-                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-amber-300 shadow-sm">
-                    {getWeaponMaxBlock(weaponTypeMode, weaponReqNum)}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* --- TAB 8: ARMOR MODE --- */}
-          {creationType === 'armor' && (
-            <>
-              {/* Row 1: Armor Name + Cost */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Armor Name</span>
-                    <GuardrailBadge isValid={isNameValid} />
-                    <InfoTooltip text="Enter the unique name of your custom armor set." />
-                  </div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Dragonscale Hauberk, Stealth Bodysuit"
-                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Cost</span>
-                    <InfoTooltip text="Purchase or craft cost in Gold (g) or Silver (s)." />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="1"
-                      value={costVal}
-                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      className="w-24 bg-slate-950 text-amber-300 font-mono font-bold text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 text-center"
-                      required
-                    />
-                    <select
-                      value={costUnit}
-                      onChange={(e) => setCostUnit(e.target.value as 's' | 'g')}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer flex-1"
-                    >
-                      <option value="g">Gold (g 🪙)</option>
-                      <option value="s">Silver (s 🥈)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 2: Requirement Selector */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Might Requirement</span>
-                    <InfoTooltip text="Governs required Might rating to wear without encumbrance." />
-                  </div>
+                  <span className="font-bold text-slate-300">Armor Weight / Requirement</span>
                   <select
                     value={armorReq}
                     onChange={(e) => setArmorReq(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none focus:border-amber-400 cursor-pointer"
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
                   >
-                    {ARMOR_REQ_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
+                    {ARMOR_REQ_OPTIONS.map((req) => (
+                      <option key={req} value={req}>
+                        {req} (AR: 🧥{getArmorArStr(req)} | MR: 👣{getArmorMrStr(req)})
                       </option>
                     ))}
                   </select>
                 </div>
-              </div>
-
-              {/* Row 3: Read-Only Calculated Attributes */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
-                  <span className="text-[11px] font-bold text-slate-400">Armor Rating (AR):</span>
-                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-amber-300 shadow-sm">
-                    {getArmorArStr(armorReq)}
-                  </div>
-                </div>
-                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
-                  <span className="text-[11px] font-bold text-slate-400">Movement Rate Mod (MR):</span>
-                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-teal-300 shadow-sm">
-                    {getArmorMrStr(armorReq)}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* --- TAB 9: SHIELD MODE --- */}
-          {creationType === 'shield' && (
-            <>
-              {/* Row 1: Shield Name + Cost */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Shield Name</span>
-                    <GuardrailBadge isValid={isNameValid} />
-                    <InfoTooltip text="Enter the unique name of your custom shield." />
-                  </div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Aegis of Dawn, Heavy Tower Shield"
-                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-cyan-400"
-                    required
-                  />
-                </div>
 
                 <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Cost</span>
-                    <InfoTooltip text="Purchase or craft cost in Gold (g) or Silver (s)." />
-                  </div>
-                  <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-300">Cost</span>
+                  <div className="flex items-center gap-1">
                     <input
                       type="number"
-                      min="1"
+                      min={1}
                       value={costVal}
                       onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      className="w-24 bg-slate-950 text-cyan-300 font-mono font-bold text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-cyan-400 text-center"
-                      required
+                      className="w-20 bg-slate-950 text-slate-100 text-xs font-semibold px-2.5 py-2 rounded-xl border border-slate-700 outline-none"
                     />
                     <select
                       value={costUnit}
-                      onChange={(e) => setCostUnit(e.target.value as 's' | 'g')}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer flex-1"
+                      onChange={(e) => setCostUnit(e.target.value as any)}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2.5 py-2 rounded-xl outline-none cursor-pointer"
                     >
-                      <option value="g">Gold (g 🪙)</option>
-                      <option value="s">Silver (s 🥈)</option>
+                      <option value="g">g (Gold)</option>
+                      <option value="s">s (Silver)</option>
                     </select>
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Row 2: Requirement Selector */}
+            {/* H. SHIELDS */}
+            {creationType === 'shield' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Might Requirement</span>
-                    <InfoTooltip text="Governs required Might rating to equip this shield." />
-                  </div>
+                  <span className="font-bold text-slate-300">Shield Size / Requirement</span>
                   <select
                     value={shieldReq}
                     onChange={(e) => setShieldReq(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none focus:border-cyan-400 cursor-pointer"
+                    className="bg-slate-950 border border-slate-700 text-cyan-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
                   >
-                    {SHIELD_REQ_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
+                    {SHIELD_REQ_OPTIONS.map((req) => (
+                      <option key={req} value={req}>
+                        {req} (Max Block: 🛡️{getShieldMaxBlockStr(req)} | MR Adj: 👣{getShieldMrStr(req)})
                       </option>
                     ))}
                   </select>
                 </div>
-              </div>
-
-              {/* Row 3: Read-Only Calculated Attributes */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
-                  <span className="text-[11px] font-bold text-slate-400">Block Cap (Blk):</span>
-                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-amber-300 shadow-sm">
-                    🛡️{getShieldMaxBlockStr(shieldReq)}
-                  </div>
-                </div>
-                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
-                  <span className="text-[11px] font-bold text-slate-400">Movement Rate Mod (MR):</span>
-                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-teal-300 shadow-sm">
-                    {getShieldMrStr(shieldReq)}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* --- TAB 10: GEAR MODE --- */}
-          {creationType === 'gear' && (
-            <>
-              {/* Row 1: Gear Name + Cost */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Gear Item Name</span>
-                    <GuardrailBadge isValid={isNameValid} />
-                    <InfoTooltip text="Enter the unique name of your custom gear item." />
-                  </div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Grappling Hook, Survival Kit"
-                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-teal-400"
-                    required
-                  />
-                </div>
 
                 <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Cost</span>
-                    <InfoTooltip text="Purchase or craft cost in Silver (s) or Gold (g)." />
-                  </div>
-                  <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-300">Cost</span>
+                  <div className="flex items-center gap-1">
                     <input
                       type="number"
-                      min="1"
+                      min={1}
                       value={costVal}
                       onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      className="w-24 bg-slate-950 text-teal-300 font-mono font-bold text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-teal-400 text-center"
-                      required
+                      className="w-20 bg-slate-950 text-slate-100 text-xs font-semibold px-2.5 py-2 rounded-xl border border-slate-700 outline-none"
                     />
                     <select
                       value={costUnit}
-                      onChange={(e) => setCostUnit(e.target.value as 's' | 'g')}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer flex-1"
+                      onChange={(e) => setCostUnit(e.target.value as any)}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2.5 py-2 rounded-xl outline-none cursor-pointer"
                     >
-                      <option value="s">Silver (s 🥈)</option>
-                      <option value="g">Gold (g 🪙)</option>
+                      <option value="g">g (Gold)</option>
+                      <option value="s">s (Silver)</option>
                     </select>
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Row 2: Category Selector / Custom New Category */}
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-300">Gear Category</span>
-                  <GuardrailBadge isValid={isGearCategoryValid} />
-                  <InfoTooltip text="Select standard gear classification or define a new category." />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {/* I. GEAR */}
+            {creationType === 'gear' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">Category</span>
                   <select
                     value={gearCategory}
                     onChange={(e) => setGearCategory(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-teal-300 text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-teal-400 cursor-pointer"
+                    className="bg-slate-950 border border-slate-700 text-teal-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
                   >
                     {GEAR_DEFAULT_CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
                     ))}
-                    <option value="CUSTOM_NEW">+ New Custom Category...</option>
+                    <option value="CUSTOM_NEW">+ Add Custom Category</option>
                   </select>
-
                   {gearCategory === 'CUSTOM_NEW' && (
                     <input
                       type="text"
                       value={gearCategoryNewText}
-                      onChange={(e) => setGearCategoryNewText(sanitizeKitInput(e.target.value))}
-                      placeholder="Type custom category name..."
-                      className="bg-slate-950 text-teal-300 text-xs px-3 py-2 rounded-xl border border-teal-500/50 outline-none focus:border-teal-400"
-                      required
+                      onChange={(e) => setGearCategoryNewText(e.target.value)}
+                      placeholder="Enter custom category name..."
+                      className="mt-1 bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-teal-500/50 outline-none"
                     />
                   )}
                 </div>
-              </div>
-            </>
-          )}
 
-          {/* --- TAB 11: CHAOS GEM MODE --- */}
-          {creationType === 'chaos_gem' && (
-            <>
-              {/* Row 1: Gem Name (Half-width) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Chaos Gem Name</span>
-                    <GuardrailBadge isValid={isNameValid} />
-                    <InfoTooltip text="Enter the unique name of your volatile Chaos Gem." />
+                  <span className="font-bold text-slate-300">Cost</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={1}
+                      value={costVal}
+                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="w-20 bg-slate-950 text-slate-100 text-xs font-semibold px-2.5 py-2 rounded-xl border border-slate-700 outline-none"
+                    />
+                    <select
+                      value={costUnit}
+                      onChange={(e) => setCostUnit(e.target.value as any)}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2.5 py-2 rounded-xl outline-none cursor-pointer"
+                    >
+                      <option value="s">s (Silver)</option>
+                      <option value="g">g (Gold)</option>
+                    </select>
                   </div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Gem of Temporal Surge, Void Ember"
-                    className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-violet-400"
+                </div>
+              </div>
+            )}
+
+            {/* J. EXOTICS & ARTIFACTS */}
+            {(creationType === 'exotic' || creationType === 'artifact') && (
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">Combat Tier</span>
+                  <select
+                    value={tier}
+                    onChange={(e) => setTier(e.target.value as any)}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                  >
+                    <option value="Minor">Minor 🍺 (1 Slot)</option>
+                    <option value="Lesser">Lesser 🪄 (2 Slots)</option>
+                    <option value="Greater">Greater 🪬 (3 Slots)</option>
+                    <option value="Epic">Epic 💫 (4 Slots)</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">Action</span>
+                  <select
+                    value={action}
+                    onChange={(e) => setAction(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                  >
+                    {ACTION_OPTIONS.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">Usage</span>
+                  <select
+                    value={usage}
+                    onChange={(e) => setUsage(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                  >
+                    {USAGE_OPTIONS.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">Cost</span>
+                  {creationType === 'artifact' ? (
+                    <div className="px-3 py-2 rounded-xl bg-purple-950/70 border border-purple-500/40 text-purple-300 font-bold text-center">
+                      Artifact
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        value={costVal}
+                        onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                        className="w-16 bg-slate-950 text-slate-100 text-xs font-semibold px-2 py-2 rounded-xl border border-slate-700 outline-none"
+                      />
+                      <select
+                        value={costUnit}
+                        onChange={(e) => setCostUnit(e.target.value as any)}
+                        className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2 py-2 rounded-xl outline-none cursor-pointer"
+                      >
+                        <option value="g">g</option>
+                        <option value="s">s</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* K. KITS */}
+            {creationType === 'kit' && (
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-slate-300">Kit Category</span>
+                    <select
+                      value={kitCategory}
+                      onChange={(e) => setKitCategory(e.target.value)}
+                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                    >
+                      {KIT_DEFAULT_CATEGORIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-slate-300">Cost</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        value={costVal}
+                        onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                        className="w-20 bg-slate-950 text-slate-100 text-xs font-semibold px-2.5 py-2 rounded-xl border border-slate-700 outline-none"
+                      />
+                      <select
+                        value={costUnit}
+                        onChange={(e) => setCostUnit(e.target.value as any)}
+                        className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2.5 py-2 rounded-xl outline-none cursor-pointer"
+                      >
+                        <option value="g">g (Gold)</option>
+                        <option value="s">s (Silver)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-300">Bundle Contents & Description</span>
+                    <GuardrailBadge isValid={kitDescription.trim().length > 0} />
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={kitDescription}
+                    onChange={(e) => setKitDescription(e.target.value)}
+                    placeholder="List the bundle contents and equipment included in this kit..."
+                    className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
                     required
                   />
                 </div>
               </div>
+            )}
 
-              {/* Row 2: Read-Only Calculated Attributes / Rules */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
-                  <span className="text-[11px] font-bold text-slate-400">Action:</span>
-                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-violet-300 shadow-sm">
-                    F (Free Action)
+            {/* RULES EFFECT TEXTAREA WITH QUICK-INSERT CHIPS */}
+            {(creationType === 'power' ||
+              creationType === 'trait' ||
+              creationType === 'exotic' ||
+              creationType === 'artifact' ||
+              creationType === 'chaos_gem') && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300">Effect Rules Syntax</span>
+                    <GuardrailBadge isValid={isEffectValid} />
+                    <InfoTooltip text="Use strict SupaFlex notation grammar. Attributes: ✨💪👁️🏃🫀👣. Range: Touch, 1sq, 2sq, Short, Medium, Long, Extreme. AoE: AoE [#]r or [#]x[#]." />
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono">KaTeX & Math Compliant</span>
+                </div>
+
+                {/* Quick Insert Ribbon */}
+                <div className="p-2 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-2">
+                  {/* Attributes Quick Chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold text-slate-400 shrink-0">Attributes:</span>
+                    {ATTRIBUTE_CHIPS.map((icon) => (
+                      <button
+                        key={icon}
+                        type="button"
+                        onClick={() => insertTextAtCursor(icon)}
+                        className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
+                        title={`Insert ${icon}`}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Range Bands Quick Chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold text-slate-400 shrink-0">Range:</span>
+                    {RANGE_BANDS.map((rng) => (
+                      <button
+                        key={rng.id}
+                        type="button"
+                        onClick={() => insertTextAtCursor(rng.text)}
+                        className="px-2 py-0.5 rounded bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-500/50 text-cyan-300 text-[10px] font-mono transition cursor-pointer"
+                        title={`Insert ${rng.label}`}
+                      >
+                        {rng.id}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* AoE Quick Chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold text-slate-400 shrink-0">AoE:</span>
+                    {AOE_PRESETS.map((aoe) => (
+                      <button
+                        key={aoe.id}
+                        type="button"
+                        onClick={() => insertTextAtCursor(aoe.text)}
+                        className="px-2 py-0.5 rounded bg-slate-900 hover:bg-rose-950/70 border border-slate-700 hover:border-rose-500/50 text-rose-300 text-[10px] font-mono transition cursor-pointer"
+                      >
+                        {aoe.id}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <div className="px-3.5 py-2 bg-slate-900/40 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner select-none cursor-default">
-                  <span className="text-[11px] font-bold text-slate-400">Durability / Uses:</span>
-                  <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-extrabold text-amber-300 shadow-sm">
-                    3 Uses (Shatters at 0)
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
 
-          {/* Effect (rules) (Power, Relic, Hardware, Chaos Gem) */}
-          {(creationType === 'power' || creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') && (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between flex-wrap gap-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-300">Effect (rules)</span>
-                  <GuardrailBadge isValid={isEffectValid} />
-                  <InfoTooltip text="Describe mechanical rules, damage dice, bonuses, or utility." />
-                </div>
-                <div className="flex items-center gap-1 flex-wrap">
-                  <span className="text-[10px] text-slate-400 font-bold mr-0.5">Insert Icon:</span>
-                  {ATTRIBUTE_EFFECT_ICONS.map((item) => (
-                    <button
-                      key={item.name}
-                      type="button"
-                      onClick={() => insertIconAtCursor(item.icon)}
-                      className="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded text-[11px] font-bold text-slate-200 transition-colors flex items-center gap-1 shadow-sm cursor-pointer"
-                      title={`Insert ${item.icon} at cursor`}
-                    >
-                      <span>{item.label}</span>
-                    </button>
-                  ))}
-                </div>
+                <textarea
+                  ref={effectTextareaRef}
+                  rows={3}
+                  value={effect}
+                  onChange={(e) => setEffect(e.target.value)}
+                  placeholder="e.g. Rng Short; target makes 🏃^14 save or suffers d💪 dmg and Prone."
+                  className="bg-slate-950 text-slate-100 text-xs font-mono px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+                  required
+                />
               </div>
-              <textarea
-                ref={effectTextareaRef}
-                value={effect}
-                onChange={(e) => setEffect(e.target.value)}
-                rows={3}
-                className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 resize-none"
-                required
-              />
-            </div>
-          )}
+            )}
 
-          {/* Visual Description / Notes */}
-          {(creationType === 'relic' ||
-            creationType === 'hardware' ||
-            creationType === 'weapon' ||
-            creationType === 'armor' ||
-            creationType === 'shield' ||
-            creationType === 'gear' ||
-            creationType === 'chaos_gem') && (
+            {/* Notes Column (Lore / Background) */}
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-300">Visual Description / Notes</span>
-                <InfoTooltip text="Physical traits, materials, appearance, visual cues, or lore notes." />
+                <span className="font-bold text-slate-300">Item Lore & Notes</span>
+                <InfoTooltip text="Optional lore, tactical notes, or historical context. Displayed via the inline ℹ️ indicator." />
               </div>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional lore, description, or crafting notes..."
-                className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400"
+                placeholder="e.g. Forged in the ancient deeps of Shanask Loom..."
+                className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-slate-700 outline-none focus:border-amber-400 font-serif"
               />
             </div>
-          )}
 
-          {/* Compatible Genres Multi-Select (Last Item Under Form Fields) */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-300">Compatible Genres</span>
-              <GuardrailBadge isValid={isGenresValid} />
-              <InfoTooltip text="Select all campaign genres where this creation is available (Medieval, Modern, SciFi). At least one is required." />
+            {/* Compatible Genres */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-300">Compatible Genres</span>
+                  <GuardrailBadge isValid={isGenresValid} />
+                  <InfoTooltip text="Select at least one genre where this item is permitted." />
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono">Required</span>
+              </div>
+              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                {GENRE_OPTIONS.map((g) => {
+                  const isSelected = selectedGenres.includes(g.id);
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => handleToggleGenre(g.id)}
+                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        isSelected
+                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <span>{g.icon}</span>
+                      <span>{g.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-              {GENRE_OPTIONS.map((g) => {
-                const isSelected = selectedGenres.includes(g.id);
-                return (
-                  <button
-                    key={g.id}
-                    type="button"
-                    onClick={() => handleToggleGenre(g.id)}
-                    className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      isSelected
-                        ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    <span>{g.icon}</span>
-                    <span>{g.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Submit Button */}
-          <div className="pt-2 mt-auto shrink-0">
-            <button
-              type="submit"
-              disabled={isSubmitting || !isFormValid}
-              className="w-full py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:from-amber-600 disabled:hover:to-amber-500 text-white font-outfit font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-950/50 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>
-                {isSubmitting
-                  ? 'Forging Creation...'
-                  : creationType === 'power_table'
-                  ? isGm
-                    ? `👑 Forge & Publish Table '${name.trim() || 'Table'}' to Catalog`
-                    : `Save Table '${name.trim() || 'Table'}' to Catalog`
-                  : isGm
-                  ? `👑 Forge & Publish ${name.trim() || 'Creation'} to Party Mall`
-                  : `Save ${name.trim() || 'Creation'} to My Creations Library`}
-              </span>
-            </button>
-          </div>
-        </form>
+            {/* Bottom Actions */}
+            <div className="pt-2 flex items-center gap-3 mt-auto">
+              <button
+                type="submit"
+                disabled={!isFormValid || isSubmitting}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg ${
+                  isFormValid && !isSubmitting
+                    ? 'bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-400 text-slate-950 shadow-amber-950/50 font-extrabold active:scale-[0.98]'
+                    : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>
+                  {isSubmitting
+                    ? 'Forging...'
+                    : isGm
+                    ? 'Forge & Publish to Party Mall 👑'
+                    : 'Forge & Save to Workshop Library'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetForm}
+                className="py-2.5 px-3 bg-slate-950 border border-slate-700 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition cursor-pointer"
+              >
+                Clear
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

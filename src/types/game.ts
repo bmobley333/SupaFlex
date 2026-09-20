@@ -1210,17 +1210,20 @@ export type AuthMode = 'login' | 'signup' | 'reset_password' | 'profile';
 export type CustomCreationType =
   | 'power'
   | 'power_table'
-  | 'artifact'
-  | 'exotic'
-  | 'relic'
-  | 'hardware'
+  | 'path'
   | 'skill'
   | 'skillset'
+  | 'trait'
   | 'weapon'
   | 'armor'
   | 'shield'
   | 'gear'
-  | 'chaos_gem';
+  | 'exotic'
+  | 'artifact'
+  | 'chaos_gem'
+  | 'kit'
+  | 'relic'
+  | 'hardware';
 
 export interface PowerTable {
   id?: number;

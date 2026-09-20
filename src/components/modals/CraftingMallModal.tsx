@@ -33,6 +33,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
   const [showcaseItems, setShowcaseItems] = useState<CustomCreationItem[]>([]);
   const [submissionItems, setSubmissionItems] = useState<CustomCreationItem[]>([]);
   const [socketingGem, setSocketingGem] = useState<SupabaseChaosGem | null>(null);
+  const [allowCloning, setAllowCloning] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -70,8 +71,37 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
   useEffect(() => {
     if (isOpen) {
       loadData();
+      if (playerEmail) {
+        gameApi.getUserProfile(playerEmail).then((prof) => {
+          if (prof && typeof prof.allow_cloning === 'boolean') {
+            setAllowCloning(prof.allow_cloning);
+          }
+        });
+      }
     }
   }, [isOpen, playerEmail, activePartyId]);
+
+  const handleToggleCloning = async (newVal: boolean) => {
+    const prevVal = allowCloning;
+    setAllowCloning(newVal);
+    try {
+      if (playerEmail) {
+        await gameApi.updateProfilePrivacy(playerEmail, newVal);
+        setFeedback({
+          type: 'success',
+          message: newVal
+            ? '🧬 Workshop creations set to Allow Cloning (visible in Party Mall).'
+            : '🔒 Workshop creations set to Private Vault (hidden from others).',
+        });
+      }
+    } catch (err: any) {
+      setAllowCloning(prevVal);
+      setFeedback({
+        type: 'error',
+        message: 'Failed to update workshop privacy setting.',
+      });
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -87,6 +117,10 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
 
   const filteredItems = currentList.filter((item) => {
     if (typeFilter !== 'all' && item.type !== typeFilter) return false;
+    // Privacy filtering for Party Mall:
+    if (activeTab === 'party_mall' && !isGm && item.author_email?.toLowerCase().trim() !== playerEmail?.toLowerCase().trim()) {
+      if (item.item_data?.allow_cloning === false) return false;
+    }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       const matchName = item.name.toLowerCase().includes(query);
@@ -399,13 +433,41 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* Dyslexia-Friendly Multi-Option Pill Switch for Workshop Privacy & Cloning */}
+            <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+              <button
+                type="button"
+                onClick={() => handleToggleCloning(false)}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  !allowCloning
+                    ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+                title="Private Vault: Keep your custom creations private to your account"
+              >
+                🔒 Private Vault
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleCloning(true)}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  allowCloning
+                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+                title="Allow Cloning: Allow party members to view and clone your creations in the Party Mall"
+              >
+                🧬 Allow Cloning
+              </button>
+            </div>
+
             {onOpenWorkshop && (
               <button
                 onClick={() => {
                   onOpenWorkshop();
                 }}
-                className="px-3 py-1.5 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 text-amber-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                className="px-3 py-1.5 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 text-amber-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Forge New Creation</span>
