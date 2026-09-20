@@ -202,21 +202,6 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-1 shrink-0 select-none">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
-            className={`p-0.5 rounded transition-all text-xs cursor-pointer select-none font-bold ${
-              isExpanded ? 'text-amber-400 bg-amber-950/40' : 'text-slate-400 hover:text-rose-300'
-            }`}
-            title={isExpanded ? 'Collapse monster details' : 'Show weapons, armor & abilities'}
-            aria-label="Toggle details"
-          >
-            {isExpanded ? '▲' : '▼'}
-          </button>
           <ItemNotesPopover notes={notesText} itemName={cleanName} />
           {onEdit && (
             <button
