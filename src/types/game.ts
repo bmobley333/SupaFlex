@@ -1269,4 +1269,7 @@ export interface CustomCreationItem {
   updated_at?: string;
 }
 
+export type CustomElement = CustomCreationItem;
+export type CustomElementType = CustomCreationType;
+
 

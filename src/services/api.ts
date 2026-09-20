@@ -2001,13 +2001,13 @@ export const gameApi = {
     if (!authorEmail) return [];
     try {
       const { data, error } = await supabase
-        .from('party_custom_items')
+        .from('custom_elements')
         .select('*')
         .ilike('author_email', authorEmail.trim())
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.warn('[gameApi] Notice fetching personal custom items:', error.message);
+        console.warn('[gameApi] Notice fetching personal custom elements:', error.message);
         return [];
       }
       return (data || []) as CustomCreationItem[];
@@ -2021,13 +2021,13 @@ export const gameApi = {
     if (!partyId) return [];
     try {
       const { data, error } = await supabase
-        .from('party_custom_items')
+        .from('custom_elements')
         .select('*')
         .eq('party_id', partyId.trim())
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.warn('[gameApi] Notice fetching party custom items:', error.message);
+        console.warn('[gameApi] Notice fetching party custom elements:', error.message);
         return [];
       }
 
@@ -2050,7 +2050,7 @@ export const gameApi = {
     if (!partyId) return [];
     try {
       const { data, error } = await supabase
-        .from('party_custom_items')
+        .from('custom_elements')
         .select('*')
         .eq('party_id', partyId.trim())
         .eq('gm_approved', false)
@@ -2070,12 +2070,12 @@ export const gameApi = {
   async getAllCustomItems(): Promise<CustomCreationItem[]> {
     try {
       const { data, error } = await supabase
-        .from('party_custom_items')
+        .from('custom_elements')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.warn('[gameApi] Notice fetching all custom items:', error.message);
+        console.warn('[gameApi] Notice fetching all custom elements:', error.message);
         return [];
       }
       return (data || []) as CustomCreationItem[];
@@ -2088,7 +2088,7 @@ export const gameApi = {
   async saveCustomItem(payload: Partial<CustomCreationItem>): Promise<CustomCreationItem | null> {
     try {
       const { data, error } = await supabase
-        .from('party_custom_items')
+        .from('custom_elements')
         .insert([
           {
             ...payload,
@@ -2109,7 +2109,7 @@ export const gameApi = {
   async updateCustomItem(id: string, updates: Partial<CustomCreationItem>): Promise<CustomCreationItem | null> {
     try {
       const { data, error } = await supabase
-        .from('party_custom_items')
+        .from('custom_elements')
         .update({
           ...updates,
           updated_at: new Date().toISOString(),
@@ -2129,7 +2129,7 @@ export const gameApi = {
   async deleteCustomItem(id: string): Promise<boolean> {
     try {
       const { error } = await supabase
-        .from('party_custom_items')
+        .from('custom_elements')
         .delete()
         .eq('id', id);
 
@@ -2139,6 +2139,20 @@ export const gameApi = {
       console.error('[gameApi] Error in deleteCustomItem:', e);
       return false;
     }
+  },
+
+  // Aliases for Custom Elements
+  async getPersonalCustomElements(authorEmail: string): Promise<CustomCreationItem[]> {
+    return this.getPersonalCustomItems(authorEmail);
+  },
+  async saveCustomElement(payload: Partial<CustomCreationItem>): Promise<CustomCreationItem | null> {
+    return this.saveCustomItem(payload);
+  },
+  async updateCustomElement(id: string, updates: Partial<CustomCreationItem>): Promise<CustomCreationItem | null> {
+    return this.updateCustomItem(id, updates);
+  },
+  async deleteCustomElement(id: string): Promise<boolean> {
+    return this.deleteCustomItem(id);
   },
 
   async promoteCustomItemToMaster(item: CustomCreationItem): Promise<boolean> {
