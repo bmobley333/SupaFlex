@@ -18,6 +18,7 @@ import { UniversalLootDropdown } from '../hud/UniversalLootDropdown';
 import { EncounterLinksDropdown } from '../hud/EncounterLinksDropdown';
 import { EncounterLootDropdown } from '../hud/EncounterLootDropdown';
 import { useAdventureStore } from '../../store/useAdventureStore';
+import { sanitizeRosterMonsters } from '../../utils/monsterSanitizer';
 
 export interface GmRosterMonster {
   id: string;
@@ -25,6 +26,8 @@ export interface GmRosterMonster {
   nish: number;
   coreStatsText: string;
   fullText: string;
+  baseFullText?: string;
+  scaled_dif?: number;
   mr?: number;
   attack?: number;
   damage?: number;
@@ -45,7 +48,9 @@ export type GmUnifiedRosterItem =
 export function parseMonsterForGmRoster(
   raw: string,
   idPrefixOrId = 'gm_mon_',
-  explicitId?: string
+  explicitId?: string,
+  baseFullText?: string,
+  scaled_dif?: number
 ): GmRosterMonster {
   const trimmed = (raw || '').trim();
   const monId = explicitId || `${idPrefixOrId}${Math.random().toString(36).substring(2, 9)}`;
@@ -143,6 +148,8 @@ export function parseMonsterForGmRoster(
     nish,
     coreStatsText,
     fullText: trimmed,
+    baseFullText: baseFullText || trimmed,
+    scaled_dif: scaled_dif ?? 10,
     mr,
     attack: parseInt(atk, 10) || 10,
     damage: parseInt(dmg, 10) || 5,
@@ -451,7 +458,13 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       const saved = localStorage.getItem(gmPushedMonstersKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          const healed = sanitizeRosterMonsters(parsed, undefined, parseMonsterForGmRoster);
+          if (healed.didHeal) {
+            localStorage.setItem(gmPushedMonstersKey, JSON.stringify(healed.monsters));
+          }
+          return healed.monsters;
+        }
       }
     } catch {}
     return [];
@@ -461,15 +474,35 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   useEffect(() => {
     if (!selectedParty?.id) return;
     try {
-      const savedMons = localStorage.getItem(`supaflex_gm_pushed_monsters_${selectedParty.id}`);
+      const partyKey = `supaflex_gm_pushed_monsters_${selectedParty.id}`;
+      const savedMons = localStorage.getItem(partyKey);
       if (savedMons) {
         const parsed = JSON.parse(savedMons);
-        if (Array.isArray(parsed)) setPushedMonsters(parsed);
-      } else {
-        setPushedMonsters([]);
+        if (Array.isArray(parsed)) {
+          const healed = sanitizeRosterMonsters(parsed, supabaseMonsters, parseMonsterForGmRoster);
+          if (healed.didHeal) {
+            localStorage.setItem(partyKey, JSON.stringify(healed.monsters));
+          }
+          setPushedMonsters(healed.monsters);
+          return;
+        }
       }
+      setPushedMonsters([]);
     } catch {}
-  }, [selectedParty?.id]);
+  }, [selectedParty?.id, supabaseMonsters]);
+
+  // Self-healing sweep once Supabase monsters codex is loaded
+  useEffect(() => {
+    if (pushedMonsters.length > 0 && supabaseMonsters.length > 0) {
+      const healed = sanitizeRosterMonsters(pushedMonsters, supabaseMonsters, parseMonsterForGmRoster);
+      if (healed.didHeal) {
+        setPushedMonsters(healed.monsters);
+        try {
+          localStorage.setItem(gmPushedMonstersKey, JSON.stringify(healed.monsters));
+        } catch {}
+      }
+    }
+  }, [supabaseMonsters]);
 
   // Turn Marked IDs (diagonal slash for turn tracking)
   const [markedTurnIds, setMarkedTurnIds] = useState<string[]>([]);
@@ -656,6 +689,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       return {
         ...parsed,
         id: m.id,
+        baseFullText: m.baseFullText || parsed.baseFullText || m.fullText,
+        scaled_dif: m.scaled_dif ?? 10,
         gear: m.gear || parsed.gear,
         abilities: m.abilities || parsed.abilities || m.gm_notes,
       };
@@ -664,7 +699,13 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
   const handleSaveRosterMonstersFromModal = (updated: ParsedMonster[]) => {
     const newRoster: GmRosterMonster[] = updated.map((p) => {
-      const mon = parseMonsterForGmRoster(p.fullText || p.nameWithEquip || '', p.id, p.id);
+      const mon = parseMonsterForGmRoster(
+        p.fullText || p.nameWithEquip || '',
+        p.id,
+        p.id,
+        p.baseFullText,
+        p.scaled_dif
+      );
       if (p.gear && !mon.gear) mon.gear = p.gear;
       if (p.abilities && !mon.abilities) {
         mon.abilities = p.abilities;

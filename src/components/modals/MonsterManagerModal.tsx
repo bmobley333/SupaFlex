@@ -1,7 +1,7 @@
 // src/components/modals/MonsterManagerModal.tsx
 // Master Two-Pane Modal for Managing GM Encounter Monsters with Master Difficulty Scaling & Tab Navigation
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, Plus, Search, FileText, Skull, Check } from 'lucide-react';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { gameApi } from '../../services/api';
@@ -24,6 +24,7 @@ import {
   scaleMrStat,
   scaleParsedMonster,
 } from '../../utils/monsterStatScaler';
+import { sanitizeParsedMonsters } from '../../utils/monsterSanitizer';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 
@@ -108,6 +109,9 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   const [selectedMonsterIds, setSelectedMonsterIds] = useState<Set<string>>(new Set());
   const [rosterThreatDif, setRosterThreatDif] = useState<number>(10);
 
+  // Immutable Baseline Vault: guarantees zero compounding rounding decay during rapid dragging
+  const baselineMapRef = useRef<Map<string, string>>(new Map());
+
   // Paste Statblock Area State
   const [pasteInputText, setPasteInputText] = useState('');
 
@@ -149,6 +153,36 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     };
     fetchMonsters();
   }, [isOpen]);
+
+  // Synchronize immutable baselines, self-heal corrupted incoming monsters, and align threat dif
+  useEffect(() => {
+    if (!monsters || monsters.length === 0) return;
+
+    // 1. Self-heal any corrupted monsters that entered the modal
+    const sanitized = sanitizeParsedMonsters(monsters, supabaseMonsters);
+    if (sanitized.didHeal) {
+      onSaveMonsters(sanitized.monsters);
+      return;
+    }
+
+    // 2. Populate baselineMapRef for each monster
+    monsters.forEach((m) => {
+      if (!baselineMapRef.current.has(m.id) || m.baseFullText) {
+        baselineMapRef.current.set(m.id, m.baseFullText || m.fullText || m.nameWithEquip);
+      }
+    });
+
+    // 3. Align rosterThreatDif to the active monster(s) if uniform
+    const activeList = selectedMonsterIds.size > 0
+      ? monsters.filter((m) => selectedMonsterIds.has(m.id))
+      : monsters;
+    if (
+      activeList.length > 0 &&
+      activeList.every((m) => m.scaled_dif !== undefined && m.scaled_dif === activeList[0].scaled_dif)
+    ) {
+      setRosterThreatDif(activeList[0].scaled_dif!);
+    }
+  }, [monsters, supabaseMonsters, selectedMonsterIds]);
 
   if (!isOpen) return null;
 
@@ -267,7 +301,16 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const targetIds = selectedMonsterIds.size > 0 ? selectedMonsterIds : new Set(monsters.map((m) => m.id));
     const updated = monsters.map((m) => {
       if (targetIds.has(m.id)) {
-        return scaleParsedMonster(m, newDif);
+        const baseText = baselineMapRef.current.get(m.id) || m.baseFullText || m.fullText || m.nameWithEquip;
+        // Scale strictly from immutable baseline to prevent exponential compounding
+        const baseParsed = { ...m, baseFullText: baseText, fullText: baseText };
+        const scaled = scaleParsedMonster(baseParsed, newDif);
+        return {
+          ...scaled,
+          id: m.id,
+          baseFullText: baseText,
+          scaled_dif: newDif,
+        };
       }
       return m;
     });
@@ -277,6 +320,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   // Handlers (Instant Clear All - No Verification Modal)
   const handleClearAll = () => {
     setSelectedMonsterIds(new Set());
+    baselineMapRef.current.clear();
     onSaveMonsters([]);
   };
 
@@ -286,6 +330,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
       next.delete(id);
       return next;
     });
+    baselineMapRef.current.delete(id);
     onSaveMonsters(monsters.filter((m) => m.id !== id));
   };
 
@@ -329,7 +374,10 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const parsed = parseMonsterLine(reconstructed);
     parsed.gear = editGearText.trim() || undefined;
     parsed.abilities = editAbilitiesText.trim() || undefined;
-    const updated = monsters.map((m) => (m.id === id ? { ...parsed, id, baseFullText: reconstructed } : m));
+    parsed.baseFullText = reconstructed;
+    parsed.scaled_dif = 10;
+    baselineMapRef.current.set(id, reconstructed);
+    const updated = monsters.map((m) => (m.id === id ? { ...parsed, id, baseFullText: reconstructed, scaled_dif: 10 } : m));
     onSaveMonsters(updated);
     setEditingId(null);
   };
@@ -338,6 +386,10 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     if (!pasteInputText.trim()) return;
     const parsedList = parseMultiRowMonsterBlock(pasteInputText.trim());
     if (parsedList.length > 0) {
+      parsedList.forEach((p) => {
+        const baseText = p.baseFullText || p.fullText || p.nameWithEquip;
+        baselineMapRef.current.set(p.id, baseText);
+      });
       onSaveMonsters([...monsters, ...parsedList]);
       setPasteInputText('');
       setSelectedMonsterIds(new Set(parsedList.map((p) => p.id)));
@@ -378,6 +430,12 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     parsed.gear = quickAdd.gear.trim() || undefined;
     parsed.abilities = quickAdd.abilities.trim() || undefined;
     parsed.scaled_dif = quickAddThreatDif;
+
+    // Calculate immutable Dif 10 baseline from quickAddBase
+    const baseStatStr = `${fullTitle} 🚩${quickAddBase.init} 👣${quickAddBase.mr} ⚔️${quickAddBase.atk}/${quickAddBase.dmg} 🧥${quickAddBase.def}/${quickAddBase.armor} ❤️${quickAddBase.vit} – [✨${quickAddBase.magic}/💪${quickAddBase.might}/👁️${quickAddBase.mind}/🏃${quickAddBase.motion}/🫀${quickAddBase.moxie}]${notesStr}`;
+    parsed.baseFullText = baseStatStr;
+
+    baselineMapRef.current.set(parsed.id, baseStatStr);
     onSaveMonsters([...monsters, parsed]);
     setSelectedMonsterIds(new Set([parsed.id]));
     setQuickAdd(calculateQuickAddStatsForDif(DEFAULT_QUICK_ADD, quickAddThreatDif));
@@ -413,6 +471,9 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     parsed.abilities = sm.abilities || sm.notes || undefined;
     parsed.codex_notes = sm.notes || sm.abilities || undefined;
     parsed.codex_id = sm.id;
+    parsed.baseFullText = fullStatStr;
+    parsed.scaled_dif = 10;
+    baselineMapRef.current.set(parsed.id, fullStatStr);
     onSaveMonsters([...monsters, parsed]);
     setSelectedMonsterIds(new Set([parsed.id]));
 

@@ -95,11 +95,13 @@ export function scaleMonsterData(monster: MonsterData, dif: number): MonsterData
  * Re-serialize a MonsterData object back into a canonical full statblock line string.
  */
 export function serializeMonsterDataLine(m: MonsterData): string {
-  const countPrefix = m.count && m.count > 1 ? `${m.count} ` : '';
   const cleanName = (m.name || 'Monster')
     .replace(/\s*\([^)]*\)/g, '')
     .replace(/\s*\[[^\]]*\]/g, '')
     .trim() || 'Monster';
+
+  // Only prefix count if cleanName does not already start with digits matching the count
+  const countPrefix = (m.count && m.count > 1 && !/^\d+\s+/.test(cleanName)) ? `${m.count} ` : '';
   const equipStr = m.equipment ? ` [${m.equipment}]` : '';
   const fullTitle = `${countPrefix}${cleanName}${equipStr}`;
   const notesStr = m.gm_notes ? ` (${m.gm_notes})` : '';
@@ -108,6 +110,7 @@ export function serializeMonsterDataLine(m: MonsterData): string {
   const mrVal = m.mr ?? 10;
   const atkVal = m.attack ?? 10;
   const dmgVal = m.damage ?? 10;
+  const woundsStr = (m.min_wounds && m.min_wounds > 0) ? `(${m.min_wounds})` : '';
   const defVal = m.defense ?? 10;
   const armorVal = m.armor ?? 0;
   const vitVal = m.max_vit ?? 10;
@@ -119,7 +122,7 @@ export function serializeMonsterDataLine(m: MonsterData): string {
   const motion = attrs.motion ?? 10;
   const moxie = attrs.moxie ?? 10;
 
-  return `${fullTitle} 🚩${initVal} 👣${mrVal} ⚔️${atkVal}/${dmgVal} 🧥${defVal}/${armorVal} ❤️${vitVal} [✨${magic}/💪${might}/👁️${mind}/🏃${motion}/🫀${moxie}]${notesStr}`;
+  return `${fullTitle} 🚩${initVal} 👣${mrVal} ⚔️${atkVal}/${dmgVal}${woundsStr} 🧥${defVal}/${armorVal} ❤️${vitVal} – [✨${magic}/💪${might}/👁️${mind}/🏃${motion}/🫀${moxie}]${notesStr}`;
 }
 
 /**
@@ -282,12 +285,12 @@ export function parseMonsterLineToData(raw: string, id: string = 'mon_tmp'): Mon
     mr: mrMatch ? parseInt(mrMatch[1], 10) : 10,
     attack: atkNums[0] ? parseInt(atkNums[0], 10) : 10,
     damage: atkNums[1] ? parseInt(atkNums[1], 10) : 10,
-    min_wounds: atkNums[2] ? parseInt(atkNums[2], 10) : 1,
+    min_wounds: atkNums[2] ? parseInt(atkNums[2], 10) : 0,
     defense: defNums[0] ? parseInt(defNums[0], 10) : 10,
     armor: defNums[1] ? parseInt(defNums[1], 10) : 0,
     max_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
     current_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
     attributes: attrValues,
-    gm_notes: undefined,
+    gm_notes: parsed.abilities || parsed.codex_notes || undefined,
   };
 }

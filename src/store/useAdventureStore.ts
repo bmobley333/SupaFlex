@@ -7,6 +7,7 @@ import { VaultItem } from '../types/game';
 import { gameApi } from '../services/api';
 import { parseMonsterLine } from '../utils/monsterStatParser';
 import { scaleParsedMonster } from '../utils/monsterStatScaler';
+import { isCorruptedMonster, healCorruptedStatblock } from '../utils/monsterSanitizer';
 
 interface AdventureStoreState {
   adventures: GmAdventure[];
@@ -1168,7 +1169,10 @@ export const useAdventureStore = create<AdventureStoreState>((set, get) => ({
 
     const currentMonsters = get().getActiveMonsters();
     const scaled = currentMonsters.map((m) => {
-      const baseText = m.baseFullText || m.fullText || m.nameWithEquip;
+      let baseText = m.baseFullText || m.fullText || m.nameWithEquip;
+      if (isCorruptedMonster(m)) {
+        baseText = healCorruptedStatblock(m.name || m.nameWithEquip, m.fullText);
+      }
       const baseParsed = parseMonsterLine(baseText);
       const scaledMonster = scaleParsedMonster(baseParsed, targetDif);
       return {
