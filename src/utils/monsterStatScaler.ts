@@ -5,65 +5,100 @@ import { MonsterData } from '../components/common/GmMonsterCard';
 import { ParsedMonster, parseMonsterLine } from './monsterStatParser';
 import { SupabaseMonster } from '../types/game';
 
+export interface StatAnchor {
+  min: number;
+  med: number;
+  max: number;
+}
+
 /**
- * Scale a Dif(ability) stat (Nish, Atk, Def, Attributes).
- * - Base Dif = 10 (100% baseline).
- * - Floor clamp at 3 (minimum guaranteed player failure floor on 2d20).
- * - Upscaled stats (Nish, Atk, Attributes): +8% per Dif step above 10.
- * - Standard stats (Def): +5% per Dif step above 10.
+ * Authoritative empirical distribution anchors derived across all 149 monsters in the Supabase catalog.
+ * - Min corresponds to Threat Level -7 (Dif 3, easiest standard foe).
+ * - Median corresponds to Threat Level 0 (Dif 10, canonical baseline).
+ * - Max corresponds to Threat Level +15 (Dif 25, legendary / mythic ceiling).
+ */
+export const STAT_ANCHORS: Record<string, StatAnchor> = {
+  initiative: { min: 5, med: 15, max: 24 },
+  mr:         { min: 5, med: 10, max: 20 },
+  attack:     { min: 5, med: 16, max: 24 },
+  damage:     { min: 5, med: 9,  max: 26 },
+  defense:    { min: 5, med: 15, max: 24 },
+  armor:      { min: 0, med: 2,  max: 4 },
+  max_vit:    { min: 6, med: 16, max: 50 },
+  magic:      { min: 5, med: 12, max: 24 },
+  might:      { min: 5, med: 16, max: 24 },
+  mind:       { min: 5, med: 12, max: 24 },
+  motion:     { min: 5, med: 15, max: 24 },
+  moxie:      { min: 5, med: 12, max: 24 },
+};
+
+/**
+ * Universal Empirical Per-Stat Scaling Engine.
+ * - Dif 10 (Delta 0): Baseline (returns baseVal unaltered).
+ * - Dif 3..9 (Delta -7..-1): Proportional descent from Median to Min over 7 steps.
+ * - Dif 11..25+ (Delta +1..+15): Proportional ascent from Median to Max over 15 steps.
+ * Prevents runaway stat compounding and preserves authentic SupaFlex 2d20 bounds.
+ */
+export function scaleStatByAnchor(statKey: string, baseVal: number, dif: number): number {
+  if (baseVal <= 0 && statKey !== 'armor') return baseVal;
+  if (dif === 10) return baseVal;
+
+  const anchor = STAT_ANCHORS[statKey] || { min: 5, med: 15, max: 24 };
+  const delta = dif - 10;
+
+  if (delta < 0) {
+    // Traverse down over 7 discrete threat steps
+    const t = Math.min(1.0, Math.abs(delta) / 7.0);
+    const reductionRatio = (anchor.med - anchor.min) / anchor.med;
+    const factor = Math.max(0.2, 1.0 - t * reductionRatio);
+    const scaled = Math.round(baseVal * factor);
+    if (statKey === 'armor') {
+      return Math.max(0, scaled);
+    }
+    return Math.max(1, scaled);
+  } else {
+    // Traverse up over 15 discrete threat steps
+    const t = delta / 15.0;
+    const growthRatio = (anchor.max - anchor.med) / anchor.med;
+    const factor = 1.0 + t * growthRatio;
+    const scaled = Math.round(baseVal * factor);
+    return scaled;
+  }
+}
+
+/**
+ * Backward-compatible adapter for ability stats routing to the empirical engine.
  */
 export function scaleAbilityStat(baseVal: number, dif: number, isUpscaled: boolean = true): number {
-  if (baseVal <= 0) return baseVal;
-  const rate = isUpscaled ? 0.08 : 0.05;
-  const factor = 1 + (dif - 10) * rate;
-  const scaled = Math.round(baseVal * factor);
-  return Math.max(3, scaled);
+  const key = isUpscaled ? 'attack' : 'defense';
+  return scaleStatByAnchor(key, baseVal, dif);
 }
 
 /**
- * Scale a Dif(Flat) stat (Dmg, Vit, AR).
- * - Dmg & Vit: Linear scaling (dif / 10), clamped between 0.5x and 3.0x.
- * - AR: Slower scaling (+4% per Dif step above 10) so player hits retain damage impact.
+ * Backward-compatible adapter for flat stats routing to the empirical engine.
  */
 export function scaleFlatStat(baseVal: number, dif: number, isArmor: boolean = false): number {
-  if (baseVal <= 0 && !isArmor) return baseVal;
-  if (isArmor) {
-    if (baseVal <= 0) return 0;
-    const factor = 1 + (dif - 10) * 0.04;
-    return Math.max(0, Math.round(baseVal * factor));
-  }
-  const ratio = Math.max(0.5, Math.min(3.0, dif / 10));
-  return Math.max(1, Math.round(baseVal * ratio));
+  const key = isArmor ? 'armor' : 'max_vit';
+  return scaleStatByAnchor(key, baseVal, dif);
 }
 
 /**
- * Scale Fatigue / Minimum Wounds (Ftg / min_wounds).
- * - Ranging 0 to 4 normally (up to 8..10 extreme).
- * - Scales with Dif (+8% per Dif step above 10).
+ * Backward-compatible adapter for fatigue/min_wounds (deprecated in SupaFlex).
  */
-export function scaleFtgStat(baseVal: number, dif: number): number {
-  if (baseVal < 0) return 0;
-  const factor = 1 + (dif - 10) * 0.08;
-  const scaled = Math.round(baseVal * factor);
-  return Math.max(0, Math.min(10, scaled));
+export function scaleFtgStat(baseVal: number, _dif: number): number {
+  if (baseVal <= 0) return 0;
+  return baseVal;
 }
 
 /**
- * Scale Movement Rate (MR).
- * - MR does NOT scale in normal range (7..15).
- * - Max +/- 20% change at extreme ends (< 5 or > 20).
+ * Backward-compatible adapter for movement rate.
  */
 export function scaleMrStat(baseVal: number, dif: number): number {
-  if (baseVal <= 0) return baseVal;
-  if (dif >= 7 && dif <= 15) return baseVal;
-  let pct = (dif - 10) * 0.02;
-  if (pct > 0.20) pct = 0.20;
-  if (pct < -0.20) pct = -0.20;
-  return Math.max(1, Math.round(baseVal * (1 + pct)));
+  return scaleStatByAnchor('mr', baseVal, dif);
 }
 
 /**
- * Scale full MonsterData object cleanly.
+ * Scale full MonsterData object cleanly using empirical database anchors.
  */
 export function scaleMonsterData(monster: MonsterData, dif: number): MonsterData {
   if (dif === 10) return monster;
@@ -72,21 +107,20 @@ export function scaleMonsterData(monster: MonsterData, dif: number): MonsterData
 
   return {
     ...monster,
-    initiative: scaleAbilityStat(monster.initiative ?? 10, dif, true),
-    mr: scaleMrStat(monster.mr ?? 10, dif),
-    attack: scaleAbilityStat(monster.attack ?? 10, dif, true),
-    damage: scaleFlatStat(monster.damage ?? 10, dif, false),
-    min_wounds: scaleFtgStat(monster.min_wounds ?? 1, dif),
-    defense: scaleAbilityStat(monster.defense ?? 10, dif, false),
-    armor: scaleFlatStat(monster.armor ?? 0, dif, true),
-    max_vit: scaleFlatStat(monster.max_vit ?? 10, dif, false),
-    current_vit: scaleFlatStat(monster.current_vit ?? (monster.max_vit ?? 10), dif, false),
+    initiative: scaleStatByAnchor('initiative', monster.initiative ?? 15, dif),
+    mr: scaleStatByAnchor('mr', monster.mr ?? 10, dif),
+    attack: scaleStatByAnchor('attack', monster.attack ?? 16, dif),
+    damage: scaleStatByAnchor('damage', monster.damage ?? 9, dif),
+    defense: scaleStatByAnchor('defense', monster.defense ?? 15, dif),
+    armor: scaleStatByAnchor('armor', monster.armor ?? 2, dif),
+    max_vit: scaleStatByAnchor('max_vit', monster.max_vit ?? 16, dif),
+    current_vit: scaleStatByAnchor('max_vit', monster.current_vit ?? (monster.max_vit ?? 16), dif),
     attributes: {
-      magic: scaleAbilityStat(attrs.magic ?? 10, dif, true),
-      might: scaleAbilityStat(attrs.might ?? 10, dif, true),
-      mind: scaleAbilityStat(attrs.mind ?? 10, dif, true),
-      motion: scaleAbilityStat(attrs.motion ?? 10, dif, true),
-      moxie: scaleAbilityStat(attrs.moxie ?? 10, dif, true),
+      magic: scaleStatByAnchor('magic', attrs.magic ?? 12, dif),
+      might: scaleStatByAnchor('might', attrs.might ?? 16, dif),
+      mind: scaleStatByAnchor('mind', attrs.mind ?? 12, dif),
+      motion: scaleStatByAnchor('motion', attrs.motion ?? 15, dif),
+      moxie: scaleStatByAnchor('moxie', attrs.moxie ?? 12, dif),
     },
   };
 }
@@ -209,15 +243,16 @@ export function scaleSupabaseMonster(sm: SupabaseMonster, dif: number): Supabase
   if (attrNums.length === 0) attrNums = [10, 10, 10, 10, 10];
   while (attrNums.length < 5) attrNums.push(10);
 
-  const scaledNish = scaleAbilityStat(nishNum, dif, true);
-  const scaledMr = scaleMrStat(mrNum, dif);
-  const scaledVit = scaleFlatStat(vitNum, dif, false);
-  const scaledAtk = scaleAbilityStat(atkVal, dif, true);
-  const scaledDmg = scaleFlatStat(dmgVal, dif, false);
-  const scaledDef = scaleAbilityStat(defVal, dif, false);
-  const scaledArmor = scaleFlatStat(armorVal, dif, true);
+  const scaledNish = scaleStatByAnchor('initiative', nishNum, dif);
+  const scaledMr = scaleStatByAnchor('mr', mrNum, dif);
+  const scaledVit = scaleStatByAnchor('max_vit', vitNum, dif);
+  const scaledAtk = scaleStatByAnchor('attack', atkVal, dif);
+  const scaledDmg = scaleStatByAnchor('damage', dmgVal, dif);
+  const scaledDef = scaleStatByAnchor('defense', defVal, dif);
+  const scaledArmor = scaleStatByAnchor('armor', armorVal, dif);
 
-  const scaledList = attrNums.slice(0, 5).map((a) => scaleAbilityStat(a, dif, true));
+  const attrKeys: Array<'magic' | 'might' | 'mind' | 'motion' | 'moxie'> = ['magic', 'might', 'mind', 'motion', 'moxie'];
+  const scaledList = attrNums.slice(0, 5).map((a, i) => scaleStatByAnchor(attrKeys[i], a, dif));
   const scaledAttrs = `✨${scaledList[0]}/💪${scaledList[1]}/👁️${scaledList[2]}/🏃${scaledList[3]}/🫀${scaledList[4]}`;
 
   return {

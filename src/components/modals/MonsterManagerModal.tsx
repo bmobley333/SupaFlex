@@ -18,9 +18,7 @@ import { GmThreatStepper } from '../common/GmThreatStepper';
 import {
   extractFirstInt,
   extractAllInts,
-  scaleAbilityStat,
-  scaleFlatStat,
-  scaleMrStat,
+  scaleStatByAnchor,
   scaleParsedMonster,
   scaleStatlineText,
 } from '../../utils/monsterStatScaler';
@@ -77,18 +75,18 @@ const calculateQuickAddStatsForDif = (base: QuickAddState, targetDif: number): Q
   if (targetDif === 10) return { ...base };
   return {
     ...base,
-    init: scaleAbilityStat(base.init, targetDif, true),
-    mr: scaleMrStat(base.mr, targetDif),
-    atk: scaleAbilityStat(base.atk, targetDif, true),
-    dmg: scaleFlatStat(base.dmg, targetDif, false),
-    def: scaleAbilityStat(base.def, targetDif, false),
-    armor: scaleFlatStat(base.armor, targetDif, true),
-    vit: scaleFlatStat(base.vit, targetDif, false),
-    magic: scaleAbilityStat(base.magic, targetDif, true),
-    might: scaleAbilityStat(base.might, targetDif, true),
-    mind: scaleAbilityStat(base.mind, targetDif, true),
-    motion: scaleAbilityStat(base.motion, targetDif, true),
-    moxie: scaleAbilityStat(base.moxie, targetDif, true),
+    init: scaleStatByAnchor('initiative', base.init, targetDif),
+    mr: scaleStatByAnchor('mr', base.mr, targetDif),
+    atk: scaleStatByAnchor('attack', base.atk, targetDif),
+    dmg: scaleStatByAnchor('damage', base.dmg, targetDif),
+    def: scaleStatByAnchor('defense', base.def, targetDif),
+    armor: scaleStatByAnchor('armor', base.armor, targetDif),
+    vit: scaleStatByAnchor('max_vit', base.vit, targetDif),
+    magic: scaleStatByAnchor('magic', base.magic, targetDif),
+    might: scaleStatByAnchor('might', base.might, targetDif),
+    mind: scaleStatByAnchor('mind', base.mind, targetDif),
+    motion: scaleStatByAnchor('motion', base.motion, targetDif),
+    moxie: scaleStatByAnchor('moxie', base.moxie, targetDif),
   };
 };
 
