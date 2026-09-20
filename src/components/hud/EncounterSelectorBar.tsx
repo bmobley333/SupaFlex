@@ -5,7 +5,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   ChevronDown,
   Plus,
-  Swords,
   Trash2,
   Edit2,
   Sparkles,
@@ -55,7 +54,6 @@ export const EncounterSelectorBar: React.FC<EncounterSelectorBarProps> = ({ clas
           title={activeEnc ? `Encounter: ${activeEnc.title}` : 'Select Encounter'}
         >
           <div className="flex items-center gap-1.5 truncate">
-            <Swords className="w-3.5 h-3.5 text-rose-400 shrink-0" />
             <span className="truncate text-red-400 font-extrabold">{activeEnc?.title || (activeAct ? 'No Encounters' : 'Select Act')}</span>
           </div>
           <div className="flex items-center gap-1 shrink-0">

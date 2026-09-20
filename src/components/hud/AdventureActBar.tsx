@@ -5,8 +5,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   ChevronDown,
   Plus,
-  Compass,
-  Scroll,
   Trash2,
   Edit2,
   ArrowUp,
@@ -78,7 +76,6 @@ export const AdventureActBar: React.FC<AdventureActBarProps> = ({ className = ''
           title={activeAdv ? `Adventure: ${activeAdv.title}` : 'Select Adventure'}
         >
           <div className="flex items-center gap-1.5 truncate">
-            <Compass className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
             <span className="truncate">{activeAdv?.title || 'No Adventure'}</span>
           </div>
           <ChevronDown className="w-3 h-3 text-indigo-400 shrink-0" />
@@ -202,7 +199,6 @@ export const AdventureActBar: React.FC<AdventureActBarProps> = ({ className = ''
           title={activeAct ? `Act: ${activeAct.title}` : 'Select Act'}
         >
           <div className="flex items-center gap-1.5 truncate">
-            <Scroll className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span className="truncate">{activeAct?.title || (activeAdv ? 'No Acts' : 'Select Adventure')}</span>
           </div>
           <ChevronDown className="w-3 h-3 text-amber-400 shrink-0" />
