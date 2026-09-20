@@ -2,7 +2,7 @@
 // Unified Player's Workshop: Master Modal Blueprint 2-Pane Architecture (My Creations + Clone from Player)
 
 import React, { useState, useEffect } from 'react';
-import { X, Check, Trash2, Plus, AlertCircle, RefreshCw, Pencil, ArrowLeft, Search, Mail } from 'lucide-react';
+import { X, Check, Trash2, AlertCircle, RefreshCw, Pencil, ArrowLeft, Search, Mail } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { 
@@ -518,8 +518,8 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
                 onClick={() => onOpenForge()}
                 className="px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-amber-950/40 shrink-0"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Forge New Creation</span>
+                <span>⚒️</span>
+                <span>To Forge</span>
               </button>
             )}
 
@@ -539,9 +539,9 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
         {/* MASTER CATEGORY FILTER BAR (Image 3: Two Symmetrical Rows Matching Forge) */}
         {/* ========================================================================= */}
         <div className="px-6 py-2.5 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex flex-col gap-1.5">
-          {/* Row 1: Capabilities */}
+          {/* Row 1: Abilities */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Capabilities:</span>
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Abilities:</span>
             <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
               <button
                 type="button"
@@ -612,9 +612,9 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
             </div>
           </div>
 
-          {/* Row 2: Equipment */}
+          {/* Row 2: Gear */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Equipment:</span>
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Gear:</span>
             <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
               <button
                 type="button"
@@ -658,7 +658,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
                 }`}
               >
-                ⚙️ Gear
+                ⚙️ Standard Gear
               </button>
               <button
                 type="button"
@@ -721,7 +721,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-200 text-sm flex items-center gap-1.5">
                   <span>👤</span>
-                  <span>My Creations</span>
+                  <span>My Creations/Clones</span>
                   <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-amber-300">
                     {filteredPersonalItems.length}
                   </span>
@@ -758,7 +758,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
                   <p className="text-[11px] mt-1 text-slate-600 max-w-xs">
                     {selectedCategory !== 'all' 
                       ? `No ${selectedCategory} creations found in your library.`
-                      : 'You have not created or cloned any items yet. Click "Forge New Creation" to begin.'}
+                      : 'You have not created or cloned any items yet. Click "To Forge" to begin.'}
                   </p>
                 </div>
               ) : (

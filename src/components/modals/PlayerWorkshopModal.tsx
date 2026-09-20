@@ -2,7 +2,7 @@
 // Unified Player's Forge: Master Modal Blueprint 2-Pane Architecture (Live Preview + Forge Controls)
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Plus, Check, AlertCircle } from 'lucide-react';
+import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CustomCreationType, CustomCreationItem, CustomCreationData } from '../../types/game';
@@ -174,6 +174,25 @@ export const GuardrailBadge: React.FC<{ isValid: boolean }> = ({ isValid }) => (
   </span>
 );
 
+export const getCategoryEmoji = (type: CustomCreationType): string => {
+  switch (type) {
+    case 'power': return '🔥';
+    case 'path': return '🧭';
+    case 'skill': return '🎓';
+    case 'skillset': return '🎓';
+    case 'trait': return '🧬';
+    case 'weapon': return '⚔️';
+    case 'armor': return '🥋';
+    case 'shield': return '🛡️';
+    case 'gear': return '⚙️';
+    case 'exotic': return '🧿';
+    case 'artifact': return '🔮';
+    case 'chaos_gem': return '💎';
+    case 'kit': return '📦';
+    default: return '✨';
+  }
+};
+
 export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -187,7 +206,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeRole = useCharacterStore((state) => state.activeRole);
   const skills = useCharacterStore((state) => state.skills);
-  const powers = useCharacterStore((state) => state.powers);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
 
   const isGm = activeRole === 'gm';
@@ -212,9 +230,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [notes, setNotes] = useState('');
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
-  // Power & Power Table State
-  const [selectedPowerTable, setSelectedPowerTable] = useState('');
-
   // Skillset State (2 to 5 selected existing skill strings)
   const [selectedSkillsetSkills, setSelectedSkillsetSkills] = useState<string[]>(['', '']);
 
@@ -238,30 +253,208 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Personal Creations State (Left Pane A-Z List)
+  const [personalItems, setPersonalItems] = useState<CustomCreationItem[]>([]);
+  const [isLoadingPersonal, setIsLoadingPersonal] = useState<boolean>(false);
+  const [editingItem, setEditingItem] = useState<CustomCreationItem | null>(null);
+  const [listFilterMode, setListFilterMode] = useState<'tab' | 'all'>('tab');
+
   const effectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-populate form if opened with an editing item
-  useEffect(() => {
-    if (isOpen && initialItem) {
-      if (initialItem.type) setCreationType(initialItem.type);
-      if (initialItem.name) setName(initialItem.name);
-      if (initialItem.item_data?.effect) setEffect(initialItem.item_data.effect);
-      if (initialItem.item_data?.action) setAction(initialItem.item_data.action);
-      if (initialItem.item_data?.usage) setUsage(initialItem.item_data.usage);
-      if (initialItem.item_data?.tier) setTier(initialItem.item_data.tier as any);
-      if (initialItem.item_data?.notes) setNotes(initialItem.item_data.notes);
-      else if (initialItem.notes) setNotes(initialItem.notes);
-      if (initialItem.item_data?.genres && Array.isArray(initialItem.item_data.genres)) {
-        setSelectedGenres(initialItem.item_data.genres);
+  const loadPersonalItems = async () => {
+    if (!isOpen || !playerEmail) return;
+    setIsLoadingPersonal(true);
+    try {
+      const items = await gameApi.getPersonalCustomItems(playerEmail);
+      setPersonalItems(items);
+    } catch (err: any) {
+      console.error('[PlayerWorkshopModal] Error loading personal items:', err);
+    } finally {
+      setIsLoadingPersonal(false);
+    }
+  };
+
+  const handleResetForm = () => {
+    setEditingItem(null);
+    setName('');
+    setAction('AM');
+    setUsage('1-Enc');
+    setTier('Minor');
+    setCostVal(10);
+    setCostUnit('g');
+    setPowerReady('primary_arsenal');
+    setSkillAttribute('💪');
+    setSkillDiscipline('General');
+    setTraitCost('1 AP');
+    setPathCategory('General');
+    setPathDescription('');
+    setKitCategory('Survival');
+    setKitDescription('');
+    setEffect('');
+    setNotes('');
+    setSelectedGenres([]);
+    setSelectedSkillsetSkills(['', '']);
+    setWeaponTypeMode('Melee');
+    setWeaponReqNum(4);
+    setArmorReq('💪 4');
+    setShieldReq('💪 4');
+    setGearCategory('Adventure');
+    setGearCategoryNewText('');
+    setFeedback(null);
+  };
+
+  const handlePopulateItemForEdit = (item: CustomCreationItem) => {
+    setEditingItem(item);
+    setFeedback(null);
+    if (item.type) setCreationType(item.type);
+    setName(item.name || '');
+    setNotes(item.item_data?.notes || item.notes || '');
+    if (item.item_data?.genres && Array.isArray(item.item_data.genres)) {
+      setSelectedGenres(item.item_data.genres);
+    } else {
+      setSelectedGenres([]);
+    }
+
+    if (item.type === 'power') {
+      setAction(item.item_data?.action || 'AM');
+      setUsage(item.item_data?.usage || '1-Enc');
+      setEffect(item.item_data?.effect || '');
+      setPowerReady(item.item_data?.ready_category || 'primary_arsenal');
+    } else if (item.type === 'path') {
+      setPathCategory(item.item_data?.category || 'General');
+      setPathDescription(item.item_data?.description || '');
+    } else if (item.type === 'skill') {
+      setSkillAttribute(item.item_data?.attribute || '💪');
+      setSkillDiscipline(item.item_data?.discipline || 'General');
+    } else if (item.type === 'skillset') {
+      if (Array.isArray(item.item_data?.skills) && item.item_data.skills.length > 0) {
+        setSelectedSkillsetSkills(item.item_data.skills);
+      } else {
+        setSelectedSkillsetSkills(['', '']);
       }
-      if (initialItem.item_data?.attribute) setSkillAttribute(initialItem.item_data.attribute);
-      if (initialItem.item_data?.category) {
-        setPathCategory(initialItem.item_data.category);
-        setKitCategory(initialItem.item_data.category);
-        setGearCategory(initialItem.item_data.category);
+    } else if (item.type === 'trait') {
+      setTraitCost(item.item_data?.cost || '1 AP');
+      setEffect(item.item_data?.effect || '');
+    } else if (item.type === 'weapon') {
+      setWeaponTypeMode((item.item_data?.type as any) || 'Melee');
+      if (item.item_data?.cost) {
+        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
+        if (match) {
+          setCostVal(parseInt(match[1], 10));
+          setCostUnit(match[2] as 's' | 'g');
+        }
+      }
+      if (item.item_data?.requirement) {
+        const numMatch = item.item_data.requirement.match(/\d+/);
+        if (numMatch) setWeaponReqNum(parseInt(numMatch[0], 10));
+      }
+    } else if (item.type === 'armor') {
+      if (item.item_data?.requirement) setArmorReq(item.item_data.requirement);
+      if (item.item_data?.cost) {
+        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
+        if (match) {
+          setCostVal(parseInt(match[1], 10));
+          setCostUnit(match[2] as 's' | 'g');
+        }
+      }
+    } else if (item.type === 'shield') {
+      if (item.item_data?.requirement) setShieldReq(item.item_data.requirement);
+      if (item.item_data?.cost) {
+        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
+        if (match) {
+          setCostVal(parseInt(match[1], 10));
+          setCostUnit(match[2] as 's' | 'g');
+        }
+      }
+    } else if (item.type === 'gear') {
+      if (item.item_data?.category) setGearCategory(item.item_data.category);
+      if (item.item_data?.cost) {
+        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
+        if (match) {
+          setCostVal(parseInt(match[1], 10));
+          setCostUnit(match[2] as 's' | 'g');
+        }
+      }
+    } else if (item.type === 'exotic') {
+      setAction(item.item_data?.action || 'AM');
+      setUsage(item.item_data?.usage || '1-Enc');
+      setTier((item.item_data?.tier as any) || 'Minor');
+      setEffect(item.item_data?.effect || '');
+      if (item.item_data?.cost) {
+        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
+        if (match) {
+          setCostVal(parseInt(match[1], 10));
+          setCostUnit(match[2] as 's' | 'g');
+        }
+      }
+    } else if (item.type === 'artifact') {
+      setAction(item.item_data?.action || 'AM');
+      setUsage(item.item_data?.usage || '1-Enc');
+      setTier((item.item_data?.tier as any) || 'Minor');
+      setEffect(item.item_data?.effect || '');
+    } else if (item.type === 'chaos_gem') {
+      setEffect(item.item_data?.effect || '');
+    } else if (item.type === 'kit') {
+      if (item.item_data?.category) setKitCategory(item.item_data.category);
+      setKitDescription(item.item_data?.description || '');
+      if (item.item_data?.cost) {
+        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
+        if (match) {
+          setCostVal(parseInt(match[1], 10));
+          setCostUnit(match[2] as 's' | 'g');
+        }
       }
     }
-  }, [isOpen, initialItem]);
+  };
+
+  const handleDeleteItem = async (item: CustomCreationItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(`Delete '${item.name}' from your personal library?`)) return;
+
+    try {
+      await gameApi.deleteCustomItem(item.id);
+      setFeedback({
+        type: 'success',
+        message: `Deleted '${item.name}' from your personal creations.`,
+      });
+      if (editingItem?.id === item.id) {
+        handleResetForm();
+      }
+      loadPersonalItems();
+    } catch (err: any) {
+      console.error('[PlayerWorkshopModal] Error deleting item:', err);
+      setFeedback({ type: 'error', message: 'Failed to delete creation.' });
+    }
+  };
+
+  const sortedPersonalItems = useMemo(() => {
+    return [...personalItems].sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+    );
+  }, [personalItems]);
+
+  const displayList = useMemo(() => {
+    if (listFilterMode === 'all') {
+      return sortedPersonalItems;
+    }
+    return sortedPersonalItems.filter((it) => it.type === creationType);
+  }, [sortedPersonalItems, listFilterMode, creationType]);
+
+  // Load custom items and personal items when modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      loadPersonalItems();
+      if (initialItem) {
+        handlePopulateItemForEdit(initialItem);
+      } else {
+        handleResetForm();
+      }
+    } else {
+      setSelectedGenres([]);
+      setFeedback(null);
+      setEditingItem(null);
+    }
+  }, [isOpen, initialItem, playerEmail]);
 
   // Switch tabs cleanly
   const handleSwitchTab = (newType: CustomCreationType) => {
@@ -274,7 +467,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   // Real-time Guardrail Validation Flags
   const isNameValid = name.trim().length > 0;
-  const isPowerTableValid = selectedPowerTable.trim().length > 0;
   const isEffectValid = effect.trim().length > 0;
   const isGenresValid = selectedGenres.length > 0;
   const isSkillAttributeValid = !!skillAttribute && skillAttribute.trim().length > 0;
@@ -290,7 +482,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (!isGenresValid) return false;
 
     if (creationType === 'power') {
-      return isPowerTableValid && isEffectValid;
+      return isEffectValid;
     }
     if (creationType === 'path') {
       return pathDescription.trim().length > 0;
@@ -321,7 +513,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     creationType,
     isNameValid,
     isGenresValid,
-    isPowerTableValid,
     isEffectValid,
     isSkillAttributeValid,
     isSkillsetSkillsValid,
@@ -428,18 +619,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       .map((entry) => entry[1]);
   }, [skills, activeCharacter, customSkillsList, isGsUnlocked]);
 
-  // Group power tables
-  const groupedPowerTables = useMemo(() => {
-    const groups: Record<string, { name: string }[]> = {};
-    const tableNames = Array.from(new Set(powers.map((p) => p.kit || p.table_group || p.table_name || 'General').filter(Boolean)));
-    tableNames.sort((a, b) => compareMsoOptions(a, b, isGsUnlocked)).forEach((tblName) => {
-      const sample = powers.find((p) => (p.kit || p.table_group || p.table_name) === tblName);
-      const cat = sample?.category || sample?.discipline || 'General';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push({ name: tblName });
-    });
-    return groups;
-  }, [powers, isGsUnlocked]);
 
   if (!isOpen) return null;
 
@@ -486,34 +665,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     );
   };
 
-  const handleResetForm = () => {
-    setName('');
-    setAction('AM');
-    setUsage('1-Enc');
-    setTier('Minor');
-    setCostVal(10);
-    setCostUnit('g');
-    setPowerReady('primary_arsenal');
-    setSkillAttribute('💪');
-    setSkillDiscipline('General');
-    setTraitCost('1 AP');
-    setPathCategory('General');
-    setPathDescription('');
-    setKitCategory('Survival');
-    setKitDescription('');
-    setEffect('');
-    setNotes('');
-    setSelectedGenres([]);
-    setSelectedPowerTable('');
-    setSelectedSkillsetSkills(['', '']);
-    setWeaponTypeMode('Melee');
-    setWeaponReqNum(4);
-    setArmorReq('💪 4');
-    setShieldReq('💪 4');
-    setGearCategory('Adventure');
-    setGearCategoryNewText('');
-  };
-
   const costStr = creationType === 'artifact' ? 'Artifact' : `${costVal}${costUnit}`;
 
   let weaponReqStr = `💪 ${weaponReqNum}`;
@@ -533,7 +684,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     const authorDisplayName = playerName || playerEmail?.split('@')[0] || 'Unknown Forger';
     const categoryStr =
       creationType === 'power'
-        ? selectedPowerTable
+        ? 'Power'
         : creationType === 'path'
         ? pathCategory
         : creationType === 'trait'
@@ -563,8 +714,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       itemDataPayload.action = action;
       itemDataPayload.usage = usage;
       itemDataPayload.effect = effect.trim();
-      itemDataPayload.table = selectedPowerTable;
-      itemDataPayload.table_group = selectedPowerTable;
+      itemDataPayload.table = 'General';
+      itemDataPayload.table_group = 'General';
       itemDataPayload.ready_category = powerReady;
     } else if (creationType === 'path') {
       itemDataPayload.category = pathCategory;
@@ -635,18 +786,22 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         notes: notes.trim() ? notes.trim() : undefined,
       };
 
-      if (initialItem && initialItem.id) {
-        await gameApi.updateCustomItem(initialItem.id, newCustomItem);
+      if (editingItem && editingItem.id) {
+        await gameApi.updateCustomItem(editingItem.id, newCustomItem);
+        setFeedback({
+          type: 'success',
+          message: `✅ Updated '${name.trim()}' in your Custom Elements library!`,
+        });
       } else {
         await gameApi.saveCustomItem(newCustomItem);
+        setFeedback({
+          type: 'success',
+          message: `✅ Successfully forged '${name.trim()}' to your Custom Elements library!`,
+        });
       }
 
-      setFeedback({
-        type: 'success',
-        message: `✅ Successfully forged '${name.trim()}' to your Custom Elements library!`,
-      });
-
       handleResetForm();
+      loadPersonalItems();
       if (onItemSaved) onItemSaved();
     } catch (err: any) {
       console.error('[PlayerWorkshopModal] Error forging item:', err);
@@ -712,9 +867,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
         {/* Primary Classification Tabs (Two Symmetrical Rows matching Character Sheet Cards) */}
         <div className="px-6 py-2.5 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex flex-col gap-1.5">
-          {/* Row 1: Capabilities & Powers */}
+          {/* Row 1: Abilities & Powers */}
           <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Capabilities:</span>
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Abilities:</span>
             <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
               <button
                 type="button"
@@ -785,9 +940,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           </div>
 
-          {/* Row 2: Equipment & Gear */}
+          {/* Row 2: Gear */}
           <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Equipment:</span>
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Gear:</span>
             <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
               <button
                 type="button"
@@ -831,7 +986,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
                 }`}
               >
-                ⚙️ Gear
+                ⚙️ Standard Gear
               </button>
               <button
                 type="button"
@@ -873,252 +1028,435 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         {/* 2-Pane Grid Architecture */}
         <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-800/80 overflow-hidden">
           {/* ========================================================================= */}
-          {/* PANE 1 (LEFT): LIVE CARD PREVIEW & CANONICAL NOTATION CHEAT SHEET         */}
+          {/* PANE 1 (LEFT): FROZEN LIVE CARD PREVIEW + A-Z CREATIONS/CLONES LIST       */}
           {/* ========================================================================= */}
-          <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-5 overflow-y-auto gap-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="font-outfit font-extrabold text-xs uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                <span>⚒️</span> Live Card Preview
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">Character Sheet Parity</span>
+          <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
+            {/* FROZEN TOP SECTION: LIVE CARD PREVIEW */}
+            <div className="shrink-0 flex flex-col gap-2">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-outfit font-extrabold text-xs uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <span>⚒️</span> Live Card Preview
+                  </span>
+                  {editingItem ? (
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      Editing
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 font-mono">Character Sheet Parity</span>
+                  )}
+                </div>
+                {editingItem && (
+                  <button
+                    type="button"
+                    onClick={handleResetForm}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition cursor-pointer"
+                    title="Clear editor to start a new blank creation"
+                  >
+                    + New Blank
+                  </button>
+                )}
+              </div>
+
+              {/* Dynamic Card Preview Container (Scrolls internally if long, keeps top frozen) */}
+              <div className="max-h-[210px] overflow-y-auto pr-1 flex flex-col justify-start">
+                {creationType === 'power' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-rose-500/40 shadow-xl flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-rose-200 truncate">{name || 'Unnamed Power'}</span>
+                      <div className="flex items-center gap-1 text-[10px] font-mono shrink-0">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold border border-slate-700">{action}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                      <span className="capitalize">{powerReady.replace('_', ' ')}</span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                      {effect || 'Effect rules syntax will render here...'}
+                    </div>
+                    {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
+                  </div>
+                )}
+
+                {creationType === 'path' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-purple-200 text-sm font-outfit flex items-center gap-1.5">
+                        <span>🧭</span>
+                        <span>{name || 'Unnamed Path'}</span>
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
+                        {pathCategory} Path
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
+                      {pathDescription || 'Path description, heritage lore, and capabilities...'}
+                    </p>
+                  </div>
+                )}
+
+                {creationType === 'skill' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-indigo-500/40 shadow-xl flex flex-col gap-2">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-indigo-200 text-sm font-outfit flex items-center gap-1.5">
+                        <span>🎓</span>
+                        <span>{name || 'Unnamed Skill'}</span>
+                      </span>
+                      <span className="px-2.5 py-1 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-500/40 text-xs font-extrabold">
+                        {skillAttribute}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      Discipline: <strong className="text-slate-200">{skillDiscipline}</strong>
+                    </div>
+                    {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
+                  </div>
+                )}
+
+                {creationType === 'skillset' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/40 shadow-xl flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-emerald-200 text-sm font-outfit flex items-center gap-1.5">
+                        <span>🎓</span>
+                        <span>{name || 'Unnamed Skillset'}</span>
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
+                        {selectedSkillsetSkills.filter(Boolean).length} Skills
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedSkillsetSkills.filter(Boolean).map((s) => (
+                        <span key={s} className="px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-200 border border-emerald-500/30 text-[11px] font-semibold">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {creationType === 'trait' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-purple-200 text-sm font-outfit flex items-center gap-1.5">
+                        <span>🧬</span>
+                        <span>{name || 'Unnamed Trait'}</span>
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
+                        {traitCost}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                      {effect || 'Trait mechanical effects...'}
+                    </div>
+                    {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
+                  </div>
+                )}
+
+                {creationType === 'weapon' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-orange-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Weapon'}</span>
+                      <span className="px-2 py-0.5 rounded bg-orange-950/80 text-orange-300 border border-orange-500/40 text-[10px]">{weaponTypeMode}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+                      <div>Req: <strong className="text-slate-100">{weaponReqStr}</strong></div>
+                      <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
+                      <div>Atk: <strong className="text-amber-300">{getWeaponAtkDmg(weaponTypeMode)}</strong></div>
+                      <div>Dmg: <strong className="text-rose-300">d{getWeaponAtkDmg(weaponTypeMode)}</strong></div>
+                      <div>Block: <strong className="text-cyan-300">{getWeaponMaxBlock(weaponTypeMode, weaponReqNum)}</strong></div>
+                    </div>
+                    {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
+                  </div>
+                )}
+
+                {creationType === 'armor' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Armor'}</span>
+                      <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px]">Armor SK</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+                      <div>Req: <strong className="text-slate-100">{armorReq}</strong></div>
+                      <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
+                      <div>AR: <strong className="text-amber-300">🧥 {getArmorArStr(armorReq)}</strong></div>
+                      <div>MR: <strong className="text-cyan-300">👣 {getArmorMrStr(armorReq)}</strong></div>
+                    </div>
+                    {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
+                  </div>
+                )}
+
+                {creationType === 'shield' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-cyan-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Shield'}</span>
+                      <span className="px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 text-[10px]">Shield SK</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+                      <div>Req: <strong className="text-slate-100">{shieldReq}</strong></div>
+                      <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
+                      <div>Max Block: <strong className="text-cyan-300">{getShieldMaxBlockStr(shieldReq)}</strong></div>
+                      <div>MR Adj: <strong className="text-cyan-300">👣 {getShieldMrStr(shieldReq)}</strong></div>
+                    </div>
+                    {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
+                  </div>
+                )}
+
+                {creationType === 'gear' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-teal-500/40 shadow-xl flex flex-col gap-2 text-xs">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Standard Gear'}</span>
+                      <span className="px-2 py-0.5 rounded bg-teal-950/80 text-teal-300 border border-teal-500/40 text-[10px]">{finalGearCat}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-300 flex items-center justify-between">
+                      <span>Category: <strong className="text-teal-300">{finalGearCat}</strong></span>
+                      <span>Cost: <strong className="text-amber-300">{costStr}</strong></span>
+                    </div>
+                    {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
+                  </div>
+                )}
+
+                {creationType === 'exotic' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-cyan-500/40 shadow-xl flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-cyan-200">{name || 'Unnamed Exotic'}</span>
+                      <div className="flex items-center gap-1 text-[10px] font-mono">
+                        <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-bold">{tier} 🧿</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold border border-slate-700">{action}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                      <span>Cost: <strong className="text-amber-300">{costStr}</strong></span>
+                      <span>Loadout: <strong className="text-cyan-300">{getItemSlotWeight({ name, category: tier })} Slot(s)</strong></span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                      {effect || 'Effect rules text...'}
+                    </div>
+                    {notes && <p className="text-[10px] text-slate-500 italic">"{notes}"</p>}
+                  </div>
+                )}
+
+                {creationType === 'artifact' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-purple-200">{name || 'Unnamed Artifact'}</span>
+                      <div className="flex items-center gap-1 text-[10px] font-mono">
+                        <span className="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40 font-bold">{tier} 🔮</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold border border-slate-700">{action}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                      <span className="px-2 py-0.5 rounded bg-purple-950/70 border border-purple-500/30 text-purple-300 font-bold text-[10px]">Cost: Artifact</span>
+                      <span>Loadout: <strong className="text-purple-300">{getItemSlotWeight({ name, category: tier })} Slot(s)</strong></span>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                      {effect || 'Effect rules text...'}
+                    </div>
+                    {notes && <p className="text-[10px] text-slate-500 italic">"{notes}"</p>}
+                  </div>
+                )}
+
+                {creationType === 'chaos_gem' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-violet-500/40 shadow-xl flex flex-col gap-2 text-xs">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-violet-200 text-sm font-outfit flex items-center gap-1.5">
+                        <span>💎</span>
+                        <span>{name || 'Unnamed Chaos Gem'}</span>
+                      </span>
+                      <div className="flex items-center gap-1 font-mono text-[10px]">
+                        <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">F</span>
+                        <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">3 Uses</span>
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                      {effect || 'Socket activation effect will render here...'}
+                    </div>
+                    {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
+                  </div>
+                )}
+
+                {creationType === 'kit' && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/40 shadow-xl flex flex-col gap-2 text-xs">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-amber-200 text-sm font-outfit flex items-center gap-1.5">
+                        <span>📦</span>
+                        <span>{name || 'Unnamed Kit'}</span>
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
+                        {costStr}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">Category: <strong className="text-amber-300">{kitCategory}</strong></div>
+                    <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">{kitDescription || 'Kit description and equipment bundle contents...'}</p>
+                    {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Dynamic Card Preview Container */}
-            <div className="flex-1 flex flex-col justify-start">
-              {creationType === 'power' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-rose-500/40 shadow-xl flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-rose-200 truncate">{name || 'Unnamed Power'}</span>
-                    <div className="flex items-center gap-1 text-[10px] font-mono shrink-0">
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold border border-slate-700">{action}</span>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
-                    </div>
-                  </div>
-                  <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                    <span>Path: <strong className="text-slate-200">{selectedPowerTable || 'General'}</strong></span>
-                    <span>•</span>
-                    <span className="capitalize">{powerReady.replace('_', ' ')}</span>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
-                    {effect || 'Effect rules syntax will render here...'}
-                  </div>
-                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
-                </div>
-              )}
+            {/* SEPARATOR & CREATED/CLONED CARDS HEADER */}
+            <div className="border-t border-slate-800/80 pt-2 shrink-0 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="font-outfit font-extrabold text-xs text-slate-200 flex items-center gap-1.5">
+                  <span>📚</span>
+                  <span>My Creations / Clones</span>
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-slate-800 border border-slate-700 text-amber-300">
+                  {displayList.length}
+                </span>
+              </div>
 
-              {creationType === 'path' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-purple-200 text-sm font-outfit flex items-center gap-1.5">
-                      <span>🧭</span>
-                      <span>{name || 'Unnamed Path'}</span>
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
-                      {pathCategory} Path
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
-                    {pathDescription || 'Path description, heritage lore, and capabilities...'}
+              <div className="flex items-center gap-1.5">
+                {/* Option A Toggle: Current Tab vs All */}
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setListFilterMode('tab')}
+                    className={`px-1.5 py-0.5 text-[9px] font-bold rounded transition-all cursor-pointer ${
+                      listFilterMode === 'tab'
+                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Filter to creations matching active tab"
+                  >
+                    Tab ({sortedPersonalItems.filter((it) => it.type === creationType).length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setListFilterMode('all')}
+                    className={`px-1.5 py-0.5 text-[9px] font-bold rounded transition-all cursor-pointer ${
+                      listFilterMode === 'all'
+                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Show all creations across all categories"
+                  >
+                    All ({sortedPersonalItems.length})
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={loadPersonalItems}
+                  className="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+                  title="Refresh creations library"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isLoadingPersonal ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* SCROLLABLE A-Z CREATED/CLONED CARDS LIST */}
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
+              {displayList.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                  <span className="text-2xl mb-1.5">📦</span>
+                  <p className="font-semibold text-slate-400">No creations found</p>
+                  <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                    {listFilterMode === 'tab'
+                      ? `No ${creationType} creations made or cloned yet.`
+                      : 'You have not created or cloned any items yet.'}
                   </p>
                 </div>
-              )}
+              ) : (
+                displayList.map((item) => {
+                  const isItemEditing = editingItem?.id === item.id;
+                  const itemAction = item.item_data?.action || 'A';
+                  const itemUsage = item.item_data?.usage || '1-Enc';
+                  const itemEffect = item.item_data?.effect || '';
+                  const itemCost = item.item_data?.cost;
+                  const itemReq = item.item_data?.requirement;
+                  const itemTier = item.item_data?.tier;
 
-              {creationType === 'skill' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-indigo-500/40 shadow-xl flex flex-col gap-2">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-indigo-200 text-sm font-outfit flex items-center gap-1.5">
-                      <span>🎓</span>
-                      <span>{name || 'Unnamed Skill'}</span>
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-500/40 text-xs font-extrabold">
-                      {skillAttribute}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    Discipline: <strong className="text-slate-200">{skillDiscipline}</strong>
-                  </div>
-                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
-                </div>
-              )}
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => handlePopulateItemForEdit(item)}
+                      className={`p-2.5 rounded-xl border transition flex flex-col gap-1.5 shadow-sm cursor-pointer ${
+                        isItemEditing
+                          ? 'bg-amber-950/30 border-amber-500/80 ring-1 ring-amber-500/40'
+                          : 'bg-slate-950/70 border-slate-800/80 hover:border-amber-500/40 hover:bg-slate-900/80'
+                      }`}
+                    >
+                      {/* Top Row: Emoji + Name + Type Tag + Actions */}
+                      <div className="flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-sm shrink-0">{getCategoryEmoji(item.type)}</span>
+                          <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
+                            {item.type}
+                          </span>
+                        </div>
 
-              {creationType === 'skillset' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/40 shadow-xl flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-emerald-200 text-sm font-outfit flex items-center gap-1.5">
-                      <span>🎓</span>
-                      <span>{name || 'Unnamed Skillset'}</span>
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
-                      {selectedSkillsetSkills.filter(Boolean).length} Skills
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedSkillsetSkills.filter(Boolean).map((s) => (
-                      <span key={s} className="px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-200 border border-emerald-500/30 text-[11px] font-semibold">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+                        {/* Actions: Pencil & Trash */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePopulateItemForEdit(item);
+                            }}
+                            className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
+                            title="Edit this card"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteItem(item, e)}
+                            className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
+                            title="Delete this card"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
 
-              {creationType === 'trait' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-purple-200 text-sm font-outfit flex items-center gap-1.5">
-                      <span>🧬</span>
-                      <span>{name || 'Unnamed Trait'}</span>
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
-                      {traitCost}
-                    </span>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
-                    {effect || 'Trait mechanical effects...'}
-                  </div>
-                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
-                </div>
-              )}
+                      {/* Middle Row: Attribute / Chips */}
+                      <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                        {item.type === 'power' || item.type === 'exotic' || item.type === 'artifact' ? (
+                          <>
+                            <span className="px-1.5 py-0.2 bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 font-bold rounded">
+                              {itemAction}
+                            </span>
+                            <span className="px-1.5 py-0.2 bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 font-bold rounded">
+                              {itemUsage}
+                            </span>
+                          </>
+                        ) : null}
+                        {itemTier && (
+                          <span className="px-1.5 py-0.2 bg-purple-950/80 border border-purple-500/30 text-purple-300 font-bold rounded">
+                            {itemTier}
+                          </span>
+                        )}
+                        {itemReq && (
+                          <span className="px-1.5 py-0.2 bg-slate-800 border border-slate-700 text-slate-300 font-bold rounded">
+                            {itemReq}
+                          </span>
+                        )}
+                        {itemCost && (
+                          <span className="px-1.5 py-0.2 bg-amber-950/80 border border-amber-500/30 text-amber-300 font-bold rounded">
+                            {itemCost}
+                          </span>
+                        )}
+                        {item.item_data?.cloned_from && (
+                          <span className="px-1.5 py-0.2 bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 font-medium rounded truncate max-w-[150px]">
+                            🧬 Cloned: {item.item_data.cloned_from}
+                          </span>
+                        )}
+                      </div>
 
-              {creationType === 'weapon' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-orange-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Weapon'}</span>
-                    <span className="px-2 py-0.5 rounded bg-orange-950/80 text-orange-300 border border-orange-500/40 text-[10px]">{weaponTypeMode}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
-                    <div>Req: <strong className="text-slate-100">{weaponReqStr}</strong></div>
-                    <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
-                    <div>Atk: <strong className="text-amber-300">{getWeaponAtkDmg(weaponTypeMode)}</strong></div>
-                    <div>Dmg: <strong className="text-rose-300">d{getWeaponAtkDmg(weaponTypeMode)}</strong></div>
-                    <div>Block: <strong className="text-cyan-300">{getWeaponMaxBlock(weaponTypeMode, weaponReqNum)}</strong></div>
-                  </div>
-                  {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
-                </div>
-              )}
-
-              {creationType === 'armor' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Armor'}</span>
-                    <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px]">Armor SK</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
-                    <div>Req: <strong className="text-slate-100">{armorReq}</strong></div>
-                    <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
-                    <div>AR: <strong className="text-amber-300">🧥 {getArmorArStr(armorReq)}</strong></div>
-                    <div>MR: <strong className="text-cyan-300">👣 {getArmorMrStr(armorReq)}</strong></div>
-                  </div>
-                  {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
-                </div>
-              )}
-
-              {creationType === 'shield' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-cyan-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Shield'}</span>
-                    <span className="px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 text-[10px]">Shield SK</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
-                    <div>Req: <strong className="text-slate-100">{shieldReq}</strong></div>
-                    <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
-                    <div>Max Block: <strong className="text-cyan-300">{getShieldMaxBlockStr(shieldReq)}</strong></div>
-                    <div>MR Adj: <strong className="text-cyan-300">👣 {getShieldMrStr(shieldReq)}</strong></div>
-                  </div>
-                  {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
-                </div>
-              )}
-
-              {creationType === 'gear' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-teal-500/40 shadow-xl flex flex-col gap-2 text-xs">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Gear'}</span>
-                    <span className="px-2 py-0.5 rounded bg-teal-950/80 text-teal-300 border border-teal-500/40 text-[10px]">{finalGearCat}</span>
-                  </div>
-                  <div className="text-[11px] text-slate-300 flex items-center justify-between">
-                    <span>Category: <strong className="text-teal-300">{finalGearCat}</strong></span>
-                    <span>Cost: <strong className="text-amber-300">{costStr}</strong></span>
-                  </div>
-                  {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
-                </div>
-              )}
-
-              {creationType === 'exotic' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-cyan-500/40 shadow-xl flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-cyan-200">{name || 'Unnamed Exotic'}</span>
-                    <div className="flex items-center gap-1 text-[10px] font-mono">
-                      <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-bold">{tier} 🧿</span>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold border border-slate-700">{action}</span>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
+                      {/* Bottom Row: Effect Snippet */}
+                      {itemEffect && (
+                        <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
+                          {itemEffect}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="text-[11px] text-slate-400 flex items-center justify-between">
-                    <span>Cost: <strong className="text-amber-300">{costStr}</strong></span>
-                    <span>Loadout: <strong className="text-cyan-300">{getItemSlotWeight({ name, category: tier })} Slot(s)</strong></span>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
-                    {effect || 'Effect rules text...'}
-                  </div>
-                  {notes && <p className="text-[10px] text-slate-500 italic">"{notes}"</p>}
-                </div>
-              )}
-
-              {creationType === 'artifact' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-purple-200">{name || 'Unnamed Artifact'}</span>
-                    <div className="flex items-center gap-1 text-[10px] font-mono">
-                      <span className="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40 font-bold">{tier} 🔮</span>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold border border-slate-700">{action}</span>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
-                    </div>
-                  </div>
-                  <div className="text-[11px] text-slate-400 flex items-center justify-between">
-                    <span className="px-2 py-0.5 rounded bg-purple-950/70 border border-purple-500/30 text-purple-300 font-bold text-[10px]">Cost: Artifact</span>
-                    <span>Loadout: <strong className="text-purple-300">{getItemSlotWeight({ name, category: tier })} Slot(s)</strong></span>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
-                    {effect || 'Effect rules text...'}
-                  </div>
-                  {notes && <p className="text-[10px] text-slate-500 italic">"{notes}"</p>}
-                </div>
-              )}
-
-              {creationType === 'chaos_gem' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-violet-500/40 shadow-xl flex flex-col gap-2 text-xs">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-violet-200 text-sm font-outfit flex items-center gap-1.5">
-                      <span>💎</span>
-                      <span>{name || 'Unnamed Chaos Gem'}</span>
-                    </span>
-                    <div className="flex items-center gap-1 font-mono text-[10px]">
-                      <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">F</span>
-                      <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">3 Uses</span>
-                    </div>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
-                    {effect || 'Socket activation effect will render here...'}
-                  </div>
-                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
-                </div>
-              )}
-
-              {creationType === 'kit' && (
-                <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/40 shadow-xl flex flex-col gap-2 text-xs">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-amber-200 text-sm font-outfit flex items-center gap-1.5">
-                      <span>📦</span>
-                      <span>{name || 'Unnamed Kit'}</span>
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
-                      {costStr}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-400">Category: <strong className="text-amber-300">{kitCategory}</strong></div>
-                  <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">{kitDescription || 'Kit description and equipment bundle contents...'}</p>
-                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
-                </div>
+                  );
+                })
               )}
             </div>
           </div>
@@ -1169,31 +1507,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             {/* A. POWERS */}
             {creationType === 'power' && (
               <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-slate-300">Path / Table</span>
-                      <GuardrailBadge isValid={isPowerTableValid} />
-                    </div>
-                    <select
-                      value={selectedPowerTable}
-                      onChange={(e) => setSelectedPowerTable(e.target.value)}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-semibold px-3 py-1.5 rounded-xl outline-none focus:border-amber-400 cursor-pointer"
-                      required
-                    >
-                      <option value="">-- Select Table --</option>
-                      {Object.entries(groupedPowerTables).map(([category, tables]) => (
-                        <optgroup key={category} label={category}>
-                          {tables.map((t) => (
-                            <option key={t.name} value={t.name}>
-                              {t.name}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                  </div>
-
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
                     <span className="font-bold text-slate-300">Action</span>
                     <select
@@ -1732,7 +2046,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Effect Rules Syntax</span>
+                    <span className="font-bold text-slate-300">Quick Add</span>
                     <GuardrailBadge isValid={isEffectValid} />
                     <InfoTooltip text="Use strict SupaFlex notation grammar. Attributes: ✨💪👁️🏃🫀👣. Range: Touch, 1sq, 2sq, Short, Medium, Long, Extreme. AoE: AoE [#]r or [#]x[#]." />
                   </div>
@@ -1820,7 +2134,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-300">Compatible Genres</span>
+                  <span className="font-bold text-slate-300">Genres - select ALL that could apply</span>
                   <GuardrailBadge isValid={isGenresValid} />
                   <InfoTooltip text="Select at least one genre where this item is permitted." />
                 </div>
