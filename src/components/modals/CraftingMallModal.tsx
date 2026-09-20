@@ -1,9 +1,22 @@
+// src/components/modals/CraftingMallModal.tsx
+// Unified Player's Workshop: Master Modal Blueprint 2-Pane Architecture (My Creations + Clone from Player)
+
 import React, { useState, useEffect } from 'react';
-import { X, Send, Check, Trash2, Plus, AlertCircle, RefreshCw, Crown } from 'lucide-react';
+import { X, Check, Trash2, Plus, AlertCircle, RefreshCw, Pencil, ArrowLeft, Search, Mail } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationItem, CustomCreationType, Power, MagicItem, AbilitySlot, WeaponSlot, ArmorData, ShieldData, SimpleGearItem, SupabaseChaosGem } from '../../types/game';
-import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { 
+  CustomCreationItem, 
+  CustomCreationType, 
+  Power, 
+  MagicItem, 
+  AbilitySlot, 
+  WeaponSlot, 
+  ArmorData, 
+  ShieldData, 
+  SimpleGearItem, 
+  SupabaseChaosGem 
+} from '../../types/game';
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
 import { getPowerReadyCategory } from '../../utils/readyMatrixSchedule';
 import { ChaosGauntletSocketModal } from './ChaosGauntletSocketModal';
@@ -11,11 +24,16 @@ import { ChaosGauntletSocketModal } from './ChaosGauntletSocketModal';
 interface CraftingMallModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenWorkshop?: () => void;
+  onOpenForge?: (itemToEdit?: CustomCreationItem) => void;
 }
 
-export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, onClose, onOpenWorkshop }) => {
+export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onOpenForge 
+}) => {
   const playerEmail = useCharacterStore((state) => state.playerEmail);
+  const playerName = useCharacterStore((state) => state.playerName);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
   const activeRole = useCharacterStore((state) => state.activeRole);
@@ -24,53 +42,44 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
 
   const isGm = activeRole === 'gm';
 
-  const [activeTab, setActiveTab] = useState<'my_creations' | 'party_mall' | 'showcase' | 'submissions'>('my_creations');
-  const [typeFilter, setTypeFilter] = useState<'all' | CustomCreationType>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Category Filter State (Matching Image 3 from Forge)
+  const [selectedCategory, setSelectedCategory] = useState<'all' | CustomCreationType>('all');
+  const [personalSearchQuery, setPersonalSearchQuery] = useState('');
 
+  // Personal Items State (Left Pane)
   const [personalItems, setPersonalItems] = useState<CustomCreationItem[]>([]);
-  const [partyItems, setPartyItems] = useState<CustomCreationItem[]>([]);
-  const [showcaseItems, setShowcaseItems] = useState<CustomCreationItem[]>([]);
-  const [submissionItems, setSubmissionItems] = useState<CustomCreationItem[]>([]);
-  const [socketingGem, setSocketingGem] = useState<SupabaseChaosGem | null>(null);
   const [allowCloning, setAllowCloning] = useState<boolean>(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingPersonal, setIsLoadingPersonal] = useState(false);
+
+  // Target Player Cloning State (Right Pane)
+  const [targetEmail, setTargetEmail] = useState('');
+  const [targetItems, setTargetItems] = useState<CustomCreationItem[]>([]);
+  const [isSearchingTarget, setIsSearchingTarget] = useState(false);
+  const [targetPrivacyStatus, setTargetPrivacyStatus] = useState<'idle' | 'allowed' | 'private' | 'not_found'>('idle');
+
+  // Socketing Gem State
+  const [socketingGem, setSocketingGem] = useState<SupabaseChaosGem | null>(null);
+
+  // General Feedback Toast
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const loadData = async () => {
-    if (!isOpen) return;
-    setIsLoading(true);
+  // Load personal creations
+  const loadPersonalData = async () => {
+    if (!isOpen || !playerEmail) return;
+    setIsLoadingPersonal(true);
     try {
-      const [personal, all] = await Promise.all([
-        playerEmail ? gameApi.getPersonalCustomItems(playerEmail) : Promise.resolve([]),
-        gameApi.getAllCustomItems(),
-      ]);
-
+      const personal = await gameApi.getPersonalCustomItems(playerEmail);
       setPersonalItems(personal);
-      setShowcaseItems(all.filter((item) => item.is_promoted));
-
-      if (activePartyId) {
-        // Party items: filtered by party_id and (gm_approved OR author is active GM)
-        const [partyResult, pendingResult] = await Promise.all([
-          gameApi.getPartyCustomItems(activePartyId),
-          isGm ? gameApi.getPendingPartySubmissions(activePartyId) : Promise.resolve([]),
-        ]);
-        setPartyItems(partyResult);
-        setSubmissionItems(pendingResult);
-      } else {
-        setPartyItems([]);
-        setSubmissionItems([]);
-      }
     } catch (err: any) {
-      console.error('[CraftingMallModal] Error loading items:', err);
+      console.error('[CraftingMallModal] Error loading personal items:', err);
     } finally {
-      setIsLoading(false);
+      setIsLoadingPersonal(false);
     }
   };
 
   useEffect(() => {
     if (isOpen) {
-      loadData();
+      loadPersonalData();
       if (playerEmail) {
         gameApi.getUserProfile(playerEmail).then((prof) => {
           if (prof && typeof prof.allow_cloning === 'boolean') {
@@ -79,8 +88,9 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
         });
       }
     }
-  }, [isOpen, playerEmail, activePartyId]);
+  }, [isOpen, playerEmail]);
 
+  // Privacy Toggle Handler
   const handleToggleCloning = async (newVal: boolean) => {
     const prevVal = allowCloning;
     setAllowCloning(newVal);
@@ -90,8 +100,8 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
         setFeedback({
           type: 'success',
           message: newVal
-            ? '🧬 Workshop creations set to Allow Cloning (visible in Party Mall).'
-            : '🔒 Workshop creations set to Private Vault (hidden from others).',
+            ? '🧬 Workshop creations set to Allow Cloning (visible to other players).'
+            : '🔒 Workshop creations set to Private Vault (hidden from other players).',
         });
       }
     } catch (err: any) {
@@ -103,37 +113,104 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
     }
   };
 
-  if (!isOpen) return null;
-
-  // Active items list based on tab
-  const currentList =
-    activeTab === 'my_creations'
-      ? personalItems
-      : activeTab === 'party_mall'
-      ? partyItems
-      : activeTab === 'showcase'
-      ? showcaseItems
-      : submissionItems;
-
-  const filteredItems = currentList.filter((item) => {
-    if (typeFilter !== 'all' && item.type !== typeFilter) return false;
-    // Privacy filtering for Party Mall:
-    if (activeTab === 'party_mall' && !isGm && item.author_email?.toLowerCase().trim() !== playerEmail?.toLowerCase().trim()) {
-      if (item.item_data?.allow_cloning === false) return false;
+  // Search target email for clonable items
+  const handleSearchTargetEmail = async () => {
+    const email = targetEmail.trim().toLowerCase();
+    if (!email) {
+      setTargetItems([]);
+      setTargetPrivacyStatus('idle');
+      return;
     }
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const matchName = item.name.toLowerCase().includes(query);
-      const matchAuthor = item.author_name.toLowerCase().includes(query);
-      const matchEffect = (item.item_data?.effect || '').toLowerCase().includes(query);
-      if (!matchName && !matchAuthor && !matchEffect) return false;
+    setIsSearchingTarget(true);
+    try {
+      const profile = await gameApi.getUserProfile(email);
+      if (!profile) {
+        const items = await gameApi.getPersonalCustomItems(email);
+        if (items.length === 0) {
+          setTargetPrivacyStatus('not_found');
+          setTargetItems([]);
+        } else {
+          setTargetPrivacyStatus('allowed');
+          setTargetItems(items);
+        }
+      } else {
+        if (profile.allow_cloning === false && !isGm) {
+          setTargetPrivacyStatus('private');
+          setTargetItems([]);
+        } else {
+          setTargetPrivacyStatus('allowed');
+          const items = await gameApi.getPersonalCustomItems(email);
+          setTargetItems(items);
+        }
+      }
+    } catch (err: any) {
+      console.error('[CraftingMallModal] Error loading target player vault:', err);
+      setTargetPrivacyStatus('not_found');
+      setTargetItems([]);
+    } finally {
+      setIsSearchingTarget(false);
     }
-    return true;
-  });
+  };
 
+  // Clone an item into personal library
+  const handleCloneItem = async (item: CustomCreationItem) => {
+    if (!playerEmail) {
+      setFeedback({ type: 'error', message: 'You must have a player email to clone items.' });
+      return;
+    }
+
+    try {
+      const clonedPayload: Partial<CustomCreationItem> = {
+        name: item.name,
+        type: item.type,
+        category: item.category,
+        author_name: playerName || playerEmail,
+        author_email: playerEmail,
+        party_id: activePartyId || null,
+        gm_approved: isGm,
+        item_data: {
+          ...item.item_data,
+          cloned_from: targetEmail.trim(),
+          cloned_from_author: item.author_name,
+          cloned_at: new Date().toISOString(),
+        },
+        notes: item.notes,
+        is_promoted: false,
+      };
+
+      await gameApi.saveCustomItem(clonedPayload);
+      setFeedback({
+        type: 'success',
+        message: `🧬 Cloned '${item.name}' into your My Creations library!`,
+      });
+      loadPersonalData();
+    } catch (err: any) {
+      console.error('[CraftingMallModal] Error cloning item:', err);
+      setFeedback({ type: 'error', message: 'Failed to clone item.' });
+    }
+  };
+
+  // Delete an item from personal library
+  const handleDeleteItem = async (item: CustomCreationItem) => {
+    if (!window.confirm(`Delete '${item.name}' from your personal workshop library?`)) return;
+
+    try {
+      await gameApi.deleteCustomItem(item.id);
+      setFeedback({
+        type: 'success',
+        message: `Deleted '${item.name}' from your personal creations.`,
+      });
+      loadPersonalData();
+    } catch (err: any) {
+      console.error('[CraftingMallModal] Error deleting item:', err);
+      setFeedback({ type: 'error', message: 'Failed to delete creation.' });
+    }
+  };
+
+  // Import to active Character Sheet
   const handleAcceptToHero = (item: CustomCreationItem) => {
     if (!activeCharacter) {
-      setFeedback({ type: 'error', message: 'No active hero selected. Please select a character sheet first.' });
+      setFeedback({ type: 'error', message: 'No active hero selected. Please open a character sheet first.' });
       return;
     }
 
@@ -179,18 +256,18 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
           };
         });
         saveActiveCharacter();
-      } else if (type === 'relic' || type === 'hardware') {
+      } else if (type === 'exotic' || type === 'artifact' || type === 'relic' || type === 'hardware') {
         const magicItemObj: MagicItem = {
           id: Date.now() + Math.floor(Math.random() * 1000),
           name,
           action,
           usage,
           effect,
-          category: category || (type === 'relic' ? '🍺 Minor' : 'Custom Hardware'),
+          category: category || (type === 'artifact' ? '🔮 Artifact' : '🧿 Exotic'),
           is_hardware: type === 'hardware',
-          cost: item_data?.cost,
+          cost: item_data?.cost || (type === 'artifact' ? 'Artifact' : '10g'),
           slot_weight: (getItemSlotWeight({ name, category: category || '' }) as 1 | 2 | 3 | 4),
-          source: `Crafting Mall (${author_name})`,
+          source: `Workshop (${author_name})`,
           created_at: new Date().toISOString(),
           notes,
         };
@@ -214,7 +291,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
             id: Date.now(),
             name,
             skills,
-            source: `Crafting Mall (${author_name})`,
+            source: `Workshop (${author_name})`,
             created_at: new Date().toISOString(),
           };
           return {
@@ -325,7 +402,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
 
       setFeedback({
         type: 'success',
-        message: `✅ Successfully imported '${name}' into ${activeCharacter.name}'s sheet! (0 AP)`,
+        message: `✅ Successfully imported '${name}' into ${activeCharacter.name}'s sheet!`,
       });
     } catch (err: any) {
       console.error('[CraftingMallModal] Error importing to sheet:', err);
@@ -333,88 +410,53 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
     }
   };
 
-  const handleSubmitToGm = async (item: CustomCreationItem) => {
-    if (!activePartyId) {
-      setFeedback({ type: 'error', message: 'You are not currently in an active party session.' });
-      return;
+  if (!isOpen) return null;
+
+  // Filter personal items by category & search
+  const filteredPersonalItems = personalItems.filter((item) => {
+    if (selectedCategory !== 'all' && item.type !== selectedCategory) return false;
+    if (personalSearchQuery.trim()) {
+      const q = personalSearchQuery.toLowerCase();
+      const matchName = item.name.toLowerCase().includes(q);
+      const matchEffect = (item.item_data?.effect || '').toLowerCase().includes(q);
+      if (!matchName && !matchEffect) return false;
     }
+    return true;
+  });
 
-    try {
-      await gameApi.updateCustomItem(item.id, {
-        party_id: activePartyId,
-        gm_approved: false,
-      });
+  // Filter target player items by category
+  const filteredTargetItems = targetItems.filter((item) => {
+    if (selectedCategory !== 'all' && item.type !== selectedCategory) return false;
+    return true;
+  });
 
-      setFeedback({
-        type: 'success',
-        message: `📤 Submitted '${item.name}' to Party [${activePartyId}] GM review queue!`,
-      });
-      loadData();
-    } catch (err: any) {
-      console.error('[CraftingMallModal] Error submitting to GM:', err);
-      setFeedback({ type: 'error', message: 'Failed to submit to GM queue.' });
-    }
-  };
-
-  const handleDeleteItem = async (item: CustomCreationItem) => {
-    if (!window.confirm(`Delete '${item.name}' from your personal workshop library?`)) return;
-
-    try {
-      await gameApi.deleteCustomItem(item.id);
-      setFeedback({
-        type: 'success',
-        message: `Deleted '${item.name}' from your personal creations.`,
-      });
-      loadData();
-    } catch (err: any) {
-      console.error('[CraftingMallModal] Error deleting item:', err);
-      setFeedback({ type: 'error', message: 'Failed to delete creation.' });
-    }
-  };
-
-  const handleApproveSubmission = async (item: CustomCreationItem) => {
-    try {
-      await gameApi.updateCustomItem(item.id, {
-        gm_approved: true,
-        approved_by_gm_email: playerEmail || undefined,
-      });
-
-      setFeedback({
-        type: 'success',
-        message: `👑 Approved '${item.name}' for Party [${activePartyId}]! It is now live in the Party Mall.`,
-      });
-      loadData();
-    } catch (err: any) {
-      console.error('[CraftingMallModal] Error approving submission:', err);
-      setFeedback({ type: 'error', message: 'Failed to approve submission.' });
-    }
-  };
-
-  const handleRejectSubmission = async (item: CustomCreationItem) => {
-    if (!window.confirm(`Reject '${item.name}' and return it to ${item.author_name}'s personal library?`)) return;
-
-    try {
-      await gameApi.updateCustomItem(item.id, {
-        party_id: null,
-        gm_approved: false,
-      });
-
-      setFeedback({
-        type: 'success',
-        message: `Returned '${item.name}' to ${item.author_name}'s personal drafts.`,
-      });
-      loadData();
-    } catch (err: any) {
-      console.error('[CraftingMallModal] Error rejecting submission:', err);
-      setFeedback({ type: 'error', message: 'Failed to reject submission.' });
+  const getCategoryEmoji = (t: string) => {
+    switch (t) {
+      case 'power': return '🔥';
+      case 'path': return '🧭';
+      case 'skill': return '🎓';
+      case 'skillset': return '🎓';
+      case 'trait': return '🧬';
+      case 'chaos_gem': return '💎';
+      case 'weapon': return '⚔️';
+      case 'armor': return '🥋';
+      case 'shield': return '🛡️';
+      case 'gear': return '⚙️';
+      case 'exotic': return '🧿';
+      case 'artifact': return '🔮';
+      case 'kit': return '📦';
+      default: return '✨';
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-      <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-4xl shadow-2xl shadow-amber-950/50 flex flex-col h-[85vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60 shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn font-outfit">
+      <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-6xl shadow-2xl shadow-amber-950/50 flex flex-col h-[90vh] max-h-[92vh] overflow-hidden">
+        
+        {/* ========================================================================= */}
+        {/* HEADER                                                                    */}
+        {/* ========================================================================= */}
+        <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/70 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-lg flex items-center justify-center">
               🛠️
@@ -422,26 +464,33 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
             <div>
               <h3 className="font-outfit font-extrabold text-base text-amber-300 tracking-wide flex items-center gap-2">
                 Workshop
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-                  {isGm 
-                    ? (activePartyId ? `👑 GM Mode: Party ${activePartyId}` : '👑 GM Mode') 
-                    : (activePartyId ? `Party Room: ${activePartyId}` : 'Solo Mode')}
-                </span>
+                {isGm ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    👑 GM Mode
+                  </span>
+                ) : (
+                  activePartyId && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                      Party: {activePartyId}
+                    </span>
+                  )
+                )}
               </h3>
               <p className="text-xs text-slate-400">
-                Browse personal craftings, party-approved creations, & master showcase items.
+                Manage personal creations & clone authorized content from players.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            {/* Dyslexia-Friendly Multi-Option Pill Switch for Workshop Privacy & Cloning */}
+
+          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+            {/* Dyslexia-Friendly Multi-Option Pill Switch for Personal Vault Privacy */}
             <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
               <button
                 type="button"
                 onClick={() => handleToggleCloning(false)}
                 className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   !allowCloning
-                    ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                    ? 'bg-amber-500 text-slate-950 shadow-md font-black'
                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
                 }`}
                 title="Private Vault: Keep your custom creations private to your account"
@@ -453,490 +502,558 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({ isOpen, on
                 onClick={() => handleToggleCloning(true)}
                 className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   allowCloning
-                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                    ? 'bg-emerald-600 text-white shadow-md font-black'
                     : 'text-slate-400 hover:text-slate-200 border border-transparent'
                 }`}
-                title="Allow Cloning: Allow party members to view and clone your creations in the Party Mall"
+                title="Allow Cloning: Allow players to view and clone your creations"
               >
                 🧬 Allow Cloning
               </button>
             </div>
 
-            {onOpenWorkshop && (
+            {/* Launch Forge Button */}
+            {onOpenForge && (
               <button
-                onClick={() => {
-                  onOpenWorkshop();
-                }}
-                className="px-3 py-1.5 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 text-amber-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0"
+                type="button"
+                onClick={() => onOpenForge()}
+                className="px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-amber-950/40 shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Forge New Creation</span>
               </button>
             )}
+
+            {/* Top Right Close Button */}
             <button
+              type="button"
               onClick={onClose}
               className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Close Workshop"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Primary Tabs (Multi-Option Pill Switch) */}
-        <div className="px-6 pt-3 pb-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0">
-          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap sm:flex-nowrap">
-            <button
-              type="button"
-              onClick={() => setActiveTab('my_creations')}
-              className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTab === 'my_creations'
-                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              👤 My Creations ({personalItems.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('party_mall')}
-              className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTab === 'party_mall'
-                  ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🏛️ Party Mall ({partyItems.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('showcase')}
-              className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTab === 'showcase'
-                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🌟 Hall of Fame ({showcaseItems.length})
-            </button>
-            {isGm && (
+        {/* ========================================================================= */}
+        {/* MASTER CATEGORY FILTER BAR (Image 3: Two Symmetrical Rows Matching Forge) */}
+        {/* ========================================================================= */}
+        <div className="px-6 py-2.5 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex flex-col gap-1.5">
+          {/* Row 1: Capabilities */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Capabilities:</span>
+            <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
               <button
                 type="button"
-                onClick={() => setActiveTab('submissions')}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  activeTab === 'submissions'
+                onClick={() => setSelectedCategory(selectedCategory === 'power' ? 'all' : 'power')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'power'
                     ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                    : 'text-rose-400 hover:text-rose-200 border border-transparent'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
                 }`}
               >
-                📥 Player Submissions ({submissionItems.length})
+                🔥 Powers
               </button>
-            )}
-          </div>
-        </div>
-
-        {/* Dynamic Contextual Subtitle Banner */}
-        <div className="px-6 py-2 bg-slate-950/70 border-b border-slate-800/80 text-xs text-center shrink-0">
-          {activeTab === 'my_creations' && (
-            <p className="text-amber-300/90 font-semibold tracking-wide flex items-center justify-center gap-1.5 animate-fadeIn">
-              <span>👤</span>
-              <span>Items & Abilities I've forged.</span>
-            </p>
-          )}
-          {activeTab === 'party_mall' && (
-            <p className="text-indigo-300/90 font-semibold tracking-wide flex items-center justify-center gap-1.5 animate-fadeIn">
-              <span>🏛️</span>
-              <span>GM approved Craftings available to the GM's party.</span>
-            </p>
-          )}
-          {activeTab === 'showcase' && (
-            <p className="text-emerald-300/90 font-semibold tracking-wide flex items-center justify-center gap-1.5 animate-fadeIn">
-              <span>🌟</span>
-              <span>Designer approved for ALL players. These are now incorporated fully into SupaFlex and available to everyone.</span>
-            </p>
-          )}
-          {activeTab === 'submissions' && (
-            <p className="text-rose-300/90 font-semibold tracking-wide flex items-center justify-center gap-1.5 animate-fadeIn">
-              <span>📥</span>
-              <span>Review & approve party member custom drafts for this campaign's Party Mall.</span>
-            </p>
-          )}
-        </div>
-
-        {/* Secondary Filter & Search Bar */}
-        <div className="px-6 py-2.5 bg-slate-950/30 border-b border-slate-800/60 flex items-center justify-between gap-3 shrink-0 flex-wrap">
-          {/* Sub-Filters */}
-          <div className="flex items-center gap-1 flex-wrap">
-            {(['all', 'power', 'power_table', 'relic', 'hardware', 'skill', 'skillset', 'weapon', 'armor', 'shield', 'gear', 'chaos_gem'] as const).map((t) => (
               <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  typeFilter === t
-                    ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'path' ? 'all' : 'path')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'path'
+                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
                 }`}
               >
-                {t === 'all'
-                  ? '🌐 All'
-                  : t === 'power'
-                  ? '🔥 Powers'
-                  : t === 'power_table'
-                  ? '📜 Tables'
-                  : t === 'relic'
-                  ? '🏺 Relics'
-                  : t === 'hardware'
-                  ? '⚙️ Hardware'
-                  : t === 'skill'
-                  ? '🎯 Skills'
-                  : t === 'skillset'
-                  ? '🎓 Skillsets'
-                  : t === 'weapon'
-                  ? '⚔️ Weapons'
-                  : t === 'armor'
-                  ? '🧥 Armor'
-                  : t === 'shield'
-                  ? '🛡️ Shields'
-                  : t === 'gear'
-                  ? '🎒 Gear'
-                  : '💎 Chaos Gems'}
+                🧭 Paths
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'skill' ? 'all' : 'skill')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'skill'
+                    ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🎓 Skills
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'skillset' ? 'all' : 'skillset')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'skillset'
+                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🎓 Skillsets
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'trait' ? 'all' : 'trait')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'trait'
+                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🧬 Traits
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'chaos_gem' ? 'all' : 'chaos_gem')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'chaos_gem'
+                    ? 'bg-violet-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                💎 Chaos Gems
+              </button>
+            </div>
           </div>
 
-          {/* Search Input */}
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, author, or effect..."
-              className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-slate-700 outline-none focus:border-amber-400 w-64"
-            />
-            <button
-              onClick={loadData}
-              className="p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-400 hover:text-amber-300 transition-colors"
-              title="Refresh creations list"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
+          {/* Row 2: Equipment */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Equipment:</span>
+            <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'weapon' ? 'all' : 'weapon')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'weapon'
+                    ? 'bg-orange-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                ⚔️ Weapons
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'armor' ? 'all' : 'armor')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'armor'
+                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🥋 Armor
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'shield' ? 'all' : 'shield')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'shield'
+                    ? 'bg-blue-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🛡️ Shields
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'gear' ? 'all' : 'gear')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'gear'
+                    ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                ⚙️ Gear
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'exotic' ? 'all' : 'exotic')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'exotic'
+                    ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🧿 Exotics
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'artifact' ? 'all' : 'artifact')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'artifact'
+                    ? 'bg-fuchsia-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🔮 Artifacts
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === 'kit' ? 'all' : 'kit')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'kit'
+                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                📦 Kits
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory('all')}
+                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'all'
+                    ? 'bg-slate-700 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                🌐 All
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Feedback Alert */}
-        {feedback && (
-          <div
-            className={`mx-6 mt-3 p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs font-semibold animate-fadeIn shrink-0 ${
-              feedback.type === 'success'
-                ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200'
-                : 'bg-rose-950/60 border-rose-500/50 text-rose-200'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              {feedback.type === 'success' ? (
-                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+        {/* ========================================================================= */}
+        {/* 2-PANE GRID BODY                                                          */}
+        {/* ========================================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 p-5 flex-1 min-h-0 overflow-hidden bg-slate-950/40">
+          
+          {/* ----------------------------------------------------------------------- */}
+          {/* PANE 1 (LEFT): MY CREATIONS                                             */}
+          {/* ----------------------------------------------------------------------- */}
+          <div className="lg:col-span-6 flex flex-col min-h-0 bg-slate-900/60 p-4 rounded-xl border border-slate-800/80">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0 gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-200 text-sm flex items-center gap-1.5">
+                  <span>👤</span>
+                  <span>My Creations</span>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-amber-300">
+                    {filteredPersonalItems.length}
+                  </span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={personalSearchQuery}
+                    onChange={(e) => setPersonalSearchQuery(e.target.value)}
+                    placeholder="Filter my items..."
+                    className="pl-8 pr-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50 w-36 sm:w-44"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={loadPersonalData}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+                  title="Refresh personal creations"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingPersonal ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* List of Personal Items */}
+            <div className="flex-1 min-h-0 overflow-y-auto mt-3 pr-1 flex flex-col gap-2.5">
+              {filteredPersonalItems.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
+                  <span className="text-3xl mb-2">📦</span>
+                  <p className="font-semibold text-slate-400">No creations found</p>
+                  <p className="text-[11px] mt-1 text-slate-600 max-w-xs">
+                    {selectedCategory !== 'all' 
+                      ? `No ${selectedCategory} creations found in your library.`
+                      : 'You have not created or cloned any items yet. Click "Forge New Creation" to begin.'}
+                  </p>
+                </div>
               ) : (
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              )}
-              <span>{feedback.message}</span>
-            </div>
-            <button onClick={() => setFeedback(null)} className="text-slate-400 hover:text-slate-100">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
+                filteredPersonalItems.map((item) => {
+                  const action = item.item_data?.action || 'A';
+                  const usage = item.item_data?.usage || '1-Enc';
+                  const effect = item.item_data?.effect || '';
+                  const cost = item.item_data?.cost || '1g';
+                  const clonedFrom = item.item_data?.cloned_from;
 
-        {/* Items Grid Body */}
-        <div className="p-6 flex-1 overflow-y-auto min-h-0">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-48 text-slate-400 text-xs gap-2">
-              <RefreshCw className="w-6 h-6 animate-spin text-amber-400" />
-              <span>Loading Crafting Mall catalog...</span>
-            </div>
-          ) : filteredItems.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {filteredItems.map((item) => {
-                const isPower = item.type === 'power';
-                const isTable = item.type === 'power_table';
-                const isRelic = item.type === 'relic';
-                const isHardware = item.type === 'hardware';
-                const isSkill = item.type === 'skill';
-                const isSkillset = item.type === 'skillset';
-                const isWeapon = item.type === 'weapon';
-                const isArmor = item.type === 'armor';
-                const isShield = item.type === 'shield';
-                const isGear = item.type === 'gear';
-                const isChaosGem = item.type === 'chaos_gem';
-
-                return (
-                  <div
-                    key={item.id}
-                    className="p-3.5 bg-slate-950/70 border border-slate-800 hover:border-amber-500/40 rounded-xl flex flex-col justify-between gap-2.5 transition-all shadow-md"
-                  >
-                    {/* Header Row */}
-                    <div className="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-2">
-                      <div className="flex flex-col gap-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-outfit font-extrabold text-sm text-slate-100 truncate inline-flex items-center align-baseline">
-                            <span>{item.name}</span>
-                            <ItemNotesPopover notes={item.notes || item.item_data?.notes} itemName={item.name} inline />
-                          </span>
-                          <span
-                            className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${
-                              isPower
-                                ? 'bg-rose-950 text-rose-300 border-rose-500/40'
-                                : isTable
-                                ? 'bg-violet-950 text-violet-300 border-violet-500/40'
-                                : isRelic
-                                ? 'bg-purple-950 text-purple-300 border-purple-500/40'
-                                : isHardware
-                                ? 'bg-cyan-950 text-cyan-300 border-cyan-500/40'
-                                : isSkill
-                                ? 'bg-amber-950 text-amber-300 border-amber-500/40'
-                                : isSkillset
-                                ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
-                                : isWeapon
-                                ? 'bg-orange-950 text-orange-300 border-orange-500/40'
-                                : isArmor
-                                ? 'bg-blue-950 text-blue-300 border-blue-500/40'
-                                : isShield
-                                ? 'bg-cyan-950 text-cyan-300 border-cyan-500/40'
-                                : isGear
-                                ? 'bg-teal-950 text-teal-300 border-teal-500/40'
-                                : 'bg-violet-950 text-violet-300 border-violet-500/40'
-                            }`}
-                          >
-                            {isPower
-                              ? '🔥 Power'
-                              : isTable
-                              ? '📜 Table'
-                              : isRelic
-                              ? '🏺 Relic'
-                              : isHardware
-                              ? '⚙️ Hardware'
-                              : isSkill
-                              ? '🎯 Skill'
-                              : isSkillset
-                              ? '🎓 Skillset'
-                              : isWeapon
-                              ? '⚔️ Weapon'
-                              : isArmor
-                              ? '🧥 Armor'
-                              : isShield
-                              ? '🛡️ Shield'
-                              : isGear
-                              ? '🎒 Gear'
-                              : '💎 Chaos Gem'}
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 hover:border-amber-500/30 transition flex flex-col gap-2 shadow-sm"
+                    >
+                      {/* Item Header */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-base shrink-0">{getCategoryEmoji(item.type)}</span>
+                          <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
+                            {item.type}
                           </span>
                         </div>
 
-                        {/* Attribution & Status Subtitle */}
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 flex-wrap">
-                          <span>By {item.author_name}</span>
-                          {item.gm_approved && (
-                            <span className="text-emerald-400 font-bold flex items-center gap-0.5">
-                              • <Check className="w-3 h-3" /> GM Approved
-                            </span>
-                          )}
-                          {item.is_promoted && (
-                            <span className="text-amber-300 font-bold flex items-center gap-0.5">
-                              • 🌟 Official Canon
-                            </span>
-                          )}
-                          {item.item_data?.cost && (
-                            <span className="text-cyan-300 font-mono font-bold">• {item.item_data.cost}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action & Usage Pill */}
-                      {!isSkillset && !isSkill && !isWeapon && !isArmor && !isShield && !isGear && !isChaosGem && (
+                        {/* Action Icons */}
                         <div className="flex items-center gap-1 shrink-0">
-                          {item.item_data?.action && (
-                            <span className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono font-bold text-amber-300">
-                              {item.item_data.action}
-                            </span>
-                          )}
-                          {item.item_data?.usage && (
-                            <span className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-300">
-                              {item.item_data.usage}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {isChaosGem && (
-                        <div className="flex items-center gap-1 shrink-0 font-mono text-[10px]">
-                          <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">
-                            F
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">
-                            3 Uses
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Effect / Description */}
-                    <div className="text-xs text-slate-300">
-                      {isSkillset && item.item_data?.skills ? (
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[10px] text-slate-400 font-bold">Included Skills:</span>
-                          <div className="flex flex-wrap gap-1">
-                            {item.item_data.skills.map((s: string) => (
-                              <span key={s} className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-200 border border-emerald-500/30 text-[10px]">
-                                {s}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : isSkill ? (
-                        <p className="text-[11px] leading-relaxed font-sans text-amber-200">
-                          Assigned Attribute: <span className="font-bold">{item.item_data?.attribute || '✨'}</span>
-                        </p>
-                      ) : isWeapon ? (
-                        <div className="flex flex-col gap-1 text-[11px] font-mono text-slate-300">
-                          <div className="flex items-center justify-between">
-                            <span>Type: <strong className="text-orange-300">{item.item_data?.type || 'Melee'}</strong></span>
-                            <span>Req: <strong className="text-slate-200">{item.item_data?.requirement || '💪 4'}</strong></span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span>Atk: <strong className="text-amber-300">{item.item_data?.atk || '💪'}</strong></span>
-                            <span>Dmg: <strong className="text-rose-300">{item.item_data?.dmg || '💪'}</strong></span>
-                            <span>Blk: <strong className="text-cyan-300">{item.item_data?.max_block || 'n/a'}</strong></span>
-                          </div>
-                        </div>
-                      ) : isArmor ? (
-                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-300">
-                          <span>Req: <strong className="text-slate-200">{item.item_data?.requirement || '💪 4'}</strong></span>
-                          <span>AR: <strong className="text-amber-300">{item.item_data?.ar || '1'}</strong></span>
-                          <span>MR: <strong className="text-cyan-300">{item.item_data?.mr || '👣0'}</strong></span>
-                        </div>
-                      ) : isShield ? (
-                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-300">
-                          <span>Req: <strong className="text-slate-200">{item.item_data?.requirement || '💪 4'}</strong></span>
-                          <span>Blk: <strong className="text-amber-300">{item.item_data?.max_block || '4'}</strong></span>
-                          <span>MR: <strong className="text-cyan-300">{item.item_data?.mr || '👣0'}</strong></span>
-                        </div>
-                      ) : isGear ? (
-                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-300">
-                          <span>Category: <strong className="text-teal-300">{item.item_data?.category || 'Adventuring'}</strong></span>
-                          <span>Cost: <strong className="text-amber-300">{item.item_data?.cost || '1s'}</strong></span>
-                        </div>
-                      ) : (
-                        <p className="text-[11px] leading-relaxed font-sans">{item.item_data?.effect || 'No description provided.'}</p>
-                      )}
-                      {item.notes && (
-                        <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{item.notes}"</p>
-                      )}
-                    </div>
-
-                    {/* Footer Action Buttons */}
-                    <div className="flex items-center justify-between border-t border-slate-800/80 pt-2 gap-2 mt-1">
-                      {activeTab === 'my_creations' && (
-                        <div className="flex items-center gap-1.5">
-                          {activePartyId && !item.gm_approved && (
+                          {activeCharacter && (
                             <button
-                              onClick={() => handleSubmitToGm(item)}
-                              className="px-2.5 py-1 text-[10px] font-bold rounded-lg border bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border-indigo-500/40 flex items-center gap-1 transition-colors cursor-pointer"
-                              title="Submit draft to active party GM for approval"
+                              type="button"
+                              onClick={() => handleAcceptToHero(item)}
+                              className="px-2 py-0.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 hover:text-emerald-200 text-[10px] font-bold rounded-md transition cursor-pointer"
+                              title="Import directly into active hero's sheet"
                             >
-                              <Send className="w-3 h-3" />
-                              <span>Submit to GM</span>
+                              📥 To Sheet
+                            </button>
+                          )}
+                          {onOpenForge && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenForge(item)}
+                              className="p-1 rounded-md text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
+                              title="Edit in Forge"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
                             </button>
                           )}
                           <button
+                            type="button"
                             onClick={() => handleDeleteItem(item)}
-                            className="p-1 rounded text-slate-500 hover:text-rose-400 transition-colors"
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
                             title="Delete creation"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                      )}
+                      </div>
 
-                      {activeTab === 'submissions' && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleApproveSubmission(item)}
-                            className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border-emerald-500/50 flex items-center gap-1 transition-all shadow-sm cursor-pointer"
-                          >
-                            <Crown className="w-3.5 h-3.5 text-amber-300" />
-                            <span>Approve to Party Mall</span>
-                          </button>
-                          <button
-                            onClick={() => handleRejectSubmission(item)}
-                            className="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border-slate-700 hover:border-rose-500/40 transition-colors cursor-pointer"
-                          >
-                            <span>Return to Drafts</span>
-                          </button>
+                      {/* Chips / Stats */}
+                      <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                        {item.type === 'power' || item.type === 'exotic' || item.type === 'artifact' ? (
+                          <>
+                            <span className="px-1.5 py-0.2 bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 font-bold rounded">
+                              {action}
+                            </span>
+                            <span className="px-1.5 py-0.2 bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 font-bold rounded">
+                              {usage}
+                            </span>
+                          </>
+                        ) : null}
+                        {cost && (
+                          <span className="px-1.5 py-0.2 bg-amber-950/80 border border-amber-500/30 text-amber-300 font-bold rounded">
+                            {cost}
+                          </span>
+                        )}
+                        {clonedFrom && (
+                          <span className="px-1.5 py-0.2 bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 font-medium rounded truncate max-w-[200px]" title={`Cloned from ${clonedFrom}`}>
+                            🧬 Cloned: {clonedFrom}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Effect Preview */}
+                      {effect && (
+                        <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800/80 text-[11px] text-slate-300 font-mono leading-relaxed line-clamp-3">
+                          {effect}
                         </div>
                       )}
-
-                      {activeTab !== 'my_creations' && activeTab !== 'submissions' && <div />}
-
-                      <button
-                        onClick={() => handleAcceptToHero(item)}
-                        className="px-3 py-1 text-xs font-bold rounded-lg border bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border-emerald-500/50 flex items-center gap-1 transition-all shadow-sm cursor-pointer ml-auto"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>{isChaosGem ? 'Socket to Gauntlet' : `Accept to ${activeCharacter?.name ? `${activeCharacter.name}'s Sheet` : 'Sheet (0 AP)'}`}</span>
-                      </button>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-48 text-slate-500 text-xs italic gap-1">
-              <span>
-                {activeTab === 'submissions'
-                  ? 'No pending player submissions found for this campaign room.'
-                  : `No creations found matching filters in ${
-                      activeTab === 'my_creations' ? 'My Creations' : activeTab === 'party_mall' ? 'Party Mall' : 'Hall of Fame'
-                    }.`}
-              </span>
-              {activeTab === 'my_creations' && (
-                <button
-                  onClick={() => {
-                    if (onOpenWorkshop) onOpenWorkshop();
-                  }}
-                  className="text-amber-400 hover:underline font-bold not-italic mt-1"
-                >
-                  + Forge your first custom creation in Forge
-                </button>
+                  );
+                })
               )}
             </div>
-          )}
+          </div>
+
+          {/* ----------------------------------------------------------------------- */}
+          {/* PANE 2 (RIGHT): CLONE FROM PLAYER                                       */}
+          {/* ----------------------------------------------------------------------- */}
+          <div className="lg:col-span-6 flex flex-col min-h-0 bg-slate-900/60 p-4 rounded-xl border border-slate-800/80">
+            <div className="flex flex-col gap-2 pb-3 border-b border-slate-800 shrink-0">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-200 text-sm flex items-center gap-1.5">
+                  <span>🧬</span>
+                  <span>Clone from Player</span>
+                  {targetItems.length > 0 && (
+                    <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-indigo-300">
+                      {filteredTargetItems.length}
+                    </span>
+                  )}
+                </span>
+              </div>
+
+              {/* Universal Email Search Input */}
+              <div className="flex items-center gap-1.5">
+                <div className="relative flex-1">
+                  <Mail className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    value={targetEmail}
+                    onChange={(e) => setTargetEmail(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSearchTargetEmail();
+                    }}
+                    placeholder="Enter player/GM email (e.g. friend@gmail.com)..."
+                    className="w-full pl-8 pr-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSearchTargetEmail}
+                  disabled={isSearchingTarget}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-sm"
+                >
+                  <Search className={`w-3.5 h-3.5 ${isSearchingTarget ? 'animate-spin' : ''}`} />
+                  <span>Load Vault</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Target Vault Output Stream */}
+            <div className="flex-1 min-h-0 overflow-y-auto mt-3 pr-1 flex flex-col gap-2.5">
+              {targetPrivacyStatus === 'idle' ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
+                  <span className="text-3xl mb-2">✉️</span>
+                  <p className="font-semibold text-slate-400">Load Player Creations</p>
+                  <p className="text-[11px] mt-1 text-slate-600 max-w-xs">
+                    Type any SupaFlex player or GM email above to inspect their clonable library.
+                  </p>
+                </div>
+              ) : targetPrivacyStatus === 'private' ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-amber-400/80 text-xs bg-amber-950/20 rounded-xl border border-amber-500/30 m-4">
+                  <span className="text-3xl mb-2">🔒</span>
+                  <p className="font-bold text-amber-300">Vault Set to Private</p>
+                  <p className="text-[11px] mt-1 text-amber-200/70 max-w-xs">
+                    This player has marked their workshop library as Private Vault. Their creations cannot be viewed or cloned.
+                  </p>
+                </div>
+              ) : targetPrivacyStatus === 'not_found' ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
+                  <span className="text-3xl mb-2">🔍</span>
+                  <p className="font-semibold text-slate-400">No creations found</p>
+                  <p className="text-[11px] mt-1 text-slate-600 max-w-xs">
+                    No custom items found for '{targetEmail}'. Verify the email address.
+                  </p>
+                </div>
+              ) : filteredTargetItems.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
+                  <span className="text-3xl mb-2">📂</span>
+                  <p className="font-semibold text-slate-400">No matching items</p>
+                  <p className="text-[11px] mt-1 text-slate-600 max-w-xs">
+                    This player has no creations matching the active category filter '{selectedCategory}'.
+                  </p>
+                </div>
+              ) : (
+                filteredTargetItems.map((item) => {
+                  const action = item.item_data?.action || 'A';
+                  const usage = item.item_data?.usage || '1-Enc';
+                  const effect = item.item_data?.effect || '';
+                  const cost = item.item_data?.cost || '1g';
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 hover:border-indigo-500/40 transition flex items-start gap-2.5 shadow-sm"
+                    >
+                      {/* Left Arrow Clone Button (FIRST Element on Each Entry) */}
+                      <button
+                        type="button"
+                        onClick={() => handleCloneItem(item)}
+                        className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1 shadow-md shadow-indigo-950/50 cursor-pointer transition shrink-0 mt-0.5"
+                        title="Clone this item into your My Creations"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5" />
+                        <span>Clone</span>
+                      </button>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-base shrink-0">{getCategoryEmoji(item.type)}</span>
+                            <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
+                              {item.type}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 italic truncate max-w-[120px]">
+                            by {item.author_name}
+                          </span>
+                        </div>
+
+                        {/* Chips / Stats */}
+                        <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                          {item.type === 'power' || item.type === 'exotic' || item.type === 'artifact' ? (
+                            <>
+                              <span className="px-1.5 py-0.2 bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 font-bold rounded">
+                                {action}
+                              </span>
+                              <span className="px-1.5 py-0.2 bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 font-bold rounded">
+                                {usage}
+                              </span>
+                            </>
+                          ) : null}
+                          {cost && (
+                            <span className="px-1.5 py-0.2 bg-amber-950/80 border border-amber-500/30 text-amber-300 font-bold rounded">
+                              {cost}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Effect Preview */}
+                        {effect && (
+                          <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800/80 text-[11px] text-slate-300 font-mono leading-relaxed line-clamp-3">
+                            {effect}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
         </div>
 
-        {/* Modal Footer Status */}
-        <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="font-outfit font-bold text-slate-300">
-              Active Hero: {activeCharacter?.name || 'None Selected'}
-            </span>
+        {/* ========================================================================= */}
+        {/* FOOTER & DONE BUTTON                                                      */}
+        {/* ========================================================================= */}
+        <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
+          {/* Feedback Toast */}
+          <div className="flex-1 min-w-0 pr-4">
+            {feedback && (
+              <div
+                className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-2 truncate animate-fadeIn ${
+                  feedback.type === 'success'
+                    ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                    : 'bg-rose-950/80 border-rose-500/40 text-rose-300'
+                }`}
+              >
+                {feedback.type === 'success' ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                )}
+                <span className="truncate">{feedback.message}</span>
+              </div>
+            )}
           </div>
+
+          {/* Standardized Done Button */}
           <button
+            type="button"
             onClick={onClose}
-            className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
+            className="py-2 px-6 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl transition cursor-pointer shadow-sm shrink-0"
+            title="Close Workshop"
           >
             Done
           </button>
         </div>
+
       </div>
 
-      {/* Volatile Chaos Gauntlet Socketing Modal */}
-      <ChaosGauntletSocketModal
-        isOpen={!!socketingGem}
-        incomingGem={socketingGem}
-        onClose={() => setSocketingGem(null)}
-        onSocketSuccess={(gemName, slotName) => {
-          setSocketingGem(null);
-          setFeedback({
-            type: 'success',
-            message: `💎 Successfully socketed '${gemName}' into ${slotName}!`,
-          });
-        }}
-      />
+      {/* Socketing Modal for Chaos Gems */}
+      {socketingGem && (
+        <ChaosGauntletSocketModal
+          isOpen={true}
+          onClose={() => setSocketingGem(null)}
+          incomingGem={socketingGem}
+          onSocketSuccess={(gemName) => {
+            setFeedback({ type: 'success', message: `💎 Successfully socketed '${gemName}'!` });
+            setSocketingGem(null);
+          }}
+        />
+      )}
     </div>
   );
 };

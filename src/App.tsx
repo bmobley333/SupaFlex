@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { Database, BookOpen, Loader2, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseKey } from './lib/supabase';
 import { gameApi } from './services/api';
-import { Character, TreasureItem, SimpleGearItem } from './types/game';
+import { Character, TreasureItem, SimpleGearItem, CustomCreationItem } from './types/game';
 import { reconcileCharacterVaultWithGear } from './utils/gearFunctionSync';
 import { useCharacterStore } from './store/useCharacterStore';
 import { useAdventureStore } from './store/useAdventureStore';
@@ -42,6 +42,7 @@ export default function App() {
   const [showResourcesPopover, setShowResourcesPopover] = useState(false);
   const [showGmToolsPopover, setShowGmToolsPopover] = useState(false);
   const [showPlayerWorkshopModal, setShowPlayerWorkshopModal] = useState(false);
+  const [editingWorkshopItem, setEditingWorkshopItem] = useState<CustomCreationItem | null>(null);
   const [showCraftingMallModal, setShowCraftingMallModal] = useState(false);
   const [showMasterArchitectDeskModal, setShowMasterArchitectDeskModal] = useState(false);
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
@@ -675,6 +676,7 @@ export default function App() {
                     onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
                     onOpenNishTcGenerator={() => setShowNishTcModal(true)}
                     onOpenCraftingMall={() => setShowCraftingMallModal(true)}
+                    onOpenPlayerWorkshop={() => setShowPlayerWorkshopModal(true)}
                     onOpenMasterArchitectDesk={() => setShowMasterArchitectDeskModal(true)}
                     onOpenMasterRoster={() => {
                       setLaunchHubInitialTab('master_roster');
@@ -703,13 +705,14 @@ export default function App() {
             {activeRole !== 'gm' && (
               <div className="relative" ref={resourcesRef}>
                 <button
+                  type="button"
                   onClick={() => setShowResourcesPopover(!showResourcesPopover)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-sm cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-sm ${
                     showResourcesPopover
-                      ? 'bg-indigo-500/20 border-indigo-400 text-indigo-200 shadow-indigo-500/30'
-                      : 'bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/35 text-indigo-300 shadow-indigo-950/40'
+                      ? 'bg-indigo-600/30 border-indigo-400/60 text-indigo-200 shadow-indigo-950/40'
+                      : 'bg-slate-950/80 hover:bg-slate-800/80 border-indigo-500/30 hover:border-indigo-400/50 text-indigo-300 hover:text-indigo-200'
                   }`}
-                  title="SupaFlex Gemini Notebook & Official Rules Website"
+                  title="SupaFlex Resources, Rulebook, Bestiary & Generators"
                 >
                   <BookOpen className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   <span className="font-outfit font-extrabold tracking-wide">Resources</span>
@@ -727,6 +730,7 @@ export default function App() {
                     onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
                     onOpenNishTcGenerator={() => setShowNishTcModal(true)}
                     onOpenCraftingMall={() => setShowCraftingMallModal(true)}
+                    onOpenPlayerWorkshop={() => setShowPlayerWorkshopModal(true)}
                     isGmMode={false}
                   />
                 )}
@@ -898,10 +902,22 @@ export default function App() {
 
 
       {/* ⚒️ Forge Modal */}
-      <ErrorBoundary fallbackTitle="Forge Error" onClose={() => setShowPlayerWorkshopModal(false)}>
+      <ErrorBoundary fallbackTitle="Forge Error" onClose={() => {
+        setShowPlayerWorkshopModal(false);
+        setEditingWorkshopItem(null);
+      }}>
         <PlayerWorkshopModal
           isOpen={showPlayerWorkshopModal}
-          onClose={() => setShowPlayerWorkshopModal(false)}
+          initialItem={editingWorkshopItem}
+          onClose={() => {
+            setShowPlayerWorkshopModal(false);
+            setEditingWorkshopItem(null);
+          }}
+          onOpenWorkshop={() => {
+            setShowPlayerWorkshopModal(false);
+            setEditingWorkshopItem(null);
+            setShowCraftingMallModal(true);
+          }}
         />
       </ErrorBoundary>
 
@@ -910,7 +926,11 @@ export default function App() {
         <CraftingMallModal
           isOpen={showCraftingMallModal}
           onClose={() => setShowCraftingMallModal(false)}
-          onOpenWorkshop={() => setShowPlayerWorkshopModal(true)}
+          onOpenForge={(itemToEdit) => {
+            setEditingWorkshopItem(itemToEdit || null);
+            setShowCraftingMallModal(false);
+            setShowPlayerWorkshopModal(true);
+          }}
         />
       </ErrorBoundary>
 

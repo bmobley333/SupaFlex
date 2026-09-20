@@ -14,6 +14,8 @@ interface PlayerWorkshopModalProps {
   isOpen: boolean;
   onClose: () => void;
   onItemSaved?: () => void;
+  onOpenWorkshop?: () => void;
+  initialItem?: CustomCreationItem | null;
 }
 
 // Canonical SupaFlex Rules Constants
@@ -172,7 +174,13 @@ export const GuardrailBadge: React.FC<{ isValid: boolean }> = ({ isValid }) => (
   </span>
 );
 
-export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen, onClose, onItemSaved }) => {
+export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onItemSaved,
+  onOpenWorkshop,
+  initialItem,
+}) => {
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const playerEmail = useCharacterStore((state) => state.playerEmail);
   const playerName = useCharacterStore((state) => state.playerName);
@@ -231,6 +239,29 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const effectTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-populate form if opened with an editing item
+  useEffect(() => {
+    if (isOpen && initialItem) {
+      if (initialItem.type) setCreationType(initialItem.type);
+      if (initialItem.name) setName(initialItem.name);
+      if (initialItem.item_data?.effect) setEffect(initialItem.item_data.effect);
+      if (initialItem.item_data?.action) setAction(initialItem.item_data.action);
+      if (initialItem.item_data?.usage) setUsage(initialItem.item_data.usage);
+      if (initialItem.item_data?.tier) setTier(initialItem.item_data.tier as any);
+      if (initialItem.item_data?.notes) setNotes(initialItem.item_data.notes);
+      else if (initialItem.notes) setNotes(initialItem.notes);
+      if (initialItem.item_data?.genres && Array.isArray(initialItem.item_data.genres)) {
+        setSelectedGenres(initialItem.item_data.genres);
+      }
+      if (initialItem.item_data?.attribute) setSkillAttribute(initialItem.item_data.attribute);
+      if (initialItem.item_data?.category) {
+        setPathCategory(initialItem.item_data.category);
+        setKitCategory(initialItem.item_data.category);
+        setGearCategory(initialItem.item_data.category);
+      }
+    }
+  }, [isOpen, initialItem]);
 
   // Switch tabs cleanly
   const handleSwitchTab = (newType: CustomCreationType) => {
@@ -604,7 +635,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
         notes: notes.trim() ? notes.trim() : undefined,
       };
 
-      await gameApi.saveCustomItem(newCustomItem);
+      if (initialItem && initialItem.id) {
+        await gameApi.updateCustomItem(initialItem.id, newCustomItem);
+      } else {
+        await gameApi.saveCustomItem(newCustomItem);
+      }
 
       // Attempt auxiliary creation in stock catalog tables
       try {
@@ -751,13 +786,29 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Close Forge"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenWorkshop && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenWorkshop();
+                }}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-amber-600/30 border border-slate-700 hover:border-amber-500/50 text-slate-300 hover:text-amber-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                title="Go to Workshop (Browse personal creations & clone from players)"
+              >
+                <span>🛠️</span>
+                <span>To Workshop</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Close Forge"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Primary Classification Tabs (Two Symmetrical Rows matching Character Sheet Cards) */}
@@ -1170,22 +1221,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                   {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
                 </div>
               )}
-            </div>
-
-            {/* Notation Anchor Cheat Sheet */}
-            <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-xl flex flex-col gap-1.5 text-[11px] text-slate-400 shrink-0">
-              <span className="font-bold text-slate-300 text-xs flex items-center gap-1">
-                <span>📜</span> Rules & Notation Guide
-              </span>
-              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
-                <div>• <strong className="text-amber-300">Attributes:</strong> ✨ 💪 👁️ 🏃 🫀 👣</div>
-                <div>• <strong className="text-cyan-300">Actions:</strong> AM, A, M, P, F</div>
-                <div>• <strong className="text-emerald-300">Usage:</strong> 1-🍀, 1-⚡, 1,2,3-Enc, 1-Rnd</div>
-                <div>• <strong className="text-rose-300">AoE:</strong> AoE [#]r, [#]x[#]</div>
-              </div>
-              <div className="text-[10px] border-t border-slate-800 pt-1 text-slate-500 truncate">
-                Range: Touch, 1sq, 2sq, Short (≤6sq), Med (≤12sq), Long (≤24sq), Extreme (≥25sq)
-              </div>
             </div>
           </div>
 
@@ -1941,6 +1976,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ isOpen
                 className="py-2.5 px-3 bg-slate-950 border border-slate-700 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition cursor-pointer"
               >
                 Clear
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl transition cursor-pointer"
+                title="Close Forge"
+              >
+                Done
               </button>
             </div>
           </form>

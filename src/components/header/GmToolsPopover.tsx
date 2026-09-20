@@ -6,6 +6,7 @@ interface GmToolsPopoverProps {
   onOpenLootGenerator: () => void;
   onOpenNishTcGenerator: () => void;
   onOpenCraftingMall?: () => void;
+  onOpenPlayerWorkshop?: () => void;
   onOpenMasterArchitectDesk?: () => void;
   onOpenMasterRoster?: () => void;
   isMasterArchitect?: boolean;
@@ -16,6 +17,7 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
   onOpenLootGenerator,
   onOpenNishTcGenerator,
   onOpenCraftingMall,
+  onOpenPlayerWorkshop,
   onOpenMasterArchitectDesk,
   onOpenMasterRoster,
   isMasterArchitect = false,
@@ -91,32 +93,69 @@ export const GmToolsPopover: React.FC<GmToolsPopoverProps> = ({
           </div>
         </button>
 
-        {/* Tool 3: Player's Workshop */}
-        {onOpenCraftingMall && (
-          <button
+        {/* Tool 3: The Forge & Workshop */}
+        {(onOpenPlayerWorkshop || onOpenCraftingMall) && (
+          <div
             onClick={() => {
-              onOpenCraftingMall();
+              if (onOpenPlayerWorkshop) onOpenPlayerWorkshop();
+              else if (onOpenCraftingMall) onOpenCraftingMall();
               onClose();
             }}
-            className="group flex items-start gap-3 p-2.5 rounded-lg bg-slate-950/80 hover:bg-amber-950/30 border border-slate-800 hover:border-amber-500/50 transition-all text-left w-full cursor-pointer"
+            className="group flex flex-col p-2.5 rounded-lg bg-slate-950/80 hover:bg-amber-950/30 border border-slate-800 hover:border-amber-500/50 transition-all text-left w-full cursor-pointer shadow-sm"
           >
-            <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 group-hover:bg-amber-500/20 group-hover:text-amber-300 transition-colors shrink-0">
-              🛠️
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-outfit font-bold text-slate-100 group-hover:text-amber-300 transition-colors truncate">
-                  Workshop
-                </span>
-                <span className="text-[10px] font-bold text-amber-950 bg-amber-400 px-1.5 py-0.5 rounded uppercase shrink-0">
-                  Workshop
-                </span>
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 group-hover:bg-amber-500/20 group-hover:text-amber-300 transition-colors shrink-0 text-base flex items-center justify-center">
+                ⚒️
               </div>
-              <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
-                Browse personal creations, party mall, & forge new items / abilities.
-              </p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="font-outfit font-bold text-slate-100 group-hover:text-amber-300 transition-colors truncate">
+                    The Forge
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-950 bg-amber-400 px-1.5 py-0.5 rounded uppercase shrink-0">
+                    Forge
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors leading-tight mt-0.5">
+                  Craft custom powers, gear, weapons, armor, & more.
+                </p>
+              </div>
             </div>
-          </button>
+
+            {/* Dual Action Buttons Row */}
+            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-800/80">
+              {onOpenPlayerWorkshop && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenPlayerWorkshop();
+                    onClose();
+                  }}
+                  className="flex-1 py-1 px-2 rounded-md bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  title="Open Forge to craft new abilities & gear"
+                >
+                  <span>⚒️</span>
+                  <span>Forge</span>
+                </button>
+              )}
+              {onOpenCraftingMall && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenCraftingMall();
+                    onClose();
+                  }}
+                  className="flex-1 py-1 px-2 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  title="Open Workshop to browse personal creations & clone from players"
+                >
+                  <span>🛠️</span>
+                  <span>Workshop</span>
+                </button>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Link 1: SupaFlex Gemini Notebook */}
