@@ -14,7 +14,7 @@ import {
   decomposeMonsterStatblock,
 } from '../../utils/monsterStatParser';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
-import { GmThreatBar } from '../common/GmThreatBar';
+import { GmThreatStepper } from '../common/GmThreatStepper';
 import {
   extractFirstInt,
   extractAllInts,
@@ -526,6 +526,13 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     {selectedMonsterIds.size > 0 ? `${selectedMonsterIds.size} of ${monsters.length} Selected` : 'All Selected'}
                   </span>
                 )}
+                {monsters.length > 0 && (
+                  <GmThreatStepper
+                    value={rosterThreatDif}
+                    onChange={handleRosterThreatChange}
+                    label="Threat Level"
+                  />
+                )}
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 {monsters.length > 0 && (
@@ -549,16 +556,6 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                 )}
               </div>
             </div>
-
-            {/* Embedded Threat Scaling Bar for Left Pane */}
-            {monsters.length > 0 && (
-              <GmThreatBar
-                value={rosterThreatDif}
-                onChange={handleRosterThreatChange}
-                label={selectedMonsterIds.size > 0 ? `Scale Selected (${selectedMonsterIds.size}):` : 'Scale All:'}
-                className="w-full shrink-0"
-              />
-            )}
 
             {/* Scrollable Roster */}
             <div className="flex-1 overflow-y-auto pr-1 space-y-2.5">
@@ -697,21 +694,17 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                   onSubmit={handleSaveQuickMonster}
                   className="p-4 bg-slate-950/90 rounded-xl border border-slate-800 flex flex-col gap-3 font-outfit"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
                       <Plus className="w-4 h-4 text-amber-400" />
                       Quick Add Custom Monster
                     </span>
+                    <GmThreatStepper
+                      value={quickAddThreatDif}
+                      onChange={handleQuickAddThreatChange}
+                      label="Threat Level"
+                    />
                   </div>
-
-                  {/* Compact Threat Pre-Scaler for Quick Add */}
-                  <GmThreatBar
-                    compact
-                    value={quickAddThreatDif}
-                    onChange={handleQuickAddThreatChange}
-                    label="Pre-Scale Threat:"
-                    className="w-full"
-                  />
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     <div>

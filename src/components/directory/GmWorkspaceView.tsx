@@ -10,7 +10,7 @@ import { parseMonsterLine, ParsedMonster, resolveCodexMonsterNotes, formatMonste
 import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { MonsterManagerModal } from '../modals/MonsterManagerModal';
-import { GmCompactDifficultyBar } from '../common/GmCompactDifficultyBar';
+import { GmThreatStepper } from '../common/GmThreatStepper';
 import { AdventureActBar } from '../hud/AdventureActBar';
 import { EncounterSelectorBar } from '../hud/EncounterSelectorBar';
 import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
@@ -206,6 +206,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const fetchAdventures = useAdventureStore((state) => state.fetchAdventures);
   const activeMonsters = useAdventureStore((state) => state.getActiveMonsters());
   const activeEncounter = useAdventureStore((state) => state.getActiveEncounter());
+  const activeEncounterDifficulty = useAdventureStore((state) => state.getActiveEncounterDifficulty());
+  const scaleEncounterDifficulty = useAdventureStore((state) => state.scaleEncounterDifficulty);
   const activeAct = useAdventureStore((state) => state.getActiveAct());
   const activeAdventure = useAdventureStore((state) => state.getActiveAdventure());
   const selectEncounter = useAdventureStore((state) => state.selectEncounter);
@@ -1439,12 +1441,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
               </div>
             )}
 
-            {/* 3. On-Screen Master Difficulty Scaling Bar */}
-            <GmCompactDifficultyBar />
-
-            {/* 4. Image 3 Header Controls (Renamed to "Encounter Rooms", Sort Excised) */}
+            {/* Encounters Header Controls with Inline Threat Level Stepper */}
             <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-              {/* Left: 🐉 Title & Encounter Selector Bar */}
+              {/* Left: 🐉 Title, Encounter Selector Bar & Inline Threat Stepper */}
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="p-1 rounded-lg bg-rose-950/90 border border-rose-500/50 text-rose-300 flex items-center justify-center shadow-[0_0_10px_rgba(244,63,94,0.25)]">
                   <span className="text-xs leading-none">🐉</span>
@@ -1455,6 +1454,12 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
                 {/* Encounter Selector Dropdown & Stepper */}
                 <EncounterSelectorBar />
+
+                {/* High-Density Inline Threat Level Stepper */}
+                <GmThreatStepper
+                  value={activeEncounterDifficulty}
+                  onChange={scaleEncounterDifficulty}
+                />
               </div>
 
               {/* Right: +🐉 Button to open MonsterManagerModal for active encounter */}
