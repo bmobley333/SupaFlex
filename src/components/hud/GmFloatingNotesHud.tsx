@@ -81,11 +81,21 @@ export const GmFloatingNotesHud: React.FC<GmFloatingNotesHudProps> = ({
     }
   }, [isOpen, initialBounds]);
 
+type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
   const isResizingRef = useRef(false);
-  const resizeStartRef = useRef({ mouseX: 0, mouseY: 0, startWidth: 0, startHeight: 0 });
+  const resizeDirRef = useRef<ResizeDirection>('se');
+  const resizeStartRef = useRef({
+    mouseX: 0,
+    mouseY: 0,
+    startX: 0,
+    startY: 0,
+    startWidth: 0,
+    startHeight: 0,
+  });
 
   // Handle Drag Start
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -113,18 +123,54 @@ export const GmFloatingNotesHud: React.FC<GmFloatingNotesHudProps> = ({
     } else if (isResizingRef.current) {
       const deltaX = e.clientX - resizeStartRef.current.mouseX;
       const deltaY = e.clientY - resizeStartRef.current.mouseY;
-
+      const dir = resizeDirRef.current;
       const winW = window.innerWidth;
       const winH = window.innerHeight;
 
-      // Minimum 380px width, max bounded by viewport
-      const maxAllowedWidth = Math.max(380, winW - position.x - 12);
-      const maxAllowedHeight = Math.max(260, winH - position.y - 12);
+      const minW = 380;
+      const minH = 260;
 
-      const nextW = Math.max(380, Math.min(maxAllowedWidth, resizeStartRef.current.startWidth + deltaX));
-      const nextH = Math.max(260, Math.min(maxAllowedHeight, resizeStartRef.current.startHeight + deltaY));
+      let newX = resizeStartRef.current.startX;
+      let newY = resizeStartRef.current.startY;
+      let newW = resizeStartRef.current.startWidth;
+      let newH = resizeStartRef.current.startHeight;
 
-      setSize({ width: nextW, height: nextH });
+      // Horizontal Resize
+      if (dir.includes('e')) {
+        const maxW = winW - newX - 10;
+        newW = Math.max(minW, Math.min(maxW, resizeStartRef.current.startWidth + deltaX));
+      } else if (dir.includes('w')) {
+        const rightEdge = resizeStartRef.current.startX + resizeStartRef.current.startWidth;
+        const candidateW = resizeStartRef.current.startWidth - deltaX;
+        if (candidateW < minW) {
+          newW = minW;
+          newX = rightEdge - minW;
+        } else {
+          const clampedX = Math.max(10, Math.min(rightEdge - minW, resizeStartRef.current.startX + deltaX));
+          newW = rightEdge - clampedX;
+          newX = clampedX;
+        }
+      }
+
+      // Vertical Resize
+      if (dir.includes('s')) {
+        const maxH = winH - newY - 10;
+        newH = Math.max(minH, Math.min(maxH, resizeStartRef.current.startHeight + deltaY));
+      } else if (dir.includes('n')) {
+        const bottomEdge = resizeStartRef.current.startY + resizeStartRef.current.startHeight;
+        const candidateH = resizeStartRef.current.startHeight - deltaY;
+        if (candidateH < minH) {
+          newH = minH;
+          newY = bottomEdge - minH;
+        } else {
+          const clampedY = Math.max(10, Math.min(bottomEdge - minH, resizeStartRef.current.startY + deltaY));
+          newH = bottomEdge - clampedY;
+          newY = clampedY;
+        }
+      }
+
+      setPosition({ x: Math.round(newX), y: Math.round(newY) });
+      setSize({ width: Math.round(newW), height: Math.round(newH) });
     }
   };
 
@@ -147,12 +193,16 @@ export const GmFloatingNotesHud: React.FC<GmFloatingNotesHudProps> = ({
     }
   };
 
-  const handleResizeStart = (e: React.PointerEvent) => {
+  const handleResizeStart = (e: React.PointerEvent, dir: ResizeDirection) => {
     e.stopPropagation();
+    e.preventDefault();
     isResizingRef.current = true;
+    resizeDirRef.current = dir;
     resizeStartRef.current = {
       mouseX: e.clientX,
       mouseY: e.clientY,
+      startX: position.x,
+      startY: position.y,
       startWidth: size.width,
       startHeight: size.height,
     };
@@ -257,24 +307,83 @@ export const GmFloatingNotesHud: React.FC<GmFloatingNotesHudProps> = ({
           </div>
         )}
 
-        {/* Interactive Bottom-Right Corner Resize Grip */}
+        {/* Full 8-Direction Resizable Border Handles */}
         {!isMinimized && (
-          <div
-            onPointerDown={handleResizeStart}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            className="absolute bottom-1 right-1 w-5 h-5 cursor-se-resize flex items-end justify-end p-1 z-30 text-slate-500 hover:text-indigo-300 transition-colors select-none"
-            title="Drag to resize window"
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" className="fill-current opacity-60 hover:opacity-100">
-              <circle cx="8" cy="8" r="1.2" />
-              <circle cx="4" cy="8" r="1.2" />
-              <circle cx="8" cy="4" r="1.2" />
-              <circle cx="0" cy="8" r="1.2" />
-              <circle cx="4" cy="4" r="1.2" />
-              <circle cx="8" cy="0" r="1.2" />
-            </svg>
-          </div>
+          <>
+            {/* Top Border */}
+            <div
+              onPointerDown={(e) => handleResizeStart(e, 'n')}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              className="absolute -top-1 left-4 right-4 h-2.5 cursor-n-resize z-40 select-none hover:bg-indigo-500/20 transition-colors"
+              title="Resize Top"
+            />
+            {/* Bottom Border */}
+            <div
+              onPointerDown={(e) => handleResizeStart(e, 's')}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              className="absolute -bottom-1 left-4 right-4 h-2.5 cursor-s-resize z-40 select-none hover:bg-indigo-500/20 transition-colors"
+              title="Resize Bottom"
+            />
+            {/* Left Border */}
+            <div
+              onPointerDown={(e) => handleResizeStart(e, 'w')}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              className="absolute top-4 bottom-4 -left-1 w-2.5 cursor-w-resize z-40 select-none hover:bg-indigo-500/20 transition-colors"
+              title="Resize Left"
+            />
+            {/* Right Border */}
+            <div
+              onPointerDown={(e) => handleResizeStart(e, 'e')}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              className="absolute top-4 bottom-4 -right-1 w-2.5 cursor-e-resize z-40 select-none hover:bg-indigo-500/20 transition-colors"
+              title="Resize Right"
+            />
+            {/* Top-Left Corner */}
+            <div
+              onPointerDown={(e) => handleResizeStart(e, 'nw')}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              className="absolute -top-1.5 -left-1.5 w-4 h-4 cursor-nw-resize z-50 select-none"
+              title="Resize Top-Left"
+            />
+            {/* Top-Right Corner */}
+            <div
+              onPointerDown={(e) => handleResizeStart(e, 'ne')}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              className="absolute -top-1.5 -right-1.5 w-4 h-4 cursor-ne-resize z-50 select-none"
+              title="Resize Top-Right"
+            />
+            {/* Bottom-Left Corner */}
+            <div
+              onPointerDown={(e) => handleResizeStart(e, 'sw')}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              className="absolute -bottom-1.5 -left-1.5 w-4 h-4 cursor-sw-resize z-50 select-none"
+              title="Resize Bottom-Left"
+            />
+            {/* Bottom-Right Corner (with visual grip dots) */}
+            <div
+              onPointerDown={(e) => handleResizeStart(e, 'se')}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize flex items-end justify-end p-1 z-50 text-slate-500 hover:text-indigo-300 transition-colors select-none"
+              title="Resize Bottom-Right"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" className="fill-current opacity-60 hover:opacity-100">
+                <circle cx="8" cy="8" r="1.2" />
+                <circle cx="4" cy="8" r="1.2" />
+                <circle cx="8" cy="4" r="1.2" />
+                <circle cx="0" cy="8" r="1.2" />
+                <circle cx="4" cy="4" r="1.2" />
+                <circle cx="8" cy="0" r="1.2" />
+              </svg>
+            </div>
+          </>
         )}
       </div>
     </div>

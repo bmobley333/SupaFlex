@@ -1652,7 +1652,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 />
               </div>
 
-              {/* Right: Encounter List vs Room Focus Switch + +🐉 Button */}
+              {/* Right: Encounter List vs Room Focus Switch */}
               <div className="flex items-center gap-2 shrink-0 ml-auto flex-wrap">
                 {/* Dyslexia-Friendly Multi-Option Pill Switch: Encounter List vs Room Focus */}
                 <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
@@ -1666,7 +1666,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     }`}
                     title="View all encounters and monsters across the active act"
                   >
-                    <span>📋</span>
+                    <span>🐉</span>
                     <span>Encounter List</span>
                   </button>
                   <button
@@ -1680,19 +1680,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     } disabled:opacity-40 disabled:cursor-not-allowed`}
                     title="Focus on active room monsters and full-height encounter notes"
                   >
-                    <span>📜</span>
+                    <span>🏰</span>
                     <span>Room Focus</span>
                   </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleOpenMonsterManager('adventure')}
-                  className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-xs font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer"
-                  title="Add or manage monsters for the active adventure encounter"
-                >
-                  <span>+🐉</span>
-                </button>
               </div>
             </div>
           </div>
@@ -1869,24 +1860,26 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
                     return (
                       <div key={enc.id} className="flex flex-col">
-                        {/* Level 1: Encounter Chassis Pill with Centered Action Button & Right Notes Button */}
+                        {/* Level 1: Encounter Chassis Pill with 3-Zone Flex Layout (Zero-Collision) */}
                         <div
-                          className={`relative flex items-center justify-between p-2 rounded-xl border text-xs font-outfit transition-all ${
+                          className={`flex items-center justify-between p-2 rounded-xl border text-xs font-outfit gap-2 transition-all ${
                             isCurrentEncounter
                               ? 'bg-rose-950/80 border-rose-500/80 shadow-md shadow-rose-950/40 text-rose-200'
                               : 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-slate-300'
                           }`}
                         >
-                          {/* Left: 🏰 Room Title & Active Room Badge / Set Active Affordance */}
+                          {/* Zone 1 (Left): 🏰 Room Title & Active Room Badge + Stepper / Set Active */}
                           <div
-                            className="flex items-center gap-2 cursor-pointer max-w-[46%] min-w-0 group"
+                            className="flex-1 min-w-0 flex items-center gap-2 cursor-pointer group"
                             onClick={() => selectEncounter(enc.id)}
                             title="Click to select this encounter as the Active Room"
                           >
                             <span className="text-sm shrink-0">🏰</span>
-                            <span className={`font-extrabold text-xs truncate transition-colors ${
-                              isCurrentEncounter ? 'text-red-400' : 'text-slate-300 group-hover:text-red-400'
-                            }`}>
+                            <span
+                              className={`font-extrabold text-xs truncate min-w-0 transition-colors ${
+                                isCurrentEncounter ? 'text-red-400' : 'text-slate-300 group-hover:text-red-400'
+                              }`}
+                            >
                               {enc.title || 'Untitled Encounter'}
                             </span>
                             {isCurrentEncounter ? (
@@ -1939,8 +1932,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             )}
                           </div>
 
-                          {/* Center: Absolutely Centered "⬅️ Add all X monsters" or "(No monsters staged)" */}
-                          <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+                          {/* Zone 2 (Center): Dedicated Monster Button or (No monsters staged) */}
+                          <div className="shrink-0 px-2 flex items-center justify-center">
                             {monCount > 0 ? (
                               <button
                                 type="button"
@@ -1965,8 +1958,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             )}
                           </div>
 
-                          {/* Right: Notes Action Button to open in Room Focus */}
-                          <div className="flex items-center gap-1.5 shrink-0 z-10">
+                          {/* Zone 3 (Right): Notes Button + +🐉 Monster Manager Button */}
+                          <div className="flex items-center gap-1.5 shrink-0">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1979,6 +1972,18 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             >
                               <span>📝</span>
                               <span>Notes</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectEncounter(enc.id);
+                                handleOpenMonsterManager('adventure');
+                              }}
+                              className="px-2 py-0.5 bg-rose-500/20 hover:bg-rose-600/30 text-rose-300 hover:text-rose-100 border border-rose-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer active:scale-95"
+                              title={`Add or manage monsters for ${enc.title || 'this encounter'}`}
+                            >
+                              <span>+🐉</span>
                             </button>
                           </div>
                         </div>
