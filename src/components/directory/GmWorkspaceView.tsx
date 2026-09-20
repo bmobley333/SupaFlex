@@ -2,7 +2,7 @@
 // Game Master Command Console: Party Roster, Party Management & Monster Roster View
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { StickyNote, RotateCcw } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import { gameApi } from '../../services/api';
 import { supabase } from '../../lib/supabase';
 import { Party, PartySessionMember, SupabaseMonster } from '../../types/game';
@@ -17,8 +17,8 @@ import { AdventureActBar } from '../hud/AdventureActBar';
 import { EncounterSelectorBar } from '../hud/EncounterSelectorBar';
 import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
 import { UniversalLootDropdown } from '../hud/UniversalLootDropdown';
-import { EncounterLinksDropdown } from '../hud/EncounterLinksDropdown';
-import { EncounterLootDropdown } from '../hud/EncounterLootDropdown';
+import { GmEncounterNotesCard } from '../hud/GmEncounterNotesCard';
+import { GmFloatingNotesHud } from '../hud/GmFloatingNotesHud';
 import { useAdventureStore } from '../../store/useAdventureStore';
 import { sanitizeRosterMonsters } from '../../utils/monsterSanitizer';
 
@@ -222,7 +222,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const selectEncounter = useAdventureStore((state) => state.selectEncounter);
   const updateEncounter = useAdventureStore((state) => state.updateEncounter);
   const setEncounterMonsters = useAdventureStore((state) => state.setEncounterMonsters);
-  const setEncounterNotes = useAdventureStore((state) => state.setEncounterNotes);
   const resetEncounterAll = useAdventureStore((state) => state.resetEncounterAll);
   const addAdventureLink = useAdventureStore((state) => state.addAdventureLink);
   const updateAdventureLink = useAdventureStore((state) => state.updateAdventureLink);
@@ -250,124 +249,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploySuccess, setDeploySuccess] = useState(false);
 
-  // Notes Textarea Ref & Formatting Mode
-  const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const [notesMode, setNotesMode] = useState<'view' | 'edit'>('view');
-
-  const ATTRIBUTE_EFFECT_ICONS = [
-    { label: 'Magic ✨', icon: '✨' },
-    { label: 'Might 💪', icon: '💪' },
-    { label: 'Mind 👁️', icon: '👁️' },
-    { label: 'Motion 🏃', icon: '🏃' },
-    { label: 'Moxie 🫀', icon: '🫀' },
-  ];
-
-  const insertIconAtNotesCursor = (iconStr: string) => {
-    if (notesMode !== 'edit') {
-      setNotesMode('edit');
-    }
-    const currentNotes = activeEncounter?.notes || activeEncounter?.tactical_notes || '';
-    const textarea = notesTextareaRef.current;
-    if (!textarea) {
-      setEncounterNotes(currentNotes + iconStr);
-      return;
-    }
-    const start = textarea.selectionStart ?? currentNotes.length;
-    const end = textarea.selectionEnd ?? currentNotes.length;
-    const nextVal = currentNotes.substring(0, start) + iconStr + currentNotes.substring(end);
-    setEncounterNotes(nextVal);
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + iconStr.length, start + iconStr.length);
-    }, 0);
-  };
-
-  const renderFormattedEncounterNotes = (rawText: string) => {
-    if (!rawText || !rawText.trim()) {
-      return (
-        <span className="text-slate-500 italic text-xs">
-          No notes for this encounter. Click to add notes...
-        </span>
-      );
-    }
-
-    const lines = rawText.split(/\r?\n/);
-    return (
-      <div className="space-y-1 text-slate-200 font-sans text-xs leading-relaxed">
-        {lines.map((line, idx) => {
-          const trimmed = line.trim();
-          if (!trimmed) {
-            return <div key={idx} className="h-1.5" />;
-          }
-
-          if (trimmed === '---') {
-            return <div key={idx} className="border-t border-slate-800/80 my-2" />;
-          }
-
-          // Major Section Headers: Room Description, Tactical Encounter Notes, Overview
-          if (
-            trimmed === 'Room Description:' ||
-            trimmed === 'Tactical Encounter Notes:' ||
-            trimmed.startsWith('Overview:') ||
-            trimmed.startsWith('Act I:') ||
-            trimmed.startsWith('Act II:') ||
-            trimmed.startsWith('Act III:') ||
-            trimmed.startsWith('Act IV:')
-          ) {
-            return (
-              <div
-                key={idx}
-                className="text-sky-300 font-extrabold text-xs tracking-wider uppercase border-b border-sky-900/40 pb-0.5 mt-2 mb-1 flex items-center gap-1.5"
-              >
-                <span>{trimmed}</span>
-              </div>
-            );
-          }
-
-          // Prompt Keywords: "• Scene:", "• GM Notes:", "• Objective:", "• Opponents:", "• Reward:", "• Treasure:", "• Trap:", "• Puzzle:", "• Special:"
-          const kwMatch = trimmed.match(
-            /^(?:[•\-\*]\s*)?(Scene|GM Notes|Objective|Opponents|Reward|Treasure|Trap|Puzzle|Special|Puzzle \/ Trap \/ Reward):\s*(.*)$/i
-          );
-          if (kwMatch) {
-            const kw = kwMatch[1];
-            const rest = kwMatch[2];
-            return (
-              <div key={idx} className="flex items-start gap-1.5 leading-relaxed">
-                <span className="font-extrabold text-sky-400 shrink-0 font-sans tracking-wide">
-                  • {kw}:
-                </span>
-                {rest && <span className="text-slate-200">{rest}</span>}
-              </div>
-            );
-          }
-
-          // Monster Sub-lines: "  - 2 Ogrind Guards: ...", "Station Commander Klyss: ..."
-          const monMatch = trimmed.match(
-            /^(?:[•\-\*○]\s*)?(\d+(?:-\d+)?\s+[A-Za-z0-9 '–\-]+(?:\([^\)]+\))?|Station Commander Klyss[^\:]*|Overseer Ketone[^\:]*|Paralith Captain):\s*(.*)$/
-          );
-          if (monMatch) {
-            const mName = monMatch[1];
-            const mRest = monMatch[2];
-            return (
-              <div key={idx} className="pl-4 flex items-start gap-1.5 leading-relaxed">
-                <span className="font-bold text-amber-300 shrink-0 font-sans">
-                  - {mName}:
-                </span>
-                <span className="text-slate-300">{mRest}</span>
-              </div>
-            );
-          }
-
-          // Standard text line
-          return (
-            <div key={idx} className="text-slate-200 leading-relaxed">
-              {line}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
+  // Encounter View Mode: 'tree' (Act-Wide Encounter Tree) vs 'focus' (Room Focus Deck)
+  const [encounterViewMode, setEncounterViewMode] = useState<'tree' | 'focus'>('tree');
+  const [isNotesPoppedOut, setIsNotesPoppedOut] = useState(false);
 
   // Inline Monster Edit State for Adventure Encounters (3-row layout)
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1328,6 +1212,91 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     };
   };
 
+  const renderMonsterRow = (m: any, encId: string) => {
+    if (editingId === m.id && editingEncounterId === encId) {
+      return (
+        <div key={m.id} className="p-3 bg-slate-950 border border-rose-500/60 rounded-xl flex flex-col gap-2 font-mono w-full">
+          {/* Row 1: Main Statline */}
+          <input
+            type="text"
+            value={editText}
+            onChange={(e) => {
+              setEditText(e.target.value);
+              setEditBaseText(e.target.value);
+              setEditDif(10);
+            }}
+            className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-rose-500"
+            autoFocus
+          />
+          {/* Row 2: ⚔️🧥 Gear / Subtitle */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-amber-400 shrink-0 select-none">⚔️🧥:</span>
+            <input
+              type="text"
+              value={editGearText}
+              onChange={(e) => setEditGearText(e.target.value)}
+              className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-amber-500"
+            />
+          </div>
+          {/* Row 3: 🔥 Abilities / Special Notes */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-rose-400 shrink-0 select-none">🔥:</span>
+            <input
+              type="text"
+              value={editAbilitiesText}
+              onChange={(e) => setEditAbilitiesText(e.target.value)}
+              className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-rose-500"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+            <div className="flex items-center gap-2">
+              <GmThreatStepper
+                value={editDif}
+                onChange={handleEncounterMonsterThreatChange}
+              />
+              <GmMinionVitSelector
+                variant="button"
+                currentVit={editMinionVit ? editMinionVit : 10}
+                baseVit={m.base_vit}
+                minionVit={editMinionVit}
+                onSelect={(newMinion) => setEditMinionVit(newMinion)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingId(null);
+                  setEditingEncounterId(null);
+                }}
+                className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaveEdit(encId, m.id)}
+                className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg cursor-pointer"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <GmMonsterCard
+        key={m.id}
+        monster={mapToMonsterData(m)}
+        onAddToRoster={() => handleAddMonsterToRoster(m)}
+        onEdit={() => handleStartEdit(m, encId)}
+        onDelete={() => handleDeleteEncounterMonster(encId, m.id)}
+        onSetMinionVit={(monId, newMinionVit) => handleSetEncounterMonsterMinionVit(encId, monId, newMinionVit)}
+      />
+    );
+  };
+
   return (
     <div className="max-w-[2500px] mx-auto font-outfit lg:h-full lg:min-h-0 lg:flex lg:flex-col">
       {/* Main Grid: Party Roster (Left) vs Monster Roster (Right) */}
@@ -1643,8 +1612,39 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 />
               </div>
 
-              {/* Right: +🐉 Button to open MonsterManagerModal for active encounter */}
-              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+              {/* Right: All Rooms vs Room Focus Switch + +🐉 Button */}
+              <div className="flex items-center gap-2 shrink-0 ml-auto flex-wrap">
+                {/* Dyslexia-Friendly Multi-Option Pill Switch: All Rooms vs Room Focus */}
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                  <button
+                    type="button"
+                    onClick={() => setEncounterViewMode('tree')}
+                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      encounterViewMode === 'tree'
+                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                    title="View all encounters and monsters across the active act"
+                  >
+                    <span>🌲</span>
+                    <span>All Rooms</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEncounterViewMode('focus')}
+                    disabled={!activeEncounter}
+                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      encounterViewMode === 'focus'
+                        ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    } disabled:opacity-40 disabled:cursor-not-allowed`}
+                    title="Focus on active room monsters and full-height encounter notes"
+                  >
+                    <span>📜</span>
+                    <span>Room Focus</span>
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => handleOpenMonsterManager('adventure')}
@@ -1658,283 +1658,260 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           </div>
 
           {/* ====================================================================== */}
-          {/* SCROLLABLE CONTENT ZONE: Encounter room tree & Encounter Notes scroll   */}
+          {/* CONTENT ZONE: Encounter Room Tree OR Room Focus Deck                   */}
           {/* ====================================================================== */}
-          <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto pr-1.5 space-y-3 pt-3">
-            {/* Act-Wide Encounter Monsters Tree */}
-            {!activeAct || (activeAct.encounters || []).length === 0 ? (
-              <div className="text-xs font-medium text-slate-400 italic p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center space-y-2 font-outfit">
-                <div>No encounters in active act.</div>
-                <div className="text-[11px] text-slate-500 font-outfit">
-                  Use the Adventure Selectors above to add acts and encounters.
+          {encounterViewMode === 'focus' ? (
+            <div className="lg:flex-1 lg:min-h-0 flex flex-col gap-2.5 pt-2">
+              {!activeEncounter ? (
+                <div className="text-xs font-medium text-slate-400 italic p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center space-y-2 font-outfit">
+                  <div>No active encounter selected.</div>
+                  <button
+                    type="button"
+                    onClick={() => setEncounterViewMode('tree')}
+                    className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg cursor-pointer"
+                  >
+                    Return to All Rooms
+                  </button>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-3 pr-1">
-                {(activeAct.encounters || []).map((enc) => {
-                  const isCurrentEncounter = enc.id === activeEncounter?.id;
-                  const monCount = (enc.monsters || []).length;
-                  const sortedMonsters = [...(enc.monsters || [])].sort((a, b) => {
-                    const nameA = (a.fullText || a.nameWithEquip || (a as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
-                    const nameB = (b.fullText || b.nameWithEquip || (b as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
-                    return nameA.localeCompare(nameB);
-                  });
+              ) : (
+                <>
+                  {/* Tier 1: Active Encounter Command Horizon & Monster Shelf */}
+                  <div className="shrink-0 flex flex-col gap-2 p-2.5 bg-rose-950/80 border border-rose-500/80 rounded-xl shadow-md shadow-rose-950/40 text-rose-200 font-outfit">
+                    {/* Header Bar */}
+                    <div className="relative flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm shrink-0">🏰</span>
+                        <span className="font-extrabold text-xs truncate text-red-400">
+                          {activeEncounter.title || 'Untitled Encounter'}
+                        </span>
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-rose-500/25 text-rose-200 border border-rose-500/50 shrink-0 flex items-center gap-1 shadow-sm">
+                          <span>👑</span>
+                          <span>Active Room</span>
+                        </span>
+                      </div>
 
-                  return (
-                    <div key={enc.id} className="flex flex-col">
-                      {/* Level 1: Encounter Chassis Pill with Centered Action Button */}
-                      <div
-                        className={`relative flex items-center justify-between p-2 rounded-xl border text-xs font-outfit transition-all ${
-                          isCurrentEncounter
-                            ? 'bg-rose-950/80 border-rose-500/80 shadow-md shadow-rose-950/40 text-rose-200'
-                            : 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-slate-300'
-                        }`}
-                      >
-                        {/* Left: 🏰 Room Title & Active Room Badge / Set Active Affordance */}
-                        <div
-                          className="flex items-center gap-2 cursor-pointer max-w-[42%] min-w-0 group"
-                          onClick={() => selectEncounter(enc.id)}
-                          title="Click to select this encounter as the Active Room"
-                        >
-                          <span className="text-sm shrink-0">🏰</span>
-                          <span className={`font-extrabold text-xs truncate transition-colors ${
-                            isCurrentEncounter ? 'text-red-400' : 'text-slate-300 group-hover:text-red-400'
-                          }`}>
-                            {enc.title || 'Untitled Encounter'}
+                      {/* Centered "Add all X monsters" or "(No monsters staged)" */}
+                      <div className="pointer-events-auto">
+                        {(activeEncounter.monsters || []).length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleAddAllMonstersToRoster(activeEncounter)}
+                            className="px-2.5 py-0.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-rose-100 border border-rose-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                            title={`Copy all ${(activeEncounter.monsters || []).length} monsters to 👥&🐉 Encounter Roster`}
+                          >
+                            <span>⬅️</span>
+                            <span>Add all {(activeEncounter.monsters || []).length} monsters</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic select-none">
+                            (No monsters staged)
                           </span>
-                          {isCurrentEncounter ? (
-                            <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-rose-500/25 text-rose-200 border border-rose-500/50 shrink-0 flex items-center gap-1 shadow-sm">
-                              <span>👑</span>
-                              <span>Active Room</span>
+                        )}
+                      </div>
+
+                      {/* Right Controls: +🐉 Monster button */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenMonsterManager('adventure')}
+                          className="px-2 py-0.5 bg-rose-500/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-xs font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+                          title="Add or manage monsters for this encounter"
+                        >
+                          <span>+🐉</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Staged Monsters Shelf */}
+                    {(activeEncounter.monsters || []).length > 0 ? (
+                      <div className="max-h-48 overflow-y-auto pr-1 flex flex-col gap-1.5 border-l-2 border-rose-500/40 pl-3 ml-2 mt-1">
+                        {[...(activeEncounter.monsters || [])]
+                          .sort((a, b) => {
+                            const nameA = (a.fullText || a.nameWithEquip || (a as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+                            const nameB = (b.fullText || b.nameWithEquip || (b as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+                            return nameA.localeCompare(nameB);
+                          })
+                          .map((m) => renderMonsterRow(m, activeEncounter.id))}
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-slate-400 italic py-1.5 px-3 bg-slate-950/60 rounded-lg border border-slate-900 text-center font-outfit">
+                        No monsters staged for this encounter. Click <span className="text-rose-300 font-bold">+🐉</span> above to stage opponents.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tier 2: Encounter Notes Deck */}
+                  {isNotesPoppedOut ? (
+                    <div className="flex-1 min-h-[160px] flex flex-col items-center justify-center p-6 bg-slate-950/80 border border-dashed border-indigo-500/40 rounded-xl text-center gap-2">
+                      <span className="text-sm font-bold text-indigo-300 flex items-center gap-2">
+                        <span>🗗</span> Encounter Notes are floating in HUD
+                      </span>
+                      <p className="text-xs text-slate-400 max-w-sm font-outfit">
+                        Notes window is detached and floating on screen. You can drag it anywhere or dock it back here.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsNotesPoppedOut(false)}
+                        className="mt-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow cursor-pointer"
+                      >
+                        <span>🗖 Dock Notes Here</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <GmEncounterNotesCard
+                      activeEncounter={activeEncounter}
+                      selectedPartyId={selectedParty?.id}
+                      isPoppedOut={false}
+                      onTogglePopOut={() => setIsNotesPoppedOut(true)}
+                      fullHeight={true}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto pr-1.5 space-y-3 pt-3">
+              {/* Act-Wide Encounter Monsters Tree */}
+              {!activeAct || (activeAct.encounters || []).length === 0 ? (
+                <div className="text-xs font-medium text-slate-400 italic p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center space-y-2 font-outfit">
+                  <div>No encounters in active act.</div>
+                  <div className="text-[11px] text-slate-500 font-outfit">
+                    Use the Adventure Selectors above to add acts and encounters.
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 pr-1">
+                  {(activeAct.encounters || []).map((enc) => {
+                    const isCurrentEncounter = enc.id === activeEncounter?.id;
+                    const monCount = (enc.monsters || []).length;
+                    const sortedMonsters = [...(enc.monsters || [])].sort((a, b) => {
+                      const nameA = (a.fullText || a.nameWithEquip || (a as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+                      const nameB = (b.fullText || b.nameWithEquip || (b as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+                      return nameA.localeCompare(nameB);
+                    });
+
+                    return (
+                      <div key={enc.id} className="flex flex-col">
+                        {/* Level 1: Encounter Chassis Pill with Centered Action Button & Right Notes Button */}
+                        <div
+                          className={`relative flex items-center justify-between p-2 rounded-xl border text-xs font-outfit transition-all ${
+                            isCurrentEncounter
+                              ? 'bg-rose-950/80 border-rose-500/80 shadow-md shadow-rose-950/40 text-rose-200'
+                              : 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-slate-300'
+                          }`}
+                        >
+                          {/* Left: 🏰 Room Title & Active Room Badge / Set Active Affordance */}
+                          <div
+                            className="flex items-center gap-2 cursor-pointer max-w-[42%] min-w-0 group"
+                            onClick={() => selectEncounter(enc.id)}
+                            title="Click to select this encounter as the Active Room"
+                          >
+                            <span className="text-sm shrink-0">🏰</span>
+                            <span className={`font-extrabold text-xs truncate transition-colors ${
+                              isCurrentEncounter ? 'text-red-400' : 'text-slate-300 group-hover:text-red-400'
+                            }`}>
+                              {enc.title || 'Untitled Encounter'}
                             </span>
-                          ) : (
+                            {isCurrentEncounter ? (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-rose-500/25 text-rose-200 border border-rose-500/50 shrink-0 flex items-center gap-1 shadow-sm">
+                                <span>👑</span>
+                                <span>Active Room</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  selectEncounter(enc.id);
+                                }}
+                                className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-900/90 hover:bg-rose-950/80 text-slate-400 hover:text-rose-300 border border-slate-700/80 hover:border-rose-500/50 shrink-0 flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
+                                title="Click to select this encounter as the Active Room"
+                              >
+                                <span>🎯</span>
+                                <span>Set Active</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Center: Absolutely Centered "⬅️ Add all X monsters" or "(No monsters staged)" */}
+                          <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+                            {monCount > 0 ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddAllMonstersToRoster(enc);
+                                }}
+                                className="px-2.5 py-0.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-rose-100 border border-rose-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                                title={`Copy all ${monCount} monsters to 👥&🐉 Encounter Roster`}
+                              >
+                                <span>⬅️</span>
+                                <span>Add all {monCount} monsters</span>
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-slate-500 italic select-none">
+                                (No monsters staged)
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Right: Notes Action Button to open in Room Focus */}
+                          <div className="flex items-center gap-1.5 shrink-0 z-10">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 selectEncounter(enc.id);
+                                setEncounterViewMode('focus');
                               }}
-                              className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-900/90 hover:bg-rose-950/80 text-slate-400 hover:text-rose-300 border border-slate-700/80 hover:border-rose-500/50 shrink-0 flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
-                              title="Click to select this encounter as the Active Room"
+                              className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-100 border border-amber-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
+                              title="Open Encounter Notes in Room Focus mode"
                             >
-                              <span>🎯</span>
-                              <span>Set Active</span>
+                              <span>📝</span>
+                              <span>Notes</span>
                             </button>
-                          )}
+                          </div>
                         </div>
 
-                        {/* Center: Absolutely Centered "⬅️ Add all X monsters" or "(No monsters staged)" */}
-                        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
-                          {monCount > 0 ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddAllMonstersToRoster(enc);
-                              }}
-                              className="px-2.5 py-0.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-rose-100 border border-rose-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                              title={`Copy all ${monCount} monsters to 👥&🐉 Encounter Roster`}
-                            >
-                              <span>⬅️</span>
-                              <span>Add all {monCount} monsters</span>
-                            </button>
-                          ) : (
-                            <span className="text-[11px] text-slate-500 italic select-none">
-                              (No monsters staged)
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Right: Spacer to balance layout */}
-                        <div className="w-12 shrink-0" />
+                        {/* Level 2: Nested Monsters with Vertical Line Indentation */}
+                        {monCount > 0 && (
+                          <div className="flex flex-col gap-1.5 pl-3 ml-3 border-l-2 border-rose-500/40 my-1.5">
+                            {sortedMonsters.map((m) => renderMonsterRow(m, enc.id))}
+                          </div>
+                        )}
                       </div>
+                    );
+                  })}
+                </div>
+              )}
 
-                      {/* Level 2: Nested Monsters with Vertical Line Indentation (strictly when monCount > 0, always alphabetical) */}
-                      {monCount > 0 && (
-                        <div className="flex flex-col gap-1.5 pl-3 ml-3 border-l-2 border-rose-500/40 my-1.5">
-                          {sortedMonsters.map((m) =>
-                            editingId === m.id && editingEncounterId === enc.id ? (
-                              <div key={m.id} className="p-3 bg-slate-950 border border-rose-500/60 rounded-xl flex flex-col gap-2 font-mono w-full">
-                                {/* Row 1: Main Statline */}
-                                <input
-                                  type="text"
-                                  value={editText}
-                                  onChange={(e) => {
-                                    setEditText(e.target.value);
-                                    setEditBaseText(e.target.value);
-                                    setEditDif(10);
-                                  }}
-                                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-rose-500"
-                                  autoFocus
-                                />
-                                {/* Row 2: ⚔️🧥 Gear / Subtitle */}
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[11px] font-bold text-amber-400 shrink-0 select-none">⚔️🧥:</span>
-                                  <input
-                                    type="text"
-                                    value={editGearText}
-                                    onChange={(e) => setEditGearText(e.target.value)}
-                                    className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-amber-500"
-                                  />
-                                </div>
-                                {/* Row 3: 🔥 Abilities / Special Notes */}
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[11px] font-bold text-rose-400 shrink-0 select-none">🔥:</span>
-                                  <input
-                                    type="text"
-                                    value={editAbilitiesText}
-                                    onChange={(e) => setEditAbilitiesText(e.target.value)}
-                                    className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-rose-500"
-                                  />
-                                </div>
-                                <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
-                                  <div className="flex items-center gap-2">
-                                    <GmThreatStepper
-                                      value={editDif}
-                                      onChange={handleEncounterMonsterThreatChange}
-                                    />
-                                    <GmMinionVitSelector
-                                      variant="button"
-                                      currentVit={editMinionVit ? editMinionVit : 10}
-                                      baseVit={m.base_vit}
-                                      minionVit={editMinionVit}
-                                      onSelect={(newMinion) => setEditMinionVit(newMinion)}
-                                    />
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setEditingId(null);
-                                        setEditingEncounterId(null);
-                                      }}
-                                      className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 cursor-pointer"
-                                    >
-                                      Cancel
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSaveEdit(enc.id, m.id)}
-                                      className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg cursor-pointer"
-                                    >
-                                      Save Changes
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <GmMonsterCard
-                                key={m.id}
-                                monster={mapToMonsterData(m)}
-                                onAddToRoster={() => handleAddMonsterToRoster(m)}
-                                onEdit={() => handleStartEdit(m, enc.id)}
-                                onDelete={() => handleDeleteEncounterMonster(enc.id, m.id)}
-                                onSetMinionVit={(monId, newMinionVit) => handleSetEncounterMonsterMinionVit(enc.id, monId, newMinionVit)}
-                              />
-                            )
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-          {/* Permanent Always-Open Encounter Notes Card */}
-          <div className="bg-slate-950/90 border border-slate-800 border-t-2 border-t-rose-500/50 p-3.5 rounded-xl shadow-inner flex flex-col gap-2.5 font-outfit mt-2">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h4 className="text-xs font-extrabold text-rose-200 uppercase tracking-wider flex items-center gap-2 font-mono">
-                  <div className="p-1 rounded-lg bg-rose-950/90 border border-rose-500/40 text-rose-300 flex items-center justify-center shadow-sm">
-                    <StickyNote className="w-3.5 h-3.5" />
-                  </div>
-                  <span>Encounter Notes</span>
-                  {activeEncounter && (
-                    <span className="text-slate-400 font-normal">({activeEncounter.title})</span>
-                  )}
-                </h4>
-
-                {/* Dyslexia-Friendly Multi-Option Pill Switch: View vs Edit */}
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+              {/* Bottom Encounter Notes Card (when in tree mode and not popped out) */}
+              {isNotesPoppedOut ? (
+                <div className="p-4 bg-slate-950/80 border border-dashed border-indigo-500/40 rounded-xl text-center flex items-center justify-between gap-2 mt-2">
+                  <span className="text-xs text-indigo-300 font-bold flex items-center gap-1.5">
+                    <span>🗗</span> Encounter Notes floating in HUD
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setNotesMode('view')}
-                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      notesMode === 'view'
-                        ? 'bg-sky-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
+                    onClick={() => setIsNotesPoppedOut(false)}
+                    className="px-2.5 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition shadow cursor-pointer"
                   >
-                    👁️ View
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNotesMode('edit')}
-                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      notesMode === 'edit'
-                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    ✏️ Edit
+                    <span>🗖 Dock Here</span>
                   </button>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3 flex-wrap">
-                {/* Insert Icon Buttons */}
-                <div className="flex items-center gap-1 flex-wrap">
-                  <span className="text-[10px] text-slate-400 font-bold mr-0.5 font-mono">Insert Icon:</span>
-                  {ATTRIBUTE_EFFECT_ICONS.map((item) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => insertIconAtNotesCursor(item.icon)}
-                      disabled={!activeEncounter}
-                      className="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded text-[11px] font-bold text-slate-200 transition-colors flex items-center gap-1 shadow-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                      title={`Insert ${item.icon} into Encounter Notes`}
-                    >
-                      <span>{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* High-Density Encounter Loot Dropdown + Encounter Links Dropdown */}
-                <div className="flex items-center gap-2">
-                  <EncounterLootDropdown partyId={selectedParty?.id} />
-                  <EncounterLinksDropdown />
-                </div>
-              </div>
+              ) : (
+                <GmEncounterNotesCard
+                  activeEncounter={activeEncounter}
+                  selectedPartyId={selectedParty?.id}
+                  isPoppedOut={false}
+                  onTogglePopOut={() => setIsNotesPoppedOut(true)}
+                  fullHeight={false}
+                  className="mt-2"
+                />
+              )}
             </div>
-
-            {/* Formatted View vs Raw Edit */}
-            {notesMode === 'view' ? (
-              <div
-                onClick={() => setNotesMode('edit')}
-                title="Click anywhere to edit notes"
-                className="w-full min-h-[100px] max-h-80 overflow-y-auto bg-slate-900/90 border border-slate-800 rounded-lg p-3 text-xs font-sans leading-relaxed cursor-pointer hover:border-slate-700/80 transition-colors shadow-inner select-text"
-              >
-                {renderFormattedEncounterNotes(activeEncounter?.notes || activeEncounter?.tactical_notes || '')}
-              </div>
-            ) : (
-              <textarea
-                ref={notesTextareaRef}
-                rows={4}
-                value={activeEncounter?.notes || activeEncounter?.tactical_notes || ''}
-                onChange={(e) => setEncounterNotes(e.target.value)}
-                placeholder={
-                  activeEncounter
-                    ? 'e.g. Floor spikes trigger on round 2; 2 skeleton archers on catwalks; secret door behind altar...'
-                    : 'Select or create an encounter above to write notes...'
-                }
-                disabled={!activeEncounter}
-                className="w-full bg-slate-900/90 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 font-mono outline-none focus:border-amber-500/80 transition placeholder:text-slate-600 disabled:opacity-40 leading-relaxed"
-              />
-            )}
-          </div>
+          )}
         </div>
-      </div>
       </div>
 
       {/* Master Monster Manager Modal */}
@@ -1945,6 +1922,15 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         onSaveMonsters={monsterManagerTarget === 'roster' ? handleSaveRosterMonstersFromModal : handleSaveMonsters}
         partyName={selectedParty?.name}
         title={monsterManagerTarget === 'roster' ? 'Encounter Roster (Live Game)' : 'Adventure Encounter Monsters'}
+      />
+
+      {/* Floating Non-Modal Encounter Notes HUD */}
+      <GmFloatingNotesHud
+        isOpen={isNotesPoppedOut}
+        activeEncounter={activeEncounter}
+        selectedPartyId={selectedParty?.id}
+        onDock={() => setIsNotesPoppedOut(false)}
+        onClose={() => setIsNotesPoppedOut(false)}
       />
     </div>
   );

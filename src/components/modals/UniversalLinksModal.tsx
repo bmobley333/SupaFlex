@@ -346,7 +346,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         };
       case 'encounter':
         return {
-          title: 'Encounter Notes',
+          title: 'Encounter Links',
           subtitle: activeEnc ? `${activeAdv?.title || 'Adv'} > ${activeEnc.title}` : 'No Active Encounter Selected',
           links: activeEnc?.links || [],
           icon: <Swords className="w-5 h-5 text-amber-400" />,
@@ -354,7 +354,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
           accentText: 'text-amber-300',
           badgeStyle: 'bg-amber-950/80 text-amber-300 border-amber-500/40',
           isDisabled: !activeEnc || !activeAdv || !activeAct,
-          disabledReason: 'Select an encounter in GM Screen to manage Encounter-specific notes.',
+          disabledReason: 'Select an encounter in GM Screen to manage Encounter-specific links.',
           onAdd: async (name: string, url: string, tag?: string, desc?: string) => {
             if (!activeAdv || !activeAct || !activeEnc) return;
             await addEncounterLink(activeAdv.id, activeAct.id, activeEnc.id, name, url, tag, desc);
