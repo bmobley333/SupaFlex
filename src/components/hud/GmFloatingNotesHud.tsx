@@ -8,12 +8,20 @@ import { Minimize2, Maximize2, X, StickyNote } from 'lucide-react';
 import { GmEncounter } from '../../types/adventures';
 import { GmEncounterNotesCard } from './GmEncounterNotesCard';
 
+export interface FloatingWindowBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface GmFloatingNotesHudProps {
   isOpen: boolean;
   activeEncounter: GmEncounter | null;
   selectedPartyId?: string;
   onDock: () => void;
   onClose: () => void;
+  initialBounds?: FloatingWindowBounds | null;
 }
 
 export const GmFloatingNotesHud: React.FC<GmFloatingNotesHudProps> = ({
@@ -22,24 +30,56 @@ export const GmFloatingNotesHud: React.FC<GmFloatingNotesHudProps> = ({
   selectedPartyId,
   onDock,
   onClose,
+  initialBounds,
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
-  const [position, setPosition] = useState<{ x: number; y: number }>(() => {
+
+  const getDefaultBounds = (): FloatingWindowBounds => {
     const screenW = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const screenH = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const isDesktop = screenW >= 1024;
+
+    if (isDesktop) {
+      // Anchored to lower right pane area roughly as in Image 1
+      const colWidth = Math.min(680, Math.max(460, Math.round(screenW * 0.48)));
+      const colX = Math.round(screenW * 0.5 + 12);
+      const colY = Math.min(390, Math.max(280, Math.round(screenH * 0.42)));
+      const colHeight = Math.min(520, Math.max(360, screenH - colY - 24));
+      return {
+        x: Math.max(10, Math.min(screenW - colWidth - 16, colX)),
+        y: Math.max(10, Math.min(screenH - 120, colY)),
+        width: colWidth,
+        height: colHeight,
+      };
+    }
+
     return {
-      x: Math.max(20, screenW - 600),
-      y: 110,
+      x: 16,
+      y: 120,
+      width: Math.min(screenW - 32, 540),
+      height: Math.min(screenH - 160, 480),
     };
+  };
+
+  const [position, setPosition] = useState<{ x: number; y: number }>(() => {
+    if (initialBounds) return { x: initialBounds.x, y: initialBounds.y };
+    const def = getDefaultBounds();
+    return { x: def.x, y: def.y };
   });
 
   const [size, setSize] = useState<{ width: number; height: number }>(() => {
-    const screenW = typeof window !== 'undefined' ? window.innerWidth : 1200;
-    const screenH = typeof window !== 'undefined' ? window.innerHeight : 800;
-    return {
-      width: Math.min(620, Math.max(440, Math.round(screenW * 0.42))),
-      height: Math.min(600, Math.max(400, Math.round(screenH * 0.65))),
-    };
+    if (initialBounds) return { width: initialBounds.width, height: initialBounds.height };
+    const def = getDefaultBounds();
+    return { width: def.width, height: def.height };
   });
+
+  // When newly opened with explicit initialBounds, adopt them immediately
+  useEffect(() => {
+    if (isOpen && initialBounds) {
+      setPosition({ x: initialBounds.x, y: initialBounds.y });
+      setSize({ width: initialBounds.width, height: initialBounds.height });
+    }
+  }, [isOpen, initialBounds]);
 
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });

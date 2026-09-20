@@ -18,7 +18,7 @@ import { EncounterSelectorBar } from '../hud/EncounterSelectorBar';
 import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
 import { UniversalLootDropdown } from '../hud/UniversalLootDropdown';
 import { GmEncounterNotesCard } from '../hud/GmEncounterNotesCard';
-import { GmFloatingNotesHud } from '../hud/GmFloatingNotesHud';
+import { GmFloatingNotesHud, FloatingWindowBounds } from '../hud/GmFloatingNotesHud';
 import { useAdventureStore } from '../../store/useAdventureStore';
 import { sanitizeRosterMonsters } from '../../utils/monsterSanitizer';
 
@@ -252,6 +252,46 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Encounter View Mode: 'tree' (Act-Wide Encounter Tree) vs 'focus' (Room Focus Deck)
   const [encounterViewMode, setEncounterViewMode] = useState<'tree' | 'focus'>('tree');
   const [isNotesPoppedOut, setIsNotesPoppedOut] = useState(false);
+  const notesDockRef = useRef<HTMLDivElement>(null);
+  const [floatingNotesBounds, setFloatingNotesBounds] = useState<FloatingWindowBounds | null>(null);
+
+  const handlePopOutNotes = () => {
+    if (notesDockRef.current) {
+      const rect = notesDockRef.current.getBoundingClientRect();
+      if (rect.width > 200 && rect.height > 100) {
+        setFloatingNotesBounds({
+          x: Math.round(rect.left),
+          y: Math.round(rect.top),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        });
+      }
+    }
+    setIsNotesPoppedOut(true);
+  };
+
+  // Encounter sequential navigation within the active act
+  const actEncounters = useMemo(() => activeAct?.encounters || [], [activeAct]);
+  const currentEncounterIndex = useMemo(
+    () => actEncounters.findIndex((e) => e.id === activeEncounter?.id),
+    [actEncounters, activeEncounter]
+  );
+  const hasPrevEncounter = currentEncounterIndex > 0;
+  const hasNextEncounter = currentEncounterIndex >= 0 && currentEncounterIndex < actEncounters.length - 1;
+  const prevEncounter = hasPrevEncounter ? actEncounters[currentEncounterIndex - 1] : null;
+  const nextEncounter = hasNextEncounter ? actEncounters[currentEncounterIndex + 1] : null;
+
+  const handlePrevEncounter = () => {
+    if (prevEncounter) {
+      selectEncounter(prevEncounter.id);
+    }
+  };
+
+  const handleNextEncounter = () => {
+    if (nextEncounter) {
+      selectEncounter(nextEncounter.id);
+    }
+  };
 
   // Inline Monster Edit State for Adventure Encounters (3-row layout)
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1688,6 +1728,33 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                           <span>👑</span>
                           <span>Active Room</span>
                         </span>
+                        {/* Encounter Navigation Stepper */}
+                        <div className="flex items-center gap-0.5 bg-slate-950/80 border border-rose-500/30 rounded-lg p-0.5 shadow-inner shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePrevEncounter();
+                            }}
+                            disabled={!hasPrevEncounter}
+                            className="w-5 h-5 flex items-center justify-center text-xs font-black rounded text-rose-300 hover:text-white hover:bg-rose-900/60 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
+                            title={hasPrevEncounter ? `Previous Room: ${prevEncounter?.title}` : 'No previous room'}
+                          >
+                            &lt;
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleNextEncounter();
+                            }}
+                            disabled={!hasNextEncounter}
+                            className="w-5 h-5 flex items-center justify-center text-xs font-black rounded text-rose-300 hover:text-white hover:bg-rose-900/60 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
+                            title={hasNextEncounter ? `Next Room: ${nextEncounter?.title}` : 'No next room'}
+                          >
+                            &gt;
+                          </button>
+                        </div>
                       </div>
 
                       {/* Centered "Add all X monsters" or "(No monsters staged)" */}
@@ -1697,10 +1764,18 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             type="button"
                             onClick={() => handleAddAllMonstersToRoster(activeEncounter)}
                             className="px-2.5 py-0.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-rose-100 border border-rose-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                            title={`Copy all ${(activeEncounter.monsters || []).length} monsters to 👥&🐉 Encounter Roster`}
+                            title={
+                              (activeEncounter.monsters || []).length === 1
+                                ? 'Copy the 1 monster to 👥&🐉 Encounter Roster'
+                                : `Copy all ${(activeEncounter.monsters || []).length} monsters to 👥&🐉 Encounter Roster`
+                            }
                           >
                             <span>⬅️</span>
-                            <span>Add all {(activeEncounter.monsters || []).length} monsters</span>
+                            <span>
+                              {(activeEncounter.monsters || []).length === 1
+                                ? 'Add the 1 monster'
+                                : `Add all ${(activeEncounter.monsters || []).length} monsters`}
+                            </span>
                           </button>
                         ) : (
                           <span className="text-[11px] text-slate-400 italic select-none">
@@ -1758,13 +1833,15 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                       </button>
                     </div>
                   ) : (
-                    <GmEncounterNotesCard
-                      activeEncounter={activeEncounter}
-                      selectedPartyId={selectedParty?.id}
-                      isPoppedOut={false}
-                      onTogglePopOut={() => setIsNotesPoppedOut(true)}
-                      fullHeight={true}
-                    />
+                    <div ref={notesDockRef} className="flex-1 min-h-0 flex flex-col">
+                      <GmEncounterNotesCard
+                        activeEncounter={activeEncounter}
+                        selectedPartyId={selectedParty?.id}
+                        isPoppedOut={false}
+                        onTogglePopOut={handlePopOutNotes}
+                        fullHeight={true}
+                      />
+                    </div>
                   )}
                 </>
               )}
@@ -1802,7 +1879,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                         >
                           {/* Left: 🏰 Room Title & Active Room Badge / Set Active Affordance */}
                           <div
-                            className="flex items-center gap-2 cursor-pointer max-w-[42%] min-w-0 group"
+                            className="flex items-center gap-2 cursor-pointer max-w-[46%] min-w-0 group"
                             onClick={() => selectEncounter(enc.id)}
                             title="Click to select this encounter as the Active Room"
                           >
@@ -1813,10 +1890,39 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                               {enc.title || 'Untitled Encounter'}
                             </span>
                             {isCurrentEncounter ? (
-                              <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-rose-500/25 text-rose-200 border border-rose-500/50 shrink-0 flex items-center gap-1 shadow-sm">
-                                <span>👑</span>
-                                <span>Active Room</span>
-                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-rose-500/25 text-rose-200 border border-rose-500/50 shrink-0 flex items-center gap-1 shadow-sm">
+                                  <span>👑</span>
+                                  <span>Active Room</span>
+                                </span>
+                                {/* Encounter Navigation Stepper */}
+                                <div className="flex items-center gap-0.5 bg-slate-950/80 border border-rose-500/30 rounded-lg p-0.5 shadow-inner shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handlePrevEncounter();
+                                    }}
+                                    disabled={!hasPrevEncounter}
+                                    className="w-5 h-5 flex items-center justify-center text-xs font-black rounded text-rose-300 hover:text-white hover:bg-rose-900/60 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
+                                    title={hasPrevEncounter ? `Previous Room: ${prevEncounter?.title}` : 'No previous room'}
+                                  >
+                                    &lt;
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleNextEncounter();
+                                    }}
+                                    disabled={!hasNextEncounter}
+                                    className="w-5 h-5 flex items-center justify-center text-xs font-black rounded text-rose-300 hover:text-white hover:bg-rose-900/60 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
+                                    title={hasNextEncounter ? `Next Room: ${nextEncounter?.title}` : 'No next room'}
+                                  >
+                                    &gt;
+                                  </button>
+                                </div>
+                              </div>
                             ) : (
                               <button
                                 type="button"
@@ -1843,10 +1949,14 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                   handleAddAllMonstersToRoster(enc);
                                 }}
                                 className="px-2.5 py-0.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-rose-100 border border-rose-500/40 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                                title={`Copy all ${monCount} monsters to 👥&🐉 Encounter Roster`}
+                                title={
+                                  monCount === 1
+                                    ? 'Copy the 1 monster to 👥&🐉 Encounter Roster'
+                                    : `Copy all ${monCount} monsters to 👥&🐉 Encounter Roster`
+                                }
                               >
                                 <span>⬅️</span>
-                                <span>Add all {monCount} monsters</span>
+                                <span>{monCount === 1 ? 'Add the 1 monster' : `Add all ${monCount} monsters`}</span>
                               </button>
                             ) : (
                               <span className="text-[11px] text-slate-500 italic select-none">
@@ -1904,6 +2014,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         isOpen={isNotesPoppedOut}
         activeEncounter={activeEncounter}
         selectedPartyId={selectedParty?.id}
+        initialBounds={floatingNotesBounds}
         onDock={() => {
           setIsNotesPoppedOut(false);
           setEncounterViewMode('focus');
