@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { ItemNotesPopover } from './ItemNotesPopover';
+import { GmMinionVitSelector } from './GmMinionVitSelector';
 import { MonsterStatData } from '../../utils/monsterStatParser';
 
 export interface MonsterData extends MonsterStatData {
@@ -14,6 +15,7 @@ interface GmMonsterCardProps {
   onEdit?: (monster: MonsterData) => void;
   onDelete?: (id: string | number) => void;
   onAddToRoster?: (monster: MonsterData) => void;
+  onSetMinionVit?: (monsterId: string | number, minionVit: number | undefined) => void;
   isTurnMarked?: boolean;
   onToggleTurnMark?: () => void;
   showDragonIcon?: boolean;
@@ -26,6 +28,7 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
   onEdit,
   onDelete,
   onAddToRoster,
+  onSetMinionVit,
   isTurnMarked,
   onToggleTurnMark,
   showDragonIcon,
@@ -59,7 +62,8 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
   const woundsVal = monster.min_wounds && monster.min_wounds > 1 ? `(${monster.min_wounds})` : '';
   const defVal = monster.defense ?? 10;
   const armorVal = monster.armor ?? 0;
-  const maxVitVal = monster.max_vit ?? monster.current_vit ?? 10;
+  const isMinion = typeof monster.minion_vit === 'number' && monster.minion_vit > 0;
+  const maxVitVal = isMinion ? monster.minion_vit! : (monster.max_vit ?? monster.current_vit ?? 10);
 
   const attrs = monster.attributes || {};
   const magic = attrs.magic ?? 10;
@@ -170,7 +174,24 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
             <span>👣{mrVal}</span>
             <span>⚔️{atkVal}/{dmgVal}{woundsVal}</span>
             <span>🧥{defVal}/{armorVal}</span>
-            <span>❤️{maxVitVal}</span>
+            {onSetMinionVit ? (
+              <GmMinionVitSelector
+                currentVit={maxVitVal}
+                baseVit={monster.base_vit ?? (isMinion ? undefined : maxVitVal)}
+                minionVit={monster.minion_vit}
+                onSelect={(newMinionVit) => onSetMinionVit(monster.id, newMinionVit)}
+              />
+            ) : isMinion ? (
+              <span
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-purple-950/50 text-purple-300 border border-purple-500/50 font-bold shadow-[0_0_8px_rgba(168,85,247,0.25)]"
+                title={`Minion Class (Locked Vit: ${monster.minion_vit} • Threat-Level Immune)`}
+              >
+                <span className="text-[11px] leading-none">💔</span>
+                <span className="text-[11px] font-extrabold text-purple-300 tabular-nums">{monster.minion_vit}</span>
+              </span>
+            ) : (
+              <span>❤️{maxVitVal}</span>
+            )}
           </div>
 
           {/* System Attributes (Strict Alphabetical Order: ✨ Magic, 💪 Might, 👁️ Mind, 🏃 Motion, 🫀 Moxie) */}

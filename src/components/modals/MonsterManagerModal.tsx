@@ -15,6 +15,7 @@ import {
 } from '../../utils/monsterStatParser';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { GmThreatStepper } from '../common/GmThreatStepper';
+import { GmMinionVitSelector } from '../common/GmMinionVitSelector';
 import {
   extractFirstInt,
   extractAllInts,
@@ -131,6 +132,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   const [editAbilitiesText, setEditAbilitiesText] = useState('');
   const [modalMonsterEditDif, setModalMonsterEditDif] = useState(10);
   const [modalMonsterEditBaseText, setModalMonsterEditBaseText] = useState('');
+  const [modalMonsterEditMinionVit, setModalMonsterEditMinionVit] = useState<number | undefined>(undefined);
 
   // Fetch Supabase Codex monsters when modal opens
   useEffect(() => {
@@ -261,8 +263,10 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
       min_wounds: atkNums[2] ? parseInt(atkNums[2], 10) : 1,
       defense: defNums[0] ? parseInt(defNums[0], 10) : 10,
       armor: defNums[1] ? parseInt(defNums[1], 10) : 0,
-      max_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
-      current_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
+      max_vit: (m.minion_vit !== undefined ? m.minion_vit : (parsed.minion_vit !== undefined ? parsed.minion_vit : (hpNums[0] ? parseInt(hpNums[0], 10) : 10))),
+      current_vit: (m.minion_vit !== undefined ? m.minion_vit : (parsed.minion_vit !== undefined ? parsed.minion_vit : (hpNums[0] ? parseInt(hpNums[0], 10) : 10))),
+      minion_vit: m.minion_vit ?? parsed.minion_vit,
+      base_vit: m.base_vit ?? (m.minion_vit !== undefined || parsed.minion_vit !== undefined ? undefined : (hpNums[0] ? parseInt(hpNums[0], 10) : 10)),
       attributes: attrValues,
       gm_notes: codexNotes,
       is_codex: !!codexNotes || m.is_codex,
@@ -359,6 +363,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     setModalMonsterEditDif(m.scaled_dif || 10);
     setEditGearText(gear);
     setEditAbilitiesText(abilities);
+    setModalMonsterEditMinionVit(m.minion_vit ?? (raw.match(/💔\s*(\d+)/) ? parseInt(raw.match(/💔\s*(\d+)/)![1], 10) : undefined));
   };
 
   const handleModalThreatChange = (newDif: number) => {
@@ -377,7 +382,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const gearPart = editGearText.trim() ? ` (${editGearText.trim()})` : '';
     const abilitiesPart = editAbilitiesText.trim() ? ` (${editAbilitiesText.trim()})` : '';
 
-    const iconPosMatch = editText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️]/u);
+    const iconPosMatch = editText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
       const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
@@ -387,15 +392,64 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
       reconstructed = `${editText.trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim()}${gearPart}${abilitiesPart}`.trim();
     }
 
+    if (typeof modalMonsterEditMinionVit === 'number') {
+      reconstructed = reconstructed.replace(/(?:❤️|💔)\s*\d+/, `💔${modalMonsterEditMinionVit}`);
+    } else {
+      const normalVitMatch = reconstructed.match(/(?:❤️|💔)\s*(\d+)/);
+      const normalVit = normalVitMatch ? normalVitMatch[1] : '10';
+      reconstructed = reconstructed.replace(/(?:❤️|💔)\s*\d+/, `❤️${normalVit}`);
+    }
+
     const parsed = parseMonsterLine(reconstructed);
     parsed.gear = editGearText.trim() || undefined;
     parsed.abilities = editAbilitiesText.trim() || undefined;
     parsed.baseFullText = modalMonsterEditBaseText;
     parsed.scaled_dif = modalMonsterEditDif;
+
+    if (typeof modalMonsterEditMinionVit === 'number') {
+      parsed.minion_vit = modalMonsterEditMinionVit;
+      parsed.vitalityStat = `💔${modalMonsterEditMinionVit}`;
+      if (parsed.fullText) {
+        parsed.fullText = parsed.fullText.replace(/(?:❤️|💔)\s*\d+/, `💔${modalMonsterEditMinionVit}`);
+      }
+    } else {
+      parsed.minion_vit = undefined;
+    }
+
     baselineMapRef.current.set(id, modalMonsterEditBaseText);
     const updated = monsters.map((m) => (m.id === id ? { ...parsed, id, baseFullText: modalMonsterEditBaseText, scaled_dif: modalMonsterEditDif } : m));
     onSaveMonsters(updated);
     setEditingId(null);
+  };
+
+  const handleSetModalMonsterMinionVit = (monsterId: string | number, minionVit: number | undefined) => {
+    const updated = monsters.map((m) => {
+      if (m.id !== monsterId) return m;
+      const updatedM = { ...m };
+      if (typeof minionVit === 'number') {
+        const hpNums = (m.vitalityStat || '').match(/\d+/);
+        if (!updatedM.base_vit && hpNums) {
+          updatedM.base_vit = parseInt(hpNums[0], 10);
+        }
+        updatedM.minion_vit = minionVit;
+        updatedM.vitalityStat = `💔${minionVit}`;
+        if (updatedM.fullText) {
+          updatedM.fullText = updatedM.fullText.replace(/(?:❤️|💔)\s*\d+/, `💔${minionVit}`);
+        }
+      } else {
+        const restoredVit = updatedM.base_vit || 10;
+        updatedM.minion_vit = undefined;
+        const scaledVit = updatedM.scaled_dif && updatedM.scaled_dif !== 10
+          ? scaleStatByAnchor('max_vit', restoredVit, updatedM.scaled_dif)
+          : restoredVit;
+        updatedM.vitalityStat = `❤️${scaledVit}`;
+        if (updatedM.fullText) {
+          updatedM.fullText = updatedM.fullText.replace(/(?:❤️|💔)\s*\d+/, `❤️${scaledVit}`);
+        }
+      }
+      return updatedM;
+    });
+    onSaveMonsters(updated);
   };
 
   const handleParsePasteBlock = () => {
@@ -620,10 +674,17 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                         />
                       </div>
                       <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
-                        <GmThreatStepper
-                          value={modalMonsterEditDif}
-                          onChange={handleModalThreatChange}
-                        />
+                        <div className="flex items-center gap-2">
+                          <GmThreatStepper
+                            value={modalMonsterEditDif}
+                            onChange={handleModalThreatChange}
+                          />
+                          <GmMinionVitSelector
+                            value={modalMonsterEditMinionVit}
+                            onChange={setModalMonsterEditMinionVit}
+                            variant="button"
+                          />
+                        </div>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
@@ -650,6 +711,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                       onToggleSelect={() => handleToggleSelectMonster(m.id)}
                       onEdit={() => handleStartEdit(m)}
                       onDelete={() => handleDeleteMonster(m.id)}
+                      onSetMinionVit={(monId, minionVit) => handleSetModalMonsterMinionVit(monId, minionVit)}
                     />
                   )
                 )

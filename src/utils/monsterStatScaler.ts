@@ -104,6 +104,7 @@ export function scaleMonsterData(monster: MonsterData, dif: number): MonsterData
   if (dif === 10) return monster;
 
   const attrs = monster.attributes || {};
+  const isMinion = typeof monster.minion_vit === 'number' && monster.minion_vit > 0;
 
   return {
     ...monster,
@@ -113,8 +114,8 @@ export function scaleMonsterData(monster: MonsterData, dif: number): MonsterData
     damage: scaleStatByAnchor('damage', monster.damage ?? 9, dif),
     defense: scaleStatByAnchor('defense', monster.defense ?? 15, dif),
     armor: scaleStatByAnchor('armor', monster.armor ?? 2, dif),
-    max_vit: scaleStatByAnchor('max_vit', monster.max_vit ?? 16, dif),
-    current_vit: scaleStatByAnchor('max_vit', monster.current_vit ?? (monster.max_vit ?? 16), dif),
+    max_vit: isMinion ? monster.minion_vit! : scaleStatByAnchor('max_vit', monster.max_vit ?? 16, dif),
+    current_vit: isMinion ? monster.minion_vit! : scaleStatByAnchor('max_vit', monster.current_vit ?? (monster.max_vit ?? 16), dif),
     attributes: {
       magic: scaleStatByAnchor('magic', attrs.magic ?? 12, dif),
       might: scaleStatByAnchor('might', attrs.might ?? 16, dif),
@@ -147,7 +148,9 @@ export function serializeMonsterDataLine(m: MonsterData): string {
   const woundsStr = (m.min_wounds && m.min_wounds > 0) ? `(${m.min_wounds})` : '';
   const defVal = m.defense ?? 10;
   const armorVal = m.armor ?? 0;
-  const vitVal = m.max_vit ?? 10;
+  const isMinion = typeof m.minion_vit === 'number' && m.minion_vit > 0;
+  const heartIcon = isMinion ? '💔' : '❤️';
+  const vitVal = isMinion ? m.minion_vit : (m.max_vit ?? 10);
 
   const attrs = m.attributes || {};
   const magic = attrs.magic ?? 10;
@@ -156,7 +159,7 @@ export function serializeMonsterDataLine(m: MonsterData): string {
   const motion = attrs.motion ?? 10;
   const moxie = attrs.moxie ?? 10;
 
-  return `${fullTitle} 🚩${initVal} 👣${mrVal} ⚔️${atkVal}/${dmgVal}${woundsStr} 🧥${defVal}/${armorVal} ❤️${vitVal} – [✨${magic}/💪${might}/👁️${mind}/🏃${motion}/🫀${moxie}]${notesStr}`;
+  return `${fullTitle} 🚩${initVal} 👣${mrVal} ⚔️${atkVal}/${dmgVal}${woundsStr} 🧥${defVal}/${armorVal} ${heartIcon}${vitVal} – [✨${magic}/💪${might}/👁️${mind}/🏃${motion}/🫀${moxie}]${notesStr}`;
 }
 
 /**
@@ -169,11 +172,20 @@ export function scaleParsedMonster(parsed: ParsedMonster, dif: number): ParsedMo
 
   if (dif === 10) {
     const baseParsed = parseMonsterLine(baseText);
+    if (parsed.minion_vit) {
+      baseParsed.minion_vit = parsed.minion_vit;
+      baseParsed.vitalityStat = `💔${parsed.minion_vit}`;
+      if (baseParsed.fullText) {
+        baseParsed.fullText = baseParsed.fullText.replace(/(?:❤️|💔)\s*\d+/, `💔${parsed.minion_vit}`);
+      }
+    }
     return {
       ...baseParsed,
       id: parsed.id,
       baseFullText: baseText,
       scaled_dif: 10,
+      minion_vit: parsed.minion_vit,
+      base_vit: parsed.base_vit,
       gear: parsed.gear || baseParsed.gear,
       abilities: parsed.abilities || baseParsed.abilities,
       codex_notes: parsed.codex_notes,
@@ -183,6 +195,9 @@ export function scaleParsedMonster(parsed: ParsedMonster, dif: number): ParsedMo
   }
 
   const mData = parseMonsterLineToData(baseText, parsed.id);
+  if (parsed.minion_vit) {
+    mData.minion_vit = parsed.minion_vit;
+  }
   const scaledData = scaleMonsterData(mData, dif);
   const newFullText = serializeMonsterDataLine(scaledData);
   const reParsed = parseMonsterLine(newFullText);
@@ -191,6 +206,8 @@ export function scaleParsedMonster(parsed: ParsedMonster, dif: number): ParsedMo
     id: parsed.id,
     baseFullText: baseText,
     scaled_dif: dif,
+    minion_vit: parsed.minion_vit,
+    base_vit: parsed.base_vit,
     gear: parsed.gear || reParsed.gear,
     abilities: parsed.abilities || reParsed.abilities,
     codex_notes: parsed.codex_notes,
@@ -312,6 +329,9 @@ export function parseMonsterLineToData(raw: string, id: string = 'mon_tmp'): Mon
     .replace(/\s*\[[^\]]*\]/g, '')
     .trim() || 'Monster';
 
+  const isMinion = typeof parsed.minion_vit === 'number' && parsed.minion_vit > 0;
+  const vitVal = isMinion ? parsed.minion_vit! : (hpNums[0] ? parseInt(hpNums[0], 10) : 10);
+
   return {
     id,
     name: cleanName,
@@ -323,8 +343,10 @@ export function parseMonsterLineToData(raw: string, id: string = 'mon_tmp'): Mon
     min_wounds: atkNums[2] ? parseInt(atkNums[2], 10) : 0,
     defense: defNums[0] ? parseInt(defNums[0], 10) : 10,
     armor: defNums[1] ? parseInt(defNums[1], 10) : 0,
-    max_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
-    current_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
+    max_vit: vitVal,
+    current_vit: vitVal,
+    minion_vit: parsed.minion_vit,
+    base_vit: parsed.base_vit,
     attributes: attrValues,
     gm_notes: parsed.abilities || parsed.codex_notes || undefined,
   };

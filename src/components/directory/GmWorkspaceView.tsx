@@ -11,7 +11,8 @@ import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharact
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { MonsterManagerModal } from '../modals/MonsterManagerModal';
 import { GmThreatStepper } from '../common/GmThreatStepper';
-import { scaleStatlineText } from '../../utils/monsterStatScaler';
+import { GmMinionVitSelector } from '../common/GmMinionVitSelector';
+import { scaleStatlineText, scaleStatByAnchor } from '../../utils/monsterStatScaler';
 import { AdventureActBar } from '../hud/AdventureActBar';
 import { EncounterSelectorBar } from '../hud/EncounterSelectorBar';
 import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
@@ -29,6 +30,8 @@ export interface GmRosterMonster {
   fullText: string;
   baseFullText?: string;
   scaled_dif?: number;
+  minion_vit?: number;
+  base_vit?: number;
   mr?: number;
   attack?: number;
   damage?: number;
@@ -56,8 +59,8 @@ export function parseMonsterForGmRoster(
   const trimmed = (raw || '').trim();
   const monId = explicitId || `${idPrefixOrId}${Math.random().toString(36).substring(2, 9)}`;
 
-  // Extract Name (before first combat stat icon 🚩, 👣, ⚔️, ⚔, 🛡️, 🧥, ❤️)
-  const firstIconMatch = trimmed.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
+  // Extract Name (before first combat stat icon 🚩, 👣, ⚔️, ⚔, 🛡️, 🧥, 🥋, ❤️, 💔)
+  const firstIconMatch = trimmed.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
   let rawName = trimmed;
   if (firstIconMatch && firstIconMatch.index !== undefined) {
     rawName = trimmed.substring(0, firstIconMatch.index).trim();
@@ -103,9 +106,11 @@ export function parseMonsterForGmRoster(
   const def = defMatch ? defMatch[1] : '10';
   const arm = defMatch ? defMatch[2] : '0';
 
-  // Vitality: match ❤️ or ❤
-  const vitMatch = trimmed.match(/(?:❤️|❤)\s*(\d+)/u);
+  // Vitality: match ❤️, ❤, or 💔
+  const vitMatch = trimmed.match(/(?:❤️|❤|💔)\s*(\d+)/u);
   const vit = vitMatch ? vitMatch[1] : '10';
+  const isMinionHeart = vitMatch ? vitMatch[0].startsWith('💔') : false;
+  const minionVitVal = isMinionHeart && vitMatch ? parseInt(vitMatch[1], 10) : undefined;
 
   // Attributes: [✨.../💪.../👁️.../🏃.../(🫀|💖)...]
   const attrMatch = trimmed.match(/\[\s*✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*(?:👁️|👁)\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(🫀|💖)\s*(\d+)\s*\]/u);
@@ -140,8 +145,9 @@ export function parseMonsterForGmRoster(
   }
 
   // Canonical full-color emoji presentation:
-  // ⚔️ (\u2694\uFE0F) and ❤️ (\u2764\uFE0F) with standardized spacing
-  const coreStatsText = `👣${mr} ⚔️${atk}/${dmg}${wounds} 🧥${def}/${arm} ❤️${vit} ${attrBlock}`.trim();
+  // ⚔️ (\u2694\uFE0F) and ❤️ / 💔 with standardized spacing
+  const heartIcon = isMinionHeart ? '💔' : '❤️';
+  const coreStatsText = `👣${mr} ⚔️${atk}/${dmg}${wounds} 🧥${def}/${arm} ${heartIcon}${vit} ${attrBlock}`.trim();
 
   return {
     id: monId,
@@ -158,6 +164,8 @@ export function parseMonsterForGmRoster(
     defense: parseInt(def, 10) || 10,
     armor: parseInt(arm, 10) || 0,
     max_vit: parseInt(vit, 10) || 10,
+    minion_vit: minionVitVal,
+    base_vit: isMinionHeart ? undefined : (parseInt(vit, 10) || 10),
     gear: gear || undefined,
     abilities: abilities || undefined,
     gm_notes: abilities || undefined,
@@ -369,6 +377,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const [editAbilitiesText, setEditAbilitiesText] = useState('');
   const [editDif, setEditDif] = useState(10);
   const [editBaseText, setEditBaseText] = useState('');
+  const [editMinionVit, setEditMinionVit] = useState<number | undefined>(undefined);
 
   // Effective monsters list displayed in the GM Monster Tracker strictly mirrors the active encounter
   const effectiveMonsters = activeMonsters;
@@ -411,6 +420,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     setEditDif(m.scaled_dif || 10);
     setEditGearText(gear);
     setEditAbilitiesText(abilities);
+    setEditMinionVit(m.minion_vit);
   };
 
   const handleEncounterMonsterThreatChange = (newDif: number) => {
@@ -429,7 +439,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const gearPart = editGearText.trim() ? ` (${editGearText.trim()})` : '';
     const abilitiesPart = editAbilitiesText.trim() ? ` (${editAbilitiesText.trim()})` : '';
 
-    const iconPosMatch = editText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️]/u);
+    const iconPosMatch = editText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
       const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
@@ -444,6 +454,16 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     parsed.abilities = editAbilitiesText.trim() || undefined;
     parsed.scaled_dif = editDif;
     parsed.baseFullText = editBaseText;
+
+    if (typeof editMinionVit === 'number') {
+      parsed.minion_vit = editMinionVit;
+      parsed.vitalityStat = `💔${editMinionVit}`;
+      if (parsed.fullText) {
+        parsed.fullText = parsed.fullText.replace(/(?:❤️|💔)\s*\d+/, `💔${editMinionVit}`);
+      }
+    } else {
+      parsed.minion_vit = undefined;
+    }
 
     if (encounterId === activeEncounter?.id) {
       const updated = effectiveMonsters.map((m) =>
@@ -461,6 +481,53 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     }
     setEditingId(null);
     setEditingEncounterId(null);
+  };
+
+  const handleSetEncounterMonsterMinionVit = (
+    encounterId: string,
+    monsterId: string | number,
+    minionVit: number | undefined
+  ) => {
+    const updateMonsterMinion = (m: ParsedMonster): ParsedMonster => {
+      const updated = { ...m };
+      if (typeof minionVit === 'number') {
+        const hpNums = (m.vitalityStat || '').match(/\d+/);
+        if (!updated.base_vit && hpNums) {
+          updated.base_vit = parseInt(hpNums[0], 10);
+        }
+        updated.minion_vit = minionVit;
+        updated.vitalityStat = `💔${minionVit}`;
+        if (updated.fullText) {
+          updated.fullText = updated.fullText.replace(/(?:❤️|💔)\s*\d+/, `💔${minionVit}`);
+        }
+      } else {
+        const restoredVit = updated.base_vit || 10;
+        updated.minion_vit = undefined;
+        const scaledVit = updated.scaled_dif && updated.scaled_dif !== 10
+          ? scaleStatByAnchor('max_vit', restoredVit, updated.scaled_dif)
+          : restoredVit;
+        updated.vitalityStat = `❤️${scaledVit}`;
+        if (updated.fullText) {
+          updated.fullText = updated.fullText.replace(/(?:❤️|💔)\s*\d+/, `❤️${scaledVit}`);
+        }
+      }
+      return updated;
+    };
+
+    if (encounterId === activeEncounter?.id) {
+      const updated = effectiveMonsters.map((m) =>
+        m.id === monsterId ? updateMonsterMinion(m) : m
+      );
+      handleSaveMonsters(updated);
+    } else if (activeAdventure && activeAct) {
+      const targetEnc = activeAct.encounters?.find((e) => e.id === encounterId);
+      if (targetEnc) {
+        const updated = (targetEnc.monsters || []).map((m) =>
+          m.id === monsterId ? updateMonsterMinion(m) : m
+        );
+        updateEncounter(activeAdventure.id, activeAct.id, encounterId, { monsters: updated });
+      }
+    }
   };
 
   const handleDeleteEncounterMonster = (encounterId: string, monsterId: string) => {
@@ -589,6 +656,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const [rosterMonsterEditAbilities, setRosterMonsterEditAbilities] = useState('');
   const [rosterMonsterEditDif, setRosterMonsterEditDif] = useState(10);
   const [rosterMonsterEditBaseText, setRosterMonsterEditBaseText] = useState('');
+  const [rosterMonsterEditMinionVit, setRosterMonsterEditMinionVit] = useState<number | undefined>(undefined);
 
   const handleStartRosterMonsterEdit = (monster: GmRosterMonster) => {
     setEditingRosterMonsterId(monster.id);
@@ -618,6 +686,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     setRosterMonsterEditDif(monster.scaled_dif || 10);
     setRosterMonsterEditGear(gear);
     setRosterMonsterEditAbilities(abilities);
+    setRosterMonsterEditMinionVit(monster.minion_vit);
   };
 
   const handleRosterMonsterThreatChange = (newDif: number) => {
@@ -636,7 +705,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const gearPart = rosterMonsterEditGear.trim() ? ` (${rosterMonsterEditGear.trim()})` : '';
     const abilitiesPart = rosterMonsterEditAbilities.trim() ? ` (${rosterMonsterEditAbilities.trim()})` : '';
 
-    const iconPosMatch = rosterMonsterEditText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️]/u);
+    const iconPosMatch = rosterMonsterEditText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
       const namePart = rosterMonsterEditText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
@@ -652,6 +721,15 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     parsed.scaled_dif = rosterMonsterEditDif;
     parsed.baseFullText = rosterMonsterEditBaseText;
 
+    if (typeof rosterMonsterEditMinionVit === 'number') {
+      parsed.minion_vit = rosterMonsterEditMinionVit;
+      parsed.max_vit = rosterMonsterEditMinionVit;
+      parsed.coreStatsText = parsed.coreStatsText.replace(/(?:❤️|💔)\s*\d+/, `💔${rosterMonsterEditMinionVit}`);
+      parsed.fullText = parsed.fullText.replace(/(?:❤️|💔)\s*\d+/, `💔${rosterMonsterEditMinionVit}`);
+    } else {
+      parsed.minion_vit = undefined;
+    }
+
     setPushedMonsters((prev) => {
       const next = prev.map((m) => (m.id === monsterId ? { ...parsed, id: monsterId, baseFullText: rosterMonsterEditBaseText, scaled_dif: rosterMonsterEditDif } : m));
       try {
@@ -660,6 +738,38 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       return next;
     });
     setEditingRosterMonsterId(null);
+  };
+
+  const handleSetRosterMonsterMinionVit = (monsterId: string | number, minionVit: number | undefined) => {
+    setPushedMonsters((prev) => {
+      const next = prev.map((m) => {
+        if (m.id !== monsterId) return m;
+        const updated = { ...m };
+        if (typeof minionVit === 'number') {
+          if (!updated.base_vit && updated.max_vit) {
+            updated.base_vit = updated.max_vit;
+          }
+          updated.minion_vit = minionVit;
+          updated.max_vit = minionVit;
+          updated.coreStatsText = updated.coreStatsText.replace(/(?:❤️|💔)\s*\d+/, `💔${minionVit}`);
+          updated.fullText = updated.fullText.replace(/(?:❤️|💔)\s*\d+/, `💔${minionVit}`);
+        } else {
+          const restoredVit = updated.base_vit || 10;
+          updated.minion_vit = undefined;
+          const scaledVit = updated.scaled_dif && updated.scaled_dif !== 10
+            ? scaleStatByAnchor('max_vit', restoredVit, updated.scaled_dif)
+            : restoredVit;
+          updated.max_vit = scaledVit;
+          updated.coreStatsText = updated.coreStatsText.replace(/(?:❤️|💔)\s*\d+/, `❤️${scaledVit}`);
+          updated.fullText = updated.fullText.replace(/(?:❤️|💔)\s*\d+/, `❤️${scaledVit}`);
+        }
+        return updated;
+      });
+      try {
+        localStorage.setItem(gmPushedMonstersKey, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   // Add monster directly to live Encounter Roster (via ⬅️ on adventure monster cards)
@@ -1152,8 +1262,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       min_wounds: atkNums[2] ? parseInt(atkNums[2], 10) : 1,
       defense: defNums[0] ? parseInt(defNums[0], 10) : 10,
       armor: defNums[1] ? parseInt(defNums[1], 10) : 0,
-      max_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
-      current_vit: hpNums[0] ? parseInt(hpNums[0], 10) : 10,
+      max_vit: m.minion_vit ? m.minion_vit : (hpNums[0] ? parseInt(hpNums[0], 10) : 10),
+      current_vit: m.minion_vit ? m.minion_vit : (hpNums[0] ? parseInt(hpNums[0], 10) : 10),
+      minion_vit: m.minion_vit,
+      base_vit: m.base_vit ?? (m.minion_vit ? undefined : (hpNums[0] ? parseInt(hpNums[0], 10) : 10)),
       attributes: attrMatch ? {
         magic: parseInt(attrMatch[1], 10),
         might: parseInt(attrMatch[2], 10),
@@ -1206,8 +1318,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       min_wounds: monster.wounds ? (parseInt(monster.wounds.replace(/\D/g, ''), 10) || 1) : 1,
       defense: monster.defense ?? 10,
       armor: monster.armor ?? 0,
-      max_vit: monster.max_vit ?? 10,
-      current_vit: monster.max_vit ?? 10,
+      max_vit: monster.minion_vit ? monster.minion_vit : (monster.max_vit ?? 10),
+      current_vit: monster.minion_vit ? monster.minion_vit : (monster.max_vit ?? 10),
+      minion_vit: monster.minion_vit,
+      base_vit: monster.base_vit ?? (monster.minion_vit ? undefined : (monster.max_vit ?? 10)),
       attributes: monster.attributes ?? { magic: 10, might: 10, mind: 10, motion: 10, moxie: 10 },
       gm_notes: codexNotes,
       is_codex: !!codexNotes,
@@ -1352,10 +1466,19 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                               />
                             </div>
                             <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
-                              <GmThreatStepper
-                                value={rosterMonsterEditDif}
-                                onChange={handleRosterMonsterThreatChange}
-                              />
+                              <div className="flex items-center gap-2">
+                                <GmThreatStepper
+                                  value={rosterMonsterEditDif}
+                                  onChange={handleRosterMonsterThreatChange}
+                                />
+                                <GmMinionVitSelector
+                                  variant="button"
+                                  currentVit={rosterMonsterEditMinionVit ? rosterMonsterEditMinionVit : (monster.max_vit ?? 10)}
+                                  baseVit={monster.base_vit ?? (monster.minion_vit ? undefined : monster.max_vit)}
+                                  minionVit={rosterMonsterEditMinionVit}
+                                  onSelect={(newMinion) => setRosterMonsterEditMinionVit(newMinion)}
+                                />
+                              </div>
                               <div className="flex items-center gap-2">
                                 <button
                                   type="button"
@@ -1382,6 +1505,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             onToggleTurnMark={() => toggleTurnMark(monster.id)}
                             onEdit={() => handleStartRosterMonsterEdit(monster)}
                             onDelete={() => handleDismissRosterMonster(monster.id)}
+                            onSetMinionVit={(monId, newMinionVit) => handleSetRosterMonsterMinionVit(monId, newMinionVit)}
                           />
                         )}
                       </div>
@@ -1662,10 +1786,19 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                   />
                                 </div>
                                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
-                                  <GmThreatStepper
-                                    value={editDif}
-                                    onChange={handleEncounterMonsterThreatChange}
-                                  />
+                                  <div className="flex items-center gap-2">
+                                    <GmThreatStepper
+                                      value={editDif}
+                                      onChange={handleEncounterMonsterThreatChange}
+                                    />
+                                    <GmMinionVitSelector
+                                      variant="button"
+                                      currentVit={editMinionVit ? editMinionVit : 10}
+                                      baseVit={m.base_vit}
+                                      minionVit={editMinionVit}
+                                      onSelect={(newMinion) => setEditMinionVit(newMinion)}
+                                    />
+                                  </div>
                                   <div className="flex items-center gap-2">
                                     <button
                                       type="button"
@@ -1694,6 +1827,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                 onAddToRoster={() => handleAddMonsterToRoster(m)}
                                 onEdit={() => handleStartEdit(m, enc.id)}
                                 onDelete={() => handleDeleteEncounterMonster(enc.id, m.id)}
+                                onSetMinionVit={(monId, newMinionVit) => handleSetEncounterMonsterMinionVit(enc.id, monId, newMinionVit)}
                               />
                             )
                           )}

@@ -13,6 +13,8 @@ export interface ParsedMonster {
   reducedText: string;
   baseFullText?: string;
   scaled_dif?: number;
+  minion_vit?: number;
+  base_vit?: number;
   is_codex?: boolean;
   codex_notes?: string;
   codex_id?: number | string;
@@ -43,12 +45,14 @@ export function parseMonsterLine(line: string): ParsedMonster {
   const defMatch = trimmed.match(/(?:🛡️|🧥|🥋)\s*[\d\/\(\)\s\-+]+/u);
   const defenseStat = defMatch ? defMatch[0].trim() : '';
 
-  // 3. Extract Vitality Stat (❤️)
-  const vitMatch = trimmed.match(/(?:❤️)\s*\d+/u);
+  // 3. Extract Vitality Stat (❤️ or 💔)
+  const vitMatch = trimmed.match(/(?:❤️|💔)\s*(\d+)/u);
   const vitalityStat = vitMatch ? vitMatch[0].trim() : '';
+  const isMinionHeart = vitMatch ? vitMatch[0].startsWith('💔') : false;
+  const parsedMinionVit = isMinionHeart && vitMatch ? parseInt(vitMatch[1], 10) : undefined;
 
-  // 4. Extract Name / Prefix (everything before first stat icon 🚩, 👣, 🥊, ⚔️, 🛡️, 🧥, 🥋, ❤️)
-  const iconPosMatch = trimmed.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️]/u);
+  // 4. Extract Name / Prefix (everything before first stat icon 🚩, 👣, 🥊, ⚔️, 🛡️, 🧥, 🥋, ❤️, 💔)
+  const iconPosMatch = trimmed.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
   let nameWithEquip = trimmed;
   if (iconPosMatch && iconPosMatch.index !== undefined) {
     nameWithEquip = trimmed.substring(0, iconPosMatch.index).trim();
@@ -85,7 +89,7 @@ export function parseMonsterLine(line: string): ParsedMonster {
     extractedAbilities = trailing;
   } else {
     // Fallback: If no attribute block, look for trailing parenthetical notes after vitality
-    const vitEndMatch = trimmed.match(/❤️\s*\d+\s*(?:–|-)?\s*\(([^)]+)\)\s*$/u);
+    const vitEndMatch = trimmed.match(/(?:❤️|💔)\s*\d+\s*(?:–|-)?\s*\(([^)]+)\)\s*$/u);
     if (vitEndMatch && vitEndMatch[1]) {
       extractedAbilities = vitEndMatch[1].trim();
     }
@@ -109,6 +113,7 @@ export function parseMonsterLine(line: string): ParsedMonster {
     attackStat,
     defenseStat,
     vitalityStat,
+    minion_vit: parsedMinionVit,
     fullText: trimmed,
     reducedText,
     baseFullText: trimmed,
@@ -131,6 +136,8 @@ export interface MonsterStatData {
   armor?: number;
   max_vit?: number;
   current_vit?: number;
+  minion_vit?: number;
+  base_vit?: number;
   attributes?: {
     magic?: number;
     might?: number;
@@ -304,17 +311,17 @@ export function decomposeMonsterStatblock(raw: string): {
       abilities = outerParen ? outerParen[1].trim() : trailing;
     }
   } else {
-    // If no attribute block, check for trailing parenthetical after ❤️
-    const vitEndMatch = trimmed.match(/^(.*?❤️\s*\d+)\s*(?:–|-)?\s*\(([^)]+)\)\s*$/u);
+    // If no attribute block, check for trailing parenthetical after ❤️ or 💔
+    const vitEndMatch = trimmed.match(/^(.*?(?:❤️|💔)\s*\d+)\s*(?:–|-)?\s*\(([^)]+)\)\s*$/u);
     if (vitEndMatch) {
       statline = vitEndMatch[1].trim();
       abilities = vitEndMatch[2].trim();
     }
   }
 
-  // 2. Extract gear from () before first combat icon (🚩, 👣, 🥊, ⚔️, ⚔, 🛡️, 🧥, 🥋, ❤️)
+  // 2. Extract gear from () before first combat icon (🚩, 👣, 🥊, ⚔️, ⚔, 🛡️, 🧥, 🥋, ❤️, 💔)
   let gear = '';
-  const firstIconMatch = statline.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️]/u);
+  const firstIconMatch = statline.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
   if (firstIconMatch && firstIconMatch.index !== undefined) {
     const preIcon = statline.substring(0, firstIconMatch.index);
     const postIcon = statline.substring(firstIconMatch.index);
@@ -357,7 +364,9 @@ export function formatMonsterDataToStatblock(m: MonsterStatData): string {
   const minWounds = m.min_wounds && m.min_wounds > 1 ? `(${m.min_wounds})` : '';
   const def = m.defense ?? 10;
   const armor = m.armor ?? 0;
-  const vit = m.max_vit ?? m.current_vit ?? 10;
+  const isMinion = typeof m.minion_vit === 'number' && m.minion_vit > 0;
+  const vit = isMinion ? m.minion_vit : (m.max_vit ?? m.current_vit ?? 10);
+  const heartIcon = isMinion ? '💔' : '❤️';
 
   const attrs = m.attributes || {};
   const magic = attrs.magic ?? 10;
@@ -370,7 +379,7 @@ export function formatMonsterDataToStatblock(m: MonsterStatData): string {
   const notesVal = m.abilities || m.gm_notes || '';
   const notesStr = notesVal ? ` (${notesVal})` : '';
 
-  return `${fullName} 🚩${init} 👣${mr} ⚔️${atk}/${dmg}${minWounds} 🧥${def}/${armor} ❤️${vit} ${attrBlock}${notesStr}`.trim();
+  return `${fullName} 🚩${init} 👣${mr} ⚔️${atk}/${dmg}${minWounds} 🧥${def}/${armor} ${heartIcon}${vit} ${attrBlock}${notesStr}`.trim();
 }
 
 export function parseMultiRowMonsterBlock(textBlock: string): ParsedMonster[] {
@@ -393,11 +402,12 @@ export function getMonsterNish<T extends { fullText?: string; nameWithEquip?: st
   return match ? parseInt(match[1], 10) : 10;
 }
 
-export function getMonsterVitality<T extends { fullText?: string; vitalityStat?: string; nameWithEquip?: string; max_vit?: number; current_vit?: number }>(m: T): number {
+export function getMonsterVitality<T extends { fullText?: string; vitalityStat?: string; nameWithEquip?: string; max_vit?: number; current_vit?: number; minion_vit?: number }>(m: T): number {
+  if (typeof m.minion_vit === 'number') return m.minion_vit;
   if (typeof m.max_vit === 'number') return m.max_vit;
   if (typeof m.current_vit === 'number') return m.current_vit;
   const raw = m.fullText || m.vitalityStat || m.nameWithEquip || '';
-  const match = raw.match(/❤️\s*(\d+)/u);
+  const match = raw.match(/(?:❤️|💔)\s*(\d+)/u);
   return match ? parseInt(match[1], 10) : 10;
 }
 
