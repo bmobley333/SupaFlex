@@ -23,6 +23,7 @@ import {
   scaleFtgStat,
   scaleMrStat,
   scaleParsedMonster,
+  scaleStatlineText,
 } from '../../utils/monsterStatScaler';
 import { sanitizeParsedMonsters } from '../../utils/monsterSanitizer';
 import { useCharacterStore } from '../../store/useCharacterStore';
@@ -134,6 +135,8 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   const [editText, setEditText] = useState('');
   const [editGearText, setEditGearText] = useState('');
   const [editAbilitiesText, setEditAbilitiesText] = useState('');
+  const [modalMonsterEditDif, setModalMonsterEditDif] = useState(10);
+  const [modalMonsterEditBaseText, setModalMonsterEditBaseText] = useState('');
 
   // Fetch Supabase Codex monsters when modal opens
   useEffect(() => {
@@ -351,9 +354,28 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
       if (!abilities) abilities = codexMatch.abilities || codexMatch.notes || '';
     }
 
-    setEditText(decomposed.statline || raw);
+    const currentStatline = decomposed.statline || raw;
+    const baseText = baselineMapRef.current.get(m.id) || m.baseFullText;
+    const baseStatline = baseText
+      ? (decomposeMonsterStatblock(baseText).statline || baseText)
+      : currentStatline;
+
+    setEditText(currentStatline);
+    setModalMonsterEditBaseText(baseStatline);
+    setModalMonsterEditDif(m.scaled_dif || 10);
     setEditGearText(gear);
     setEditAbilitiesText(abilities);
+  };
+
+  const handleModalThreatChange = (newDif: number) => {
+    setModalMonsterEditDif(newDif);
+    if (!modalMonsterEditBaseText.trim()) return;
+    if (newDif === 10) {
+      setEditText(modalMonsterEditBaseText);
+    } else {
+      const scaledLine = scaleStatlineText(modalMonsterEditBaseText, newDif);
+      setEditText(scaledLine);
+    }
   };
 
   const handleSaveEdit = (id: string) => {
@@ -361,7 +383,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const gearPart = editGearText.trim() ? ` (${editGearText.trim()})` : '';
     const abilitiesPart = editAbilitiesText.trim() ? ` (${editAbilitiesText.trim()})` : '';
 
-    const iconPosMatch = editText.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
+    const iconPosMatch = editText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
       const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
@@ -374,10 +396,10 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const parsed = parseMonsterLine(reconstructed);
     parsed.gear = editGearText.trim() || undefined;
     parsed.abilities = editAbilitiesText.trim() || undefined;
-    parsed.baseFullText = reconstructed;
-    parsed.scaled_dif = 10;
-    baselineMapRef.current.set(id, reconstructed);
-    const updated = monsters.map((m) => (m.id === id ? { ...parsed, id, baseFullText: reconstructed, scaled_dif: 10 } : m));
+    parsed.baseFullText = modalMonsterEditBaseText;
+    parsed.scaled_dif = modalMonsterEditDif;
+    baselineMapRef.current.set(id, modalMonsterEditBaseText);
+    const updated = monsters.map((m) => (m.id === id ? { ...parsed, id, baseFullText: modalMonsterEditBaseText, scaled_dif: modalMonsterEditDif } : m));
     onSaveMonsters(updated);
     setEditingId(null);
   };
@@ -575,7 +597,11 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                       <input
                         type="text"
                         value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
+                        onChange={(e) => {
+                          setEditText(e.target.value);
+                          setModalMonsterEditBaseText(e.target.value);
+                          setModalMonsterEditDif(10);
+                        }}
                         className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-rose-500"
                         autoFocus
                       />
@@ -599,21 +625,27 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                           className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-rose-500"
                         />
                       </div>
-                      <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800/80">
-                        <button
-                          type="button"
-                          onClick={() => setEditingId(null)}
-                          className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSaveEdit(m.id)}
-                          className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg cursor-pointer"
-                        >
-                          Save Changes
-                        </button>
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                        <GmThreatStepper
+                          value={modalMonsterEditDif}
+                          onChange={handleModalThreatChange}
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(null)}
+                            className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEdit(m.id)}
+                            className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg cursor-pointer"
+                          >
+                            Save Changes
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (

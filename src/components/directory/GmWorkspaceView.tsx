@@ -11,6 +11,7 @@ import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharact
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { MonsterManagerModal } from '../modals/MonsterManagerModal';
 import { GmThreatStepper } from '../common/GmThreatStepper';
+import { scaleStatlineText } from '../../utils/monsterStatScaler';
 import { AdventureActBar } from '../hud/AdventureActBar';
 import { EncounterSelectorBar } from '../hud/EncounterSelectorBar';
 import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
@@ -366,6 +367,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const [editText, setEditText] = useState('');
   const [editGearText, setEditGearText] = useState('');
   const [editAbilitiesText, setEditAbilitiesText] = useState('');
+  const [editDif, setEditDif] = useState(10);
+  const [editBaseText, setEditBaseText] = useState('');
 
   // Effective monsters list displayed in the GM Monster Tracker strictly mirrors the active encounter
   const effectiveMonsters = activeMonsters;
@@ -398,9 +401,27 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       if (!abilities) abilities = codexMatch.abilities || codexMatch.notes || '';
     }
 
-    setEditText(decomposed.statline || raw);
+    const currentStatline = decomposed.statline || raw;
+    const baseStatline = m.baseFullText
+      ? (decomposeMonsterStatblock(m.baseFullText).statline || m.baseFullText)
+      : currentStatline;
+
+    setEditText(currentStatline);
+    setEditBaseText(baseStatline);
+    setEditDif(m.scaled_dif || 10);
     setEditGearText(gear);
     setEditAbilitiesText(abilities);
+  };
+
+  const handleEncounterMonsterThreatChange = (newDif: number) => {
+    setEditDif(newDif);
+    if (!editBaseText.trim()) return;
+    if (newDif === 10) {
+      setEditText(editBaseText);
+    } else {
+      const scaledLine = scaleStatlineText(editBaseText, newDif);
+      setEditText(scaledLine);
+    }
   };
 
   const handleSaveEdit = (encounterId: string, monsterId: string) => {
@@ -408,7 +429,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const gearPart = editGearText.trim() ? ` (${editGearText.trim()})` : '';
     const abilitiesPart = editAbilitiesText.trim() ? ` (${editAbilitiesText.trim()})` : '';
 
-    const iconPosMatch = editText.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
+    const iconPosMatch = editText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
       const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
@@ -421,17 +442,19 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const parsed = parseMonsterLine(reconstructed);
     parsed.gear = editGearText.trim() || undefined;
     parsed.abilities = editAbilitiesText.trim() || undefined;
+    parsed.scaled_dif = editDif;
+    parsed.baseFullText = editBaseText;
 
     if (encounterId === activeEncounter?.id) {
       const updated = effectiveMonsters.map((m) =>
-        m.id === monsterId ? { ...parsed, id: monsterId, baseFullText: reconstructed } : m
+        m.id === monsterId ? { ...parsed, id: monsterId, baseFullText: editBaseText, scaled_dif: editDif } : m
       );
       handleSaveMonsters(updated);
     } else if (activeAdventure && activeAct) {
       const targetEnc = activeAct.encounters?.find((e) => e.id === encounterId);
       if (targetEnc) {
         const updated = (targetEnc.monsters || []).map((m) =>
-          m.id === monsterId ? { ...parsed, id: monsterId, baseFullText: reconstructed } : m
+          m.id === monsterId ? { ...parsed, id: monsterId, baseFullText: editBaseText, scaled_dif: editDif } : m
         );
         updateEncounter(activeAdventure.id, activeAct.id, encounterId, { monsters: updated });
       }
@@ -564,6 +587,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const [rosterMonsterEditText, setRosterMonsterEditText] = useState('');
   const [rosterMonsterEditGear, setRosterMonsterEditGear] = useState('');
   const [rosterMonsterEditAbilities, setRosterMonsterEditAbilities] = useState('');
+  const [rosterMonsterEditDif, setRosterMonsterEditDif] = useState(10);
+  const [rosterMonsterEditBaseText, setRosterMonsterEditBaseText] = useState('');
 
   const handleStartRosterMonsterEdit = (monster: GmRosterMonster) => {
     setEditingRosterMonsterId(monster.id);
@@ -583,9 +608,27 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       if (!abilities) abilities = codexMatch.abilities || codexMatch.notes || '';
     }
 
-    setRosterMonsterEditText(decomposed.statline || raw);
+    const currentStatline = decomposed.statline || raw;
+    const baseStatline = monster.baseFullText
+      ? (decomposeMonsterStatblock(monster.baseFullText).statline || monster.baseFullText)
+      : currentStatline;
+
+    setRosterMonsterEditText(currentStatline);
+    setRosterMonsterEditBaseText(baseStatline);
+    setRosterMonsterEditDif(monster.scaled_dif || 10);
     setRosterMonsterEditGear(gear);
     setRosterMonsterEditAbilities(abilities);
+  };
+
+  const handleRosterMonsterThreatChange = (newDif: number) => {
+    setRosterMonsterEditDif(newDif);
+    if (!rosterMonsterEditBaseText.trim()) return;
+    if (newDif === 10) {
+      setRosterMonsterEditText(rosterMonsterEditBaseText);
+    } else {
+      const scaledLine = scaleStatlineText(rosterMonsterEditBaseText, newDif);
+      setRosterMonsterEditText(scaledLine);
+    }
   };
 
   const handleSaveRosterMonsterEdit = (monsterId: string) => {
@@ -593,7 +636,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const gearPart = rosterMonsterEditGear.trim() ? ` (${rosterMonsterEditGear.trim()})` : '';
     const abilitiesPart = rosterMonsterEditAbilities.trim() ? ` (${rosterMonsterEditAbilities.trim()})` : '';
 
-    const iconPosMatch = rosterMonsterEditText.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
+    const iconPosMatch = rosterMonsterEditText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
       const namePart = rosterMonsterEditText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
@@ -606,9 +649,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const parsed = parseMonsterForGmRoster(reconstructed, monsterId, monsterId);
     parsed.gear = rosterMonsterEditGear.trim() || undefined;
     parsed.abilities = rosterMonsterEditAbilities.trim() || undefined;
+    parsed.scaled_dif = rosterMonsterEditDif;
+    parsed.baseFullText = rosterMonsterEditBaseText;
 
     setPushedMonsters((prev) => {
-      const next = prev.map((m) => (m.id === monsterId ? { ...parsed, id: monsterId } : m));
+      const next = prev.map((m) => (m.id === monsterId ? { ...parsed, id: monsterId, baseFullText: rosterMonsterEditBaseText, scaled_dif: rosterMonsterEditDif } : m));
       try {
         localStorage.setItem(gmPushedMonstersKey, JSON.stringify(next));
       } catch {}
@@ -1278,7 +1323,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                             <input
                               type="text"
                               value={rosterMonsterEditText}
-                              onChange={(e) => setRosterMonsterEditText(e.target.value)}
+                              onChange={(e) => {
+                                setRosterMonsterEditText(e.target.value);
+                                setRosterMonsterEditBaseText(e.target.value);
+                                setRosterMonsterEditDif(10);
+                              }}
                               className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-rose-500"
                               autoFocus
                             />
@@ -1302,21 +1351,27 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                 className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-rose-500"
                               />
                             </div>
-                            <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800/80">
-                              <button
-                                type="button"
-                                onClick={() => setEditingRosterMonsterId(null)}
-                                className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 cursor-pointer"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleSaveRosterMonsterEdit(monster.id)}
-                                className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg cursor-pointer"
-                              >
-                                Save Changes
-                              </button>
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                              <GmThreatStepper
+                                value={rosterMonsterEditDif}
+                                onChange={handleRosterMonsterThreatChange}
+                              />
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingRosterMonsterId(null)}
+                                  className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveRosterMonsterEdit(monster.id)}
+                                  className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg cursor-pointer"
+                                >
+                                  Save Changes
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ) : (
@@ -1578,7 +1633,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                 <input
                                   type="text"
                                   value={editText}
-                                  onChange={(e) => setEditText(e.target.value)}
+                                  onChange={(e) => {
+                                    setEditText(e.target.value);
+                                    setEditBaseText(e.target.value);
+                                    setEditDif(10);
+                                  }}
                                   className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-rose-500"
                                   autoFocus
                                 />
@@ -1602,24 +1661,30 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                                     className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-100 outline-none focus:border-rose-500"
                                   />
                                 </div>
-                                <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800/80">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingId(null);
-                                      setEditingEncounterId(null);
-                                    }}
-                                    className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveEdit(enc.id, m.id)}
-                                    className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg cursor-pointer"
-                                  >
-                                    Save Changes
-                                  </button>
+                                <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                                  <GmThreatStepper
+                                    value={editDif}
+                                    onChange={handleEncounterMonsterThreatChange}
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingId(null);
+                                        setEditingEncounterId(null);
+                                      }}
+                                      className="px-3 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-700 cursor-pointer"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveEdit(enc.id, m.id)}
+                                      className="px-3.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600/30 text-xs font-bold rounded-lg cursor-pointer"
+                                    >
+                                      Save Changes
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             ) : (

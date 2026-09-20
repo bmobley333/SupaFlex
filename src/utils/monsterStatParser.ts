@@ -39,16 +39,16 @@ export function parseMonsterLine(line: string): ParsedMonster {
   const atkMatch = trimmed.match(/(?:⚔️|⚔)\s*[\d\/\(\)\s\-+]+/u);
   const attackStat = atkMatch ? atkMatch[0].trim() : '';
 
-  // 2. Extract Defense/Armor Stat (🛡️ or 🧥)
-  const defMatch = trimmed.match(/(?:🛡️|🧥)\s*[\d\/\(\)\s\-+]+/u);
+  // 2. Extract Defense/Armor Stat (🛡️, 🧥, or 🥋)
+  const defMatch = trimmed.match(/(?:🛡️|🧥|🥋)\s*[\d\/\(\)\s\-+]+/u);
   const defenseStat = defMatch ? defMatch[0].trim() : '';
 
   // 3. Extract Vitality Stat (❤️)
   const vitMatch = trimmed.match(/(?:❤️)\s*\d+/u);
   const vitalityStat = vitMatch ? vitMatch[0].trim() : '';
 
-  // 4. Extract Name / Prefix (everything before first stat icon 🚩, 👣, ⚔️, 🛡️, 🧥, ❤️)
-  const iconPosMatch = trimmed.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
+  // 4. Extract Name / Prefix (everything before first stat icon 🚩, 👣, 🥊, ⚔️, 🛡️, 🧥, 🥋, ❤️)
+  const iconPosMatch = trimmed.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️]/u);
   let nameWithEquip = trimmed;
   if (iconPosMatch && iconPosMatch.index !== undefined) {
     nameWithEquip = trimmed.substring(0, iconPosMatch.index).trim();
@@ -312,9 +312,9 @@ export function decomposeMonsterStatblock(raw: string): {
     }
   }
 
-  // 2. Extract gear from () before first combat icon (🚩, 👣, ⚔️, ⚔, 🛡️, 🧥, ❤️)
+  // 2. Extract gear from () before first combat icon (🚩, 👣, 🥊, ⚔️, ⚔, 🛡️, 🧥, 🥋, ❤️)
   let gear = '';
-  const firstIconMatch = statline.match(/[🚩👣⚔️⚔🛡️🧥❤️]/u);
+  const firstIconMatch = statline.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️]/u);
   if (firstIconMatch && firstIconMatch.index !== undefined) {
     const preIcon = statline.substring(0, firstIconMatch.index);
     const postIcon = statline.substring(firstIconMatch.index);

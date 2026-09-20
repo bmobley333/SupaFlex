@@ -238,7 +238,7 @@ export function parseMonsterLineToData(raw: string, id: string = 'mon_tmp'): Mon
   const parsed = parseMonsterLine(raw);
 
   const initMatch = raw.match(/🚩\s*(\d+)/u);
-  const mrMatch = raw.match(/👣\s*(\d+)/u);
+  const mrMatch = raw.match(/(?:👣|🥊)\s*(\d+)/u);
   const atkNums = parsed.attackStat.match(/\d+/g) || [];
   const defNums = parsed.defenseStat.match(/\d+/g) || [];
   const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
@@ -293,4 +293,30 @@ export function parseMonsterLineToData(raw: string, id: string = 'mon_tmp'): Mon
     attributes: attrValues,
     gm_notes: parsed.abilities || parsed.codex_notes || undefined,
   };
+}
+
+/**
+ * Scale an isolated statline string (without gear or abilities) to a target difficulty.
+ * If dif is 10, returns baseStatline verbatim.
+ * Preserves custom combat icons (such as 🥊 for MR or 🥋 for Defense) if present in the base statline.
+ */
+export function scaleStatlineText(baseStatline: string, dif: number): string {
+  if (!baseStatline.trim()) return baseStatline;
+  if (dif === 10) return baseStatline;
+
+  const mData = parseMonsterLineToData(baseStatline, 'tmp_scale');
+  mData.equipment = undefined;
+  mData.gm_notes = undefined;
+  const scaled = scaleMonsterData(mData, dif);
+  scaled.equipment = undefined;
+  scaled.gm_notes = undefined;
+
+  let result = serializeMonsterDataLine(scaled);
+  if (baseStatline.includes('🥊') && !baseStatline.includes('👣')) {
+    result = result.replace('👣', '🥊');
+  }
+  if (baseStatline.includes('🥋') && !baseStatline.includes('🧥')) {
+    result = result.replace('🧥', '🥋');
+  }
+  return result;
 }
