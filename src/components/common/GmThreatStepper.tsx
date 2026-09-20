@@ -2,7 +2,7 @@
 // High-Density, Ultra-Compact Threat Level Stepper Badge ([-] [ ⚡ Threat Level (+/-N) ] [+])
 
 import React from 'react';
-import { Minus, Plus, Zap } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 
 export interface GmThreatStepperProps {
   value: number; // Master Dif (3 to 25, default 10)
@@ -71,28 +71,27 @@ export const GmThreatStepper: React.FC<GmThreatStepperProps> = ({
 
   return (
     <div
-      className={`inline-flex items-center bg-slate-950/90 border border-slate-800/80 p-0.5 rounded-lg shadow-inner gap-0.5 font-outfit select-none shrink-0 ${className}`}
+      className={`h-[29px] inline-flex items-center bg-slate-950/90 border border-slate-800/80 p-0.5 rounded-lg shadow-inner gap-0.5 font-outfit select-none shrink-0 ${className}`}
     >
       {/* Decrement Button */}
       <button
         type="button"
         onClick={handleDecrement}
         disabled={value <= min}
-        className="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-25 disabled:hover:bg-transparent disabled:cursor-not-allowed cursor-pointer transition-all shrink-0"
+        className="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-25 disabled:hover:bg-transparent disabled:cursor-not-allowed cursor-pointer transition-all shrink-0"
         title="Decrease Threat Level (-1)"
       >
-        <Minus className="w-3 h-3" />
+        <Minus className="w-3.5 h-3.5" />
       </button>
 
-      {/* Center Stepper Badge (Click to reset to baseline) */}
+      {/* Center Stepper Badge: Fixed width (116px) eliminates horizontal layout drift when spam-clicking +/- */}
       <button
         type="button"
         onClick={handleReset}
-        className={`px-2 py-0.5 text-[11px] font-bold rounded-md border flex items-center gap-1 transition-all cursor-pointer ${badgeStyle}`}
+        className={`h-6 w-[116px] px-2 text-xs font-bold rounded-md border flex items-center justify-center transition-all cursor-pointer select-none shrink-0 ${badgeStyle}`}
         title={tooltipText}
       >
-        <Zap className="w-2.5 h-2.5 shrink-0 opacity-80" />
-        <span className="leading-none whitespace-nowrap">{displayLabel}</span>
+        <span className="leading-none truncate text-center">{displayLabel}</span>
       </button>
 
       {/* Increment Button */}
@@ -100,10 +99,10 @@ export const GmThreatStepper: React.FC<GmThreatStepperProps> = ({
         type="button"
         onClick={handleIncrement}
         disabled={value >= max}
-        className="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-25 disabled:hover:bg-transparent disabled:cursor-not-allowed cursor-pointer transition-all shrink-0"
+        className="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-25 disabled:hover:bg-transparent disabled:cursor-not-allowed cursor-pointer transition-all shrink-0"
         title="Increase Threat Level (+1)"
       >
-        <Plus className="w-3 h-3" />
+        <Plus className="w-3.5 h-3.5" />
       </button>
     </div>
   );
