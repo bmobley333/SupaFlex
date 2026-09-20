@@ -1612,9 +1612,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                 />
               </div>
 
-              {/* Right: All Rooms vs Room Focus Switch + +🐉 Button */}
+              {/* Right: Encounter List vs Room Focus Switch + +🐉 Button */}
               <div className="flex items-center gap-2 shrink-0 ml-auto flex-wrap">
-                {/* Dyslexia-Friendly Multi-Option Pill Switch: All Rooms vs Room Focus */}
+                {/* Dyslexia-Friendly Multi-Option Pill Switch: Encounter List vs Room Focus */}
                 <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
                     type="button"
@@ -1626,8 +1626,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     }`}
                     title="View all encounters and monsters across the active act"
                   >
-                    <span>🌲</span>
-                    <span>All Rooms</span>
+                    <span>📋</span>
+                    <span>Encounter List</span>
                   </button>
                   <button
                     type="button"
@@ -1670,7 +1670,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     onClick={() => setEncounterViewMode('tree')}
                     className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg cursor-pointer"
                   >
-                    Return to All Rooms
+                    Return to Encounter List
                   </button>
                 </div>
               ) : (
@@ -1884,31 +1884,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   })}
                 </div>
               )}
-
-              {/* Bottom Encounter Notes Card (when in tree mode and not popped out) */}
-              {isNotesPoppedOut ? (
-                <div className="p-4 bg-slate-950/80 border border-dashed border-indigo-500/40 rounded-xl text-center flex items-center justify-between gap-2 mt-2">
-                  <span className="text-xs text-indigo-300 font-bold flex items-center gap-1.5">
-                    <span>🗗</span> Encounter Notes floating in HUD
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsNotesPoppedOut(false)}
-                    className="px-2.5 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition shadow cursor-pointer"
-                  >
-                    <span>🗖 Dock Here</span>
-                  </button>
-                </div>
-              ) : (
-                <GmEncounterNotesCard
-                  activeEncounter={activeEncounter}
-                  selectedPartyId={selectedParty?.id}
-                  isPoppedOut={false}
-                  onTogglePopOut={() => setIsNotesPoppedOut(true)}
-                  fullHeight={false}
-                  className="mt-2"
-                />
-              )}
             </div>
           )}
         </div>
@@ -1929,7 +1904,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         isOpen={isNotesPoppedOut}
         activeEncounter={activeEncounter}
         selectedPartyId={selectedParty?.id}
-        onDock={() => setIsNotesPoppedOut(false)}
+        onDock={() => {
+          setIsNotesPoppedOut(false);
+          setEncounterViewMode('focus');
+        }}
         onClose={() => setIsNotesPoppedOut(false)}
       />
     </div>

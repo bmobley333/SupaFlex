@@ -1,5 +1,5 @@
 // src/components/hud/GmFloatingNotesHud.tsx
-// Non-blocking, draggable floating HUD window for Encounter Notes.
+// Non-blocking, draggable & resizable floating HUD window for Encounter Notes.
 // Allows the GM to review and edit room notes anywhere on screen while freely
 // interacting with the background encounter list and live combat roster.
 
@@ -25,16 +25,27 @@ export const GmFloatingNotesHud: React.FC<GmFloatingNotesHudProps> = ({
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
   const [position, setPosition] = useState<{ x: number; y: number }>(() => {
-    // Default to right side of screen, below the header
     const screenW = typeof window !== 'undefined' ? window.innerWidth : 1200;
     return {
-      x: Math.max(20, screenW - 580),
+      x: Math.max(20, screenW - 600),
       y: 110,
+    };
+  });
+
+  const [size, setSize] = useState<{ width: number; height: number }>(() => {
+    const screenW = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const screenH = typeof window !== 'undefined' ? window.innerHeight : 800;
+    return {
+      width: Math.min(620, Math.max(440, Math.round(screenW * 0.42))),
+      height: Math.min(600, Math.max(400, Math.round(screenH * 0.65))),
     };
   });
 
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+  const isResizingRef = useRef(false);
+  const resizeStartRef = useRef({ mouseX: 0, mouseY: 0, startWidth: 0, startHeight: 0 });
 
   // Handle Drag Start
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -50,16 +61,31 @@ export const GmFloatingNotesHud: React.FC<GmFloatingNotesHudProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingRef.current) return;
+    if (isDraggingRef.current) {
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      const currentWidth = isMinimized ? 320 : size.width;
 
-    const winW = window.innerWidth;
-    const winH = window.innerHeight;
-    const width = isMinimized ? 320 : 540;
+      const nextX = Math.max(10, Math.min(winW - currentWidth - 10, e.clientX - dragOffsetRef.current.x));
+      const nextY = Math.max(10, Math.min(winH - 80, e.clientY - dragOffsetRef.current.y));
 
-    const nextX = Math.max(10, Math.min(winW - width - 10, e.clientX - dragOffsetRef.current.x));
-    const nextY = Math.max(10, Math.min(winH - 100, e.clientY - dragOffsetRef.current.y));
+      setPosition({ x: nextX, y: nextY });
+    } else if (isResizingRef.current) {
+      const deltaX = e.clientX - resizeStartRef.current.mouseX;
+      const deltaY = e.clientY - resizeStartRef.current.mouseY;
 
-    setPosition({ x: nextX, y: nextY });
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+
+      // Minimum 380px width, max bounded by viewport
+      const maxAllowedWidth = Math.max(380, winW - position.x - 12);
+      const maxAllowedHeight = Math.max(260, winH - position.y - 12);
+
+      const nextW = Math.max(380, Math.min(maxAllowedWidth, resizeStartRef.current.startWidth + deltaX));
+      const nextH = Math.max(260, Math.min(maxAllowedHeight, resizeStartRef.current.startHeight + deltaY));
+
+      setSize({ width: nextW, height: nextH });
+    }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -68,9 +94,29 @@ export const GmFloatingNotesHud: React.FC<GmFloatingNotesHudProps> = ({
       try {
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
       } catch {
-        // Ignore if already released
+        // Ignore
       }
     }
+    if (isResizingRef.current) {
+      isResizingRef.current = false;
+      try {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        // Ignore
+      }
+    }
+  };
+
+  const handleResizeStart = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    isResizingRef.current = true;
+    resizeStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      startWidth: size.width,
+      startHeight: size.height,
+    };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   // Keyboard shortcut: ESC closes the floating window
@@ -93,15 +139,17 @@ export const GmFloatingNotesHud: React.FC<GmFloatingNotesHudProps> = ({
         position: 'fixed',
         left: `${position.x}px`,
         top: `${position.y}px`,
+        width: isMinimized ? '320px' : `${size.width}px`,
+        height: isMinimized ? 'auto' : `${size.height}px`,
       }}
       className={`z-40 font-outfit select-none transition-shadow ${
         isMinimized
-          ? 'w-80 shadow-xl'
-          : 'w-[540px] max-w-[94vw] h-[520px] max-h-[82vh] flex flex-col shadow-2xl'
+          ? 'shadow-xl'
+          : 'max-w-[96vw] max-h-[92vh] flex flex-col shadow-2xl relative'
       }`}
     >
-      {/* Draggable HUD Window Chassis */}
-      <div className="bg-slate-950/95 border-2 border-indigo-500/60 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden h-full">
+      {/* Draggable & Resizable HUD Window Chassis */}
+      <div className="bg-slate-950/95 border-2 border-indigo-500/60 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden h-full relative">
         {/* Top Window Bar (Drag Handle) */}
         <div
           onPointerDown={handlePointerDown}
@@ -163,10 +211,29 @@ export const GmFloatingNotesHud: React.FC<GmFloatingNotesHudProps> = ({
               activeEncounter={activeEncounter}
               selectedPartyId={selectedPartyId}
               isPoppedOut={true}
-              onDock={onDock}
               fullHeight={true}
               className="border-none bg-transparent p-1 shadow-none flex-1"
             />
+          </div>
+        )}
+
+        {/* Interactive Bottom-Right Corner Resize Grip */}
+        {!isMinimized && (
+          <div
+            onPointerDown={handleResizeStart}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            className="absolute bottom-1 right-1 w-5 h-5 cursor-se-resize flex items-end justify-end p-1 z-30 text-slate-500 hover:text-indigo-300 transition-colors select-none"
+            title="Drag to resize window"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" className="fill-current opacity-60 hover:opacity-100">
+              <circle cx="8" cy="8" r="1.2" />
+              <circle cx="4" cy="8" r="1.2" />
+              <circle cx="8" cy="4" r="1.2" />
+              <circle cx="0" cy="8" r="1.2" />
+              <circle cx="4" cy="4" r="1.2" />
+              <circle cx="8" cy="0" r="1.2" />
+            </svg>
           </div>
         )}
       </div>

@@ -3,7 +3,7 @@
 // Markdown-style formatting, Icon insertion, Loot & Links dropdowns, and Pop-out HUD support.
 
 import React, { useState, useRef } from 'react';
-import { StickyNote, ExternalLink, Minimize2, X } from 'lucide-react';
+import { StickyNote, ExternalLink } from 'lucide-react';
 import { GmEncounter } from '../../types/adventures';
 import { EncounterLootDropdown } from './EncounterLootDropdown';
 import { EncounterLinksDropdown } from './EncounterLinksDropdown';
@@ -14,8 +14,6 @@ interface GmEncounterNotesCardProps {
   selectedPartyId?: string;
   isPoppedOut?: boolean;
   onTogglePopOut?: () => void;
-  onDock?: () => void;
-  onClose?: () => void;
   fullHeight?: boolean;
   className?: string;
 }
@@ -33,8 +31,6 @@ export const GmEncounterNotesCard: React.FC<GmEncounterNotesCardProps> = ({
   selectedPartyId,
   isPoppedOut = false,
   onTogglePopOut,
-  onDock,
-  onClose,
   fullHeight = false,
   className = '',
 }) => {
@@ -223,39 +219,16 @@ export const GmEncounterNotesCard: React.FC<GmEncounterNotesCardProps> = ({
             <EncounterLinksDropdown />
           </div>
 
-          {/* Pop-Out / Dock Affordances */}
-          {onTogglePopOut && (
+          {/* Pop-Out Affordance (Only shown when docked in pane) */}
+          {!isPoppedOut && onTogglePopOut && (
             <button
               type="button"
               onClick={onTogglePopOut}
               className="px-2 py-1 bg-indigo-950/80 hover:bg-indigo-900/90 text-indigo-300 hover:text-indigo-100 border border-indigo-500/50 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm cursor-pointer"
-              title={isPoppedOut ? "Dock notes back into the right pane" : "Pop out notes into a floating, draggable HUD window"}
+              title="Pop out notes into a floating, draggable HUD window"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>{isPoppedOut ? "Dock" : "Pop Out"}</span>
-            </button>
-          )}
-
-          {isPoppedOut && onDock && (
-            <button
-              type="button"
-              onClick={onDock}
-              className="px-2 py-1 bg-indigo-950/80 hover:bg-indigo-900/90 text-indigo-300 hover:text-indigo-100 border border-indigo-500/50 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm cursor-pointer"
-              title="Dock notes back into the right pane"
-            >
-              <Minimize2 className="w-3.5 h-3.5" />
-              <span>Dock</span>
-            </button>
-          )}
-
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1 text-slate-400 hover:text-rose-300 hover:bg-rose-950/50 border border-transparent hover:border-rose-500/40 rounded-lg transition-all cursor-pointer"
-              title="Close window"
-            >
-              <X className="w-4 h-4" />
+              <span>Pop Out</span>
             </button>
           )}
         </div>
