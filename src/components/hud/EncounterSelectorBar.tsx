@@ -7,7 +7,6 @@ import {
   Plus,
   Trash2,
   Edit2,
-  Sparkles,
 } from 'lucide-react';
 import { useAdventureStore } from '../../store/useAdventureStore';
 
@@ -22,7 +21,6 @@ export const EncounterSelectorBar: React.FC<EncounterSelectorBarProps> = ({ clas
   const activeMonsters = useAdventureStore((state) => state.getActiveMonsters());
 
   const selectEncounter = useAdventureStore((state) => state.selectEncounter);
-  const ensureAdLibEncounter = useAdventureStore((state) => state.ensureAdLibEncounter);
   const addEncounter = useAdventureStore((state) => state.addEncounter);
   const deleteEncounter = useAdventureStore((state) => state.deleteEncounter);
   const renameEncounter = useAdventureStore((state) => state.renameEncounter);
@@ -80,26 +78,6 @@ export const EncounterSelectorBar: React.FC<EncounterSelectorBarProps> = ({ clas
             >
               <Plus className="w-3.5 h-3.5 text-rose-400" />
               <span>+ Create New Encounter</span>
-            </button>
-
-            {/* Pinned Permanent: Ad-Lib Encounter */}
-            <button
-              type="button"
-              onClick={async () => {
-                if (activeAdv && activeAct) {
-                  await ensureAdLibEncounter(activeAdv.id, activeAct.id);
-                  setIsEncMenuOpen(false);
-                }
-              }}
-              className="w-full text-left px-3 py-2 hover:bg-rose-950/60 text-amber-300 font-bold border-b border-slate-800/80 flex items-center justify-between cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>🎲 Ad-Lib Encounter</span>
-              </div>
-              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 bg-amber-500/20 text-amber-300 rounded border border-amber-500/30">
-                Permanent
-              </span>
             </button>
 
             {/* Encounters List with Reorder Up/Down, Edit, Delete */}

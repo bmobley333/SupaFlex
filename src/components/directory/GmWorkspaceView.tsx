@@ -1370,21 +1370,23 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   <span>{deploySuccess ? 'Pushed!' : 'Push 🐉s'}</span>
                 </button>
 
+              </div>
+
+              {/* Right side of header: Remove 🐉s + Add 🐉 */}
+              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                 {/* Remove 🐉s Button */}
                 <button
                   type="button"
                   onClick={handleClearRosterMonsters}
                   disabled={pushedMonsters.length === 0}
-                  className="px-2.5 py-1 bg-slate-900/90 hover:bg-rose-950/80 text-slate-400 hover:text-rose-300 border border-slate-700/80 hover:border-rose-500/50 text-xs font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer ml-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-2.5 py-1 bg-slate-900/90 hover:bg-rose-950/80 text-slate-400 hover:text-rose-300 border border-slate-700/80 hover:border-rose-500/50 text-xs font-bold rounded-lg transition-all flex items-center gap-1 shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Remove ALL monsters from the live Encounter Roster"
                 >
                   <span>🗑️</span>
                   <span>Remove 🐉s</span>
                 </button>
-              </div>
 
-              {/* Right side of header: +🐉 Button to open MonsterManagerModal for live roster */}
-              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                {/* +🐉 Button */}
                 <button
                   type="button"
                   onClick={() => handleOpenMonsterManager('roster')}
