@@ -20,7 +20,6 @@ import {
   extractAllInts,
   scaleAbilityStat,
   scaleFlatStat,
-  scaleFtgStat,
   scaleMrStat,
   scaleParsedMonster,
   scaleStatlineText,
@@ -45,7 +44,6 @@ interface QuickAddState {
   mr: number;
   atk: number;
   dmg: number;
-  minWounds: number;
   def: number;
   armor: number;
   vit: number;
@@ -60,18 +58,17 @@ interface QuickAddState {
 const DEFAULT_QUICK_ADD: QuickAddState = {
   name: '',
   gear: '',
-  init: 10,
+  init: 15,
   mr: 10,
-  atk: 10,
-  dmg: 5,
-  minWounds: 1,
+  atk: 16,
+  dmg: 9,
   def: 15,
-  armor: 1,
-  vit: 12,
+  armor: 2,
+  vit: 16,
   magic: 12,
-  might: 12,
+  might: 16,
   mind: 12,
-  motion: 12,
+  motion: 15,
   moxie: 12,
   abilities: '',
 };
@@ -84,7 +81,6 @@ const calculateQuickAddStatsForDif = (base: QuickAddState, targetDif: number): Q
     mr: scaleMrStat(base.mr, targetDif),
     atk: scaleAbilityStat(base.atk, targetDif, true),
     dmg: scaleFlatStat(base.dmg, targetDif, false),
-    minWounds: scaleFtgStat(base.minWounds, targetDif),
     def: scaleAbilityStat(base.def, targetDif, false),
     armor: scaleFlatStat(base.armor, targetDif, true),
     vit: scaleFlatStat(base.vit, targetDif, false),
