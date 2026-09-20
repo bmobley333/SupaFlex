@@ -17,6 +17,8 @@ interface GmMonsterCardProps {
   isTurnMarked?: boolean;
   onToggleTurnMark?: () => void;
   showDragonIcon?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
@@ -27,6 +29,8 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
   isTurnMarked,
   onToggleTurnMark,
   showDragonIcon,
+  isSelected,
+  onToggleSelect,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -73,12 +77,30 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
         e.preventDefault();
         setIsExpanded((prev) => !prev);
       }}
-      className="bg-slate-900/90 border border-rose-500/30 hover:border-rose-500/50 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono shadow-sm flex flex-col gap-1 transition-all w-full cursor-pointer select-none"
+      className={`border rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono shadow-sm flex flex-col gap-1 transition-all w-full cursor-pointer select-none ${
+        isSelected
+          ? 'bg-purple-950/40 border-purple-500/70 shadow-[0_0_12px_rgba(168,85,247,0.2)]'
+          : 'bg-slate-900/90 border-rose-500/30 hover:border-rose-500/50'
+      }`}
     >
       {/* Main Row */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 w-full">
         {/* Main Content */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 flex-1 min-w-0">
+          {onToggleSelect && (
+            <input
+              type="checkbox"
+              checked={!!isSelected}
+              onChange={(e) => {
+                e.stopPropagation();
+                onToggleSelect();
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-3.5 h-3.5 rounded bg-slate-800 border-slate-700 text-purple-600 focus:ring-0 focus:ring-offset-0 cursor-pointer shrink-0 accent-purple-600"
+              title={isSelected ? 'Deselect monster' : 'Select monster for batch Threat scaling'}
+            />
+          )}
+
           {showDragonIcon && (
             <span className="text-xs leading-none shrink-0 select-none">🐉</span>
           )}
@@ -98,7 +120,15 @@ export const GmMonsterCard: React.FC<GmMonsterCardProps> = ({
             </button>
           )}
 
-          <span className="font-extrabold text-rose-200 tracking-wide text-xs shrink-0">
+          <span
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsExpanded((prev) => !prev);
+            }}
+            className="font-extrabold text-rose-200 hover:text-rose-100 hover:underline tracking-wide text-xs shrink-0 cursor-pointer select-none"
+            title={isExpanded ? 'Click to collapse details' : 'Click to expand details'}
+          >
             {countPrefix}{cleanName}
           </span>
 

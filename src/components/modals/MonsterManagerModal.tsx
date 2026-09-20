@@ -14,9 +14,15 @@ import {
   decomposeMonsterStatblock,
 } from '../../utils/monsterStatParser';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
+import { GmThreatBar } from '../common/GmThreatBar';
 import {
   extractFirstInt,
   extractAllInts,
+  scaleAbilityStat,
+  scaleFlatStat,
+  scaleFtgStat,
+  scaleMrStat,
+  scaleParsedMonster,
 } from '../../utils/monsterStatScaler';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
@@ -68,6 +74,26 @@ const DEFAULT_QUICK_ADD: QuickAddState = {
   abilities: '',
 };
 
+const calculateQuickAddStatsForDif = (base: QuickAddState, targetDif: number): QuickAddState => {
+  if (targetDif === 10) return { ...base };
+  return {
+    ...base,
+    init: scaleAbilityStat(base.init, targetDif, true),
+    mr: scaleMrStat(base.mr, targetDif),
+    atk: scaleAbilityStat(base.atk, targetDif, true),
+    dmg: scaleFlatStat(base.dmg, targetDif, false),
+    minWounds: scaleFtgStat(base.minWounds, targetDif),
+    def: scaleAbilityStat(base.def, targetDif, false),
+    armor: scaleFlatStat(base.armor, targetDif, true),
+    vit: scaleFlatStat(base.vit, targetDif, false),
+    magic: scaleAbilityStat(base.magic, targetDif, true),
+    might: scaleAbilityStat(base.might, targetDif, true),
+    mind: scaleAbilityStat(base.mind, targetDif, true),
+    motion: scaleAbilityStat(base.motion, targetDif, true),
+    moxie: scaleAbilityStat(base.moxie, targetDif, true),
+  };
+};
+
 export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   isOpen,
   onClose,
@@ -77,10 +103,17 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
   title,
 }) => {
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
+
+  // Left Pane Multi-Selection & Threat Scaling State
+  const [selectedMonsterIds, setSelectedMonsterIds] = useState<Set<string>>(new Set());
+  const [rosterThreatDif, setRosterThreatDif] = useState<number>(10);
+
   // Paste Statblock Area State
   const [pasteInputText, setPasteInputText] = useState('');
 
   // Quick Add State
+  const [quickAddThreatDif, setQuickAddThreatDif] = useState<number>(10);
+  const [quickAddBase, setQuickAddBase] = useState<QuickAddState>(DEFAULT_QUICK_ADD);
   const [quickAdd, setQuickAdd] = useState<QuickAddState>(DEFAULT_QUICK_ADD);
 
   // Codex Search State
@@ -205,12 +238,54 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     };
   };
 
+  // Multi-select handlers
+  const handleToggleSelectMonster = (id: string) => {
+    setSelectedMonsterIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedMonsterIds.size === monsters.length && monsters.length > 0) {
+      setSelectedMonsterIds(new Set());
+    } else {
+      setSelectedMonsterIds(new Set(monsters.map((m) => m.id)));
+    }
+  };
+
+  // Batch Threat Scaling for Left Pane
+  const handleRosterThreatChange = (newDif: number) => {
+    setRosterThreatDif(newDif);
+    if (monsters.length === 0) return;
+
+    const targetIds = selectedMonsterIds.size > 0 ? selectedMonsterIds : new Set(monsters.map((m) => m.id));
+    const updated = monsters.map((m) => {
+      if (targetIds.has(m.id)) {
+        return scaleParsedMonster(m, newDif);
+      }
+      return m;
+    });
+    onSaveMonsters(updated);
+  };
+
   // Handlers (Instant Clear All - No Verification Modal)
   const handleClearAll = () => {
+    setSelectedMonsterIds(new Set());
     onSaveMonsters([]);
   };
 
   const handleDeleteMonster = (id: string) => {
+    setSelectedMonsterIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     onSaveMonsters(monsters.filter((m) => m.id !== id));
   };
 
@@ -265,11 +340,30 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     if (parsedList.length > 0) {
       onSaveMonsters([...monsters, ...parsedList]);
       setPasteInputText('');
+      setSelectedMonsterIds(new Set(parsedList.map((p) => p.id)));
     }
   };
 
   const handleQuickAddChange = (field: keyof QuickAddState, val: string | number) => {
     setQuickAdd((prev) => ({ ...prev, [field]: val }));
+    if (typeof val === 'number') {
+      if (quickAddThreatDif === 10) {
+        setQuickAddBase((prev) => ({ ...prev, [field]: val }));
+      }
+    }
+  };
+
+  const handleQuickAddThreatChange = (newDif: number) => {
+    setQuickAddThreatDif(newDif);
+    setQuickAdd((prev) => {
+      const scaled = calculateQuickAddStatsForDif(quickAddBase, newDif);
+      return {
+        ...scaled,
+        name: prev.name,
+        gear: prev.gear,
+        abilities: prev.abilities,
+      };
+    });
   };
 
   const handleSaveQuickMonster = (e: React.FormEvent) => {
@@ -283,8 +377,11 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const parsed = parseMonsterLine(fullStatStr);
     parsed.gear = quickAdd.gear.trim() || undefined;
     parsed.abilities = quickAdd.abilities.trim() || undefined;
+    parsed.scaled_dif = quickAddThreatDif;
     onSaveMonsters([...monsters, parsed]);
-    setQuickAdd(DEFAULT_QUICK_ADD);
+    setSelectedMonsterIds(new Set([parsed.id]));
+    setQuickAdd(calculateQuickAddStatsForDif(DEFAULT_QUICK_ADD, quickAddThreatDif));
+    setQuickAddBase(DEFAULT_QUICK_ADD);
   };
 
   const getCodexMonsterStatblock = (sm: SupabaseMonster): string => {
@@ -317,6 +414,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     parsed.codex_notes = sm.notes || sm.abilities || undefined;
     parsed.codex_id = sm.id;
     onSaveMonsters([...monsters, parsed]);
+    setSelectedMonsterIds(new Set([parsed.id]));
 
     setAddedCodexIds((prev) => ({ ...prev, [sm.id || sm.name]: true }));
     setTimeout(() => {
@@ -357,20 +455,49 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 p-6 bg-slate-900/40 flex-1 overflow-hidden">
           {/* Left Pane (md:col-span-7): Active Monster Roster Stream */}
           <div className="md:col-span-7 border-r border-slate-800/80 pr-6 flex flex-col gap-3 min-h-0">
-            <div className="flex items-center justify-between shrink-0">
-              <h3 className="text-xs font-extrabold text-rose-400 uppercase tracking-wider flex items-center gap-2">
-                <span>🐉</span> {title ? `${title.toUpperCase()} (${monsters.length})` : `ACTIVE ENCOUNTER ROSTER (${monsters.length})`}
-              </h3>
-              {monsters.length > 0 && (
-                <button
-                  onClick={handleClearAll}
-                  className="px-2.5 py-1 bg-rose-950/60 text-rose-300 border border-rose-800/80 hover:bg-rose-900/80 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Clear All
-                </button>
-              )}
+            <div className="flex items-center justify-between shrink-0 flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-xs font-extrabold text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                  <span>🐉</span> {title ? `${title.toUpperCase()} (${monsters.length})` : `ACTIVE ENCOUNTER ROSTER (${monsters.length})`}
+                </h3>
+                {monsters.length > 0 && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-purple-300 font-bold border border-purple-500/30">
+                    {selectedMonsterIds.size > 0 ? `${selectedMonsterIds.size} of ${monsters.length} Selected` : 'All Selected'}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {monsters.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleToggleSelectAll}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                    title={selectedMonsterIds.size === monsters.length ? 'Deselect all monsters' : 'Select all monsters'}
+                  >
+                    <span>{selectedMonsterIds.size === monsters.length ? 'Deselect All' : 'Select All'}</span>
+                  </button>
+                )}
+                {monsters.length > 0 && (
+                  <button
+                    onClick={handleClearAll}
+                    className="px-2.5 py-1 bg-rose-950/60 text-rose-300 border border-rose-800/80 hover:bg-rose-900/80 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Clear All
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Embedded Threat Scaling Bar for Left Pane */}
+            {monsters.length > 0 && (
+              <GmThreatBar
+                value={rosterThreatDif}
+                onChange={handleRosterThreatChange}
+                label={selectedMonsterIds.size > 0 ? `Scale Selected (${selectedMonsterIds.size}):` : 'Scale All:'}
+                className="w-full shrink-0"
+              />
+            )}
 
             {/* Scrollable Roster */}
             <div className="flex-1 overflow-y-auto pr-1 space-y-2.5">
@@ -435,6 +562,8 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                     <GmMonsterCard
                       key={m.id}
                       monster={mapToMonsterData(m)}
+                      isSelected={selectedMonsterIds.has(m.id)}
+                      onToggleSelect={() => handleToggleSelectMonster(m.id)}
                       onEdit={() => handleStartEdit(m)}
                       onDelete={() => handleDeleteMonster(m.id)}
                     />
@@ -507,10 +636,21 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                   onSubmit={handleSaveQuickMonster}
                   className="p-4 bg-slate-950/90 rounded-xl border border-slate-800 flex flex-col gap-3 font-outfit"
                 >
-                  <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <Plus className="w-4 h-4 text-amber-400" />
-                    Quick Add Custom Monster
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Plus className="w-4 h-4 text-amber-400" />
+                      Quick Add Custom Monster
+                    </span>
+                  </div>
+
+                  {/* Compact Threat Pre-Scaler for Quick Add */}
+                  <GmThreatBar
+                    compact
+                    value={quickAddThreatDif}
+                    onChange={handleQuickAddThreatChange}
+                    label="Pre-Scale Threat:"
+                    className="w-full"
+                  />
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     <div>

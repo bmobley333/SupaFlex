@@ -124,19 +124,41 @@ export function serializeMonsterDataLine(m: MonsterData): string {
 
 /**
  * Scale a ParsedMonster struct by parsing its line, applying scaling, and re-building strings.
+ * Always scales from baseFullText (the Dif 10 baseline) to prevent compounding rounding decay.
  */
 export function scaleParsedMonster(parsed: ParsedMonster, dif: number): ParsedMonster {
-  if (dif === 10) return parsed;
-  const raw = parsed.fullText || parsed.nameWithEquip;
-  if (!raw) return parsed;
+  const baseText = parsed.baseFullText || parsed.fullText || parsed.nameWithEquip;
+  if (!baseText) return parsed;
 
-  const mData = parseMonsterLineToData(raw, parsed.id);
+  if (dif === 10) {
+    const baseParsed = parseMonsterLine(baseText);
+    return {
+      ...baseParsed,
+      id: parsed.id,
+      baseFullText: baseText,
+      scaled_dif: 10,
+      gear: parsed.gear || baseParsed.gear,
+      abilities: parsed.abilities || baseParsed.abilities,
+      codex_notes: parsed.codex_notes,
+      is_codex: parsed.is_codex,
+      codex_id: parsed.codex_id,
+    };
+  }
+
+  const mData = parseMonsterLineToData(baseText, parsed.id);
   const scaledData = scaleMonsterData(mData, dif);
   const newFullText = serializeMonsterDataLine(scaledData);
   const reParsed = parseMonsterLine(newFullText);
   return {
     ...reParsed,
     id: parsed.id,
+    baseFullText: baseText,
+    scaled_dif: dif,
+    gear: parsed.gear || reParsed.gear,
+    abilities: parsed.abilities || reParsed.abilities,
+    codex_notes: parsed.codex_notes,
+    is_codex: parsed.is_codex,
+    codex_id: parsed.codex_id,
   };
 }
 
