@@ -1715,12 +1715,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                         <span className="font-extrabold text-xs truncate text-red-400">
                           {activeEncounter.title || 'Untitled Encounter'}
                         </span>
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-rose-500/25 text-rose-200 border border-rose-500/50 shrink-0 flex items-center gap-1 shadow-sm">
-                          <span>👑</span>
-                          <span>Active Room</span>
-                        </span>
-                        {/* Encounter Navigation Stepper */}
-                        <div className="flex items-center gap-0.5 bg-slate-950/80 border border-rose-500/30 rounded-lg p-0.5 shadow-inner shrink-0">
+                        {/* Unified Active Room Stepper Capsule */}
+                        <div className="bg-rose-950/90 border border-rose-500/60 p-0.5 rounded-lg flex items-center gap-1 shadow-sm shrink-0 backdrop-blur-md">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1728,11 +1724,15 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                               handlePrevEncounter();
                             }}
                             disabled={!hasPrevEncounter}
-                            className="w-5 h-5 flex items-center justify-center text-xs font-black rounded text-rose-300 hover:text-white hover:bg-rose-900/60 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
+                            className="w-4 h-4.5 flex items-center justify-center text-[10px] font-black rounded text-rose-300 hover:text-white hover:bg-rose-800/80 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
                             title={hasPrevEncounter ? `Previous Room: ${prevEncounter?.title}` : 'No previous room'}
                           >
                             &lt;
                           </button>
+                          <span className="text-[9px] font-extrabold text-rose-200 px-1 flex items-center gap-1 select-none leading-none">
+                            <span>👑</span>
+                            <span>Active Room</span>
+                          </span>
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1740,7 +1740,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                               handleNextEncounter();
                             }}
                             disabled={!hasNextEncounter}
-                            className="w-5 h-5 flex items-center justify-center text-xs font-black rounded text-rose-300 hover:text-white hover:bg-rose-900/60 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
+                            className="w-4 h-4.5 flex items-center justify-center text-[10px] font-black rounded text-rose-300 hover:text-white hover:bg-rose-800/80 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
                             title={hasNextEncounter ? `Next Room: ${nextEncounter?.title}` : 'No next room'}
                           >
                             &gt;
@@ -1883,38 +1883,35 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                               {enc.title || 'Untitled Encounter'}
                             </span>
                             {isCurrentEncounter ? (
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-rose-500/25 text-rose-200 border border-rose-500/50 shrink-0 flex items-center gap-1 shadow-sm">
+                              <div className="bg-rose-950/90 border border-rose-500/60 p-0.5 rounded-lg flex items-center gap-1 shadow-sm shrink-0 backdrop-blur-md">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePrevEncounter();
+                                  }}
+                                  disabled={!hasPrevEncounter}
+                                  className="w-4 h-4.5 flex items-center justify-center text-[10px] font-black rounded text-rose-300 hover:text-white hover:bg-rose-800/80 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
+                                  title={hasPrevEncounter ? `Previous Room: ${prevEncounter?.title}` : 'No previous room'}
+                                >
+                                  &lt;
+                                </button>
+                                <span className="text-[9px] font-extrabold text-rose-200 px-1 flex items-center gap-1 select-none leading-none">
                                   <span>👑</span>
                                   <span>Active Room</span>
                                 </span>
-                                {/* Encounter Navigation Stepper */}
-                                <div className="flex items-center gap-0.5 bg-slate-950/80 border border-rose-500/30 rounded-lg p-0.5 shadow-inner shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handlePrevEncounter();
-                                    }}
-                                    disabled={!hasPrevEncounter}
-                                    className="w-5 h-5 flex items-center justify-center text-xs font-black rounded text-rose-300 hover:text-white hover:bg-rose-900/60 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
-                                    title={hasPrevEncounter ? `Previous Room: ${prevEncounter?.title}` : 'No previous room'}
-                                  >
-                                    &lt;
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleNextEncounter();
-                                    }}
-                                    disabled={!hasNextEncounter}
-                                    className="w-5 h-5 flex items-center justify-center text-xs font-black rounded text-rose-300 hover:text-white hover:bg-rose-900/60 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
-                                    title={hasNextEncounter ? `Next Room: ${nextEncounter?.title}` : 'No next room'}
-                                  >
-                                    &gt;
-                                  </button>
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleNextEncounter();
+                                  }}
+                                  disabled={!hasNextEncounter}
+                                  className="w-4 h-4.5 flex items-center justify-center text-[10px] font-black rounded text-rose-300 hover:text-white hover:bg-rose-800/80 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-rose-300 transition-all cursor-pointer disabled:cursor-not-allowed leading-none"
+                                  title={hasNextEncounter ? `Next Room: ${nextEncounter?.title}` : 'No next room'}
+                                >
+                                  &gt;
+                                </button>
                               </div>
                             ) : (
                               <button
