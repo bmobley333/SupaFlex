@@ -1924,7 +1924,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 )}
               </h3>
               <p className="text-xs text-slate-400">
-                Craft custom Powers, Paths, Skills, Traits, Weapons, Armor, Shields, Gear, Exotics & Artifacts.
+                Craft custom Paths & Abilities, Chaos Gems, and Gear (including Exotics and Artifacts).
               </p>
             </div>
           </div>
@@ -2516,9 +2516,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           ) : creationType === 'paths_abilities' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
               {/* Unified Single-Row Studio Switcher: [Current | My Creations] & [Path | Standalone] */}
-              <div className="shrink-0 flex items-center justify-between gap-2">
+              <div className="shrink-0 grid grid-cols-2 gap-2">
                 {/* Toggle 1: Current vs My Creations */}
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md flex-1">
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md">
                   <button
                     type="button"
                     onClick={() => setPathStudioTab('current')}
@@ -2546,8 +2546,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
 
                 {/* Toggle 2: Path vs Standalone (Only visible in Current mode, hidden in My Creations) */}
-                {pathStudioTab === 'current' && (
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md flex-1">
+                {pathStudioTab === 'current' ? (
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md">
                     <button
                       type="button"
                       onClick={() => {
@@ -2579,23 +2579,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <span>Standalone</span>
                     </button>
                   </div>
-                )}
-
-                {editingItem && pathStudioTab === 'current' && pathStudioMode !== 'path' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleResetForm();
-                      setCreationType('paths_abilities');
-                      setPathStudioMode(pathStudioMode);
-                      setIsCreatingNewPath(false);
-                      setSelectedPathId('');
-                    }}
-                    className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 transition cursor-pointer shrink-0"
-                    title="Start a new blank creation"
-                  >
-                    + New
-                  </button>
+                ) : (
+                  <div />
                 )}
               </div>
 
@@ -2771,16 +2756,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       </div>
 
                       {isPathIdle ? (
-                        /* STATE 1: IDLE / NO PATH CHOSEN */
-                        <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-6 rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 text-center gap-3 text-slate-500">
-                          <span className="text-3xl">🧭</span>
-                          <div className="space-y-1">
-                            <div className="font-bold text-sm text-slate-300">No Path Selected</div>
-                            <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-                              Click <span className="text-blue-400 font-semibold">+ New Path</span> above to author a new Path Archetype, or select an existing one from the dropdown to inspect and edit.
-                            </p>
-                          </div>
-                        </div>
+                        /* STATE 1: IDLE / NO PATH CHOSEN (BLANK CANVAS) */
+                        <div className="flex-1 min-h-0" />
                       ) : isCreatingNewPath ? (
                         /* STATE 2: CREATING NEW PATH (SHOW ONLY PATH CARD + BOTTOM SAVE PATH BUTTON) */
                         <>
@@ -4192,31 +4169,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
               )}
 
-              {/* VIEW IDLE: WELCOME / WORKSHOP GUIDANCE */}
+              {/* VIEW IDLE: BLANK CANVAS UNTIL PATH CHOSEN */}
               {pathStudioMode === 'path' && isPathIdle && (
-                <div className="flex-1 flex flex-col items-center justify-center p-8 rounded-2xl border border-dashed border-slate-800 bg-slate-950/30 text-center gap-4 text-slate-400">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-950/40 border border-blue-500/30 flex items-center justify-center text-3xl shadow-inner">
-                    🧭
-                  </div>
-                  <div className="max-w-md space-y-2">
-                    <h3 className="font-outfit font-extrabold text-base text-slate-100">
-                      Path Archetype Workshop
-                    </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Paths represent unified character archetypes, traditions, and class progressions. They group thematic powers, skills, skillsets, and traits into an organized advancement tree.
-                    </p>
-                    <div className="text-xs text-slate-400 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 text-left space-y-2.5 mt-3">
-                      <div className="flex items-center gap-2.5 text-blue-300 font-semibold">
-                        <span className="text-base">➕</span>
-                        <span>Click "+ New Path" on the left to forge a new custom archetype</span>
-                      </div>
-                      <div className="flex items-center gap-2.5 text-slate-400">
-                        <span className="text-base">📜</span>
-                        <span>Or select an existing path from the dropdown to clone, edit, or customize</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <div className="flex-1 min-h-0" />
               )}
 
               {/* VIEW A: PATH IDENTITY CONFIGURATION */}
@@ -5364,17 +5319,21 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 Clear
               </button>
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl transition cursor-pointer"
-                title="Close Forge"
-              >
-                Done
-              </button>
             </div>
           </form>
           )}
+        </div>
+
+        {/* Universal Modal Footer */}
+        <div className="px-6 py-3 bg-slate-950/80 border-t border-slate-800/80 shrink-0 flex items-center justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="py-2 px-6 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl transition cursor-pointer shadow-sm"
+            title="Close Forge"
+          >
+            Done
+          </button>
         </div>
       </div>
     </div>
