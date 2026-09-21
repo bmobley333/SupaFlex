@@ -2,14 +2,13 @@
 // Unified Player's Forge: Master Modal Blueprint 2-Pane Architecture (Live Preview + Forge Controls)
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw } from 'lucide-react';
+import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw, Search } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationType, CustomCreationItem, CustomCreationData, PathLinkedElement, StudioPower, StudioMod } from '../../types/game';
+import { CustomCreationType, CustomCreationItem, CustomCreationData, PathElementType, PathLinkedElement, StudioPower, StudioMod } from '../../types/game';
 import { InfoTooltip } from '../common/InfoTooltip';
 import { compareMsoOptions } from '../../utils/kitUtils';
 import { parseCostToSilver } from '../../utils/moneyUtils';
-import { LinkPathElementsModal } from './LinkPathElementsModal';
 
 interface PlayerWorkshopModalProps {
   isOpen: boolean;
@@ -168,16 +167,20 @@ export const GuardrailBadge: React.FC<{ isValid: boolean }> = ({ isValid }) => (
   </span>
 );
 
-export const getCategoryEmoji = (type: CustomCreationType): string => {
+export const getCategoryEmoji = (type?: string): string => {
   switch (type) {
     case 'power': return '🔥';
     case 'path': return '🧭';
     case 'skill': return '🎓';
     case 'skillset': return '🎓';
     case 'trait': return '🧬';
-    case 'weapon': return '⚔️';
-    case 'armor': return '🥋';
-    case 'shield': return '🛡️';
+    case 'weapon':
+    case 'weapon_skill': return '⚔️';
+    case 'armor':
+    case 'armor_skill': return '🥋';
+    case 'paths_abilities': return '🧭';
+    case 'shield':
+    case 'shield_skill': return '🛡️';
     case 'gear': return '⚙️';
     case 'exotic': return '🧿';
     case 'artifact': return '🔮';
@@ -190,6 +193,11 @@ export const getCategoryEmoji = (type: CustomCreationType): string => {
 export const isGearType = (type?: string): boolean => {
   if (!type) return false;
   return ['gear', 'weapon', 'armor', 'shield', 'exotic', 'artifact'].includes(type);
+};
+
+export const isPathOrAbilityType = (type?: string): boolean => {
+  if (!type) return false;
+  return ['paths_abilities', 'path', 'power', 'skill', 'skillset', 'trait'].includes(type);
 };
 
 export const CompactCostInput: React.FC<{
@@ -237,14 +245,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const activeRole = useCharacterStore((state) => state.activeRole);
   const skills = useCharacterStore((state) => state.skills);
   const paths = useCharacterStore((state) => state.paths);
+  const powers = useCharacterStore((state) => state.powers);
+  const traits = useCharacterStore((state) => state.traits);
   const weaponsCatalog = useCharacterStore((state) => state.weaponsCatalog);
+  const armorCatalog = useCharacterStore((state) => state.armorCatalog);
   const shieldsCatalog = useCharacterStore((state) => state.shieldsCatalog);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
 
   const isGm = activeRole === 'gm';
 
   // Form Core State
-  const [creationType, setCreationType] = useState<CustomCreationType>('power');
+  const [creationType, setCreationType] = useState<CustomCreationType>('paths_abilities');
   const [name, setName] = useState('');
   const [action, setAction] = useState('AM');
   const [usage, setUsage] = useState('1-Enc');
@@ -258,10 +269,38 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [pathCategoryNewText, setPathCategoryNewText] = useState<string>('');
   const [pathDescription, setPathDescription] = useState<string>('');
   const [linkedElements, setLinkedElements] = useState<PathLinkedElement[]>([]);
-  const [isLinkModalOpen, setIsLinkModalOpen] = useState<boolean>(false);
   const [effect, setEffect] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+
+  // Unified Paths & Abilities Studio State
+  const [pathStudioMode, setPathStudioMode] = useState<'path' | 'standalone'>('path');
+  const [pathStudioTab, setPathStudioTab] = useState<'current' | 'library'>('current');
+  const [pathLibraryFilter, setPathLibraryFilter] = useState<'all' | 'path' | 'power' | 'skill' | 'skillset' | 'trait'>('all');
+  const [activePathSelection, setActivePathSelection] = useState<{
+    type: 'path' | 'ability';
+    category?: PathElementType;
+    id?: string;
+    name?: string;
+    source?: 'new' | 'existing';
+  }>({ type: 'path' });
+  const [activeAbilityCategory, setActiveAbilityCategory] = useState<PathElementType>('power');
+  const [abilitySourceMode, setAbilitySourceMode] = useState<'forge_new' | 'pick_existing'>('forge_new');
+  const [abilityCatalogSearch, setAbilityCatalogSearch] = useState<string>('');
+
+  // Standalone/Inline Ability Form States
+  const [abilityFormName, setAbilityFormName] = useState<string>('');
+  const [abilityFormAction, setAbilityFormAction] = useState<string>('AM');
+  const [abilityFormUsage, setAbilityFormUsage] = useState<string>('1-Enc');
+  const [abilityFormPowerReady, setAbilityFormPowerReady] = useState<string>('primary_arsenal');
+  const [abilityFormEffect, setAbilityFormEffect] = useState<string>('');
+  const [abilityFormSkillAttribute, setAbilityFormSkillAttribute] = useState<string>('💪');
+  const [abilityFormSkillDiscipline, setAbilityFormSkillDiscipline] = useState<string>('General');
+  const [abilityFormSkillDisciplineNewText, setAbilityFormSkillDisciplineNewText] = useState<string>('');
+  const [abilityFormSkillsetSkills, setAbilityFormSkillsetSkills] = useState<string[]>(['', '']);
+  const [abilityFormNotes, setAbilityFormNotes] = useState<string>('');
+  const [abilityFormGenres, setAbilityFormGenres] = useState<string[]>([]);
+  const abilityEffectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Skillset State (2+ selected existing skill strings)
   const [selectedSkillsetSkills, setSelectedSkillsetSkills] = useState<string[]>(['', '']);
@@ -553,6 +592,24 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setAttachedMods([]);
     setActiveStudioSelection({ type: 'chassis' });
     setStudioTab('current');
+    setPathStudioMode('path');
+    setPathStudioTab('current');
+    setPathLibraryFilter('all');
+    setActivePathSelection({ type: 'path' });
+    setActiveAbilityCategory('power');
+    setAbilitySourceMode('forge_new');
+    setAbilityCatalogSearch('');
+    setAbilityFormName('');
+    setAbilityFormAction('AM');
+    setAbilityFormUsage('1-Enc');
+    setAbilityFormPowerReady('primary_arsenal');
+    setAbilityFormEffect('');
+    setAbilityFormSkillAttribute('💪');
+    setAbilityFormSkillDiscipline('General');
+    setAbilityFormSkillDisciplineNewText('');
+    setAbilityFormSkillsetSkills(['', '']);
+    setAbilityFormNotes('');
+    setAbilityFormGenres([]);
     setModFormId('');
     setModFormName('');
     setModFormGold(0);
@@ -618,7 +675,21 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setEditingItem(item);
     setFeedback(null);
     if (item.type) {
-      setCreationType(isGearType(item.type) ? 'gear' : item.type);
+      if (isGearType(item.type)) {
+        setCreationType('gear');
+      } else if (isPathOrAbilityType(item.type)) {
+        setCreationType('paths_abilities');
+        if (item.type === 'path') {
+          setPathStudioMode('path');
+          setActivePathSelection({ type: 'path' });
+        } else {
+          setPathStudioMode('standalone');
+          setActiveAbilityCategory(item.type as PathElementType);
+          setActivePathSelection({ type: 'ability', category: item.type as PathElementType, id: item.id });
+        }
+      } else {
+        setCreationType(item.type);
+      }
     }
     setName(item.name || '');
     setNotes(item.item_data?.notes || item.notes || '');
@@ -650,6 +721,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setUsage(item.item_data?.usage || '1-Enc');
       setEffect(item.item_data?.effect || '');
       setPowerReady(item.item_data?.ready_category || 'primary_arsenal');
+      setAbilityFormName(item.name || '');
+      setAbilityFormAction(item.item_data?.action || 'AM');
+      setAbilityFormUsage(item.item_data?.usage || '1-Enc');
+      setAbilityFormEffect(item.item_data?.effect || '');
+      setAbilityFormPowerReady(item.item_data?.ready_category || 'primary_arsenal');
+      setAbilityFormGenres(item.item_data?.genres || []);
+      setAbilityFormNotes(item.item_data?.notes || item.notes || '');
     } else if (item.type === 'path') {
       const cat = item.item_data?.category || 'General';
       if (availablePathCategories.includes(cat)) {
@@ -671,14 +749,24 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         setSkillDiscipline('CUSTOM_NEW');
         setSkillDisciplineNewText(disc);
       }
+      setAbilityFormName(item.name || '');
+      setAbilityFormSkillAttribute(item.item_data?.attribute || '💪');
+      setAbilityFormSkillDiscipline(disc);
+      setAbilityFormGenres(item.item_data?.genres || []);
+      setAbilityFormNotes(item.item_data?.notes || item.notes || '');
     } else if (item.type === 'skillset') {
-      if (Array.isArray(item.item_data?.skills) && item.item_data.skills.length > 0) {
-        setSelectedSkillsetSkills(item.item_data.skills);
-      } else {
-        setSelectedSkillsetSkills(['', '']);
-      }
+      const sks = Array.isArray(item.item_data?.skills) && item.item_data.skills.length > 0 ? item.item_data.skills : ['', ''];
+      setSelectedSkillsetSkills(sks);
+      setAbilityFormName(item.name || '');
+      setAbilityFormSkillsetSkills(sks);
+      setAbilityFormGenres(item.item_data?.genres || []);
+      setAbilityFormNotes(item.item_data?.notes || item.notes || '');
     } else if (item.type === 'trait') {
       setEffect(item.item_data?.effect || '');
+      setAbilityFormName(item.name || '');
+      setAbilityFormEffect(item.item_data?.effect || '');
+      setAbilityFormGenres(item.item_data?.genres || []);
+      setAbilityFormNotes(item.item_data?.notes || item.notes || '');
     } else if (isGearType(item.type)) {
       const chassis: 'weapon' | 'armor' | 'shield' | 'supplies' =
         (item.item_data?.chassis_type as any) ||
@@ -804,6 +892,431 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     });
   }, [sortedPersonalItems, studioLibraryChassisFilter]);
 
+  const filteredPathItems = useMemo(() => {
+    const all = sortedPersonalItems.filter((it) => isPathOrAbilityType(it.type));
+    if (pathLibraryFilter === 'all') return all;
+    return all.filter((it) => it.type === pathLibraryFilter);
+  }, [sortedPersonalItems, pathLibraryFilter]);
+
+  // Derive unique skillsets from atomic skills catalog
+  const derivedSkillsets = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; skills: string[]; attribute?: string }>();
+    (skills || []).forEach((sk) => {
+      const sets = Array.isArray(sk.skillset) ? sk.skillset : sk.skillset ? [sk.skillset] : [];
+      sets.forEach((setName) => {
+        const clean = (setName || '').trim();
+        if (!clean) return;
+        if (!map.has(clean)) {
+          map.set(clean, { id: `skillset_${clean}`, name: clean, skills: [], attribute: sk.attribute });
+        }
+        map.get(clean)!.skills.push(sk.name);
+      });
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [skills]);
+
+  // Aggregate all available paths for the Path selector dropdown
+  const allAvailablePaths = useMemo(() => {
+    const list: { id: string; name: string; category?: string; isCustom?: boolean; rawItem?: CustomCreationItem }[] = [];
+    personalItems.filter((it) => it.type === 'path').forEach((p) => {
+      list.push({
+        id: `custom_${p.id}`,
+        name: p.name,
+        category: p.item_data?.category || 'Custom',
+        isCustom: true,
+        rawItem: p,
+      });
+    });
+    (paths || []).forEach((p) => {
+      list.push({
+        id: `official_${p.id || p.name}`,
+        name: p.name,
+        category: p.category || 'Official',
+        isCustom: false,
+      });
+    });
+    return list;
+  }, [personalItems, paths]);
+
+  // Filtered catalog items for Link Existing Ability
+  const filteredPathCatalogItems = useMemo(() => {
+    const q = abilityCatalogSearch.toLowerCase().trim();
+
+    if (activeAbilityCategory === 'power') {
+      const allPowers: { id: string | number; name: string; type: PathElementType; details: string }[] = [];
+      const seen = new Set<string>();
+
+      personalItems.filter((it) => it.type === 'power').forEach((p) => {
+        const key = (p.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          allPowers.push({
+            id: p.id,
+            name: p.name,
+            type: 'power',
+            details: `⭐ Personal • ${p.item_data?.action || 'AM'} • ${p.item_data?.usage || '1-Enc'} • ${p.item_data?.effect ? p.item_data.effect.slice(0, 50) : ''}`,
+          });
+        }
+      });
+
+      (powers || []).forEach((p) => {
+        const key = (p.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          allPowers.push({
+            id: p.id ?? p.name,
+            name: p.name,
+            type: 'power',
+            details: `${p.action || 'AM'} • ${p.usage || '1-Enc'} • ${p.effect ? p.effect.slice(0, 50) : ''}`,
+          });
+        }
+      });
+
+      if (!q) return allPowers;
+      return allPowers.filter((p) => p.name.toLowerCase().includes(q) || p.details.toLowerCase().includes(q));
+    }
+
+    if (activeAbilityCategory === 'skill') {
+      const allSkills: { id: string | number; name: string; type: PathElementType; details: string }[] = [];
+      const seen = new Set<string>();
+
+      personalItems.filter((it) => it.type === 'skill').forEach((s) => {
+        const key = (s.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          allSkills.push({
+            id: s.id,
+            name: s.name,
+            type: 'skill',
+            details: `⭐ Personal • Attr: ${s.item_data?.attribute || '💪'} • ${s.item_data?.discipline || 'General'}`,
+          });
+        }
+      });
+
+      (skills || []).forEach((s) => {
+        const key = (s.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          allSkills.push({
+            id: s.id ?? s.name,
+            name: s.name,
+            type: 'skill',
+            details: `Attr: ${s.attribute || '💪'} • Disc: ${s.discipline || 'General'}`,
+          });
+        }
+      });
+
+      if (!q) return allSkills;
+      return allSkills.filter((s) => s.name.toLowerCase().includes(q) || s.details.toLowerCase().includes(q));
+    }
+
+    if (activeAbilityCategory === 'skillset') {
+      const allSets: { id: string | number; name: string; type: PathElementType; details: string }[] = [];
+      const seen = new Set<string>();
+
+      personalItems.filter((it) => it.type === 'skillset').forEach((ss) => {
+        const key = (ss.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          const count = Array.isArray(ss.item_data?.skills) ? ss.item_data.skills.length : 0;
+          allSets.push({
+            id: ss.id,
+            name: ss.name,
+            type: 'skillset',
+            details: `⭐ Personal • ${count} Skills`,
+          });
+        }
+      });
+
+      derivedSkillsets.forEach((ss) => {
+        const key = (ss.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          allSets.push({
+            id: ss.id,
+            name: ss.name,
+            type: 'skillset',
+            details: `${ss.skills.length} Skills: ${ss.skills.slice(0, 3).join(', ')}...`,
+          });
+        }
+      });
+
+      if (!q) return allSets;
+      return allSets.filter((s) => s.name.toLowerCase().includes(q) || s.details.toLowerCase().includes(q));
+    }
+
+    if (activeAbilityCategory === 'trait') {
+      const allTraits: { id: string | number; name: string; type: PathElementType; details: string }[] = [];
+      const seen = new Set<string>();
+
+      personalItems.filter((it) => it.type === 'trait').forEach((t) => {
+        const key = (t.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          allTraits.push({
+            id: t.id,
+            name: t.name,
+            type: 'trait',
+            details: `⭐ Personal • ${t.item_data?.effect ? t.item_data.effect.slice(0, 50) : ''}`,
+          });
+        }
+      });
+
+      (traits || []).forEach((t) => {
+        const key = (t.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          allTraits.push({
+            id: t.id ?? t.name,
+            name: t.name,
+            type: 'trait',
+            details: t.effect ? t.effect.slice(0, 60) : 'Trait effect...',
+          });
+        }
+      });
+
+      if (!q) return allTraits;
+      return allTraits.filter((t) => t.name.toLowerCase().includes(q) || t.details.toLowerCase().includes(q));
+    }
+
+    if (activeAbilityCategory === 'weapon') {
+      const allWeapons: { id: string | number; name: string; type: PathElementType; details: string }[] = [];
+      const seen = new Set<string>();
+
+      (weaponsCatalog || []).forEach((w) => {
+        const key = (w.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          allWeapons.push({
+            id: w.id ?? w.name,
+            name: w.name,
+            type: 'weapon',
+            details: `${w.type || 'Melee'} • Req: ${w.requirement || '💪 4'} • Dmg: ${w.dmg || 'd6'}`,
+          });
+        }
+      });
+
+      if (!q) return allWeapons;
+      return allWeapons.filter((w) => w.name.toLowerCase().includes(q) || w.details.toLowerCase().includes(q));
+    }
+
+    if (activeAbilityCategory === 'armor') {
+      const allArmor: { id: string | number; name: string; type: PathElementType; details: string }[] = [];
+      const seen = new Set<string>();
+
+      (armorCatalog || []).forEach((a) => {
+        const key = (a.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          allArmor.push({
+            id: a.id ?? a.name,
+            name: a.name,
+            type: 'armor',
+            details: `Req: ${a.requirement || '💪 4'} • AR: ${a.ar || '4'} • MR: ${a.mr || '👣12'}`,
+          });
+        }
+      });
+
+      if (!q) return allArmor;
+      return allArmor.filter((a) => a.name.toLowerCase().includes(q) || a.details.toLowerCase().includes(q));
+    }
+
+    if (activeAbilityCategory === 'shield') {
+      const allShields: { id: string | number; name: string; type: PathElementType; details: string }[] = [];
+      const seen = new Set<string>();
+
+      (shieldsCatalog || []).forEach((s) => {
+        const key = (s.name || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          allShields.push({
+            id: s.id ?? s.name,
+            name: s.name,
+            type: 'shield',
+            details: `Req: ${s.requirement || '💪 4'} • Block: ${s.max_block || '🛡️12'} • MR: ${s.mr || '👣0'}`,
+          });
+        }
+      });
+
+      if (!q) return allShields;
+      return allShields.filter((s) => s.name.toLowerCase().includes(q) || s.details.toLowerCase().includes(q));
+    }
+
+    return [];
+  }, [
+    activeAbilityCategory,
+    abilityCatalogSearch,
+    personalItems,
+    powers,
+    skills,
+    traits,
+    derivedSkillsets,
+    weaponsCatalog,
+    armorCatalog,
+    shieldsCatalog,
+  ]);
+
+  const handleUpdateLinkedElements = async (elements: PathLinkedElement[]) => {
+    setLinkedElements(elements);
+    if (editingItem && editingItem.id) {
+      try {
+        const updatedItemData: CustomCreationData = {
+          ...(editingItem.item_data || {}),
+          linked_elements: elements,
+        };
+        const updated = await gameApi.updateCustomItem(editingItem.id, {
+          ...editingItem,
+          item_data: updatedItemData,
+        });
+        if (updated) {
+          setEditingItem(updated);
+        }
+        loadPersonalItems();
+        if (onItemSaved) onItemSaved();
+      } catch (err) {
+        console.error('[PlayerWorkshopModal] Error auto-persisting linked elements:', err);
+      }
+    }
+  };
+
+  const handleToggleLinkedElementFree = (idx: number, isFree: boolean) => {
+    const copy = [...linkedElements];
+    if (copy[idx]) {
+      copy[idx] = { ...copy[idx], isFree, tag: isFree ? 'Free' : '1 AP' };
+      handleUpdateLinkedElements(copy);
+    }
+  };
+
+  const handleRemoveLinkedElement = (idx: number) => {
+    const next = linkedElements.filter((_, i) => i !== idx);
+    handleUpdateLinkedElements(next);
+  };
+
+  const handleLinkExistingItem = (item: { id: string | number; name: string; type: PathElementType; details?: string }) => {
+    if (linkedElements.some((el) => (el.name || el.element_name || '').toLowerCase().trim() === item.name.toLowerCase().trim())) {
+      return;
+    }
+    const next: PathLinkedElement[] = [
+      ...linkedElements,
+      {
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        tag: '1 AP',
+        isFree: false,
+        details: item.details,
+      },
+    ];
+    handleUpdateLinkedElements(next);
+  };
+
+  const handlePopulateOfficialPath = (official: any) => {
+    setEditingItem(null);
+    setName(`${official.name} (Custom)`);
+    setPathCategory(official.category || 'General');
+    setPathCategoryNewText('');
+    setPathDescription(official.description || '');
+    setLinkedElements(Array.isArray(official.linked_elements) ? official.linked_elements : []);
+    setSelectedGenres(['Medieval']);
+    setActivePathSelection({ type: 'path' });
+  };
+
+  const handleSaveAndLinkAbility = async () => {
+    if (!abilityFormName.trim()) return;
+    setIsSubmitting(true);
+    setFeedback(null);
+
+    const authorDisplayName = playerName || playerEmail?.split('@')[0] || 'Unknown Forger';
+    const abilityType = activeAbilityCategory;
+
+    const abilityDataPayload: CustomCreationData = {
+      notes: abilityFormNotes.trim() || undefined,
+      genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+      category:
+        abilityType === 'power'
+          ? 'Power'
+          : abilityType === 'trait'
+          ? 'Trait'
+          : abilityType === 'skill'
+          ? abilityFormSkillDiscipline === 'CUSTOM_NEW'
+            ? abilityFormSkillDisciplineNewText.trim()
+            : abilityFormSkillDiscipline
+          : 'General',
+      allow_cloning: true,
+    };
+
+    let detailsSummary = '';
+
+    if (abilityType === 'power') {
+      abilityDataPayload.action = abilityFormAction;
+      abilityDataPayload.usage = abilityFormUsage;
+      abilityDataPayload.effect = abilityFormEffect.trim();
+      abilityDataPayload.ready_category = abilityFormPowerReady;
+      abilityDataPayload.table = 'General';
+      abilityDataPayload.table_group = 'General';
+      detailsSummary = `${abilityFormAction} • ${abilityFormUsage}`;
+    } else if (abilityType === 'skill') {
+      const disc =
+        abilityFormSkillDiscipline === 'CUSTOM_NEW'
+          ? abilityFormSkillDisciplineNewText.trim() || 'General'
+          : abilityFormSkillDiscipline;
+      abilityDataPayload.attribute = abilityFormSkillAttribute;
+      abilityDataPayload.discipline = disc;
+      abilityDataPayload.formatted_skill = `${abilityFormName.trim()} ${abilityFormSkillAttribute}`;
+      detailsSummary = `Attr: ${abilityFormSkillAttribute} • ${disc}`;
+    } else if (abilityType === 'skillset') {
+      abilityDataPayload.skills = abilityFormSkillsetSkills.filter(Boolean);
+      detailsSummary = `${abilityDataPayload.skills.length} Skills`;
+    } else if (abilityType === 'trait') {
+      abilityDataPayload.effect = abilityFormEffect.trim();
+      detailsSummary = abilityFormEffect.slice(0, 50);
+    }
+
+    try {
+      const newAbilityItem: Partial<CustomCreationItem> = {
+        name: abilityFormName.trim(),
+        type: abilityType as CustomCreationType,
+        category: abilityDataPayload.category,
+        author_name: isGm ? `${authorDisplayName} (GM)` : authorDisplayName,
+        author_email: playerEmail || 'guest@metascape.com',
+        party_id: activePartyId || null,
+        gm_approved: isGm ? true : false,
+        item_data: abilityDataPayload,
+      };
+
+      const savedAbility = await gameApi.saveCustomItem(newAbilityItem);
+      const abilityId = savedAbility?.id || `custom_${Date.now()}`;
+
+      setLinkedElements((prev) => [
+        ...prev,
+        {
+          id: abilityId,
+          name: abilityFormName.trim(),
+          type: abilityType,
+          isFree: false,
+          details: detailsSummary,
+          item_data: abilityDataPayload,
+        },
+      ]);
+
+      setAbilityFormName('');
+      setAbilityFormEffect('');
+      setAbilityFormNotes('');
+      setAbilityFormSkillsetSkills(['', '']);
+
+      setFeedback({
+        type: 'success',
+        message: `Forged '${newAbilityItem.name}' and linked to ${name.trim() || 'Path'}!`,
+      });
+      loadPersonalItems();
+    } catch (err: any) {
+      console.error('[PlayerWorkshopModal] Error creating and linking ability:', err);
+      setFeedback({ type: 'error', message: 'Failed to create and link ability.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Load custom items and personal items when modal is opened
   useEffect(() => {
     if (isOpen) {
@@ -854,6 +1367,33 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const isCostValid = costGold > 0 || costSilver > 0;
 
   const isFormValid = useMemo(() => {
+    if (creationType === 'paths_abilities') {
+      if (pathStudioMode === 'path') {
+        if (!isNameValid) return false;
+        if (!isGenresValid) return false;
+        return isPathCategoryValid && pathDescription.trim().length > 0;
+      } else {
+        // standalone ability mode
+        if (!abilityFormName.trim()) return false;
+        if (activeAbilityCategory === 'power') return abilityFormEffect.trim().length > 0;
+        if (activeAbilityCategory === 'trait') return abilityFormEffect.trim().length > 0;
+        if (activeAbilityCategory === 'skill') {
+          const isDiscValid =
+            abilityFormSkillDiscipline === 'CUSTOM_NEW'
+              ? abilityFormSkillDisciplineNewText.trim().length > 0
+              : abilityFormSkillDiscipline.trim().length > 0;
+          return !!abilityFormSkillAttribute && isDiscValid;
+        }
+        if (activeAbilityCategory === 'skillset') {
+          return (
+            abilityFormSkillsetSkills.length >= 2 &&
+            abilityFormSkillsetSkills.every((s) => typeof s === 'string' && s.trim().length > 0)
+          );
+        }
+        return true;
+      }
+    }
+
     if (!isNameValid) return false;
     if (!isGenresValid) return false;
 
@@ -890,6 +1430,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return true;
   }, [
     creationType,
+    pathStudioMode,
+    abilityFormName,
+    activeAbilityCategory,
+    abilityFormEffect,
+    abilityFormSkillAttribute,
+    abilityFormSkillDiscipline,
+    abilityFormSkillDisciplineNewText,
+    abilityFormSkillsetSkills,
     costMode,
     studioChassisType,
     isNameValid,
@@ -1025,6 +1573,23 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     }, 0);
   };
 
+  const insertAbilityTextAtCursor = (insertStr: string) => {
+    const textarea = abilityEffectTextareaRef.current;
+    if (!textarea) {
+      setAbilityFormEffect((prev) => (prev ? prev + insertStr : insertStr));
+      return;
+    }
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    const currentVal = abilityFormEffect;
+    const nextVal = currentVal.substring(0, start) + insertStr + currentVal.substring(end);
+    setAbilityFormEffect(nextVal);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + insertStr.length, start + insertStr.length);
+    }, 0);
+  };
+
   const handleAddSkillsetRow = () => {
     setSelectedSkillsetSkills((prev) => [...prev, '']);
   };
@@ -1047,29 +1612,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setSelectedGenres((prev) =>
       prev.includes(genreId) ? prev.filter((g) => g !== genreId) : [...prev, genreId]
     );
-  };
-
-  const handleUpdateLinkedElements = async (elements: PathLinkedElement[]) => {
-    setLinkedElements(elements);
-    if (editingItem && editingItem.id) {
-      try {
-        const updatedItemData: CustomCreationData = {
-          ...(editingItem.item_data || {}),
-          linked_elements: elements,
-        };
-        const updated = await gameApi.updateCustomItem(editingItem.id, {
-          ...editingItem,
-          item_data: updatedItemData,
-        });
-        if (updated) {
-          setEditingItem(updated);
-        }
-        loadPersonalItems();
-        if (onItemSaved) onItemSaved();
-      } catch (err) {
-        console.error('[PlayerWorkshopModal] Error auto-persisting linked elements:', err);
-      }
-    }
   };
 
   const costStr =
@@ -1109,7 +1651,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setFeedback(null);
 
     const authorDisplayName = playerName || playerEmail?.split('@')[0] || 'Unknown Forger';
-    const categoryStr =
+    let categoryStr =
       creationType === 'power'
         ? 'Power'
         : creationType === 'path'
@@ -1135,7 +1677,49 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       allow_cloning: true,
     };
 
-    if (creationType === 'power') {
+    if (creationType === 'paths_abilities') {
+      if (pathStudioMode === 'path') {
+        categoryStr = finalPathCat;
+        itemDataPayload.category = finalPathCat;
+        itemDataPayload.description = pathDescription.trim();
+        itemDataPayload.linked_elements = linkedElements;
+        itemDataPayload.genres = selectedGenres;
+        itemDataPayload.notes = notes.trim() || undefined;
+      } else {
+        itemDataPayload.genres =
+          abilityFormGenres.length > 0
+            ? abilityFormGenres
+            : selectedGenres.length > 0
+            ? selectedGenres
+            : ['Fantasy', 'SciFi', 'Modern', 'Horror', 'Super'];
+        itemDataPayload.notes = abilityFormNotes.trim() || undefined;
+        if (activeAbilityCategory === 'power') {
+          categoryStr = 'Power';
+          itemDataPayload.action = abilityFormAction;
+          itemDataPayload.usage = abilityFormUsage;
+          itemDataPayload.effect = abilityFormEffect.trim();
+          itemDataPayload.table = 'General';
+          itemDataPayload.table_group = 'General';
+          itemDataPayload.ready_category = abilityFormPowerReady;
+        } else if (activeAbilityCategory === 'trait') {
+          categoryStr = 'Trait';
+          itemDataPayload.effect = abilityFormEffect.trim();
+        } else if (activeAbilityCategory === 'skill') {
+          const finalDisc =
+            abilityFormSkillDiscipline === 'CUSTOM_NEW'
+              ? abilityFormSkillDisciplineNewText.trim() || 'General'
+              : abilityFormSkillDiscipline;
+          categoryStr = finalDisc;
+          itemDataPayload.attribute = abilityFormSkillAttribute;
+          itemDataPayload.discipline = finalDisc;
+          itemDataPayload.formatted_skill = `${abilityFormName.trim()} ${abilityFormSkillAttribute}`;
+        } else if (activeAbilityCategory === 'skillset') {
+          categoryStr = 'Skillset';
+          itemDataPayload.skills = abilityFormSkillsetSkills.filter(Boolean);
+        }
+        itemDataPayload.category = categoryStr;
+      }
+    } else if (creationType === 'power') {
       itemDataPayload.action = action;
       itemDataPayload.usage = usage;
       itemDataPayload.effect = effect.trim();
@@ -1218,7 +1802,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
     // Auto-classify canonical custom_elements.type for backward compatibility & character sheet equipping
     let finalType: CustomCreationType = creationType;
-    if (creationType === 'gear') {
+    if (creationType === 'paths_abilities') {
+      finalType = pathStudioMode === 'path' ? 'path' : (activeAbilityCategory as CustomCreationType);
+    } else if (creationType === 'gear') {
       const isArtifact = costMode === 'artifact' || costStr === 'Artifact';
       const hasPowersOrMods = inherentPowers.length > 0 || attachedMods.length > 0;
       const isExotic = hasPowersOrMods && !isArtifact;
@@ -1232,9 +1818,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       }
     }
 
+    const finalItemName =
+      creationType === 'paths_abilities' && pathStudioMode === 'standalone'
+        ? abilityFormName.trim()
+        : name.trim();
+
     try {
       const newCustomItem: Partial<CustomCreationItem> = {
-        name: name.trim(),
+        name: finalItemName,
         type: finalType,
         category: categoryStr,
         author_name: isGm ? `${authorDisplayName} (GM)` : authorDisplayName,
@@ -1242,14 +1833,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         party_id: activePartyId || null,
         gm_approved: isGm ? true : false,
         item_data: itemDataPayload,
-        notes: notes.trim() ? notes.trim() : undefined,
+        notes: itemDataPayload.notes,
       };
 
       if (editingItem && editingItem.id) {
         const updated = await gameApi.updateCustomItem(editingItem.id, newCustomItem);
         setFeedback({
           type: 'success',
-          message: `✅ Updated '${name.trim()}' in your Custom Elements library!`,
+          message: `✅ Updated '${finalItemName}' in your Custom Elements library!`,
         });
         if (updated) {
           setEditingItem(updated);
@@ -1260,18 +1851,27 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         const created = await gameApi.saveCustomItem(newCustomItem);
         setFeedback({
           type: 'success',
-          message: `✅ Successfully forged '${name.trim()}' to your Custom Elements library!`,
+          message: `✅ Successfully forged '${finalItemName}' to your Custom Elements library!`,
         });
         loadPersonalItems();
         if (onItemSaved) onItemSaved();
 
-        if (creationType === 'path' && created) {
+        if (creationType === 'paths_abilities') {
+          if (pathStudioMode === 'standalone') {
+            setAbilityFormName('');
+            setAbilityFormEffect('');
+            setAbilityFormNotes('');
+            setAbilityFormSkillsetSkills(['', '']);
+            setEditingItem(null);
+          } else if (created) {
+            setEditingItem(created);
+          }
+        } else if (creationType === 'path' && created) {
           setEditingItem(created);
-          setIsLinkModalOpen(true);
           return;
+        } else {
+          handleResetForm();
         }
-
-        handleResetForm();
       }
     } catch (err: any) {
       console.error('[PlayerWorkshopModal] Error forging item:', err);
@@ -1335,85 +1935,44 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           </div>
         </div>
 
-        {/* Primary Classification Tabs: Single Unified Row */}
-        <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex items-center gap-1.5 overflow-x-auto">
-          <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
+        {/* S-Tier 3-Pillar Master Navigation */}
+        <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex items-center justify-between gap-2">
+          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
             <button
               type="button"
-              onClick={() => handleSwitchTab('power')}
-              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                creationType === 'power'
-                  ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🔥 Powers
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('path')}
-              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                creationType === 'path'
+              onClick={() => handleSwitchTab('paths_abilities')}
+              className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                creationType === 'paths_abilities'
                   ? 'bg-purple-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
             >
-              🧭 Paths
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('skill')}
-              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                creationType === 'skill'
-                  ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🎓 Skills
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('skillset')}
-              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                creationType === 'skillset'
-                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🎓 Skillsets
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('trait')}
-              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                creationType === 'trait'
-                  ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🧬 Traits
+              <span>🧭</span>
+              <span>Paths & Abilities</span>
             </button>
             <button
               type="button"
               onClick={() => handleSwitchTab('chaos_gem')}
-              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+              className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 creationType === 'chaos_gem'
                   ? 'bg-violet-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
             >
-              💎 Chaos Gems
+              <span>💎</span>
+              <span>Chaos Gems</span>
             </button>
             <button
               type="button"
               onClick={() => handleSwitchTab('gear')}
-              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+              className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 creationType === 'gear'
                   ? 'bg-amber-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
             >
-              ⚙️ Gear
+              <span>⚙️</span>
+              <span>Gear</span>
             </button>
           </div>
         </div>
@@ -1934,6 +2493,504 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     </button>
                   </div>
                 </>
+              )}
+            </div>
+          ) : creationType === 'paths_abilities' ? (
+            <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
+              {/* Studio Tab Switcher: Current Item vs My Creations */}
+              <div className="shrink-0 flex items-center justify-between gap-2">
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-1">
+                  <button
+                    type="button"
+                    onClick={() => setPathStudioTab('current')}
+                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      pathStudioTab === 'current'
+                        ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <span>🛠️</span>
+                    <span>Current Item</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPathStudioTab('library')}
+                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      pathStudioTab === 'library'
+                        ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <span>📚</span>
+                    <span>My Creations ({personalItems.filter((it) => isPathOrAbilityType(it.type)).length})</span>
+                  </button>
+                </div>
+
+                {editingItem && (
+                  <button
+                    type="button"
+                    onClick={handleResetForm}
+                    className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 transition cursor-pointer shrink-0"
+                    title="Start a new blank creation"
+                  >
+                    + New Blank
+                  </button>
+                )}
+              </div>
+
+              {pathStudioTab === 'library' ? (
+                /* LIBRARY LIST VIEW */
+                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+                  {/* Category Filter Switch */}
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
+                    {(['all', 'path', 'power', 'skill', 'skillset', 'trait'] as const).map((filter) => {
+                      const labels: Record<string, string> = {
+                        all: '🌐 All',
+                        path: '🧭 Paths',
+                        power: '⚡ Powers',
+                        skill: '🎯 Skills',
+                        skillset: '📚 Sets',
+                        trait: '🧬 Traits',
+                      };
+                      return (
+                        <button
+                          key={filter}
+                          type="button"
+                          onClick={() => setPathLibraryFilter(filter)}
+                          className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            pathLibraryFilter === filter
+                              ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          {labels[filter]}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+                    {filteredPathItems.length === 0 ? (
+                      <div className="p-8 text-center text-slate-500 text-xs">
+                        No creations found under this filter.
+                      </div>
+                    ) : (
+                      filteredPathItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
+                            editingItem?.id === item.id
+                              ? 'bg-purple-950/40 border-purple-500/80 shadow-md shadow-purple-950/50 ring-1 ring-purple-500'
+                              : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
+                          }`}
+                          onClick={() => handlePopulateItemForEdit(item)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base">{getCategoryEmoji(item.type)}</span>
+                              <span className="font-bold text-slate-100 text-xs">{item.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-purple-300 font-mono">
+                                {item.type.toUpperCase()}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteItem(item, e);
+                                }}
+                                className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition cursor-pointer"
+                                title="Delete creation"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {item.type === 'path' && item.item_data?.linked_elements && (
+                            <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <span>Linked:</span>
+                              <span className="font-bold text-slate-300">
+                                {item.item_data.linked_elements.length} elements
+                              </span>
+                            </div>
+                          )}
+                          {item.item_data?.effect && (
+                            <div className="text-[10px] text-slate-400 font-mono line-clamp-1">
+                              {item.item_data.effect}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* CURRENT ITEM VIEW */
+                <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+                  {/* Mode Selector Pill Switch */}
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPathStudioMode('path');
+                        setActivePathSelection({ type: 'path' });
+                      }}
+                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        pathStudioMode === 'path'
+                          ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <span>🧭</span>
+                      <span>Path Archetype</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPathStudioMode('standalone');
+                        setActivePathSelection({ type: 'ability', category: activeAbilityCategory });
+                      }}
+                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        pathStudioMode === 'standalone'
+                          ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <span>⚡</span>
+                      <span>Standalone Ability</span>
+                    </button>
+                  </div>
+
+                  {pathStudioMode === 'path' ? (
+                    <>
+                      {/* Path Selector Dropdown */}
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+                          <span>Select Path:</span>
+                          <span className="text-[10px] text-slate-500">Pick to edit / clone</span>
+                        </div>
+                        <select
+                          value={editingItem && editingItem.type === 'path' ? editingItem.id : ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (!val) {
+                              handleResetForm();
+                              setCreationType('paths_abilities');
+                              setPathStudioMode('path');
+                              return;
+                            }
+                            if (val.startsWith('custom_')) {
+                              const id = val.replace('custom_', '');
+                              const found = personalItems.find((it) => it.id === id);
+                              if (found) handlePopulateItemForEdit(found);
+                            } else if (val.startsWith('official_')) {
+                              const pathName = val.replace('official_', '');
+                              const found = paths.find((p) => p.name === pathName);
+                              if (found) handlePopulateOfficialPath(found);
+                            }
+                          }}
+                          className="bg-slate-950 text-slate-200 text-xs px-2.5 py-1.5 rounded-xl border border-slate-700 outline-none focus:border-purple-500 font-medium"
+                        >
+                          <option value="">+ Start New Blank Path</option>
+                          {allAvailablePaths.some((p) => p.isCustom) && (
+                            <optgroup label="Personal Custom Paths">
+                              {allAvailablePaths
+                                .filter((p) => p.isCustom)
+                                .map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    ⭐ {p.name} ({p.category})
+                                  </option>
+                                ))}
+                            </optgroup>
+                          )}
+                          <optgroup label="Official Paths">
+                            {allAvailablePaths
+                              .filter((p) => !p.isCustom)
+                              .map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  📜 {p.name} ({p.category})
+                                </option>
+                              ))}
+                          </optgroup>
+                        </select>
+                      </div>
+
+                      {/* Master Path Card (Root Node) */}
+                      <div
+                        onClick={() => setActivePathSelection({ type: 'path' })}
+                        className={`p-3.5 rounded-xl border transition-all cursor-pointer shrink-0 flex flex-col gap-2 ${
+                          activePathSelection.type === 'path'
+                            ? 'bg-purple-950/40 border-purple-500 shadow-md shadow-purple-950/40 ring-1 ring-purple-500'
+                            : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🧭</span>
+                            <div>
+                              <div className="font-extrabold text-sm text-slate-100 flex items-center gap-1.5">
+                                <span>{name.trim() || 'Untitled Path'}</span>
+                                <GuardrailBadge isValid={isNameValid} />
+                              </div>
+                              <div className="text-[11px] text-purple-300 font-medium">
+                                Category: {finalPathCat}
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-900/60 text-purple-200 border border-purple-500/40">
+                            Root Node
+                          </span>
+                        </div>
+
+                        {pathDescription.trim() && (
+                          <div className="text-[11px] text-slate-400 line-clamp-2 italic">
+                            "{pathDescription.trim()}"
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 mt-1">
+                          <span className="flex items-center gap-1 text-purple-300 font-semibold">
+                            <span>⚡</span> {linkedElements.length} Linked Elements
+                          </span>
+                          <span className="text-purple-400">Click to edit Path Identity ✎</span>
+                        </div>
+                      </div>
+
+                      {/* Linked Path Elements Tree */}
+                      <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+                        <div className="flex items-center justify-between shrink-0">
+                          <span className="font-bold text-xs text-slate-300 flex items-center gap-1.5">
+                            <span>🔗</span>
+                            <span>Linked Elements ({linkedElements.length})</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActivePathSelection({ type: 'ability', category: activeAbilityCategory })}
+                            className="text-[10px] font-bold px-2 py-1 rounded-lg bg-purple-950/80 hover:bg-purple-900/80 text-purple-200 border border-purple-500/40 transition cursor-pointer flex items-center gap-1"
+                          >
+                            <span>+ Add / Link Ability</span>
+                          </button>
+                        </div>
+
+                        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+                          {linkedElements.length === 0 ? (
+                            <div className="p-6 rounded-xl border border-dashed border-slate-800 bg-slate-950/40 text-center flex flex-col items-center gap-2 text-slate-500">
+                              <span className="text-2xl">🧭</span>
+                              <p className="text-xs">No abilities or proficiencies linked yet.</p>
+                              <p className="text-[11px] text-slate-600">
+                                Use the Ability Studio on the right to forge new abilities or link existing catalog elements.
+                              </p>
+                            </div>
+                          ) : (
+                            linkedElements.map((el, idx) => {
+                              const elKey = el.element_name || el.name || `el_${idx}`;
+                              const elType = el.element_type || el.type || 'power';
+                              const isFree = Boolean(el.is_free || el.isFree);
+
+                              const typeLabels: Record<string, { label: string; color: string; icon: string }> = {
+                                power: { label: 'Power', color: 'bg-rose-950/60 border-rose-500/40 text-rose-300', icon: '⚡' },
+                                skill: { label: 'Skill', color: 'bg-amber-950/60 border-amber-500/40 text-amber-300', icon: '🎯' },
+                                skillset: { label: 'Skillset', color: 'bg-blue-950/60 border-blue-500/40 text-blue-300', icon: '📚' },
+                                trait: { label: 'Trait', color: 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300', icon: '🧬' },
+                                weapon_skill: { label: 'Weapon Sk', color: 'bg-orange-950/60 border-orange-500/40 text-orange-300', icon: '⚔️' },
+                                armor_skill: { label: 'Armor Sk', color: 'bg-amber-950/60 border-amber-500/40 text-amber-300', icon: '🥋' },
+                                shield_skill: { label: 'Shield Sk', color: 'bg-cyan-950/60 border-cyan-500/40 text-cyan-300', icon: '🛡️' },
+                              };
+                              const meta = typeLabels[elType] || { label: elType, color: 'bg-slate-800 text-slate-300 border-slate-700', icon: '✨' };
+
+                              return (
+                                <div
+                                  key={`${elKey}_${idx}`}
+                                  className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/80 flex items-center justify-between gap-2 shadow-sm"
+                                >
+                                  <div className="flex flex-col min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-xs">{meta.icon}</span>
+                                      <span className="font-bold text-slate-100 text-xs truncate">{elKey}</span>
+                                      <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border ${meta.color}`}>
+                                        {meta.label}
+                                      </span>
+                                    </div>
+                                    {el.details && (
+                                      <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                                        {el.details}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* S-Tier Pill Switch: [ 1 AP | Free ] */}
+                                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleLinkedElementFree(idx, false)}
+                                      className={`py-1 px-2 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                                        !isFree
+                                          ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                      }`}
+                                      title="Costs standard 1 AP to acquire"
+                                    >
+                                      1 AP
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleLinkedElementFree(idx, true)}
+                                      className={`py-1 px-2 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                                        isFree
+                                          ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                      }`}
+                                      title="Granted free upon selecting this Path"
+                                    >
+                                      Free
+                                    </button>
+                                  </div>
+
+                                  {/* Unlink Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveLinkedElement(idx)}
+                                    className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition cursor-pointer shrink-0"
+                                    title="Unlink from Path"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bottom Forge / Update Path Button */}
+                      <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                          <span>Status:</span>
+                          {editingItem ? (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                              Editing Path
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-emerald-400 font-mono font-bold">New Path Creation</span>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleSubmit}
+                          disabled={!isFormValid || isSubmitting}
+                          className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                            isFormValid && !isSubmitting
+                              ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-purple-900/40 cursor-pointer'
+                              : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                          }`}
+                        >
+                          <AnvilIcon className="w-4 h-4" />
+                          <span>
+                            {isSubmitting
+                              ? 'Forging...'
+                              : editingItem
+                              ? 'Update Path Archetype'
+                              : 'Forge Path to My Creations'}
+                          </span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    /* STANDALONE ABILITY MODE */
+                    <div className="flex-1 flex flex-col gap-3 min-h-0">
+                      <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/40 text-indigo-200 text-xs leading-relaxed">
+                        <div className="font-bold flex items-center gap-1.5 mb-1 text-indigo-300">
+                          <span>⚡</span>
+                          <span>Standalone Ability Mode</span>
+                        </div>
+                        <p className="text-[11px] text-slate-300">
+                          You are forging an independent Ability (Power, Skill, Skillset, or Trait) that is not linked to any Path. It will be saved directly into your Custom Elements library and can be equipped by any character or linked to a Path later.
+                        </p>
+                      </div>
+
+                      <div className="font-bold text-xs text-slate-300 flex items-center gap-1.5">
+                        <span>⚒️</span>
+                        <span>Ability Preview</span>
+                      </div>
+
+                      <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/90 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{getCategoryEmoji(activeAbilityCategory)}</span>
+                            <div>
+                              <div className="font-bold text-slate-100 text-sm">
+                                {abilityFormName.trim() || 'Untitled Ability'}
+                              </div>
+                              <div className="text-[10px] font-mono text-indigo-300">
+                                {activeAbilityCategory.toUpperCase()}
+                              </div>
+                            </div>
+                          </div>
+                          <GuardrailBadge isValid={abilityFormName.trim().length > 0} />
+                        </div>
+
+                        {activeAbilityCategory === 'power' && (
+                          <div className="flex items-center gap-1.5 text-[10px]">
+                            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+                              Action: {abilityFormAction}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+                              Usage: {abilityFormUsage}
+                            </span>
+                          </div>
+                        )}
+
+                        {activeAbilityCategory === 'skill' && (
+                          <div className="flex items-center gap-1.5 text-[10px]">
+                            <span className="px-2 py-0.5 rounded bg-amber-950/60 border border-amber-500/30 text-amber-300 font-bold">
+                              {abilityFormSkillAttribute}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                              {abilityFormSkillDiscipline}
+                            </span>
+                          </div>
+                        )}
+
+                        {activeAbilityCategory === 'skillset' && (
+                          <div className="text-[11px] text-slate-400">
+                            Skills: {abilityFormSkillsetSkills.filter(Boolean).join(', ') || 'None selected'}
+                          </div>
+                        )}
+
+                        {abilityFormEffect.trim() && (
+                          <div className="p-2 rounded bg-slate-950 border border-slate-800 text-[11px] text-slate-300 font-mono whitespace-pre-wrap">
+                            {abilityFormEffect.trim()}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-auto shrink-0 pt-2 border-t border-slate-800/80">
+                        <button
+                          type="button"
+                          onClick={handleSubmit}
+                          disabled={!isFormValid || isSubmitting}
+                          className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                            isFormValid && !isSubmitting
+                              ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-indigo-900/40 cursor-pointer'
+                              : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                          }`}
+                        >
+                          <AnvilIcon className="w-4 h-4" />
+                          <span>
+                            {isSubmitting
+                              ? 'Forging...'
+                              : editingItem
+                              ? `Update ${activeAbilityCategory.charAt(0).toUpperCase() + activeAbilityCategory.slice(1)}`
+                              : `Forge ${activeAbilityCategory.charAt(0).toUpperCase() + activeAbilityCategory.slice(1)} to My Creations`}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           ) : (
@@ -2958,6 +4015,772 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
               )}
             </div>
+          ) : creationType === 'paths_abilities' ? (
+            <div className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-5 overflow-y-auto gap-4 text-xs">
+              {/* Feedback Alert */}
+              {feedback && (
+                <div
+                  className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-semibold animate-fadeIn ${
+                    feedback.type === 'success'
+                      ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200'
+                      : 'bg-rose-950/60 border-rose-500/50 text-rose-200'
+                  }`}
+                >
+                  {feedback.type === 'success' ? (
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  )}
+                  <span>{feedback.message}</span>
+                </div>
+              )}
+
+              {/* VIEW A: PATH IDENTITY CONFIGURATION */}
+              {pathStudioMode === 'path' && activePathSelection.type === 'path' && (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🧭</span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                          Path Archetype Configuration
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Configure Path archetype name, discipline category, lore description, genres, and notes.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-purple-950/80 border border-purple-500/40 text-purple-300 font-mono text-[10px] font-bold">
+                      Mode: Path Archetype
+                    </span>
+                  </div>
+
+                  {/* Path Name */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300">Path Name</span>
+                        <GuardrailBadge isValid={isNameValid} />
+                        <InfoTooltip text="Enter the archetype name of this Path (e.g. Shadowblade, Chronomancer)." />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Voidstalker, Iron Sentinel, Starweaver..."
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-purple-400 shadow-inner"
+                      required
+                    />
+                  </div>
+
+                  {/* Path Category */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300">Path Category / Discipline</span>
+                        <GuardrailBadge isValid={isPathCategoryValid} />
+                        <InfoTooltip text="Select the core discipline or theme for this Path." />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <select
+                        value={pathCategory}
+                        onChange={(e) => setPathCategory(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 text-slate-200 text-xs px-3 py-2 rounded-xl outline-none focus:border-purple-400 font-medium"
+                      >
+                        {availablePathCategories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                        <option value="CUSTOM_NEW">+ Custom Category...</option>
+                      </select>
+                      {pathCategory === 'CUSTOM_NEW' && (
+                        <input
+                          type="text"
+                          value={pathCategoryNewText}
+                          onChange={(e) => setPathCategoryNewText(e.target.value)}
+                          placeholder="Type custom category name..."
+                          className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-purple-500/60 outline-none"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Path Description & Lore */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300">Description & Archetype Lore</span>
+                        <GuardrailBadge isValid={pathDescription.trim().length > 0} />
+                        <InfoTooltip text="Flavor text describing this path's training, role, and thematic identity." />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                    </div>
+                    <textarea
+                      value={pathDescription}
+                      onChange={(e) => setPathDescription(e.target.value)}
+                      rows={3}
+                      placeholder="e.g. Masters of planar shifting and void manipulation, the Voidstalker steps between shadows..."
+                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-purple-400 shadow-inner resize-none leading-relaxed"
+                      required
+                    />
+                  </div>
+
+                  {/* Genres */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300">Genres</span>
+                        <GuardrailBadge isValid={isGenresValid} />
+                        <InfoTooltip text="Select all genres where this Path is permitted." />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                    </div>
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
+                      {GENRE_OPTIONS.map((g) => {
+                        const isSelected = selectedGenres.includes(g.id);
+                        return (
+                          <button
+                            key={g.id}
+                            type="button"
+                            onClick={() => handleToggleGenre(g.id)}
+                            className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              isSelected
+                                ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            <span>{g.icon}</span>
+                            <span>{g.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-300">Notes / GM Reference</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Optional</span>
+                    </div>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={2}
+                      placeholder="Internal notes, lore connections, or special rules..."
+                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-purple-400 shadow-inner resize-none leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Continue to Ability Studio Button */}
+                  <div className="pt-2 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setActivePathSelection({ type: 'ability', category: activeAbilityCategory })}
+                      className="py-2.5 px-5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center gap-2 shadow-md shadow-purple-950/50 cursor-pointer"
+                    >
+                      <span>Continue to Ability Studio</span>
+                      <span>➔</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* VIEW B: ABILITY STUDIO */}
+              {(activePathSelection.type === 'ability' || pathStudioMode === 'standalone') && (
+                <div className="flex flex-col gap-4">
+                  {/* Studio Header */}
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">⚡</span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                          {pathStudioMode === 'path'
+                            ? `Link Abilities to ${name.trim() || 'Path'}`
+                            : 'Standalone Ability Studio'}
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          {pathStudioMode === 'path'
+                            ? 'Forge new abilities or link existing powers, skills, and traits to this Path archetype.'
+                            : 'Craft standalone abilities ready for character equipping or future path linkage.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {pathStudioMode === 'path' && (
+                      <button
+                        type="button"
+                        onClick={() => setActivePathSelection({ type: 'path' })}
+                        className="text-[11px] font-bold px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>⬅️</span>
+                        <span>Path Identity</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Ability Categories 2-Row Switch */}
+                  <div className="flex flex-col gap-2">
+                    <span className="font-bold text-slate-300">Ability Category</span>
+
+                    {/* Row 1: Creatable Abilities */}
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                      <button
+                        type="button"
+                        onClick={() => setActiveAbilityCategory('power')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          activeAbilityCategory === 'power'
+                            ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>⚡</span>
+                        <span>Powers</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveAbilityCategory('skill')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          activeAbilityCategory === 'skill'
+                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>🎯</span>
+                        <span>Skills</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveAbilityCategory('skillset')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          activeAbilityCategory === 'skillset'
+                            ? 'bg-blue-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>📚</span>
+                        <span>Skillsets</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveAbilityCategory('trait')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          activeAbilityCategory === 'trait'
+                            ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>🧬</span>
+                        <span>Traits</span>
+                      </button>
+                    </div>
+
+                    {/* Row 2: Equipment Skills (Pick-Existing-Only) */}
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                      <button
+                        type="button"
+                        onClick={() => setActiveAbilityCategory('weapon')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          activeAbilityCategory === 'weapon'
+                            ? 'bg-orange-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>⚔️</span>
+                        <span>Weapon Sk</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveAbilityCategory('armor')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          activeAbilityCategory === 'armor'
+                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>🥋</span>
+                        <span>Armor Sk</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveAbilityCategory('shield')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          activeAbilityCategory === 'shield'
+                            ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>🛡️</span>
+                        <span>Shield Sk</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* If a Gear Skill category is selected */}
+                  {(activeAbilityCategory === 'weapon' || activeAbilityCategory === 'armor' || activeAbilityCategory === 'shield') ? (
+                    <div className="flex flex-col gap-3">
+                      {/* Authoritative Gear Skills Banner */}
+                      <div className="p-3 rounded-xl bg-slate-950 border border-amber-500/40 text-amber-200 text-xs flex items-start gap-2">
+                        <span className="text-base shrink-0">ℹ️</span>
+                        <p className="leading-relaxed">
+                          Gear proficiencies link existing equipment skills to this Path. To forge a new weapon, armor, or shield skill, use the ⚙️ Gear studio above.
+                        </p>
+                      </div>
+
+                      {/* Search input */}
+                      <div className="flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-xl border border-slate-700">
+                        <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                        <input
+                          type="text"
+                          value={abilityCatalogSearch}
+                          onChange={(e) => setAbilityCatalogSearch(e.target.value)}
+                          placeholder={`Search ${activeAbilityCategory} catalog...`}
+                          className="bg-transparent text-slate-100 text-xs outline-none w-full"
+                        />
+                      </div>
+
+                      {/* Catalog List */}
+                      <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
+                        {filteredPathCatalogItems.length === 0 ? (
+                          <div className="p-6 text-center text-slate-500 text-xs">
+                            No matching {activeAbilityCategory} proficiencies found.
+                          </div>
+                        ) : (
+                          filteredPathCatalogItems.map((item) => {
+                            const isAlreadyLinked = linkedElements.some(
+                              (el) => (el.name || el.element_name || '').toLowerCase().trim() === item.name.toLowerCase().trim()
+                            );
+                            return (
+                              <div
+                                key={item.id}
+                                className="p-2.5 rounded-xl border border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2"
+                              >
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
+                                  <span className="text-[10px] text-slate-400 font-mono truncate">{item.details}</span>
+                                </div>
+
+                                {isAlreadyLinked ? (
+                                  <span className="text-[10px] font-bold px-2 py-1 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 shrink-0">
+                                    ✓ Linked
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleLinkExistingItem(item)}
+                                    className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition cursor-pointer shrink-0"
+                                  >
+                                    + Link to Path
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    /* Creatable Ability Modes (power, skill, skillset, trait) */
+                    <div className="flex flex-col gap-4">
+                      {/* Source Mode Switch: Forge New vs Pick Existing */}
+                      <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                        <button
+                          type="button"
+                          onClick={() => setAbilitySourceMode('forge_new')}
+                          className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            abilitySourceMode === 'forge_new'
+                              ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          <span>➕</span>
+                          <span>Forge New {activeAbilityCategory.charAt(0).toUpperCase() + activeAbilityCategory.slice(1)}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAbilitySourceMode('pick_existing')}
+                          className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            abilitySourceMode === 'pick_existing'
+                              ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          <span>🔍</span>
+                          <span>Pick Existing</span>
+                        </button>
+                      </div>
+
+                      {abilitySourceMode === 'pick_existing' ? (
+                        /* PICK EXISTING CATALOG LIST */
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-xl border border-slate-700">
+                            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                            <input
+                              type="text"
+                              value={abilityCatalogSearch}
+                              onChange={(e) => setAbilityCatalogSearch(e.target.value)}
+                              placeholder={`Search ${activeAbilityCategory}s...`}
+                              className="bg-transparent text-slate-100 text-xs outline-none w-full"
+                            />
+                          </div>
+
+                          <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
+                            {filteredPathCatalogItems.length === 0 ? (
+                              <div className="p-6 text-center text-slate-500 text-xs">
+                                No matching {activeAbilityCategory}s found.
+                              </div>
+                            ) : (
+                              filteredPathCatalogItems.map((item) => {
+                                const isAlreadyLinked = linkedElements.some(
+                                  (el) => (el.name || el.element_name || '').toLowerCase().trim() === item.name.toLowerCase().trim()
+                                );
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className="p-2.5 rounded-xl border border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2"
+                                  >
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
+                                      <span className="text-[10px] text-slate-400 font-mono truncate">{item.details}</span>
+                                    </div>
+
+                                    {pathStudioMode === 'path' && (
+                                      isAlreadyLinked ? (
+                                        <span className="text-[10px] font-bold px-2 py-1 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 shrink-0">
+                                          ✓ Linked
+                                        </span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleLinkExistingItem(item)}
+                                          className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition cursor-pointer shrink-0"
+                                        >
+                                          + Link to Path
+                                        </button>
+                                      )
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        /* FORGE NEW ABILITY FORM */
+                        <div className="flex flex-col gap-3">
+                          {/* Ability Name */}
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-300">
+                                  {activeAbilityCategory.charAt(0).toUpperCase() + activeAbilityCategory.slice(1)} Name
+                                </span>
+                                <GuardrailBadge isValid={abilityFormName.trim().length > 0} />
+                              </div>
+                              <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                            </div>
+                            <input
+                              type="text"
+                              value={abilityFormName}
+                              onChange={(e) => setAbilityFormName(e.target.value)}
+                              placeholder={`e.g. Void Blade, Astral Surge, Shadow Veil...`}
+                              className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-purple-400 shadow-inner"
+                            />
+                          </div>
+
+                          {/* POWER FIELDS */}
+                          {activeAbilityCategory === 'power' && (
+                            <div className="flex flex-col gap-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-1">
+                                  <span className="font-bold text-slate-300">Action</span>
+                                  <select
+                                    value={abilityFormAction}
+                                    onChange={(e) => setAbilityFormAction(e.target.value)}
+                                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
+                                  >
+                                    {ACTION_OPTIONS.map((opt) => (
+                                      <option key={opt.id} value={opt.id}>
+                                        {opt.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div className="flex flex-col gap-1">
+                                  <span className="font-bold text-slate-300">Usage</span>
+                                  <select
+                                    value={abilityFormUsage}
+                                    onChange={(e) => setAbilityFormUsage(e.target.value)}
+                                    className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer"
+                                  >
+                                    {USAGE_OPTIONS.map((opt) => (
+                                      <option key={opt.id} value={opt.id}>
+                                        {opt.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-1">
+                                <span className="font-bold text-slate-300">Ready Category</span>
+                                <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                                  {POWER_READY_CATEGORIES.map((cat) => {
+                                    const isSelected = abilityFormPowerReady === cat.id;
+                                    return (
+                                      <button
+                                        key={cat.id}
+                                        type="button"
+                                        onClick={() => setAbilityFormPowerReady(cat.id)}
+                                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                          isSelected
+                                            ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                        }`}
+                                      >
+                                        <span>{cat.icon}</span>
+                                        <span className="truncate">{cat.label}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Effect with Quick Insert Presets */}
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-bold text-slate-300">Effect Rules</span>
+                                    <GuardrailBadge isValid={abilityFormEffect.trim().length > 0} />
+                                  </div>
+                                  <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                                </div>
+
+                                {/* Preset Tags */}
+                                <div className="flex flex-col gap-1.5 mb-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[10px] font-bold text-slate-400 shrink-0">Attributes:</span>
+                                    {ATTRIBUTE_CHIPS.map((chip) => (
+                                      <button
+                                        key={chip}
+                                        type="button"
+                                        onClick={() => insertAbilityTextAtCursor(chip)}
+                                        className="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-[10px] font-mono transition cursor-pointer"
+                                      >
+                                        {chip}
+                                      </button>
+                                    ))}
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[10px] font-bold text-slate-400 shrink-0">AoE:</span>
+                                    {AOE_PRESETS.map((aoe) => (
+                                      <button
+                                        key={aoe.id}
+                                        type="button"
+                                        onClick={() => insertAbilityTextAtCursor(aoe.text)}
+                                        className="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-300 text-[10px] font-mono transition cursor-pointer"
+                                      >
+                                        {aoe.id}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <textarea
+                                  ref={abilityEffectTextareaRef}
+                                  value={abilityFormEffect}
+                                  onChange={(e) => setAbilityFormEffect(e.target.value)}
+                                  rows={3}
+                                  placeholder="e.g. Rng Medium; AoE 2r; 2d6 Burn. Target gains Prone."
+                                  className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-purple-400 shadow-inner resize-none font-mono leading-relaxed"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* SKILL FIELDS */}
+                          {activeAbilityCategory === 'skill' && (
+                            <div className="flex flex-col gap-3">
+                              <div className="flex flex-col gap-1">
+                                <span className="font-bold text-slate-300">Governing Attribute</span>
+                                <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                                  {ATTRIBUTE_CHIPS.map((attr) => {
+                                    const isSelected = abilityFormSkillAttribute === attr;
+                                    return (
+                                      <button
+                                        key={attr}
+                                        type="button"
+                                        onClick={() => setAbilityFormSkillAttribute(attr)}
+                                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                          isSelected
+                                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                        }`}
+                                      >
+                                        {attr}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-1">
+                                <span className="font-bold text-slate-300">Discipline</span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  <select
+                                    value={abilityFormSkillDiscipline}
+                                    onChange={(e) => setAbilityFormSkillDiscipline(e.target.value)}
+                                    className="bg-slate-950 border border-slate-700 text-slate-200 text-xs px-3 py-2 rounded-xl outline-none focus:border-purple-400"
+                                  >
+                                    {availableSkillDisciplines.map((disc) => (
+                                      <option key={disc} value={disc}>
+                                        {disc}
+                                      </option>
+                                    ))}
+                                    <option value="CUSTOM_NEW">+ Custom Discipline...</option>
+                                  </select>
+                                  {abilityFormSkillDiscipline === 'CUSTOM_NEW' && (
+                                    <input
+                                      type="text"
+                                      value={abilityFormSkillDisciplineNewText}
+                                      onChange={(e) => setAbilityFormSkillDisciplineNewText(e.target.value)}
+                                      placeholder="Type custom discipline..."
+                                      className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-purple-500/60 outline-none"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* SKILLSET FIELDS */}
+                          {activeAbilityCategory === 'skillset' && (
+                            <div className="flex flex-col gap-3">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-300">Included Skills (min 2)</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setAbilityFormSkillsetSkills((prev) => [...prev, ''])}
+                                  className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 transition cursor-pointer"
+                                >
+                                  + Add Skill
+                                </button>
+                              </div>
+
+                              <div className="space-y-2">
+                                {abilityFormSkillsetSkills.map((sk, sIdx) => (
+                                  <div key={sIdx} className="flex items-center gap-2">
+                                    <select
+                                      value={sk}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setAbilityFormSkillsetSkills((prev) => {
+                                          const next = [...prev];
+                                          next[sIdx] = val;
+                                          return next;
+                                        });
+                                      }}
+                                      className="flex-1 bg-slate-950 border border-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-xl outline-none focus:border-purple-400"
+                                    >
+                                      <option value="">-- Select Skill --</option>
+                                      {availableSkillsCatalog.map((catalogSkill) => (
+                                        <option key={catalogSkill} value={catalogSkill}>
+                                          {catalogSkill}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {abilityFormSkillsetSkills.length > 2 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setAbilityFormSkillsetSkills((prev) => prev.filter((_, i) => i !== sIdx));
+                                        }}
+                                        className="p-1.5 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition cursor-pointer"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* TRAIT FIELDS */}
+                          {activeAbilityCategory === 'trait' && (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-300">Passive / Trait Effect</span>
+                                <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                              </div>
+                              <textarea
+                                value={abilityFormEffect}
+                                onChange={(e) => setAbilityFormEffect(e.target.value)}
+                                rows={3}
+                                placeholder="e.g. Gain +1 to initiative. You can see in total magical darkness."
+                                className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-purple-400 shadow-inner resize-none leading-relaxed"
+                              />
+                            </div>
+                          )}
+
+                          {/* Notes */}
+                          <div className="flex flex-col gap-1">
+                            <span className="font-bold text-slate-300">Notes</span>
+                            <input
+                              type="text"
+                              value={abilityFormNotes}
+                              onChange={(e) => setAbilityFormNotes(e.target.value)}
+                              placeholder="Optional notes or rule notes..."
+                              className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-slate-700 outline-none"
+                            />
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-800">
+                            {pathStudioMode === 'path' ? (
+                              <button
+                                type="button"
+                                onClick={handleSaveAndLinkAbility}
+                                disabled={!abilityFormName.trim() || isSubmitting}
+                                className={`py-2 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-1.5 select-none shadow-md ${
+                                  abilityFormName.trim() && !isSubmitting
+                                    ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white cursor-pointer shadow-purple-950/40'
+                                    : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                                }`}
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>⚡ Save & Link to Path</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={!isFormValid || isSubmitting}
+                                className={`py-2 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-1.5 select-none shadow-md ${
+                                  isFormValid && !isSubmitting
+                                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white cursor-pointer shadow-indigo-950/40'
+                                    : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                                }`}
+                              >
+                                <AnvilIcon className="w-4 h-4" />
+                                <span>⚡ Forge to My Creations</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
             <form onSubmit={handleSubmit} className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-5 overflow-y-auto gap-4 text-xs">
             {/* Feedback Alert */}
@@ -3330,54 +5153,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               </div>
             </div>
 
-            {/* Path Creation Lifecycle Card */}
-            {creationType === 'path' && (
-              !editingItem ? (
-                <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 shadow-inner">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-purple-300 text-xs flex items-center gap-1.5">
-                      <span>🧭</span>
-                      <span>Step 1 of 2: Path Archetype Identity</span>
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/60 text-purple-200 border border-purple-500/30 font-semibold">
-                      Sequential Flow
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    Establish this Path's name, category, and lore first. Clicking <strong className="text-amber-400">"Forge Path to My Creations and open Linked Elements"</strong> below will forge the Path and automatically open the Linker to assign its Powers, Skills, Traits, and Proficiencies.
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-purple-950/30 border border-purple-500/40">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-purple-200 text-xs flex items-center gap-1">
-                        <span>🧭</span>
-                        <span>Manage Linked Elements</span>
-                      </span>
-                      <GuardrailBadge isValid={linkedElements.length > 0} />
-                    </div>
-                    <span className="text-[10px] text-purple-300 font-mono">
-                      {linkedElements.length} Linked {linkedElements.length === 0 ? '(Required)' : ''}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    A playable path requires linked elements (Powers, Skills, Skillsets, Traits, or Gear Skills).
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setIsLinkModalOpen(true)}
-                    className="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-purple-950/50 cursor-pointer active:scale-[0.98]"
-                  >
-                    <span>🧭 Manage Linked Elements</span>
-                    <span className="px-1.5 py-0.2 rounded-full bg-purple-950/80 text-purple-200 text-[10px]">
-                      {linkedElements.length}
-                    </span>
-                  </button>
-                </div>
-              )
-            )}
-
             {/* Bottom Actions */}
             <div className="pt-2 flex items-center gap-3 mt-auto">
               <button
@@ -3385,21 +5160,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 disabled={!isFormValid || isSubmitting}
                 className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg ${
                   isFormValid && !isSubmitting
-                    ? 'bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-400 text-slate-950 shadow-amber-950/50 font-extrabold active:scale-[0.98]'
+                    ? 'bg-gradient-to-r from-violet-600 via-violet-500 to-violet-600 hover:from-violet-500 hover:to-violet-400 text-white shadow-violet-950/50 font-extrabold active:scale-[0.98]'
                     : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
                 }`}
               >
-                {creationType === 'path' && !editingItem ? (
-                  <>
-                    <span>🧭</span>
-                    <span>
-                      {isSubmitting
-                        ? 'Forging Path...'
-                        : 'Forge Path to My Creations and open Linked Elements'}
-                    </span>
-                    <span className="text-sm">➔</span>
-                  </>
-                ) : editingItem ? (
+                {editingItem ? (
                   <>
                     <Check className="w-4 h-4" />
                     <span>{isSubmitting ? 'Saving...' : 'Save Changes'}</span>
@@ -3439,16 +5204,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           )}
         </div>
       </div>
-
-      {isLinkModalOpen && (
-        <LinkPathElementsModal
-          isOpen={isLinkModalOpen}
-          onClose={() => setIsLinkModalOpen(false)}
-          pathName={name}
-          linkedElements={linkedElements}
-          onUpdateLinkedElements={handleUpdateLinkedElements}
-        />
-      )}
     </div>
   );
 };

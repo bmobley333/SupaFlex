@@ -1208,6 +1208,7 @@ export interface PartySessionMember {
 export type AuthMode = 'login' | 'signup' | 'reset_password' | 'profile';
 
 export type CustomCreationType =
+  | 'paths_abilities'
   | 'power'
   | 'power_table'
   | 'path'
@@ -1250,9 +1251,14 @@ export type PathElementType =
 export interface PathLinkedElement {
   id: string | number;
   name: string;
-  type: PathElementType;
-  tag: '1 AP' | 'Free' | 'Learn';
+  element_name?: string;
+  type?: PathElementType;
+  element_type?: PathElementType;
+  tag?: '1 AP' | 'Free' | 'Learn' | string;
+  isFree?: boolean;
+  is_free?: boolean;
   details?: string;
+  item_data?: any;
 }
 
 export interface StudioPower {
