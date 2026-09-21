@@ -573,7 +573,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       return isEffectValid;
     }
     if (creationType === 'path') {
-      return isPathCategoryValid && pathDescription.trim().length > 0 && linkedElements.length > 0;
+      return isPathCategoryValid && pathDescription.trim().length > 0;
     }
     if (creationType === 'skill') {
       return isSkillAttributeValid && isSkillDisciplineValid;
@@ -617,7 +617,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     isShieldDomainValid,
     isCostValid,
     pathDescription,
-    linkedElements.length,
   ]);
 
   // Load custom items when modal is opened
@@ -760,6 +759,29 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     );
   };
 
+  const handleUpdateLinkedElements = async (elements: PathLinkedElement[]) => {
+    setLinkedElements(elements);
+    if (editingItem && editingItem.id) {
+      try {
+        const updatedItemData: CustomCreationData = {
+          ...(editingItem.item_data || {}),
+          linked_elements: elements,
+        };
+        const updated = await gameApi.updateCustomItem(editingItem.id, {
+          ...editingItem,
+          item_data: updatedItemData,
+        });
+        if (updated) {
+          setEditingItem(updated);
+        }
+        loadPersonalItems();
+        if (onItemSaved) onItemSaved();
+      } catch (err) {
+        console.error('[PlayerWorkshopModal] Error auto-persisting linked elements:', err);
+      }
+    }
+  };
+
   const costStr =
     creationType === 'artifact'
       ? 'Artifact'
@@ -890,22 +912,33 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       };
 
       if (editingItem && editingItem.id) {
-        await gameApi.updateCustomItem(editingItem.id, newCustomItem);
+        const updated = await gameApi.updateCustomItem(editingItem.id, newCustomItem);
         setFeedback({
           type: 'success',
           message: `✅ Updated '${name.trim()}' in your Custom Elements library!`,
         });
+        if (updated) {
+          setEditingItem(updated);
+        }
+        loadPersonalItems();
+        if (onItemSaved) onItemSaved();
       } else {
-        await gameApi.saveCustomItem(newCustomItem);
+        const created = await gameApi.saveCustomItem(newCustomItem);
         setFeedback({
           type: 'success',
           message: `✅ Successfully forged '${name.trim()}' to your Custom Elements library!`,
         });
-      }
+        loadPersonalItems();
+        if (onItemSaved) onItemSaved();
 
-      handleResetForm();
-      loadPersonalItems();
-      if (onItemSaved) onItemSaved();
+        if (creationType === 'path' && created) {
+          setEditingItem(created);
+          setIsLinkModalOpen(true);
+          return;
+        }
+
+        handleResetForm();
+      }
     } catch (err: any) {
       console.error('[PlayerWorkshopModal] Error forging item:', err);
       setFeedback({ type: 'error', message: `❌ Error: ${err.message || 'Failed to save creation.'}` });
@@ -2210,35 +2243,52 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               </div>
             </div>
 
-            {/* Path Link Elements Action Card (Required for Path) */}
+            {/* Path Creation Lifecycle Card */}
             {creationType === 'path' && (
-              <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-purple-950/30 border border-purple-500/40">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-purple-200 text-xs flex items-center gap-1">
+              !editingItem ? (
+                <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 shadow-inner">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-purple-300 text-xs flex items-center gap-1.5">
                       <span>🧭</span>
-                      <span>Link Elements to Path</span>
+                      <span>Step 1 of 2: Path Archetype Identity</span>
                     </span>
-                    <GuardrailBadge isValid={linkedElements.length > 0} />
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-900/60 text-purple-200 border border-purple-500/30 font-semibold">
+                      Sequential Flow
+                    </span>
                   </div>
-                  <span className="text-[10px] text-purple-300 font-mono">
-                    {linkedElements.length} Linked (Required)
-                  </span>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Establish this Path's name, category, and lore first. Clicking <strong className="text-amber-400">"Forge Path to My Creations and open Linked Elements"</strong> below will forge the Path and automatically open the Linker to assign its Powers, Skills, Traits, and Proficiencies.
+                  </p>
                 </div>
-                <p className="text-[11px] text-slate-400">
-                  A path must have at least 1 linked element (Powers, Skills, Skillsets, Traits, or Gear Skills).
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setIsLinkModalOpen(true)}
-                  className="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-purple-950/50 cursor-pointer active:scale-[0.98]"
-                >
-                  <span>🧭 Manage Linked Elements</span>
-                  <span className="px-1.5 py-0.2 rounded-full bg-purple-950/80 text-purple-200 text-[10px]">
-                    {linkedElements.length}
-                  </span>
-                </button>
-              </div>
+              ) : (
+                <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-purple-950/30 border border-purple-500/40">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-purple-200 text-xs flex items-center gap-1">
+                        <span>🧭</span>
+                        <span>Manage Linked Elements</span>
+                      </span>
+                      <GuardrailBadge isValid={linkedElements.length > 0} />
+                    </div>
+                    <span className="text-[10px] text-purple-300 font-mono">
+                      {linkedElements.length} Linked {linkedElements.length === 0 ? '(Required)' : ''}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    A playable path requires linked elements (Powers, Skills, Skillsets, Traits, or Gear Skills).
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsLinkModalOpen(true)}
+                    className="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-purple-950/50 cursor-pointer active:scale-[0.98]"
+                  >
+                    <span>🧭 Manage Linked Elements</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-purple-950/80 text-purple-200 text-[10px]">
+                      {linkedElements.length}
+                    </span>
+                  </button>
+                </div>
+              )
             )}
 
             {/* Bottom Actions */}
@@ -2252,14 +2302,33 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
                 }`}
               >
-                <Plus className="w-4 h-4" />
-                <span>
-                  {isSubmitting
-                    ? 'Forging...'
-                    : isGm
-                    ? 'Forge to My Creations 👑'
-                    : 'Forge to My Creations'}
-                </span>
+                {creationType === 'path' && !editingItem ? (
+                  <>
+                    <span>🧭</span>
+                    <span>
+                      {isSubmitting
+                        ? 'Forging Path...'
+                        : 'Forge Path to My Creations and open Linked Elements'}
+                    </span>
+                    <span className="text-sm">➔</span>
+                  </>
+                ) : editingItem ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>{isSubmitting ? 'Saving...' : 'Save Changes'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>
+                      {isSubmitting
+                        ? 'Forging...'
+                        : isGm
+                        ? 'Forge to My Creations 👑'
+                        : 'Forge to My Creations'}
+                    </span>
+                  </>
+                )}
               </button>
 
               <button
@@ -2289,7 +2358,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           onClose={() => setIsLinkModalOpen(false)}
           pathName={name}
           linkedElements={linkedElements}
-          onUpdateLinkedElements={setLinkedElements}
+          onUpdateLinkedElements={handleUpdateLinkedElements}
         />
       )}
     </div>
