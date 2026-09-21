@@ -187,6 +187,11 @@ export const getCategoryEmoji = (type: CustomCreationType): string => {
   }
 };
 
+export const isGearType = (type?: string): boolean => {
+  if (!type) return false;
+  return ['gear', 'weapon', 'armor', 'shield', 'exotic', 'artifact'].includes(type);
+};
+
 export const CompactCostInput: React.FC<{
   gold: number;
   silver: number;
@@ -293,8 +298,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const effectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Exotic & Artifact Studio State
+  // Unified Gear Studio State
   const [studioTab, setStudioTab] = useState<'current' | 'library'>('current');
+  const [costMode, setCostMode] = useState<'standard' | 'artifact'>('standard');
+  const [studioLibraryChassisFilter, setStudioLibraryChassisFilter] = useState<'all' | 'weapon' | 'armor' | 'shield' | 'supplies'>('all');
   const [activeStudioSelection, setActiveStudioSelection] = useState<{
     type: 'chassis' | 'mod' | 'power';
     id?: string;
@@ -540,6 +547,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setGearCategory('Adventure');
     setGearCategoryNewText('');
     setStudioChassisType('supplies');
+    setCostMode('standard');
+    setStudioLibraryChassisFilter('all');
     setInherentPowers([]);
     setAttachedMods([]);
     setActiveStudioSelection({ type: 'chassis' });
@@ -608,7 +617,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const handlePopulateItemForEdit = (item: CustomCreationItem) => {
     setEditingItem(item);
     setFeedback(null);
-    if (item.type) setCreationType(item.type);
+    if (item.type) {
+      setCreationType(isGearType(item.type) ? 'gear' : item.type);
+    }
     setName(item.name || '');
     setNotes(item.item_data?.notes || item.notes || '');
     if (item.item_data?.genres && Array.isArray(item.item_data.genres)) {
@@ -617,13 +628,21 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setSelectedGenres([]);
     }
 
-    if (item.item_data?.cost) {
-      const totalSilver = parseCostToSilver(item.item_data.cost);
-      setCostGold(Math.floor(totalSilver / 100));
-      setCostSilver(totalSilver % 100);
-    } else {
+    const rawCost = item.item_data?.cost;
+    if (item.type === 'artifact' || rawCost === 'Artifact') {
+      setCostMode('artifact');
       setCostGold(10);
       setCostSilver(0);
+    } else {
+      setCostMode('standard');
+      if (rawCost) {
+        const totalSilver = parseCostToSilver(rawCost);
+        setCostGold(Math.floor(totalSilver / 100));
+        setCostSilver(totalSilver % 100);
+      } else {
+        setCostGold(10);
+        setCostSilver(0);
+      }
     }
 
     if (item.type === 'power') {
@@ -660,41 +679,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       }
     } else if (item.type === 'trait') {
       setEffect(item.item_data?.effect || '');
-    } else if (item.type === 'weapon') {
-      setWeaponTypeMode((item.item_data?.type as any) || 'Melee');
-      const dom = item.item_data?.domain || 'Archaic';
-      if (availableWeaponDomains.includes(dom)) {
-        setWeaponDomain(dom);
-        setWeaponDomainNewText('');
-      } else {
-        setWeaponDomain('CUSTOM_NEW');
-        setWeaponDomainNewText(dom);
-      }
-      if (item.item_data?.requirement) {
-        const numMatch = item.item_data.requirement.match(/\d+/);
-        if (numMatch) setWeaponReqNum(parseInt(numMatch[0], 10));
-      }
-    } else if (item.type === 'armor') {
-      if (item.item_data?.requirement) setArmorReq(item.item_data.requirement);
-    } else if (item.type === 'shield') {
-      if (item.item_data?.requirement) setShieldReq(item.item_data.requirement);
-      const dom = item.item_data?.domain || 'Archaic';
-      if (availableShieldDomains.includes(dom)) {
-        setShieldDomain(dom);
-        setShieldDomainNewText('');
-      } else {
-        setShieldDomain('CUSTOM_NEW');
-        setShieldDomainNewText(dom);
-      }
-    } else if (item.type === 'gear') {
-      if (item.item_data?.category) setGearCategory(item.item_data.category);
-    } else if (item.type === 'exotic' || item.type === 'artifact') {
-      const chassis = (item.item_data?.chassis_type as any) || 'supplies';
+    } else if (isGearType(item.type)) {
+      const chassis: 'weapon' | 'armor' | 'shield' | 'supplies' =
+        (item.item_data?.chassis_type as any) ||
+        (item.type === 'weapon' ? 'weapon' : item.type === 'armor' ? 'armor' : item.type === 'shield' ? 'shield' : 'supplies');
       setStudioChassisType(chassis);
 
+      // Inherent Powers
       if (Array.isArray(item.item_data?.inherent_powers)) {
         setInherentPowers(item.item_data.inherent_powers);
-      } else if (item.item_data?.effect) {
+      } else if (item.item_data?.effect && (item.type === 'exotic' || item.type === 'artifact')) {
         setInherentPowers([
           {
             id: `pwr_legacy_${Date.now()}`,
@@ -708,33 +702,58 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         setInherentPowers([]);
       }
 
+      // Modular Mods
       if (Array.isArray(item.item_data?.mods)) {
         setAttachedMods(item.item_data.mods);
       } else {
         setAttachedMods([]);
       }
 
+      // Chassis Stats & Configuration
       const stats = item.item_data?.chassis_stats;
-      if (stats) {
-        if (stats.type) setWeaponTypeMode(stats.type);
-        if (stats.requirement) {
-          if (chassis === 'armor') setArmorReq(stats.requirement);
-          if (chassis === 'shield') setShieldReq(stats.requirement);
+      if (chassis === 'weapon') {
+        const wMode = (item.item_data?.type as any) || stats?.type || 'Melee';
+        setWeaponTypeMode(wMode);
+        const wReq = item.item_data?.requirement || stats?.requirement;
+        if (wReq) {
+          const numMatch = wReq.match(/\d+/);
+          if (numMatch) setWeaponReqNum(parseInt(numMatch[0], 10));
         }
-        if (stats.domain) {
-          if (chassis === 'weapon') setWeaponDomain(stats.domain);
-          if (chassis === 'shield') setShieldDomain(stats.domain);
+        const dom = item.item_data?.domain || stats?.domain || 'Archaic';
+        if (availableWeaponDomains.includes(dom)) {
+          setWeaponDomain(dom);
+          setWeaponDomainNewText('');
+        } else {
+          setWeaponDomain('CUSTOM_NEW');
+          setWeaponDomainNewText(dom);
         }
-        if (stats.category) {
-          if (GEAR_DEFAULT_CATEGORIES.includes(stats.category)) {
-            setGearCategory(stats.category);
-            setGearCategoryNewText('');
-          } else {
-            setGearCategory('CUSTOM_NEW');
-            setGearCategoryNewText(stats.category);
-          }
+      } else if (chassis === 'armor') {
+        const aReq = item.item_data?.requirement || stats?.requirement || '💪 4';
+        setArmorReq(aReq);
+      } else if (chassis === 'shield') {
+        const sReq = item.item_data?.requirement || stats?.requirement || '💪 4';
+        setShieldReq(sReq);
+        const dom = item.item_data?.domain || stats?.domain || 'Archaic';
+        if (availableShieldDomains.includes(dom)) {
+          setShieldDomain(dom);
+          setShieldDomainNewText('');
+        } else {
+          setShieldDomain('CUSTOM_NEW');
+          setShieldDomainNewText(dom);
+        }
+      } else if (chassis === 'supplies') {
+        const cat = item.item_data?.category || stats?.category || 'Adventure';
+        if (GEAR_DEFAULT_CATEGORIES.includes(cat)) {
+          setGearCategory(cat);
+          setGearCategoryNewText('');
+        } else {
+          setGearCategory('CUSTOM_NEW');
+          setGearCategoryNewText(cat);
         }
       }
+
+      // Chassis Lore / Passive Effect
+      setEffect(item.item_data?.effect || '');
 
       setActiveStudioSelection({ type: 'chassis' });
       setStudioTab('current');
@@ -776,6 +795,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return sortedPersonalItems.filter((it) => it.type === creationType);
   }, [sortedPersonalItems, listFilterMode, creationType]);
 
+  const filteredGearItems = useMemo(() => {
+    const allGear = sortedPersonalItems.filter((it) => isGearType(it.type));
+    if (studioLibraryChassisFilter === 'all') return allGear;
+    return allGear.filter((it) => {
+      const itChassis = it.item_data?.chassis_type || (it.type === 'gear' ? 'supplies' : it.type);
+      return itChassis === studioLibraryChassisFilter;
+    });
+  }, [sortedPersonalItems, studioLibraryChassisFilter]);
+
   // Load custom items and personal items when modal is opened
   useEffect(() => {
     if (isOpen) {
@@ -798,7 +826,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setCreationType(newType);
       setSelectedGenres([]);
       setFeedback(null);
-      if (newType === 'exotic' || newType === 'artifact') {
+      if (newType === 'gear' || newType === 'exotic' || newType === 'artifact') {
         setActiveStudioSelection({ type: 'chassis' });
         setStudioTab('current');
       }
@@ -844,23 +872,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (creationType === 'trait') {
       return isEffectValid;
     }
-    if (creationType === 'weapon') {
-      return isCostValid && isWeaponDomainValid;
-    }
-    if (creationType === 'armor') {
-      return isCostValid;
-    }
-    if (creationType === 'shield') {
-      return isCostValid && isShieldDomainValid;
-    }
     if (creationType === 'gear') {
-      return isGearCategoryValid && isCostValid;
-    }
-    if (creationType === 'exotic') {
-      return isCostValid && (inherentPowers.length > 0 || attachedMods.length > 0);
-    }
-    if (creationType === 'artifact') {
-      return inherentPowers.length > 0 || attachedMods.length > 0;
+      const isCostModeValid = costMode === 'artifact' || isCostValid;
+      if (!isCostModeValid) return false;
+      if (costMode === 'artifact') {
+        const hasPowersOrMods = inherentPowers.length > 0 || attachedMods.length > 0 || effect.trim().length > 0;
+        if (!hasPowersOrMods) return false;
+      }
+      if (studioChassisType === 'weapon') return isWeaponDomainValid;
+      if (studioChassisType === 'shield') return isShieldDomainValid;
+      if (studioChassisType === 'supplies') return isGearCategoryValid;
+      return true;
     }
     if (creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
       return isEffectValid;
@@ -868,6 +890,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return true;
   }, [
     creationType,
+    costMode,
+    studioChassisType,
     isNameValid,
     isGenresValid,
     isEffectValid,
@@ -882,6 +906,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     pathDescription,
     inherentPowers,
     attachedMods,
+    effect,
   ]);
 
   // Load custom items when modal is opened
@@ -1048,7 +1073,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   };
 
   const costStr =
-    creationType === 'artifact'
+    creationType === 'gear'
+      ? costMode === 'artifact'
+        ? 'Artifact'
+        : costGold > 0 && costSilver > 0
+        ? `${costGold}g ${costSilver}s`
+        : costGold > 0
+        ? `${costGold}g`
+        : `${costSilver}s`
+      : creationType === 'artifact'
       ? 'Artifact'
       : costGold > 0 && costSilver > 0
       ? `${costGold}g ${costSilver}s`
@@ -1085,18 +1118,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         ? 'Trait'
         : creationType === 'skill'
         ? finalSkillDisc
-        : creationType === 'weapon'
-        ? weaponTypeMode
-        : creationType === 'armor'
-        ? 'Armor'
-        : creationType === 'shield'
-        ? 'Shield'
         : creationType === 'gear'
-        ? finalGearCat
-        : creationType === 'exotic'
-        ? 'Exotic'
-        : creationType === 'artifact'
-        ? 'Artifact'
+        ? studioChassisType === 'weapon'
+          ? weaponTypeMode
+          : studioChassisType === 'armor'
+          ? 'Armor'
+          : studioChassisType === 'shield'
+          ? 'Shield'
+          : finalGearCat
         : 'General';
 
     const itemDataPayload: CustomCreationData = {
@@ -1125,33 +1154,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       itemDataPayload.formatted_skill = `${name.trim()} ${skillAttribute}`;
     } else if (creationType === 'skillset') {
       itemDataPayload.skills = selectedSkillsetSkills.filter(Boolean);
-    } else if (creationType === 'weapon') {
-      itemDataPayload.type = weaponTypeMode;
-      itemDataPayload.requirement = weaponReqStr;
-      itemDataPayload.atk = getWeaponAtkDmg(weaponTypeMode);
-      itemDataPayload.dmg = getWeaponAtkDmg(weaponTypeMode);
-      itemDataPayload.max_block = getWeaponMaxBlock(weaponTypeMode, weaponReqNum);
-      itemDataPayload.cost = costStr;
-      itemDataPayload.domain = finalWeaponDomain;
-    } else if (creationType === 'armor') {
-      itemDataPayload.requirement = armorReq;
-      itemDataPayload.ar = getArmorArStr(armorReq);
-      itemDataPayload.mr = getArmorMrStr(armorReq);
-      itemDataPayload.cost = costStr;
-    } else if (creationType === 'shield') {
-      itemDataPayload.requirement = shieldReq;
-      itemDataPayload.max_block = getShieldMaxBlockStr(shieldReq);
-      itemDataPayload.mr = getShieldMrStr(shieldReq);
-      itemDataPayload.cost = costStr;
-      itemDataPayload.domain = finalShieldDomain;
-    } else if (creationType === 'gear') {
-      itemDataPayload.category = finalGearCat;
-      itemDataPayload.cost = costStr;
-    } else if (creationType === 'exotic' || creationType === 'artifact') {
+    } else if (creationType === 'gear' || creationType === 'exotic' || creationType === 'artifact') {
       itemDataPayload.chassis_type = studioChassisType;
-      itemDataPayload.cost = creationType === 'artifact' ? 'Artifact' : costStr;
+      itemDataPayload.cost = costMode === 'artifact' ? 'Artifact' : costStr;
       itemDataPayload.inherent_powers = inherentPowers;
       itemDataPayload.mods = attachedMods;
+      itemDataPayload.effect = effect.trim() || undefined;
 
       if (studioChassisType === 'weapon') {
         itemDataPayload.chassis_stats = {
@@ -1162,12 +1170,21 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           max_block: getWeaponMaxBlock(weaponTypeMode, weaponReqNum),
           domain: finalWeaponDomain,
         };
+        itemDataPayload.type = weaponTypeMode;
+        itemDataPayload.requirement = weaponReqStr;
+        itemDataPayload.atk = getWeaponAtkDmg(weaponTypeMode);
+        itemDataPayload.dmg = getWeaponAtkDmg(weaponTypeMode);
+        itemDataPayload.max_block = getWeaponMaxBlock(weaponTypeMode, weaponReqNum);
+        itemDataPayload.domain = finalWeaponDomain;
       } else if (studioChassisType === 'armor') {
         itemDataPayload.chassis_stats = {
           requirement: armorReq,
           ar: getArmorArStr(armorReq),
           mr: getArmorMrStr(armorReq),
         };
+        itemDataPayload.requirement = armorReq;
+        itemDataPayload.ar = getArmorArStr(armorReq);
+        itemDataPayload.mr = getArmorMrStr(armorReq);
       } else if (studioChassisType === 'shield') {
         itemDataPayload.chassis_stats = {
           requirement: shieldReq,
@@ -1175,10 +1192,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           mr: getShieldMrStr(shieldReq),
           domain: finalShieldDomain,
         };
+        itemDataPayload.requirement = shieldReq;
+        itemDataPayload.max_block = getShieldMaxBlockStr(shieldReq);
+        itemDataPayload.mr = getShieldMrStr(shieldReq);
+        itemDataPayload.domain = finalShieldDomain;
       } else if (studioChassisType === 'supplies') {
         itemDataPayload.chassis_stats = {
           category: finalGearCat,
         };
+        itemDataPayload.category = finalGearCat;
       }
 
       // Legacy fallback fields for simple display / listing
@@ -1186,7 +1208,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       if (firstPwr) {
         itemDataPayload.action = firstPwr.action;
         itemDataPayload.usage = firstPwr.usage;
-        itemDataPayload.effect = firstPwr.effect;
+        if (!itemDataPayload.effect) itemDataPayload.effect = firstPwr.effect;
       }
     } else if (creationType === 'chaos_gem') {
       itemDataPayload.action = 'F';
@@ -1194,10 +1216,26 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       itemDataPayload.effect = effect.trim();
     }
 
+    // Auto-classify canonical custom_elements.type for backward compatibility & character sheet equipping
+    let finalType: CustomCreationType = creationType;
+    if (creationType === 'gear') {
+      const isArtifact = costMode === 'artifact' || costStr === 'Artifact';
+      const hasPowersOrMods = inherentPowers.length > 0 || attachedMods.length > 0;
+      const isExotic = hasPowersOrMods && !isArtifact;
+
+      if (isArtifact) {
+        finalType = 'artifact';
+      } else if (isExotic) {
+        finalType = 'exotic';
+      } else {
+        finalType = studioChassisType === 'supplies' ? 'gear' : (studioChassisType as CustomCreationType);
+      }
+    }
+
     try {
       const newCustomItem: Partial<CustomCreationItem> = {
         name: name.trim(),
-        type: creationType,
+        type: finalType,
         category: categoryStr,
         author_name: isGm ? `${authorDisplayName} (GM)` : authorDisplayName,
         author_email: playerEmail || 'guest@metascape.com',
@@ -1297,161 +1335,95 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           </div>
         </div>
 
-        {/* Primary Classification Tabs (Two Symmetrical Rows matching Character Sheet Cards) */}
-        <div className="px-6 py-2.5 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex flex-col gap-1.5">
-          {/* Row 1: Abilities & Powers */}
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Abilities:</span>
-            <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('power')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'power'
-                    ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🔥 Powers
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('path')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'path'
-                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🧭 Paths
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('skill')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'skill'
-                    ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🎓 Skills
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('skillset')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'skillset'
-                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🎓 Skillsets
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('trait')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'trait'
-                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🧬 Traits
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('chaos_gem')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'chaos_gem'
-                    ? 'bg-violet-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                💎 Chaos Gems
-              </button>
-            </div>
-          </div>
-
-          {/* Row 2: Gear */}
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider w-20 shrink-0">Gear:</span>
-            <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('weapon')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'weapon'
-                    ? 'bg-orange-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                ⚔️ Weapons
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('armor')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'armor'
-                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🧥 Armor
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('shield')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'shield'
-                    ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🛡️ Shields
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('gear')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'gear'
-                    ? 'bg-teal-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                ⚙️ Standard Gear
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('exotic')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'exotic'
-                    ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🧿 Exotics
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('artifact')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'artifact'
-                    ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                🔮 Artifacts
-              </button>
-            </div>
+        {/* Primary Classification Tabs: Single Unified Row */}
+        <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex items-center gap-1.5 overflow-x-auto">
+          <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('power')}
+              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                creationType === 'power'
+                  ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🔥 Powers
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('path')}
+              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                creationType === 'path'
+                  ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🧭 Paths
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('skill')}
+              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                creationType === 'skill'
+                  ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🎓 Skills
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('skillset')}
+              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                creationType === 'skillset'
+                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🎓 Skillsets
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('trait')}
+              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                creationType === 'trait'
+                  ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🧬 Traits
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('chaos_gem')}
+              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                creationType === 'chaos_gem'
+                  ? 'bg-violet-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              💎 Chaos Gems
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('gear')}
+              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                creationType === 'gear'
+                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              ⚙️ Gear
+            </button>
           </div>
         </div>
 
         {/* 2-Pane Grid Architecture */}
         <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-800/80 overflow-hidden">
           {/* ========================================================================= */}
-          {/* PANE 1 (LEFT): STUDIO BLUEPRINT TREE (EXO/ART) OR LIVE CARD PREVIEW       */}
+          {/* PANE 1 (LEFT): STUDIO BLUEPRINT TREE (GEAR) OR LIVE CARD PREVIEW          */}
           {/* ========================================================================= */}
-          {creationType === 'exotic' || creationType === 'artifact' ? (
+          {creationType === 'gear' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
               {/* Studio Tab Switcher: Current Item vs My Creations */}
               <div className="shrink-0 flex items-center justify-between gap-2">
@@ -1476,7 +1448,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    📚 My Creations ({sortedPersonalItems.filter((it) => it.type === creationType).length})
+                    📚 My Creations ({sortedPersonalItems.filter((it) => isGearType(it.type)).length})
                   </button>
                 </div>
 
@@ -1494,19 +1466,77 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
               {studioTab === 'library' ? (
                 /* LIBRARY LIST VIEW */
-                <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
-                  {sortedPersonalItems.filter((it) => it.type === creationType).length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
-                      <span className="text-2xl mb-1.5">📦</span>
-                      <p className="font-semibold text-slate-400">No {creationType} creations yet</p>
-                      <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                        Click "Current Item" above to forge your first {creationType === 'artifact' ? 'Artifact' : 'Exotic'}.
-                      </p>
-                    </div>
-                  ) : (
-                    sortedPersonalItems
-                      .filter((it) => it.type === creationType)
-                      .map((item) => {
+                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+                  {/* Chassis Category Filter Switch */}
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setStudioLibraryChassisFilter('all')}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        studioLibraryChassisFilter === 'all'
+                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🌐 All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStudioLibraryChassisFilter('weapon')}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        studioLibraryChassisFilter === 'weapon'
+                          ? 'bg-orange-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      ⚔️ Weapons
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStudioLibraryChassisFilter('armor')}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        studioLibraryChassisFilter === 'armor'
+                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🥋 Armor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStudioLibraryChassisFilter('shield')}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        studioLibraryChassisFilter === 'shield'
+                          ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🛡️ Shields
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStudioLibraryChassisFilter('supplies')}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        studioLibraryChassisFilter === 'supplies'
+                          ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🎒 Supplies
+                    </button>
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
+                    {filteredGearItems.length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                        <span className="text-2xl mb-1.5">📦</span>
+                        <p className="font-semibold text-slate-400">No gear creations found</p>
+                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                          Click "Current Item" above to forge your first weapon, armor, shield, or supply.
+                        </p>
+                      </div>
+                    ) : (
+                      filteredGearItems.map((item) => {
                         const isItemEditing = editingItem?.id === item.id;
                         const itemEffect = item.item_data?.effect || '';
                         const itemCost = item.item_data?.cost;
@@ -1514,6 +1544,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           ? item.item_data.inherent_powers.length
                           : item.item_data?.effect ? 1 : 0;
                         const modCount = Array.isArray(item.item_data?.mods) ? item.item_data.mods.length : 0;
+                        const itemChassis = item.item_data?.chassis_type || (item.type === 'gear' ? 'supplies' : item.type);
 
                         return (
                           <div
@@ -1527,7 +1558,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           >
                             <div className="flex items-center justify-between gap-1.5">
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-sm shrink-0">{getCategoryEmoji(item.type)}</span>
+                                <span className="text-sm shrink-0">
+                                  {item.type === 'artifact'
+                                    ? '🔮'
+                                    : item.type === 'exotic'
+                                    ? '🧿'
+                                    : item.type === 'weapon'
+                                    ? '⚔️'
+                                    : item.type === 'armor'
+                                    ? '🥋'
+                                    : item.type === 'shield'
+                                    ? '🛡️'
+                                    : '🎒'}
+                                </span>
                                 <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
                                 <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
                                   {item.type}
@@ -1557,14 +1600,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             </div>
                             <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
                               <span className="px-1.5 py-0.2 bg-purple-950/80 border border-purple-500/30 text-purple-300 font-bold rounded">
-                                {itemCost || (creationType === 'artifact' ? 'Artifact' : 'Cost N/A')}
+                                {itemCost || (item.type === 'artifact' ? 'Artifact' : 'Cost N/A')}
                               </span>
                               <span className="px-1.5 py-0.2 bg-slate-800 border border-slate-700 text-slate-300 font-bold rounded">
                                 {inherentCount} Inherent • {modCount} Mod(s)
                               </span>
-                              {item.item_data?.chassis_type && (
+                              {itemChassis && (
                                 <span className="px-1.5 py-0.2 bg-slate-800 border border-slate-700 text-slate-400 capitalize rounded">
-                                  {item.item_data.chassis_type}
+                                  {itemChassis}
                                 </span>
                               )}
                             </div>
@@ -1576,8 +1619,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           </div>
                         );
                       })
-                  )}
+                    )}
+                  </div>
                 </div>
+
               ) : (
                 /* CURRENT ITEM HIERARCHY TREE VIEW */
                 <>
@@ -1608,12 +1653,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </div>
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            creationType === 'artifact'
+                            costMode === 'artifact'
                               ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
                               : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
                           }`}
                         >
-                          {creationType === 'artifact' ? 'Artifact 🔮' : costStr}
+                          {costMode === 'artifact' ? 'Artifact 🔮' : costStr}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[11px] text-slate-400">
@@ -1872,7 +1917,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       disabled={!isFormValid || isSubmitting}
                       className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
                         isFormValid && !isSubmitting
-                          ? creationType === 'artifact'
+                          ? costMode === 'artifact'
                             ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-purple-900/40 cursor-pointer'
                             : 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-amber-900/40 cursor-pointer'
                           : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
@@ -1883,8 +1928,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         {isSubmitting
                           ? 'Forging...'
                           : editingItem
-                          ? `Update ${creationType === 'artifact' ? 'Artifact' : 'Exotic'}`
-                          : `Forge ${creationType === 'artifact' ? 'Artifact' : 'Exotic'} to My Creations`}
+                          ? `Update ${costMode === 'artifact' ? 'Artifact' : (attachedMods.length > 0 || inherentPowers.length > 0) ? 'Exotic' : 'Gear'}`
+                          : `Forge ${costMode === 'artifact' ? 'Artifact' : (attachedMods.length > 0 || inherentPowers.length > 0) ? 'Exotic' : 'Gear'} to My Creations`}
                       </span>
                     </button>
                   </div>
@@ -2056,69 +2101,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
                 )}
 
-                {creationType === 'weapon' && (
-                  <div className="p-4 rounded-xl bg-slate-900 border border-orange-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Weapon'}</span>
-                      <span className="px-2 py-0.5 rounded bg-orange-950/80 text-orange-300 border border-orange-500/40 text-[10px]">{weaponTypeMode}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
-                      <div>Req: <strong className="text-slate-100">{weaponReqStr}</strong></div>
-                      <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
-                      <div>Atk: <strong className="text-amber-300">{getWeaponAtkDmg(weaponTypeMode)}</strong></div>
-                      <div>Dmg: <strong className="text-rose-300">d{getWeaponAtkDmg(weaponTypeMode)}</strong></div>
-                      <div>Block: <strong className="text-cyan-300">{getWeaponMaxBlock(weaponTypeMode, weaponReqNum)}</strong></div>
-                      <div>Domain: <strong className="text-amber-300">{finalWeaponDomain}</strong></div>
-                    </div>
-                    {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
-                  </div>
-                )}
-
-                {creationType === 'armor' && (
-                  <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Armor'}</span>
-                      <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px]">Armor SK</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
-                      <div>Req: <strong className="text-slate-100">{armorReq}</strong></div>
-                      <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
-                      <div>AR: <strong className="text-amber-300">🧥 {getArmorArStr(armorReq)}</strong></div>
-                      <div>MR: <strong className="text-cyan-300">👣 {getArmorMrStr(armorReq)}</strong></div>
-                    </div>
-                    {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
-                  </div>
-                )}
-
-                {creationType === 'shield' && (
-                  <div className="p-4 rounded-xl bg-slate-900 border border-cyan-500/40 shadow-xl flex flex-col gap-2 text-xs font-mono">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Shield'}</span>
-                      <span className="px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 text-[10px]">Shield SK</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
-                      <div>Req: <strong className="text-slate-100">{shieldReq}</strong></div>
-                      <div>Cost: <strong className="text-amber-300">{costStr}</strong></div>
-                      <div>Max Block: <strong className="text-cyan-300">{getShieldMaxBlockStr(shieldReq)}</strong></div>
-                      <div>MR Adj: <strong className="text-cyan-300">👣 {getShieldMrStr(shieldReq)}</strong></div>
-                    </div>
-                    {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
-                  </div>
-                )}
-
-                {creationType === 'gear' && (
-                  <div className="p-4 rounded-xl bg-slate-900 border border-teal-500/40 shadow-xl flex flex-col gap-2 text-xs">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="font-bold text-slate-100 text-sm font-outfit">{name || 'Unnamed Standard Gear'}</span>
-                      <span className="px-2 py-0.5 rounded bg-teal-950/80 text-teal-300 border border-teal-500/40 text-[10px]">{finalGearCat}</span>
-                    </div>
-                    <div className="text-[11px] text-slate-300 flex items-center justify-between">
-                      <span>Category: <strong className="text-teal-300">{finalGearCat}</strong></span>
-                      <span>Cost: <strong className="text-amber-300">{costStr}</strong></span>
-                    </div>
-                    {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
-                  </div>
-                )}
 
                 {creationType === 'chaos_gem' && (
                   <div className="p-4 rounded-xl bg-slate-900 border border-violet-500/40 shadow-xl flex flex-col gap-2 text-xs">
@@ -2315,7 +2297,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           {/* ========================================================================= */}
           {/* PANE 2 (RIGHT): 3-MODE CONTEXTUAL STUDIO EDITOR OR FORGE FORM             */}
           {/* ========================================================================= */}
-          {creationType === 'exotic' || creationType === 'artifact' ? (
+          {creationType === 'gear' ? (
             <div className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-5 overflow-y-auto gap-4 text-xs">
               {/* Feedback Alert */}
               {feedback && (
@@ -2412,7 +2394,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-slate-300">Name</span>
                         <GuardrailBadge isValid={isNameValid} />
-                        <InfoTooltip text="Enter the unique name of this exotic or artifact creation." />
+                        <InfoTooltip text="Enter the unique name of this equipment creation." />
                       </div>
                       <span className="text-[10px] text-slate-500 font-mono">Required</span>
                     </div>
@@ -2422,12 +2404,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       onChange={(e) => setName(e.target.value)}
                       placeholder={
                         studioChassisType === 'weapon'
-                          ? 'e.g. Flametongue Blade'
+                          ? 'e.g. Iron Longsword, Flametongue Blade...'
                           : studioChassisType === 'armor'
-                          ? 'e.g. Aegis Powered Exosuit'
+                          ? 'e.g. Leather Cuirass, Aegis Powered Exosuit...'
                           : studioChassisType === 'shield'
-                          ? 'e.g. Bulwark of Dawn'
-                          : 'e.g. Wand of Fireballs'
+                          ? 'e.g. Wooden Heater, Bulwark of Dawn...'
+                          : 'e.g. Explorer Pack, Wand of Fireballs...'
                       }
                       className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-500 transition shadow-inner font-semibold"
                     />
@@ -2583,21 +2565,56 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     </div>
                   )}
 
-                  {/* Cost */}
-                  <div className="flex flex-col gap-1">
-                    <span className="font-bold text-slate-300">Cost</span>
-                    {creationType === 'artifact' ? (
-                      <div className="px-3 py-2 rounded-xl bg-purple-950/70 border border-purple-500/40 text-purple-300 font-bold text-xs flex items-center justify-between">
-                        <span>Artifact 🔮 (Priceless Relic)</span>
-                        <span className="text-[10px] font-mono text-purple-400">Locked to 'Artifact'</span>
+                  {/* Cost & Classification Pill Switch */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300">Cost & Pricing</span>
+                        <GuardrailBadge isValid={costMode === 'artifact' ? true : isCostValid} />
                       </div>
-                    ) : (
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {costMode === 'artifact' ? 'Priceless' : 'Required'}
+                      </span>
+                    </div>
+
+                    {/* KISS Multi-Option Pill Switch */}
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                      <button
+                        type="button"
+                        onClick={() => setCostMode('standard')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          costMode === 'standard'
+                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        🪙 Standard (g/s)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCostMode('artifact')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          costMode === 'artifact'
+                            ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        🔮 Artifact (Priceless)
+                      </button>
+                    </div>
+
+                    {costMode === 'standard' ? (
                       <CompactCostInput
                         gold={costGold}
                         silver={costSilver}
                         onGoldChange={setCostGold}
                         onSilverChange={setCostSilver}
                       />
+                    ) : (
+                      <div className="px-3 py-2 rounded-xl bg-purple-950/70 border border-purple-500/40 text-purple-300 font-bold text-xs flex items-center justify-between">
+                        <span>🔮 Artifact (Priceless Relic)</span>
+                        <span className="text-[10px] font-mono text-purple-400">Locked to 'Artifact'</span>
+                      </div>
                     )}
                   </div>
 
@@ -2675,14 +2692,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       disabled={!isFormValid || isSubmitting}
                       className={`py-2 px-5 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-1.5 select-none shadow-md ${
                         isFormValid && !isSubmitting
-                          ? creationType === 'artifact'
+                          ? costMode === 'artifact'
                             ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 text-white cursor-pointer'
                             : 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 text-white cursor-pointer'
                           : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
                       }`}
                     >
                       <AnvilIcon className="w-3.5 h-3.5" />
-                      <span>{isSubmitting ? 'Forging...' : editingItem ? 'Update' : 'Forge Creation'}</span>
+                      <span>{isSubmitting ? 'Forging...' : editingItem ? 'Update Gear' : 'Forge Gear to My Creations'}</span>
                     </button>
                   </div>
                 </div>
@@ -3189,206 +3206,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
             {/* E. TRAITS (Traits do not have an AP cost) */}
 
-            {/* F. WEAPONS */}
-            {creationType === 'weapon' && (
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Type</span>
-                  <select
-                    value={weaponTypeMode}
-                    onChange={(e) => setWeaponTypeMode(e.target.value as any)}
-                    className="bg-slate-950 border border-slate-700 text-orange-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                  >
-                    <option value="Melee">Melee</option>
-                    <option value="Shot">Shot</option>
-                    <option value="Hurled">Hurled</option>
-                    <option value="Melee, Hurled">Melee, Hurled</option>
-                    <option value="Melee, Shot">Melee, Shot</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Requirement</span>
-                  <select
-                    value={weaponReqNum}
-                    onChange={(e) => setWeaponReqNum(parseInt(e.target.value, 10))}
-                    className="bg-slate-950 border border-slate-700 text-slate-200 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                  >
-                    {WEAPON_REQ_NUMBERS.map((n) => (
-                      <option key={n} value={n}>
-                        Requirement: {n}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-300">Domain</span>
-                    <GuardrailBadge isValid={isWeaponDomainValid} />
-                  </div>
-                  <select
-                    value={weaponDomain}
-                    onChange={(e) => setWeaponDomain(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                  >
-                    <option value="CUSTOM_NEW">➕ New Domain...</option>
-                    {availableWeaponDomains.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                  {weaponDomain === 'CUSTOM_NEW' && (
-                    <input
-                      type="text"
-                      value={weaponDomainNewText}
-                      onChange={(e) => setWeaponDomainNewText(e.target.value)}
-                      placeholder="Enter new domain name..."
-                      className="mt-1 bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-amber-500/50 outline-none"
-                    />
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Cost</span>
-                  <CompactCostInput
-                    gold={costGold}
-                    silver={costSilver}
-                    onGoldChange={setCostGold}
-                    onSilverChange={setCostSilver}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* G. ARMOR */}
-            {creationType === 'armor' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Armor Stats</span>
-                  <select
-                    value={armorReq}
-                    onChange={(e) => setArmorReq(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                  >
-                    {ARMOR_REQ_OPTIONS.map((req) => (
-                      <option key={req} value={req}>
-                        {req} (AR: 🧥{getArmorArStr(req)} | MR: {getArmorMrStr(req)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Cost</span>
-                  <CompactCostInput
-                    gold={costGold}
-                    silver={costSilver}
-                    onGoldChange={setCostGold}
-                    onSilverChange={setCostSilver}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* H. SHIELDS */}
-            {creationType === 'shield' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Shield Stats</span>
-                  <select
-                    value={shieldReq}
-                    onChange={(e) => setShieldReq(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-cyan-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                  >
-                    {SHIELD_REQ_OPTIONS.map((req) => (
-                      <option key={req} value={req}>
-                        {req} (Max Block: {getShieldMaxBlockStr(req)} | MR Adj: {getShieldMrStr(req)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-300">Domain</span>
-                    <GuardrailBadge isValid={isShieldDomainValid} />
-                  </div>
-                  <select
-                    value={shieldDomain}
-                    onChange={(e) => setShieldDomain(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-cyan-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                  >
-                    <option value="CUSTOM_NEW">➕ New Domain...</option>
-                    {availableShieldDomains.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                  {shieldDomain === 'CUSTOM_NEW' && (
-                    <input
-                      type="text"
-                      value={shieldDomainNewText}
-                      onChange={(e) => setShieldDomainNewText(e.target.value)}
-                      placeholder="Enter new domain name..."
-                      className="mt-1 bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-cyan-500/50 outline-none"
-                    />
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Cost</span>
-                  <CompactCostInput
-                    gold={costGold}
-                    silver={costSilver}
-                    onGoldChange={setCostGold}
-                    onSilverChange={setCostSilver}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* I. GEAR */}
-            {creationType === 'gear' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Category</span>
-                  <select
-                    value={gearCategory}
-                    onChange={(e) => setGearCategory(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-teal-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                  >
-                    <option value="CUSTOM_NEW">➕ Add Custom Category...</option>
-                    {GEAR_DEFAULT_CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                  {gearCategory === 'CUSTOM_NEW' && (
-                    <input
-                      type="text"
-                      value={gearCategoryNewText}
-                      onChange={(e) => setGearCategoryNewText(e.target.value)}
-                      placeholder="Enter custom category name..."
-                      className="mt-1 bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-teal-500/50 outline-none"
-                    />
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Cost</span>
-                  <CompactCostInput
-                    gold={costGold}
-                    silver={costSilver}
-                    onGoldChange={setCostGold}
-                    onSilverChange={setCostSilver}
-                  />
-                </div>
-              </div>
-            )}
 
             {/* RULES EFFECT TEXTAREA WITH QUICK-INSERT CHIPS */}
             {(creationType === 'power' ||
