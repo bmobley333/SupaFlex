@@ -1365,6 +1365,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const isShieldDomainValid =
     shieldDomain === 'CUSTOM_NEW' ? shieldDomainNewText.trim().length > 0 : shieldDomain.trim().length > 0;
   const isCostValid = costGold > 0 || costSilver > 0;
+  const isPathReadyForAbilities =
+    isNameValid && isGenresValid && isPathCategoryValid && pathDescription.trim().length > 0;
 
   const isFormValid = useMemo(() => {
     if (creationType === 'paths_abilities') {
@@ -1943,7 +1945,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               onClick={() => handleSwitchTab('paths_abilities')}
               className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 creationType === 'paths_abilities'
-                  ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                  ? 'bg-blue-600 text-white shadow-sm font-extrabold'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
             >
@@ -2497,32 +2499,69 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           ) : creationType === 'paths_abilities' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Studio Tab Switcher: Current Item vs My Creations */}
+              {/* Unified Single-Row Studio Switcher: [Current | My Creations] & [Path | Standalone] */}
               <div className="shrink-0 flex items-center justify-between gap-2">
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-1">
+                {/* Toggle 1: Current vs My Creations */}
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md flex-1">
                   <button
                     type="button"
                     onClick={() => setPathStudioTab('current')}
-                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                       pathStudioTab === 'current'
-                        ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                        ? 'bg-blue-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
                     <span>🛠️</span>
-                    <span>Current Item</span>
+                    <span>Current</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setPathStudioTab('library')}
-                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                       pathStudioTab === 'library'
-                        ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
                     <span>📚</span>
-                    <span>My Creations ({personalItems.filter((it) => isPathOrAbilityType(it.type)).length})</span>
+                    <span>My Creations</span>
+                  </button>
+                </div>
+
+                {/* Toggle 2: Path vs Standalone */}
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md flex-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPathStudioMode('path');
+                      if (pathStudioTab !== 'current') setPathStudioTab('current');
+                      setActivePathSelection({ type: 'path' });
+                    }}
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      pathStudioMode === 'path' && pathStudioTab === 'current'
+                        ? 'bg-sky-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <span>🧭</span>
+                    <span>Path</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPathStudioMode('standalone');
+                      if (pathStudioTab !== 'current') setPathStudioTab('current');
+                      setActivePathSelection({ type: 'ability', category: activeAbilityCategory });
+                    }}
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      pathStudioMode === 'standalone' && pathStudioTab === 'current'
+                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <span>⚡</span>
+                    <span>Standalone</span>
                   </button>
                 </div>
 
@@ -2530,10 +2569,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   <button
                     type="button"
                     onClick={handleResetForm}
-                    className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 transition cursor-pointer shrink-0"
+                    className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 transition cursor-pointer shrink-0"
                     title="Start a new blank creation"
                   >
-                    + New Blank
+                    + New
                   </button>
                 )}
               </div>
@@ -2559,7 +2598,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           onClick={() => setPathLibraryFilter(filter)}
                           className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                             pathLibraryFilter === filter
-                              ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                              ? 'bg-blue-600 text-white shadow-sm font-extrabold'
                               : 'text-slate-400 hover:text-slate-200 border border-transparent'
                           }`}
                         >
@@ -2580,7 +2619,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           key={item.id}
                           className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
                             editingItem?.id === item.id
-                              ? 'bg-purple-950/40 border-purple-500/80 shadow-md shadow-purple-950/50 ring-1 ring-purple-500'
+                              ? 'bg-blue-950/40 border-blue-500/80 shadow-md shadow-blue-950/50 ring-1 ring-blue-500'
                               : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
                           }`}
                           onClick={() => handlePopulateItemForEdit(item)}
@@ -2591,7 +2630,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               <span className="font-bold text-slate-100 text-xs">{item.name}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-purple-300 font-mono">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-blue-300 font-mono">
                                 {item.type.toUpperCase()}
                               </span>
                               <button
@@ -2629,40 +2668,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               ) : (
                 /* CURRENT ITEM VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
-                  {/* Mode Selector Pill Switch */}
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPathStudioMode('path');
-                        setActivePathSelection({ type: 'path' });
-                      }}
-                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                        pathStudioMode === 'path'
-                          ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      <span>🧭</span>
-                      <span>Path Archetype</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPathStudioMode('standalone');
-                        setActivePathSelection({ type: 'ability', category: activeAbilityCategory });
-                      }}
-                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                        pathStudioMode === 'standalone'
-                          ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      <span>⚡</span>
-                      <span>Standalone Ability</span>
-                    </button>
-                  </div>
-
                   {pathStudioMode === 'path' ? (
                     <>
                       {/* Path Selector Dropdown */}
@@ -2691,7 +2696,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               if (found) handlePopulateOfficialPath(found);
                             }
                           }}
-                          className="bg-slate-950 text-slate-200 text-xs px-2.5 py-1.5 rounded-xl border border-slate-700 outline-none focus:border-purple-500 font-medium"
+                          className="bg-slate-950 text-slate-200 text-xs px-2.5 py-1.5 rounded-xl border border-slate-700 outline-none focus:border-blue-500 font-medium"
                         >
                           <option value="">+ Start New Blank Path</option>
                           {allAvailablePaths.some((p) => p.isCustom) && (
@@ -2722,7 +2727,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         onClick={() => setActivePathSelection({ type: 'path' })}
                         className={`p-3.5 rounded-xl border transition-all cursor-pointer shrink-0 flex flex-col gap-2 ${
                           activePathSelection.type === 'path'
-                            ? 'bg-purple-950/40 border-purple-500 shadow-md shadow-purple-950/40 ring-1 ring-purple-500'
+                            ? 'bg-blue-950/40 border-blue-500 shadow-md shadow-blue-950/40 ring-1 ring-blue-500'
                             : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
                         }`}
                       >
@@ -2734,12 +2739,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                 <span>{name.trim() || 'Untitled Path'}</span>
                                 <GuardrailBadge isValid={isNameValid} />
                               </div>
-                              <div className="text-[11px] text-purple-300 font-medium">
+                              <div className="text-[11px] text-blue-300 font-medium">
                                 Category: {finalPathCat}
                               </div>
                             </div>
                           </div>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-900/60 text-purple-200 border border-purple-500/40">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-900/60 text-blue-200 border border-blue-500/40">
                             Root Node
                           </span>
                         </div>
@@ -2751,12 +2756,32 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         )}
 
                         <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 mt-1">
-                          <span className="flex items-center gap-1 text-purple-300 font-semibold">
+                          <span className="flex items-center gap-1 text-blue-300 font-semibold">
                             <span>⚡</span> {linkedElements.length} Linked Elements
                           </span>
-                          <span className="text-purple-400">Click to edit Path Identity ✎</span>
+                          <span className="text-blue-400">Click to edit Path Identity ✎</span>
                         </div>
                       </div>
+
+                      {/* +Ability Action Button (Guardrailed: Requires Selected Path or Fully Filled Out New Path) */}
+                      <button
+                        type="button"
+                        disabled={!isPathReadyForAbilities}
+                        onClick={() => setActivePathSelection({ type: 'ability', category: activeAbilityCategory })}
+                        className={`w-full py-2 px-4 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm shrink-0 ${
+                          isPathReadyForAbilities
+                            ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-950/50 cursor-pointer'
+                            : 'bg-slate-900/80 border border-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+                        }`}
+                        title={
+                          !isPathReadyForAbilities
+                            ? 'Complete Path Name, Category, Description, and Genre before adding abilities'
+                            : 'Open Ability Studio to forge or link abilities to this Path'
+                        }
+                      >
+                        <span>➕</span>
+                        <span>Ability</span>
+                      </button>
 
                       {/* Linked Path Elements Tree */}
                       <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
@@ -2765,13 +2790,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             <span>🔗</span>
                             <span>Linked Elements ({linkedElements.length})</span>
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => setActivePathSelection({ type: 'ability', category: activeAbilityCategory })}
-                            className="text-[10px] font-bold px-2 py-1 rounded-lg bg-purple-950/80 hover:bg-purple-900/80 text-purple-200 border border-purple-500/40 transition cursor-pointer flex items-center gap-1"
-                          >
-                            <span>+ Add / Link Ability</span>
-                          </button>
                         </div>
 
                         <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
@@ -2827,7 +2845,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                       onClick={() => handleToggleLinkedElementFree(idx, false)}
                                       className={`py-1 px-2 text-[10px] font-bold rounded transition-all cursor-pointer ${
                                         !isFree
-                                          ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                                          ? 'bg-blue-600 text-white shadow-sm font-extrabold'
                                           : 'text-slate-400 hover:text-slate-200 border border-transparent'
                                       }`}
                                       title="Costs standard 1 AP to acquire"
@@ -2869,7 +2887,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         <div className="flex items-center justify-between text-[11px] text-slate-400">
                           <span>Status:</span>
                           {editingItem ? (
-                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
                               Editing Path
                             </span>
                           ) : (
@@ -2883,7 +2901,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           disabled={!isFormValid || isSubmitting}
                           className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
                             isFormValid && !isSubmitting
-                              ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-purple-900/40 cursor-pointer'
+                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-900/40 cursor-pointer'
                               : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
                           }`}
                         >
@@ -4050,7 +4068,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </p>
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded bg-purple-950/80 border border-purple-500/40 text-purple-300 font-mono text-[10px] font-bold">
+                    <span className="px-2 py-0.5 rounded bg-blue-950/80 border border-blue-500/40 text-blue-300 font-mono text-[10px] font-bold">
                       Mode: Path Archetype
                     </span>
                   </div>
@@ -4070,7 +4088,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Voidstalker, Iron Sentinel, Starweaver..."
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-purple-400 shadow-inner"
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner"
                       required
                     />
                   </div>
@@ -4089,7 +4107,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <select
                         value={pathCategory}
                         onChange={(e) => setPathCategory(e.target.value)}
-                        className="bg-slate-950 border border-slate-700 text-slate-200 text-xs px-3 py-2 rounded-xl outline-none focus:border-purple-400 font-medium"
+                        className="bg-slate-950 border border-slate-700 text-slate-200 text-xs px-3 py-2 rounded-xl outline-none focus:border-blue-400 font-medium"
                       >
                         {availablePathCategories.map((cat) => (
                           <option key={cat} value={cat}>
@@ -4104,7 +4122,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           value={pathCategoryNewText}
                           onChange={(e) => setPathCategoryNewText(e.target.value)}
                           placeholder="Type custom category name..."
-                          className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-purple-500/60 outline-none"
+                          className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-blue-500/60 outline-none"
                         />
                       )}
                     </div>
@@ -4125,7 +4143,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       onChange={(e) => setPathDescription(e.target.value)}
                       rows={3}
                       placeholder="e.g. Masters of planar shifting and void manipulation, the Voidstalker steps between shadows..."
-                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-purple-400 shadow-inner resize-none leading-relaxed"
+                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner resize-none leading-relaxed"
                       required
                     />
                   </div>
@@ -4150,7 +4168,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             onClick={() => handleToggleGenre(g.id)}
                             className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                               isSelected
-                                ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                                ? 'bg-blue-600 text-white shadow-sm font-extrabold'
                                 : 'text-slate-400 hover:text-slate-200 border border-transparent'
                             }`}
                           >
@@ -4173,20 +4191,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       onChange={(e) => setNotes(e.target.value)}
                       rows={2}
                       placeholder="Internal notes, lore connections, or special rules..."
-                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-purple-400 shadow-inner resize-none leading-relaxed"
+                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner resize-none leading-relaxed"
                     />
-                  </div>
-
-                  {/* Continue to Ability Studio Button */}
-                  <div className="pt-2 flex items-center justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setActivePathSelection({ type: 'ability', category: activeAbilityCategory })}
-                      className="py-2.5 px-5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center gap-2 shadow-md shadow-purple-950/50 cursor-pointer"
-                    >
-                      <span>Continue to Ability Studio</span>
-                      <span>➔</span>
-                    </button>
                   </div>
                 </div>
               )}
@@ -4216,7 +4222,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setActivePathSelection({ type: 'path' })}
-                        className="text-[11px] font-bold px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 transition cursor-pointer flex items-center gap-1.5"
+                        className="text-[11px] font-bold px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 transition cursor-pointer flex items-center gap-1.5"
                       >
                         <span>⬅️</span>
                         <span>Path Identity</span>
