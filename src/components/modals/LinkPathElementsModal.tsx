@@ -18,15 +18,20 @@ interface LinkPathElementsModalProps {
   onUpdateLinkedElements: (elements: PathLinkedElement[]) => void;
 }
 
-const CATEGORIES: { id: PathElementType; label: string; icon: string }[] = [
+const CATEGORY_ROW_1: { id: PathElementType; label: string; icon: string }[] = [
   { id: 'power', label: 'Powers', icon: '🔥' },
   { id: 'skill', label: 'Skills', icon: '🎓' },
   { id: 'skillset', label: 'Skillsets', icon: '📚' },
   { id: 'trait', label: 'Traits', icon: '🧬' },
+];
+
+const CATEGORY_ROW_2: { id: PathElementType; label: string; icon: string }[] = [
   { id: 'weapon', label: 'Weapon Sk', icon: '⚔️' },
-  { id: 'armor', label: 'Armor Sk', icon: '🧥' },
+  { id: 'armor', label: 'Armor Sk', icon: '🥋' },
   { id: 'shield', label: 'Shield Sk', icon: '🛡️' },
 ];
+
+const CATEGORIES = [...CATEGORY_ROW_1, ...CATEGORY_ROW_2];
 
 export const LinkPathElementsModal: React.FC<LinkPathElementsModalProps> = ({
   isOpen,
@@ -217,7 +222,7 @@ export const LinkPathElementsModal: React.FC<LinkPathElementsModalProps> = ({
       id: `${item.type}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name: item.name,
       type: item.type,
-      tag: 'Learn', // Default to Learn per specification
+      tag: '1 AP', // Default to 1 AP per specification
       details: item.details,
     };
 
@@ -228,7 +233,7 @@ export const LinkPathElementsModal: React.FC<LinkPathElementsModalProps> = ({
     onUpdateLinkedElements(linkedElements.filter((el) => el.id !== id));
   };
 
-  const handleToggleTag = (id: string | number, newTag: 'Free' | 'Learn') => {
+  const handleToggleTag = (id: string | number, newTag: '1 AP' | 'Free') => {
     onUpdateLinkedElements(
       linkedElements.map((el) => (el.id === id ? { ...el, tag: newTag } : el))
     );
@@ -334,9 +339,21 @@ export const LinkPathElementsModal: React.FC<LinkPathElementsModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Right: Dyslexia-Friendly KISS Pill Switch (Text Only, No Icons) + Trash */}
+                      {/* Right: Dyslexia-Friendly KISS Pill Switch (1 AP / Free in that order) + Trash */}
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-1 shadow-inner backdrop-blur-md">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleTag(elem.id, '1 AP')}
+                            className={`py-1 px-2.5 text-[11px] font-bold rounded-md transition-all flex items-center justify-center cursor-pointer ${
+                              elem.tag === '1 AP' || elem.tag === 'Learn'
+                                ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                            title="Learned through path progression (costs 1 AP)"
+                          >
+                            1 AP
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleToggleTag(elem.id, 'Free')}
@@ -348,18 +365,6 @@ export const LinkPathElementsModal: React.FC<LinkPathElementsModalProps> = ({
                             title="Granted as starting trait {Free}"
                           >
                             Free
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleTag(elem.id, 'Learn')}
-                            className={`py-1 px-2.5 text-[11px] font-bold rounded-md transition-all flex items-center justify-center cursor-pointer ${
-                              elem.tag === 'Learn'
-                                ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                            title="Learned through progression (requires AP)"
-                          >
-                            Learn
                           </button>
                         </div>
 
@@ -382,30 +387,58 @@ export const LinkPathElementsModal: React.FC<LinkPathElementsModalProps> = ({
           {/* PANE 2 (RIGHT): Category Selectors & Catalog Stream (md:col-span-6) */}
           <div className="md:col-span-6 flex flex-col bg-slate-900/30 min-h-0">
             {/* Category Selector Bar */}
-            <div className="p-3 border-b border-slate-800 bg-slate-950/50 shrink-0 flex flex-col gap-2.5">
-              {/* Category Tabs */}
-              <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-thin">
-                {CATEGORIES.map((cat) => {
-                  const isActive = activeCategory === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveCategory(cat.id);
-                        setSearchQuery('');
-                      }}
-                      className={`py-1 px-2.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                        isActive
-                          ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                          : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
-                      }`}
-                    >
-                      <span>{cat.icon}</span>
-                      <span>{cat.label}</span>
-                    </button>
-                  );
-                })}
+            <div className="p-3 border-b border-slate-800 bg-slate-950/50 shrink-0 flex flex-col gap-2">
+              {/* Category Tabs: 2 Visible Rows (Zero Horizontal Scroll) */}
+              <div className="flex flex-col gap-1.5">
+                {/* Row 1: Core Archetype Elements */}
+                <div className="flex items-center gap-1.5">
+                  {CATEGORY_ROW_1.map((cat) => {
+                    const isActive = activeCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveCategory(cat.id);
+                          setSearchQuery('');
+                        }}
+                        className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                          isActive
+                            ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                            : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+                        }`}
+                      >
+                        <span className="text-xs">{cat.icon}</span>
+                        <span className="truncate">{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Row 2: Combat Proficiencies */}
+                <div className="flex items-center gap-1.5">
+                  {CATEGORY_ROW_2.map((cat) => {
+                    const isActive = activeCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveCategory(cat.id);
+                          setSearchQuery('');
+                        }}
+                        className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                          isActive
+                            ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                            : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+                        }`}
+                      >
+                        <span className="text-xs">{cat.icon}</span>
+                        <span className="truncate">{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Search Bar */}

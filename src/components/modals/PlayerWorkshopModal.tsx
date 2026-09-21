@@ -1215,7 +1215,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                     : 'bg-amber-950 text-amber-300 border border-amber-500/40'
                                 }`}
                               >
-                                {el.tag === 'Free' ? '{Free}' : 'Learn'}
+                                {el.tag === 'Free' ? '{Free}' : '1 AP'}
                               </span>
                             </span>
                           ))}
@@ -1732,35 +1732,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     required
                   />
                 </div>
-
-                {/* Path Link Elements Action Card */}
-                <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-purple-950/30 border border-purple-500/40">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-purple-200 text-xs flex items-center gap-1">
-                        <span>🧭</span>
-                        <span>Link Elements to Path</span>
-                      </span>
-                      <GuardrailBadge isValid={linkedElements.length > 0} />
-                    </div>
-                    <span className="text-[10px] text-purple-300 font-mono">
-                      {linkedElements.length} Linked (Required)
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    A path must have at least 1 linked element (Powers, Skills, Skillsets, Traits, or Gear Skills).
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setIsLinkModalOpen(true)}
-                    className="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-purple-950/50 cursor-pointer active:scale-[0.98]"
-                  >
-                    <span>🧭 Manage Linked Elements</span>
-                    <span className="px-1.5 py-0.2 rounded-full bg-purple-950/80 text-purple-200 text-[10px]">
-                      {linkedElements.length}
-                    </span>
-                  </button>
-                </div>
               </div>
             )}
 
@@ -2239,28 +2210,33 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               </div>
             </div>
 
-            {/* Path Linkage Action Button (Required for Path) */}
+            {/* Path Link Elements Action Card (Required for Path) */}
             {creationType === 'path' && (
-              <div className="pt-1 flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-purple-950/30 border border-purple-500/40">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-purple-200 text-xs flex items-center gap-1">
+                      <span>🧭</span>
+                      <span>Link Elements to Path</span>
+                    </span>
+                    <GuardrailBadge isValid={linkedElements.length > 0} />
+                  </div>
+                  <span className="text-[10px] text-purple-300 font-mono">
+                    {linkedElements.length} Linked (Required)
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  A path must have at least 1 linked element (Powers, Skills, Skillsets, Traits, or Gear Skills).
+                </p>
                 <button
                   type="button"
                   onClick={() => setIsLinkModalOpen(true)}
-                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border shadow-sm cursor-pointer ${
-                    linkedElements.length > 0
-                      ? 'bg-purple-950/70 border-purple-500/60 text-purple-200 hover:bg-purple-900/80'
-                      : 'bg-rose-950/60 border-rose-500/60 text-rose-300 hover:bg-rose-900/70 animate-pulse'
-                  }`}
+                  className="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-purple-950/50 cursor-pointer active:scale-[0.98]"
                 >
-                  <span>🧭</span>
-                  <span>Link Elements to Path</span>
-                  <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-[10px] font-extrabold border border-purple-500/40">
-                    {linkedElements.length} Linked
+                  <span>🧭 Manage Linked Elements</span>
+                  <span className="px-1.5 py-0.2 rounded-full bg-purple-950/80 text-purple-200 text-[10px]">
+                    {linkedElements.length}
                   </span>
-                  {linkedElements.length === 0 && (
-                    <span className="text-[10px] text-rose-400 font-extrabold ml-1">
-                      (Required)
-                    </span>
-                  )}
                 </button>
               </div>
             )}

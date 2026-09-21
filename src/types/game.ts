@@ -1251,7 +1251,7 @@ export interface PathLinkedElement {
   id: string | number;
   name: string;
   type: PathElementType;
-  tag: 'Free' | 'Learn';
+  tag: '1 AP' | 'Free' | 'Learn';
   details?: string;
 }
 
