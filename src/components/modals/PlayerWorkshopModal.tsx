@@ -9,6 +9,7 @@ import { CustomCreationType, CustomCreationItem, CustomCreationData } from '../.
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
 import { InfoTooltip } from '../common/InfoTooltip';
 import { compareMsoOptions } from '../../utils/kitUtils';
+import { parseCostToSilver } from '../../utils/moneyUtils';
 
 interface PlayerWorkshopModalProps {
   isOpen: boolean;
@@ -44,16 +45,19 @@ const RANGE_BANDS = [
   { id: 'Short', label: 'Short (≤6sq)', text: 'Rng Short; ' },
   { id: 'Medium', label: 'Medium (≤12sq)', text: 'Rng Medium; ' },
   { id: 'Long', label: 'Long (≤24sq)', text: 'Rng Long; ' },
-  { id: 'Extreme', label: 'Extreme (≥25sq)', text: 'Rng Extreme; ' },
+  { id: 'Extreme', label: 'Extreme (≥50sq)', text: 'Rng Extreme; ' },
 ];
 
-// Canonical AoE Formats
+// AoE Presets
 const AOE_PRESETS = [
   { id: 'AoE 1r', text: 'AoE 1r; ' },
   { id: 'AoE 2r', text: 'AoE 2r; ' },
   { id: 'AoE 3r', text: 'AoE 3r; ' },
   { id: 'AoE 2x2', text: 'AoE 2x2; ' },
   { id: 'AoE 3x3', text: 'AoE 3x3; ' },
+  { id: 'AoE 4x4', text: 'AoE 4x4; ' },
+  { id: 'Cone 3sq', text: 'AoE Cone 3sq; ' },
+  { id: 'Line 6sq', text: 'AoE Line 6sq; ' },
 ];
 
 // Attributes Without Labels per Directive
@@ -66,9 +70,14 @@ const POWER_READY_CATEGORIES = [
 ];
 
 const GENRE_OPTIONS = [
-  { id: 'Medieval', label: 'Medieval', icon: '🏰' },
+  { id: 'Fantasy', label: 'Fantasy', icon: '🏰' },
   { id: 'Modern', label: 'Modern', icon: '🏙️' },
-  { id: 'SciFi', label: 'SciFi', icon: '🚀' },
+  { id: 'SciFi', label: 'Sci-Fi', icon: '🚀' },
+  { id: 'WildWest', label: 'Wild West', icon: '🤠' },
+  { id: 'Horror', label: 'Horror', icon: '🕯️' },
+  { id: 'MartialArts', label: 'Martial Arts', icon: '🥋' },
+  { id: 'Medieval', label: 'Medieval', icon: '⚔️' },
+  { id: 'PostApoc', label: 'Post-Apocalyptic', icon: '☢️' },
 ];
 
 const WEAPON_REQ_NUMBERS = [4, 6, 8, 10, 12];
@@ -77,6 +86,7 @@ const SHIELD_REQ_OPTIONS = ['💪 4', '💪 6', '💪 8', '💪 10', '💪 12'];
 
 const GEAR_DEFAULT_CATEGORIES = [
   'Adventure',
+  'Communication',
   'Clothing',
   'Containers',
   'General',
@@ -98,10 +108,9 @@ const KIT_DEFAULT_CATEGORIES = [
   'General',
 ];
 
-const PATH_CATEGORIES = ['Race', 'Class', 'Origin', 'General'];
-
 const getWeaponAtkDmg = (typeMode: string): string => {
   if (typeMode === 'Melee, Hurled') return '💪, 🏃';
+  if (typeMode === 'Melee, Shot') return '💪, 👁️';
   if (typeMode === 'Hurled') return '🏃';
   if (typeMode === 'Shot') return '👁️';
   return '💪';
@@ -193,6 +202,37 @@ export const getCategoryEmoji = (type: CustomCreationType): string => {
   }
 };
 
+export const CompactCostInput: React.FC<{
+  gold: number;
+  silver: number;
+  onGoldChange: (val: number) => void;
+  onSilverChange: (val: number) => void;
+}> = ({ gold, silver, onGoldChange, onSilverChange }) => (
+  <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-700 px-2.5 py-1.5 rounded-xl shadow-inner">
+    <input
+      type="number"
+      min={0}
+      value={gold === 0 ? '' : gold}
+      onChange={(e) => onGoldChange(Math.max(0, parseInt(e.target.value, 10) || 0))}
+      className="w-12 bg-transparent text-slate-100 text-xs font-bold text-right outline-none"
+      placeholder="0"
+      title="Gold amount"
+    />
+    <span className="text-amber-400 font-extrabold text-xs select-none">g</span>
+    <span className="text-slate-600 font-bold select-none">•</span>
+    <input
+      type="number"
+      min={0}
+      value={silver === 0 ? '' : silver}
+      onChange={(e) => onSilverChange(Math.max(0, parseInt(e.target.value, 10) || 0))}
+      className="w-12 bg-transparent text-slate-100 text-xs font-bold text-right outline-none"
+      placeholder="0"
+      title="Silver amount"
+    />
+    <span className="text-slate-300 font-extrabold text-xs select-none">s</span>
+  </div>
+);
+
 export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -206,6 +246,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeRole = useCharacterStore((state) => state.activeRole);
   const skills = useCharacterStore((state) => state.skills);
+  const paths = useCharacterStore((state) => state.paths);
+  const weaponsCatalog = useCharacterStore((state) => state.weaponsCatalog);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
 
   const isGm = activeRole === 'gm';
@@ -216,13 +258,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [action, setAction] = useState('AM');
   const [usage, setUsage] = useState('1-Enc');
   const [tier, setTier] = useState<'Minor' | 'Lesser' | 'Greater' | 'Epic'>('Minor');
-  const [costVal, setCostVal] = useState<number>(10);
-  const [costUnit, setCostUnit] = useState<'s' | 'g'>('g');
+  const [costGold, setCostGold] = useState<number>(10);
+  const [costSilver, setCostSilver] = useState<number>(0);
   const [powerReady, setPowerReady] = useState<string>('primary_arsenal');
   const [skillAttribute, setSkillAttribute] = useState<string>('💪');
   const [skillDiscipline, setSkillDiscipline] = useState<string>('General');
-  const [traitCost, setTraitCost] = useState<string>('1 AP');
+  const [skillDisciplineNewText, setSkillDisciplineNewText] = useState<string>('');
   const [pathCategory, setPathCategory] = useState<string>('General');
+  const [pathCategoryNewText, setPathCategoryNewText] = useState<string>('');
   const [pathDescription, setPathDescription] = useState<string>('');
   const [kitCategory, setKitCategory] = useState<string>('Survival');
   const [kitDescription, setKitDescription] = useState<string>('');
@@ -230,12 +273,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [notes, setNotes] = useState('');
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
-  // Skillset State (2 to 5 selected existing skill strings)
+  // Skillset State (2+ selected existing skill strings)
   const [selectedSkillsetSkills, setSelectedSkillsetSkills] = useState<string[]>(['', '']);
 
   // Weapon State
-  const [weaponTypeMode, setWeaponTypeMode] = useState<'Melee' | 'Hurled' | 'Shot' | 'Melee, Hurled'>('Melee');
+  const [weaponTypeMode, setWeaponTypeMode] = useState<'Melee' | 'Hurled' | 'Shot' | 'Melee, Hurled' | 'Melee, Shot'>('Melee');
   const [weaponReqNum, setWeaponReqNum] = useState<number>(4);
+  const [weaponDomain, setWeaponDomain] = useState<string>('Archaic');
+  const [weaponDomainNewText, setWeaponDomainNewText] = useState<string>('');
 
   // Armor State
   const [armorReq, setArmorReq] = useState<string>('💪 4');
@@ -280,13 +325,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setAction('AM');
     setUsage('1-Enc');
     setTier('Minor');
-    setCostVal(10);
-    setCostUnit('g');
+    setCostGold(10);
+    setCostSilver(0);
     setPowerReady('primary_arsenal');
     setSkillAttribute('💪');
     setSkillDiscipline('General');
-    setTraitCost('1 AP');
+    setSkillDisciplineNewText('');
     setPathCategory('General');
+    setPathCategoryNewText('');
     setPathDescription('');
     setKitCategory('Survival');
     setKitDescription('');
@@ -296,12 +342,50 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setSelectedSkillsetSkills(['', '']);
     setWeaponTypeMode('Melee');
     setWeaponReqNum(4);
+    setWeaponDomain('Archaic');
+    setWeaponDomainNewText('');
     setArmorReq('💪 4');
     setShieldReq('💪 4');
     setGearCategory('Adventure');
     setGearCategoryNewText('');
     setFeedback(null);
   };
+
+  // Distinct Path Categories from Supabase paths table + defaults
+  const availablePathCategories = useMemo(() => {
+    const cats = new Set<string>();
+    if (Array.isArray(paths)) {
+      paths.forEach((p) => {
+        if (p.category && typeof p.category === 'string') cats.add(p.category.trim());
+      });
+    }
+    ['Class', 'Race', 'Origin', 'General', 'Combat Style', 'Specialist', 'Ship Officer', 'Innate', 'Universal'].forEach((c) => cats.add(c));
+    return Array.from(cats).sort((a, b) => a.localeCompare(b));
+  }, [paths]);
+
+  // Distinct Skill Disciplines from Supabase skills table + defaults
+  const availableSkillDisciplines = useMemo(() => {
+    const discs = new Set<string>();
+    if (Array.isArray(skills)) {
+      skills.forEach((s) => {
+        if (s.discipline && typeof s.discipline === 'string') discs.add(s.discipline.trim());
+      });
+    }
+    ['General', 'Martial', 'Arcane', 'Roguish', 'Technical', 'BioTech', 'Covert', 'CyberTech', 'Medical', 'Physical', 'Psionics', 'Somatics', 'Tech', 'Universal', 'Void Magic'].forEach((d) => discs.add(d));
+    return Array.from(discs).sort((a, b) => a.localeCompare(b));
+  }, [skills]);
+
+  // Distinct Weapon Domains from Supabase weapons table + defaults
+  const availableWeaponDomains = useMemo(() => {
+    const doms = new Set<string>();
+    if (Array.isArray(weaponsCatalog)) {
+      weaponsCatalog.forEach((w) => {
+        if (w.domain && typeof w.domain === 'string') doms.add(w.domain.trim());
+      });
+    }
+    ['Archaic', 'BioTech', 'CyberTech', 'Tech', 'Void Magic', 'Psionics', 'Somatics'].forEach((d) => doms.add(d));
+    return Array.from(doms).sort((a, b) => a.localeCompare(b));
+  }, [weaponsCatalog]);
 
   const handlePopulateItemForEdit = (item: CustomCreationItem) => {
     setEditingItem(item);
@@ -315,17 +399,40 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setSelectedGenres([]);
     }
 
+    if (item.item_data?.cost) {
+      const totalSilver = parseCostToSilver(item.item_data.cost);
+      setCostGold(Math.floor(totalSilver / 100));
+      setCostSilver(totalSilver % 100);
+    } else {
+      setCostGold(10);
+      setCostSilver(0);
+    }
+
     if (item.type === 'power') {
       setAction(item.item_data?.action || 'AM');
       setUsage(item.item_data?.usage || '1-Enc');
       setEffect(item.item_data?.effect || '');
       setPowerReady(item.item_data?.ready_category || 'primary_arsenal');
     } else if (item.type === 'path') {
-      setPathCategory(item.item_data?.category || 'General');
+      const cat = item.item_data?.category || 'General';
+      if (availablePathCategories.includes(cat)) {
+        setPathCategory(cat);
+        setPathCategoryNewText('');
+      } else {
+        setPathCategory('CUSTOM_NEW');
+        setPathCategoryNewText(cat);
+      }
       setPathDescription(item.item_data?.description || '');
     } else if (item.type === 'skill') {
       setSkillAttribute(item.item_data?.attribute || '💪');
-      setSkillDiscipline(item.item_data?.discipline || 'General');
+      const disc = item.item_data?.discipline || 'General';
+      if (availableSkillDisciplines.includes(disc)) {
+        setSkillDiscipline(disc);
+        setSkillDisciplineNewText('');
+      } else {
+        setSkillDiscipline('CUSTOM_NEW');
+        setSkillDisciplineNewText(disc);
+      }
     } else if (item.type === 'skillset') {
       if (Array.isArray(item.item_data?.skills) && item.item_data.skills.length > 0) {
         setSelectedSkillsetSkills(item.item_data.skills);
@@ -333,16 +440,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         setSelectedSkillsetSkills(['', '']);
       }
     } else if (item.type === 'trait') {
-      setTraitCost(item.item_data?.cost || '1 AP');
       setEffect(item.item_data?.effect || '');
     } else if (item.type === 'weapon') {
       setWeaponTypeMode((item.item_data?.type as any) || 'Melee');
-      if (item.item_data?.cost) {
-        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
-        if (match) {
-          setCostVal(parseInt(match[1], 10));
-          setCostUnit(match[2] as 's' | 'g');
-        }
+      const dom = item.item_data?.domain || 'Archaic';
+      if (availableWeaponDomains.includes(dom)) {
+        setWeaponDomain(dom);
+        setWeaponDomainNewText('');
+      } else {
+        setWeaponDomain('CUSTOM_NEW');
+        setWeaponDomainNewText(dom);
       }
       if (item.item_data?.requirement) {
         const numMatch = item.item_data.requirement.match(/\d+/);
@@ -350,43 +457,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       }
     } else if (item.type === 'armor') {
       if (item.item_data?.requirement) setArmorReq(item.item_data.requirement);
-      if (item.item_data?.cost) {
-        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
-        if (match) {
-          setCostVal(parseInt(match[1], 10));
-          setCostUnit(match[2] as 's' | 'g');
-        }
-      }
     } else if (item.type === 'shield') {
       if (item.item_data?.requirement) setShieldReq(item.item_data.requirement);
-      if (item.item_data?.cost) {
-        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
-        if (match) {
-          setCostVal(parseInt(match[1], 10));
-          setCostUnit(match[2] as 's' | 'g');
-        }
-      }
     } else if (item.type === 'gear') {
       if (item.item_data?.category) setGearCategory(item.item_data.category);
-      if (item.item_data?.cost) {
-        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
-        if (match) {
-          setCostVal(parseInt(match[1], 10));
-          setCostUnit(match[2] as 's' | 'g');
-        }
-      }
     } else if (item.type === 'exotic') {
       setAction(item.item_data?.action || 'AM');
       setUsage(item.item_data?.usage || '1-Enc');
       setTier((item.item_data?.tier as any) || 'Minor');
       setEffect(item.item_data?.effect || '');
-      if (item.item_data?.cost) {
-        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
-        if (match) {
-          setCostVal(parseInt(match[1], 10));
-          setCostUnit(match[2] as 's' | 'g');
-        }
-      }
     } else if (item.type === 'artifact') {
       setAction(item.item_data?.action || 'AM');
       setUsage(item.item_data?.usage || '1-Enc');
@@ -397,13 +476,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     } else if (item.type === 'kit') {
       if (item.item_data?.category) setKitCategory(item.item_data.category);
       setKitDescription(item.item_data?.description || '');
-      if (item.item_data?.cost) {
-        const match = item.item_data.cost.match(/^(\d+)([sg])$/);
-        if (match) {
-          setCostVal(parseInt(match[1], 10));
-          setCostUnit(match[2] as 's' | 'g');
-        }
-      }
     }
   };
 
@@ -472,10 +544,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const isSkillAttributeValid = !!skillAttribute && skillAttribute.trim().length > 0;
   const isSkillsetSkillsValid =
     selectedSkillsetSkills.length >= 2 &&
-    selectedSkillsetSkills.length <= 5 &&
     selectedSkillsetSkills.every((s) => typeof s === 'string' && s.trim().length > 0);
   const isGearCategoryValid =
     gearCategory === 'CUSTOM_NEW' ? gearCategoryNewText.trim().length > 0 : gearCategory.trim().length > 0;
+  const isPathCategoryValid =
+    pathCategory === 'CUSTOM_NEW' ? pathCategoryNewText.trim().length > 0 : pathCategory.trim().length > 0;
+  const isSkillDisciplineValid =
+    skillDiscipline === 'CUSTOM_NEW' ? skillDisciplineNewText.trim().length > 0 : skillDiscipline.trim().length > 0;
+  const isWeaponDomainValid =
+    weaponDomain === 'CUSTOM_NEW' ? weaponDomainNewText.trim().length > 0 : weaponDomain.trim().length > 0;
+  const isCostValid = costGold > 0 || costSilver > 0;
 
   const isFormValid = useMemo(() => {
     if (!isNameValid) return false;
@@ -485,10 +563,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       return isEffectValid;
     }
     if (creationType === 'path') {
-      return pathDescription.trim().length > 0;
+      return isPathCategoryValid && pathDescription.trim().length > 0;
     }
     if (creationType === 'skill') {
-      return isSkillAttributeValid;
+      return isSkillAttributeValid && isSkillDisciplineValid;
     }
     if (creationType === 'skillset') {
       return isSkillsetSkillsValid;
@@ -496,17 +574,23 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (creationType === 'trait') {
       return isEffectValid;
     }
-    if (creationType === 'weapon' || creationType === 'armor' || creationType === 'shield') {
-      return costVal >= 1;
+    if (creationType === 'weapon') {
+      return isCostValid && isWeaponDomainValid;
+    }
+    if (creationType === 'armor' || creationType === 'shield') {
+      return isCostValid;
     }
     if (creationType === 'gear') {
-      return isGearCategoryValid && costVal >= 1;
+      return isGearCategoryValid && isCostValid;
     }
-    if (creationType === 'exotic' || creationType === 'artifact' || creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
+    if (creationType === 'exotic') {
+      return isEffectValid && isCostValid;
+    }
+    if (creationType === 'artifact' || creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
       return isEffectValid;
     }
     if (creationType === 'kit') {
-      return kitDescription.trim().length > 0 && costVal >= 1;
+      return kitDescription.trim().length > 0 && isCostValid;
     }
     return true;
   }, [
@@ -515,11 +599,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     isGenresValid,
     isEffectValid,
     isSkillAttributeValid,
+    isSkillDisciplineValid,
     isSkillsetSkillsValid,
     isGearCategoryValid,
+    isPathCategoryValid,
+    isWeaponDomainValid,
+    isCostValid,
     pathDescription,
     kitDescription,
-    costVal,
   ]);
 
   // Load custom items when modal is opened
@@ -619,7 +706,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       .map((entry) => entry[1]);
   }, [skills, activeCharacter, customSkillsList, isGsUnlocked]);
 
-
   if (!isOpen) return null;
 
   const insertTextAtCursor = (insertStr: string) => {
@@ -640,9 +726,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   };
 
   const handleAddSkillsetRow = () => {
-    if (selectedSkillsetSkills.length < 5) {
-      setSelectedSkillsetSkills((prev) => [...prev, '']);
-    }
+    setSelectedSkillsetSkills((prev) => [...prev, '']);
   };
 
   const handleRemoveSkillsetRow = (index: number) => {
@@ -665,14 +749,25 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     );
   };
 
-  const costStr = creationType === 'artifact' ? 'Artifact' : `${costVal}${costUnit}`;
+  const costStr =
+    creationType === 'artifact'
+      ? 'Artifact'
+      : costGold > 0 && costSilver > 0
+      ? `${costGold}g ${costSilver}s`
+      : costGold > 0
+      ? `${costGold}g`
+      : `${costSilver}s`;
 
   let weaponReqStr = `💪 ${weaponReqNum}`;
   if (weaponTypeMode === 'Hurled') weaponReqStr = `🏃 ${weaponReqNum}`;
   if (weaponTypeMode === 'Shot') weaponReqStr = `👁️ ${weaponReqNum}`;
   if (weaponTypeMode === 'Melee, Hurled') weaponReqStr = `💪 ${weaponReqNum}, 🏃 ${weaponReqNum}`;
+  if (weaponTypeMode === 'Melee, Shot') weaponReqStr = `💪 ${weaponReqNum}, 👁️ ${weaponReqNum}`;
 
   const finalGearCat = gearCategory === 'CUSTOM_NEW' ? gearCategoryNewText.trim() || 'Custom' : gearCategory;
+  const finalPathCat = pathCategory === 'CUSTOM_NEW' ? pathCategoryNewText.trim() || 'General' : pathCategory;
+  const finalSkillDisc = skillDiscipline === 'CUSTOM_NEW' ? skillDisciplineNewText.trim() || 'General' : skillDiscipline;
+  const finalWeaponDomain = weaponDomain === 'CUSTOM_NEW' ? weaponDomainNewText.trim() || 'Archaic' : weaponDomain;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -686,11 +781,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       creationType === 'power'
         ? 'Power'
         : creationType === 'path'
-        ? pathCategory
+        ? finalPathCat
         : creationType === 'trait'
         ? 'Trait'
         : creationType === 'skill'
-        ? skillDiscipline
+        ? finalSkillDisc
         : creationType === 'weapon'
         ? weaponTypeMode
         : creationType === 'armor'
@@ -718,14 +813,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       itemDataPayload.table_group = 'General';
       itemDataPayload.ready_category = powerReady;
     } else if (creationType === 'path') {
-      itemDataPayload.category = pathCategory;
+      itemDataPayload.category = finalPathCat;
       itemDataPayload.description = pathDescription.trim();
     } else if (creationType === 'trait') {
       itemDataPayload.effect = effect.trim();
-      itemDataPayload.cost = traitCost;
     } else if (creationType === 'skill') {
       itemDataPayload.attribute = skillAttribute;
-      itemDataPayload.discipline = skillDiscipline;
+      itemDataPayload.discipline = finalSkillDisc;
       itemDataPayload.formatted_skill = `${name.trim()} ${skillAttribute}`;
     } else if (creationType === 'skillset') {
       itemDataPayload.skills = selectedSkillsetSkills.filter(Boolean);
@@ -736,6 +830,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       itemDataPayload.dmg = getWeaponAtkDmg(weaponTypeMode);
       itemDataPayload.max_block = getWeaponMaxBlock(weaponTypeMode, weaponReqNum);
       itemDataPayload.cost = costStr;
+      itemDataPayload.domain = finalWeaponDomain;
     } else if (creationType === 'armor') {
       itemDataPayload.requirement = armorReq;
       itemDataPayload.ar = getArmorArStr(armorReq);
@@ -1087,7 +1182,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         <span>{name || 'Unnamed Path'}</span>
                       </span>
                       <span className="px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
-                        {pathCategory} Path
+                        {finalPathCat} Path
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
@@ -1108,7 +1203,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-400">
-                      Discipline: <strong className="text-slate-200">{skillDiscipline}</strong>
+                      Discipline: <strong className="text-slate-200">{finalSkillDisc}</strong>
                     </div>
                     {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
                   </div>
@@ -1143,7 +1238,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         <span>{name || 'Unnamed Trait'}</span>
                       </span>
                       <span className="px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[10px] font-bold">
-                        {traitCost}
+                        Trait
                       </span>
                     </div>
                     <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
@@ -1165,6 +1260,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <div>Atk: <strong className="text-amber-300">{getWeaponAtkDmg(weaponTypeMode)}</strong></div>
                       <div>Dmg: <strong className="text-rose-300">d{getWeaponAtkDmg(weaponTypeMode)}</strong></div>
                       <div>Block: <strong className="text-cyan-300">{getWeaponMaxBlock(weaponTypeMode, weaponReqNum)}</strong></div>
+                      <div>Domain: <strong className="text-amber-300">{finalWeaponDomain}</strong></div>
                     </div>
                     {notes && <p className="text-[10px] text-slate-500 italic mt-1 font-serif">"{notes}"</p>}
                   </div>
@@ -1441,6 +1537,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             {itemCost}
                           </span>
                         )}
+                        {item.item_data?.domain && (
+                          <span className="px-1.5 py-0.2 bg-amber-950/60 border border-amber-600/30 text-amber-200 font-medium rounded">
+                            {item.item_data.domain}
+                          </span>
+                        )}
                         {item.item_data?.cloned_from && (
                           <span className="px-1.5 py-0.2 bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 font-medium rounded truncate max-w-[150px]">
                             🧬 Cloned: {item.item_data.cloned_from}
@@ -1569,23 +1670,31 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             {creationType === 'path' && (
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Path Category</span>
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                    {PATH_CATEGORIES.map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setPathCategory(cat)}
-                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center cursor-pointer ${
-                          pathCategory === cat
-                            ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-300">Path Category</span>
+                    <GuardrailBadge isValid={isPathCategoryValid} />
                   </div>
+                  <select
+                    value={pathCategory}
+                    onChange={(e) => setPathCategory(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-purple-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                  >
+                    <option value="CUSTOM_NEW">➕ New Category...</option>
+                    {availablePathCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                  {pathCategory === 'CUSTOM_NEW' && (
+                    <input
+                      type="text"
+                      value={pathCategoryNewText}
+                      onChange={(e) => setPathCategoryNewText(e.target.value)}
+                      placeholder="Enter new category name..."
+                      className="mt-1 bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-purple-500/50 outline-none"
+                    />
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -1629,18 +1738,31 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Discipline</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-300">Discipline</span>
+                    <GuardrailBadge isValid={isSkillDisciplineValid} />
+                  </div>
                   <select
                     value={skillDiscipline}
                     onChange={(e) => setSkillDiscipline(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                    className="bg-slate-950 border border-slate-700 text-indigo-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
                   >
-                    <option value="General">General</option>
-                    <option value="Martial">Martial</option>
-                    <option value="Arcane">Arcane</option>
-                    <option value="Roguish">Roguish</option>
-                    <option value="Technical">Technical</option>
+                    <option value="CUSTOM_NEW">➕ New Discipline...</option>
+                    {availableSkillDisciplines.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
                   </select>
+                  {skillDiscipline === 'CUSTOM_NEW' && (
+                    <input
+                      type="text"
+                      value={skillDisciplineNewText}
+                      onChange={(e) => setSkillDisciplineNewText(e.target.value)}
+                      placeholder="Enter new discipline name..."
+                      className="mt-1 bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-indigo-500/50 outline-none"
+                    />
+                  )}
                 </div>
               </div>
             )}
@@ -1649,7 +1771,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             {creationType === 'skillset' && (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-300">Select Included Skills (2–5)</span>
+                  <span className="font-bold text-slate-300">Select Included Skills (2+)</span>
                   <GuardrailBadge isValid={isSkillsetSkillsValid} />
                 </div>
                 {selectedSkillsetSkills.map((skVal, idx) => (
@@ -1677,47 +1799,22 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     )}
                   </div>
                 ))}
-                {selectedSkillsetSkills.length < 5 && (
-                  <button
-                    type="button"
-                    onClick={handleAddSkillsetRow}
-                    className="self-start text-[11px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Another Skill ({selectedSkillsetSkills.length}/5)</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={handleAddSkillsetRow}
+                  className="self-start text-[11px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Another Skill ({selectedSkillsetSkills.length})</span>
+                </button>
               </div>
             )}
 
-            {/* E. TRAITS */}
-            {creationType === 'trait' && (
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">AP Cost</span>
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                    {['0 AP', '1 AP', '2 AP', '3 AP', '4 AP'].map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setTraitCost(c)}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center cursor-pointer ${
-                          traitCost === c
-                            ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* E. TRAITS (Traits do not have an AP cost) */}
 
             {/* F. WEAPONS */}
             {creationType === 'weapon' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="font-bold text-slate-300">Type</span>
                   <select
@@ -1729,6 +1826,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     <option value="Shot">Shot</option>
                     <option value="Hurled">Hurled</option>
                     <option value="Melee, Hurled">Melee, Hurled</option>
+                    <option value="Melee, Shot">Melee, Shot</option>
                   </select>
                 </div>
 
@@ -1748,24 +1846,41 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Cost</span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min={1}
-                      value={costVal}
-                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      className="w-20 bg-slate-950 text-slate-100 text-xs font-semibold px-2.5 py-2 rounded-xl border border-slate-700 outline-none"
-                    />
-                    <select
-                      value={costUnit}
-                      onChange={(e) => setCostUnit(e.target.value as any)}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2.5 py-2 rounded-xl outline-none cursor-pointer"
-                    >
-                      <option value="g">g (Gold)</option>
-                      <option value="s">s (Silver)</option>
-                    </select>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-300">Domain</span>
+                    <GuardrailBadge isValid={isWeaponDomainValid} />
                   </div>
+                  <select
+                    value={weaponDomain}
+                    onChange={(e) => setWeaponDomain(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                  >
+                    <option value="CUSTOM_NEW">➕ New Domain...</option>
+                    {availableWeaponDomains.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  {weaponDomain === 'CUSTOM_NEW' && (
+                    <input
+                      type="text"
+                      value={weaponDomainNewText}
+                      onChange={(e) => setWeaponDomainNewText(e.target.value)}
+                      placeholder="Enter new domain name..."
+                      className="mt-1 bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-amber-500/50 outline-none"
+                    />
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-300">Cost</span>
+                  <CompactCostInput
+                    gold={costGold}
+                    silver={costSilver}
+                    onGoldChange={setCostGold}
+                    onSilverChange={setCostSilver}
+                  />
                 </div>
               </div>
             )}
@@ -1790,23 +1905,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
                 <div className="flex flex-col gap-1">
                   <span className="font-bold text-slate-300">Cost</span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min={1}
-                      value={costVal}
-                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      className="w-20 bg-slate-950 text-slate-100 text-xs font-semibold px-2.5 py-2 rounded-xl border border-slate-700 outline-none"
-                    />
-                    <select
-                      value={costUnit}
-                      onChange={(e) => setCostUnit(e.target.value as any)}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2.5 py-2 rounded-xl outline-none cursor-pointer"
-                    >
-                      <option value="g">g (Gold)</option>
-                      <option value="s">s (Silver)</option>
-                    </select>
-                  </div>
+                  <CompactCostInput
+                    gold={costGold}
+                    silver={costSilver}
+                    onGoldChange={setCostGold}
+                    onSilverChange={setCostSilver}
+                  />
                 </div>
               </div>
             )}
@@ -1831,23 +1935,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
                 <div className="flex flex-col gap-1">
                   <span className="font-bold text-slate-300">Cost</span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min={1}
-                      value={costVal}
-                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      className="w-20 bg-slate-950 text-slate-100 text-xs font-semibold px-2.5 py-2 rounded-xl border border-slate-700 outline-none"
-                    />
-                    <select
-                      value={costUnit}
-                      onChange={(e) => setCostUnit(e.target.value as any)}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2.5 py-2 rounded-xl outline-none cursor-pointer"
-                    >
-                      <option value="g">g (Gold)</option>
-                      <option value="s">s (Silver)</option>
-                    </select>
-                  </div>
+                  <CompactCostInput
+                    gold={costGold}
+                    silver={costSilver}
+                    onGoldChange={setCostGold}
+                    onSilverChange={setCostSilver}
+                  />
                 </div>
               </div>
             )}
@@ -1882,23 +1975,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
                 <div className="flex flex-col gap-1">
                   <span className="font-bold text-slate-300">Cost</span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min={1}
-                      value={costVal}
-                      onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      className="w-20 bg-slate-950 text-slate-100 text-xs font-semibold px-2.5 py-2 rounded-xl border border-slate-700 outline-none"
-                    />
-                    <select
-                      value={costUnit}
-                      onChange={(e) => setCostUnit(e.target.value as any)}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2.5 py-2 rounded-xl outline-none cursor-pointer"
-                    >
-                      <option value="s">s (Silver)</option>
-                      <option value="g">g (Gold)</option>
-                    </select>
-                  </div>
+                  <CompactCostInput
+                    gold={costGold}
+                    silver={costSilver}
+                    onGoldChange={setCostGold}
+                    onSilverChange={setCostSilver}
+                  />
                 </div>
               </div>
             )}
@@ -1957,23 +2039,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       Artifact
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min={1}
-                        value={costVal}
-                        onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                        className="w-16 bg-slate-950 text-slate-100 text-xs font-semibold px-2 py-2 rounded-xl border border-slate-700 outline-none"
-                      />
-                      <select
-                        value={costUnit}
-                        onChange={(e) => setCostUnit(e.target.value as any)}
-                        className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2 py-2 rounded-xl outline-none cursor-pointer"
-                      >
-                        <option value="g">g</option>
-                        <option value="s">s</option>
-                      </select>
-                    </div>
+                    <CompactCostInput
+                      gold={costGold}
+                      silver={costSilver}
+                      onGoldChange={setCostGold}
+                      onSilverChange={setCostSilver}
+                    />
                   )}
                 </div>
               </div>
@@ -2000,23 +2071,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
                   <div className="flex flex-col gap-1">
                     <span className="font-bold text-slate-300">Cost</span>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min={1}
-                        value={costVal}
-                        onChange={(e) => setCostVal(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                        className="w-20 bg-slate-950 text-slate-100 text-xs font-semibold px-2.5 py-2 rounded-xl border border-slate-700 outline-none"
-                      />
-                      <select
-                        value={costUnit}
-                        onChange={(e) => setCostUnit(e.target.value as any)}
-                        className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-2.5 py-2 rounded-xl outline-none cursor-pointer"
-                      >
-                        <option value="g">g (Gold)</option>
-                        <option value="s">s (Silver)</option>
-                      </select>
-                    </div>
+                    <CompactCostInput
+                      gold={costGold}
+                      silver={costSilver}
+                      onGoldChange={setCostGold}
+                      onSilverChange={setCostSilver}
+                    />
                   </div>
                 </div>
 
@@ -2118,7 +2178,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             {/* Notes Column (Lore / Background) */}
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-300">Item Lore & Notes</span>
+                <span className="font-bold text-slate-300">Lore & Notes</span>
                 <InfoTooltip text="Optional lore, tactical notes, or historical context. Displayed via the inline ℹ️ indicator." />
               </div>
               <input
