@@ -2799,48 +2799,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             )}
 
                             <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 mt-1">
-                              <span className="text-slate-500">Save path below to unlock abilities</span>
+                              <span className="text-slate-500">Save path on the right to unlock abilities</span>
                               <span className="text-blue-400 font-medium">Editing Path Identity ✎</span>
                             </div>
                           </div>
 
-                          {/* Spacer / Guidance */}
-                          <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-6 rounded-xl border border-dashed border-slate-800/60 bg-slate-950/20 text-center gap-2 text-slate-500">
-                            <span className="text-2xl">✨</span>
-                            <p className="text-xs text-slate-300 font-bold">Configure Path Identity</p>
-                            <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed">
-                              Complete your Path's Name, Category, Description, and Genre on the right. Once valid, click <strong className="text-blue-400">Save Path</strong> below to unlock the Ability Studio.
-                            </p>
-                          </div>
-
-                          {/* Bottom Save Path Button (grey when !isPathReadyForAbilities, functional blue when ready) */}
-                          <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
-                            <div className="flex items-center justify-between text-[11px] text-slate-400">
-                              <span>Status:</span>
-                              <span className={`text-[10px] font-mono font-bold ${isPathReadyForAbilities ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                {isPathReadyForAbilities ? 'Ready to Save' : 'Incomplete Requirements'}
-                              </span>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={handleSubmit}
-                              disabled={!isPathReadyForAbilities || isSubmitting}
-                              className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
-                                isPathReadyForAbilities && !isSubmitting
-                                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/40 cursor-pointer font-extrabold'
-                                  : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                              }`}
-                              title={
-                                !isPathReadyForAbilities
-                                  ? 'Fill in Path Name, Category, Description, and Genre before saving'
-                                  : 'Save Path Archetype to unlock adding abilities'
-                              }
-                            >
-                              <AnvilIcon className="w-4 h-4" />
-                              <span>{isSubmitting ? 'Saving Path...' : 'Save Path'}</span>
-                            </button>
-                          </div>
+                          {/* Blank Canvas */}
+                          <div className="flex-1 min-h-0" />
                         </>
                       ) : (
                         /* STATE 3: PATH LOADED / SAVED (SHOW PATH CARD + +ABILITY BUTTON + LINKED ELEMENTS + BOTTOM BUTTON) */
@@ -4182,15 +4147,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <span className="text-base">🧭</span>
                       <div>
                         <h3 className="font-outfit font-extrabold text-sm text-slate-100">
-                          Path Archetype Configuration
+                          Path Editor
                         </h3>
                         <p className="text-[11px] text-slate-400">
-                          Configure Path archetype name, discipline category, lore description, genres, and notes.
+                          Configure Path archetype name, discipline category, lore description, and genres.
                         </p>
                       </div>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-blue-950/80 border border-blue-500/40 text-blue-300 font-mono text-[10px] font-bold">
-                      Mode: Path Archetype
+                      Mode: Path Editor
                     </span>
                   </div>
 
@@ -4253,7 +4218,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-300">Description & Archetype Lore</span>
+                        <span className="font-bold text-slate-300">Description & Lore</span>
                         <GuardrailBadge isValid={pathDescription.trim().length > 0} />
                         <InfoTooltip text="Flavor text describing this path's training, role, and thematic identity." />
                       </div>
@@ -4301,19 +4266,41 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Notes */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-300">Notes / GM Reference</span>
-                      <span className="text-[10px] text-slate-500 font-mono">Optional</span>
+                  {/* Status & Save / Update Path Button (Image 3 relocated from Left Pane) */}
+                  <div className="shrink-0 flex flex-col gap-2 pt-3 border-t border-slate-800/80 mt-1">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span>Status:</span>
+                      <span className={`text-[10px] font-mono font-bold ${isPathReadyForAbilities ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {isPathReadyForAbilities ? 'Ready to Save' : 'Incomplete Requirements'}
+                      </span>
                     </div>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      rows={2}
-                      placeholder="Internal notes, lore connections, or special rules..."
-                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner resize-none leading-relaxed"
-                    />
+
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={!isPathReadyForAbilities || isSubmitting}
+                      className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                        isPathReadyForAbilities && !isSubmitting
+                          ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/40 cursor-pointer font-extrabold'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                      }`}
+                      title={
+                        !isPathReadyForAbilities
+                          ? 'Fill in Path Name, Category, Description, and Genre before saving'
+                          : editingItem
+                          ? 'Update Path Archetype'
+                          : 'Save Path Archetype to unlock adding abilities'
+                      }
+                    >
+                      <AnvilIcon className="w-4 h-4" />
+                      <span>
+                        {isSubmitting
+                          ? 'Saving Path...'
+                          : editingItem
+                          ? 'Update Path Archetype'
+                          : 'Save Path'}
+                      </span>
+                    </button>
                   </div>
                 </div>
               )}
