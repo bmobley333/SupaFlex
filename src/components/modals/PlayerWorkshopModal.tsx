@@ -277,6 +277,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [pathStudioMode, setPathStudioMode] = useState<'path' | 'standalone'>('path');
   const [pathStudioTab, setPathStudioTab] = useState<'current' | 'library'>('current');
   const [pathLibraryFilter, setPathLibraryFilter] = useState<'all' | 'path' | 'power' | 'skill' | 'skillset' | 'trait'>('all');
+  const [isCreatingNewPath, setIsCreatingNewPath] = useState<boolean>(false);
+  const [selectedPathId, setSelectedPathId] = useState<string>('');
   const [activePathSelection, setActivePathSelection] = useState<{
     type: 'path' | 'ability';
     category?: PathElementType;
@@ -595,6 +597,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setPathStudioMode('path');
     setPathStudioTab('current');
     setPathLibraryFilter('all');
+    setIsCreatingNewPath(false);
+    setSelectedPathId('');
     setActivePathSelection({ type: 'path' });
     setActiveAbilityCategory('power');
     setAbilitySourceMode('forge_new');
@@ -679,9 +683,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         setCreationType('gear');
       } else if (isPathOrAbilityType(item.type)) {
         setCreationType('paths_abilities');
+        setPathStudioTab('current');
         if (item.type === 'path') {
           setPathStudioMode('path');
           setActivePathSelection({ type: 'path' });
+          setIsCreatingNewPath(false);
+          setSelectedPathId(`custom_${item.id}`);
         } else {
           setPathStudioMode('standalone');
           setActiveAbilityCategory(item.type as PathElementType);
@@ -1212,6 +1219,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const handlePopulateOfficialPath = (official: any) => {
     setEditingItem(null);
+    setIsCreatingNewPath(false);
+    setSelectedPathId(`official_${official.name}`);
     setName(`${official.name} (Custom)`);
     setPathCategory(official.category || 'General');
     setPathCategoryNewText('');
@@ -1367,6 +1376,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const isCostValid = costGold > 0 || costSilver > 0;
   const isPathReadyForAbilities =
     isNameValid && isGenresValid && isPathCategoryValid && pathDescription.trim().length > 0;
+
+  const isPathLoaded = Boolean(
+    !isCreatingNewPath && (selectedPathId || (editingItem && editingItem.type === 'path'))
+  );
+  const isPathIdle = !isCreatingNewPath && !isPathLoaded;
 
   const isFormValid = useMemo(() => {
     if (creationType === 'paths_abilities') {
@@ -1867,6 +1881,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             setEditingItem(null);
           } else if (created) {
             setEditingItem(created);
+            setIsCreatingNewPath(false);
+            setSelectedPathId(`custom_${created.id}`);
           }
         } else if (creationType === 'path' && created) {
           setEditingItem(created);
@@ -2529,46 +2545,52 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </button>
                 </div>
 
-                {/* Toggle 2: Path vs Standalone */}
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md flex-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPathStudioMode('path');
-                      if (pathStudioTab !== 'current') setPathStudioTab('current');
-                      setActivePathSelection({ type: 'path' });
-                    }}
-                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                      pathStudioMode === 'path' && pathStudioTab === 'current'
-                        ? 'bg-sky-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    <span>🧭</span>
-                    <span>Path</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPathStudioMode('standalone');
-                      if (pathStudioTab !== 'current') setPathStudioTab('current');
-                      setActivePathSelection({ type: 'ability', category: activeAbilityCategory });
-                    }}
-                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                      pathStudioMode === 'standalone' && pathStudioTab === 'current'
-                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    <span>⚡</span>
-                    <span>Standalone</span>
-                  </button>
-                </div>
+                {/* Toggle 2: Path vs Standalone (Only visible in Current mode, hidden in My Creations) */}
+                {pathStudioTab === 'current' && (
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md flex-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPathStudioMode('path');
+                        setActivePathSelection({ type: 'path' });
+                      }}
+                      className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        pathStudioMode === 'path'
+                          ? 'bg-sky-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <span>🧭</span>
+                      <span>Path</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPathStudioMode('standalone');
+                        setActivePathSelection({ type: 'ability', category: activeAbilityCategory });
+                      }}
+                      className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        pathStudioMode === 'standalone'
+                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <span>⚡</span>
+                      <span>Standalone</span>
+                    </button>
+                  </div>
+                )}
 
-                {editingItem && (
+                {editingItem && pathStudioTab === 'current' && pathStudioMode !== 'path' && (
                   <button
                     type="button"
-                    onClick={handleResetForm}
+                    onClick={() => {
+                      handleResetForm();
+                      setCreationType('paths_abilities');
+                      setPathStudioMode(pathStudioMode);
+                      setIsCreatingNewPath(false);
+                      setSelectedPathId('');
+                    }}
                     className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 transition cursor-pointer shrink-0"
                     title="Start a new blank creation"
                   >
@@ -2670,251 +2692,368 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
                   {pathStudioMode === 'path' ? (
                     <>
-                      {/* Path Selector Dropdown */}
-                      <div className="flex flex-col gap-1 shrink-0">
+                      {/* Path Selection & Action Row */}
+                      <div className="flex flex-col gap-1.5 shrink-0">
                         <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
                           <span>Select Path:</span>
                           <span className="text-[10px] text-slate-500">Pick to edit / clone</span>
                         </div>
-                        <select
-                          value={editingItem && editingItem.type === 'path' ? editingItem.id : ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (!val) {
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
                               handleResetForm();
                               setCreationType('paths_abilities');
                               setPathStudioMode('path');
-                              return;
-                            }
-                            if (val.startsWith('custom_')) {
-                              const id = val.replace('custom_', '');
-                              const found = personalItems.find((it) => it.id === id);
-                              if (found) handlePopulateItemForEdit(found);
-                            } else if (val.startsWith('official_')) {
-                              const pathName = val.replace('official_', '');
-                              const found = paths.find((p) => p.name === pathName);
-                              if (found) handlePopulateOfficialPath(found);
-                            }
-                          }}
-                          className="bg-slate-950 text-slate-200 text-xs px-2.5 py-1.5 rounded-xl border border-slate-700 outline-none focus:border-blue-500 font-medium"
-                        >
-                          <option value="">+ Start New Blank Path</option>
-                          {allAvailablePaths.some((p) => p.isCustom) && (
-                            <optgroup label="Personal Custom Paths">
+                              setIsCreatingNewPath(true);
+                              setSelectedPathId('');
+                              setActivePathSelection({ type: 'path' });
+                            }}
+                            className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shrink-0 cursor-pointer shadow-sm ${
+                              isCreatingNewPath
+                                ? 'bg-blue-600 text-white shadow-blue-950/50 font-extrabold border border-blue-400/50'
+                                : 'bg-slate-900/90 hover:bg-slate-800 text-blue-300 border border-slate-700 hover:border-blue-500/50'
+                            }`}
+                            title="Create a brand new Path Archetype"
+                          >
+                            <span>➕</span>
+                            <span>New Path</span>
+                          </button>
+                          <select
+                            value={selectedPathId}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (!val) {
+                                handleResetForm();
+                                setCreationType('paths_abilities');
+                                setPathStudioMode('path');
+                                setIsCreatingNewPath(false);
+                                setSelectedPathId('');
+                                return;
+                              }
+                              setIsCreatingNewPath(false);
+                              setSelectedPathId(val);
+                              if (val.startsWith('custom_')) {
+                                const id = val.replace('custom_', '');
+                                const found = personalItems.find((it) => it.id === id);
+                                if (found) handlePopulateItemForEdit(found);
+                              } else if (val.startsWith('official_')) {
+                                const pathKey = val.replace('official_', '');
+                                const found = paths.find((p) => (p.id && p.id === pathKey) || p.name === pathKey);
+                                if (found) handlePopulateOfficialPath(found);
+                              }
+                            }}
+                            className="flex-1 min-w-0 bg-slate-950 text-slate-200 text-xs px-2.5 py-1.5 rounded-xl border border-slate-700 outline-none focus:border-blue-500 font-medium truncate"
+                          >
+                            <option value="">Select an existing path...</option>
+                            {allAvailablePaths.some((p) => p.isCustom) && (
+                              <optgroup label="Personal Custom Paths">
+                                {allAvailablePaths
+                                  .filter((p) => p.isCustom)
+                                  .map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      ⭐ {p.name} ({p.category})
+                                    </option>
+                                  ))}
+                              </optgroup>
+                            )}
+                            <optgroup label="Official Paths">
                               {allAvailablePaths
-                                .filter((p) => p.isCustom)
+                                .filter((p) => !p.isCustom)
                                 .map((p) => (
                                   <option key={p.id} value={p.id}>
-                                    ⭐ {p.name} ({p.category})
+                                    📜 {p.name} ({p.category})
                                   </option>
                                 ))}
                             </optgroup>
-                          )}
-                          <optgroup label="Official Paths">
-                            {allAvailablePaths
-                              .filter((p) => !p.isCustom)
-                              .map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  📜 {p.name} ({p.category})
-                                </option>
-                              ))}
-                          </optgroup>
-                        </select>
-                      </div>
-
-                      {/* Master Path Card (Root Node) */}
-                      <div
-                        onClick={() => setActivePathSelection({ type: 'path' })}
-                        className={`p-3.5 rounded-xl border transition-all cursor-pointer shrink-0 flex flex-col gap-2 ${
-                          activePathSelection.type === 'path'
-                            ? 'bg-blue-950/40 border-blue-500 shadow-md shadow-blue-950/40 ring-1 ring-blue-500'
-                            : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">🧭</span>
-                            <div>
-                              <div className="font-extrabold text-sm text-slate-100 flex items-center gap-1.5">
-                                <span>{name.trim() || 'Untitled Path'}</span>
-                                <GuardrailBadge isValid={isNameValid} />
-                              </div>
-                              <div className="text-[11px] text-blue-300 font-medium">
-                                Category: {finalPathCat}
-                              </div>
-                            </div>
-                          </div>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-900/60 text-blue-200 border border-blue-500/40">
-                            Root Node
-                          </span>
-                        </div>
-
-                        {pathDescription.trim() && (
-                          <div className="text-[11px] text-slate-400 line-clamp-2 italic">
-                            "{pathDescription.trim()}"
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 mt-1">
-                          <span className="flex items-center gap-1 text-blue-300 font-semibold">
-                            <span>⚡</span> {linkedElements.length} Linked Elements
-                          </span>
-                          <span className="text-blue-400">Click to edit Path Identity ✎</span>
+                          </select>
                         </div>
                       </div>
 
-                      {/* +Ability Action Button (Guardrailed: Requires Selected Path or Fully Filled Out New Path) */}
-                      <button
-                        type="button"
-                        disabled={!isPathReadyForAbilities}
-                        onClick={() => setActivePathSelection({ type: 'ability', category: activeAbilityCategory })}
-                        className={`w-full py-2 px-4 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm shrink-0 ${
-                          isPathReadyForAbilities
-                            ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-950/50 cursor-pointer'
-                            : 'bg-slate-900/80 border border-slate-800 text-slate-500 cursor-not-allowed opacity-60'
-                        }`}
-                        title={
-                          !isPathReadyForAbilities
-                            ? 'Complete Path Name, Category, Description, and Genre before adding abilities'
-                            : 'Open Ability Studio to forge or link abilities to this Path'
-                        }
-                      >
-                        <span>➕</span>
-                        <span>Ability</span>
-                      </button>
-
-                      {/* Linked Path Elements Tree */}
-                      <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-                        <div className="flex items-center justify-between shrink-0">
-                          <span className="font-bold text-xs text-slate-300 flex items-center gap-1.5">
-                            <span>🔗</span>
-                            <span>Linked Elements ({linkedElements.length})</span>
-                          </span>
+                      {isPathIdle ? (
+                        /* STATE 1: IDLE / NO PATH CHOSEN */
+                        <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-6 rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 text-center gap-3 text-slate-500">
+                          <span className="text-3xl">🧭</span>
+                          <div className="space-y-1">
+                            <div className="font-bold text-sm text-slate-300">No Path Selected</div>
+                            <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
+                              Click <span className="text-blue-400 font-semibold">+ New Path</span> above to author a new Path Archetype, or select an existing one from the dropdown to inspect and edit.
+                            </p>
+                          </div>
                         </div>
-
-                        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
-                          {linkedElements.length === 0 ? (
-                            <div className="p-6 rounded-xl border border-dashed border-slate-800 bg-slate-950/40 text-center flex flex-col items-center gap-2 text-slate-500">
-                              <span className="text-2xl">🧭</span>
-                              <p className="text-xs">No abilities or proficiencies linked yet.</p>
-                              <p className="text-[11px] text-slate-600">
-                                Use the Ability Studio on the right to forge new abilities or link existing catalog elements.
-                              </p>
-                            </div>
-                          ) : (
-                            linkedElements.map((el, idx) => {
-                              const elKey = el.element_name || el.name || `el_${idx}`;
-                              const elType = el.element_type || el.type || 'power';
-                              const isFree = Boolean(el.is_free || el.isFree);
-
-                              const typeLabels: Record<string, { label: string; color: string; icon: string }> = {
-                                power: { label: 'Power', color: 'bg-rose-950/60 border-rose-500/40 text-rose-300', icon: '⚡' },
-                                skill: { label: 'Skill', color: 'bg-amber-950/60 border-amber-500/40 text-amber-300', icon: '🎯' },
-                                skillset: { label: 'Skillset', color: 'bg-blue-950/60 border-blue-500/40 text-blue-300', icon: '📚' },
-                                trait: { label: 'Trait', color: 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300', icon: '🧬' },
-                                weapon_skill: { label: 'Weapon Sk', color: 'bg-orange-950/60 border-orange-500/40 text-orange-300', icon: '⚔️' },
-                                armor_skill: { label: 'Armor Sk', color: 'bg-amber-950/60 border-amber-500/40 text-amber-300', icon: '🥋' },
-                                shield_skill: { label: 'Shield Sk', color: 'bg-cyan-950/60 border-cyan-500/40 text-cyan-300', icon: '🛡️' },
-                              };
-                              const meta = typeLabels[elType] || { label: elType, color: 'bg-slate-800 text-slate-300 border-slate-700', icon: '✨' };
-
-                              return (
-                                <div
-                                  key={`${elKey}_${idx}`}
-                                  className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/80 flex items-center justify-between gap-2 shadow-sm"
-                                >
-                                  <div className="flex flex-col min-w-0 flex-1">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-xs">{meta.icon}</span>
-                                      <span className="font-bold text-slate-100 text-xs truncate">{elKey}</span>
-                                      <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border ${meta.color}`}>
-                                        {meta.label}
-                                      </span>
-                                    </div>
-                                    {el.details && (
-                                      <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                                        {el.details}
-                                      </div>
-                                    )}
+                      ) : isCreatingNewPath ? (
+                        /* STATE 2: CREATING NEW PATH (SHOW ONLY PATH CARD + BOTTOM SAVE PATH BUTTON) */
+                        <>
+                          {/* Master Path Card (Root Node) */}
+                          <div
+                            onClick={() => setActivePathSelection({ type: 'path' })}
+                            className={`p-3.5 rounded-xl border transition-all cursor-pointer shrink-0 flex flex-col gap-2 ${
+                              activePathSelection.type === 'path'
+                                ? 'bg-blue-950/40 border-blue-500 shadow-md shadow-blue-950/40 ring-1 ring-blue-500'
+                                : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">🧭</span>
+                                <div>
+                                  <div className="font-extrabold text-sm text-slate-100 flex items-center gap-1.5">
+                                    <span>{name.trim() || 'Untitled Path'}</span>
+                                    <GuardrailBadge isValid={isNameValid} />
                                   </div>
-
-                                  {/* S-Tier Pill Switch: [ 1 AP | Free ] */}
-                                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner shrink-0">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleLinkedElementFree(idx, false)}
-                                      className={`py-1 px-2 text-[10px] font-bold rounded transition-all cursor-pointer ${
-                                        !isFree
-                                          ? 'bg-blue-600 text-white shadow-sm font-extrabold'
-                                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                                      }`}
-                                      title="Costs standard 1 AP to acquire"
-                                    >
-                                      1 AP
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleLinkedElementFree(idx, true)}
-                                      className={`py-1 px-2 text-[10px] font-bold rounded transition-all cursor-pointer ${
-                                        isFree
-                                          ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                                      }`}
-                                      title="Granted free upon selecting this Path"
-                                    >
-                                      Free
-                                    </button>
+                                  <div className="text-[11px] text-blue-300 font-medium">
+                                    Category: {finalPathCat}
                                   </div>
-
-                                  {/* Unlink Button */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveLinkedElement(idx)}
-                                    className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition cursor-pointer shrink-0"
-                                    title="Unlink from Path"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
                                 </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
+                              </div>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-900/60 text-blue-200 border border-blue-500/40">
+                                New Archetype
+                              </span>
+                            </div>
 
-                      {/* Bottom Forge / Update Path Button */}
-                      <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Status:</span>
-                          {editingItem ? (
-                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
-                              Editing Path
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-emerald-400 font-mono font-bold">New Path Creation</span>
-                          )}
-                        </div>
+                            {pathDescription.trim() ? (
+                              <div className="text-[11px] text-slate-400 line-clamp-2 italic">
+                                "{pathDescription.trim()}"
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-slate-500 italic">
+                                (Fill in description and category on the right)
+                              </div>
+                            )}
 
-                        <button
-                          type="button"
-                          onClick={handleSubmit}
-                          disabled={!isFormValid || isSubmitting}
-                          className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
-                            isFormValid && !isSubmitting
-                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-900/40 cursor-pointer'
-                              : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                          }`}
-                        >
-                          <AnvilIcon className="w-4 h-4" />
-                          <span>
-                            {isSubmitting
-                              ? 'Forging...'
-                              : editingItem
-                              ? 'Update Path Archetype'
-                              : 'Forge Path to My Creations'}
-                          </span>
-                        </button>
-                      </div>
+                            <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 mt-1">
+                              <span className="text-slate-500">Save path below to unlock abilities</span>
+                              <span className="text-blue-400 font-medium">Editing Path Identity ✎</span>
+                            </div>
+                          </div>
+
+                          {/* Spacer / Guidance */}
+                          <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-6 rounded-xl border border-dashed border-slate-800/60 bg-slate-950/20 text-center gap-2 text-slate-500">
+                            <span className="text-2xl">✨</span>
+                            <p className="text-xs text-slate-300 font-bold">Configure Path Identity</p>
+                            <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed">
+                              Complete your Path's Name, Category, Description, and Genre on the right. Once valid, click <strong className="text-blue-400">Save Path</strong> below to unlock the Ability Studio.
+                            </p>
+                          </div>
+
+                          {/* Bottom Save Path Button (grey when !isPathReadyForAbilities, functional blue when ready) */}
+                          <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
+                            <div className="flex items-center justify-between text-[11px] text-slate-400">
+                              <span>Status:</span>
+                              <span className={`text-[10px] font-mono font-bold ${isPathReadyForAbilities ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                {isPathReadyForAbilities ? 'Ready to Save' : 'Incomplete Requirements'}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={handleSubmit}
+                              disabled={!isPathReadyForAbilities || isSubmitting}
+                              className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                                isPathReadyForAbilities && !isSubmitting
+                                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/40 cursor-pointer font-extrabold'
+                                  : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                              }`}
+                              title={
+                                !isPathReadyForAbilities
+                                  ? 'Fill in Path Name, Category, Description, and Genre before saving'
+                                  : 'Save Path Archetype to unlock adding abilities'
+                              }
+                            >
+                              <AnvilIcon className="w-4 h-4" />
+                              <span>{isSubmitting ? 'Saving Path...' : 'Save Path'}</span>
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        /* STATE 3: PATH LOADED / SAVED (SHOW PATH CARD + +ABILITY BUTTON + LINKED ELEMENTS + BOTTOM BUTTON) */
+                        <>
+                          {/* Master Path Card (Root Node) */}
+                          <div
+                            onClick={() => setActivePathSelection({ type: 'path' })}
+                            className={`p-3.5 rounded-xl border transition-all cursor-pointer shrink-0 flex flex-col gap-2 ${
+                              activePathSelection.type === 'path'
+                                ? 'bg-blue-950/40 border-blue-500 shadow-md shadow-blue-950/40 ring-1 ring-blue-500'
+                                : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">🧭</span>
+                                <div>
+                                  <div className="font-extrabold text-sm text-slate-100 flex items-center gap-1.5">
+                                    <span>{name.trim() || 'Untitled Path'}</span>
+                                    <GuardrailBadge isValid={isNameValid} />
+                                  </div>
+                                  <div className="text-[11px] text-blue-300 font-medium">
+                                    Category: {finalPathCat}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-900/60 text-blue-200 border border-blue-500/40">
+                                Root Node
+                              </span>
+                            </div>
+
+                            {pathDescription.trim() && (
+                              <div className="text-[11px] text-slate-400 line-clamp-2 italic">
+                                "{pathDescription.trim()}"
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 mt-1">
+                              <span className="flex items-center gap-1 text-blue-300 font-semibold">
+                                <span>⚡</span> {linkedElements.length} Linked Elements
+                              </span>
+                              <span className="text-blue-400">Click to edit Path Identity ✎</span>
+                            </div>
+                          </div>
+
+                          {/* +Ability Action Button */}
+                          <button
+                            type="button"
+                            onClick={() => setActivePathSelection({ type: 'ability', category: activeAbilityCategory })}
+                            className="w-full py-2 px-4 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm shrink-0 bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-950/50 cursor-pointer font-extrabold"
+                            title="Open Ability Studio to forge or link abilities to this Path"
+                          >
+                            <span>➕</span>
+                            <span>Ability</span>
+                          </button>
+
+                          {/* Linked Path Elements Tree */}
+                          <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+                            <div className="flex items-center justify-between shrink-0">
+                              <span className="font-bold text-xs text-slate-300 flex items-center gap-1.5">
+                                <span>🔗</span>
+                                <span>Linked Elements ({linkedElements.length})</span>
+                              </span>
+                            </div>
+
+                            <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+                              {linkedElements.length === 0 ? (
+                                <div className="p-6 rounded-xl border border-dashed border-slate-800 bg-slate-950/40 text-center flex flex-col items-center gap-2 text-slate-500">
+                                  <span className="text-2xl">🧭</span>
+                                  <p className="text-xs">No abilities or proficiencies linked yet.</p>
+                                  <p className="text-[11px] text-slate-600">
+                                    Click <strong className="text-blue-400">+Ability</strong> above to forge new abilities or link existing catalog elements.
+                                  </p>
+                                </div>
+                              ) : (
+                                linkedElements.map((el, idx) => {
+                                  const elKey = el.element_name || el.name || `el_${idx}`;
+                                  const elType = el.element_type || el.type || 'power';
+                                  const isFree = Boolean(el.is_free || el.isFree);
+
+                                  const typeLabels: Record<string, { label: string; color: string; icon: string }> = {
+                                    power: { label: 'Power', color: 'bg-rose-950/60 border-rose-500/40 text-rose-300', icon: '⚡' },
+                                    skill: { label: 'Skill', color: 'bg-amber-950/60 border-amber-500/40 text-amber-300', icon: '🎯' },
+                                    skillset: { label: 'Skillset', color: 'bg-blue-950/60 border-blue-500/40 text-blue-300', icon: '📚' },
+                                    trait: { label: 'Trait', color: 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300', icon: '🧬' },
+                                    weapon_skill: { label: 'Weapon Sk', color: 'bg-orange-950/60 border-orange-500/40 text-orange-300', icon: '⚔️' },
+                                    armor_skill: { label: 'Armor Sk', color: 'bg-amber-950/60 border-amber-500/40 text-amber-300', icon: '🥋' },
+                                    shield_skill: { label: 'Shield Sk', color: 'bg-cyan-950/60 border-cyan-500/40 text-cyan-300', icon: '🛡️' },
+                                  };
+                                  const meta = typeLabels[elType] || { label: elType, color: 'bg-slate-800 text-slate-300 border-slate-700', icon: '✨' };
+
+                                  return (
+                                    <div
+                                      key={`${elKey}_${idx}`}
+                                      className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/80 flex items-center justify-between gap-2 shadow-sm"
+                                    >
+                                      <div className="flex flex-col min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="text-xs">{meta.icon}</span>
+                                          <span className="font-bold text-slate-100 text-xs truncate">{elKey}</span>
+                                          <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border ${meta.color}`}>
+                                            {meta.label}
+                                          </span>
+                                        </div>
+                                        {el.details && (
+                                          <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                                            {el.details}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* S-Tier Pill Switch: [ 1 AP | Free ] */}
+                                      <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner shrink-0">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleLinkedElementFree(idx, false)}
+                                          className={`py-1 px-2 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                                            !isFree
+                                              ? 'bg-blue-600 text-white shadow-sm font-extrabold'
+                                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                          }`}
+                                          title="Costs standard 1 AP to acquire"
+                                        >
+                                          1 AP
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleLinkedElementFree(idx, true)}
+                                          className={`py-1 px-2 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                                            isFree
+                                              ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                          }`}
+                                          title="Granted free upon selecting this Path"
+                                        >
+                                          Free
+                                        </button>
+                                      </div>
+
+                                      {/* Unlink Button */}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveLinkedElement(idx)}
+                                        className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition cursor-pointer shrink-0"
+                                        title="Unlink from Path"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Bottom Forge / Update Path Button */}
+                          <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
+                            <div className="flex items-center justify-between text-[11px] text-slate-400">
+                              <span>Status:</span>
+                              {editingItem ? (
+                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                                  Editing Path
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-emerald-400 font-mono font-bold">New Path Creation</span>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={handleSubmit}
+                              disabled={!isFormValid || isSubmitting}
+                              className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                                isFormValid && !isSubmitting
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-900/40 cursor-pointer'
+                                  : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                              }`}
+                            >
+                              <AnvilIcon className="w-4 h-4" />
+                              <span>
+                                {isSubmitting
+                                  ? 'Forging...'
+                                  : editingItem
+                                  ? 'Update Path Archetype'
+                                  : 'Forge Path to My Creations'}
+                              </span>
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </>
                   ) : (
                     /* STANDALONE ABILITY MODE */
@@ -4053,8 +4192,35 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
               )}
 
+              {/* VIEW IDLE: WELCOME / WORKSHOP GUIDANCE */}
+              {pathStudioMode === 'path' && isPathIdle && (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 rounded-2xl border border-dashed border-slate-800 bg-slate-950/30 text-center gap-4 text-slate-400">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-950/40 border border-blue-500/30 flex items-center justify-center text-3xl shadow-inner">
+                    🧭
+                  </div>
+                  <div className="max-w-md space-y-2">
+                    <h3 className="font-outfit font-extrabold text-base text-slate-100">
+                      Path Archetype Workshop
+                    </h3>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Paths represent unified character archetypes, traditions, and class progressions. They group thematic powers, skills, skillsets, and traits into an organized advancement tree.
+                    </p>
+                    <div className="text-xs text-slate-400 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 text-left space-y-2.5 mt-3">
+                      <div className="flex items-center gap-2.5 text-blue-300 font-semibold">
+                        <span className="text-base">➕</span>
+                        <span>Click "+ New Path" on the left to forge a new custom archetype</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-slate-400">
+                        <span className="text-base">📜</span>
+                        <span>Or select an existing path from the dropdown to clone, edit, or customize</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* VIEW A: PATH IDENTITY CONFIGURATION */}
-              {pathStudioMode === 'path' && activePathSelection.type === 'path' && (
+              {pathStudioMode === 'path' && !isPathIdle && activePathSelection.type === 'path' && (
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                     <div className="flex items-center gap-2">
@@ -4198,7 +4364,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               )}
 
               {/* VIEW B: ABILITY STUDIO */}
-              {(activePathSelection.type === 'ability' || pathStudioMode === 'standalone') && (
+              {((pathStudioMode === 'path' && !isPathIdle && activePathSelection.type === 'ability') ||
+                pathStudioMode === 'standalone') && (
                 <div className="flex flex-col gap-4">
                   {/* Studio Header */}
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
