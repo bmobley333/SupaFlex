@@ -70,14 +70,9 @@ const POWER_READY_CATEGORIES = [
 ];
 
 const GENRE_OPTIONS = [
-  { id: 'Fantasy', label: 'Fantasy', icon: '🏰' },
-  { id: 'Modern', label: 'Modern', icon: '🏙️' },
-  { id: 'SciFi', label: 'Sci-Fi', icon: '🚀' },
-  { id: 'WildWest', label: 'Wild West', icon: '🤠' },
-  { id: 'Horror', label: 'Horror', icon: '🕯️' },
-  { id: 'MartialArts', label: 'Martial Arts', icon: '🥋' },
   { id: 'Medieval', label: 'Medieval', icon: '⚔️' },
-  { id: 'PostApoc', label: 'Post-Apocalyptic', icon: '☢️' },
+  { id: 'Modern', label: 'Modern', icon: '🏙️' },
+  { id: 'SciFi', label: 'SciFi', icon: '🚀' },
 ];
 
 const WEAPON_REQ_NUMBERS = [4, 6, 8, 10, 12];
@@ -132,27 +127,27 @@ const getArmorArStr = (req: string): string => {
 };
 
 const getArmorMrStr = (req: string): string => {
-  if (req.includes('12')) return '-2';
-  if (req.includes('10')) return '-2';
-  if (req.includes('8')) return '-1';
-  if (req.includes('6')) return '-1';
-  return '-0';
+  if (req.includes('12')) return '👣8';
+  if (req.includes('10')) return '👣9';
+  if (req.includes('8')) return '👣10';
+  if (req.includes('6')) return '👣11';
+  return '👣12';
 };
 
 const getShieldMaxBlockStr = (req: string): string => {
-  if (req.includes('12')) return '12';
-  if (req.includes('10')) return '10';
-  if (req.includes('8')) return '8';
-  if (req.includes('6')) return '6';
-  return '4';
+  if (req.includes('12')) return '🛡️28';
+  if (req.includes('10')) return '🛡️24';
+  if (req.includes('8')) return '🛡️20';
+  if (req.includes('6')) return '🛡️16';
+  return '🛡️12';
 };
 
 const getShieldMrStr = (req: string): string => {
-  if (req.includes('12')) return '-2';
-  if (req.includes('10')) return '-2';
-  if (req.includes('8')) return '-1';
-  if (req.includes('6')) return '-1';
-  return '-0';
+  if (req.includes('12')) return '👣-4';
+  if (req.includes('10')) return '👣-3';
+  if (req.includes('8')) return '👣-2';
+  if (req.includes('6')) return '👣-1';
+  return '👣0';
 };
 
 export const AnvilIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
@@ -248,6 +243,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const skills = useCharacterStore((state) => state.skills);
   const paths = useCharacterStore((state) => state.paths);
   const weaponsCatalog = useCharacterStore((state) => state.weaponsCatalog);
+  const shieldsCatalog = useCharacterStore((state) => state.shieldsCatalog);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
 
   const isGm = activeRole === 'gm';
@@ -287,6 +283,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   // Shield State
   const [shieldReq, setShieldReq] = useState<string>('💪 4');
+  const [shieldDomain, setShieldDomain] = useState<string>('Archaic');
+  const [shieldDomainNewText, setShieldDomainNewText] = useState<string>('');
 
   // Gear State
   const [gearCategory, setGearCategory] = useState<string>('Adventure');
@@ -346,6 +344,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setWeaponDomainNewText('');
     setArmorReq('💪 4');
     setShieldReq('💪 4');
+    setShieldDomain('Archaic');
+    setShieldDomainNewText('');
     setGearCategory('Adventure');
     setGearCategoryNewText('');
     setFeedback(null);
@@ -386,6 +386,18 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     ['Archaic', 'BioTech', 'CyberTech', 'Tech', 'Void Magic', 'Psionics', 'Somatics'].forEach((d) => doms.add(d));
     return Array.from(doms).sort((a, b) => a.localeCompare(b));
   }, [weaponsCatalog]);
+
+  // Distinct Shield Domains from Supabase shields table + defaults
+  const availableShieldDomains = useMemo(() => {
+    const doms = new Set<string>();
+    if (Array.isArray(shieldsCatalog)) {
+      shieldsCatalog.forEach((s) => {
+        if (s.domain && typeof s.domain === 'string') doms.add(s.domain.trim());
+      });
+    }
+    ['Archaic', 'Tech'].forEach((d) => doms.add(d));
+    return Array.from(doms).sort((a, b) => a.localeCompare(b));
+  }, [shieldsCatalog]);
 
   const handlePopulateItemForEdit = (item: CustomCreationItem) => {
     setEditingItem(item);
@@ -459,6 +471,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       if (item.item_data?.requirement) setArmorReq(item.item_data.requirement);
     } else if (item.type === 'shield') {
       if (item.item_data?.requirement) setShieldReq(item.item_data.requirement);
+      const dom = item.item_data?.domain || 'Archaic';
+      if (availableShieldDomains.includes(dom)) {
+        setShieldDomain(dom);
+        setShieldDomainNewText('');
+      } else {
+        setShieldDomain('CUSTOM_NEW');
+        setShieldDomainNewText(dom);
+      }
     } else if (item.type === 'gear') {
       if (item.item_data?.category) setGearCategory(item.item_data.category);
     } else if (item.type === 'exotic') {
@@ -553,6 +573,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     skillDiscipline === 'CUSTOM_NEW' ? skillDisciplineNewText.trim().length > 0 : skillDiscipline.trim().length > 0;
   const isWeaponDomainValid =
     weaponDomain === 'CUSTOM_NEW' ? weaponDomainNewText.trim().length > 0 : weaponDomain.trim().length > 0;
+  const isShieldDomainValid =
+    shieldDomain === 'CUSTOM_NEW' ? shieldDomainNewText.trim().length > 0 : shieldDomain.trim().length > 0;
   const isCostValid = costGold > 0 || costSilver > 0;
 
   const isFormValid = useMemo(() => {
@@ -577,8 +599,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (creationType === 'weapon') {
       return isCostValid && isWeaponDomainValid;
     }
-    if (creationType === 'armor' || creationType === 'shield') {
+    if (creationType === 'armor') {
       return isCostValid;
+    }
+    if (creationType === 'shield') {
+      return isCostValid && isShieldDomainValid;
     }
     if (creationType === 'gear') {
       return isGearCategoryValid && isCostValid;
@@ -604,6 +629,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     isGearCategoryValid,
     isPathCategoryValid,
     isWeaponDomainValid,
+    isShieldDomainValid,
     isCostValid,
     pathDescription,
     kitDescription,
@@ -768,6 +794,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const finalPathCat = pathCategory === 'CUSTOM_NEW' ? pathCategoryNewText.trim() || 'General' : pathCategory;
   const finalSkillDisc = skillDiscipline === 'CUSTOM_NEW' ? skillDisciplineNewText.trim() || 'General' : skillDiscipline;
   const finalWeaponDomain = weaponDomain === 'CUSTOM_NEW' ? weaponDomainNewText.trim() || 'Archaic' : weaponDomain;
+  const finalShieldDomain = shieldDomain === 'CUSTOM_NEW' ? shieldDomainNewText.trim() || 'Archaic' : shieldDomain;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -796,7 +823,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         ? finalGearCat
         : creationType === 'kit'
         ? kitCategory
-        : tier;
+        : creationType === 'exotic'
+        ? 'Exotic'
+        : creationType === 'artifact'
+        ? 'Artifact'
+        : 'General';
 
     const itemDataPayload: CustomCreationData = {
       notes: notes.trim() || undefined,
@@ -841,6 +872,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       itemDataPayload.max_block = getShieldMaxBlockStr(shieldReq);
       itemDataPayload.mr = getShieldMrStr(shieldReq);
       itemDataPayload.cost = costStr;
+      itemDataPayload.domain = finalShieldDomain;
     } else if (creationType === 'gear') {
       itemDataPayload.category = finalGearCat;
       itemDataPayload.cost = costStr;
@@ -849,15 +881,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       itemDataPayload.usage = usage;
       itemDataPayload.effect = effect.trim();
       itemDataPayload.cost = costStr;
-      itemDataPayload.tier = tier;
-      itemDataPayload.slot_weight = (getItemSlotWeight({ name: name.trim(), category: tier }) as 1 | 2 | 3 | 4);
     } else if (creationType === 'artifact') {
       itemDataPayload.action = action;
       itemDataPayload.usage = usage;
       itemDataPayload.effect = effect.trim();
       itemDataPayload.cost = 'Artifact';
-      itemDataPayload.tier = tier;
-      itemDataPayload.slot_weight = (getItemSlotWeight({ name: name.trim(), category: tier }) as 1 | 2 | 3 | 4);
     } else if (creationType === 'chaos_gem') {
       itemDataPayload.action = 'F';
       itemDataPayload.usage = '3';
@@ -912,8 +940,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/70 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center">
-              <AnvilIcon className="w-5 h-5" />
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-xl">
+              ♨️
             </div>
             <div>
               <h3 className="font-outfit font-extrabold text-base text-amber-300 tracking-wide flex items-center gap-2">
@@ -1889,7 +1917,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             {creationType === 'armor' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Armor Weight / Requirement</span>
+                  <span className="font-bold text-slate-300">Armor Stats</span>
                   <select
                     value={armorReq}
                     onChange={(e) => setArmorReq(e.target.value)}
@@ -1897,7 +1925,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   >
                     {ARMOR_REQ_OPTIONS.map((req) => (
                       <option key={req} value={req}>
-                        {req} (AR: 🧥{getArmorArStr(req)} | MR: 👣{getArmorMrStr(req)})
+                        {req} (AR: 🧥{getArmorArStr(req)} | MR: {getArmorMrStr(req)})
                       </option>
                     ))}
                   </select>
@@ -1917,9 +1945,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
             {/* H. SHIELDS */}
             {creationType === 'shield' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Shield Size / Requirement</span>
+                  <span className="font-bold text-slate-300">Shield Stats</span>
                   <select
                     value={shieldReq}
                     onChange={(e) => setShieldReq(e.target.value)}
@@ -1927,10 +1955,38 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   >
                     {SHIELD_REQ_OPTIONS.map((req) => (
                       <option key={req} value={req}>
-                        {req} (Max Block: 🛡️{getShieldMaxBlockStr(req)} | MR Adj: 👣{getShieldMrStr(req)})
+                        {req} (Max Block: {getShieldMaxBlockStr(req)} | MR Adj: {getShieldMrStr(req)})
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-300">Domain</span>
+                    <GuardrailBadge isValid={isShieldDomainValid} />
+                  </div>
+                  <select
+                    value={shieldDomain}
+                    onChange={(e) => setShieldDomain(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-cyan-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                  >
+                    <option value="CUSTOM_NEW">➕ New Domain...</option>
+                    {availableShieldDomains.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  {shieldDomain === 'CUSTOM_NEW' && (
+                    <input
+                      type="text"
+                      value={shieldDomainNewText}
+                      onChange={(e) => setShieldDomainNewText(e.target.value)}
+                      placeholder="Enter new domain name..."
+                      className="mt-1 bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-cyan-500/50 outline-none"
+                    />
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -1955,12 +2011,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     onChange={(e) => setGearCategory(e.target.value)}
                     className="bg-slate-950 border border-slate-700 text-teal-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
                   >
+                    <option value="CUSTOM_NEW">➕ Add Custom Category...</option>
                     {GEAR_DEFAULT_CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
                     ))}
-                    <option value="CUSTOM_NEW">+ Add Custom Category</option>
                   </select>
                   {gearCategory === 'CUSTOM_NEW' && (
                     <input
@@ -1987,21 +2043,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
             {/* J. EXOTICS & ARTIFACTS */}
             {(creationType === 'exotic' || creationType === 'artifact') && (
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Combat Tier</span>
-                  <select
-                    value={tier}
-                    onChange={(e) => setTier(e.target.value as any)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                  >
-                    <option value="Minor">Minor 🍺 (1 Slot)</option>
-                    <option value="Lesser">Lesser 🪄 (2 Slots)</option>
-                    <option value="Greater">Greater 🪬 (3 Slots)</option>
-                    <option value="Epic">Epic 💫 (4 Slots)</option>
-                  </select>
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="font-bold text-slate-300">Action</span>
                   <select
@@ -2106,7 +2148,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-300">Quick Add</span>
+                    <span className="font-bold text-slate-300">Effect</span>
                     <GuardrailBadge isValid={isEffectValid} />
                     <InfoTooltip text="Use strict SupaFlex notation grammar. Attributes: ✨💪👁️🏃🫀👣. Range: Touch, 1sq, 2sq, Short, Medium, Long, Extreme. AoE: AoE [#]r or [#]x[#]." />
                   </div>
@@ -2238,8 +2280,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   {isSubmitting
                     ? 'Forging...'
                     : isGm
-                    ? 'Forge & Publish to Party Mall 👑'
-                    : 'Forge & Save to Workshop Library'}
+                    ? 'Forge to My Creations 👑'
+                    : 'Forge to My Creations'}
                 </span>
               </button>
 

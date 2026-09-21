@@ -518,7 +518,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
                 onClick={() => onOpenForge()}
                 className="px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-amber-950/40 shrink-0"
               >
-                <span>⚒️</span>
+                <span>♨️</span>
                 <span>To Forge</span>
               </button>
             )}
