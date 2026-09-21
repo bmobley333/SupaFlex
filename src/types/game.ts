@@ -1255,6 +1255,23 @@ export interface PathLinkedElement {
   details?: string;
 }
 
+export interface StudioPower {
+  id: string;
+  name: string;
+  action: string;
+  usage: string;
+  effect: string;
+}
+
+export interface StudioMod {
+  id: string;
+  name: string;
+  costGold: number;
+  costSilver: number;
+  notes: string;
+  powers: StudioPower[];
+}
+
 export interface CustomCreationData {
   action?: string;
   usage?: string;
@@ -1267,6 +1284,10 @@ export interface CustomCreationData {
   table_group?: string;
   table?: string;
   linked_elements?: PathLinkedElement[];
+  chassis_type?: 'weapon' | 'armor' | 'shield' | 'supplies' | string;
+  chassis_stats?: Record<string, any>;
+  inherent_powers?: StudioPower[];
+  mods?: StudioMod[];
   [key: string]: any;
 }
 

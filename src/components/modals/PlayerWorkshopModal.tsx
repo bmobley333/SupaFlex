@@ -5,8 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationType, CustomCreationItem, CustomCreationData, PathLinkedElement } from '../../types/game';
-import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
+import { CustomCreationType, CustomCreationItem, CustomCreationData, PathLinkedElement, StudioPower, StudioMod } from '../../types/game';
 import { InfoTooltip } from '../common/InfoTooltip';
 import { compareMsoOptions } from '../../utils/kitUtils';
 import { parseCostToSilver } from '../../utils/moneyUtils';
@@ -244,7 +243,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [name, setName] = useState('');
   const [action, setAction] = useState('AM');
   const [usage, setUsage] = useState('1-Enc');
-  const [tier, setTier] = useState<'Minor' | 'Lesser' | 'Greater' | 'Epic'>('Minor');
   const [costGold, setCostGold] = useState<number>(10);
   const [costSilver, setCostSilver] = useState<number>(0);
   const [powerReady, setPowerReady] = useState<string>('primary_arsenal');
@@ -295,6 +293,210 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const effectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Exotic & Artifact Studio State
+  const [studioTab, setStudioTab] = useState<'current' | 'library'>('current');
+  const [activeStudioSelection, setActiveStudioSelection] = useState<{
+    type: 'chassis' | 'mod' | 'power';
+    id?: string;
+    isNew?: boolean;
+    parentType?: 'inherent' | 'mod';
+    parentId?: string;
+  }>({ type: 'chassis' });
+  const [studioChassisType, setStudioChassisType] = useState<'weapon' | 'armor' | 'shield' | 'supplies'>('supplies');
+  const [inherentPowers, setInherentPowers] = useState<StudioPower[]>([]);
+  const [attachedMods, setAttachedMods] = useState<StudioMod[]>([]);
+
+  // Studio Mod Form Working State
+  const [modFormId, setModFormId] = useState<string>('');
+  const [modFormName, setModFormName] = useState<string>('');
+  const [modFormGold, setModFormGold] = useState<number>(0);
+  const [modFormSilver, setModFormSilver] = useState<number>(0);
+  const [modFormNotes, setModFormNotes] = useState<string>('');
+
+  // Studio Power Form Working State
+  const [powerFormId, setPowerFormId] = useState<string>('');
+  const [powerFormParentType, setPowerFormParentType] = useState<'inherent' | 'mod'>('inherent');
+  const [powerFormParentId, setPowerFormParentId] = useState<string | undefined>(undefined);
+  const [powerFormName, setPowerFormName] = useState<string>('');
+  const [powerFormAction, setPowerFormAction] = useState<string>('AM');
+  const [powerFormUsage, setPowerFormUsage] = useState<string>('1-Enc');
+  const [powerFormEffect, setPowerFormEffect] = useState<string>('');
+
+  const studioEffectTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleStartAddInherentPower = () => {
+    setPowerFormId(Date.now().toString());
+    setPowerFormParentType('inherent');
+    setPowerFormParentId(undefined);
+    setPowerFormName('');
+    setPowerFormAction('AM');
+    setPowerFormUsage('1-Enc');
+    setPowerFormEffect('');
+    setActiveStudioSelection({ type: 'power', parentType: 'inherent', id: 'new', isNew: true });
+  };
+
+  const handleStartEditInherentPower = (pwr: StudioPower) => {
+    setPowerFormId(pwr.id);
+    setPowerFormParentType('inherent');
+    setPowerFormParentId(undefined);
+    setPowerFormName(pwr.name);
+    setPowerFormAction(pwr.action);
+    setPowerFormUsage(pwr.usage);
+    setPowerFormEffect(pwr.effect);
+    setActiveStudioSelection({ type: 'power', parentType: 'inherent', id: pwr.id });
+  };
+
+  const handleDeleteInherentPower = (pwrId: string) => {
+    setInherentPowers((prev) => prev.filter((p) => p.id !== pwrId));
+    if (activeStudioSelection.type === 'power' && activeStudioSelection.id === pwrId) {
+      setActiveStudioSelection({ type: 'chassis' });
+    }
+  };
+
+  const handleStartAddMod = () => {
+    setModFormId(Date.now().toString());
+    setModFormName('');
+    setModFormGold(0);
+    setModFormSilver(0);
+    setModFormNotes('');
+    setActiveStudioSelection({ type: 'mod', id: 'new', isNew: true });
+  };
+
+  const handleStartEditMod = (mod: StudioMod) => {
+    setModFormId(mod.id);
+    setModFormName(mod.name);
+    setModFormGold(mod.costGold);
+    setModFormSilver(mod.costSilver);
+    setModFormNotes(mod.notes);
+    setActiveStudioSelection({ type: 'mod', id: mod.id });
+  };
+
+  const handleDeleteMod = (modId: string) => {
+    setAttachedMods((prev) => prev.filter((m) => m.id !== modId));
+    if (
+      (activeStudioSelection.type === 'mod' && activeStudioSelection.id === modId) ||
+      (activeStudioSelection.type === 'power' && activeStudioSelection.parentId === modId)
+    ) {
+      setActiveStudioSelection({ type: 'chassis' });
+    }
+  };
+
+  const handleStartAddPowerToMod = (mod: StudioMod) => {
+    setPowerFormId(Date.now().toString());
+    setPowerFormParentType('mod');
+    setPowerFormParentId(mod.id);
+    setPowerFormName('');
+    setPowerFormAction('AM');
+    setPowerFormUsage('1-Enc');
+    setPowerFormEffect('');
+    setActiveStudioSelection({ type: 'power', parentType: 'mod', parentId: mod.id, id: 'new', isNew: true });
+  };
+
+  const handleStartEditModPower = (mod: StudioMod, pwr: StudioPower) => {
+    setPowerFormId(pwr.id);
+    setPowerFormParentType('mod');
+    setPowerFormParentId(mod.id);
+    setPowerFormName(pwr.name);
+    setPowerFormAction(pwr.action);
+    setPowerFormUsage(pwr.usage);
+    setPowerFormEffect(pwr.effect);
+    setActiveStudioSelection({ type: 'power', parentType: 'mod', parentId: mod.id, id: pwr.id });
+  };
+
+  const handleDeleteModPower = (modId: string, pwrId: string) => {
+    setAttachedMods((prev) =>
+      prev.map((m) => (m.id === modId ? { ...m, powers: m.powers.filter((p) => p.id !== pwrId) } : m))
+    );
+    if (activeStudioSelection.type === 'power' && activeStudioSelection.id === pwrId) {
+      setActiveStudioSelection({ type: 'chassis' });
+    }
+  };
+
+  const handleSaveModForm = () => {
+    if (!modFormName.trim()) return;
+    setAttachedMods((prev) => {
+      const existingIdx = prev.findIndex((m) => m.id === modFormId);
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = {
+          ...updated[existingIdx],
+          name: modFormName.trim(),
+          costGold: modFormGold,
+          costSilver: modFormSilver,
+          notes: modFormNotes.trim(),
+        };
+        return updated;
+      }
+      return [
+        ...prev,
+        {
+          id: modFormId || Date.now().toString(),
+          name: modFormName.trim(),
+          costGold: modFormGold,
+          costSilver: modFormSilver,
+          notes: modFormNotes.trim(),
+          powers: [],
+        },
+      ];
+    });
+    setActiveStudioSelection({ type: 'chassis' });
+  };
+
+  const handleSavePowerForm = () => {
+    if (!powerFormName.trim() || !powerFormEffect.trim()) return;
+    const pwrObj: StudioPower = {
+      id: powerFormId || Date.now().toString(),
+      name: powerFormName.trim(),
+      action: powerFormAction,
+      usage: powerFormUsage,
+      effect: powerFormEffect.trim(),
+    };
+
+    if (powerFormParentType === 'inherent') {
+      setInherentPowers((prev) => {
+        const existingIdx = prev.findIndex((p) => p.id === powerFormId);
+        if (existingIdx >= 0) {
+          const updated = [...prev];
+          updated[existingIdx] = pwrObj;
+          return updated;
+        }
+        return [...prev, pwrObj];
+      });
+    } else if (powerFormParentType === 'mod' && powerFormParentId) {
+      setAttachedMods((prev) =>
+        prev.map((m) => {
+          if (m.id !== powerFormParentId) return m;
+          const existingIdx = m.powers.findIndex((p) => p.id === powerFormId);
+          let updatedPowers = [...m.powers];
+          if (existingIdx >= 0) {
+            updatedPowers[existingIdx] = pwrObj;
+          } else {
+            updatedPowers.push(pwrObj);
+          }
+          return { ...m, powers: updatedPowers };
+        })
+      );
+    }
+    setActiveStudioSelection({ type: 'chassis' });
+  };
+
+  const insertStudioPowerTextAtCursor = (insertStr: string) => {
+    const textarea = studioEffectTextareaRef.current;
+    if (!textarea) {
+      setPowerFormEffect((prev) => (prev ? prev + insertStr : insertStr));
+      return;
+    }
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    const currentVal = powerFormEffect;
+    const nextVal = currentVal.substring(0, start) + insertStr + currentVal.substring(end);
+    setPowerFormEffect(nextVal);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + insertStr.length, start + insertStr.length);
+    }, 0);
+  };
+
   const loadPersonalItems = async () => {
     if (!isOpen || !playerEmail) return;
     setIsLoadingPersonal(true);
@@ -313,7 +515,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setName('');
     setAction('AM');
     setUsage('1-Enc');
-    setTier('Minor');
     setCostGold(10);
     setCostSilver(0);
     setPowerReady('primary_arsenal');
@@ -338,6 +539,21 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setShieldDomainNewText('');
     setGearCategory('Adventure');
     setGearCategoryNewText('');
+    setStudioChassisType('supplies');
+    setInherentPowers([]);
+    setAttachedMods([]);
+    setActiveStudioSelection({ type: 'chassis' });
+    setStudioTab('current');
+    setModFormId('');
+    setModFormName('');
+    setModFormGold(0);
+    setModFormSilver(0);
+    setModFormNotes('');
+    setPowerFormId('');
+    setPowerFormName('');
+    setPowerFormAction('AM');
+    setPowerFormUsage('1-Enc');
+    setPowerFormEffect('');
     setFeedback(null);
   };
 
@@ -472,16 +688,56 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       }
     } else if (item.type === 'gear') {
       if (item.item_data?.category) setGearCategory(item.item_data.category);
-    } else if (item.type === 'exotic') {
-      setAction(item.item_data?.action || 'AM');
-      setUsage(item.item_data?.usage || '1-Enc');
-      setTier((item.item_data?.tier as any) || 'Minor');
-      setEffect(item.item_data?.effect || '');
-    } else if (item.type === 'artifact') {
-      setAction(item.item_data?.action || 'AM');
-      setUsage(item.item_data?.usage || '1-Enc');
-      setTier((item.item_data?.tier as any) || 'Minor');
-      setEffect(item.item_data?.effect || '');
+    } else if (item.type === 'exotic' || item.type === 'artifact') {
+      const chassis = (item.item_data?.chassis_type as any) || 'supplies';
+      setStudioChassisType(chassis);
+
+      if (Array.isArray(item.item_data?.inherent_powers)) {
+        setInherentPowers(item.item_data.inherent_powers);
+      } else if (item.item_data?.effect) {
+        setInherentPowers([
+          {
+            id: `pwr_legacy_${Date.now()}`,
+            name: item.name || 'Inherent Power',
+            action: item.item_data?.action || 'AM',
+            usage: item.item_data?.usage || '1-Enc',
+            effect: item.item_data.effect,
+          },
+        ]);
+      } else {
+        setInherentPowers([]);
+      }
+
+      if (Array.isArray(item.item_data?.mods)) {
+        setAttachedMods(item.item_data.mods);
+      } else {
+        setAttachedMods([]);
+      }
+
+      const stats = item.item_data?.chassis_stats;
+      if (stats) {
+        if (stats.type) setWeaponTypeMode(stats.type);
+        if (stats.requirement) {
+          if (chassis === 'armor') setArmorReq(stats.requirement);
+          if (chassis === 'shield') setShieldReq(stats.requirement);
+        }
+        if (stats.domain) {
+          if (chassis === 'weapon') setWeaponDomain(stats.domain);
+          if (chassis === 'shield') setShieldDomain(stats.domain);
+        }
+        if (stats.category) {
+          if (GEAR_DEFAULT_CATEGORIES.includes(stats.category)) {
+            setGearCategory(stats.category);
+            setGearCategoryNewText('');
+          } else {
+            setGearCategory('CUSTOM_NEW');
+            setGearCategoryNewText(stats.category);
+          }
+        }
+      }
+
+      setActiveStudioSelection({ type: 'chassis' });
+      setStudioTab('current');
     } else if (item.type === 'chaos_gem') {
       setEffect(item.item_data?.effect || '');
     }
@@ -542,6 +798,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setCreationType(newType);
       setSelectedGenres([]);
       setFeedback(null);
+      if (newType === 'exotic' || newType === 'artifact') {
+        setActiveStudioSelection({ type: 'chassis' });
+        setStudioTab('current');
+      }
     }
   };
 
@@ -597,9 +857,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       return isGearCategoryValid && isCostValid;
     }
     if (creationType === 'exotic') {
-      return isEffectValid && isCostValid;
+      return isCostValid && (inherentPowers.length > 0 || attachedMods.length > 0);
     }
-    if (creationType === 'artifact' || creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
+    if (creationType === 'artifact') {
+      return inherentPowers.length > 0 || attachedMods.length > 0;
+    }
+    if (creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
       return isEffectValid;
     }
     return true;
@@ -617,6 +880,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     isShieldDomainValid,
     isCostValid,
     pathDescription,
+    inherentPowers,
+    attachedMods,
   ]);
 
   // Load custom items when modal is opened
@@ -882,16 +1147,47 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     } else if (creationType === 'gear') {
       itemDataPayload.category = finalGearCat;
       itemDataPayload.cost = costStr;
-    } else if (creationType === 'exotic') {
-      itemDataPayload.action = action;
-      itemDataPayload.usage = usage;
-      itemDataPayload.effect = effect.trim();
-      itemDataPayload.cost = costStr;
-    } else if (creationType === 'artifact') {
-      itemDataPayload.action = action;
-      itemDataPayload.usage = usage;
-      itemDataPayload.effect = effect.trim();
-      itemDataPayload.cost = 'Artifact';
+    } else if (creationType === 'exotic' || creationType === 'artifact') {
+      itemDataPayload.chassis_type = studioChassisType;
+      itemDataPayload.cost = creationType === 'artifact' ? 'Artifact' : costStr;
+      itemDataPayload.inherent_powers = inherentPowers;
+      itemDataPayload.mods = attachedMods;
+
+      if (studioChassisType === 'weapon') {
+        itemDataPayload.chassis_stats = {
+          type: weaponTypeMode,
+          requirement: weaponReqStr,
+          atk: getWeaponAtkDmg(weaponTypeMode),
+          dmg: getWeaponAtkDmg(weaponTypeMode),
+          max_block: getWeaponMaxBlock(weaponTypeMode, weaponReqNum),
+          domain: finalWeaponDomain,
+        };
+      } else if (studioChassisType === 'armor') {
+        itemDataPayload.chassis_stats = {
+          requirement: armorReq,
+          ar: getArmorArStr(armorReq),
+          mr: getArmorMrStr(armorReq),
+        };
+      } else if (studioChassisType === 'shield') {
+        itemDataPayload.chassis_stats = {
+          requirement: shieldReq,
+          max_block: getShieldMaxBlockStr(shieldReq),
+          mr: getShieldMrStr(shieldReq),
+          domain: finalShieldDomain,
+        };
+      } else if (studioChassisType === 'supplies') {
+        itemDataPayload.chassis_stats = {
+          category: finalGearCat,
+        };
+      }
+
+      // Legacy fallback fields for simple display / listing
+      const firstPwr = inherentPowers[0] || attachedMods[0]?.powers[0];
+      if (firstPwr) {
+        itemDataPayload.action = firstPwr.action;
+        itemDataPayload.usage = firstPwr.usage;
+        itemDataPayload.effect = firstPwr.effect;
+      }
     } else if (creationType === 'chaos_gem') {
       itemDataPayload.action = 'F';
       itemDataPayload.usage = '3';
@@ -1153,9 +1449,450 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         {/* 2-Pane Grid Architecture */}
         <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-800/80 overflow-hidden">
           {/* ========================================================================= */}
-          {/* PANE 1 (LEFT): FROZEN LIVE CARD PREVIEW + A-Z CREATIONS/CLONES LIST       */}
+          {/* PANE 1 (LEFT): STUDIO BLUEPRINT TREE (EXO/ART) OR LIVE CARD PREVIEW       */}
           {/* ========================================================================= */}
-          <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
+          {creationType === 'exotic' || creationType === 'artifact' ? (
+            <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
+              {/* Studio Tab Switcher: Current Item vs My Creations */}
+              <div className="shrink-0 flex items-center justify-between gap-2">
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-1">
+                  <button
+                    type="button"
+                    onClick={() => setStudioTab('current')}
+                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      studioTab === 'current'
+                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🛠️ Current Item
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStudioTab('library')}
+                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      studioTab === 'library'
+                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    📚 My Creations ({sortedPersonalItems.filter((it) => it.type === creationType).length})
+                  </button>
+                </div>
+
+                {editingItem && (
+                  <button
+                    type="button"
+                    onClick={handleResetForm}
+                    className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition cursor-pointer shrink-0"
+                    title="Start a new blank creation"
+                  >
+                    + New Blank
+                  </button>
+                )}
+              </div>
+
+              {studioTab === 'library' ? (
+                /* LIBRARY LIST VIEW */
+                <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
+                  {sortedPersonalItems.filter((it) => it.type === creationType).length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                      <span className="text-2xl mb-1.5">📦</span>
+                      <p className="font-semibold text-slate-400">No {creationType} creations yet</p>
+                      <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                        Click "Current Item" above to forge your first {creationType === 'artifact' ? 'Artifact' : 'Exotic'}.
+                      </p>
+                    </div>
+                  ) : (
+                    sortedPersonalItems
+                      .filter((it) => it.type === creationType)
+                      .map((item) => {
+                        const isItemEditing = editingItem?.id === item.id;
+                        const itemEffect = item.item_data?.effect || '';
+                        const itemCost = item.item_data?.cost;
+                        const inherentCount = Array.isArray(item.item_data?.inherent_powers)
+                          ? item.item_data.inherent_powers.length
+                          : item.item_data?.effect ? 1 : 0;
+                        const modCount = Array.isArray(item.item_data?.mods) ? item.item_data.mods.length : 0;
+
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => handlePopulateItemForEdit(item)}
+                            className={`p-2.5 rounded-xl border transition flex flex-col gap-1.5 shadow-sm cursor-pointer ${
+                              isItemEditing
+                                ? 'bg-amber-950/30 border-amber-500/80 ring-1 ring-amber-500/40'
+                                : 'bg-slate-950/70 border-slate-800/80 hover:border-amber-500/40 hover:bg-slate-900/80'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-sm shrink-0">{getCategoryEmoji(item.type)}</span>
+                                <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
+                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
+                                  {item.type}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePopulateItemForEdit(item);
+                                  }}
+                                  className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
+                                  title="Edit this creation"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteItem(item, e)}
+                                  className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
+                                  title="Delete this creation"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                              <span className="px-1.5 py-0.2 bg-purple-950/80 border border-purple-500/30 text-purple-300 font-bold rounded">
+                                {itemCost || (creationType === 'artifact' ? 'Artifact' : 'Cost N/A')}
+                              </span>
+                              <span className="px-1.5 py-0.2 bg-slate-800 border border-slate-700 text-slate-300 font-bold rounded">
+                                {inherentCount} Inherent • {modCount} Mod(s)
+                              </span>
+                              {item.item_data?.chassis_type && (
+                                <span className="px-1.5 py-0.2 bg-slate-800 border border-slate-700 text-slate-400 capitalize rounded">
+                                  {item.item_data.chassis_type}
+                                </span>
+                              )}
+                            </div>
+                            {itemEffect && (
+                              <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
+                                {itemEffect}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
+              ) : (
+                /* CURRENT ITEM HIERARCHY TREE VIEW */
+                <>
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
+                    {/* 1. CHASSIS NODE CARD */}
+                    <div
+                      onClick={() => setActiveStudioSelection({ type: 'chassis' })}
+                      className={`p-3 rounded-xl border transition flex flex-col gap-1.5 cursor-pointer shadow-sm ${
+                        activeStudioSelection.type === 'chassis'
+                          ? 'bg-amber-950/30 border-amber-500/80 ring-1 ring-amber-500/40'
+                          : 'bg-slate-900/80 border-slate-800 hover:border-amber-500/40 hover:bg-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-base shrink-0">
+                            {studioChassisType === 'weapon'
+                              ? '⚔️'
+                              : studioChassisType === 'armor'
+                              ? '🥋'
+                              : studioChassisType === 'shield'
+                              ? '🛡️'
+                              : '🎒'}
+                          </span>
+                          <span className="font-bold text-slate-100 text-xs truncate">
+                            {name || 'Unnamed Chassis'}
+                          </span>
+                        </div>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            creationType === 'artifact'
+                              ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
+                              : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+                          }`}
+                        >
+                          {creationType === 'artifact' ? 'Artifact 🔮' : costStr}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-400">
+                        <span className="capitalize">
+                          {studioChassisType === 'supplies'
+                            ? `Supplies: ${finalGearCat}`
+                            : studioChassisType === 'weapon'
+                            ? `Weapon: ${weaponTypeMode}`
+                            : studioChassisType === 'armor'
+                            ? `Armor (${armorReq})`
+                            : `Shield (${shieldReq})`}
+                        </span>
+                        <span className="text-[10px] text-amber-400/80 font-mono font-bold">
+                          {activeStudioSelection.type === 'chassis' ? '● Active in Editor' : 'Click to Edit'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 2. INHERENT ABILITIES CARD */}
+                    <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col gap-2 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs">⚡</span>
+                          <span className="font-outfit font-extrabold text-xs text-slate-200">
+                            Inherent Abilities (No Mod)
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                          {inherentPowers.length}
+                        </span>
+                      </div>
+
+                      {inherentPowers.length > 0 ? (
+                        <div className="flex flex-col gap-1.5">
+                          {inherentPowers.map((pwr) => {
+                            const isPwrSelected =
+                              activeStudioSelection.type === 'power' &&
+                              activeStudioSelection.parentType === 'inherent' &&
+                              activeStudioSelection.id === pwr.id;
+                            return (
+                              <div
+                                key={pwr.id}
+                                onClick={() => handleStartEditInherentPower(pwr)}
+                                className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
+                                  isPwrSelected
+                                    ? 'bg-rose-950/30 border-rose-500/80 ring-1 ring-rose-500/40'
+                                    : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="text-xs shrink-0">🔥</span>
+                                  <span className="font-bold text-slate-200 text-xs truncate">
+                                    {pwr.name || 'Unnamed Power'}
+                                  </span>
+                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
+                                    {pwr.action}
+                                  </span>
+                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
+                                    {pwr.usage}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteInherentPower(pwr.id);
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
+                                    title="Delete inherent power"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-slate-500 italic">
+                          No inherent powers attached directly to this chassis.
+                        </p>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleStartAddInherentPower}
+                        className="mt-1 py-1.5 px-3 rounded-lg bg-slate-950 hover:bg-slate-800 border border-dashed border-slate-700 hover:border-rose-500/50 text-slate-300 hover:text-rose-300 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Inherent Power</span>
+                      </button>
+                    </div>
+
+                    {/* 3. MODULAR ADD-ONS (MODS) CARD */}
+                    <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col gap-2.5 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs">⚙️</span>
+                          <span className="font-outfit font-extrabold text-xs text-slate-200">
+                            Modular Add-ons (Mods)
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                          {attachedMods.length}
+                        </span>
+                      </div>
+
+                      {attachedMods.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          {attachedMods.map((mod) => {
+                            const isModSelected =
+                              activeStudioSelection.type === 'mod' && activeStudioSelection.id === mod.id;
+                            const modCostStr =
+                              mod.costGold > 0 || mod.costSilver > 0
+                                ? `${mod.costGold > 0 ? `${mod.costGold}g` : ''}${mod.costGold > 0 && mod.costSilver > 0 ? ' ' : ''}${mod.costSilver > 0 ? `${mod.costSilver}s` : ''}`
+                                : '0s';
+
+                            return (
+                              <div
+                                key={mod.id}
+                                className={`p-2.5 rounded-xl border transition flex flex-col gap-2 ${
+                                  isModSelected
+                                    ? 'bg-cyan-950/20 border-cyan-500/80 ring-1 ring-cyan-500/40'
+                                    : 'bg-slate-950/80 border-slate-800/90'
+                                }`}
+                              >
+                                <div
+                                  onClick={() => handleStartEditMod(mod)}
+                                  className="flex items-center justify-between cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-xs">⚙️</span>
+                                    <span className="font-bold text-cyan-200 text-xs truncate">
+                                      {mod.name || 'Unnamed Mod'}
+                                    </span>
+                                    <span className="px-1.5 py-0.2 rounded bg-amber-950/70 border border-amber-500/30 text-amber-300 font-mono text-[9px] font-bold">
+                                      {modCostStr}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteMod(mod.id);
+                                      }}
+                                      className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
+                                      title="Delete mod"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="pl-2 border-l border-slate-800 flex flex-col gap-1.5">
+                                  {mod.powers.length > 0 ? (
+                                    mod.powers.map((pwr) => {
+                                      const isModPwrSelected =
+                                        activeStudioSelection.type === 'power' &&
+                                        activeStudioSelection.parentType === 'mod' &&
+                                        activeStudioSelection.parentId === mod.id &&
+                                        activeStudioSelection.id === pwr.id;
+
+                                      return (
+                                        <div
+                                          key={pwr.id}
+                                          onClick={() => handleStartEditModPower(mod, pwr)}
+                                          className={`p-1.5 rounded-lg border transition flex items-center justify-between gap-1.5 cursor-pointer ${
+                                            isModPwrSelected
+                                              ? 'bg-rose-950/30 border-rose-500/80 ring-1 ring-rose-500/40'
+                                              : 'bg-slate-900/80 border-slate-800/80 hover:border-slate-700'
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-1 min-w-0">
+                                            <span className="text-[11px] shrink-0">🔥</span>
+                                            <span className="font-semibold text-slate-200 text-[11px] truncate">
+                                              {pwr.name || 'Unnamed Power'}
+                                            </span>
+                                            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
+                                              {pwr.action}
+                                            </span>
+                                            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
+                                              {pwr.usage}
+                                            </span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteModPower(mod.id, pwr.id);
+                                            }}
+                                            className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
+                                            title="Delete power from mod"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    <p className="text-[9px] text-slate-500 italic">No powers attached to this mod.</p>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartAddPowerToMod(mod)}
+                                    className="py-1 px-2 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/40 text-[10px] text-slate-300 hover:text-cyan-300 font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>Add Power to Mod</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-slate-500 italic">
+                          No modular add-ons attached. You can add modular hardware upgrades below.
+                        </p>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleStartAddMod}
+                        className="mt-1 py-1.5 px-3 rounded-lg bg-slate-950 hover:bg-slate-800 border border-dashed border-slate-700 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Modular Mod</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 4. FOOTER STATUS & FORGE ACTION BUTTON */}
+                  <div className="pt-2 border-t border-slate-800/80 shrink-0 flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
+                      <span>
+                        Structure:{' '}
+                        <strong className="text-slate-200">
+                          1 Chassis • {inherentPowers.length} Inherent • {attachedMods.length} Mod(s)
+                        </strong>
+                      </span>
+                      {editingItem ? (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          Editing
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-emerald-400 font-mono font-bold">New Creation</span>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={!isFormValid || isSubmitting}
+                      className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                        isFormValid && !isSubmitting
+                          ? creationType === 'artifact'
+                            ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-purple-900/40 cursor-pointer'
+                            : 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-amber-900/40 cursor-pointer'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                      }`}
+                    >
+                      <AnvilIcon className="w-4 h-4" />
+                      <span>
+                        {isSubmitting
+                          ? 'Forging...'
+                          : editingItem
+                          ? `Update ${creationType === 'artifact' ? 'Artifact' : 'Exotic'}`
+                          : `Forge ${creationType === 'artifact' ? 'Artifact' : 'Exotic'} to My Creations`}
+                      </span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
             {/* FROZEN TOP SECTION: LIVE CARD PREVIEW */}
             <div className="shrink-0 flex flex-col gap-2">
               <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
@@ -1383,48 +2120,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
                 )}
 
-                {creationType === 'exotic' && (
-                  <div className="p-4 rounded-xl bg-slate-900 border border-cyan-500/40 shadow-xl flex flex-col gap-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-cyan-200">{name || 'Unnamed Exotic'}</span>
-                      <div className="flex items-center gap-1 text-[10px] font-mono">
-                        <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-bold">{tier} 🧿</span>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold border border-slate-700">{action}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
-                      </div>
-                    </div>
-                    <div className="text-[11px] text-slate-400 flex items-center justify-between">
-                      <span>Cost: <strong className="text-amber-300">{costStr}</strong></span>
-                      <span>Loadout: <strong className="text-cyan-300">{getItemSlotWeight({ name, category: tier })} Slot(s)</strong></span>
-                    </div>
-                    <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
-                      {effect || 'Effect rules text...'}
-                    </div>
-                    {notes && <p className="text-[10px] text-slate-500 italic">"{notes}"</p>}
-                  </div>
-                )}
-
-                {creationType === 'artifact' && (
-                  <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-purple-200">{name || 'Unnamed Artifact'}</span>
-                      <div className="flex items-center gap-1 text-[10px] font-mono">
-                        <span className="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40 font-bold">{tier} 🔮</span>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-bold border border-slate-700">{action}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
-                      </div>
-                    </div>
-                    <div className="text-[11px] text-slate-400 flex items-center justify-between">
-                      <span className="px-2 py-0.5 rounded bg-purple-950/70 border border-purple-500/30 text-purple-300 font-bold text-[10px]">Cost: Artifact</span>
-                      <span>Loadout: <strong className="text-purple-300">{getItemSlotWeight({ name, category: tier })} Slot(s)</strong></span>
-                    </div>
-                    <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
-                      {effect || 'Effect rules text...'}
-                    </div>
-                    {notes && <p className="text-[10px] text-slate-500 italic">"{notes}"</p>}
-                  </div>
-                )}
-
                 {creationType === 'chaos_gem' && (
                   <div className="p-4 rounded-xl bg-slate-900 border border-violet-500/40 shadow-xl flex flex-col gap-2 text-xs">
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -1615,11 +2310,639 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               )}
             </div>
           </div>
+        )}
 
           {/* ========================================================================= */}
-          {/* PANE 2 (RIGHT): FORGE CONTROLS & FORM INPUTS                              */}
+          {/* PANE 2 (RIGHT): 3-MODE CONTEXTUAL STUDIO EDITOR OR FORGE FORM             */}
           {/* ========================================================================= */}
-          <form onSubmit={handleSubmit} className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-5 overflow-y-auto gap-4 text-xs">
+          {creationType === 'exotic' || creationType === 'artifact' ? (
+            <div className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-5 overflow-y-auto gap-4 text-xs">
+              {/* Feedback Alert */}
+              {feedback && (
+                <div
+                  className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-semibold animate-fadeIn ${
+                    feedback.type === 'success'
+                      ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200'
+                      : 'bg-rose-950/60 border-rose-500/50 text-rose-200'
+                  }`}
+                >
+                  {feedback.type === 'success' ? (
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  )}
+                  <span>{feedback.message}</span>
+                </div>
+              )}
+
+              {/* MODE 1: CHASSIS EDITOR */}
+              {activeStudioSelection.type === 'chassis' && (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">📦</span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                          Equipment Chassis Configuration
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Configure baseline equipment form, category, base combat stats, lore, and pricing.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-300 font-mono text-[10px] font-bold">
+                      Mode: Chassis
+                    </span>
+                  </div>
+
+                  {/* Chassis Category Pill Switch */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="font-bold text-slate-300">Chassis Category</span>
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                      <button
+                        type="button"
+                        onClick={() => setStudioChassisType('weapon')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          studioChassisType === 'weapon'
+                            ? 'bg-orange-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        ⚔️ Weapons
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStudioChassisType('armor')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          studioChassisType === 'armor'
+                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        🥋 Armor
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStudioChassisType('shield')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          studioChassisType === 'shield'
+                            ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        🛡️ Shields
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStudioChassisType('supplies')}
+                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          studioChassisType === 'supplies'
+                            ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        🎒 Supplies
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Chassis Name */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300">Name</span>
+                        <GuardrailBadge isValid={isNameValid} />
+                        <InfoTooltip text="Enter the unique name of this exotic or artifact creation." />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder={
+                        studioChassisType === 'weapon'
+                          ? 'e.g. Flametongue Blade'
+                          : studioChassisType === 'armor'
+                          ? 'e.g. Aegis Powered Exosuit'
+                          : studioChassisType === 'shield'
+                          ? 'e.g. Bulwark of Dawn'
+                          : 'e.g. Wand of Fireballs'
+                      }
+                      className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-500 transition shadow-inner font-semibold"
+                    />
+                  </div>
+
+                  {/* Subtype & Baseline Stats Controls */}
+                  {studioChassisType === 'weapon' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-slate-300">Type Mode</span>
+                        <select
+                          value={weaponTypeMode}
+                          onChange={(e) => setWeaponTypeMode(e.target.value as any)}
+                          className="bg-slate-950 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                        >
+                          <option value="Melee">Melee</option>
+                          <option value="Hurled">Hurled</option>
+                          <option value="Shot">Shot</option>
+                          <option value="Melee, Hurled">Melee, Hurled</option>
+                          <option value="Melee, Shot">Melee, Shot</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-slate-300">Requirement</span>
+                        <select
+                          value={weaponReqNum}
+                          onChange={(e) => setWeaponReqNum(parseInt(e.target.value, 10))}
+                          className="bg-slate-950 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                        >
+                          {WEAPON_REQ_NUMBERS.map((n) => (
+                            <option key={n} value={n}>
+                              💪 {n}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-slate-300">Domain</span>
+                        <select
+                          value={weaponDomain}
+                          onChange={(e) => setWeaponDomain(e.target.value)}
+                          className="bg-slate-950 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                        >
+                          {availableWeaponDomains.map((d) => (
+                            <option key={d} value={d}>
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-3 flex items-center gap-2 text-[11px] text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+                        <span>Atk / Dmg: <strong className="text-amber-300">{getWeaponAtkDmg(weaponTypeMode)}</strong></span>
+                        <span>•</span>
+                        <span>Max Block: <strong className="text-cyan-300">{getWeaponMaxBlock(weaponTypeMode, weaponReqNum)}</strong></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {studioChassisType === 'armor' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-slate-300">Armor Requirement</span>
+                        <select
+                          value={armorReq}
+                          onChange={(e) => setArmorReq(e.target.value)}
+                          className="bg-slate-950 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                        >
+                          {ARMOR_REQ_OPTIONS.map((req) => (
+                            <option key={req} value={req}>
+                              {req}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-[11px] text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                        <span>Armor Rating (AR): <strong className="text-amber-300">{getArmorArStr(armorReq)}</strong></span>
+                        <span>•</span>
+                        <span>MR: <strong className="text-cyan-300">{getArmorMrStr(armorReq)}</strong></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {studioChassisType === 'shield' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-slate-300">Shield Requirement</span>
+                        <select
+                          value={shieldReq}
+                          onChange={(e) => setShieldReq(e.target.value)}
+                          className="bg-slate-950 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                        >
+                          {SHIELD_REQ_OPTIONS.map((req) => (
+                            <option key={req} value={req}>
+                              {req}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-slate-300">Shield Domain</span>
+                        <select
+                          value={shieldDomain}
+                          onChange={(e) => setShieldDomain(e.target.value)}
+                          className="bg-slate-950 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                        >
+                          {availableShieldDomains.map((d) => (
+                            <option key={d} value={d}>
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-3 flex items-center gap-3 text-[11px] text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+                        <span>Max Block: <strong className="text-cyan-300">{getShieldMaxBlockStr(shieldReq)}</strong></span>
+                        <span>•</span>
+                        <span>MR Penalty: <strong className="text-cyan-300">{getShieldMrStr(shieldReq)}</strong></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {studioChassisType === 'supplies' && (
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-slate-300">Supplies Category</span>
+                      <select
+                        value={gearCategory}
+                        onChange={(e) => setGearCategory(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                      >
+                        {GEAR_DEFAULT_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                        <option value="Arcane Focus">Arcane Focus</option>
+                        <option value="CUSTOM_NEW">+ Custom Category...</option>
+                      </select>
+
+                      {gearCategory === 'CUSTOM_NEW' && (
+                        <input
+                          type="text"
+                          value={gearCategoryNewText}
+                          onChange={(e) => setGearCategoryNewText(e.target.value)}
+                          placeholder="Enter custom category name..."
+                          className="mt-1 bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-teal-500/50 outline-none font-semibold"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Cost */}
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-slate-300">Cost</span>
+                    {creationType === 'artifact' ? (
+                      <div className="px-3 py-2 rounded-xl bg-purple-950/70 border border-purple-500/40 text-purple-300 font-bold text-xs flex items-center justify-between">
+                        <span>Artifact 🔮 (Priceless Relic)</span>
+                        <span className="text-[10px] font-mono text-purple-400">Locked to 'Artifact'</span>
+                      </div>
+                    ) : (
+                      <CompactCostInput
+                        gold={costGold}
+                        silver={costSilver}
+                        onGoldChange={setCostGold}
+                        onSilverChange={setCostSilver}
+                      />
+                    )}
+                  </div>
+
+                  {/* Lore & Notes */}
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-slate-300">Lore & Flavor Notes</span>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={2}
+                      placeholder="Origin story, historical background, craftsmanship notes..."
+                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-amber-500 transition shadow-inner font-serif italic"
+                    />
+                  </div>
+
+                  {/* Genres */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300">Target Genres</span>
+                        <GuardrailBadge isValid={isGenresValid} />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Select at least 1</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {GENRE_OPTIONS.map((g) => {
+                        const isSelected = selectedGenres.includes(g.id);
+                        return (
+                          <button
+                            key={g.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedGenres((prev) =>
+                                isSelected ? prev.filter((id) => id !== g.id) : [...prev, g.id]
+                              );
+                            }}
+                            className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+                              isSelected
+                                ? 'bg-amber-600 border-amber-500 text-white shadow-sm'
+                                : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            <span>{g.icon}</span>
+                            <span>{g.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Quick-Action Bar */}
+                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleStartAddInherentPower}
+                        className="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-500/30 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Inherent Power</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleStartAddMod}
+                        className="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Modular Mod</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={!isFormValid || isSubmitting}
+                      className={`py-2 px-5 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-1.5 select-none shadow-md ${
+                        isFormValid && !isSubmitting
+                          ? creationType === 'artifact'
+                            ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 text-white cursor-pointer'
+                            : 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 text-white cursor-pointer'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                      }`}
+                    >
+                      <AnvilIcon className="w-3.5 h-3.5" />
+                      <span>{isSubmitting ? 'Forging...' : editingItem ? 'Update' : 'Forge Creation'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* MODE 2: MOD EDITOR */}
+              {activeStudioSelection.type === 'mod' && (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">⚙️</span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                          {modFormId && attachedMods.some((m) => m.id === modFormId)
+                            ? `Edit Mod: ${modFormName || 'Unnamed Mod'}`
+                            : 'New Modular Upgrade / Mod'}
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Define aftermarket hardware, modifications, or specialized attachments.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-cyan-300 font-mono text-[10px] font-bold">
+                      Mode: Mod
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-300">Mod Name</span>
+                      <GuardrailBadge isValid={modFormName.trim().length > 0} />
+                    </div>
+                    <input
+                      type="text"
+                      value={modFormName}
+                      onChange={(e) => setModFormName(e.target.value)}
+                      placeholder="e.g. Jet Thrusters, Psionic Dampener, Heavy Plating"
+                      className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-cyan-500 transition shadow-inner font-semibold"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-slate-300">Mod Cost</span>
+                    <CompactCostInput
+                      gold={modFormGold}
+                      silver={modFormSilver}
+                      onGoldChange={setModFormGold}
+                      onSilverChange={setModFormSilver}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-slate-300">Hardware Notes & Specs</span>
+                    <textarea
+                      value={modFormNotes}
+                      onChange={(e) => setModFormNotes(e.target.value)}
+                      rows={3}
+                      placeholder="Technical details, mounting position, installation lore..."
+                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-cyan-500 transition shadow-inner font-serif italic"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-3 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={handleSaveModForm}
+                      disabled={!modFormName.trim()}
+                      className={`py-2 px-5 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-1.5 select-none shadow-md ${
+                        modFormName.trim()
+                          ? 'bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white cursor-pointer'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                      }`}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>💾 Done Editing Mod</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveStudioSelection({ type: 'chassis' })}
+                      className="py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition cursor-pointer"
+                    >
+                      Back to Chassis
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* MODE 3: EXOTIC POWER EDITOR */}
+              {activeStudioSelection.type === 'power' && (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🔥</span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                          {powerFormId &&
+                          (inherentPowers.some((p) => p.id === powerFormId) ||
+                            attachedMods.some((m) => m.powers.some((p) => p.id === powerFormId)))
+                            ? `Edit Power: ${powerFormName || 'Unnamed Power'}`
+                            : 'New Exotic Power'}
+                        </h3>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                          <span>Target:</span>
+                          <span className="font-bold text-amber-300">
+                            {powerFormParentType === 'inherent'
+                              ? '⚡ Inherent Ability (Direct to Chassis)'
+                              : `⚙️ Mod: ${attachedMods.find((m) => m.id === powerFormParentId)?.name || 'Mod'}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-rose-300 font-mono text-[10px] font-bold">
+                      Mode: Power
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-300">Power Name</span>
+                      <GuardrailBadge isValid={powerFormName.trim().length > 0} />
+                    </div>
+                    <input
+                      type="text"
+                      value={powerFormName}
+                      onChange={(e) => setPowerFormName(e.target.value)}
+                      placeholder="e.g. Fireball, Tactical Leap, Void Pulse, Healing Mist"
+                      className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-rose-500 transition shadow-inner font-semibold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-slate-300">Action</span>
+                      <select
+                        value={powerFormAction}
+                        onChange={(e) => setPowerFormAction(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                      >
+                        {ACTION_OPTIONS.map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-slate-300">Usage</span>
+                      <select
+                        value={powerFormUsage}
+                        onChange={(e) => setPowerFormUsage(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
+                      >
+                        {USAGE_OPTIONS.map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Rules Effect with Quick Chips Ribbon */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300">Rules Effect Text</span>
+                        <GuardrailBadge isValid={powerFormEffect.trim().length > 0} />
+                        <InfoTooltip text="Use strict SupaFlex notation grammar: Attributes (✨💪👁️🏃🫀👣), Range bands, and AoE presets." />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">KaTeX & Math Compliant</span>
+                    </div>
+
+                    <div className="p-2 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-2">
+                      {/* Attributes Quick Chips */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0">Attributes:</span>
+                        {ATTRIBUTE_CHIPS.map((icon) => (
+                          <button
+                            key={icon}
+                            type="button"
+                            onClick={() => insertStudioPowerTextAtCursor(icon)}
+                            className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
+                            title={`Insert ${icon}`}
+                          >
+                            {icon}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Range Bands */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0">Range:</span>
+                        {RANGE_BANDS.map((rng) => (
+                          <button
+                            key={rng.id}
+                            type="button"
+                            onClick={() => insertStudioPowerTextAtCursor(rng.text)}
+                            className="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 text-[10px] font-mono transition cursor-pointer"
+                            title={`Insert ${rng.text}`}
+                          >
+                            {rng.id}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* AoE Presets */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0">AoE:</span>
+                        {AOE_PRESETS.map((aoe) => (
+                          <button
+                            key={aoe.id}
+                            type="button"
+                            onClick={() => insertStudioPowerTextAtCursor(aoe.text)}
+                            className="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-300 text-[10px] font-mono transition cursor-pointer"
+                            title={`Insert ${aoe.text}`}
+                          >
+                            {aoe.id}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <textarea
+                      ref={studioEffectTextareaRef}
+                      value={powerFormEffect}
+                      onChange={(e) => setPowerFormEffect(e.target.value)}
+                      rows={3}
+                      placeholder="e.g. Rng Medium; AoE 2r; 2d6 Burn. Target gains Prone."
+                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-rose-500 transition font-mono leading-relaxed shadow-inner"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-3 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={handleSavePowerForm}
+                      disabled={!powerFormName.trim() || !powerFormEffect.trim()}
+                      className={`py-2 px-5 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-1.5 select-none shadow-md ${
+                        powerFormName.trim() && powerFormEffect.trim()
+                          ? 'bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white cursor-pointer'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                      }`}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>💾 Done Editing Power</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveStudioSelection({ type: 'chassis' })}
+                      className="py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition cursor-pointer"
+                    >
+                      Back to Chassis
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-5 overflow-y-auto gap-4 text-xs">
             {/* Feedback Alert */}
             {feedback && (
               <div
@@ -2067,62 +3390,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               </div>
             )}
 
-            {/* J. EXOTICS & ARTIFACTS */}
-            {(creationType === 'exotic' || creationType === 'artifact') && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Action</span>
-                  <select
-                    value={action}
-                    onChange={(e) => setAction(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                  >
-                    {ACTION_OPTIONS.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Usage</span>
-                  <select
-                    value={usage}
-                    onChange={(e) => setUsage(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-slate-300 text-xs font-mono font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                  >
-                    {USAGE_OPTIONS.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Cost</span>
-                  {creationType === 'artifact' ? (
-                    <div className="px-3 py-2 rounded-xl bg-purple-950/70 border border-purple-500/40 text-purple-300 font-bold text-center">
-                      Artifact
-                    </div>
-                  ) : (
-                    <CompactCostInput
-                      gold={costGold}
-                      silver={costSilver}
-                      onGoldChange={setCostGold}
-                      onSilverChange={setCostSilver}
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* RULES EFFECT TEXTAREA WITH QUICK-INSERT CHIPS */}
             {(creationType === 'power' ||
               creationType === 'trait' ||
-              creationType === 'exotic' ||
-              creationType === 'artifact' ||
               creationType === 'chaos_gem') && (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
@@ -2349,6 +3619,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               </button>
             </div>
           </form>
+          )}
         </div>
       </div>
 
