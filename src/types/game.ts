@@ -1238,6 +1238,23 @@ export interface PowerTable {
   notes?: string;
 }
 
+export type PathElementType =
+  | 'power'
+  | 'skill'
+  | 'skillset'
+  | 'trait'
+  | 'weapon'
+  | 'armor'
+  | 'shield';
+
+export interface PathLinkedElement {
+  id: string | number;
+  name: string;
+  type: PathElementType;
+  tag: 'Free' | 'Learn';
+  details?: string;
+}
+
 export interface CustomCreationData {
   action?: string;
   usage?: string;
@@ -1249,6 +1266,7 @@ export interface CustomCreationData {
   kit?: string;
   table_group?: string;
   table?: string;
+  linked_elements?: PathLinkedElement[];
   [key: string]: any;
 }
 

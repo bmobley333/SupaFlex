@@ -5,11 +5,12 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationType, CustomCreationItem, CustomCreationData } from '../../types/game';
+import { CustomCreationType, CustomCreationItem, CustomCreationData, PathLinkedElement } from '../../types/game';
 import { getItemSlotWeight } from '../../utils/magicSlotSchedule';
 import { InfoTooltip } from '../common/InfoTooltip';
 import { compareMsoOptions } from '../../utils/kitUtils';
 import { parseCostToSilver } from '../../utils/moneyUtils';
+import { LinkPathElementsModal } from './LinkPathElementsModal';
 
 interface PlayerWorkshopModalProps {
   isOpen: boolean;
@@ -37,18 +38,19 @@ const USAGE_OPTIONS = [
   { id: '1-Rnd', label: '1-Rnd (1/Round)' },
 ];
 
-// 7 Canonical Range Bands
+// 8 Canonical Range Bands
 const RANGE_BANDS = [
-  { id: 'Touch', label: 'Touch', text: 'Rng Touch; ' },
+  { id: 'Touch', label: 'Touch (≤1 sq)', text: 'Rng Touch; ' },
   { id: '1sq', label: '1sq', text: 'Rng 1sq; ' },
   { id: '2sq', label: '2sq', text: 'Rng 2sq; ' },
-  { id: 'Short', label: 'Short (≤6sq)', text: 'Rng Short; ' },
-  { id: 'Medium', label: 'Medium (≤12sq)', text: 'Rng Medium; ' },
-  { id: 'Long', label: 'Long (≤24sq)', text: 'Rng Long; ' },
-  { id: 'Extreme', label: 'Extreme (≥50sq)', text: 'Rng Extreme; ' },
+  { id: '3sq', label: '3sq', text: 'Rng 3sq; ' },
+  { id: 'Short', label: 'Short (≤6 sq)', text: 'Rng Short; ' },
+  { id: 'Medium', label: 'Medium (≤12 sq)', text: 'Rng Medium; ' },
+  { id: 'Long', label: 'Long (≤24 sq)', text: 'Rng Long; ' },
+  { id: 'Extreme', label: 'Extreme (≥25 sq)', text: 'Rng Extreme; ' },
 ];
 
-// AoE Presets
+// AoE Presets (Only [#]r and [#]x[#] allowed)
 const AOE_PRESETS = [
   { id: 'AoE 1r', text: 'AoE 1r; ' },
   { id: 'AoE 2r', text: 'AoE 2r; ' },
@@ -56,8 +58,6 @@ const AOE_PRESETS = [
   { id: 'AoE 2x2', text: 'AoE 2x2; ' },
   { id: 'AoE 3x3', text: 'AoE 3x3; ' },
   { id: 'AoE 4x4', text: 'AoE 4x4; ' },
-  { id: 'Cone 3sq', text: 'AoE Cone 3sq; ' },
-  { id: 'Line 6sq', text: 'AoE Line 6sq; ' },
 ];
 
 // Attributes Without Labels per Directive
@@ -92,15 +92,6 @@ const GEAR_DEFAULT_CATEGORIES = [
   'Storage',
   'Survival',
   'Tools',
-];
-
-const KIT_DEFAULT_CATEGORIES = [
-  'Medical',
-  'Survival',
-  'Tools',
-  'Engineering',
-  'Infiltration',
-  'General',
 ];
 
 const getWeaponAtkDmg = (typeMode: string): string => {
@@ -263,8 +254,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [pathCategory, setPathCategory] = useState<string>('General');
   const [pathCategoryNewText, setPathCategoryNewText] = useState<string>('');
   const [pathDescription, setPathDescription] = useState<string>('');
-  const [kitCategory, setKitCategory] = useState<string>('Survival');
-  const [kitDescription, setKitDescription] = useState<string>('');
+  const [linkedElements, setLinkedElements] = useState<PathLinkedElement[]>([]);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState<boolean>(false);
   const [effect, setEffect] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
@@ -332,8 +323,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setPathCategory('General');
     setPathCategoryNewText('');
     setPathDescription('');
-    setKitCategory('Survival');
-    setKitDescription('');
+    setLinkedElements([]);
     setEffect('');
     setNotes('');
     setSelectedGenres([]);
@@ -435,6 +425,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         setPathCategoryNewText(cat);
       }
       setPathDescription(item.item_data?.description || '');
+      setLinkedElements(item.item_data?.linked_elements || []);
     } else if (item.type === 'skill') {
       setSkillAttribute(item.item_data?.attribute || '💪');
       const disc = item.item_data?.discipline || 'General';
@@ -493,9 +484,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setEffect(item.item_data?.effect || '');
     } else if (item.type === 'chaos_gem') {
       setEffect(item.item_data?.effect || '');
-    } else if (item.type === 'kit') {
-      if (item.item_data?.category) setKitCategory(item.item_data.category);
-      setKitDescription(item.item_data?.description || '');
     }
   };
 
@@ -585,7 +573,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       return isEffectValid;
     }
     if (creationType === 'path') {
-      return isPathCategoryValid && pathDescription.trim().length > 0;
+      return isPathCategoryValid && pathDescription.trim().length > 0 && linkedElements.length > 0;
     }
     if (creationType === 'skill') {
       return isSkillAttributeValid && isSkillDisciplineValid;
@@ -614,9 +602,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (creationType === 'artifact' || creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
       return isEffectValid;
     }
-    if (creationType === 'kit') {
-      return kitDescription.trim().length > 0 && isCostValid;
-    }
     return true;
   }, [
     creationType,
@@ -632,7 +617,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     isShieldDomainValid,
     isCostValid,
     pathDescription,
-    kitDescription,
+    linkedElements.length,
   ]);
 
   // Load custom items when modal is opened
@@ -821,8 +806,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         ? 'Shield'
         : creationType === 'gear'
         ? finalGearCat
-        : creationType === 'kit'
-        ? kitCategory
         : creationType === 'exotic'
         ? 'Exotic'
         : creationType === 'artifact'
@@ -846,6 +829,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     } else if (creationType === 'path') {
       itemDataPayload.category = finalPathCat;
       itemDataPayload.description = pathDescription.trim();
+      itemDataPayload.linked_elements = linkedElements;
     } else if (creationType === 'trait') {
       itemDataPayload.effect = effect.trim();
     } else if (creationType === 'skill') {
@@ -890,10 +874,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       itemDataPayload.action = 'F';
       itemDataPayload.usage = '3';
       itemDataPayload.effect = effect.trim();
-    } else if (creationType === 'kit') {
-      itemDataPayload.category = kitCategory;
-      itemDataPayload.description = kitDescription.trim();
-      itemDataPayload.cost = costStr;
     }
 
     try {
@@ -1133,17 +1113,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               >
                 🔮 Artifacts
               </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('kit')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                  creationType === 'kit'
-                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                📦 Kits
-              </button>
             </div>
           </div>
         </div>
@@ -1203,7 +1172,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 )}
 
                 {creationType === 'path' && (
-                  <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2">
+                  <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/40 shadow-xl flex flex-col gap-2.5">
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                       <span className="font-bold text-purple-200 text-sm font-outfit flex items-center gap-1.5">
                         <span>🧭</span>
@@ -1216,6 +1185,47 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
                       {pathDescription || 'Path description, heritage lore, and capabilities...'}
                     </p>
+
+                    {/* Linked Elements Stream Preview */}
+                    <div className="pt-2 border-t border-slate-800 flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold text-purple-300 flex items-center gap-1">
+                          <span>🧭</span>
+                          <span>Linked Elements ({linkedElements.length})</span>
+                        </span>
+                        {linkedElements.length === 0 && (
+                          <span className="text-[10px] text-amber-400 font-semibold animate-pulse">
+                            Required (None Linked)
+                          </span>
+                        )}
+                      </div>
+                      {linkedElements.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                          {linkedElements.map((el) => (
+                            <span
+                              key={el.id}
+                              className="px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-bold text-slate-200 flex items-center gap-1 shadow-sm"
+                            >
+                              <span>{getCategoryEmoji(el.type)}</span>
+                              <span>{el.name}</span>
+                              <span
+                                className={`ml-0.5 px-1 py-0.2 rounded text-[9px] font-extrabold ${
+                                  el.tag === 'Free'
+                                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
+                                    : 'bg-amber-950 text-amber-300 border border-amber-500/40'
+                                }`}
+                              >
+                                {el.tag === 'Free' ? '{Free}' : 'Learn'}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-slate-500 italic">
+                          No elements linked yet. Click "Link Elements to Path" below to add powers, skills, traits, and proficiencies.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1397,23 +1407,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
                       {effect || 'Socket activation effect will render here...'}
                     </div>
-                    {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
-                  </div>
-                )}
-
-                {creationType === 'kit' && (
-                  <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/40 shadow-xl flex flex-col gap-2 text-xs">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="font-bold text-amber-200 text-sm font-outfit flex items-center gap-1.5">
-                        <span>📦</span>
-                        <span>{name || 'Unnamed Kit'}</span>
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
-                        {costStr}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-400">Category: <strong className="text-amber-300">{kitCategory}</strong></div>
-                    <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">{kitDescription || 'Kit description and equipment bundle contents...'}</p>
                     {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
                   </div>
                 )}
@@ -1731,13 +1724,42 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     <GuardrailBadge isValid={pathDescription.trim().length > 0} />
                   </div>
                   <textarea
-                    rows={4}
+                    rows={3}
                     value={pathDescription}
                     onChange={(e) => setPathDescription(e.target.value)}
                     placeholder="Describe this Path, training archetype, and key abilities..."
                     className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
                     required
                   />
+                </div>
+
+                {/* Path Link Elements Action Card */}
+                <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-purple-950/30 border border-purple-500/40">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-purple-200 text-xs flex items-center gap-1">
+                        <span>🧭</span>
+                        <span>Link Elements to Path</span>
+                      </span>
+                      <GuardrailBadge isValid={linkedElements.length > 0} />
+                    </div>
+                    <span className="text-[10px] text-purple-300 font-mono">
+                      {linkedElements.length} Linked (Required)
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    A path must have at least 1 linked element (Powers, Skills, Skillsets, Traits, or Gear Skills).
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsLinkModalOpen(true)}
+                    className="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-purple-950/50 cursor-pointer active:scale-[0.98]"
+                  >
+                    <span>🧭 Manage Linked Elements</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-purple-950/80 text-purple-200 text-[10px]">
+                      {linkedElements.length}
+                    </span>
+                  </button>
                 </div>
               </div>
             )}
@@ -2092,53 +2114,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               </div>
             )}
 
-            {/* K. KITS */}
-            {creationType === 'kit' && (
-              <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="font-bold text-slate-300">Kit Category</span>
-                    <select
-                      value={kitCategory}
-                      onChange={(e) => setKitCategory(e.target.value)}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer"
-                    >
-                      {KIT_DEFAULT_CATEGORIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <span className="font-bold text-slate-300">Cost</span>
-                    <CompactCostInput
-                      gold={costGold}
-                      silver={costSilver}
-                      onGoldChange={setCostGold}
-                      onSilverChange={setCostSilver}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-300">Bundle Contents & Description</span>
-                    <GuardrailBadge isValid={kitDescription.trim().length > 0} />
-                  </div>
-                  <textarea
-                    rows={3}
-                    value={kitDescription}
-                    onChange={(e) => setKitDescription(e.target.value)}
-                    placeholder="List the bundle contents and equipment included in this kit..."
-                    className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
-                    required
-                  />
-                </div>
-              </div>
-            )}
-
             {/* RULES EFFECT TEXTAREA WITH QUICK-INSERT CHIPS */}
             {(creationType === 'power' ||
               creationType === 'trait' ||
@@ -2150,7 +2125,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-300">Effect</span>
                     <GuardrailBadge isValid={isEffectValid} />
-                    <InfoTooltip text="Use strict SupaFlex notation grammar. Attributes: ✨💪👁️🏃🫀👣. Range: Touch, 1sq, 2sq, Short, Medium, Long, Extreme. AoE: AoE [#]r or [#]x[#]." />
+                    <InfoTooltip text="Use strict SupaFlex notation grammar. Attributes: ✨💪👁️🏃🫀👣. Range: Touch (≤1 sq), 1sq, 2sq, 3sq, Short (≤6 sq), Medium (≤12 sq), Long (≤24 sq), Extreme (≥25 sq). AoE: AoE [#]r or [#]x[#]." />
                   </div>
                   <span className="text-[10px] text-slate-500 font-mono">KaTeX & Math Compliant</span>
                 </div>
@@ -2264,6 +2239,32 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               </div>
             </div>
 
+            {/* Path Linkage Action Button (Required for Path) */}
+            {creationType === 'path' && (
+              <div className="pt-1 flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={() => setIsLinkModalOpen(true)}
+                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border shadow-sm cursor-pointer ${
+                    linkedElements.length > 0
+                      ? 'bg-purple-950/70 border-purple-500/60 text-purple-200 hover:bg-purple-900/80'
+                      : 'bg-rose-950/60 border-rose-500/60 text-rose-300 hover:bg-rose-900/70 animate-pulse'
+                  }`}
+                >
+                  <span>🧭</span>
+                  <span>Link Elements to Path</span>
+                  <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-[10px] font-extrabold border border-purple-500/40">
+                    {linkedElements.length} Linked
+                  </span>
+                  {linkedElements.length === 0 && (
+                    <span className="text-[10px] text-rose-400 font-extrabold ml-1">
+                      (Required)
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
+
             {/* Bottom Actions */}
             <div className="pt-2 flex items-center gap-3 mt-auto">
               <button
@@ -2305,6 +2306,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           </form>
         </div>
       </div>
+
+      {isLinkModalOpen && (
+        <LinkPathElementsModal
+          isOpen={isLinkModalOpen}
+          onClose={() => setIsLinkModalOpen(false)}
+          pathName={name}
+          linkedElements={linkedElements}
+          onUpdateLinkedElements={setLinkedElements}
+        />
+      )}
     </div>
   );
 };
