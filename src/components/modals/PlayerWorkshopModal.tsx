@@ -354,6 +354,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [gearDatabaseChassis, setGearDatabaseChassis] = useState<'weapon' | 'armor' | 'shield' | 'supplies'>('weapon');
   const [gemStudioTab, setGemStudioTab] = useState<'current' | 'library' | 'database'>('current');
   const [canonicalChaosGems, setCanonicalChaosGems] = useState<SupabaseChaosGem[]>([]);
+  const [canonicalSearchQuery, setCanonicalSearchQuery] = useState<string>('');
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
     type: string;
     id: string | number;
@@ -1184,6 +1185,107 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     shieldsCatalog,
   ]);
 
+  // Canonical Search Filtered Lists (Designer Mode SupaBase)
+  const filteredCanonicalWeapons = useMemo(() => {
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (!q) return weaponsCatalog || [];
+    return (weaponsCatalog || []).filter(
+      (w) =>
+        (w.name || '').toLowerCase().includes(q) ||
+        (w.type || '').toLowerCase().includes(q) ||
+        (w.requirement || '').toLowerCase().includes(q) ||
+        (w.domain || '').toLowerCase().includes(q)
+    );
+  }, [weaponsCatalog, canonicalSearchQuery]);
+
+  const filteredCanonicalArmor = useMemo(() => {
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (!q) return armorCatalog || [];
+    return (armorCatalog || []).filter(
+      (a) =>
+        (a.name || '').toLowerCase().includes(q) ||
+        (a.requirement || '').toLowerCase().includes(q) ||
+        (a.ar || '').toLowerCase().includes(q)
+    );
+  }, [armorCatalog, canonicalSearchQuery]);
+
+  const filteredCanonicalShields = useMemo(() => {
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (!q) return shieldsCatalog || [];
+    return (shieldsCatalog || []).filter(
+      (s) =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.requirement || '').toLowerCase().includes(q) ||
+        (s.domain || '').toLowerCase().includes(q)
+    );
+  }, [shieldsCatalog, canonicalSearchQuery]);
+
+  const filteredCanonicalSupplies = useMemo(() => {
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (!q) return suppliesCatalog || [];
+    return (suppliesCatalog || []).filter(
+      (sup) =>
+        (sup.name || '').toLowerCase().includes(q) ||
+        (sup.category || '').toLowerCase().includes(q) ||
+        (sup.cost || '').toLowerCase().includes(q)
+    );
+  }, [suppliesCatalog, canonicalSearchQuery]);
+
+  const filteredCanonicalPaths = useMemo(() => {
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (!q) return paths || [];
+    return (paths || []).filter(
+      (p) =>
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.category || '').toLowerCase().includes(q) ||
+        (p.description || '').toLowerCase().includes(q)
+    );
+  }, [paths, canonicalSearchQuery]);
+
+  const filteredCanonicalPowers = useMemo(() => {
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (!q) return powers || [];
+    return (powers || []).filter(
+      (p) =>
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.action || '').toLowerCase().includes(q) ||
+        (p.usage || '').toLowerCase().includes(q) ||
+        (p.effect || '').toLowerCase().includes(q)
+    );
+  }, [powers, canonicalSearchQuery]);
+
+  const filteredCanonicalTraits = useMemo(() => {
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (!q) return traits || [];
+    return (traits || []).filter(
+      (t) =>
+        (t.name || '').toLowerCase().includes(q) ||
+        (t.effect || '').toLowerCase().includes(q)
+    );
+  }, [traits, canonicalSearchQuery]);
+
+  const filteredCanonicalSkills = useMemo(() => {
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (!q) return skills || [];
+    return (skills || []).filter(
+      (s) =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.discipline || '').toLowerCase().includes(q) ||
+        (s.attribute || '').toLowerCase().includes(q)
+    );
+  }, [skills, canonicalSearchQuery]);
+
+  const filteredCanonicalChaosGems = useMemo(() => {
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (!q) return canonicalChaosGems || [];
+    return (canonicalChaosGems || []).filter(
+      (g) =>
+        (g.name || '').toLowerCase().includes(q) ||
+        (g.effect || '').toLowerCase().includes(q) ||
+        (g.notes || '').toLowerCase().includes(q)
+    );
+  }, [canonicalChaosGems, canonicalSearchQuery]);
+
   const handleUpdateLinkedElements = async (elements: PathLinkedElement[]) => {
     setLinkedElements(elements);
     if (editingItem && editingItem.id) {
@@ -1404,6 +1506,34 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       type: 'success',
       message: '✨ Authoring new canonical entry in SupaBase Master Database.',
     });
+  };
+
+  const handleCanonicalSearchEnter = (currentArea: 'gear' | 'paths_abilities' | 'chaos_gem') => {
+    if (currentArea === 'gear') {
+      if (gearDatabaseChassis === 'weapon' && filteredCanonicalWeapons.length === 1) {
+        handlePopulateCanonicalWeapon(filteredCanonicalWeapons[0]);
+      } else if (gearDatabaseChassis === 'armor' && filteredCanonicalArmor.length === 1) {
+        handlePopulateCanonicalArmor(filteredCanonicalArmor[0]);
+      } else if (gearDatabaseChassis === 'shield' && filteredCanonicalShields.length === 1) {
+        handlePopulateCanonicalShield(filteredCanonicalShields[0]);
+      } else if (gearDatabaseChassis === 'supplies' && filteredCanonicalSupplies.length === 1) {
+        handlePopulateCanonicalSupply(filteredCanonicalSupplies[0]);
+      }
+    } else if (currentArea === 'paths_abilities') {
+      if (pathDatabaseCategory === 'path' && filteredCanonicalPaths.length === 1) {
+        handlePopulateOfficialPath(filteredCanonicalPaths[0]);
+      } else if (pathDatabaseCategory === 'power' && filteredCanonicalPowers.length === 1) {
+        handlePopulateCanonicalPower(filteredCanonicalPowers[0]);
+      } else if (pathDatabaseCategory === 'trait' && filteredCanonicalTraits.length === 1) {
+        handlePopulateCanonicalTrait(filteredCanonicalTraits[0]);
+      } else if (pathDatabaseCategory === 'skill' && filteredCanonicalSkills.length === 1) {
+        handlePopulateCanonicalSkill(filteredCanonicalSkills[0]);
+      }
+    } else if (currentArea === 'chaos_gem') {
+      if (filteredCanonicalChaosGems.length === 1) {
+        handlePopulateCanonicalChaosGem(filteredCanonicalChaosGems[0]);
+      }
+    }
   };
 
   const loadCanonicalChaosGems = async () => {
@@ -1671,6 +1801,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setEditingItem(null);
       setCanonicalSelectedId(null);
       setOriginalCanonicalName('');
+      setCanonicalSearchQuery('');
       if (newType === 'gear' || newType === 'exotic' || newType === 'artifact') {
         setActiveStudioSelection({ type: 'chassis' });
         if (studioTab === 'database' && (!isMasterAccount || workshopMode !== 'designer')) {
@@ -2748,7 +2879,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
                     type="button"
-                    onClick={() => setStudioTab('current')}
+                    onClick={() => {
+                      setStudioTab('current');
+                      setCanonicalSearchQuery('');
+                    }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       studioTab === 'current'
                         ? 'bg-amber-600 text-white shadow-sm font-extrabold'
@@ -2759,7 +2893,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setStudioTab('library')}
+                    onClick={() => {
+                      setStudioTab('library');
+                      setCanonicalSearchQuery('');
+                    }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       studioTab === 'library'
                         ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
@@ -2771,7 +2908,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   {isMetaScapeDesigner && (
                     <button
                       type="button"
-                      onClick={() => setStudioTab('database')}
+                      onClick={() => {
+                        setStudioTab('database');
+                        setCanonicalSearchQuery('');
+                      }}
                       className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                         studioTab === 'database'
                           ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
@@ -2965,6 +3105,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setGearDatabaseChassis('weapon');
                         handleResetForm();
                         setStudioChassisType('weapon');
+                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         gearDatabaseChassis === 'weapon'
@@ -2980,6 +3121,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setGearDatabaseChassis('armor');
                         handleResetForm();
                         setStudioChassisType('armor');
+                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         gearDatabaseChassis === 'armor'
@@ -2995,6 +3137,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setGearDatabaseChassis('shield');
                         handleResetForm();
                         setStudioChassisType('shield');
+                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         gearDatabaseChassis === 'shield'
@@ -3010,6 +3153,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setGearDatabaseChassis('supplies');
                         handleResetForm();
                         setStudioChassisType('supplies');
+                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         gearDatabaseChassis === 'supplies'
@@ -3022,17 +3166,43 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
 
                   {/* Dropdown Selector Header */}
-                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0">
-                    <span className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
+                    <span className="flex items-center gap-1.5 shrink-0">
                       <span>👑</span>
                       <span>
                         Master {gearDatabaseChassis === 'weapon' ? 'Weapons' : gearDatabaseChassis === 'armor' ? 'Armor' : gearDatabaseChassis === 'shield' ? 'Shields' : 'Supplies'}
                       </span>
                     </span>
+
+                    {/* Inline Search Bar */}
+                    <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
+                      <input
+                        type="text"
+                        value={canonicalSearchQuery}
+                        onChange={(e) => setCanonicalSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleCanonicalSearchEnter('gear');
+                        }}
+                        placeholder={`Search ${gearDatabaseChassis}...`}
+                        className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/80 transition"
+                      />
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+                      {canonicalSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setCanonicalSearchQuery('')}
+                          className="absolute right-2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                          title="Clear search"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
                     <button
                       type="button"
                       onClick={handleNewMasterEntry}
-                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer"
+                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer shrink-0"
                     >
                       + New Master Item
                     </button>
@@ -3048,42 +3218,68 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         return;
                       }
                       if (gearDatabaseChassis === 'weapon') {
-                        const item = weaponsCatalog.find((w) => String(w.id) === val || w.name === val);
+                        const item = (weaponsCatalog || []).find((w) => String(w.id) === val || w.name === val);
                         if (item) handlePopulateCanonicalWeapon(item);
                       } else if (gearDatabaseChassis === 'armor') {
-                        const item = armorCatalog.find((a) => String(a.id) === val || a.name === val);
+                        const item = (armorCatalog || []).find((a) => String(a.id) === val || a.name === val);
                         if (item) handlePopulateCanonicalArmor(item);
                       } else if (gearDatabaseChassis === 'shield') {
-                        const item = shieldsCatalog.find((s) => String(s.id) === val || s.name === val);
+                        const item = (shieldsCatalog || []).find((s) => String(s.id) === val || s.name === val);
                         if (item) handlePopulateCanonicalShield(item);
                       } else if (gearDatabaseChassis === 'supplies') {
-                        const item = suppliesCatalog.find((sup) => String(sup.id) === val || sup.name === val);
+                        const item = (suppliesCatalog || []).find((sup) => String(sup.id) === val || sup.name === val);
                         if (item) handlePopulateCanonicalSupply(item);
                       }
                     }}
                     className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0"
                   >
-                    <option value="">-- Choose Canonical {gearDatabaseChassis.charAt(0).toUpperCase() + gearDatabaseChassis.slice(1)} --</option>
+                    <option value="">
+                      {canonicalSearchQuery
+                        ? gearDatabaseChassis === 'weapon'
+                          ? filteredCanonicalWeapons.length > 0
+                            ? `-- Filtered (${filteredCanonicalWeapons.length} matches) --`
+                            : `-- No matches for "${canonicalSearchQuery}" --`
+                          : gearDatabaseChassis === 'armor'
+                          ? filteredCanonicalArmor.length > 0
+                            ? `-- Filtered (${filteredCanonicalArmor.length} matches) --`
+                            : `-- No matches for "${canonicalSearchQuery}" --`
+                          : gearDatabaseChassis === 'shield'
+                          ? filteredCanonicalShields.length > 0
+                            ? `-- Filtered (${filteredCanonicalShields.length} matches) --`
+                            : `-- No matches for "${canonicalSearchQuery}" --`
+                          : filteredCanonicalSupplies.length > 0
+                          ? `-- Filtered (${filteredCanonicalSupplies.length} matches) --`
+                          : `-- No matches for "${canonicalSearchQuery}" --`
+                        : `-- Choose Canonical ${gearDatabaseChassis.charAt(0).toUpperCase() + gearDatabaseChassis.slice(1)} (${
+                            gearDatabaseChassis === 'weapon'
+                              ? (weaponsCatalog || []).length
+                              : gearDatabaseChassis === 'armor'
+                              ? (armorCatalog || []).length
+                              : gearDatabaseChassis === 'shield'
+                              ? (shieldsCatalog || []).length
+                              : (suppliesCatalog || []).length
+                          }) --`}
+                    </option>
                     {gearDatabaseChassis === 'weapon' &&
-                      weaponsCatalog.map((w) => (
+                      filteredCanonicalWeapons.map((w) => (
                         <option key={w.id || w.name} value={w.id || w.name}>
                           {w.name} ({w.type || 'Melee'}{w.requirement ? `, ${w.requirement}` : ''})
                         </option>
                       ))}
                     {gearDatabaseChassis === 'armor' &&
-                      armorCatalog.map((a) => (
+                      filteredCanonicalArmor.map((a) => (
                         <option key={a.id || a.name} value={a.id || a.name}>
                           {a.name} ({a.requirement || 'No Req'}{a.ar ? `, AR ${a.ar}` : ''})
                         </option>
                       ))}
                     {gearDatabaseChassis === 'shield' &&
-                      shieldsCatalog.map((s) => (
+                      filteredCanonicalShields.map((s) => (
                         <option key={s.id || s.name} value={s.id || s.name}>
                           {s.name} ({s.requirement || 'No Req'})
                         </option>
                       ))}
                     {gearDatabaseChassis === 'supplies' &&
-                      suppliesCatalog.map((sup) => (
+                      filteredCanonicalSupplies.map((sup) => (
                         <option key={sup.id || sup.name} value={sup.id || sup.name}>
                           {sup.name} ({sup.category || 'Gear'}{sup.cost ? `, ${sup.cost}` : ''})
                         </option>
@@ -3483,7 +3679,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
                     type="button"
-                    onClick={() => setPathStudioTab('current')}
+                    onClick={() => {
+                      setPathStudioTab('current');
+                      setCanonicalSearchQuery('');
+                    }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       pathStudioTab === 'current'
                         ? 'bg-blue-600 text-white shadow-sm font-extrabold'
@@ -3494,7 +3693,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPathStudioTab('library')}
+                    onClick={() => {
+                      setPathStudioTab('library');
+                      setCanonicalSearchQuery('');
+                    }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       pathStudioTab === 'library'
                         ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
@@ -3506,7 +3708,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   {isMetaScapeDesigner && (
                     <button
                       type="button"
-                      onClick={() => setPathStudioTab('database')}
+                      onClick={() => {
+                        setPathStudioTab('database');
+                        setCanonicalSearchQuery('');
+                      }}
                       className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                         pathStudioTab === 'database'
                           ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
@@ -3654,6 +3859,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         handleResetForm();
                         setPathStudioMode('path');
                         setActivePathSelection({ type: 'path' });
+                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         pathDatabaseCategory === 'path'
@@ -3671,6 +3877,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setPathStudioMode('standalone');
                         setActiveAbilityCategory('power');
                         setActivePathSelection({ type: 'ability', category: 'power' });
+                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         pathDatabaseCategory === 'power'
@@ -3688,6 +3895,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setPathStudioMode('standalone');
                         setActiveAbilityCategory('trait');
                         setActivePathSelection({ type: 'ability', category: 'trait' });
+                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         pathDatabaseCategory === 'trait'
@@ -3705,6 +3913,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setPathStudioMode('standalone');
                         setActiveAbilityCategory('skill');
                         setActivePathSelection({ type: 'ability', category: 'skill' });
+                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         pathDatabaseCategory === 'skill'
@@ -3717,17 +3926,43 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
 
                   {/* Dropdown Selector Header */}
-                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0">
-                    <span className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
+                    <span className="flex items-center gap-1.5 shrink-0">
                       <span>👑</span>
                       <span>
                         Master {pathDatabaseCategory === 'path' ? 'Paths' : pathDatabaseCategory === 'power' ? 'Powers' : pathDatabaseCategory === 'trait' ? 'Traits' : 'Skills'}
                       </span>
                     </span>
+
+                    {/* Inline Search Bar */}
+                    <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
+                      <input
+                        type="text"
+                        value={canonicalSearchQuery}
+                        onChange={(e) => setCanonicalSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleCanonicalSearchEnter('paths_abilities');
+                        }}
+                        placeholder={`Search ${pathDatabaseCategory}...`}
+                        className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/80 transition"
+                      />
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+                      {canonicalSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setCanonicalSearchQuery('')}
+                          className="absolute right-2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                          title="Clear search"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
                     <button
                       type="button"
                       onClick={handleNewMasterEntry}
-                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer"
+                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer shrink-0"
                     >
                       + New Master Entry
                     </button>
@@ -3743,42 +3978,68 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         return;
                       }
                       if (pathDatabaseCategory === 'path') {
-                        const p = paths.find((item) => String(item.id) === val || item.name === val);
+                        const p = (paths || []).find((item) => String(item.id) === val || item.name === val);
                         if (p) handlePopulateOfficialPath(p);
                       } else if (pathDatabaseCategory === 'power') {
-                        const p = powers.find((item) => String(item.id) === val || item.name === val);
+                        const p = (powers || []).find((item) => String(item.id) === val || item.name === val);
                         if (p) handlePopulateCanonicalPower(p);
                       } else if (pathDatabaseCategory === 'trait') {
-                        const t = traits.find((item) => String(item.id) === val || item.name === val);
+                        const t = (traits || []).find((item) => String(item.id) === val || item.name === val);
                         if (t) handlePopulateCanonicalTrait(t);
                       } else if (pathDatabaseCategory === 'skill') {
-                        const s = skills.find((item) => String(item.id) === val || item.name === val);
+                        const s = (skills || []).find((item) => String(item.id) === val || item.name === val);
                         if (s) handlePopulateCanonicalSkill(s);
                       }
                     }}
                     className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0"
                   >
-                    <option value="">-- Choose Canonical {pathDatabaseCategory.charAt(0).toUpperCase() + pathDatabaseCategory.slice(1)} --</option>
+                    <option value="">
+                      {canonicalSearchQuery
+                        ? pathDatabaseCategory === 'path'
+                          ? filteredCanonicalPaths.length > 0
+                            ? `-- Filtered (${filteredCanonicalPaths.length} matches) --`
+                            : `-- No matches for "${canonicalSearchQuery}" --`
+                          : pathDatabaseCategory === 'power'
+                          ? filteredCanonicalPowers.length > 0
+                            ? `-- Filtered (${filteredCanonicalPowers.length} matches) --`
+                            : `-- No matches for "${canonicalSearchQuery}" --`
+                          : pathDatabaseCategory === 'trait'
+                          ? filteredCanonicalTraits.length > 0
+                            ? `-- Filtered (${filteredCanonicalTraits.length} matches) --`
+                            : `-- No matches for "${canonicalSearchQuery}" --`
+                          : filteredCanonicalSkills.length > 0
+                          ? `-- Filtered (${filteredCanonicalSkills.length} matches) --`
+                          : `-- No matches for "${canonicalSearchQuery}" --`
+                        : `-- Choose Canonical ${pathDatabaseCategory.charAt(0).toUpperCase() + pathDatabaseCategory.slice(1)} (${
+                            pathDatabaseCategory === 'path'
+                              ? (paths || []).length
+                              : pathDatabaseCategory === 'power'
+                              ? (powers || []).length
+                              : pathDatabaseCategory === 'trait'
+                              ? (traits || []).length
+                              : (skills || []).length
+                          }) --`}
+                    </option>
                     {pathDatabaseCategory === 'path' &&
-                      paths.map((p) => (
+                      filteredCanonicalPaths.map((p) => (
                         <option key={p.id || p.name} value={p.id || p.name}>
                           {p.name} ({p.category || 'General'})
                         </option>
                       ))}
                     {pathDatabaseCategory === 'power' &&
-                      powers.map((p) => (
+                      filteredCanonicalPowers.map((p) => (
                         <option key={p.id || p.name} value={p.id || p.name}>
                           {p.name} ({p.action || 'AM'}, {p.usage || 'Usage'})
                         </option>
                       ))}
                     {pathDatabaseCategory === 'trait' &&
-                      traits.map((t) => (
+                      filteredCanonicalTraits.map((t) => (
                         <option key={t.id || t.name} value={t.id || t.name}>
                           {t.name}
                         </option>
                       ))}
                     {pathDatabaseCategory === 'skill' &&
-                      skills.map((s) => (
+                      filteredCanonicalSkills.map((s) => (
                         <option key={s.id || s.name} value={s.id || s.name}>
                           {s.name} ({s.attribute || 'Attr'}, {s.discipline || 'General'})
                         </option>
@@ -4315,7 +4576,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
                     type="button"
-                    onClick={() => setGemStudioTab('current')}
+                    onClick={() => {
+                      setGemStudioTab('current');
+                      setCanonicalSearchQuery('');
+                    }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       gemStudioTab === 'current'
                         ? 'bg-violet-600 text-white shadow-sm font-extrabold'
@@ -4326,7 +4590,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setGemStudioTab('library')}
+                    onClick={() => {
+                      setGemStudioTab('library');
+                      setCanonicalSearchQuery('');
+                    }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       gemStudioTab === 'library'
                         ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
@@ -4338,7 +4605,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   {isMetaScapeDesigner && (
                     <button
                       type="button"
-                      onClick={() => setGemStudioTab('database')}
+                      onClick={() => {
+                        setGemStudioTab('database');
+                        setCanonicalSearchQuery('');
+                      }}
                       className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                         gemStudioTab === 'database'
                           ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
@@ -4444,15 +4714,41 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 /* SUPABASE CANONICAL VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
                   {/* Dropdown Selector Header */}
-                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0">
-                    <span className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
+                    <span className="flex items-center gap-1.5 shrink-0">
                       <span>👑</span>
                       <span>Master Chaos Gems ({canonicalChaosGems.length})</span>
                     </span>
+
+                    {/* Inline Search Bar */}
+                    <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
+                      <input
+                        type="text"
+                        value={canonicalSearchQuery}
+                        onChange={(e) => setCanonicalSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleCanonicalSearchEnter('chaos_gem');
+                        }}
+                        placeholder="Search chaos gems..."
+                        className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/80 transition"
+                      />
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+                      {canonicalSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setCanonicalSearchQuery('')}
+                          className="absolute right-2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                          title="Clear search"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
                     <button
                       type="button"
                       onClick={handleNewMasterEntry}
-                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer"
+                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer shrink-0"
                     >
                       + New Master Gem
                     </button>
@@ -4467,13 +4763,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         handleResetForm();
                         return;
                       }
-                      const gem = canonicalChaosGems.find((g) => String(g.id) === val || g.name === val);
+                      const gem = (canonicalChaosGems || []).find((g) => String(g.id) === val || g.name === val);
                       if (gem) handlePopulateCanonicalChaosGem(gem);
                     }}
                     className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0"
                   >
-                    <option value="">-- Choose Canonical Chaos Gem --</option>
-                    {canonicalChaosGems.map((g) => (
+                    <option value="">
+                      {canonicalSearchQuery
+                        ? filteredCanonicalChaosGems.length > 0
+                          ? `-- Filtered (${filteredCanonicalChaosGems.length} matches) --`
+                          : `-- No matches for "${canonicalSearchQuery}" --`
+                        : `-- Choose Canonical Chaos Gem (${canonicalChaosGems.length}) --`}
+                    </option>
+                    {filteredCanonicalChaosGems.map((g) => (
                       <option key={g.id || g.name} value={g.id || g.name}>
                         {g.name}
                       </option>
