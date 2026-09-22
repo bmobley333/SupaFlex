@@ -1371,6 +1371,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const handlePopulateCanonicalPower = (p: any) => {
     setCanonicalSelectedId(p.id || p.name);
     setOriginalCanonicalName(p.name || '');
+    setName(p.name || '');
     setAbilityFormName(p.name || '');
     setAbilityFormAction(p.action || 'AM');
     setAbilityFormUsage(p.usage || '1-Enc');
@@ -1386,6 +1387,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const handlePopulateCanonicalTrait = (t: any) => {
     setCanonicalSelectedId(t.id || t.name);
     setOriginalCanonicalName(t.name || '');
+    setName(t.name || '');
     setAbilityFormName(t.name || '');
     setAbilityFormEffect(t.effect || '');
     setAbilityFormNotes(t.notes || '');
@@ -1398,6 +1400,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const handlePopulateCanonicalSkill = (s: any) => {
     setCanonicalSelectedId(s.id || s.name);
     setOriginalCanonicalName(s.name || '');
+    setName(s.name || '');
     setAbilityFormName(s.name || '');
     setAbilityFormSkillAttribute(s.attribute || '💪');
     setAbilityFormSkillDiscipline(s.discipline || 'General');
@@ -1573,6 +1576,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       } else if (type === 'chaos_gem') {
         await gameApi.deleteCanonicalChaosGem(id);
         setCanonicalChaosGems((prev) => prev.filter((g) => String(g.id) !== String(id) && g.name !== targetName));
+        removeCanonicalCatalogItem('chaos_gem', id, targetName);
       } else if (type === 'weapon') {
         await gameApi.deleteCanonicalWeapon(id);
         removeCanonicalCatalogItem('weapon', id, targetName);
@@ -1587,11 +1591,18 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         removeCanonicalCatalogItem('supplies', id, targetName);
       }
 
+      // Automatically purge from all character sheets across the database
+      const purgeRes = await gameApi.propagateCanonicalDeletionToAllCharacters({
+        entityType: (type === 'gear' ? 'supplies' : type) as any,
+        targetName,
+        targetId: id,
+      });
+
       handleResetForm();
       setDeleteConfirmTarget(null);
       setFeedback({
         type: 'success',
-        message: `👑 Successfully deleted '${targetName}' from canonical Supabase database.`,
+        message: `👑 Deleted '${targetName}' from Supabase & purged from ${purgeRes.purgedCharacterCount} character(s)!`,
       });
     } catch (err: any) {
       console.error('[PlayerWorkshopModal] Error deleting canonical record:', err);
@@ -2351,7 +2362,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             // Standalone ability in Designer mode
             if (activeAbilityCategory === 'power' || pathDatabaseCategory === 'power') {
               const powerPayload = {
-                name: (pathStudioTab === 'database' ? name.trim() : abilityFormName.trim()),
+                name: (abilityFormName.trim() || name.trim()),
                 action: abilityFormAction,
                 usage: abilityFormUsage,
                 effect: abilityFormEffect.trim(),
@@ -2371,6 +2382,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 });
                 updateCanonicalCatalogItem('power', { ...powerPayload, id: canonicalSelectedId }, originalCanonicalName);
                 setOriginalCanonicalName(powerPayload.name);
+                setName(powerPayload.name);
                 setFeedback({
                   type: 'success',
                   message: `👑 Updated Master Power '${powerPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
@@ -2385,6 +2397,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 updateCanonicalCatalogItem('power', createdPower);
                 setCanonicalSelectedId(createdPower.id);
                 setOriginalCanonicalName(createdPower.name);
+                setName(createdPower.name);
                 setFeedback({
                   type: 'success',
                   message: `👑 Saved Master Power '${powerPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
@@ -2395,7 +2408,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               setAbilityFormNotes('');
             } else if (activeAbilityCategory === 'trait' || pathDatabaseCategory === 'trait') {
               const traitPayload = {
-                name: (pathStudioTab === 'database' ? name.trim() : abilityFormName.trim()),
+                name: (abilityFormName.trim() || name.trim()),
                 effect: abilityFormEffect.trim(),
                 notes: abilityFormNotes.trim() || '',
                 genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
@@ -2410,6 +2423,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 });
                 updateCanonicalCatalogItem('trait', { ...traitPayload, id: canonicalSelectedId }, originalCanonicalName);
                 setOriginalCanonicalName(traitPayload.name);
+                setName(traitPayload.name);
                 setFeedback({
                   type: 'success',
                   message: `👑 Updated Master Trait '${traitPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
@@ -2424,6 +2438,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 updateCanonicalCatalogItem('trait', createdTrait);
                 setCanonicalSelectedId(createdTrait.id);
                 setOriginalCanonicalName(createdTrait.name);
+                setName(createdTrait.name);
                 setFeedback({
                   type: 'success',
                   message: `👑 Saved Master Trait '${traitPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
@@ -2434,7 +2449,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               setAbilityFormNotes('');
             } else if (activeAbilityCategory === 'skill' || pathDatabaseCategory === 'skill') {
               const skillPayload = {
-                name: (pathStudioTab === 'database' ? name.trim() : abilityFormName.trim()),
+                name: (abilityFormName.trim() || name.trim()),
                 attribute: abilityFormSkillAttribute,
                 discipline: abilityFormSkillDiscipline === 'CUSTOM_NEW' ? abilityFormSkillDisciplineNewText.trim() : abilityFormSkillDiscipline,
                 notes: abilityFormNotes.trim() || '',
@@ -2449,6 +2464,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 });
                 updateCanonicalCatalogItem('skill', { ...skillPayload, id: canonicalSelectedId }, originalCanonicalName);
                 setOriginalCanonicalName(skillPayload.name);
+                setName(skillPayload.name);
                 setFeedback({
                   type: 'success',
                   message: `👑 Updated Master Skill '${skillPayload.name}' & propagated to ${propRes.updatedCount} character(s)!`,
@@ -2458,6 +2474,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 updateCanonicalCatalogItem('skill', createdSkill);
                 setCanonicalSelectedId(createdSkill.id);
                 setOriginalCanonicalName(createdSkill.name);
+                setName(createdSkill.name);
                 setFeedback({
                   type: 'success',
                   message: `👑 Created Master Skill '${createdSkill.name}' in Supabase Canon!`,
@@ -2483,6 +2500,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               oldName: originalCanonicalName || name.trim(),
               updatedItem: { ...gemPayload, id: canonicalSelectedId },
             });
+            updateCanonicalCatalogItem('chaos_gem', { ...gemPayload, id: canonicalSelectedId }, originalCanonicalName);
             setCanonicalChaosGems((prev) =>
               prev.map((g) => (String(g.id) === String(canonicalSelectedId) ? { ...g, ...gemPayload } : g))
             );
@@ -2498,6 +2516,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               oldName: name.trim(),
               updatedItem: savedGem,
             });
+            updateCanonicalCatalogItem('chaos_gem', savedGem);
             setCanonicalChaosGems((prev) => [...prev, savedGem]);
             setCanonicalSelectedId(savedGem.id);
             setOriginalCanonicalName(savedGem.name);

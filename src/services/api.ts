@@ -31,7 +31,7 @@ import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { resolveArtifactCatalog, CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { resolveExoticCatalog, CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
-import { updateCharacterSheetCanonicalItem, CanonicalPropagationParams } from '../utils/canonicalPropagation';
+import { updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, CanonicalPropagationParams, CanonicalEntityType } from '../utils/canonicalPropagation';
 
 let cachedSupabaseMonsters: SupabaseMonster[] | null = null;
 
@@ -2747,6 +2747,61 @@ export const gameApi = {
     } catch (e: any) {
       console.error('[gameApi] Error in propagateCanonicalUpdateToAllCharacters:', e);
       return { updatedCount: 0, errors: [e.message || 'Propagation failed'] };
+    }
+  },
+
+  async propagateCanonicalDeletionToAllCharacters(params: {
+    entityType: CanonicalEntityType;
+    targetName: string;
+    targetId?: string | number;
+  }): Promise<{ purgedCharacterCount: number; errors: string[] }> {
+    const { entityType, targetName, targetId } = params;
+    if (!targetName) {
+      return { purgedCharacterCount: 0, errors: [] };
+    }
+
+    try {
+      // Fetch all character sheet records
+      const { data: allChars, error: fetchErr } = await supabase
+        .from('characters')
+        .select('id, name, sheet_data');
+
+      if (fetchErr) throw fetchErr;
+      if (!allChars || allChars.length === 0) {
+        return { purgedCharacterCount: 0, errors: [] };
+      }
+
+      let purgedCharacterCount = 0;
+      const errors: string[] = [];
+
+      for (const char of allChars) {
+        if (!char.sheet_data) continue;
+        const { updatedSheet, wasModified } = removeCharacterSheetCanonicalItem(
+          char.sheet_data,
+          entityType,
+          targetName,
+          targetId
+        );
+
+        if (wasModified) {
+          const { error: updateErr } = await supabase
+            .from('characters')
+            .update({ sheet_data: updatedSheet, updated_at: new Date().toISOString() })
+            .eq('id', char.id);
+
+          if (updateErr) {
+            console.error(`[gameApi] Deletion propagation error for character ${char.id} (${char.name}):`, updateErr);
+            errors.push(`${char.name || char.id}: ${updateErr.message}`);
+          } else {
+            purgedCharacterCount++;
+          }
+        }
+      }
+
+      return { purgedCharacterCount, errors };
+    } catch (e: any) {
+      console.error('[gameApi] Error in propagateCanonicalDeletionToAllCharacters:', e);
+      return { purgedCharacterCount: 0, errors: [e.message || 'Deletion propagation failed'] };
     }
   },
 };

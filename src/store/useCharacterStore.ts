@@ -7,7 +7,7 @@ import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { reconcileCharacterVaultWithGear, cleanBelongsToName, getFunctionsForMod } from '../utils/gearFunctionSync';
 import { parseCostToSilver, deductFundsWithChange } from '../utils/moneyUtils';
 import { reconcileCharacterFreeTraits } from '../utils/pathReconciliationUtils';
-import { reconcileCanonicalSnapshots } from '../utils/canonicalPropagation';
+import { reconcileCanonicalSnapshots, updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, CanonicalEntityType } from '../utils/canonicalPropagation';
 import { CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { getTabSessionId } from '../utils/tabSession';
@@ -1354,8 +1354,21 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     // Immediately re-reconcile active character in memory if open
     const activeChar = get().activeCharacter;
     if (activeChar && activeChar.sheet_data) {
+      let currentSheet = activeChar.sheet_data;
+      if (oldName || item.name) {
+        const propRes = updateCharacterSheetCanonicalItem(
+          currentSheet,
+          type as CanonicalEntityType,
+          oldName || item.name,
+          item
+        );
+        if (propRes.wasModified) {
+          currentSheet = propRes.updatedSheet;
+        }
+      }
+
       const { updatedSheetData, modifiedCount } = reconcileCanonicalSnapshots(
-        activeChar.sheet_data,
+        currentSheet,
         {
           powers: get().powers,
           weapons: get().weaponsCatalog,
@@ -1365,7 +1378,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           supplies: get().suppliesCatalog,
         }
       );
-      if (modifiedCount > 0) {
+
+      if (modifiedCount > 0 || currentSheet !== activeChar.sheet_data) {
         set({ activeCharacter: { ...activeChar, sheet_data: updatedSheetData } });
       }
     }
@@ -1395,6 +1409,20 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
     if (typeof window !== 'undefined') {
       localStorage.removeItem(CATALOGS_CACHE_KEY);
+    }
+
+    // Immediately purge from active character in memory if open
+    const activeChar = get().activeCharacter;
+    if (activeChar && activeChar.sheet_data) {
+      const { updatedSheet, wasModified } = removeCharacterSheetCanonicalItem(
+        activeChar.sheet_data,
+        type as CanonicalEntityType,
+        name || '',
+        id
+      );
+      if (wasModified) {
+        set({ activeCharacter: { ...activeChar, sheet_data: updatedSheet } });
+      }
     }
   },
 

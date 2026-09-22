@@ -245,6 +245,9 @@ export function updateCharacterSheetCanonicalItem(
             ...gem,
             name: cleanNewName,
             effect: updatedItem.effect !== undefined ? updatedItem.effect : gem.effect,
+            action: updatedItem.action !== undefined ? updatedItem.action : gem.action,
+            usage: updatedItem.usage !== undefined ? updatedItem.usage : gem.usage,
+            notes: updatedItem.notes !== undefined ? updatedItem.notes : gem.notes,
           };
         }
         return gem;
@@ -466,4 +469,298 @@ export function reconcileCanonicalSnapshots(
   }
 
   return { updatedSheetData: updatedSheet, modifiedCount };
+}
+
+export interface CharacterPurgeResult {
+  updatedSheet: CharacterSheetData;
+  wasModified: boolean;
+  purgedItemsCount: number;
+}
+
+/**
+ * Deterministically removes all occurrences of a deleted canonical item from a character's sheet_data.
+ * Purges from equipped slots, inventories, vaults, overrides, and wishlists.
+ */
+export function removeCharacterSheetCanonicalItem(
+  sheetData: CharacterSheetData,
+  entityType: CanonicalEntityType,
+  targetName: string,
+  targetId?: string | number
+): CharacterPurgeResult {
+  if (!sheetData || !targetName) {
+    return { updatedSheet: sheetData, wasModified: false, purgedItemsCount: 0 };
+  }
+
+  const cleanTargetName = targetName.trim().toLowerCase();
+  const strId = targetId !== undefined ? String(targetId) : '';
+  let wasModified = false;
+  let purgedItemsCount = 0;
+
+  // Deep clone to prevent unintended mutations
+  const updatedSheet: CharacterSheetData = JSON.parse(JSON.stringify(sheetData));
+
+  // --- 1. POWERS ---
+  if (entityType === 'power') {
+    const isPowerMatch = (slot: AbilitySlot) => {
+      const sName = (slot.name || '').trim().toLowerCase();
+      const bName = (slot.base_name || '').trim().toLowerCase();
+      return sName === cleanTargetName || bName === cleanTargetName;
+    };
+
+    if (Array.isArray(updatedSheet.power_slots)) {
+      const initialLen = updatedSheet.power_slots.length;
+      updatedSheet.power_slots = updatedSheet.power_slots.filter((slot) => !isPowerMatch(slot));
+      if (updatedSheet.power_slots.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.power_slots.length);
+      }
+    }
+    if (Array.isArray(updatedSheet.spell_slots)) {
+      const initialLen = updatedSheet.spell_slots.length;
+      updatedSheet.spell_slots = updatedSheet.spell_slots.filter((slot) => !isPowerMatch(slot));
+      if (updatedSheet.spell_slots.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.spell_slots.length);
+      }
+    }
+    if (Array.isArray(updatedSheet.character_power_codex)) {
+      const initialLen = updatedSheet.character_power_codex.length;
+      updatedSheet.character_power_codex = updatedSheet.character_power_codex.filter((slot) => !isPowerMatch(slot));
+      if (updatedSheet.character_power_codex.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.character_power_codex.length);
+      }
+    }
+    if (updatedSheet.ability_overrides) {
+      for (const key of Object.keys(updatedSheet.ability_overrides)) {
+        if (key.trim().toLowerCase() === cleanTargetName) {
+          delete updatedSheet.ability_overrides[key];
+          wasModified = true;
+        }
+      }
+    }
+    if (Array.isArray(updatedSheet.starred_powers)) {
+      const initialLen = updatedSheet.starred_powers.length;
+      updatedSheet.starred_powers = updatedSheet.starred_powers.filter(
+        (id) => String(id) !== strId && String(id).toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.starred_powers.length !== initialLen) {
+        wasModified = true;
+      }
+    }
+  }
+
+  // --- 2. WEAPONS ---
+  if (entityType === 'weapon') {
+    const isWeaponMatch = (w: WeaponSlot) => (w.name || '').trim().toLowerCase() === cleanTargetName;
+    if (Array.isArray(updatedSheet.weapons)) {
+      const initialLen = updatedSheet.weapons.length;
+      updatedSheet.weapons = updatedSheet.weapons.filter((w) => !isWeaponMatch(w));
+      if (updatedSheet.weapons.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.weapons.length);
+      }
+    }
+    if (Array.isArray(updatedSheet.starred_weapons)) {
+      const initialLen = updatedSheet.starred_weapons.length;
+      updatedSheet.starred_weapons = updatedSheet.starred_weapons.filter(
+        (id) => String(id) !== strId && String(id).toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.starred_weapons.length !== initialLen) {
+        wasModified = true;
+      }
+    }
+  }
+
+  // --- 3. ARMOR ---
+  if (entityType === 'armor') {
+    if (updatedSheet.armor_slot && (updatedSheet.armor_slot.name || '').trim().toLowerCase() === cleanTargetName) {
+      delete (updatedSheet as any).armor_slot;
+      wasModified = true;
+      purgedItemsCount++;
+    }
+    if (Array.isArray(updatedSheet.wardrobe)) {
+      const initialLen = updatedSheet.wardrobe.length;
+      updatedSheet.wardrobe = updatedSheet.wardrobe.filter(
+        (a) => (a.name || '').trim().toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.wardrobe.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.wardrobe.length);
+      }
+    }
+    if (Array.isArray(updatedSheet.starred_armor)) {
+      const initialLen = updatedSheet.starred_armor.length;
+      updatedSheet.starred_armor = updatedSheet.starred_armor.filter(
+        (id) => String(id) !== strId && String(id).toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.starred_armor.length !== initialLen) {
+        wasModified = true;
+      }
+    }
+  }
+
+  // --- 4. SHIELDS ---
+  if (entityType === 'shield') {
+    if (updatedSheet.shield_slot && (updatedSheet.shield_slot.name || '').trim().toLowerCase() === cleanTargetName) {
+      delete (updatedSheet as any).shield_slot;
+      wasModified = true;
+      purgedItemsCount++;
+    }
+    if (Array.isArray(updatedSheet.armory)) {
+      const initialLen = updatedSheet.armory.length;
+      updatedSheet.armory = updatedSheet.armory.filter(
+        (s) => (s.name || '').trim().toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.armory.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.armory.length);
+      }
+    }
+    if (Array.isArray(updatedSheet.starred_shields)) {
+      const initialLen = updatedSheet.starred_shields.length;
+      updatedSheet.starred_shields = updatedSheet.starred_shields.filter(
+        (id) => String(id) !== strId && String(id).toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.starred_shields.length !== initialLen) {
+        wasModified = true;
+      }
+    }
+  }
+
+  // --- 5. GEAR / SUPPLIES ---
+  if (entityType === 'gear' || entityType === 'supplies') {
+    if (Array.isArray(updatedSheet.simple_gear)) {
+      const initialLen = updatedSheet.simple_gear.length;
+      updatedSheet.simple_gear = updatedSheet.simple_gear.filter(
+        (g) => (g.name || '').trim().toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.simple_gear.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.simple_gear.length);
+      }
+    }
+    if (Array.isArray(updatedSheet.gear_slots)) {
+      const initialLen = updatedSheet.gear_slots.length;
+      updatedSheet.gear_slots = updatedSheet.gear_slots.filter(
+        (slot) => (slot.name || '').trim().toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.gear_slots.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.gear_slots.length);
+      }
+    }
+    if (Array.isArray(updatedSheet.character_vault)) {
+      const initialLen = updatedSheet.character_vault.length;
+      updatedSheet.character_vault = updatedSheet.character_vault.filter(
+        (item) => (item.name || '').trim().toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.character_vault.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.character_vault.length);
+      }
+    }
+    if (Array.isArray(updatedSheet.starred_gear)) {
+      const initialLen = updatedSheet.starred_gear.length;
+      updatedSheet.starred_gear = updatedSheet.starred_gear.filter(
+        (id) => String(id) !== strId && String(id).toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.starred_gear.length !== initialLen) {
+        wasModified = true;
+      }
+    }
+  }
+
+  // --- 6. TRAITS ---
+  if (entityType === 'trait') {
+    if (Array.isArray(updatedSheet.traits_quirks)) {
+      const initialLen = updatedSheet.traits_quirks.length;
+      updatedSheet.traits_quirks = updatedSheet.traits_quirks.filter(
+        (t) => (t.name || '').trim().toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.traits_quirks.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.traits_quirks.length);
+      }
+    }
+    if (Array.isArray(updatedSheet.starred_traits)) {
+      const initialLen = updatedSheet.starred_traits.length;
+      updatedSheet.starred_traits = updatedSheet.starred_traits.filter(
+        (id) => String(id) !== strId && String(id).toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.starred_traits.length !== initialLen) {
+        wasModified = true;
+      }
+    }
+  }
+
+  // --- 7. CHAOS GEMS ---
+  if (entityType === 'chaos_gem') {
+    if (Array.isArray(updatedSheet.chaos_gauntlet_slots)) {
+      updatedSheet.chaos_gauntlet_slots = updatedSheet.chaos_gauntlet_slots.map((slot: any) => {
+        if (slot && (slot.name || '').trim().toLowerCase() === cleanTargetName) {
+          wasModified = true;
+          purgedItemsCount++;
+          return {
+            ...slot,
+            gem: null,
+            name: '',
+            effect: '',
+            action: '',
+            usage: '',
+          };
+        }
+        return slot;
+      });
+    }
+  }
+
+  // --- 8. PATHS ---
+  if (entityType === 'path') {
+    if (Array.isArray(updatedSheet.favorite_power_tables)) {
+      const initialLen = updatedSheet.favorite_power_tables.length;
+      updatedSheet.favorite_power_tables = updatedSheet.favorite_power_tables.filter(
+        (p) => p.trim().toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.favorite_power_tables.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.favorite_power_tables.length);
+      }
+    }
+    if (Array.isArray(updatedSheet.favorite_trait_kits)) {
+      const initialLen = updatedSheet.favorite_trait_kits.length;
+      updatedSheet.favorite_trait_kits = updatedSheet.favorite_trait_kits.filter(
+        (p) => p.trim().toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.favorite_trait_kits.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.favorite_trait_kits.length);
+      }
+    }
+  }
+
+  // --- 9. SKILLS ---
+  if (entityType === 'skill') {
+    if (Array.isArray(updatedSheet.known_individual_skills)) {
+      const initialLen = updatedSheet.known_individual_skills.length;
+      updatedSheet.known_individual_skills = updatedSheet.known_individual_skills.filter(
+        (s) => s.trim().toLowerCase() !== cleanTargetName
+      );
+      if (updatedSheet.known_individual_skills.length !== initialLen) {
+        wasModified = true;
+        purgedItemsCount += (initialLen - updatedSheet.known_individual_skills.length);
+      }
+    }
+    if (Array.isArray(updatedSheet.starred_skills)) {
+      const initialLen = updatedSheet.starred_skills.length;
+      updatedSheet.starred_skills = updatedSheet.starred_skills.filter(
+        (s) => String(s).trim().toLowerCase() !== cleanTargetName && String(s) !== strId
+      );
+      if (updatedSheet.starred_skills.length !== initialLen) {
+        wasModified = true;
+      }
+    }
+  }
+
+  return { updatedSheet, wasModified, purgedItemsCount };
 }
