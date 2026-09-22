@@ -1819,7 +1819,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setEditingItem(null);
       setCanonicalSelectedId(null);
       setOriginalCanonicalName('');
-      setCanonicalSearchQuery('');
       if (newType === 'gear' || newType === 'exotic' || newType === 'artifact') {
         setActiveStudioSelection({ type: 'chassis' });
         if (studioTab === 'database' && (!isMasterAccount || workshopMode !== 'designer')) {
@@ -2798,6 +2797,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   onClick={() => {
                     setWorkshopMode('player');
                     handleResetForm();
+                    setCanonicalSearchQuery('');
                   }}
                   className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                     workshopMode === 'player'
@@ -2907,7 +2907,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     type="button"
                     onClick={() => {
                       setStudioTab('current');
-                      setCanonicalSearchQuery('');
                     }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       studioTab === 'current'
@@ -2921,7 +2920,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     type="button"
                     onClick={() => {
                       setStudioTab('library');
-                      setCanonicalSearchQuery('');
                     }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       studioTab === 'library'
@@ -2936,7 +2934,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       type="button"
                       onClick={() => {
                         setStudioTab('database');
-                        setCanonicalSearchQuery('');
                       }}
                       className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                         studioTab === 'database'
@@ -3131,7 +3128,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setGearDatabaseChassis('weapon');
                         handleResetForm();
                         setStudioChassisType('weapon');
-                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         gearDatabaseChassis === 'weapon'
@@ -3147,7 +3143,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setGearDatabaseChassis('armor');
                         handleResetForm();
                         setStudioChassisType('armor');
-                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         gearDatabaseChassis === 'armor'
@@ -3163,7 +3158,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setGearDatabaseChassis('shield');
                         handleResetForm();
                         setStudioChassisType('shield');
-                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         gearDatabaseChassis === 'shield'
@@ -3179,7 +3173,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setGearDatabaseChassis('supplies');
                         handleResetForm();
                         setStudioChassisType('supplies');
-                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         gearDatabaseChassis === 'supplies'
@@ -3711,7 +3704,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     type="button"
                     onClick={() => {
                       setPathStudioTab('current');
-                      setCanonicalSearchQuery('');
                     }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       pathStudioTab === 'current'
@@ -3725,7 +3717,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     type="button"
                     onClick={() => {
                       setPathStudioTab('library');
-                      setCanonicalSearchQuery('');
                     }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       pathStudioTab === 'library'
@@ -3740,7 +3731,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       type="button"
                       onClick={() => {
                         setPathStudioTab('database');
-                        setCanonicalSearchQuery('');
                       }}
                       className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                         pathStudioTab === 'database'
@@ -3889,7 +3879,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         handleResetForm();
                         setPathStudioMode('path');
                         setActivePathSelection({ type: 'path' });
-                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         pathDatabaseCategory === 'path'
@@ -3907,7 +3896,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setPathStudioMode('standalone');
                         setActiveAbilityCategory('power');
                         setActivePathSelection({ type: 'ability', category: 'power' });
-                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         pathDatabaseCategory === 'power'
@@ -3925,7 +3913,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setPathStudioMode('standalone');
                         setActiveAbilityCategory('trait');
                         setActivePathSelection({ type: 'ability', category: 'trait' });
-                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         pathDatabaseCategory === 'trait'
@@ -3943,7 +3930,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setPathStudioMode('standalone');
                         setActiveAbilityCategory('skill');
                         setActivePathSelection({ type: 'ability', category: 'skill' });
-                        setCanonicalSearchQuery('');
                       }}
                       className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         pathDatabaseCategory === 'skill'
@@ -4608,7 +4594,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     type="button"
                     onClick={() => {
                       setGemStudioTab('current');
-                      setCanonicalSearchQuery('');
                     }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       gemStudioTab === 'current'
@@ -4622,7 +4607,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     type="button"
                     onClick={() => {
                       setGemStudioTab('library');
-                      setCanonicalSearchQuery('');
                     }}
                     className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       gemStudioTab === 'library'
@@ -4637,7 +4621,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       type="button"
                       onClick={() => {
                         setGemStudioTab('database');
-                        setCanonicalSearchQuery('');
                       }}
                       className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                         gemStudioTab === 'database'
