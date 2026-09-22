@@ -615,9 +615,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setInherentPowers([]);
     setAttachedMods([]);
     setActiveStudioSelection({ type: 'chassis' });
-    setStudioTab('current');
-    setPathStudioMode('path');
-    setPathStudioTab('current');
+    if (studioTab !== 'database') {
+      setStudioTab('current');
+    }
+    if (pathStudioTab !== 'database') {
+      setPathStudioMode('path');
+      setPathStudioTab('current');
+    }
+    if (gemStudioTab !== 'database') {
+      setGemStudioTab('current');
+    }
     setPathLibraryFilter('all');
     setIsCreatingNewPath(false);
     setSelectedPathId('');
@@ -3279,11 +3286,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </option>
                       ))}
                     {gearDatabaseChassis === 'supplies' &&
-                      filteredCanonicalSupplies.map((sup) => (
-                        <option key={sup.id || sup.name} value={sup.id || sup.name}>
-                          {sup.name} ({sup.category || 'Gear'}{sup.cost ? `, ${sup.cost}` : ''})
-                        </option>
-                      ))}
+                      filteredCanonicalSupplies.map((sup) => {
+                        const cat = (sup.category || 'Gear').trim();
+                        const showCost = sup.cost && sup.cost.trim().toLowerCase() !== cat.toLowerCase();
+                        return (
+                          <option key={sup.id || sup.name} value={sup.id || sup.name}>
+                            {sup.name} ({cat}{showCost ? `, ${sup.cost}` : ''})
+                          </option>
+                        );
+                      })}
                   </select>
 
                   {/* Canonical Item Preview Card */}
@@ -5581,7 +5592,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       onChange={(e) => setNotes(e.target.value)}
                       rows={2}
                       placeholder="Origin story, historical background, craftsmanship notes..."
-                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-amber-500 transition shadow-inner font-serif italic"
+                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-amber-500 transition shadow-inner font-serif italic resize-y min-h-[48px]"
                     />
                   </div>
 
@@ -5713,7 +5724,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       onChange={(e) => setModFormNotes(e.target.value)}
                       rows={3}
                       placeholder="Technical details, mounting position, installation lore..."
-                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-cyan-500 transition shadow-inner font-serif italic"
+                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-cyan-500 transition shadow-inner font-serif italic resize-y min-h-[48px]"
                     />
                   </div>
 
@@ -6028,7 +6039,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       onChange={(e) => setPathDescription(e.target.value)}
                       rows={3}
                       placeholder="e.g. Masters of planar shifting and void manipulation, the Voidstalker steps between shadows..."
-                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner resize-none leading-relaxed"
+                      className="bg-slate-950 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner resize-y min-h-[60px] leading-relaxed"
                       required
                     />
                   </div>
@@ -6655,12 +6666,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           {/* Notes */}
                           <div className="flex flex-col gap-1">
                             <span className="font-bold text-slate-300">Notes</span>
-                            <input
-                              type="text"
+                            <textarea
+                              rows={2}
                               value={abilityFormNotes}
                               onChange={(e) => setAbilityFormNotes(e.target.value)}
                               placeholder="Optional notes or rule notes..."
-                              className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-slate-700 outline-none"
+                              className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 font-serif italic resize-y min-h-[48px]"
                             />
                           </div>
 
@@ -6846,7 +6857,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     value={pathDescription}
                     onChange={(e) => setPathDescription(e.target.value)}
                     placeholder="Describe this Path, training archetype, and key abilities..."
-                    className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+                    className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 resize-y min-h-[60px]"
                     required
                   />
                 </div>
@@ -7034,12 +7045,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 <span className="font-bold text-slate-300">Lore & Notes</span>
                 <InfoTooltip text="Optional lore, tactical notes, or historical context. Displayed via the inline ℹ️ indicator." />
               </div>
-              <input
-                type="text"
+              <textarea
+                rows={2}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="e.g. Forged in the ancient deeps of Shanask Loom..."
-                className="bg-slate-950 text-slate-100 text-xs px-3 py-1.5 rounded-xl border border-slate-700 outline-none focus:border-amber-400 font-serif"
+                className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 font-serif italic resize-y min-h-[48px]"
               />
             </div>
 
