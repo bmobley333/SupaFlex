@@ -7,6 +7,7 @@ import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { reconcileCharacterVaultWithGear, cleanBelongsToName, getFunctionsForMod } from '../utils/gearFunctionSync';
 import { parseCostToSilver, deductFundsWithChange } from '../utils/moneyUtils';
 import { reconcileCharacterFreeTraits } from '../utils/pathReconciliationUtils';
+import { reconcileCanonicalSnapshots } from '../utils/canonicalPropagation';
 import { CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { getTabSessionId } from '../utils/tabSession';
@@ -201,6 +202,8 @@ interface CharacterStore {
   ) => void;
   revertApExpenditure: (entryId: string) => void;
   syncSheetRulesToDatabase: () => Promise<{ updatedCount: number; preservedCount: number }>;
+  updateCanonicalCatalogItem: (type: string, item: any, oldName?: string) => void;
+  removeCanonicalCatalogItem: (type: string, id: string | number, name?: string) => void;
 
   // Player Links (Account-Wide)
   playerLinks: EncounterLink[];
@@ -495,7 +498,15 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         const cleanedSheet = sanitizeNishSkills(rawSheet);
         const migrated = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(cleanedSheet));
         const vaultReconciled = reconcileCharacterVaultWithGear(migrated, functionsData || [], modsData || []).updatedSheet;
-        return reconcileCharacterFreeTraits(vaultReconciled, char, traits).updatedSheetData;
+        const canonicalReconciled = reconcileCanonicalSnapshots(vaultReconciled, {
+          powers,
+          weapons: weaponsData,
+          armor: armorData,
+          shields: shieldsData,
+          traits,
+          supplies: suppliesData,
+        }).updatedSheetData;
+        return reconcileCharacterFreeTraits(canonicalReconciled, char, traits).updatedSheetData;
       };
 
       let targetCandidate: Character | null = null;
@@ -564,7 +575,15 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       const cleanedSheet = sanitizeNishSkills(rawSheet);
       const migrated = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(cleanedSheet));
       const vaultReconciled = reconcileCharacterVaultWithGear(migrated, functionsCatalog, modsCatalog).updatedSheet;
-      return reconcileCharacterFreeTraits(vaultReconciled, char, get().traits).updatedSheetData;
+      const canonicalReconciled = reconcileCanonicalSnapshots(vaultReconciled, {
+        powers: get().powers,
+        weapons: get().weaponsCatalog,
+        armor: get().armorCatalog,
+        shields: get().shieldsCatalog,
+        traits: get().traits,
+        supplies: get().suppliesCatalog,
+      }).updatedSheetData;
+      return reconcileCharacterFreeTraits(canonicalReconciled, char, get().traits).updatedSheetData;
     };
 
     const found = get().characters.find((c) => c.id === id);
@@ -1250,6 +1269,120 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     } catch (err) {
       console.error('Error syncing sheet rules:', err);
       return { updatedCount: 0, preservedCount: 0 };
+    }
+  },
+
+  // --- DESIGNER MODE CATALOG FRESHNESS ---
+  updateCanonicalCatalogItem: (type: string, item: any, oldName?: string) => {
+    const cleanOld = (oldName || item.name || '').trim().toLowerCase();
+    const cleanNew = (item.name || '').trim();
+
+    if (type === 'power') {
+      const updated = get().powers.map((p) =>
+        (p.name || '').trim().toLowerCase() === cleanOld ? { ...p, ...item } : p
+      );
+      if (!updated.some((p) => (p.name || '').trim().toLowerCase() === cleanNew.toLowerCase())) {
+        updated.push(item);
+      }
+      set({ powers: updated });
+    } else if (type === 'path') {
+      const updated = get().paths.map((p) =>
+        (p.name || '').trim().toLowerCase() === cleanOld || String(p.id) === String(item.id)
+          ? { ...p, ...item }
+          : p
+      );
+      if (!updated.some((p) => (p.name || '').trim().toLowerCase() === cleanNew.toLowerCase())) {
+        updated.push(item);
+      }
+      set({ paths: updated });
+    } else if (type === 'weapon') {
+      const updated = get().weaponsCatalog.map((w) =>
+        (w.name || '').trim().toLowerCase() === cleanOld ? { ...w, ...item } : w
+      );
+      if (!updated.some((w) => (w.name || '').trim().toLowerCase() === cleanNew.toLowerCase())) {
+        updated.push(item);
+      }
+      set({ weaponsCatalog: updated });
+    } else if (type === 'armor') {
+      const updated = get().armorCatalog.map((a) =>
+        (a.name || '').trim().toLowerCase() === cleanOld ? { ...a, ...item } : a
+      );
+      if (!updated.some((a) => (a.name || '').trim().toLowerCase() === cleanNew.toLowerCase())) {
+        updated.push(item);
+      }
+      set({ armorCatalog: updated });
+    } else if (type === 'shield') {
+      const updated = get().shieldsCatalog.map((s) =>
+        (s.name || '').trim().toLowerCase() === cleanOld ? { ...s, ...item } : s
+      );
+      if (!updated.some((s) => (s.name || '').trim().toLowerCase() === cleanNew.toLowerCase())) {
+        updated.push(item);
+      }
+      set({ shieldsCatalog: updated });
+    } else if (type === 'gear' || type === 'supplies') {
+      const updated = get().suppliesCatalog.map((g) =>
+        (g.name || '').trim().toLowerCase() === cleanOld ? { ...g, ...item } : g
+      );
+      if (!updated.some((g) => (g.name || '').trim().toLowerCase() === cleanNew.toLowerCase())) {
+        updated.push(item);
+      }
+      set({ suppliesCatalog: updated });
+    } else if (type === 'trait') {
+      const updated = get().traits.map((t) =>
+        (t.name || '').trim().toLowerCase() === cleanOld ? { ...t, ...item } : t
+      );
+      if (!updated.some((t) => (t.name || '').trim().toLowerCase() === cleanNew.toLowerCase())) {
+        updated.push(item);
+      }
+      set({ traits: updated });
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(CATALOGS_CACHE_KEY);
+    }
+
+    // Immediately re-reconcile active character in memory if open
+    const activeChar = get().activeCharacter;
+    if (activeChar && activeChar.sheet_data) {
+      const { updatedSheetData, modifiedCount } = reconcileCanonicalSnapshots(
+        activeChar.sheet_data,
+        {
+          powers: get().powers,
+          weapons: get().weaponsCatalog,
+          armor: get().armorCatalog,
+          shields: get().shieldsCatalog,
+          traits: get().traits,
+          supplies: get().suppliesCatalog,
+        }
+      );
+      if (modifiedCount > 0) {
+        set({ activeCharacter: { ...activeChar, sheet_data: updatedSheetData } });
+      }
+    }
+  },
+
+  removeCanonicalCatalogItem: (type: string, id: string | number, name?: string) => {
+    const cleanName = (name || '').trim().toLowerCase();
+    const strId = String(id);
+
+    if (type === 'power') {
+      set({ powers: get().powers.filter((p) => String(p.id) !== strId && (p.name || '').trim().toLowerCase() !== cleanName) });
+    } else if (type === 'path') {
+      set({ paths: get().paths.filter((p) => String(p.id) !== strId && (p.name || '').trim().toLowerCase() !== cleanName) });
+    } else if (type === 'weapon') {
+      set({ weaponsCatalog: get().weaponsCatalog.filter((w) => String(w.id) !== strId && (w.name || '').trim().toLowerCase() !== cleanName) });
+    } else if (type === 'armor') {
+      set({ armorCatalog: get().armorCatalog.filter((a) => String(a.id) !== strId && (a.name || '').trim().toLowerCase() !== cleanName) });
+    } else if (type === 'shield') {
+      set({ shieldsCatalog: get().shieldsCatalog.filter((s) => String(s.id) !== strId && (s.name || '').trim().toLowerCase() !== cleanName) });
+    } else if (type === 'gear' || type === 'supplies') {
+      set({ suppliesCatalog: get().suppliesCatalog.filter((g) => String(g.id) !== strId && (g.name || '').trim().toLowerCase() !== cleanName) });
+    } else if (type === 'trait') {
+      set({ traits: get().traits.filter((t) => String(t.id) !== strId && (t.name || '').trim().toLowerCase() !== cleanName) });
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(CATALOGS_CACHE_KEY);
     }
   },
 

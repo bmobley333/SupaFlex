@@ -251,6 +251,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const armorCatalog = useCharacterStore((state) => state.armorCatalog);
   const shieldsCatalog = useCharacterStore((state) => state.shieldsCatalog);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
+  const updateCanonicalCatalogItem = useCharacterStore((state) => state.updateCanonicalCatalogItem);
+
+  const isMasterAccount = (playerEmail || '').toLowerCase().trim() === 'metascapegame@gmail.com';
+  const [workshopMode, setWorkshopMode] = useState<'player' | 'designer'>('player');
+  const [canonicalSelectedId, setCanonicalSelectedId] = useState<string | number | null>(null);
+  const [originalCanonicalName, setOriginalCanonicalName] = useState<string>('');
 
   const isGm = activeRole === 'gm';
 
@@ -560,6 +566,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const handleResetForm = () => {
     setEditingItem(null);
+    setCanonicalSelectedId(null);
+    setOriginalCanonicalName('');
     setName('');
     setAction('AM');
     setUsage('1-Enc');
@@ -1220,13 +1228,21 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const handlePopulateOfficialPath = (official: any) => {
     setEditingItem(null);
     setIsCreatingNewPath(false);
-    setSelectedPathId(`official_${official.name}`);
-    setName(`${official.name} (Custom)`);
+    setSelectedPathId(`official_${official.id || official.name}`);
+    if (workshopMode === 'designer') {
+      setCanonicalSelectedId(official.id || official.name);
+      setOriginalCanonicalName(official.name);
+      setName(official.name);
+    } else {
+      setCanonicalSelectedId(null);
+      setOriginalCanonicalName('');
+      setName(`${official.name} (Custom)`);
+    }
     setPathCategory(official.category || 'General');
     setPathCategoryNewText('');
     setPathDescription(official.description || '');
     setLinkedElements(Array.isArray(official.linked_elements) ? official.linked_elements : []);
-    setSelectedGenres(['Medieval']);
+    setSelectedGenres(official.genres && official.genres.length > 0 ? official.genres : ['Medieval']);
     setActivePathSelection({ type: 'path' });
   };
 
@@ -1279,6 +1295,88 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     } else if (abilityType === 'trait') {
       abilityDataPayload.effect = abilityFormEffect.trim();
       detailsSummary = abilityFormEffect.slice(0, 50);
+    }
+
+    if (workshopMode === 'designer') {
+      try {
+        let createdId: string | number = `canon_${Date.now()}`;
+        let detailsSummary = '';
+
+        if (abilityType === 'power') {
+          const powerPayload = {
+            name: abilityFormName.trim(),
+            action: abilityFormAction,
+            usage: abilityFormUsage,
+            effect: abilityFormEffect.trim(),
+            ready: abilityFormPowerReady,
+            notes: abilityFormNotes.trim() || null,
+            genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+            path: name.trim() || 'General',
+            category: 'Class',
+            table_group: name.trim() || 'General',
+          };
+          const createdPower = await gameApi.saveCanonicalPower(powerPayload);
+          createdId = createdPower.id;
+          await gameApi.propagateCanonicalUpdateToAllCharacters({
+            entityType: 'power',
+            oldName: abilityFormName.trim(),
+            updatedItem: createdPower,
+          });
+          updateCanonicalCatalogItem('power', createdPower);
+          detailsSummary = `${abilityFormAction} • ${abilityFormUsage}`;
+        } else if (abilityType === 'trait') {
+          const traitPayload = {
+            name: abilityFormName.trim(),
+            effect: abilityFormEffect.trim(),
+            notes: abilityFormNotes.trim() || '',
+            genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+            path: name.trim() || 'General',
+          };
+          const createdTrait = await gameApi.saveCanonicalTrait(traitPayload);
+          createdId = createdTrait.id;
+          await gameApi.propagateCanonicalUpdateToAllCharacters({
+            entityType: 'trait',
+            oldName: abilityFormName.trim(),
+            updatedItem: createdTrait,
+          });
+          updateCanonicalCatalogItem('trait', createdTrait);
+          detailsSummary = abilityFormEffect.slice(0, 50);
+        }
+
+        const newLink: PathLinkedElement = {
+          id: String(createdId),
+          name: abilityFormName.trim(),
+          type: abilityType,
+          isFree: false,
+          details: detailsSummary,
+          item_data: abilityDataPayload,
+        };
+
+        const nextLinked = [...linkedElements, newLink];
+        setLinkedElements(nextLinked);
+
+        if (canonicalSelectedId) {
+          await gameApi.updateCanonicalPath(canonicalSelectedId, { linked_elements: nextLinked });
+          updateCanonicalCatalogItem('path', { id: canonicalSelectedId, name, linked_elements: nextLinked });
+        }
+
+        setAbilityFormName('');
+        setAbilityFormEffect('');
+        setAbilityFormNotes('');
+        setAbilityFormSkillsetSkills(['', '']);
+
+        setFeedback({
+          type: 'success',
+          message: `👑 Forged Master Ability '${newLink.name}' and linked to Master Path '${name.trim() || 'Path'}'!`,
+        });
+        return;
+      } catch (err: any) {
+        console.error('[PlayerWorkshopModal] Error creating and linking canonical ability:', err);
+        setFeedback({ type: 'error', message: `❌ Error: ${err.message || 'Failed to save canonical ability.'}` });
+        return;
+      } finally {
+        setIsSubmitting(false);
+      }
     }
 
     try {
@@ -1839,6 +1937,218 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         ? abilityFormName.trim()
         : name.trim();
 
+    if (workshopMode === 'designer') {
+      try {
+        if (creationType === 'paths_abilities') {
+          if (pathStudioMode === 'path') {
+            const pathPayload = {
+              name: name.trim(),
+              category: finalPathCat,
+              description: pathDescription.trim(),
+              linked_elements: linkedElements,
+              genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+            };
+
+            if (canonicalSelectedId) {
+              await gameApi.updateCanonicalPath(canonicalSelectedId, pathPayload);
+              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                entityType: 'path',
+                oldName: originalCanonicalName || name.trim(),
+                updatedItem: { ...pathPayload, id: canonicalSelectedId },
+              });
+              updateCanonicalCatalogItem('path', { ...pathPayload, id: canonicalSelectedId }, originalCanonicalName);
+              setOriginalCanonicalName(name.trim());
+              setFeedback({
+                type: 'success',
+                message: `👑 Updated '${name.trim()}' in Master Database & propagated to ${propRes.updatedCount} active character(s)!`,
+              });
+            } else {
+              const created = await gameApi.saveCanonicalPath(pathPayload);
+              updateCanonicalCatalogItem('path', created);
+              setCanonicalSelectedId(created.id);
+              setOriginalCanonicalName(created.name);
+              setSelectedPathId(`official_${created.id || created.name}`);
+              setIsCreatingNewPath(false);
+              setFeedback({
+                type: 'success',
+                message: `👑 Created '${created.name}' in Master Database Canon!`,
+              });
+            }
+          } else {
+            // Standalone ability in Designer mode
+            if (activeAbilityCategory === 'power') {
+              const powerPayload = {
+                name: abilityFormName.trim(),
+                action: abilityFormAction,
+                usage: abilityFormUsage,
+                effect: abilityFormEffect.trim(),
+                ready: abilityFormPowerReady,
+                notes: abilityFormNotes.trim() || null,
+                genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+                path: 'General',
+                category: 'Class',
+                table_group: 'General',
+              };
+              const createdPower = await gameApi.saveCanonicalPower(powerPayload);
+              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                entityType: 'power',
+                oldName: abilityFormName.trim(),
+                updatedItem: createdPower,
+              });
+              updateCanonicalCatalogItem('power', createdPower);
+              setFeedback({
+                type: 'success',
+                message: `👑 Saved Master Power '${abilityFormName.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+              });
+              setAbilityFormName('');
+              setAbilityFormEffect('');
+              setAbilityFormNotes('');
+            } else if (activeAbilityCategory === 'trait') {
+              const traitPayload = {
+                name: abilityFormName.trim(),
+                effect: abilityFormEffect.trim(),
+                notes: abilityFormNotes.trim() || '',
+                genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+                path: 'General',
+              };
+              const createdTrait = await gameApi.saveCanonicalTrait(traitPayload);
+              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                entityType: 'trait',
+                oldName: abilityFormName.trim(),
+                updatedItem: createdTrait,
+              });
+              updateCanonicalCatalogItem('trait', createdTrait);
+              setFeedback({
+                type: 'success',
+                message: `👑 Saved Master Trait '${abilityFormName.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+              });
+              setAbilityFormName('');
+              setAbilityFormEffect('');
+              setAbilityFormNotes('');
+            }
+          }
+        } else if (creationType === 'chaos_gem') {
+          const gemPayload = {
+            name: name.trim(),
+            effect: effect.trim(),
+            genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+            notes: notes.trim() || '',
+            action: 'F',
+            usage: '3',
+          };
+          const savedGem = await gameApi.saveCanonicalChaosGem(gemPayload);
+          const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+            entityType: 'chaos_gem',
+            oldName: name.trim(),
+            updatedItem: savedGem,
+          });
+          setFeedback({
+            type: 'success',
+            message: `👑 Saved Master Chaos Gem '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+          });
+          handleResetForm();
+        } else if (creationType === 'gear') {
+          if (studioChassisType === 'weapon') {
+            const weaponPayload = {
+              name: name.trim(),
+              type: weaponTypeMode,
+              requirement: weaponReqStr,
+              atk: getWeaponAtkDmg(weaponTypeMode),
+              dmg: getWeaponAtkDmg(weaponTypeMode),
+              max_block: getWeaponMaxBlock(weaponTypeMode, weaponReqNum),
+              cost: costStr,
+              notes: notes.trim() || null,
+              genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+            };
+            const savedW = await gameApi.saveCanonicalWeapon(weaponPayload);
+            const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+              entityType: 'weapon',
+              oldName: name.trim(),
+              updatedItem: savedW,
+            });
+            updateCanonicalCatalogItem('weapon', savedW);
+            setFeedback({
+              type: 'success',
+              message: `👑 Saved Master Weapon '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+            });
+            handleResetForm();
+          } else if (studioChassisType === 'armor') {
+            const armorPayload = {
+              name: name.trim(),
+              requirement: armorReq,
+              ar: getArmorArStr(armorReq),
+              mr: getArmorMrStr(armorReq),
+              cost: costStr,
+              notes: notes.trim() || null,
+              genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+            };
+            const savedA = await gameApi.saveCanonicalArmor(armorPayload);
+            const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+              entityType: 'armor',
+              oldName: name.trim(),
+              updatedItem: savedA,
+            });
+            updateCanonicalCatalogItem('armor', savedA);
+            setFeedback({
+              type: 'success',
+              message: `👑 Saved Master Armor '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+            });
+            handleResetForm();
+          } else if (studioChassisType === 'shield') {
+            const shieldPayload = {
+              name: name.trim(),
+              requirement: shieldReq,
+              max_block: getShieldMaxBlockStr(shieldReq),
+              mr: getShieldMrStr(shieldReq),
+              cost: costStr,
+              notes: notes.trim() || null,
+              genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+            };
+            const savedS = await gameApi.saveCanonicalShield(shieldPayload);
+            const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+              entityType: 'shield',
+              oldName: name.trim(),
+              updatedItem: savedS,
+            });
+            updateCanonicalCatalogItem('shield', savedS);
+            setFeedback({
+              type: 'success',
+              message: `👑 Saved Master Shield '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+            });
+            handleResetForm();
+          } else if (studioChassisType === 'supplies') {
+            const gearPayload = {
+              name: name.trim(),
+              category: finalGearCat,
+              cost: costStr,
+              notes: notes.trim() || null,
+              genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+            };
+            const savedG = await gameApi.saveCanonicalGear(gearPayload);
+            const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+              entityType: 'gear',
+              oldName: name.trim(),
+              updatedItem: savedG,
+            });
+            updateCanonicalCatalogItem('gear', savedG);
+            setFeedback({
+              type: 'success',
+              message: `👑 Saved Master Gear '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+            });
+            handleResetForm();
+          }
+        }
+        if (onItemSaved) onItemSaved();
+        return;
+      } catch (err: any) {
+        console.error('[PlayerWorkshopModal] Error in Designer Mode save:', err);
+        setFeedback({ type: 'error', message: `❌ Designer Mode Error: ${err.message || 'Failed to save canonical record.'}` });
+        return;
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+
     try {
       const newCustomItem: Partial<CustomCreationItem> = {
         name: finalItemName,
@@ -1901,17 +2211,25 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn font-outfit">
-      <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-5xl lg:max-w-6xl shadow-2xl shadow-amber-950/50 flex flex-col h-[90vh] max-h-[92vh] overflow-hidden">
+      <div className={`bg-slate-900 border ${workshopMode === 'designer' ? 'border-amber-500/80 shadow-amber-950/70' : 'border-amber-500/40 shadow-amber-950/50'} rounded-2xl w-full max-w-5xl lg:max-w-6xl shadow-2xl flex flex-col h-[90vh] max-h-[92vh] overflow-hidden`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/70 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-xl">
-              ♨️
+            <div className={`p-2.5 rounded-xl border flex items-center justify-center text-xl ${
+              workshopMode === 'designer'
+                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+            }`}>
+              {workshopMode === 'designer' ? '👑' : '♨️'}
             </div>
             <div>
               <h3 className="font-outfit font-extrabold text-base text-amber-300 tracking-wide flex items-center gap-2">
                 Forge
-                {isGm ? (
+                {workshopMode === 'designer' ? (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/50 uppercase tracking-wider font-mono">
+                    👑 Designer Mode (Master Database Canon)
+                  </span>
+                ) : isGm ? (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
                     👑 GM Mode {activePartyId ? `[Party: ${activePartyId}]` : ''}
                   </span>
@@ -1924,11 +2242,49 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 )}
               </h3>
               <p className="text-xs text-slate-400">
-                Craft custom Paths & Abilities, Chaos Gems, and Gear (including Exotics and Artifacts).
+                {workshopMode === 'designer'
+                  ? 'Author, edit, & curate canonical Master Database records. Edits automatically propagate to all characters.'
+                  : 'Craft custom Paths & Abilities, Chaos Gems, and Gear (including Exotics and Artifacts).'}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isMasterAccount && (
+              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md mr-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWorkshopMode('player');
+                    handleResetForm();
+                  }}
+                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    workshopMode === 'player'
+                      ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                  title="Normal Player Forge (saves to Custom Elements)"
+                >
+                  <span>👤</span>
+                  <span>Player Forge</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWorkshopMode('designer');
+                    handleResetForm();
+                  }}
+                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    workshopMode === 'designer'
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                  title="Master Designer Mode (edits canonical Supabase database)"
+                >
+                  <span>👑</span>
+                  <span>Designer Mode</span>
+                </button>
+              </div>
+            )}
             {onOpenWorkshop && (
               <button
                 type="button"
@@ -4287,6 +4643,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       title={
                         !isPathReadyForAbilities
                           ? 'Fill in Path Name, Category, Description, and Genre before saving'
+                          : workshopMode === 'designer'
+                          ? canonicalSelectedId
+                            ? 'Update canonical Path in Master Database and propagate changes to characters'
+                            : 'Create new canonical Path in Master Database'
                           : editingItem
                           ? 'Update Path Archetype'
                           : 'Save Path Archetype to unlock adding abilities'
@@ -4296,6 +4656,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <span>
                         {isSubmitting
                           ? 'Saving Path...'
+                          : workshopMode === 'designer'
+                          ? canonicalSelectedId
+                            ? 'Update Master Path 👑'
+                            : 'Create Master Path 👑'
                           : editingItem
                           ? 'Update Path Archetype'
                           : 'Save Path'}
@@ -4885,7 +5249,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                 }`}
                               >
                                 <AnvilIcon className="w-4 h-4" />
-                                <span>⚡ Forge to My Creations</span>
+                                <span>{workshopMode === 'designer' ? '👑 Forge to Master Database' : '⚡ Forge to My Creations'}</span>
                               </button>
                             )}
                           </div>
@@ -5290,6 +5654,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     <span>
                       {isSubmitting
                         ? 'Forging...'
+                        : workshopMode === 'designer'
+                        ? 'Forge to Master Database 👑'
                         : isGm
                         ? 'Forge to My Creations 👑'
                         : 'Forge to My Creations'}

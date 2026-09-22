@@ -31,6 +31,7 @@ import { generateRoomId, sanitizeRoomCodeInput } from '../utils/roomId';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { resolveArtifactCatalog, CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { resolveExoticCatalog, CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
+import { updateCharacterSheetCanonicalItem, CanonicalPropagationParams } from '../utils/canonicalPropagation';
 
 let cachedSupabaseMonsters: SupabaseMonster[] | null = null;
 
@@ -2435,6 +2436,289 @@ export const gameApi = {
     } catch (e) {
       console.error('[gameApi] Error in deleteAdventure:', e);
       return false;
+    }
+  },
+
+  // ==========================================
+  // --- DESIGNER MODE: CANONICAL MASTER CRUD ---
+  // Locked strictly to metascapegame@gmail.com via PostgreSQL RLS
+  // ==========================================
+
+  // 1. PATHS
+  async saveCanonicalPath(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('paths')
+      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalPath(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('paths')
+      .update({ ...payload, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalPath(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('paths').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 2. POWERS
+  async saveCanonicalPower(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('powers')
+      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalPower(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('powers')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalPower(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('powers').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 3. WEAPONS
+  async saveCanonicalWeapon(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('weapons')
+      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalWeapon(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('weapons')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalWeapon(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('weapons').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 4. ARMOR
+  async saveCanonicalArmor(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('armor')
+      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalArmor(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('armor')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalArmor(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('armor').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 5. SHIELDS
+  async saveCanonicalShield(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('shields')
+      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalShield(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('shields')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalShield(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('shields').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 6. GEAR / SUPPLIES
+  async saveCanonicalGear(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('supplies')
+      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalGear(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('supplies')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalGear(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('supplies').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 7. TRAITS
+  async saveCanonicalTrait(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('traits')
+      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalTrait(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('traits')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalTrait(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('traits').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 8. CHAOS GEMS
+  async saveCanonicalChaosGem(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('chaos_gems')
+      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalChaosGem(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('chaos_gems')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalChaosGem(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('chaos_gems').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 9. ACTIVE PROPAGATION ENGINE
+  async propagateCanonicalUpdateToAllCharacters(
+    params: CanonicalPropagationParams
+  ): Promise<{ updatedCount: number; errors: string[] }> {
+    const { entityType, oldName, updatedItem } = params;
+    if (!oldName || !updatedItem) {
+      return { updatedCount: 0, errors: [] };
+    }
+
+    try {
+      // Fetch all character sheet records
+      const { data: allChars, error: fetchErr } = await supabase
+        .from('characters')
+        .select('id, name, sheet_data');
+
+      if (fetchErr) throw fetchErr;
+      if (!allChars || allChars.length === 0) {
+        return { updatedCount: 0, errors: [] };
+      }
+
+      let updatedCount = 0;
+      const errors: string[] = [];
+
+      for (const char of allChars) {
+        if (!char.sheet_data) continue;
+        const { updatedSheet, wasModified } = updateCharacterSheetCanonicalItem(
+          char.sheet_data,
+          entityType,
+          oldName,
+          updatedItem
+        );
+
+        if (wasModified) {
+          const { error: updateErr } = await supabase
+            .from('characters')
+            .update({ sheet_data: updatedSheet, updated_at: new Date().toISOString() })
+            .eq('id', char.id);
+
+          if (updateErr) {
+            console.error(`[gameApi] Propagation error for character ${char.id} (${char.name}):`, updateErr);
+            errors.push(`${char.name || char.id}: ${updateErr.message}`);
+          } else {
+            updatedCount++;
+          }
+        }
+      }
+
+      return { updatedCount, errors };
+    } catch (e: any) {
+      console.error('[gameApi] Error in propagateCanonicalUpdateToAllCharacters:', e);
+      return { updatedCount: 0, errors: [e.message || 'Propagation failed'] };
     }
   },
 };
