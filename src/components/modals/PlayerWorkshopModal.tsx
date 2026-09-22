@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw, Search } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationType, CustomCreationItem, CustomCreationData, PathElementType, PathLinkedElement, StudioPower, StudioMod } from '../../types/game';
+import { CustomCreationType, CustomCreationItem, CustomCreationData, PathElementType, PathLinkedElement, StudioPower, StudioMod, SupabaseChaosGem } from '../../types/game';
 import { InfoTooltip } from '../common/InfoTooltip';
 import { compareMsoOptions } from '../../utils/kitUtils';
 import { parseCostToSilver } from '../../utils/moneyUtils';
@@ -250,11 +250,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const weaponsCatalog = useCharacterStore((state) => state.weaponsCatalog);
   const armorCatalog = useCharacterStore((state) => state.armorCatalog);
   const shieldsCatalog = useCharacterStore((state) => state.shieldsCatalog);
+  const suppliesCatalog = useCharacterStore((state) => state.suppliesCatalog);
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
   const updateCanonicalCatalogItem = useCharacterStore((state) => state.updateCanonicalCatalogItem);
+  const removeCanonicalCatalogItem = useCharacterStore((state) => state.removeCanonicalCatalogItem);
 
   const isMasterAccount = (playerEmail || '').toLowerCase().trim() === 'metascapegame@gmail.com';
   const [workshopMode, setWorkshopMode] = useState<'player' | 'designer'>('player');
+  const isMetaScapeDesigner = isMasterAccount && workshopMode === 'designer';
   const [canonicalSelectedId, setCanonicalSelectedId] = useState<string | number | null>(null);
   const [originalCanonicalName, setOriginalCanonicalName] = useState<string>('');
 
@@ -281,7 +284,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   // Unified Paths & Abilities Studio State
   const [pathStudioMode, setPathStudioMode] = useState<'path' | 'standalone'>('path');
-  const [pathStudioTab, setPathStudioTab] = useState<'current' | 'library'>('current');
+  const [pathStudioTab, setPathStudioTab] = useState<'current' | 'library' | 'database'>('current');
+  const [pathDatabaseCategory, setPathDatabaseCategory] = useState<'path' | 'power' | 'trait' | 'skill'>('path');
   const [pathLibraryFilter, setPathLibraryFilter] = useState<'all' | 'path' | 'power' | 'skill' | 'skillset' | 'trait'>('all');
   const [isCreatingNewPath, setIsCreatingNewPath] = useState<boolean>(false);
   const [selectedPathId, setSelectedPathId] = useState<string>('');
@@ -346,7 +350,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const effectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Unified Gear Studio State
-  const [studioTab, setStudioTab] = useState<'current' | 'library'>('current');
+  const [studioTab, setStudioTab] = useState<'current' | 'library' | 'database'>('current');
+  const [gearDatabaseChassis, setGearDatabaseChassis] = useState<'weapon' | 'armor' | 'shield' | 'supplies'>('weapon');
+  const [gemStudioTab, setGemStudioTab] = useState<'current' | 'library' | 'database'>('current');
+  const [canonicalChaosGems, setCanonicalChaosGems] = useState<SupabaseChaosGem[]>([]);
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
+    type: string;
+    id: string | number;
+    name: string;
+  } | null>(null);
+  const [isDeletingCanonical, setIsDeletingCanonical] = useState<boolean>(false);
   const [costMode, setCostMode] = useState<'standard' | 'artifact'>('standard');
   const [studioLibraryChassisFilter, setStudioLibraryChassisFilter] = useState<'all' | 'weapon' | 'armor' | 'shield' | 'supplies'>('all');
   const [activeStudioSelection, setActiveStudioSelection] = useState<{
@@ -1246,6 +1259,214 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setActivePathSelection({ type: 'path' });
   };
 
+  const handlePopulateCanonicalPower = (p: any) => {
+    setCanonicalSelectedId(p.id || p.name);
+    setOriginalCanonicalName(p.name || '');
+    setAbilityFormName(p.name || '');
+    setAbilityFormAction(p.action || 'AM');
+    setAbilityFormUsage(p.usage || '1-Enc');
+    setAbilityFormPowerReady(p.ready || 'primary_arsenal');
+    setAbilityFormEffect(p.effect || '');
+    setAbilityFormNotes(p.notes || '');
+    setAbilityFormGenres(Array.isArray(p.genres) ? p.genres : ['Medieval']);
+    setActiveAbilityCategory('power');
+    setPathStudioMode('standalone');
+    setEditingItem(null);
+  };
+
+  const handlePopulateCanonicalTrait = (t: any) => {
+    setCanonicalSelectedId(t.id || t.name);
+    setOriginalCanonicalName(t.name || '');
+    setAbilityFormName(t.name || '');
+    setAbilityFormEffect(t.effect || '');
+    setAbilityFormNotes(t.notes || '');
+    setAbilityFormGenres(Array.isArray(t.genres) ? t.genres : ['Medieval']);
+    setActiveAbilityCategory('trait');
+    setPathStudioMode('standalone');
+    setEditingItem(null);
+  };
+
+  const handlePopulateCanonicalSkill = (s: any) => {
+    setCanonicalSelectedId(s.id || s.name);
+    setOriginalCanonicalName(s.name || '');
+    setAbilityFormName(s.name || '');
+    setAbilityFormSkillAttribute(s.attribute || '💪');
+    setAbilityFormSkillDiscipline(s.discipline || 'General');
+    setAbilityFormNotes(s.notes || '');
+    setAbilityFormGenres(Array.isArray(s.genres) ? s.genres : ['Medieval']);
+    setActiveAbilityCategory('skill');
+    setPathStudioMode('standalone');
+    setEditingItem(null);
+  };
+
+  const handlePopulateCanonicalWeapon = (w: any) => {
+    setCanonicalSelectedId(w.id || w.name);
+    setOriginalCanonicalName(w.name || '');
+    setName(w.name || '');
+    setStudioChassisType('weapon');
+    setWeaponTypeMode(w.type || 'Melee');
+    setWeaponDomain(w.domain || 'Archaic');
+    setNotes(w.notes || '');
+    if (w.cost) {
+      const matchG = w.cost.match(/(\d+)\s*g/i);
+      const matchS = w.cost.match(/(\d+)\s*s/i);
+      setCostGold(matchG ? parseInt(matchG[1], 10) : 0);
+      setCostSilver(matchS ? parseInt(matchS[1], 10) : 0);
+    }
+    if (w.requirement) {
+      const numMatch = w.requirement.match(/\d+/);
+      if (numMatch) setWeaponReqNum(parseInt(numMatch[0], 10));
+    }
+    setEditingItem(null);
+  };
+
+  const handlePopulateCanonicalArmor = (a: any) => {
+    setCanonicalSelectedId(a.id || a.name);
+    setOriginalCanonicalName(a.name || '');
+    setName(a.name || '');
+    setStudioChassisType('armor');
+    setArmorReq(a.requirement || '💪 4');
+    setNotes(a.notes || '');
+    if (a.cost) {
+      const matchG = a.cost.match(/(\d+)\s*g/i);
+      const matchS = a.cost.match(/(\d+)\s*s/i);
+      setCostGold(matchG ? parseInt(matchG[1], 10) : 0);
+      setCostSilver(matchS ? parseInt(matchS[1], 10) : 0);
+    }
+    setEditingItem(null);
+  };
+
+  const handlePopulateCanonicalShield = (s: any) => {
+    setCanonicalSelectedId(s.id || s.name);
+    setOriginalCanonicalName(s.name || '');
+    setName(s.name || '');
+    setStudioChassisType('shield');
+    setShieldReq(s.requirement || '💪 4');
+    setShieldDomain(s.domain || 'Archaic');
+    setNotes(s.notes || '');
+    if (s.cost) {
+      const matchG = s.cost.match(/(\d+)\s*g/i);
+      const matchS = s.cost.match(/(\d+)\s*s/i);
+      setCostGold(matchG ? parseInt(matchG[1], 10) : 0);
+      setCostSilver(matchS ? parseInt(matchS[1], 10) : 0);
+    }
+    setEditingItem(null);
+  };
+
+  const handlePopulateCanonicalSupply = (sup: any) => {
+    setCanonicalSelectedId(sup.id || sup.name);
+    setOriginalCanonicalName(sup.name || '');
+    setName(sup.name || '');
+    setStudioChassisType('supplies');
+    setGearCategory(sup.category || 'Adventure');
+    setNotes(sup.notes || '');
+    if (sup.cost) {
+      const matchG = sup.cost.match(/(\d+)\s*g/i);
+      const matchS = sup.cost.match(/(\d+)\s*s/i);
+      setCostGold(matchG ? parseInt(matchG[1], 10) : 0);
+      setCostSilver(matchS ? parseInt(matchS[1], 10) : 0);
+    }
+    setEditingItem(null);
+  };
+
+  const handlePopulateCanonicalChaosGem = (g: SupabaseChaosGem) => {
+    setCanonicalSelectedId(g.id ? String(g.id) : g.name);
+    setOriginalCanonicalName(g.name || '');
+    setName(g.name || '');
+    setAction(g.action || 'F');
+    setUsage(g.usage || '3-Enc');
+    setEffect(g.effect || '');
+    setNotes(g.notes || '');
+    setSelectedGenres(Array.isArray(g.genres) && g.genres.length > 0 ? g.genres : ['Fantasy']);
+    setEditingItem(null);
+  };
+
+  const handleNewMasterEntry = () => {
+    setCanonicalSelectedId(null);
+    setOriginalCanonicalName('');
+    setEditingItem(null);
+    setName('');
+    setEffect('');
+    setNotes('');
+    setAction('AM');
+    setUsage('1-Enc');
+    setSelectedGenres([]);
+    setLinkedElements([]);
+    setPathDescription('');
+    setCostGold(10);
+    setCostSilver(0);
+    setInherentPowers([]);
+    setAttachedMods([]);
+    setAbilityFormName('');
+    setAbilityFormEffect('');
+    setAbilityFormNotes('');
+    setFeedback({
+      type: 'success',
+      message: '✨ Authoring new canonical entry in SupaBase Master Database.',
+    });
+  };
+
+  const loadCanonicalChaosGems = async () => {
+    try {
+      const gems = await gameApi.getChaosGems();
+      setCanonicalChaosGems(gems || []);
+    } catch (err) {
+      console.error('[PlayerWorkshopModal] Error loading canonical chaos gems:', err);
+    }
+  };
+
+  const handleConfirmDeleteCanonical = async () => {
+    if (!deleteConfirmTarget) return;
+    const { type, id, name: targetName } = deleteConfirmTarget;
+    setIsDeletingCanonical(true);
+
+    try {
+      if (type === 'path') {
+        await gameApi.deleteCanonicalPath(id);
+        removeCanonicalCatalogItem('path', id, targetName);
+      } else if (type === 'power') {
+        await gameApi.deleteCanonicalPower(id);
+        removeCanonicalCatalogItem('power', id, targetName);
+      } else if (type === 'trait') {
+        await gameApi.deleteCanonicalTrait(id);
+        removeCanonicalCatalogItem('trait', id, targetName);
+      } else if (type === 'skill') {
+        await gameApi.deleteCanonicalSkill(id);
+        removeCanonicalCatalogItem('skill', id, targetName);
+      } else if (type === 'chaos_gem') {
+        await gameApi.deleteCanonicalChaosGem(id);
+        setCanonicalChaosGems((prev) => prev.filter((g) => String(g.id) !== String(id) && g.name !== targetName));
+      } else if (type === 'weapon') {
+        await gameApi.deleteCanonicalWeapon(id);
+        removeCanonicalCatalogItem('weapon', id, targetName);
+      } else if (type === 'armor') {
+        await gameApi.deleteCanonicalArmor(id);
+        removeCanonicalCatalogItem('armor', id, targetName);
+      } else if (type === 'shield') {
+        await gameApi.deleteCanonicalShield(id);
+        removeCanonicalCatalogItem('shield', id, targetName);
+      } else if (type === 'supplies' || type === 'gear') {
+        await gameApi.deleteCanonicalGear(id);
+        removeCanonicalCatalogItem('supplies', id, targetName);
+      }
+
+      handleResetForm();
+      setDeleteConfirmTarget(null);
+      setFeedback({
+        type: 'success',
+        message: `👑 Successfully deleted '${targetName}' from canonical Supabase database.`,
+      });
+    } catch (err: any) {
+      console.error('[PlayerWorkshopModal] Error deleting canonical record:', err);
+      setFeedback({
+        type: 'error',
+        message: `❌ Failed to delete from Supabase: ${err.message || 'Unknown database error'}`,
+      });
+    } finally {
+      setIsDeletingCanonical(false);
+    }
+  };
+
   const handleSaveAndLinkAbility = async () => {
     if (!abilityFormName.trim()) return;
     setIsSubmitting(true);
@@ -1424,10 +1645,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     }
   };
 
-  // Load custom items and personal items when modal is opened
+  // Load custom items, personal items, and canonical gems when modal is opened
   useEffect(() => {
     if (isOpen) {
       loadPersonalItems();
+      loadCanonicalChaosGems();
       if (initialItem) {
         handlePopulateItemForEdit(initialItem);
       } else {
@@ -1446,9 +1668,22 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setCreationType(newType);
       setSelectedGenres([]);
       setFeedback(null);
+      setEditingItem(null);
+      setCanonicalSelectedId(null);
+      setOriginalCanonicalName('');
       if (newType === 'gear' || newType === 'exotic' || newType === 'artifact') {
         setActiveStudioSelection({ type: 'chassis' });
-        setStudioTab('current');
+        if (studioTab === 'database' && (!isMasterAccount || workshopMode !== 'designer')) {
+          setStudioTab('current');
+        }
+      } else if (newType === 'paths_abilities') {
+        if (pathStudioTab === 'database' && (!isMasterAccount || workshopMode !== 'designer')) {
+          setPathStudioTab('current');
+        }
+      } else if (newType === 'chaos_gem') {
+        if (gemStudioTab === 'database' && (!isMasterAccount || workshopMode !== 'designer')) {
+          setGemStudioTab('current');
+        }
       }
     }
   };
@@ -1976,9 +2211,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             }
           } else {
             // Standalone ability in Designer mode
-            if (activeAbilityCategory === 'power') {
+            if (activeAbilityCategory === 'power' || pathDatabaseCategory === 'power') {
               const powerPayload = {
-                name: abilityFormName.trim(),
+                name: (pathStudioTab === 'database' ? name.trim() : abilityFormName.trim()),
                 action: abilityFormAction,
                 usage: abilityFormUsage,
                 effect: abilityFormEffect.trim(),
@@ -1989,41 +2224,108 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 category: 'Class',
                 table_group: 'General',
               };
-              const createdPower = await gameApi.saveCanonicalPower(powerPayload);
-              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
-                entityType: 'power',
-                oldName: abilityFormName.trim(),
-                updatedItem: createdPower,
-              });
-              updateCanonicalCatalogItem('power', createdPower);
-              setFeedback({
-                type: 'success',
-                message: `👑 Saved Master Power '${abilityFormName.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
-              });
+              if (canonicalSelectedId) {
+                await gameApi.updateCanonicalPower(canonicalSelectedId, powerPayload);
+                const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                  entityType: 'power',
+                  oldName: originalCanonicalName || powerPayload.name,
+                  updatedItem: { ...powerPayload, id: canonicalSelectedId },
+                });
+                updateCanonicalCatalogItem('power', { ...powerPayload, id: canonicalSelectedId }, originalCanonicalName);
+                setOriginalCanonicalName(powerPayload.name);
+                setFeedback({
+                  type: 'success',
+                  message: `👑 Updated Master Power '${powerPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
+                });
+              } else {
+                const createdPower = await gameApi.saveCanonicalPower(powerPayload);
+                const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                  entityType: 'power',
+                  oldName: powerPayload.name,
+                  updatedItem: createdPower,
+                });
+                updateCanonicalCatalogItem('power', createdPower);
+                setCanonicalSelectedId(createdPower.id);
+                setOriginalCanonicalName(createdPower.name);
+                setFeedback({
+                  type: 'success',
+                  message: `👑 Saved Master Power '${powerPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
+                });
+              }
               setAbilityFormName('');
               setAbilityFormEffect('');
               setAbilityFormNotes('');
-            } else if (activeAbilityCategory === 'trait') {
+            } else if (activeAbilityCategory === 'trait' || pathDatabaseCategory === 'trait') {
               const traitPayload = {
-                name: abilityFormName.trim(),
+                name: (pathStudioTab === 'database' ? name.trim() : abilityFormName.trim()),
                 effect: abilityFormEffect.trim(),
                 notes: abilityFormNotes.trim() || '',
                 genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
                 path: 'General',
               };
-              const createdTrait = await gameApi.saveCanonicalTrait(traitPayload);
-              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
-                entityType: 'trait',
-                oldName: abilityFormName.trim(),
-                updatedItem: createdTrait,
-              });
-              updateCanonicalCatalogItem('trait', createdTrait);
-              setFeedback({
-                type: 'success',
-                message: `👑 Saved Master Trait '${abilityFormName.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
-              });
+              if (canonicalSelectedId) {
+                await gameApi.updateCanonicalTrait(canonicalSelectedId, traitPayload);
+                const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                  entityType: 'trait',
+                  oldName: originalCanonicalName || traitPayload.name,
+                  updatedItem: { ...traitPayload, id: canonicalSelectedId },
+                });
+                updateCanonicalCatalogItem('trait', { ...traitPayload, id: canonicalSelectedId }, originalCanonicalName);
+                setOriginalCanonicalName(traitPayload.name);
+                setFeedback({
+                  type: 'success',
+                  message: `👑 Updated Master Trait '${traitPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
+                });
+              } else {
+                const createdTrait = await gameApi.saveCanonicalTrait(traitPayload);
+                const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                  entityType: 'trait',
+                  oldName: traitPayload.name,
+                  updatedItem: createdTrait,
+                });
+                updateCanonicalCatalogItem('trait', createdTrait);
+                setCanonicalSelectedId(createdTrait.id);
+                setOriginalCanonicalName(createdTrait.name);
+                setFeedback({
+                  type: 'success',
+                  message: `👑 Saved Master Trait '${traitPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
+                });
+              }
               setAbilityFormName('');
               setAbilityFormEffect('');
+              setAbilityFormNotes('');
+            } else if (activeAbilityCategory === 'skill' || pathDatabaseCategory === 'skill') {
+              const skillPayload = {
+                name: (pathStudioTab === 'database' ? name.trim() : abilityFormName.trim()),
+                attribute: abilityFormSkillAttribute,
+                discipline: abilityFormSkillDiscipline === 'CUSTOM_NEW' ? abilityFormSkillDisciplineNewText.trim() : abilityFormSkillDiscipline,
+                notes: abilityFormNotes.trim() || '',
+                genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+              };
+              if (canonicalSelectedId) {
+                await gameApi.updateCanonicalSkill(canonicalSelectedId, skillPayload);
+                const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                  entityType: 'skill',
+                  oldName: originalCanonicalName || skillPayload.name,
+                  updatedItem: { ...skillPayload, id: canonicalSelectedId },
+                });
+                updateCanonicalCatalogItem('skill', { ...skillPayload, id: canonicalSelectedId }, originalCanonicalName);
+                setOriginalCanonicalName(skillPayload.name);
+                setFeedback({
+                  type: 'success',
+                  message: `👑 Updated Master Skill '${skillPayload.name}' & propagated to ${propRes.updatedCount} character(s)!`,
+                });
+              } else {
+                const createdSkill = await gameApi.saveCanonicalSkill(skillPayload);
+                updateCanonicalCatalogItem('skill', createdSkill);
+                setCanonicalSelectedId(createdSkill.id);
+                setOriginalCanonicalName(createdSkill.name);
+                setFeedback({
+                  type: 'success',
+                  message: `👑 Created Master Skill '${createdSkill.name}' in Supabase Canon!`,
+                });
+              }
+              setAbilityFormName('');
               setAbilityFormNotes('');
             }
           }
@@ -2033,20 +2335,39 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             effect: effect.trim(),
             genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
             notes: notes.trim() || '',
-            action: 'F',
-            usage: '3',
+            action: action || 'F',
+            usage: usage || '3',
           };
-          const savedGem = await gameApi.saveCanonicalChaosGem(gemPayload);
-          const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
-            entityType: 'chaos_gem',
-            oldName: name.trim(),
-            updatedItem: savedGem,
-          });
-          setFeedback({
-            type: 'success',
-            message: `👑 Saved Master Chaos Gem '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
-          });
-          handleResetForm();
+          if (canonicalSelectedId) {
+            await gameApi.updateCanonicalChaosGem(canonicalSelectedId, gemPayload);
+            const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+              entityType: 'chaos_gem',
+              oldName: originalCanonicalName || name.trim(),
+              updatedItem: { ...gemPayload, id: canonicalSelectedId },
+            });
+            setCanonicalChaosGems((prev) =>
+              prev.map((g) => (String(g.id) === String(canonicalSelectedId) ? { ...g, ...gemPayload } : g))
+            );
+            setOriginalCanonicalName(name.trim());
+            setFeedback({
+              type: 'success',
+              message: `👑 Updated Master Chaos Gem '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+            });
+          } else {
+            const savedGem = await gameApi.saveCanonicalChaosGem(gemPayload);
+            const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+              entityType: 'chaos_gem',
+              oldName: name.trim(),
+              updatedItem: savedGem,
+            });
+            setCanonicalChaosGems((prev) => [...prev, savedGem]);
+            setCanonicalSelectedId(savedGem.id);
+            setOriginalCanonicalName(savedGem.name);
+            setFeedback({
+              type: 'success',
+              message: `👑 Saved Master Chaos Gem '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+            });
+          }
         } else if (creationType === 'gear') {
           if (studioChassisType === 'weapon') {
             const weaponPayload = {
@@ -2060,18 +2381,34 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               notes: notes.trim() || null,
               genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
             };
-            const savedW = await gameApi.saveCanonicalWeapon(weaponPayload);
-            const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
-              entityType: 'weapon',
-              oldName: name.trim(),
-              updatedItem: savedW,
-            });
-            updateCanonicalCatalogItem('weapon', savedW);
-            setFeedback({
-              type: 'success',
-              message: `👑 Saved Master Weapon '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
-            });
-            handleResetForm();
+            if (canonicalSelectedId) {
+              await gameApi.updateCanonicalWeapon(canonicalSelectedId, weaponPayload);
+              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                entityType: 'weapon',
+                oldName: originalCanonicalName || name.trim(),
+                updatedItem: { ...weaponPayload, id: canonicalSelectedId },
+              });
+              updateCanonicalCatalogItem('weapon', { ...weaponPayload, id: canonicalSelectedId }, originalCanonicalName);
+              setOriginalCanonicalName(name.trim());
+              setFeedback({
+                type: 'success',
+                message: `👑 Updated Master Weapon '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+              });
+            } else {
+              const savedW = await gameApi.saveCanonicalWeapon(weaponPayload);
+              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                entityType: 'weapon',
+                oldName: name.trim(),
+                updatedItem: savedW,
+              });
+              updateCanonicalCatalogItem('weapon', savedW);
+              setCanonicalSelectedId(savedW.id);
+              setOriginalCanonicalName(savedW.name);
+              setFeedback({
+                type: 'success',
+                message: `👑 Saved Master Weapon '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+              });
+            }
           } else if (studioChassisType === 'armor') {
             const armorPayload = {
               name: name.trim(),
@@ -2082,18 +2419,34 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               notes: notes.trim() || null,
               genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
             };
-            const savedA = await gameApi.saveCanonicalArmor(armorPayload);
-            const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
-              entityType: 'armor',
-              oldName: name.trim(),
-              updatedItem: savedA,
-            });
-            updateCanonicalCatalogItem('armor', savedA);
-            setFeedback({
-              type: 'success',
-              message: `👑 Saved Master Armor '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
-            });
-            handleResetForm();
+            if (canonicalSelectedId) {
+              await gameApi.updateCanonicalArmor(canonicalSelectedId, armorPayload);
+              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                entityType: 'armor',
+                oldName: originalCanonicalName || name.trim(),
+                updatedItem: { ...armorPayload, id: canonicalSelectedId },
+              });
+              updateCanonicalCatalogItem('armor', { ...armorPayload, id: canonicalSelectedId }, originalCanonicalName);
+              setOriginalCanonicalName(name.trim());
+              setFeedback({
+                type: 'success',
+                message: `👑 Updated Master Armor '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+              });
+            } else {
+              const savedA = await gameApi.saveCanonicalArmor(armorPayload);
+              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                entityType: 'armor',
+                oldName: name.trim(),
+                updatedItem: savedA,
+              });
+              updateCanonicalCatalogItem('armor', savedA);
+              setCanonicalSelectedId(savedA.id);
+              setOriginalCanonicalName(savedA.name);
+              setFeedback({
+                type: 'success',
+                message: `👑 Saved Master Armor '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+              });
+            }
           } else if (studioChassisType === 'shield') {
             const shieldPayload = {
               name: name.trim(),
@@ -2104,18 +2457,34 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               notes: notes.trim() || null,
               genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
             };
-            const savedS = await gameApi.saveCanonicalShield(shieldPayload);
-            const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
-              entityType: 'shield',
-              oldName: name.trim(),
-              updatedItem: savedS,
-            });
-            updateCanonicalCatalogItem('shield', savedS);
-            setFeedback({
-              type: 'success',
-              message: `👑 Saved Master Shield '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
-            });
-            handleResetForm();
+            if (canonicalSelectedId) {
+              await gameApi.updateCanonicalShield(canonicalSelectedId, shieldPayload);
+              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                entityType: 'shield',
+                oldName: originalCanonicalName || name.trim(),
+                updatedItem: { ...shieldPayload, id: canonicalSelectedId },
+              });
+              updateCanonicalCatalogItem('shield', { ...shieldPayload, id: canonicalSelectedId }, originalCanonicalName);
+              setOriginalCanonicalName(name.trim());
+              setFeedback({
+                type: 'success',
+                message: `👑 Updated Master Shield '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+              });
+            } else {
+              const savedS = await gameApi.saveCanonicalShield(shieldPayload);
+              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                entityType: 'shield',
+                oldName: name.trim(),
+                updatedItem: savedS,
+              });
+              updateCanonicalCatalogItem('shield', savedS);
+              setCanonicalSelectedId(savedS.id);
+              setOriginalCanonicalName(savedS.name);
+              setFeedback({
+                type: 'success',
+                message: `👑 Saved Master Shield '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+              });
+            }
           } else if (studioChassisType === 'supplies') {
             const gearPayload = {
               name: name.trim(),
@@ -2124,18 +2493,34 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               notes: notes.trim() || null,
               genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
             };
-            const savedG = await gameApi.saveCanonicalGear(gearPayload);
-            const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
-              entityType: 'gear',
-              oldName: name.trim(),
-              updatedItem: savedG,
-            });
-            updateCanonicalCatalogItem('gear', savedG);
-            setFeedback({
-              type: 'success',
-              message: `👑 Saved Master Gear '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
-            });
-            handleResetForm();
+            if (canonicalSelectedId) {
+              await gameApi.updateCanonicalGear(canonicalSelectedId, gearPayload);
+              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                entityType: 'gear',
+                oldName: originalCanonicalName || name.trim(),
+                updatedItem: { ...gearPayload, id: canonicalSelectedId },
+              });
+              updateCanonicalCatalogItem('gear', { ...gearPayload, id: canonicalSelectedId }, originalCanonicalName);
+              setOriginalCanonicalName(name.trim());
+              setFeedback({
+                type: 'success',
+                message: `👑 Updated Master Gear '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+              });
+            } else {
+              const savedG = await gameApi.saveCanonicalGear(gearPayload);
+              const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
+                entityType: 'gear',
+                oldName: name.trim(),
+                updatedItem: savedG,
+              });
+              updateCanonicalCatalogItem('gear', savedG);
+              setCanonicalSelectedId(savedG.id);
+              setOriginalCanonicalName(savedG.name);
+              setFeedback({
+                type: 'success',
+                message: `👑 Saved Master Gear '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
+              });
+            }
           }
         }
         if (onItemSaved) onItemSaved();
@@ -2358,34 +2743,47 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           {/* ========================================================================= */}
           {creationType === 'gear' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Studio Tab Switcher: Current Item vs My Creations */}
+              {/* Studio Tab Switcher: Current vs My Creations vs SupaBase */}
               <div className="shrink-0 flex items-center justify-between gap-2">
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-1">
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
                     type="button"
                     onClick={() => setStudioTab('current')}
-                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       studioTab === 'current'
                         ? 'bg-amber-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    🛠️ Current Item
+                    🛠️ Current
                   </button>
                   <button
                     type="button"
                     onClick={() => setStudioTab('library')}
-                    className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       studioTab === 'library'
-                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    📚 My Creations ({sortedPersonalItems.filter((it) => isGearType(it.type)).length})
+                    🎨 My Creations ({filteredGearItems.length})
                   </button>
+                  {isMetaScapeDesigner && (
+                    <button
+                      type="button"
+                      onClick={() => setStudioTab('database')}
+                      className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                        studioTab === 'database'
+                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      👑 SupaBase
+                    </button>
+                  )}
                 </div>
 
-                {editingItem && (
+                {editingItem && studioTab === 'current' && (
                   <button
                     type="button"
                     onClick={handleResetForm}
@@ -2552,6 +2950,214 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           </div>
                         );
                       })
+                    )}
+                  </div>
+                </div>
+
+              ) : studioTab === 'database' ? (
+                /* SUPABASE CANONICAL VIEW */
+                <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+                  {/* Chassis Category Filter Switch */}
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGearDatabaseChassis('weapon');
+                        handleResetForm();
+                        setStudioChassisType('weapon');
+                      }}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        gearDatabaseChassis === 'weapon'
+                          ? 'bg-orange-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      ⚔️ Weapons
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGearDatabaseChassis('armor');
+                        handleResetForm();
+                        setStudioChassisType('armor');
+                      }}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        gearDatabaseChassis === 'armor'
+                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🥋 Armor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGearDatabaseChassis('shield');
+                        handleResetForm();
+                        setStudioChassisType('shield');
+                      }}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        gearDatabaseChassis === 'shield'
+                          ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🛡️ Shields
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGearDatabaseChassis('supplies');
+                        handleResetForm();
+                        setStudioChassisType('supplies');
+                      }}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        gearDatabaseChassis === 'supplies'
+                          ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🎒 Supplies
+                    </button>
+                  </div>
+
+                  {/* Dropdown Selector Header */}
+                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0">
+                    <span className="flex items-center gap-1.5">
+                      <span>👑</span>
+                      <span>
+                        Master {gearDatabaseChassis === 'weapon' ? 'Weapons' : gearDatabaseChassis === 'armor' ? 'Armor' : gearDatabaseChassis === 'shield' ? 'Shields' : 'Supplies'}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleNewMasterEntry}
+                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer"
+                    >
+                      + New Master Item
+                    </button>
+                  </div>
+
+                  {/* Dropdown Selector */}
+                  <select
+                    value={canonicalSelectedId || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) {
+                        handleResetForm();
+                        return;
+                      }
+                      if (gearDatabaseChassis === 'weapon') {
+                        const item = weaponsCatalog.find((w) => String(w.id) === val || w.name === val);
+                        if (item) handlePopulateCanonicalWeapon(item);
+                      } else if (gearDatabaseChassis === 'armor') {
+                        const item = armorCatalog.find((a) => String(a.id) === val || a.name === val);
+                        if (item) handlePopulateCanonicalArmor(item);
+                      } else if (gearDatabaseChassis === 'shield') {
+                        const item = shieldsCatalog.find((s) => String(s.id) === val || s.name === val);
+                        if (item) handlePopulateCanonicalShield(item);
+                      } else if (gearDatabaseChassis === 'supplies') {
+                        const item = suppliesCatalog.find((sup) => String(sup.id) === val || sup.name === val);
+                        if (item) handlePopulateCanonicalSupply(item);
+                      }
+                    }}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0"
+                  >
+                    <option value="">-- Choose Canonical {gearDatabaseChassis.charAt(0).toUpperCase() + gearDatabaseChassis.slice(1)} --</option>
+                    {gearDatabaseChassis === 'weapon' &&
+                      weaponsCatalog.map((w) => (
+                        <option key={w.id || w.name} value={w.id || w.name}>
+                          {w.name} ({w.type || 'Melee'}{w.requirement ? `, ${w.requirement}` : ''})
+                        </option>
+                      ))}
+                    {gearDatabaseChassis === 'armor' &&
+                      armorCatalog.map((a) => (
+                        <option key={a.id || a.name} value={a.id || a.name}>
+                          {a.name} ({a.requirement || 'No Req'}{a.ar ? `, AR ${a.ar}` : ''})
+                        </option>
+                      ))}
+                    {gearDatabaseChassis === 'shield' &&
+                      shieldsCatalog.map((s) => (
+                        <option key={s.id || s.name} value={s.id || s.name}>
+                          {s.name} ({s.requirement || 'No Req'})
+                        </option>
+                      ))}
+                    {gearDatabaseChassis === 'supplies' &&
+                      suppliesCatalog.map((sup) => (
+                        <option key={sup.id || sup.name} value={sup.id || sup.name}>
+                          {sup.name} ({sup.category || 'Gear'}{sup.cost ? `, ${sup.cost}` : ''})
+                        </option>
+                      ))}
+                  </select>
+
+                  {/* Canonical Item Preview Card */}
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
+                    {canonicalSelectedId ? (
+                      <div className="p-3.5 rounded-xl border border-amber-500/40 bg-slate-900/90 flex flex-col gap-2.5 shadow-lg shadow-amber-950/20">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0">
+                              {gearDatabaseChassis === 'weapon' ? '⚔️' : gearDatabaseChassis === 'armor' ? '🥋' : gearDatabaseChassis === 'shield' ? '🛡️' : '🎒'}
+                            </span>
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-slate-100 text-xs truncate">{name || 'Unnamed Item'}</h4>
+                              <span className="text-[10px] text-amber-400 font-mono">👑 Master ID: {canonicalSelectedId}</span>
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px] font-bold shrink-0">
+                            {costStr || 'Cost N/A'}
+                          </span>
+                        </div>
+
+                        <div className="text-[11px] text-slate-300 flex flex-col gap-1">
+                          {gearDatabaseChassis === 'weapon' && (
+                            <div>Type: <strong className="text-amber-300">{weaponTypeMode}</strong> • Domain: <strong className="text-slate-200">{finalWeaponDomain}</strong></div>
+                          )}
+                          {gearDatabaseChassis === 'armor' && (
+                            <div>Requirement: <strong className="text-amber-300">{armorReq}</strong> • AR: <strong className="text-slate-200">{getArmorArStr(armorReq)}</strong></div>
+                          )}
+                          {gearDatabaseChassis === 'shield' && (
+                            <div>Requirement: <strong className="text-amber-300">{shieldReq}</strong> • Domain: <strong className="text-slate-200">{finalShieldDomain}</strong></div>
+                          )}
+                          {gearDatabaseChassis === 'supplies' && (
+                            <div>Category: <strong className="text-amber-300">{finalGearCat}</strong></div>
+                          )}
+                          {notes && (
+                            <p className="text-[10px] text-slate-400 italic font-serif mt-1 border-t border-slate-800/80 pt-1">
+                              "{notes}"
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-auto">
+                          <span className="text-[10px] text-slate-400 italic">
+                            Edit details in the right pane, then click Save.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDeleteConfirmTarget({
+                                type: gearDatabaseChassis,
+                                id: canonicalSelectedId,
+                                name: originalCanonicalName || name,
+                              })
+                            }
+                            className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                            title="Delete this record from Supabase"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete from SupaBase</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                        <span className="text-2xl mb-1.5">👑</span>
+                        <p className="font-semibold text-slate-400">No Master Item Selected</p>
+                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                          Pick an existing master item from the dropdown above to view, edit, or delete it, or click "+ New Master Item" to author a new canonical entry.
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -2871,53 +3477,63 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           ) : creationType === 'paths_abilities' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Unified Single-Row Studio Switcher: [Current | My Creations] & [Path | Standalone] */}
-              <div className="shrink-0 grid grid-cols-2 gap-2">
-                {/* Toggle 1: Current vs My Creations */}
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md">
+              {/* Unified Single-Row Studio Switcher: [Current | My Creations | SupaBase] & [Path | Standalone] */}
+              <div className="shrink-0 flex items-center justify-between gap-2 flex-wrap">
+                {/* Toggle 1: Current vs My Creations vs SupaBase */}
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
                     type="button"
                     onClick={() => setPathStudioTab('current')}
-                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       pathStudioTab === 'current'
                         ? 'bg-blue-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    <span>🛠️</span>
-                    <span>Current</span>
+                    🛠️ Current
                   </button>
                   <button
                     type="button"
                     onClick={() => setPathStudioTab('library')}
-                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       pathStudioTab === 'library'
                         ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    <span>📚</span>
-                    <span>My Creations</span>
+                    🎨 My Creations ({filteredPathItems.length})
                   </button>
+                  {isMetaScapeDesigner && (
+                    <button
+                      type="button"
+                      onClick={() => setPathStudioTab('database')}
+                      className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                        pathStudioTab === 'database'
+                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      👑 SupaBase
+                    </button>
+                  )}
                 </div>
 
-                {/* Toggle 2: Path vs Standalone (Only visible in Current mode, hidden in My Creations) */}
+                {/* Toggle 2: Path vs Standalone (Only visible in Current mode, hidden in My Creations / SupaBase) */}
                 {pathStudioTab === 'current' ? (
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md">
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                     <button
                       type="button"
                       onClick={() => {
                         setPathStudioMode('path');
                         setActivePathSelection({ type: 'path' });
                       }}
-                      className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         pathStudioMode === 'path'
                           ? 'bg-sky-600 text-white shadow-sm font-extrabold'
                           : 'text-slate-400 hover:text-slate-200 border border-transparent'
                       }`}
                     >
-                      <span>🧭</span>
-                      <span>Path</span>
+                      🧭 Path
                     </button>
                     <button
                       type="button"
@@ -2925,19 +3541,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         setPathStudioMode('standalone');
                         setActivePathSelection({ type: 'ability', category: activeAbilityCategory });
                       }}
-                      className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                         pathStudioMode === 'standalone'
                           ? 'bg-amber-600 text-white shadow-sm font-extrabold'
                           : 'text-slate-400 hover:text-slate-200 border border-transparent'
                       }`}
                     >
-                      <span>⚡</span>
-                      <span>Standalone</span>
+                      ⚡ Standalone
                     </button>
                   </div>
-                ) : (
-                  <div />
-                )}
+                ) : null}
               </div>
 
               {pathStudioTab === 'library' ? (
@@ -3028,6 +3641,253 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     )}
                   </div>
                 </div>
+
+              ) : pathStudioTab === 'database' ? (
+                /* SUPABASE CANONICAL VIEW */
+                <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+                  {/* Category Filter Switch */}
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPathDatabaseCategory('path');
+                        handleResetForm();
+                        setPathStudioMode('path');
+                        setActivePathSelection({ type: 'path' });
+                      }}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        pathDatabaseCategory === 'path'
+                          ? 'bg-blue-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🧭 Paths
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPathDatabaseCategory('power');
+                        handleResetForm();
+                        setPathStudioMode('standalone');
+                        setActiveAbilityCategory('power');
+                        setActivePathSelection({ type: 'ability', category: 'power' });
+                      }}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        pathDatabaseCategory === 'power'
+                          ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      ⚡ Powers
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPathDatabaseCategory('trait');
+                        handleResetForm();
+                        setPathStudioMode('standalone');
+                        setActiveAbilityCategory('trait');
+                        setActivePathSelection({ type: 'ability', category: 'trait' });
+                      }}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        pathDatabaseCategory === 'trait'
+                          ? 'bg-purple-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🧬 Traits
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPathDatabaseCategory('skill');
+                        handleResetForm();
+                        setPathStudioMode('standalone');
+                        setActiveAbilityCategory('skill');
+                        setActivePathSelection({ type: 'ability', category: 'skill' });
+                      }}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        pathDatabaseCategory === 'skill'
+                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🎯 Skills
+                    </button>
+                  </div>
+
+                  {/* Dropdown Selector Header */}
+                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0">
+                    <span className="flex items-center gap-1.5">
+                      <span>👑</span>
+                      <span>
+                        Master {pathDatabaseCategory === 'path' ? 'Paths' : pathDatabaseCategory === 'power' ? 'Powers' : pathDatabaseCategory === 'trait' ? 'Traits' : 'Skills'}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleNewMasterEntry}
+                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer"
+                    >
+                      + New Master Entry
+                    </button>
+                  </div>
+
+                  {/* Dropdown Selector */}
+                  <select
+                    value={canonicalSelectedId || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) {
+                        handleResetForm();
+                        return;
+                      }
+                      if (pathDatabaseCategory === 'path') {
+                        const p = paths.find((item) => String(item.id) === val || item.name === val);
+                        if (p) handlePopulateOfficialPath(p);
+                      } else if (pathDatabaseCategory === 'power') {
+                        const p = powers.find((item) => String(item.id) === val || item.name === val);
+                        if (p) handlePopulateCanonicalPower(p);
+                      } else if (pathDatabaseCategory === 'trait') {
+                        const t = traits.find((item) => String(item.id) === val || item.name === val);
+                        if (t) handlePopulateCanonicalTrait(t);
+                      } else if (pathDatabaseCategory === 'skill') {
+                        const s = skills.find((item) => String(item.id) === val || item.name === val);
+                        if (s) handlePopulateCanonicalSkill(s);
+                      }
+                    }}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0"
+                  >
+                    <option value="">-- Choose Canonical {pathDatabaseCategory.charAt(0).toUpperCase() + pathDatabaseCategory.slice(1)} --</option>
+                    {pathDatabaseCategory === 'path' &&
+                      paths.map((p) => (
+                        <option key={p.id || p.name} value={p.id || p.name}>
+                          {p.name} ({p.category || 'General'})
+                        </option>
+                      ))}
+                    {pathDatabaseCategory === 'power' &&
+                      powers.map((p) => (
+                        <option key={p.id || p.name} value={p.id || p.name}>
+                          {p.name} ({p.action || 'AM'}, {p.usage || 'Usage'})
+                        </option>
+                      ))}
+                    {pathDatabaseCategory === 'trait' &&
+                      traits.map((t) => (
+                        <option key={t.id || t.name} value={t.id || t.name}>
+                          {t.name}
+                        </option>
+                      ))}
+                    {pathDatabaseCategory === 'skill' &&
+                      skills.map((s) => (
+                        <option key={s.id || s.name} value={s.id || s.name}>
+                          {s.name} ({s.attribute || 'Attr'}, {s.discipline || 'General'})
+                        </option>
+                      ))}
+                  </select>
+
+                  {/* Canonical Item Preview Card */}
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
+                    {canonicalSelectedId ? (
+                      <div className="p-3.5 rounded-xl border border-amber-500/40 bg-slate-900/90 flex flex-col gap-2.5 shadow-lg shadow-amber-950/20">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0">
+                              {pathDatabaseCategory === 'path' ? '🧭' : pathDatabaseCategory === 'power' ? '⚡' : pathDatabaseCategory === 'trait' ? '🧬' : '🎯'}
+                            </span>
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-slate-100 text-xs truncate">
+                                {pathDatabaseCategory === 'path' ? name : abilityFormName || 'Unnamed Entry'}
+                              </h4>
+                              <span className="text-[10px] text-amber-400 font-mono">👑 Master ID: {canonicalSelectedId}</span>
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px] font-bold shrink-0 uppercase">
+                            {pathDatabaseCategory}
+                          </span>
+                        </div>
+
+                        <div className="text-[11px] text-slate-300 flex flex-col gap-1.5">
+                          {pathDatabaseCategory === 'path' && (
+                            <>
+                              <div>Category: <strong className="text-amber-300">{finalPathCat}</strong></div>
+                              {pathDescription && (
+                                <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
+                                  {pathDescription}
+                                </p>
+                              )}
+                              <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                                <span className="font-bold text-slate-300">Linked Elements:</span>
+                                <span className="font-mono text-amber-300">{linkedElements.length} elements</span>
+                              </div>
+                            </>
+                          )}
+                          {pathDatabaseCategory === 'power' && (
+                            <>
+                              <div className="flex items-center gap-1.5">
+                                <span className="px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 font-mono font-bold">{abilityFormAction}</span>
+                                <span className="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono font-bold">{abilityFormUsage}</span>
+                              </div>
+                              {abilityFormEffect && (
+                                <div className="p-2 rounded bg-slate-950/90 border border-slate-800 font-mono text-xs text-slate-200 whitespace-pre-wrap">
+                                  {abilityFormEffect}
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {pathDatabaseCategory === 'trait' && (
+                            <>
+                              {abilityFormEffect && (
+                                <div className="p-2 rounded bg-slate-950/90 border border-slate-800 font-mono text-xs text-slate-200 whitespace-pre-wrap">
+                                  {abilityFormEffect}
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {pathDatabaseCategory === 'skill' && (
+                            <div>
+                              Attribute: <strong className="text-amber-300">{abilityFormSkillAttribute}</strong> • Discipline: <strong className="text-slate-200">{abilityFormSkillDiscipline}</strong>
+                            </div>
+                          )}
+                          {((pathDatabaseCategory === 'path' ? notes : abilityFormNotes) || '').trim() && (
+                            <p className="text-[10px] text-slate-400 italic font-serif border-t border-slate-800/80 pt-1">
+                              "{pathDatabaseCategory === 'path' ? notes : abilityFormNotes}"
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-auto">
+                          <span className="text-[10px] text-slate-400 italic">
+                            Edit details in the right pane, then click Save.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDeleteConfirmTarget({
+                                type: pathDatabaseCategory,
+                                id: canonicalSelectedId,
+                                name: originalCanonicalName || (pathDatabaseCategory === 'path' ? name : abilityFormName),
+                              })
+                            }
+                            className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                            title="Delete this record from Supabase"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete from SupaBase</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                        <span className="text-2xl mb-1.5">👑</span>
+                        <p className="font-semibold text-slate-400">No Master Entry Selected</p>
+                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                          Pick an existing master entry from the dropdown above to view, edit, or delete it, or click "+ New Master Entry" to author a new canonical entry.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
               ) : (
                 /* CURRENT ITEM VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
@@ -3448,6 +4308,307 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
               )}
             </div>
+          ) : creationType === 'chaos_gem' ? (
+            <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
+              {/* Studio Tab Switcher: Current vs My Creations vs SupaBase */}
+              <div className="shrink-0 flex items-center justify-between gap-2">
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
+                  <button
+                    type="button"
+                    onClick={() => setGemStudioTab('current')}
+                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                      gemStudioTab === 'current'
+                        ? 'bg-violet-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🛠️ Current
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGemStudioTab('library')}
+                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                      gemStudioTab === 'library'
+                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🎨 My Creations ({sortedPersonalItems.filter((it) => it.type === 'chaos_gem').length})
+                  </button>
+                  {isMetaScapeDesigner && (
+                    <button
+                      type="button"
+                      onClick={() => setGemStudioTab('database')}
+                      className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                        gemStudioTab === 'database'
+                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      👑 SupaBase
+                    </button>
+                  )}
+                </div>
+
+                {editingItem && gemStudioTab === 'current' && (
+                  <button
+                    type="button"
+                    onClick={handleResetForm}
+                    className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition cursor-pointer shrink-0"
+                    title="Start a new blank creation"
+                  >
+                    + New Blank
+                  </button>
+                )}
+              </div>
+
+              {gemStudioTab === 'library' ? (
+                /* LIBRARY LIST VIEW */
+                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
+                    {sortedPersonalItems.filter((it) => it.type === 'chaos_gem').length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                        <span className="text-2xl mb-1.5">💎</span>
+                        <p className="font-semibold text-slate-400">No chaos gem creations found</p>
+                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                          Click "Current" above to forge your first custom Chaos Gem.
+                        </p>
+                      </div>
+                    ) : (
+                      sortedPersonalItems
+                        .filter((it) => it.type === 'chaos_gem')
+                        .map((item) => {
+                          const isItemEditing = editingItem?.id === item.id;
+                          const itemEffect = item.item_data?.effect || '';
+
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={() => handlePopulateItemForEdit(item)}
+                              className={`p-2.5 rounded-xl border transition flex flex-col gap-1.5 shadow-sm cursor-pointer ${
+                                isItemEditing
+                                  ? 'bg-violet-950/30 border-violet-500/80 ring-1 ring-violet-500/40'
+                                  : 'bg-slate-950/70 border-slate-800/80 hover:border-violet-500/40 hover:bg-slate-900/80'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-1.5">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="text-sm shrink-0">💎</span>
+                                  <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
+                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
+                                    CHAOS GEM
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handlePopulateItemForEdit(item);
+                                    }}
+                                    className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
+                                    title="Edit this chaos gem"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteItem(item, e)}
+                                    className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
+                                    title="Delete this chaos gem"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                                <span className="px-1.5 py-0.2 bg-violet-950/80 border border-violet-500/30 text-violet-300 font-bold rounded">
+                                  {item.item_data?.action || 'F'}
+                                </span>
+                                <span className="px-1.5 py-0.2 bg-amber-950/80 border border-amber-500/30 text-amber-300 font-bold rounded">
+                                  {item.item_data?.usage || '3 Uses'}
+                                </span>
+                              </div>
+                              {itemEffect && (
+                                <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
+                                  {itemEffect}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                    )}
+                  </div>
+                </div>
+              ) : gemStudioTab === 'database' ? (
+                /* SUPABASE CANONICAL VIEW */
+                <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+                  {/* Dropdown Selector Header */}
+                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0">
+                    <span className="flex items-center gap-1.5">
+                      <span>👑</span>
+                      <span>Master Chaos Gems ({canonicalChaosGems.length})</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleNewMasterEntry}
+                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer"
+                    >
+                      + New Master Gem
+                    </button>
+                  </div>
+
+                  {/* Dropdown Selector */}
+                  <select
+                    value={canonicalSelectedId || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) {
+                        handleResetForm();
+                        return;
+                      }
+                      const gem = canonicalChaosGems.find((g) => String(g.id) === val || g.name === val);
+                      if (gem) handlePopulateCanonicalChaosGem(gem);
+                    }}
+                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0"
+                  >
+                    <option value="">-- Choose Canonical Chaos Gem --</option>
+                    {canonicalChaosGems.map((g) => (
+                      <option key={g.id || g.name} value={g.id || g.name}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Canonical Item Preview Card */}
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
+                    {canonicalSelectedId ? (
+                      <div className="p-3.5 rounded-xl border border-amber-500/40 bg-slate-900/90 flex flex-col gap-2.5 shadow-lg shadow-amber-950/20">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0">💎</span>
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-slate-100 text-xs truncate">{name || 'Unnamed Chaos Gem'}</h4>
+                              <span className="text-[10px] text-amber-400 font-mono">👑 Master ID: {canonicalSelectedId}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 font-mono text-[10px] shrink-0">
+                            <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">{action || 'F'}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">{usage || '3 Uses'}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-[11px] text-slate-300 flex flex-col gap-1.5">
+                          {effect && (
+                            <div className="p-2 rounded bg-slate-950/90 border border-slate-800 font-mono text-xs text-slate-200 whitespace-pre-wrap">
+                              {effect}
+                            </div>
+                          )}
+                          {notes && (
+                            <p className="text-[10px] text-slate-400 italic font-serif border-t border-slate-800/80 pt-1">
+                              "{notes}"
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-auto">
+                          <span className="text-[10px] text-slate-400 italic">
+                            Edit details in the right pane, then click Save.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDeleteConfirmTarget({
+                                type: 'chaos_gem',
+                                id: canonicalSelectedId,
+                                name: originalCanonicalName || name,
+                              })
+                            }
+                            className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                            title="Delete this record from Supabase"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete from SupaBase</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                        <span className="text-2xl mb-1.5">👑</span>
+                        <p className="font-semibold text-slate-400">No Master Gem Selected</p>
+                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                          Pick an existing master gem from the dropdown above to view, edit, or delete it, or click "+ New Master Gem" to author a new canonical entry.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* CURRENT ITEM LIVE CARD PREVIEW VIEW */
+                <>
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
+                    <div className="p-4 rounded-xl bg-slate-900 border border-violet-500/40 shadow-xl flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span className="font-bold text-violet-200 text-sm font-outfit flex items-center gap-1.5">
+                          <span>💎</span>
+                          <span>{name || 'Unnamed Chaos Gem'}</span>
+                        </span>
+                        <div className="flex items-center gap-1 font-mono text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">{action || 'F'}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">{usage || '3 Uses'}</span>
+                        </div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                        {effect || 'Socket activation effect will render here...'}
+                      </div>
+                      {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
+                    </div>
+                  </div>
+
+                  {/* Bottom Forge Button */}
+                  <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span>Status:</span>
+                      {editingItem ? (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-violet-500/20 text-violet-300 border border-violet-500/40">
+                          Editing Creation
+                        </span>
+                      ) : canonicalSelectedId ? (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          Editing Master Record
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-emerald-400 font-mono font-bold">New Creation</span>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={!isFormValid || isSubmitting}
+                      className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                        isFormValid && !isSubmitting
+                          ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-violet-900/40 cursor-pointer'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                      }`}
+                    >
+                      <AnvilIcon className="w-4 h-4" />
+                      <span>
+                        {isSubmitting
+                          ? 'Forging...'
+                          : isMetaScapeDesigner && canonicalSelectedId
+                          ? 'Update Canonical Master Record 👑'
+                          : isMetaScapeDesigner
+                          ? 'Forge New Canonical Master Record 👑'
+                          : editingItem
+                          ? 'Update Chaos Gem'
+                          : 'Forge Chaos Gem to My Creations'}
+                      </span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           ) : (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
             {/* FROZEN TOP SECTION: LIVE CARD PREVIEW */}
@@ -3608,26 +4769,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     </div>
                     <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
                       {effect || 'Trait mechanical effects...'}
-                    </div>
-                    {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
-                  </div>
-                )}
-
-
-                {creationType === 'chaos_gem' && (
-                  <div className="p-4 rounded-xl bg-slate-900 border border-violet-500/40 shadow-xl flex flex-col gap-2 text-xs">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="font-bold text-violet-200 text-sm font-outfit flex items-center gap-1.5">
-                        <span>💎</span>
-                        <span>{name || 'Unnamed Chaos Gem'}</span>
-                      </span>
-                      <div className="flex items-center gap-1 font-mono text-[10px]">
-                        <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">F</span>
-                        <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">3 Uses</span>
-                      </div>
-                    </div>
-                    <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
-                      {effect || 'Socket activation effect will render here...'}
                     </div>
                     {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
                   </div>
@@ -5676,6 +6817,68 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           </form>
           )}
         </div>
+
+        {/* Canonical Deletion Confirmation Dialog */}
+        {deleteConfirmTarget && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-slate-900 border border-rose-500/50 rounded-2xl max-w-md w-full p-5 shadow-2xl shadow-rose-950/50 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xl">
+                  ⚠️
+                </div>
+                <div>
+                  <h4 className="font-outfit font-extrabold text-sm text-slate-100">
+                    Delete Canonical Master Record?
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    This action will permanently delete this item from the production Supabase database.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs flex flex-col gap-1">
+                <div className="text-slate-400">
+                  Entity Type: <strong className="text-amber-300 uppercase">{deleteConfirmTarget.type}</strong>
+                </div>
+                <div className="text-slate-400">
+                  Name: <strong className="text-slate-200">{deleteConfirmTarget.name}</strong>
+                </div>
+                <div className="text-slate-400">
+                  ID: <strong className="text-slate-300 font-mono">{String(deleteConfirmTarget.id)}</strong>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmTarget(null)}
+                  disabled={isDeletingCanonical}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteCanonical}
+                  disabled={isDeletingCanonical}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white text-xs font-bold transition cursor-pointer shadow-md shadow-rose-950/50 flex items-center gap-1.5"
+                >
+                  {isDeletingCanonical ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Permanently Delete</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Universal Modal Footer */}
         <div className="px-6 py-3 bg-slate-950/80 border-t border-slate-800/80 shrink-0 flex items-center justify-end">

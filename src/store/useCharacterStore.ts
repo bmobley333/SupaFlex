@@ -1335,6 +1335,16 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         updated.push(item);
       }
       set({ traits: updated });
+    } else if (type === 'skill') {
+      const updated = get().skills.map((s) =>
+        (s.name || '').trim().toLowerCase() === cleanOld || String(s.id) === String(item.id)
+          ? { ...s, ...item }
+          : s
+      );
+      if (!updated.some((s) => (s.name || '').trim().toLowerCase() === cleanNew.toLowerCase())) {
+        updated.push(item);
+      }
+      set({ skills: updated });
     }
 
     if (typeof window !== 'undefined') {
@@ -1379,6 +1389,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       set({ suppliesCatalog: get().suppliesCatalog.filter((g) => String(g.id) !== strId && (g.name || '').trim().toLowerCase() !== cleanName) });
     } else if (type === 'trait') {
       set({ traits: get().traits.filter((t) => String(t.id) !== strId && (t.name || '').trim().toLowerCase() !== cleanName) });
+    } else if (type === 'skill') {
+      set({ skills: get().skills.filter((s) => String(s.id) !== strId && (s.name || '').trim().toLowerCase() !== cleanName) });
     }
 
     if (typeof window !== 'undefined') {

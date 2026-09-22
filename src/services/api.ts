@@ -2668,7 +2668,35 @@ export const gameApi = {
     return true;
   },
 
-  // 9. ACTIVE PROPAGATION ENGINE
+  // 9. SKILLS
+  async saveCanonicalSkill(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('skills')
+      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalSkill(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('skills')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalSkill(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('skills').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 10. ACTIVE PROPAGATION ENGINE
   async propagateCanonicalUpdateToAllCharacters(
     params: CanonicalPropagationParams
   ): Promise<{ updatedCount: number; errors: string[] }> {
