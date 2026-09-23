@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, SupabaseSupply, SupabaseWeapon, SupabaseArmor, SupabaseShield, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, GearPowerItem, ModItem, PlayerRecord, ApLogEntry, isGearPowerLearned, cleanAbilityName, calculateAvailableAp } from '../types/game';
-import { gameApi, createDefaultSheetData } from '../services/api';
+import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, SupabaseSupply, SupabaseWeapon, SupabaseArmor, SupabaseShield, SupabaseChaosGem, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, GearPowerItem, ModItem, PlayerRecord, ApLogEntry, isGearPowerLearned, cleanAbilityName, calculateAvailableAp } from '../types/game';
+import { gameApi, createDefaultSheetData, CatalogScope } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
@@ -8,6 +8,7 @@ import { reconcileCharacterVaultWithGear, cleanBelongsToName, getFunctionsForMod
 import { parseCostToSilver, deductFundsWithChange } from '../utils/moneyUtils';
 import { reconcileCharacterFreeTraits } from '../utils/pathReconciliationUtils';
 import { reconcileCanonicalSnapshots, updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, CanonicalEntityType } from '../utils/canonicalPropagation';
+import { applyEntityHydration } from '../utils/entityHydration';
 import { CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { getTabSessionId } from '../utils/tabSession';
@@ -35,10 +36,16 @@ interface CatalogsCachePayload {
     weaponsData: SupabaseWeapon[];
     armorData: SupabaseArmor[];
     shieldsData: SupabaseShield[];
+    chaosGemsData: SupabaseChaosGem[];
   };
 }
 
-function loadCatalogsFromCache(minTimestamp?: number): CatalogsCachePayload['data'] | null {
+export function getCatalogCacheKey(email?: string): string {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  return cleanEmail ? `${CATALOGS_CACHE_KEY}_${cleanEmail}` : CATALOGS_CACHE_KEY;
+}
+
+function loadCatalogsFromCache(minTimestamp?: number, email?: string): CatalogsCachePayload['data'] | null {
   if (typeof window === 'undefined') return null;
   try {
     // Purge old v1, v2, and v3 cache if present
@@ -46,7 +53,8 @@ function loadCatalogsFromCache(minTimestamp?: number): CatalogsCachePayload['dat
     localStorage.removeItem('supaflex_catalogs_cache_v2');
     localStorage.removeItem('supaflex_catalogs_cache_v3');
 
-    const raw = localStorage.getItem(CATALOGS_CACHE_KEY);
+    const cacheKey = getCatalogCacheKey(email);
+    const raw = localStorage.getItem(cacheKey);
     if (!raw) return null;
     const parsed: CatalogsCachePayload = JSON.parse(raw);
     if (!parsed || parsed.version !== 4 || !parsed.timestamp || !parsed.data) return null;
@@ -55,7 +63,7 @@ function loadCatalogsFromCache(minTimestamp?: number): CatalogsCachePayload['dat
       return null;
     }
     if (Date.now() - parsed.timestamp > CATALOGS_CACHE_TTL_MS) {
-      localStorage.removeItem(CATALOGS_CACHE_KEY);
+      localStorage.removeItem(cacheKey);
       return null;
     }
     // Auto-invalidate if cloud beacon is newer than cached timestamp
@@ -69,7 +77,7 @@ function loadCatalogsFromCache(minTimestamp?: number): CatalogsCachePayload['dat
   }
 }
 
-function saveCatalogsToCache(data: CatalogsCachePayload['data']): void {
+function saveCatalogsToCache(data: CatalogsCachePayload['data'], email?: string): void {
   if (typeof window === 'undefined') return;
   try {
     const payload: CatalogsCachePayload = {
@@ -77,7 +85,8 @@ function saveCatalogsToCache(data: CatalogsCachePayload['data']): void {
       timestamp: Date.now(),
       data,
     };
-    localStorage.setItem(CATALOGS_CACHE_KEY, JSON.stringify(payload));
+    const cacheKey = getCatalogCacheKey(email);
+    localStorage.setItem(cacheKey, JSON.stringify(payload));
   } catch (e) {
     console.warn('[CatalogsCache] Error writing cache:', e);
   }
@@ -138,6 +147,7 @@ interface CharacterStore {
   weaponsCatalog: SupabaseWeapon[];
   armorCatalog: SupabaseArmor[];
   shieldsCatalog: SupabaseShield[];
+  chaosGemsCatalog: SupabaseChaosGem[];
   isLoading: boolean;
   isSaving: boolean;
   dbConnected: boolean;
@@ -151,6 +161,7 @@ interface CharacterStore {
   // Player Login & Filtering State
   playerEmail: string;
   playerName: string;
+  playerSubscriptions: string[];
   filterMode: 'my_heroes' | 'all_heroes';
   activeRole: 'player' | 'gm';
   activePartyId: string | null;
@@ -167,6 +178,8 @@ interface CharacterStore {
   // Actions
   fetchInitialData: (options?: { silent?: boolean; forceRefresh?: boolean }) => Promise<void>;
   refreshCatalogs: () => Promise<void>;
+  subscribeToAuthor: (email: string) => Promise<void>;
+  unsubscribeFromAuthor: (email: string) => Promise<void>;
   selectCharacter: (id: number) => void;
   createNewCharacter: (name: string, characterClass?: string, race?: string) => Promise<Character | null>;
   updateActiveSheetData: (updater: (prev: CharacterSheetData) => CharacterSheetData) => void;
@@ -267,6 +280,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   weaponsCatalog: [],
   armorCatalog: [],
   shieldsCatalog: [],
+  chaosGemsCatalog: [],
   isLoading: false,
   isSaving: false,
   dbConnected: false,
@@ -274,6 +288,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   error: null,
 
   tabSessionId: getTabSessionId(),
+  playerSubscriptions: [],
 
   playerEmail: (() => {
     if (typeof window === 'undefined') return '';
@@ -360,11 +375,29 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       let weaponsData: SupabaseWeapon[];
       let armorData: SupabaseArmor[];
       let shieldsData: SupabaseShield[];
+      let chaosGemsData: SupabaseChaosGem[];
+
+      const email = (get().playerEmail || (typeof window !== 'undefined' ? sessionStorage.getItem('supaflex_player_email') || '' : '')).trim().toLowerCase();
+
+      // Fetch player subscriptions if email is present
+      let userSubscriptions: string[] = [];
+      if (email) {
+        try {
+          userSubscriptions = await gameApi.getSubscriptionsForUser(email);
+        } catch (subErr) {
+          console.warn('[Store] Error fetching player subscriptions:', subErr);
+        }
+      }
+
+      const catalogScope: CatalogScope = {
+        userEmail: email,
+        subscribedEmails: userSubscriptions,
+      };
 
       // Check 40-byte cloud beacon to detect if Antigravity / admin pushed database adjustments
       const beaconTimeStr = await gameApi.getCatalogBeacon();
       const beaconTime = beaconTimeStr ? new Date(beaconTimeStr).getTime() : 0;
-      const cached = !options?.forceRefresh ? loadCatalogsFromCache(beaconTime) : null;
+      const cached = !options?.forceRefresh ? loadCatalogsFromCache(beaconTime, email) : null;
 
       if (cached) {
         // Fast path: Instant load from localStorage (0 REST calls, 0 egress)
@@ -383,6 +416,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         weaponsData = cached.weaponsData || [];
         armorData = cached.armorData || [];
         shieldsData = cached.shieldsData || [];
+        chaosGemsData = cached.chaosGemsData || [];
 
         chars = await gameApi.getCharactersSummary();
       } else {
@@ -404,23 +438,25 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           fetchedWeapons,
           fetchedArmor,
           fetchedShields,
+          fetchedChaosGems,
         ] = await Promise.all([
           gameApi.getCharactersSummary(),
-          gameApi.getPowers(),
-          gameApi.getMagicItems(),
-          gameApi.getSkills(),
-          gameApi.getTraits(),
-          gameApi.getPaths(),
-          gameApi.getBundles(),
-          gameApi.getFunctions(),
-          gameApi.getMods(),
-          gameApi.getArtifacts(),
-          gameApi.getExotics(),
+          gameApi.getPowers(catalogScope),
+          gameApi.getMagicItems(catalogScope),
+          gameApi.getSkills(catalogScope),
+          gameApi.getTraits(catalogScope),
+          gameApi.getPaths(catalogScope),
+          gameApi.getBundles(catalogScope),
+          gameApi.getFunctions(catalogScope),
+          gameApi.getMods(catalogScope),
+          gameApi.getArtifacts(catalogScope),
+          gameApi.getExotics(catalogScope),
           gameApi.getPlayers(),
-          gameApi.getSupplies(),
-          gameApi.getWeapons(),
-          gameApi.getArmor(),
-          gameApi.getShields(),
+          gameApi.getSupplies(catalogScope),
+          gameApi.getWeapons(catalogScope),
+          gameApi.getArmor(catalogScope),
+          gameApi.getShields(catalogScope),
+          gameApi.getChaosGems(catalogScope),
         ]);
 
         chars = fetchedChars;
@@ -439,6 +475,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         weaponsData = fetchedWeapons || [];
         armorData = fetchedArmor || [];
         shieldsData = fetchedShields || [];
+        chaosGemsData = fetchedChaosGems || [];
 
         saveCatalogsToCache({
           powers,
@@ -456,10 +493,9 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           weaponsData,
           armorData,
           shieldsData,
-        });
+          chaosGemsData,
+        }, email);
       }
-
-      const email = (get().playerEmail || '').trim().toLowerCase();
 
       // If unauthenticated, do not select any character
       if (!email) {
@@ -483,6 +519,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           weaponsCatalog: weaponsData || [],
           armorCatalog: armorData || [],
           shieldsCatalog: shieldsData || [],
+          chaosGemsCatalog: chaosGemsData || [],
+          playerSubscriptions: userSubscriptions,
           isLoading: false,
         });
         return;
@@ -506,7 +544,15 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           traits,
           supplies: suppliesData,
         }).updatedSheetData;
-        return reconcileCharacterFreeTraits(canonicalReconciled, char, traits).updatedSheetData;
+        const pathReconciled = reconcileCharacterFreeTraits(canonicalReconciled, char, traits).updatedSheetData;
+        return applyEntityHydration(pathReconciled, {
+          powers,
+          weapons: weaponsData,
+          armor: armorData,
+          shields: shieldsData,
+          supplies: suppliesData,
+          traits,
+        });
       };
 
       let targetCandidate: Character | null = null;
@@ -557,6 +603,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         weaponsCatalog: weaponsData || [],
         armorCatalog: armorData || [],
         shieldsCatalog: shieldsData || [],
+        chaosGemsCatalog: chaosGemsData || [],
+        playerSubscriptions: userSubscriptions,
         isLoading: false,
       });
     } catch (err: any) {
@@ -566,6 +614,29 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       });
     }
   },
+
+  subscribeToAuthor: async (email: string) => {
+    const playerEmail = get().playerEmail;
+    if (!playerEmail || !email) return;
+    const ok = await gameApi.addSubscription(playerEmail, email);
+    if (ok) {
+      const subs = await gameApi.getSubscriptionsForUser(playerEmail);
+      set({ playerSubscriptions: subs });
+      await get().refreshCatalogs();
+    }
+  },
+
+  unsubscribeFromAuthor: async (email: string) => {
+    const playerEmail = get().playerEmail;
+    if (!playerEmail || !email) return;
+    const ok = await gameApi.removeSubscription(playerEmail, email);
+    if (ok) {
+      const subs = await gameApi.getSubscriptionsForUser(playerEmail);
+      set({ playerSubscriptions: subs });
+      await get().refreshCatalogs();
+    }
+  },
+
 
   selectCharacter: async (id: number) => {
     sessionStorage.setItem('supaflex_last_active_char_id', String(id));
@@ -583,7 +654,15 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         traits: get().traits,
         supplies: get().suppliesCatalog,
       }).updatedSheetData;
-      return reconcileCharacterFreeTraits(canonicalReconciled, char, get().traits).updatedSheetData;
+      const pathReconciled = reconcileCharacterFreeTraits(canonicalReconciled, char, get().traits).updatedSheetData;
+      return applyEntityHydration(pathReconciled, {
+        powers: get().powers,
+        weapons: get().weaponsCatalog,
+        armor: get().armorCatalog,
+        shields: get().shieldsCatalog,
+        supplies: get().suppliesCatalog,
+        traits: get().traits,
+      });
     };
 
     const found = get().characters.find((c) => c.id === id);
@@ -634,6 +713,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     }
     set({ playerEmail: trimmed });
     get().fetchPlayerLinks();
+    get().fetchInitialData({ silent: true });
   },
 
   setPlayerName: (name: string) => {
@@ -786,7 +866,12 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   },
 
   refreshCatalogs: async () => {
-    await get().fetchInitialData({ forceRefresh: true });
+    const email = (get().playerEmail || '').trim().toLowerCase();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(getCatalogCacheKey(email));
+      localStorage.removeItem(CATALOGS_CACHE_KEY);
+    }
+    await get().fetchInitialData({ silent: true, forceRefresh: true });
   },
 
   deleteCharacter: async (id: number) => {
@@ -1345,9 +1430,21 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         updated.push(item);
       }
       set({ skills: updated });
+    } else if (type === 'chaos_gem' || type === 'chaos_gems') {
+      const updated = get().chaosGemsCatalog.map((cg) =>
+        (cg.name || '').trim().toLowerCase() === cleanOld || String(cg.id) === String(item.id)
+          ? { ...cg, ...item }
+          : cg
+      );
+      if (!updated.some((cg) => (cg.name || '').trim().toLowerCase() === cleanNew.toLowerCase())) {
+        updated.push(item);
+      }
+      set({ chaosGemsCatalog: updated });
     }
 
     if (typeof window !== 'undefined') {
+      const email = (get().playerEmail || '').trim().toLowerCase();
+      localStorage.removeItem(getCatalogCacheKey(email));
       localStorage.removeItem(CATALOGS_CACHE_KEY);
     }
 
@@ -1405,9 +1502,13 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       set({ traits: get().traits.filter((t) => String(t.id) !== strId && (t.name || '').trim().toLowerCase() !== cleanName) });
     } else if (type === 'skill') {
       set({ skills: get().skills.filter((s) => String(s.id) !== strId && (s.name || '').trim().toLowerCase() !== cleanName) });
+    } else if (type === 'chaos_gem' || type === 'chaos_gems') {
+      set({ chaosGemsCatalog: get().chaosGemsCatalog.filter((cg) => String(cg.id) !== strId && (cg.name || '').trim().toLowerCase() !== cleanName) });
     }
 
     if (typeof window !== 'undefined') {
+      const email = (get().playerEmail || '').trim().toLowerCase();
+      localStorage.removeItem(getCatalogCacheKey(email));
       localStorage.removeItem(CATALOGS_CACHE_KEY);
     }
 
@@ -1983,6 +2084,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     get().saveActiveCharacter();
     return { success: true, refundedAp: refundAp };
   },
+
+
 
   // Shared Ability Sort & Filter State & Setters
   abilitySortMode: 'action',

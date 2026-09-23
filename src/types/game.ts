@@ -35,6 +35,7 @@ export interface SupabaseTrait {
   table_group?: string;
   is_hidden?: boolean;
   notes: string;
+  owner?: string;
   created_at?: string;
 }
 
@@ -57,6 +58,7 @@ export interface SupabasePath {
   category: PathCategory;
   ap_cost?: number;
   description?: string;
+  owner?: string;
   created_at?: string;
 }
 
@@ -78,6 +80,7 @@ export interface SupabaseKit {
   description?: string;
   genres?: string[];
   notes?: string;
+  owner?: string;
   domain?: EquipmentDomain | string;
   discipline?: string;
   belongs_to?: string;
@@ -136,6 +139,10 @@ export interface TraitItem {
   genres?: string[];
   created_at?: string;
   ap_cost?: number;
+  ref_id?: number | string;
+  ref_table?: EntityCatalogTable;
+  is_archived?: boolean;
+  archived_notice?: string;
 }
 
 export type RuleItem = TraitItem;
@@ -169,6 +176,13 @@ export interface AbilitySlot {
   ap_cost?: number;
   source_gear?: string;
   source_mod?: string;
+  ref_id?: number | string;
+  ref_table?: EntityCatalogTable;
+  is_archived?: boolean;
+  archived_notice?: string;
+  action_override?: string;
+  usage_override?: string;
+  effect_override?: string;
 }
 
 export interface EquipmentSlot {
@@ -195,6 +209,12 @@ export interface WeaponSlot {
   path?: string;
   requirement?: string;
   variantType?: 'Melee' | 'Hurled' | 'Shot';
+  cost?: string;
+  type?: string;
+  ref_id?: number | string;
+  ref_table?: EntityCatalogTable;
+  is_archived?: boolean;
+  archived_notice?: string;
 }
 
 export interface ArmorData {
@@ -211,6 +231,10 @@ export interface ArmorData {
   notes?: string;
   ap_cost?: number;
   path?: string;
+  ref_id?: number | string;
+  ref_table?: EntityCatalogTable;
+  is_archived?: boolean;
+  archived_notice?: string;
 }
 
 export interface SupabaseArmor {
@@ -229,6 +253,7 @@ export interface SupabaseArmor {
   table_group?: string;
   notes?: string;
   pic?: string;
+  owner?: string;
   created_at?: string;
 }
 
@@ -248,6 +273,7 @@ export interface SupabaseSupply {
   usage?: string;
   notes?: string;
   pic?: string;
+  owner?: string;
   created_at?: string;
 }
 
@@ -281,6 +307,7 @@ export interface SupabaseChaosGem {
   effect: string;
   notes?: string;
   pic?: string;
+  owner?: string;
   created_at?: string;
 }
 
@@ -376,6 +403,7 @@ export interface SupabaseShield {
   notes?: string;
   cost: string;
   pic?: string;
+  owner?: string;
   created_at?: string;
 }
 
@@ -439,6 +467,7 @@ export interface SupabaseWeapon {
   table_group?: string;
   notes?: string;
   pic?: string;
+  owner?: string;
   created_at?: string;
 }
 
@@ -542,6 +571,10 @@ export interface ShieldData {
   notes?: string;
   ap_cost?: number;
   path?: string;
+  ref_id?: number | string;
+  ref_table?: EntityCatalogTable;
+  is_archived?: boolean;
+  archived_notice?: string;
 }
 
 export interface MovementRateData {
@@ -576,6 +609,10 @@ export interface SimpleGearItem {
   base_template?: string;
   base_item_name?: string;
   base_item_id?: string | number;
+  ref_id?: number | string;
+  ref_table?: EntityCatalogTable;
+  is_archived?: boolean;
+  archived_notice?: string;
 }
 
 export interface ApLogEntry {
@@ -764,6 +801,7 @@ export interface Power {
   base_name?: string;
   path?: string;
   domain?: string;
+  owner?: string;
 }
 
 export const parseAbilityVersion = (name: string): { baseName: string; version: number } => {
@@ -1115,6 +1153,7 @@ export interface GearPowerItem {
   notes?: string;
   source_gear?: string;
   source_mod?: string;
+  owner?: string;
   created_at?: string;
 }
 
@@ -1137,6 +1176,7 @@ export interface ModItem {
   belongs_to: string;
   genres: string[];
   notes?: string;
+  owner?: string;
   created_at?: string;
 }
 
@@ -1153,6 +1193,7 @@ export interface SupabaseSkill {
   kit?: string;
   table_group?: string;
   notes?: string;
+  owner?: string;
   created_at: string;
 }
 
@@ -1316,5 +1357,48 @@ export interface CustomCreationItem {
 
 export type CustomElement = CustomCreationItem;
 export type CustomElementType = CustomCreationType;
+
+export interface PlayerSubscription {
+  id: number;
+  subscriber_email: string;
+  target_author_email: string;
+  created_at: string;
+}
+
+export type EntityCatalogTable =
+  | 'powers'
+  | 'weapons'
+  | 'armor'
+  | 'shields'
+  | 'supplies'
+  | 'traits'
+  | 'paths'
+  | 'gear_powers'
+  | 'mods'
+  | 'chaos_gems'
+  | 'skills';
+
+export interface EntityPointerInstance {
+  instance_id: string; // Unique runtime instance ID on this sheet, e.g. inst_w_12345
+  ref_id?: number | string; // Primary Key in target catalog table
+  ref_table: EntityCatalogTable;
+  ref_name?: string; // Human-readable fallback name
+  equipped?: boolean;
+  slot?: string;
+  qty?: number;
+  attached_mods?: (number | string)[];
+  runtime?: {
+    usage_checked?: number;
+    custom_name?: string;
+    custom_notes?: string;
+    action_override?: string;
+    usage_override?: string;
+    effect_override?: string;
+    [key: string]: any;
+  };
+  cached_snapshot?: any; // Preserved snapshot for graceful tombstoning if master row is deleted
+  is_archived?: boolean; // True if master row was removed from database
+}
+
 
 

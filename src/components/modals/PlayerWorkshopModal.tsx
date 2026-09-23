@@ -240,7 +240,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 }) => {
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const playerEmail = useCharacterStore((state) => state.playerEmail);
-  const playerName = useCharacterStore((state) => state.playerName);
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const activeRole = useCharacterStore((state) => state.activeRole);
   const skills = useCharacterStore((state) => state.skills);
@@ -254,6 +253,42 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
   const updateCanonicalCatalogItem = useCharacterStore((state) => state.updateCanonicalCatalogItem);
   const removeCanonicalCatalogItem = useCharacterStore((state) => state.removeCanonicalCatalogItem);
+  const playerSubscriptions = useCharacterStore((state) => state.playerSubscriptions);
+  const subscribeToAuthor = useCharacterStore((state) => state.subscribeToAuthor);
+  const unsubscribeFromAuthor = useCharacterStore((state) => state.unsubscribeFromAuthor);
+  const chaosGemsCatalog = useCharacterStore((state) => state.chaosGemsCatalog);
+  const refreshCatalogs = useCharacterStore((state) => state.refreshCatalogs);
+
+  const [subAuthorEmailInput, setSubAuthorEmailInput] = useState('');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const handleSubscribe = async () => {
+    const clean = subAuthorEmailInput.trim().toLowerCase();
+    if (!clean || !playerEmail) return;
+    if (clean === playerEmail.toLowerCase()) {
+      alert("You cannot subscribe to your own email address.");
+      return;
+    }
+    setIsSubscribing(true);
+    try {
+      await subscribeToAuthor(clean);
+      setSubAuthorEmailInput('');
+      setFeedback({ type: 'success', message: `🔗 Subscribed to ${clean}'s creations!` });
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: `Failed to subscribe: ${err.message || 'Error'}` });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  const handleUnsubscribe = async (authorEmail: string) => {
+    try {
+      await unsubscribeFromAuthor(authorEmail);
+      setFeedback({ type: 'success', message: `Removed subscription to ${authorEmail}.` });
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: `Failed to unsubscribe: ${err.message || 'Error'}` });
+    }
+  };
 
   const isMasterAccount = (playerEmail || '').toLowerCase().trim() === 'metascapegame@gmail.com';
   const [workshopMode, setWorkshopMode] = useState<'player' | 'designer'>('player');
@@ -284,7 +319,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   // Unified Paths & Abilities Studio State
   const [pathStudioMode, setPathStudioMode] = useState<'path' | 'standalone'>('path');
-  const [pathStudioTab, setPathStudioTab] = useState<'current' | 'library' | 'database'>('current');
+  const [pathStudioTab, setPathStudioTab] = useState<'current' | 'canon' | 'mine' | 'linked'>('current');
   const [pathDatabaseCategory, setPathDatabaseCategory] = useState<'path' | 'power' | 'trait' | 'skill'>('path');
   const [pathLibraryFilter, setPathLibraryFilter] = useState<'all' | 'path' | 'power' | 'skill' | 'skillset' | 'trait'>('all');
   const [isCreatingNewPath, setIsCreatingNewPath] = useState<boolean>(false);
@@ -350,9 +385,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const effectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Unified Gear Studio State
-  const [studioTab, setStudioTab] = useState<'current' | 'library' | 'database'>('current');
+  const [studioTab, setStudioTab] = useState<'current' | 'canon' | 'mine' | 'linked'>('current');
   const [gearDatabaseChassis, setGearDatabaseChassis] = useState<'weapon' | 'armor' | 'shield' | 'supplies'>('weapon');
-  const [gemStudioTab, setGemStudioTab] = useState<'current' | 'library' | 'database'>('current');
+  const [gemStudioTab, setGemStudioTab] = useState<'current' | 'canon' | 'mine' | 'linked'>('current');
   const [canonicalChaosGems, setCanonicalChaosGems] = useState<SupabaseChaosGem[]>([]);
   const [canonicalSearchQuery, setCanonicalSearchQuery] = useState<string>('');
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
@@ -615,14 +650,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setInherentPowers([]);
     setAttachedMods([]);
     setActiveStudioSelection({ type: 'chassis' });
-    if (studioTab !== 'database') {
+    if (studioTab !== 'canon' && studioTab !== 'mine' && studioTab !== 'linked') {
       setStudioTab('current');
     }
-    if (pathStudioTab !== 'database') {
+    if (pathStudioTab !== 'canon' && pathStudioTab !== 'mine' && pathStudioTab !== 'linked') {
       setPathStudioMode('path');
       setPathStudioTab('current');
     }
-    if (gemStudioTab !== 'database') {
+    if (gemStudioTab !== 'canon' && gemStudioTab !== 'mine' && gemStudioTab !== 'linked') {
       setGemStudioTab('current');
     }
     setPathLibraryFilter('all');
@@ -912,27 +947,336 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     );
   }, [personalItems]);
 
+  const cleanEmail = (playerEmail || '').trim().toLowerCase();
+  const subEmails = useMemo(() => (playerSubscriptions || []).map((s) => s.toLowerCase()), [playerSubscriptions]);
+
+  // Helper to determine scope: canon vs mine vs linked
+  const getItemScope = (itemOwner?: string): 'canon' | 'mine' | 'linked' => {
+    if (!itemOwner || itemOwner === 'Designer') return 'canon';
+    const ownerClean = itemOwner.toLowerCase();
+    if (cleanEmail && ownerClean === cleanEmail) return 'mine';
+    if (subEmails.includes(ownerClean)) return 'linked';
+    return 'canon';
+  };
+
+  // Normalized Gear Item for UI List Rendering
+  interface NormalizedGearItem {
+    id: string | number;
+    name: string;
+    chassis: 'weapon' | 'armor' | 'shield' | 'supplies';
+    cost?: string;
+    requirement?: string;
+    details: string;
+    notes?: string;
+    owner?: string;
+    rawItem: any;
+  }
+
+  const allGearItems = useMemo<NormalizedGearItem[]>(() => {
+    const list: NormalizedGearItem[] = [];
+    (weaponsCatalog || []).forEach((w) => {
+      list.push({
+        id: w.id || w.name,
+        name: w.name,
+        chassis: 'weapon',
+        cost: w.cost,
+        requirement: w.requirement,
+        details: `${w.type || 'Melee'} • Req: ${w.requirement || '💪 4'} • Dmg: ${w.dmg || 'd6'}`,
+        notes: w.notes || undefined,
+        owner: w.owner,
+        rawItem: w,
+      });
+    });
+    (armorCatalog || []).forEach((a) => {
+      list.push({
+        id: a.id || a.name,
+        name: a.name,
+        chassis: 'armor',
+        cost: a.cost,
+        requirement: a.requirement,
+        details: `Req: ${a.requirement || '💪 4'} • AR: ${a.ar || '4'} • MR: ${a.mr || '👣12'}`,
+        notes: a.notes || undefined,
+        owner: a.owner,
+        rawItem: a,
+      });
+    });
+    (shieldsCatalog || []).forEach((s) => {
+      list.push({
+        id: s.id || s.name,
+        name: s.name,
+        chassis: 'shield',
+        cost: s.cost,
+        requirement: s.requirement,
+        details: `Req: ${s.requirement || '💪 4'} • Block: ${s.max_block || '💪'}${s.mr ? ` • MR: ${s.mr}` : ''}`,
+        notes: s.notes || undefined,
+        owner: s.owner,
+        rawItem: s,
+      });
+    });
+    (suppliesCatalog || []).forEach((sup) => {
+      list.push({
+        id: sup.id || sup.name,
+        name: sup.name,
+        chassis: 'supplies',
+        cost: sup.cost,
+        details: sup.category || 'Supplies',
+        notes: sup.notes || undefined,
+        owner: sup.owner,
+        rawItem: sup,
+      });
+    });
+    return list;
+  }, [weaponsCatalog, armorCatalog, shieldsCatalog, suppliesCatalog]);
+
+  const myGearItems = useMemo(() => {
+    return allGearItems.filter((it) => getItemScope(it.owner) === 'mine');
+  }, [allGearItems, cleanEmail]);
+
+  const linkedGearItems = useMemo(() => {
+    return allGearItems.filter((it) => getItemScope(it.owner) === 'linked');
+  }, [allGearItems, subEmails]);
+
+  const myGearCount = myGearItems.length;
+  const linkedGearCount = linkedGearItems.length;
+
+  const filteredMyGearItems = useMemo(() => {
+    let items = myGearItems;
+    if (studioLibraryChassisFilter !== 'all') {
+      items = items.filter((it) => it.chassis === studioLibraryChassisFilter);
+    }
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (q) {
+      items = items.filter((it) => it.name.toLowerCase().includes(q) || (it.notes && it.notes.toLowerCase().includes(q)));
+    }
+    return items.sort((a, b) => a.name.localeCompare(b.name));
+  }, [myGearItems, studioLibraryChassisFilter, canonicalSearchQuery]);
+
+  const filteredLinkedGearItems = useMemo(() => {
+    let items = linkedGearItems;
+    if (studioLibraryChassisFilter !== 'all') {
+      items = items.filter((it) => it.chassis === studioLibraryChassisFilter);
+    }
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (q) {
+      items = items.filter((it) => it.name.toLowerCase().includes(q) || (it.notes && it.notes.toLowerCase().includes(q)));
+    }
+    return items.sort((a, b) => a.name.localeCompare(b.name));
+  }, [linkedGearItems, studioLibraryChassisFilter, canonicalSearchQuery]);
+
+  // Normalized Paths & Abilities for UI List Rendering
+  interface NormalizedPathItem {
+    id: string | number;
+    name: string;
+    type: 'path' | 'power' | 'skill' | 'trait';
+    category?: string;
+    details: string;
+    notes?: string;
+    owner?: string;
+    rawItem: any;
+  }
+
+  const allPathAbilityItems = useMemo<NormalizedPathItem[]>(() => {
+    const list: NormalizedPathItem[] = [];
+    (paths || []).forEach((p) => {
+      list.push({
+        id: p.id || p.name,
+        name: p.name,
+        type: 'path',
+        category: p.category || 'Path',
+        details: `${p.category || 'General'} • ${((p as any).linked_elements || []).length} Elements`,
+        notes: p.description,
+        owner: p.owner,
+        rawItem: p,
+      });
+    });
+    (powers || []).forEach((p) => {
+      list.push({
+        id: p.id || p.name,
+        name: p.name,
+        type: 'power',
+        category: p.category || 'Power',
+        details: `${p.action || 'AM'} • ${p.usage || '1-Enc'}${p.ready ? ` • ${p.ready}` : ''}`,
+        notes: p.effect || (p as any).notes,
+        owner: p.owner,
+        rawItem: p,
+      });
+    });
+    (traits || []).forEach((t) => {
+      list.push({
+        id: t.id || t.name,
+        name: t.name,
+        type: 'trait',
+        category: 'Trait',
+        details: t.effect ? t.effect.slice(0, 60) : 'Trait',
+        notes: t.notes,
+        owner: t.owner,
+        rawItem: t,
+      });
+    });
+    (skills || []).forEach((s) => {
+      list.push({
+        id: s.id || s.name,
+        name: s.name,
+        type: 'skill',
+        category: s.discipline || 'Skill',
+        details: `${s.attribute} • ${s.discipline || 'General'}`,
+        notes: s.notes,
+        owner: s.owner,
+        rawItem: s,
+      });
+    });
+    return list;
+  }, [paths, powers, traits, skills]);
+
+  const myPathItems = useMemo(() => {
+    return allPathAbilityItems.filter((it) => getItemScope(it.owner) === 'mine');
+  }, [allPathAbilityItems, cleanEmail]);
+
+  const linkedPathItems = useMemo(() => {
+    return allPathAbilityItems.filter((it) => getItemScope(it.owner) === 'linked');
+  }, [allPathAbilityItems, subEmails]);
+
+  const myPathCount = myPathItems.length;
+  const linkedPathCount = linkedPathItems.length;
+
+  const filteredMyPathItems = useMemo(() => {
+    let items = myPathItems;
+    if (pathLibraryFilter !== 'all') {
+      items = items.filter((it) => it.type === pathLibraryFilter);
+    }
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (q) {
+      items = items.filter((it) => it.name.toLowerCase().includes(q) || (it.notes && it.notes.toLowerCase().includes(q)));
+    }
+    return items.sort((a, b) => a.name.localeCompare(b.name));
+  }, [myPathItems, pathLibraryFilter, canonicalSearchQuery]);
+
+  const filteredLinkedPathItems = useMemo(() => {
+    let items = linkedPathItems;
+    if (pathLibraryFilter !== 'all') {
+      items = items.filter((it) => it.type === pathLibraryFilter);
+    }
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (q) {
+      items = items.filter((it) => it.name.toLowerCase().includes(q) || (it.notes && it.notes.toLowerCase().includes(q)));
+    }
+    return items.sort((a, b) => a.name.localeCompare(b.name));
+  }, [linkedPathItems, pathLibraryFilter, canonicalSearchQuery]);
+
+  // Normalized Chaos Gems for UI List Rendering
+  const myGems = useMemo(() => {
+    return (chaosGemsCatalog || []).filter((g) => getItemScope(g.owner) === 'mine');
+  }, [chaosGemsCatalog, cleanEmail]);
+
+  const linkedGems = useMemo(() => {
+    return (chaosGemsCatalog || []).filter((g) => getItemScope(g.owner) === 'linked');
+  }, [chaosGemsCatalog, subEmails]);
+
+  const myGemCount = myGems.length;
+  const linkedGemCount = linkedGems.length;
+
+  const filteredMyGems = useMemo(() => {
+    let items = myGems;
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (q) {
+      items = items.filter((g) => g.name.toLowerCase().includes(q) || (g.effect && g.effect.toLowerCase().includes(q)));
+    }
+    return items.sort((a, b) => a.name.localeCompare(b.name));
+  }, [myGems, canonicalSearchQuery]);
+
+  const filteredLinkedGems = useMemo(() => {
+    let items = linkedGems;
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (q) {
+      items = items.filter((g) => g.name.toLowerCase().includes(q) || (g.effect && g.effect.toLowerCase().includes(q)));
+    }
+    return items.sort((a, b) => a.name.localeCompare(b.name));
+  }, [linkedGems, canonicalSearchQuery]);
+
+  const handleLoadTemplateIntoForge = (chassisOrType: string, item: any) => {
+    if (chassisOrType === 'weapon') handlePopulateCanonicalWeapon(item);
+    else if (chassisOrType === 'armor') handlePopulateCanonicalArmor(item);
+    else if (chassisOrType === 'shield') handlePopulateCanonicalShield(item);
+    else if (chassisOrType === 'supplies') handlePopulateCanonicalSupply(item);
+    else if (chassisOrType === 'path') handlePopulateOfficialPath(item);
+    else if (chassisOrType === 'power') handlePopulateCanonicalPower(item);
+    else if (chassisOrType === 'trait') handlePopulateCanonicalTrait(item);
+    else if (chassisOrType === 'skill') handlePopulateCanonicalSkill(item);
+    else if (chassisOrType === 'chaos_gem') handlePopulateCanonicalChaosGem(item);
+
+    // Detach canonical master id so it saves as player's own new creation
+    setCanonicalSelectedId(null);
+    setOriginalCanonicalName('');
+    setName(`${item.name} (Custom)`);
+    if (isGearType(chassisOrType as any) || chassisOrType === 'supplies') {
+      setStudioTab('current');
+    } else if (chassisOrType === 'chaos_gem') {
+      setGemStudioTab('current');
+    } else {
+      setPathStudioTab('current');
+    }
+  };
+
+  const renderAuthorSubscriptionBanner = () => (
+    <div className="p-2.5 rounded-xl bg-slate-900/90 border border-indigo-500/30 flex flex-col gap-2 shrink-0 shadow-lg shadow-indigo-950/20">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-bold text-indigo-300 flex items-center gap-1.5">
+          <span>🔗</span>
+          <span>Author Subscriptions</span>
+        </span>
+        <span className="text-[10px] text-slate-400">
+          {playerSubscriptions.length} Linked Author{playerSubscriptions.length === 1 ? '' : 's'}
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <input
+          type="email"
+          value={subAuthorEmailInput}
+          onChange={(e) => setSubAuthorEmailInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSubscribe();
+          }}
+          placeholder="Enter creator email to link creations..."
+          className="flex-1 bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+        />
+        <button
+          type="button"
+          onClick={handleSubscribe}
+          disabled={isSubscribing || !subAuthorEmailInput.trim()}
+          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 transition cursor-pointer shrink-0"
+        >
+          {isSubscribing ? 'Linking...' : '+ Link'}
+        </button>
+      </div>
+      {playerSubscriptions.length > 0 && (
+        <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-0.5">
+          {playerSubscriptions.map((author) => (
+            <span
+              key={author}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-950/80 text-indigo-200 border border-indigo-500/30"
+            >
+              <span>👤 {author}</span>
+              <button
+                type="button"
+                onClick={() => handleUnsubscribe(author)}
+                className="hover:text-red-400 cursor-pointer ml-0.5 font-bold"
+                title={`Unlink ${author}`}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   const displayList = useMemo(() => {
     if (listFilterMode === 'all') {
       return sortedPersonalItems;
     }
     return sortedPersonalItems.filter((it) => it.type === creationType);
   }, [sortedPersonalItems, listFilterMode, creationType]);
-
-  const filteredGearItems = useMemo(() => {
-    const allGear = sortedPersonalItems.filter((it) => isGearType(it.type));
-    if (studioLibraryChassisFilter === 'all') return allGear;
-    return allGear.filter((it) => {
-      const itChassis = it.item_data?.chassis_type || (it.type === 'gear' ? 'supplies' : it.type);
-      return itChassis === studioLibraryChassisFilter;
-    });
-  }, [sortedPersonalItems, studioLibraryChassisFilter]);
-
-  const filteredPathItems = useMemo(() => {
-    const all = sortedPersonalItems.filter((it) => isPathOrAbilityType(it.type));
-    if (pathLibraryFilter === 'all') return all;
-    return all.filter((it) => it.type === pathLibraryFilter);
-  }, [sortedPersonalItems, pathLibraryFilter]);
 
   // Derive unique skillsets from atomic skills catalog
   const derivedSkillsets = useMemo(() => {
@@ -953,26 +1297,25 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   // Aggregate all available paths for the Path selector dropdown
   const allAvailablePaths = useMemo(() => {
-    const list: { id: string; name: string; category?: string; isCustom?: boolean; rawItem?: CustomCreationItem }[] = [];
-    personalItems.filter((it) => it.type === 'path').forEach((p) => {
+    const list: { id: string; name: string; category?: string; isCustom?: boolean; rawItem?: any }[] = [];
+    (paths || []).forEach((p) => {
+      const scope = getItemScope(p.owner);
+      const isCustom = scope !== 'canon';
+      const cat = isCustom
+        ? scope === 'mine'
+          ? `${p.category || 'Path'} (Personal)`
+          : `${p.category || 'Path'} (Linked - ${p.owner})`
+        : p.category || 'Official';
       list.push({
-        id: `custom_${p.id}`,
+        id: isCustom ? `custom_${p.id || p.name}` : `official_${p.id || p.name}`,
         name: p.name,
-        category: p.item_data?.category || 'Custom',
-        isCustom: true,
+        category: cat,
+        isCustom,
         rawItem: p,
       });
     });
-    (paths || []).forEach((p) => {
-      list.push({
-        id: `official_${p.id || p.name}`,
-        name: p.name,
-        category: p.category || 'Official',
-        isCustom: false,
-      });
-    });
     return list;
-  }, [personalItems, paths]);
+  }, [paths, cleanEmail, subEmails]);
 
   // Filtered catalog items for Link Existing Ability
   const filteredPathCatalogItems = useMemo(() => {
@@ -1195,103 +1538,113 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   // Canonical Search Filtered Lists (Designer Mode SupaBase)
   const filteredCanonicalWeapons = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
-    if (!q) return weaponsCatalog || [];
-    return (weaponsCatalog || []).filter(
+    const canonItems = (weaponsCatalog || []).filter((w) => getItemScope(w.owner) === 'canon');
+    if (!q) return canonItems;
+    return canonItems.filter(
       (w) =>
         (w.name || '').toLowerCase().includes(q) ||
         (w.type || '').toLowerCase().includes(q) ||
         (w.requirement || '').toLowerCase().includes(q) ||
         (w.domain || '').toLowerCase().includes(q)
     );
-  }, [weaponsCatalog, canonicalSearchQuery]);
+  }, [weaponsCatalog, canonicalSearchQuery, cleanEmail, subEmails]);
 
   const filteredCanonicalArmor = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
-    if (!q) return armorCatalog || [];
-    return (armorCatalog || []).filter(
+    const canonItems = (armorCatalog || []).filter((a) => getItemScope(a.owner) === 'canon');
+    if (!q) return canonItems;
+    return canonItems.filter(
       (a) =>
         (a.name || '').toLowerCase().includes(q) ||
         (a.requirement || '').toLowerCase().includes(q) ||
         (a.ar || '').toLowerCase().includes(q)
     );
-  }, [armorCatalog, canonicalSearchQuery]);
+  }, [armorCatalog, canonicalSearchQuery, cleanEmail, subEmails]);
 
   const filteredCanonicalShields = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
-    if (!q) return shieldsCatalog || [];
-    return (shieldsCatalog || []).filter(
+    const canonItems = (shieldsCatalog || []).filter((s) => getItemScope(s.owner) === 'canon');
+    if (!q) return canonItems;
+    return canonItems.filter(
       (s) =>
         (s.name || '').toLowerCase().includes(q) ||
         (s.requirement || '').toLowerCase().includes(q) ||
         (s.domain || '').toLowerCase().includes(q)
     );
-  }, [shieldsCatalog, canonicalSearchQuery]);
+  }, [shieldsCatalog, canonicalSearchQuery, cleanEmail, subEmails]);
 
   const filteredCanonicalSupplies = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
-    if (!q) return suppliesCatalog || [];
-    return (suppliesCatalog || []).filter(
+    const canonItems = (suppliesCatalog || []).filter((sup) => getItemScope(sup.owner) === 'canon');
+    if (!q) return canonItems;
+    return canonItems.filter(
       (sup) =>
         (sup.name || '').toLowerCase().includes(q) ||
         (sup.category || '').toLowerCase().includes(q) ||
         (sup.cost || '').toLowerCase().includes(q)
     );
-  }, [suppliesCatalog, canonicalSearchQuery]);
+  }, [suppliesCatalog, canonicalSearchQuery, cleanEmail, subEmails]);
 
   const filteredCanonicalPaths = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
-    if (!q) return paths || [];
-    return (paths || []).filter(
+    const canonItems = (paths || []).filter((p) => getItemScope(p.owner) === 'canon');
+    if (!q) return canonItems;
+    return canonItems.filter(
       (p) =>
         (p.name || '').toLowerCase().includes(q) ||
         (p.category || '').toLowerCase().includes(q) ||
         (p.description || '').toLowerCase().includes(q)
     );
-  }, [paths, canonicalSearchQuery]);
+  }, [paths, canonicalSearchQuery, cleanEmail, subEmails]);
 
   const filteredCanonicalPowers = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
-    if (!q) return powers || [];
-    return (powers || []).filter(
+    const canonItems = (powers || []).filter((p) => getItemScope(p.owner) === 'canon');
+    if (!q) return canonItems;
+    return canonItems.filter(
       (p) =>
         (p.name || '').toLowerCase().includes(q) ||
         (p.action || '').toLowerCase().includes(q) ||
         (p.usage || '').toLowerCase().includes(q) ||
         (p.effect || '').toLowerCase().includes(q)
     );
-  }, [powers, canonicalSearchQuery]);
+  }, [powers, canonicalSearchQuery, cleanEmail, subEmails]);
 
   const filteredCanonicalTraits = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
-    if (!q) return traits || [];
-    return (traits || []).filter(
+    const canonItems = (traits || []).filter((t) => getItemScope(t.owner) === 'canon');
+    if (!q) return canonItems;
+    return canonItems.filter(
       (t) =>
         (t.name || '').toLowerCase().includes(q) ||
         (t.effect || '').toLowerCase().includes(q)
     );
-  }, [traits, canonicalSearchQuery]);
+  }, [traits, canonicalSearchQuery, cleanEmail, subEmails]);
 
   const filteredCanonicalSkills = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
-    if (!q) return skills || [];
-    return (skills || []).filter(
+    const canonItems = (skills || []).filter((s) => getItemScope(s.owner) === 'canon');
+    if (!q) return canonItems;
+    return canonItems.filter(
       (s) =>
         (s.name || '').toLowerCase().includes(q) ||
         (s.discipline || '').toLowerCase().includes(q) ||
         (s.attribute || '').toLowerCase().includes(q)
     );
-  }, [skills, canonicalSearchQuery]);
+  }, [skills, canonicalSearchQuery, cleanEmail, subEmails]);
 
   const filteredCanonicalChaosGems = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
-    if (!q) return canonicalChaosGems || [];
-    return (canonicalChaosGems || []).filter(
+    const gemSource = chaosGemsCatalog && chaosGemsCatalog.length > 0 ? chaosGemsCatalog : canonicalChaosGems;
+    const canonItems = (gemSource || []).filter((g) => getItemScope(g.owner) === 'canon');
+    if (!q) return canonItems;
+    return canonItems.filter(
       (g) =>
         (g.name || '').toLowerCase().includes(q) ||
         (g.effect || '').toLowerCase().includes(q) ||
         (g.notes || '').toLowerCase().includes(q)
     );
-  }, [canonicalChaosGems, canonicalSearchQuery]);
+  }, [chaosGemsCatalog, canonicalChaosGems, canonicalSearchQuery, cleanEmail, subEmails]);
 
   const handleUpdateLinkedElements = async (elements: PathLinkedElement[]) => {
     setLinkedElements(elements);
@@ -1620,7 +1973,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setIsSubmitting(true);
     setFeedback(null);
 
-    const authorDisplayName = playerName || playerEmail?.split('@')[0] || 'Unknown Forger';
     const abilityType = activeAbilityCategory;
 
     const abilityDataPayload: CustomCreationData = {
@@ -1666,114 +2018,95 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       detailsSummary = abilityFormEffect.slice(0, 50);
     }
 
-    if (workshopMode === 'designer') {
-      try {
-        let createdId: string | number = `canon_${Date.now()}`;
-        let detailsSummary = '';
+    const targetOwner = workshopMode === 'designer' ? 'Designer' : (playerEmail || 'guest@metascape.com');
 
-        if (abilityType === 'power') {
-          const powerPayload = {
-            name: abilityFormName.trim(),
-            action: abilityFormAction,
-            usage: abilityFormUsage,
-            effect: abilityFormEffect.trim(),
-            ready: abilityFormPowerReady,
-            notes: abilityFormNotes.trim() || null,
-            genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
-            path: name.trim() || 'General',
-            category: 'Class',
-            table_group: name.trim() || 'General',
-          };
-          const createdPower = await gameApi.saveCanonicalPower(powerPayload);
-          createdId = createdPower.id;
+    try {
+      let createdId: string | number = `link_${Date.now()}`;
+
+      if (abilityType === 'power') {
+        const powerPayload = {
+          name: abilityFormName.trim(),
+          action: abilityFormAction,
+          usage: abilityFormUsage,
+          effect: abilityFormEffect.trim(),
+          ready: abilityFormPowerReady,
+          notes: abilityFormNotes.trim() || null,
+          genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+          path: name.trim() || 'General',
+          category: 'Class',
+          table_group: name.trim() || 'General',
+          owner: targetOwner,
+        };
+        const createdPower = await gameApi.saveCanonicalPower(powerPayload);
+        createdId = createdPower.id;
+        if (workshopMode === 'designer') {
           await gameApi.propagateCanonicalUpdateToAllCharacters({
             entityType: 'power',
             oldName: abilityFormName.trim(),
             updatedItem: createdPower,
           });
-          updateCanonicalCatalogItem('power', createdPower);
-          detailsSummary = `${abilityFormAction} • ${abilityFormUsage}`;
-        } else if (abilityType === 'trait') {
-          const traitPayload = {
-            name: abilityFormName.trim(),
-            effect: abilityFormEffect.trim(),
-            notes: abilityFormNotes.trim() || '',
-            genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
-            path: name.trim() || 'General',
-          };
-          const createdTrait = await gameApi.saveCanonicalTrait(traitPayload);
-          createdId = createdTrait.id;
+        }
+        updateCanonicalCatalogItem('power', createdPower);
+      } else if (abilityType === 'trait') {
+        const traitPayload = {
+          name: abilityFormName.trim(),
+          effect: abilityFormEffect.trim(),
+          notes: abilityFormNotes.trim() || '',
+          genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+          path: name.trim() || 'General',
+          owner: targetOwner,
+        };
+        const createdTrait = await gameApi.saveCanonicalTrait(traitPayload);
+        createdId = createdTrait.id;
+        if (workshopMode === 'designer') {
           await gameApi.propagateCanonicalUpdateToAllCharacters({
             entityType: 'trait',
             oldName: abilityFormName.trim(),
             updatedItem: createdTrait,
           });
-          updateCanonicalCatalogItem('trait', createdTrait);
-          detailsSummary = abilityFormEffect.slice(0, 50);
         }
-
-        const newLink: PathLinkedElement = {
-          id: String(createdId),
+        updateCanonicalCatalogItem('trait', createdTrait);
+      } else if (abilityType === 'skill') {
+        const disc =
+          abilityFormSkillDiscipline === 'CUSTOM_NEW'
+            ? abilityFormSkillDisciplineNewText.trim() || 'General'
+            : abilityFormSkillDiscipline;
+        const skillPayload = {
           name: abilityFormName.trim(),
-          type: abilityType,
-          isFree: false,
-          details: detailsSummary,
-          item_data: abilityDataPayload,
+          attribute: abilityFormSkillAttribute,
+          discipline: disc,
+          notes: abilityFormNotes.trim() || '',
+          genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+          owner: targetOwner,
         };
-
-        const nextLinked = [...linkedElements, newLink];
-        setLinkedElements(nextLinked);
-
-        if (canonicalSelectedId) {
-          await gameApi.updateCanonicalPath(canonicalSelectedId, { linked_elements: nextLinked });
-          updateCanonicalCatalogItem('path', { id: canonicalSelectedId, name, linked_elements: nextLinked });
+        const createdSkill = await gameApi.saveCanonicalSkill(skillPayload);
+        createdId = createdSkill.id;
+        if (workshopMode === 'designer') {
+          await gameApi.propagateCanonicalUpdateToAllCharacters({
+            entityType: 'skill',
+            oldName: abilityFormName.trim(),
+            updatedItem: createdSkill,
+          });
         }
-
-        setAbilityFormName('');
-        setAbilityFormEffect('');
-        setAbilityFormNotes('');
-        setAbilityFormSkillsetSkills(['', '']);
-
-        setFeedback({
-          type: 'success',
-          message: `👑 Forged Master Ability '${newLink.name}' and linked to Master Path '${name.trim() || 'Path'}'!`,
-        });
-        return;
-      } catch (err: any) {
-        console.error('[PlayerWorkshopModal] Error creating and linking canonical ability:', err);
-        setFeedback({ type: 'error', message: `❌ Error: ${err.message || 'Failed to save canonical ability.'}` });
-        return;
-      } finally {
-        setIsSubmitting(false);
+        updateCanonicalCatalogItem('skill', createdSkill);
       }
-    }
 
-    try {
-      const newAbilityItem: Partial<CustomCreationItem> = {
+      const newLink: PathLinkedElement = {
+        id: String(createdId),
         name: abilityFormName.trim(),
-        type: abilityType as CustomCreationType,
-        category: abilityDataPayload.category,
-        author_name: isGm ? `${authorDisplayName} (GM)` : authorDisplayName,
-        author_email: playerEmail || 'guest@metascape.com',
-        party_id: activePartyId || null,
-        gm_approved: isGm ? true : false,
+        type: abilityType,
+        isFree: false,
+        details: detailsSummary,
         item_data: abilityDataPayload,
       };
 
-      const savedAbility = await gameApi.saveCustomItem(newAbilityItem);
-      const abilityId = savedAbility?.id || `custom_${Date.now()}`;
+      const nextLinked = [...linkedElements, newLink];
+      setLinkedElements(nextLinked);
 
-      setLinkedElements((prev) => [
-        ...prev,
-        {
-          id: abilityId,
-          name: abilityFormName.trim(),
-          type: abilityType,
-          isFree: false,
-          details: detailsSummary,
-          item_data: abilityDataPayload,
-        },
-      ]);
+      if (canonicalSelectedId) {
+        await gameApi.updateCanonicalPath(canonicalSelectedId, { linked_elements: nextLinked });
+        updateCanonicalCatalogItem('path', { id: canonicalSelectedId, name, linked_elements: nextLinked });
+      }
 
       setAbilityFormName('');
       setAbilityFormEffect('');
@@ -1782,12 +2115,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
       setFeedback({
         type: 'success',
-        message: `Forged '${newAbilityItem.name}' and linked to ${name.trim() || 'Path'}!`,
+        message: `Forged '${newLink.name}' and linked to ${name.trim() || 'Path'}!`,
       });
-      loadPersonalItems();
+
+      if (workshopMode !== 'designer') {
+        await refreshCatalogs();
+      }
     } catch (err: any) {
       console.error('[PlayerWorkshopModal] Error creating and linking ability:', err);
-      setFeedback({ type: 'error', message: 'Failed to create and link ability.' });
+      setFeedback({ type: 'error', message: `❌ Error: ${err.message || 'Failed to save ability.'}` });
     } finally {
       setIsSubmitting(false);
     }
@@ -1821,17 +2157,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setOriginalCanonicalName('');
       if (newType === 'gear' || newType === 'exotic' || newType === 'artifact') {
         setActiveStudioSelection({ type: 'chassis' });
-        if (studioTab === 'database' && (!isMasterAccount || workshopMode !== 'designer')) {
-          setStudioTab('current');
-        }
-      } else if (newType === 'paths_abilities') {
-        if (pathStudioTab === 'database' && (!isMasterAccount || workshopMode !== 'designer')) {
-          setPathStudioTab('current');
-        }
-      } else if (newType === 'chaos_gem') {
-        if (gemStudioTab === 'database' && (!isMasterAccount || workshopMode !== 'designer')) {
-          setGemStudioTab('current');
-        }
       }
     }
   };
@@ -2147,7 +2472,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setIsSubmitting(true);
     setFeedback(null);
 
-    const authorDisplayName = playerName || playerEmail?.split('@')[0] || 'Unknown Forger';
     let categoryStr =
       creationType === 'power'
         ? 'Power'
@@ -2297,454 +2621,495 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       itemDataPayload.effect = effect.trim();
     }
 
-    // Auto-classify canonical custom_elements.type for backward compatibility & character sheet equipping
-    let finalType: CustomCreationType = creationType;
-    if (creationType === 'paths_abilities') {
-      finalType = pathStudioMode === 'path' ? 'path' : (activeAbilityCategory as CustomCreationType);
-    } else if (creationType === 'gear') {
-      const isArtifact = costMode === 'artifact' || costStr === 'Artifact';
-      const hasPowersOrMods = inherentPowers.length > 0 || attachedMods.length > 0;
-      const isExotic = hasPowersOrMods && !isArtifact;
+    const targetOwner = workshopMode === 'designer' ? 'Designer' : (playerEmail || 'guest@metascape.com');
 
-      if (isArtifact) {
-        finalType = 'artifact';
-      } else if (isExotic) {
-        finalType = 'exotic';
-      } else {
-        finalType = studioChassisType === 'supplies' ? 'gear' : (studioChassisType as CustomCreationType);
-      }
-    }
+    try {
+      if (creationType === 'paths_abilities') {
+        if (pathStudioMode === 'path') {
+          const pathPayload = {
+            name: name.trim(),
+            category: finalPathCat,
+            description: pathDescription.trim(),
+            linked_elements: linkedElements,
+            genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+            owner: targetOwner,
+          };
 
-    const finalItemName =
-      creationType === 'paths_abilities' && pathStudioMode === 'standalone'
-        ? abilityFormName.trim()
-        : name.trim();
-
-    if (workshopMode === 'designer') {
-      try {
-        if (creationType === 'paths_abilities') {
-          if (pathStudioMode === 'path') {
-            const pathPayload = {
-              name: name.trim(),
-              category: finalPathCat,
-              description: pathDescription.trim(),
-              linked_elements: linkedElements,
-              genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
-            };
-
-            if (canonicalSelectedId) {
-              await gameApi.updateCanonicalPath(canonicalSelectedId, pathPayload);
+          if (canonicalSelectedId) {
+            await gameApi.updateCanonicalPath(canonicalSelectedId, pathPayload);
+            if (workshopMode === 'designer') {
               const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                 entityType: 'path',
                 oldName: originalCanonicalName || name.trim(),
                 updatedItem: { ...pathPayload, id: canonicalSelectedId },
               });
-              updateCanonicalCatalogItem('path', { ...pathPayload, id: canonicalSelectedId }, originalCanonicalName);
-              setOriginalCanonicalName(name.trim());
               setFeedback({
                 type: 'success',
                 message: `👑 Updated '${name.trim()}' in Master Database & propagated to ${propRes.updatedCount} active character(s)!`,
               });
             } else {
-              const created = await gameApi.saveCanonicalPath(pathPayload);
-              updateCanonicalCatalogItem('path', created);
-              setCanonicalSelectedId(created.id);
-              setOriginalCanonicalName(created.name);
-              setSelectedPathId(`official_${created.id || created.name}`);
-              setIsCreatingNewPath(false);
               setFeedback({
                 type: 'success',
-                message: `👑 Created '${created.name}' in Master Database Canon!`,
+                message: `✅ Updated '${name.trim()}' in your custom creations!`,
               });
             }
+            updateCanonicalCatalogItem('path', { ...pathPayload, id: canonicalSelectedId }, originalCanonicalName);
+            setOriginalCanonicalName(name.trim());
           } else {
-            // Standalone ability in Designer mode
-            if (activeAbilityCategory === 'power' || pathDatabaseCategory === 'power') {
-              const powerPayload = {
-                name: (abilityFormName.trim() || name.trim()),
-                action: abilityFormAction,
-                usage: abilityFormUsage,
-                effect: abilityFormEffect.trim(),
-                ready: abilityFormPowerReady,
-                notes: abilityFormNotes.trim() || null,
-                genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
-                path: 'General',
-                category: 'Class',
-                table_group: 'General',
-              };
-              if (canonicalSelectedId) {
-                await gameApi.updateCanonicalPower(canonicalSelectedId, powerPayload);
+            const created = await gameApi.saveCanonicalPath(pathPayload);
+            updateCanonicalCatalogItem('path', created);
+            setCanonicalSelectedId(created.id);
+            setOriginalCanonicalName(created.name);
+            setSelectedPathId(`official_${created.id || created.name}`);
+            setIsCreatingNewPath(false);
+            setFeedback({
+              type: 'success',
+              message: workshopMode === 'designer' ? `👑 Created '${created.name}' in Master Database Canon!` : `✅ Successfully forged '${created.name}' to your creations!`,
+            });
+          }
+        } else {
+          // Standalone ability
+          if (activeAbilityCategory === 'power' || pathDatabaseCategory === 'power') {
+            const powerPayload = {
+              name: (abilityFormName.trim() || name.trim()),
+              action: abilityFormAction,
+              usage: abilityFormUsage,
+              effect: abilityFormEffect.trim(),
+              ready: abilityFormPowerReady,
+              notes: abilityFormNotes.trim() || null,
+              genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+              path: 'General',
+              category: 'Class',
+              table_group: 'General',
+              owner: targetOwner,
+            };
+            if (canonicalSelectedId) {
+              await gameApi.updateCanonicalPower(canonicalSelectedId, powerPayload);
+              if (workshopMode === 'designer') {
                 const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                   entityType: 'power',
                   oldName: originalCanonicalName || powerPayload.name,
                   updatedItem: { ...powerPayload, id: canonicalSelectedId },
                 });
-                updateCanonicalCatalogItem('power', { ...powerPayload, id: canonicalSelectedId }, originalCanonicalName);
-                setOriginalCanonicalName(powerPayload.name);
-                setName(powerPayload.name);
                 setFeedback({
                   type: 'success',
                   message: `👑 Updated Master Power '${powerPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
                 });
               } else {
-                const createdPower = await gameApi.saveCanonicalPower(powerPayload);
+                setFeedback({
+                  type: 'success',
+                  message: `✅ Updated Power '${powerPayload.name}'!`,
+                });
+              }
+              updateCanonicalCatalogItem('power', { ...powerPayload, id: canonicalSelectedId }, originalCanonicalName);
+              setOriginalCanonicalName(powerPayload.name);
+              setName(powerPayload.name);
+            } else {
+              const createdPower = await gameApi.saveCanonicalPower(powerPayload);
+              if (workshopMode === 'designer') {
                 const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                   entityType: 'power',
                   oldName: powerPayload.name,
                   updatedItem: createdPower,
                 });
-                updateCanonicalCatalogItem('power', createdPower);
-                setCanonicalSelectedId(createdPower.id);
-                setOriginalCanonicalName(createdPower.name);
-                setName(createdPower.name);
                 setFeedback({
                   type: 'success',
                   message: `👑 Saved Master Power '${powerPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
                 });
+              } else {
+                setFeedback({
+                  type: 'success',
+                  message: `✅ Successfully forged Power '${powerPayload.name}'!`,
+                });
               }
-              setAbilityFormName('');
-              setAbilityFormEffect('');
-              setAbilityFormNotes('');
-            } else if (activeAbilityCategory === 'trait' || pathDatabaseCategory === 'trait') {
-              const traitPayload = {
-                name: (abilityFormName.trim() || name.trim()),
-                effect: abilityFormEffect.trim(),
-                notes: abilityFormNotes.trim() || '',
-                genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
-                path: 'General',
-              };
-              if (canonicalSelectedId) {
-                await gameApi.updateCanonicalTrait(canonicalSelectedId, traitPayload);
+              updateCanonicalCatalogItem('power', createdPower);
+              setCanonicalSelectedId(createdPower.id);
+              setOriginalCanonicalName(createdPower.name);
+              setName(createdPower.name);
+            }
+            setAbilityFormName('');
+            setAbilityFormEffect('');
+            setAbilityFormNotes('');
+          } else if (activeAbilityCategory === 'trait' || pathDatabaseCategory === 'trait') {
+            const traitPayload = {
+              name: (abilityFormName.trim() || name.trim()),
+              effect: abilityFormEffect.trim(),
+              notes: abilityFormNotes.trim() || '',
+              genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+              path: 'General',
+              owner: targetOwner,
+            };
+            if (canonicalSelectedId) {
+              await gameApi.updateCanonicalTrait(canonicalSelectedId, traitPayload);
+              if (workshopMode === 'designer') {
                 const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                   entityType: 'trait',
                   oldName: originalCanonicalName || traitPayload.name,
                   updatedItem: { ...traitPayload, id: canonicalSelectedId },
                 });
-                updateCanonicalCatalogItem('trait', { ...traitPayload, id: canonicalSelectedId }, originalCanonicalName);
-                setOriginalCanonicalName(traitPayload.name);
-                setName(traitPayload.name);
                 setFeedback({
                   type: 'success',
                   message: `👑 Updated Master Trait '${traitPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
                 });
               } else {
-                const createdTrait = await gameApi.saveCanonicalTrait(traitPayload);
+                setFeedback({
+                  type: 'success',
+                  message: `✅ Updated Trait '${traitPayload.name}'!`,
+                });
+              }
+              updateCanonicalCatalogItem('trait', { ...traitPayload, id: canonicalSelectedId }, originalCanonicalName);
+              setOriginalCanonicalName(traitPayload.name);
+              setName(traitPayload.name);
+            } else {
+              const createdTrait = await gameApi.saveCanonicalTrait(traitPayload);
+              if (workshopMode === 'designer') {
                 const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                   entityType: 'trait',
                   oldName: traitPayload.name,
                   updatedItem: createdTrait,
                 });
-                updateCanonicalCatalogItem('trait', createdTrait);
-                setCanonicalSelectedId(createdTrait.id);
-                setOriginalCanonicalName(createdTrait.name);
-                setName(createdTrait.name);
                 setFeedback({
                   type: 'success',
                   message: `👑 Saved Master Trait '${traitPayload.name}' & propagated to ${propRes.updatedCount} active character(s)!`,
                 });
+              } else {
+                setFeedback({
+                  type: 'success',
+                  message: `✅ Successfully forged Trait '${traitPayload.name}'!`,
+                });
               }
-              setAbilityFormName('');
-              setAbilityFormEffect('');
-              setAbilityFormNotes('');
-            } else if (activeAbilityCategory === 'skill' || pathDatabaseCategory === 'skill') {
-              const skillPayload = {
-                name: (abilityFormName.trim() || name.trim()),
-                attribute: abilityFormSkillAttribute,
-                discipline: abilityFormSkillDiscipline === 'CUSTOM_NEW' ? abilityFormSkillDisciplineNewText.trim() : abilityFormSkillDiscipline,
-                notes: abilityFormNotes.trim() || '',
-                genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
-              };
-              if (canonicalSelectedId) {
-                await gameApi.updateCanonicalSkill(canonicalSelectedId, skillPayload);
+              updateCanonicalCatalogItem('trait', createdTrait);
+              setCanonicalSelectedId(createdTrait.id);
+              setOriginalCanonicalName(createdTrait.name);
+              setName(createdTrait.name);
+            }
+            setAbilityFormName('');
+            setAbilityFormEffect('');
+            setAbilityFormNotes('');
+          } else if (activeAbilityCategory === 'skill' || pathDatabaseCategory === 'skill') {
+            const skillPayload = {
+              name: (abilityFormName.trim() || name.trim()),
+              attribute: abilityFormSkillAttribute,
+              discipline: abilityFormSkillDiscipline === 'CUSTOM_NEW' ? abilityFormSkillDisciplineNewText.trim() : abilityFormSkillDiscipline,
+              notes: abilityFormNotes.trim() || '',
+              genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
+              owner: targetOwner,
+            };
+            if (canonicalSelectedId) {
+              await gameApi.updateCanonicalSkill(canonicalSelectedId, skillPayload);
+              if (workshopMode === 'designer') {
                 const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                   entityType: 'skill',
                   oldName: originalCanonicalName || skillPayload.name,
                   updatedItem: { ...skillPayload, id: canonicalSelectedId },
                 });
-                updateCanonicalCatalogItem('skill', { ...skillPayload, id: canonicalSelectedId }, originalCanonicalName);
-                setOriginalCanonicalName(skillPayload.name);
-                setName(skillPayload.name);
                 setFeedback({
                   type: 'success',
                   message: `👑 Updated Master Skill '${skillPayload.name}' & propagated to ${propRes.updatedCount} character(s)!`,
                 });
               } else {
-                const createdSkill = await gameApi.saveCanonicalSkill(skillPayload);
-                updateCanonicalCatalogItem('skill', createdSkill);
-                setCanonicalSelectedId(createdSkill.id);
-                setOriginalCanonicalName(createdSkill.name);
-                setName(createdSkill.name);
                 setFeedback({
                   type: 'success',
-                  message: `👑 Created Master Skill '${createdSkill.name}' in Supabase Canon!`,
+                  message: `✅ Updated Skill '${skillPayload.name}'!`,
                 });
               }
-              setAbilityFormName('');
-              setAbilityFormNotes('');
+              updateCanonicalCatalogItem('skill', { ...skillPayload, id: canonicalSelectedId }, originalCanonicalName);
+              setOriginalCanonicalName(skillPayload.name);
+              setName(skillPayload.name);
+            } else {
+              const createdSkill = await gameApi.saveCanonicalSkill(skillPayload);
+              updateCanonicalCatalogItem('skill', createdSkill);
+              setCanonicalSelectedId(createdSkill.id);
+              setOriginalCanonicalName(createdSkill.name);
+              setName(createdSkill.name);
+              setFeedback({
+                type: 'success',
+                message: workshopMode === 'designer' ? `👑 Created Master Skill '${createdSkill.name}' in Supabase Canon!` : `✅ Successfully forged Skill '${createdSkill.name}'!`,
+              });
             }
+            setAbilityFormName('');
+            setAbilityFormNotes('');
           }
-        } else if (creationType === 'chaos_gem') {
-          const gemPayload = {
-            name: name.trim(),
-            effect: effect.trim(),
-            genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
-            notes: notes.trim() || '',
-            action: action || 'F',
-            usage: usage || '3',
-          };
-          if (canonicalSelectedId) {
-            await gameApi.updateCanonicalChaosGem(canonicalSelectedId, gemPayload);
+        }
+      } else if (creationType === 'chaos_gem') {
+        const gemPayload = {
+          name: name.trim(),
+          effect: effect.trim(),
+          genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+          notes: notes.trim() || '',
+          action: action || 'F',
+          usage: usage || '3',
+          owner: targetOwner,
+        };
+        if (canonicalSelectedId) {
+          await gameApi.updateCanonicalChaosGem(canonicalSelectedId, gemPayload);
+          if (workshopMode === 'designer') {
             const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
               entityType: 'chaos_gem',
               oldName: originalCanonicalName || name.trim(),
               updatedItem: { ...gemPayload, id: canonicalSelectedId },
             });
-            updateCanonicalCatalogItem('chaos_gem', { ...gemPayload, id: canonicalSelectedId }, originalCanonicalName);
-            setCanonicalChaosGems((prev) =>
-              prev.map((g) => (String(g.id) === String(canonicalSelectedId) ? { ...g, ...gemPayload } : g))
-            );
-            setOriginalCanonicalName(name.trim());
             setFeedback({
               type: 'success',
               message: `👑 Updated Master Chaos Gem '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
             });
           } else {
-            const savedGem = await gameApi.saveCanonicalChaosGem(gemPayload);
+            setFeedback({
+              type: 'success',
+              message: `✅ Updated Chaos Gem '${name.trim()}'!`,
+            });
+          }
+          updateCanonicalCatalogItem('chaos_gem', { ...gemPayload, id: canonicalSelectedId }, originalCanonicalName);
+          setCanonicalChaosGems((prev) =>
+            prev.map((g) => (String(g.id) === String(canonicalSelectedId) ? { ...g, ...gemPayload } : g))
+          );
+          setOriginalCanonicalName(name.trim());
+        } else {
+          const savedGem = await gameApi.saveCanonicalChaosGem(gemPayload);
+          if (workshopMode === 'designer') {
             const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
               entityType: 'chaos_gem',
               oldName: name.trim(),
               updatedItem: savedGem,
             });
-            updateCanonicalCatalogItem('chaos_gem', savedGem);
-            setCanonicalChaosGems((prev) => [...prev, savedGem]);
-            setCanonicalSelectedId(savedGem.id);
-            setOriginalCanonicalName(savedGem.name);
             setFeedback({
               type: 'success',
               message: `👑 Saved Master Chaos Gem '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
             });
+          } else {
+            setFeedback({
+              type: 'success',
+              message: `✅ Successfully forged Chaos Gem '${name.trim()}'!`,
+            });
           }
-        } else if (creationType === 'gear') {
-          if (studioChassisType === 'weapon') {
-            const weaponPayload = {
-              name: name.trim(),
-              type: weaponTypeMode,
-              requirement: weaponReqStr,
-              atk: getWeaponAtkDmg(weaponTypeMode),
-              dmg: getWeaponAtkDmg(weaponTypeMode),
-              max_block: getWeaponMaxBlock(weaponTypeMode, weaponReqNum),
-              cost: costStr,
-              notes: notes.trim() || null,
-              genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
-            };
-            if (canonicalSelectedId) {
-              await gameApi.updateCanonicalWeapon(canonicalSelectedId, weaponPayload);
+          updateCanonicalCatalogItem('chaos_gem', savedGem);
+          setCanonicalChaosGems((prev) => [...prev, savedGem]);
+          setCanonicalSelectedId(savedGem.id);
+          setOriginalCanonicalName(savedGem.name);
+        }
+      } else if (creationType === 'gear') {
+        if (studioChassisType === 'weapon') {
+          const weaponPayload = {
+            name: name.trim(),
+            type: weaponTypeMode,
+            requirement: weaponReqStr,
+            atk: getWeaponAtkDmg(weaponTypeMode),
+            dmg: getWeaponAtkDmg(weaponTypeMode),
+            max_block: getWeaponMaxBlock(weaponTypeMode, weaponReqNum),
+            cost: costStr,
+            notes: notes.trim() || null,
+            genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+            owner: targetOwner,
+          };
+          if (canonicalSelectedId) {
+            await gameApi.updateCanonicalWeapon(canonicalSelectedId, weaponPayload);
+            if (workshopMode === 'designer') {
               const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                 entityType: 'weapon',
                 oldName: originalCanonicalName || name.trim(),
                 updatedItem: { ...weaponPayload, id: canonicalSelectedId },
               });
-              updateCanonicalCatalogItem('weapon', { ...weaponPayload, id: canonicalSelectedId }, originalCanonicalName);
-              setOriginalCanonicalName(name.trim());
               setFeedback({
                 type: 'success',
                 message: `👑 Updated Master Weapon '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
               });
             } else {
-              const savedW = await gameApi.saveCanonicalWeapon(weaponPayload);
+              setFeedback({
+                type: 'success',
+                message: `✅ Updated Weapon '${name.trim()}'!`,
+              });
+            }
+            updateCanonicalCatalogItem('weapon', { ...weaponPayload, id: canonicalSelectedId }, originalCanonicalName);
+            setOriginalCanonicalName(name.trim());
+          } else {
+            const savedW = await gameApi.saveCanonicalWeapon(weaponPayload);
+            if (workshopMode === 'designer') {
               const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                 entityType: 'weapon',
                 oldName: name.trim(),
                 updatedItem: savedW,
               });
-              updateCanonicalCatalogItem('weapon', savedW);
-              setCanonicalSelectedId(savedW.id);
-              setOriginalCanonicalName(savedW.name);
               setFeedback({
                 type: 'success',
                 message: `👑 Saved Master Weapon '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
               });
+            } else {
+              setFeedback({
+                type: 'success',
+                message: `✅ Successfully forged Weapon '${name.trim()}'!`,
+              });
             }
-          } else if (studioChassisType === 'armor') {
-            const armorPayload = {
-              name: name.trim(),
-              requirement: armorReq,
-              ar: getArmorArStr(armorReq),
-              mr: getArmorMrStr(armorReq),
-              cost: costStr,
-              notes: notes.trim() || null,
-              genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
-            };
-            if (canonicalSelectedId) {
-              await gameApi.updateCanonicalArmor(canonicalSelectedId, armorPayload);
+            updateCanonicalCatalogItem('weapon', savedW);
+            setCanonicalSelectedId(savedW.id);
+            setOriginalCanonicalName(savedW.name);
+          }
+        } else if (studioChassisType === 'armor') {
+          const armorPayload = {
+            name: name.trim(),
+            requirement: armorReq,
+            ar: getArmorArStr(armorReq),
+            mr: getArmorMrStr(armorReq),
+            cost: costStr,
+            notes: notes.trim() || null,
+            genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+            owner: targetOwner,
+          };
+          if (canonicalSelectedId) {
+            await gameApi.updateCanonicalArmor(canonicalSelectedId, armorPayload);
+            if (workshopMode === 'designer') {
               const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                 entityType: 'armor',
                 oldName: originalCanonicalName || name.trim(),
                 updatedItem: { ...armorPayload, id: canonicalSelectedId },
               });
-              updateCanonicalCatalogItem('armor', { ...armorPayload, id: canonicalSelectedId }, originalCanonicalName);
-              setOriginalCanonicalName(name.trim());
               setFeedback({
                 type: 'success',
                 message: `👑 Updated Master Armor '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
               });
             } else {
-              const savedA = await gameApi.saveCanonicalArmor(armorPayload);
+              setFeedback({
+                type: 'success',
+                message: `✅ Updated Armor '${name.trim()}'!`,
+              });
+            }
+            updateCanonicalCatalogItem('armor', { ...armorPayload, id: canonicalSelectedId }, originalCanonicalName);
+            setOriginalCanonicalName(name.trim());
+          } else {
+            const savedA = await gameApi.saveCanonicalArmor(armorPayload);
+            if (workshopMode === 'designer') {
               const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                 entityType: 'armor',
                 oldName: name.trim(),
                 updatedItem: savedA,
               });
-              updateCanonicalCatalogItem('armor', savedA);
-              setCanonicalSelectedId(savedA.id);
-              setOriginalCanonicalName(savedA.name);
               setFeedback({
                 type: 'success',
                 message: `👑 Saved Master Armor '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
               });
+            } else {
+              setFeedback({
+                type: 'success',
+                message: `✅ Successfully forged Armor '${name.trim()}'!`,
+              });
             }
-          } else if (studioChassisType === 'shield') {
-            const shieldPayload = {
-              name: name.trim(),
-              requirement: shieldReq,
-              max_block: getShieldMaxBlockStr(shieldReq),
-              mr: getShieldMrStr(shieldReq),
-              cost: costStr,
-              notes: notes.trim() || null,
-              genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
-            };
-            if (canonicalSelectedId) {
-              await gameApi.updateCanonicalShield(canonicalSelectedId, shieldPayload);
+            updateCanonicalCatalogItem('armor', savedA);
+            setCanonicalSelectedId(savedA.id);
+            setOriginalCanonicalName(savedA.name);
+          }
+        } else if (studioChassisType === 'shield') {
+          const shieldPayload = {
+            name: name.trim(),
+            requirement: shieldReq,
+            max_block: getShieldMaxBlockStr(shieldReq),
+            mr: getShieldMrStr(shieldReq),
+            cost: costStr,
+            notes: notes.trim() || null,
+            genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+            owner: targetOwner,
+          };
+          if (canonicalSelectedId) {
+            await gameApi.updateCanonicalShield(canonicalSelectedId, shieldPayload);
+            if (workshopMode === 'designer') {
               const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                 entityType: 'shield',
                 oldName: originalCanonicalName || name.trim(),
                 updatedItem: { ...shieldPayload, id: canonicalSelectedId },
               });
-              updateCanonicalCatalogItem('shield', { ...shieldPayload, id: canonicalSelectedId }, originalCanonicalName);
-              setOriginalCanonicalName(name.trim());
               setFeedback({
                 type: 'success',
                 message: `👑 Updated Master Shield '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
               });
             } else {
-              const savedS = await gameApi.saveCanonicalShield(shieldPayload);
+              setFeedback({
+                type: 'success',
+                message: `✅ Updated Shield '${name.trim()}'!`,
+              });
+            }
+            updateCanonicalCatalogItem('shield', { ...shieldPayload, id: canonicalSelectedId }, originalCanonicalName);
+            setOriginalCanonicalName(name.trim());
+          } else {
+            const savedS = await gameApi.saveCanonicalShield(shieldPayload);
+            if (workshopMode === 'designer') {
               const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                 entityType: 'shield',
                 oldName: name.trim(),
                 updatedItem: savedS,
               });
-              updateCanonicalCatalogItem('shield', savedS);
-              setCanonicalSelectedId(savedS.id);
-              setOriginalCanonicalName(savedS.name);
               setFeedback({
                 type: 'success',
                 message: `👑 Saved Master Shield '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
               });
+            } else {
+              setFeedback({
+                type: 'success',
+                message: `✅ Successfully forged Shield '${name.trim()}'!`,
+              });
             }
-          } else if (studioChassisType === 'supplies') {
-            const gearPayload = {
-              name: name.trim(),
-              category: finalGearCat,
-              cost: costStr,
-              notes: notes.trim() || null,
-              genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
-            };
-            if (canonicalSelectedId) {
-              await gameApi.updateCanonicalGear(canonicalSelectedId, gearPayload);
+            updateCanonicalCatalogItem('shield', savedS);
+            setCanonicalSelectedId(savedS.id);
+            setOriginalCanonicalName(savedS.name);
+          }
+        } else if (studioChassisType === 'supplies') {
+          const gearPayload = {
+            name: name.trim(),
+            category: finalGearCat,
+            cost: costStr,
+            notes: notes.trim() || null,
+            genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+            owner: targetOwner,
+          };
+          if (canonicalSelectedId) {
+            await gameApi.updateCanonicalGear(canonicalSelectedId, gearPayload);
+            if (workshopMode === 'designer') {
               const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                 entityType: 'gear',
                 oldName: originalCanonicalName || name.trim(),
                 updatedItem: { ...gearPayload, id: canonicalSelectedId },
               });
-              updateCanonicalCatalogItem('gear', { ...gearPayload, id: canonicalSelectedId }, originalCanonicalName);
-              setOriginalCanonicalName(name.trim());
               setFeedback({
                 type: 'success',
                 message: `👑 Updated Master Gear '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
               });
             } else {
-              const savedG = await gameApi.saveCanonicalGear(gearPayload);
+              setFeedback({
+                type: 'success',
+                message: `✅ Updated Gear '${name.trim()}'!`,
+              });
+            }
+            updateCanonicalCatalogItem('gear', { ...gearPayload, id: canonicalSelectedId }, originalCanonicalName);
+            setOriginalCanonicalName(name.trim());
+          } else {
+            const savedG = await gameApi.saveCanonicalGear(gearPayload);
+            if (workshopMode === 'designer') {
               const propRes = await gameApi.propagateCanonicalUpdateToAllCharacters({
                 entityType: 'gear',
                 oldName: name.trim(),
                 updatedItem: savedG,
               });
-              updateCanonicalCatalogItem('gear', savedG);
-              setCanonicalSelectedId(savedG.id);
-              setOriginalCanonicalName(savedG.name);
               setFeedback({
                 type: 'success',
                 message: `👑 Saved Master Gear '${name.trim()}' & propagated to ${propRes.updatedCount} active character(s)!`,
               });
+            } else {
+              setFeedback({
+                type: 'success',
+                message: `✅ Successfully forged Gear '${name.trim()}'!`,
+              });
             }
+            updateCanonicalCatalogItem('gear', savedG);
+            setCanonicalSelectedId(savedG.id);
+            setOriginalCanonicalName(savedG.name);
           }
         }
-        if (onItemSaved) onItemSaved();
-        return;
-      } catch (err: any) {
-        console.error('[PlayerWorkshopModal] Error in Designer Mode save:', err);
-        setFeedback({ type: 'error', message: `❌ Designer Mode Error: ${err.message || 'Failed to save canonical record.'}` });
-        return;
-      } finally {
-        setIsSubmitting(false);
       }
-    }
 
-    try {
-      const newCustomItem: Partial<CustomCreationItem> = {
-        name: finalItemName,
-        type: finalType,
-        category: categoryStr,
-        author_name: isGm ? `${authorDisplayName} (GM)` : authorDisplayName,
-        author_email: playerEmail || 'guest@metascape.com',
-        party_id: activePartyId || null,
-        gm_approved: isGm ? true : false,
-        item_data: itemDataPayload,
-        notes: itemDataPayload.notes,
-      };
-
-      if (editingItem && editingItem.id) {
-        const updated = await gameApi.updateCustomItem(editingItem.id, newCustomItem);
-        setFeedback({
-          type: 'success',
-          message: `✅ Updated '${finalItemName}' in your Custom Elements library!`,
-        });
-        if (updated) {
-          setEditingItem(updated);
-        }
-        loadPersonalItems();
-        if (onItemSaved) onItemSaved();
-      } else {
-        const created = await gameApi.saveCustomItem(newCustomItem);
-        setFeedback({
-          type: 'success',
-          message: `✅ Successfully forged '${finalItemName}' to your Custom Elements library!`,
-        });
-        loadPersonalItems();
-        if (onItemSaved) onItemSaved();
-
-        if (creationType === 'paths_abilities') {
-          if (pathStudioMode === 'standalone') {
-            setAbilityFormName('');
-            setAbilityFormEffect('');
-            setAbilityFormNotes('');
-            setAbilityFormSkillsetSkills(['', '']);
-            setEditingItem(null);
-          } else if (created) {
-            setEditingItem(created);
-            setIsCreatingNewPath(false);
-            setSelectedPathId(`custom_${created.id}`);
-          }
-        } else if (creationType === 'path' && created) {
-          setEditingItem(created);
-          return;
-        } else {
-          handleResetForm();
-        }
+      if (workshopMode !== 'designer') {
+        await refreshCatalogs();
       }
+      if (onItemSaved) onItemSaved();
     } catch (err: any) {
-      console.error('[PlayerWorkshopModal] Error forging item:', err);
-      setFeedback({ type: 'error', message: `❌ Error: ${err.message || 'Failed to save creation.'}` });
+      console.error('[PlayerWorkshopModal] Error in save:', err);
+      setFeedback({ type: 'error', message: `❌ Error: ${err.message || 'Failed to save record.'}` });
     } finally {
       setIsSubmitting(false);
     }
@@ -2900,15 +3265,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           {/* ========================================================================= */}
           {creationType === 'gear' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Studio Tab Switcher: Current vs My Creations vs SupaBase */}
+              {/* Studio Tab Switcher: 4-Option Pill Switch */}
               <div className="shrink-0 flex items-center justify-between gap-2">
                 <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
                     type="button"
-                    onClick={() => {
-                      setStudioTab('current');
-                    }}
-                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                    onClick={() => setStudioTab('current')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       studioTab === 'current'
                         ? 'bg-amber-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -2918,32 +3281,37 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setStudioTab('library');
-                    }}
-                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      studioTab === 'library'
+                    onClick={() => setStudioTab('canon')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                      studioTab === 'canon'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    👑 Canon
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStudioTab('mine')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                      studioTab === 'mine'
                         ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    🎨 My Creations ({filteredGearItems.length})
+                    🎨 My Creations ({myGearCount})
                   </button>
-                  {isMetaScapeDesigner && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStudioTab('database');
-                      }}
-                      className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                        studioTab === 'database'
-                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      👑 SupaBase
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setStudioTab('linked')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                      studioTab === 'linked'
+                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🔗 Linked ({linkedGearCount})
+                  </button>
                 </div>
 
                 {editingItem && studioTab === 'current' && (
@@ -2958,8 +3326,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 )}
               </div>
 
-              {studioTab === 'library' ? (
-                /* LIBRARY LIST VIEW */
+              {studioTab === 'mine' ? (
+                /* MY CREATIONS LIST VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
                   {/* Chassis Category Filter Switch */}
                   <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
@@ -3021,103 +3389,198 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
 
                   <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
-                    {filteredGearItems.length === 0 ? (
+                    {filteredMyGearItems.length === 0 ? (
                       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
                         <span className="text-2xl mb-1.5">📦</span>
                         <p className="font-semibold text-slate-400">No gear creations found</p>
                         <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          Click "Current Item" above to forge your first weapon, armor, shield, or supply.
+                          Click "Current" above to forge your first weapon, armor, shield, or supply.
                         </p>
                       </div>
                     ) : (
-                      filteredGearItems.map((item) => {
-                        const isItemEditing = editingItem?.id === item.id;
-                        const itemEffect = item.item_data?.effect || '';
-                        const itemCost = item.item_data?.cost;
-                        const inherentCount = Array.isArray(item.item_data?.inherent_powers)
-                          ? item.item_data.inherent_powers.length
-                          : item.item_data?.effect ? 1 : 0;
-                        const modCount = Array.isArray(item.item_data?.mods) ? item.item_data.mods.length : 0;
-                        const itemChassis = item.item_data?.chassis_type || (item.type === 'gear' ? 'supplies' : item.type);
-
-                        return (
-                          <div
-                            key={item.id}
-                            onClick={() => handlePopulateItemForEdit(item)}
-                            className={`p-2.5 rounded-xl border transition flex flex-col gap-1.5 shadow-sm cursor-pointer ${
-                              isItemEditing
-                                ? 'bg-amber-950/30 border-amber-500/80 ring-1 ring-amber-500/40'
-                                : 'bg-slate-950/70 border-slate-800/80 hover:border-amber-500/40 hover:bg-slate-900/80'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-1.5">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-sm shrink-0">
-                                  {item.type === 'artifact'
-                                    ? '🔮'
-                                    : item.type === 'exotic'
-                                    ? '🧿'
-                                    : item.type === 'weapon'
-                                    ? '⚔️'
-                                    : item.type === 'armor'
-                                    ? '🥋'
-                                    : item.type === 'shield'
-                                    ? '🛡️'
-                                    : '🎒'}
-                                </span>
-                                <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
-                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
-                                  {item.type}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePopulateItemForEdit(item);
-                                  }}
-                                  className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
-                                  title="Edit this creation"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleDeleteItem(item, e)}
-                                  className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
-                                  title="Delete this creation"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-                              <span className="px-1.5 py-0.2 bg-purple-950/80 border border-purple-500/30 text-purple-300 font-bold rounded">
-                                {itemCost || (item.type === 'artifact' ? 'Artifact' : 'Cost N/A')}
+                      filteredMyGearItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-2.5 rounded-xl border border-slate-800/80 bg-slate-950/70 hover:border-amber-500/40 hover:bg-slate-900/80 transition flex flex-col gap-1.5 shadow-sm"
+                        >
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-sm shrink-0">
+                                {item.chassis === 'weapon' ? '⚔️' : item.chassis === 'armor' ? '🥋' : item.chassis === 'shield' ? '🛡️' : '🎒'}
                               </span>
-                              <span className="px-1.5 py-0.2 bg-slate-800 border border-slate-700 text-slate-300 font-bold rounded">
-                                {inherentCount} Inherent • {modCount} Mod(s)
+                              <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
+                                {item.chassis}
                               </span>
-                              {itemChassis && (
-                                <span className="px-1.5 py-0.2 bg-slate-800 border border-slate-700 text-slate-400 capitalize rounded">
-                                  {itemChassis}
-                                </span>
-                              )}
                             </div>
-                            {itemEffect && (
-                              <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
-                                {itemEffect}
-                              </div>
-                            )}
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (item.chassis === 'weapon') handlePopulateCanonicalWeapon(item.rawItem);
+                                  else if (item.chassis === 'armor') handlePopulateCanonicalArmor(item.rawItem);
+                                  else if (item.chassis === 'shield') handlePopulateCanonicalShield(item.rawItem);
+                                  else if (item.chassis === 'supplies') handlePopulateCanonicalSupply(item.rawItem);
+                                  setStudioTab('current');
+                                }}
+                                className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
+                                title="Edit this creation"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDeleteConfirmTarget({
+                                    type: item.chassis,
+                                    id: item.id,
+                                    name: item.name,
+                                  })
+                                }
+                                className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
+                                title="Delete this creation"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
-                        );
-                      })
+                          <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                            {item.cost && (
+                              <span className="px-1.5 py-0.2 bg-purple-950/80 border border-purple-500/30 text-purple-300 font-bold rounded">
+                                {item.cost}
+                              </span>
+                            )}
+                            <span className="text-slate-300">{item.details}</span>
+                          </div>
+                          {item.notes && (
+                            <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
+                              {item.notes}
+                            </div>
+                          )}
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
 
-              ) : studioTab === 'database' ? (
+              ) : studioTab === 'linked' ? (
+                /* LINKED CREATIONS VIEW */
+                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+                  {renderAuthorSubscriptionBanner()}
+
+                  {/* Chassis Category Filter Switch */}
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setStudioLibraryChassisFilter('all')}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        studioLibraryChassisFilter === 'all'
+                          ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🌐 All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStudioLibraryChassisFilter('weapon')}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        studioLibraryChassisFilter === 'weapon'
+                          ? 'bg-orange-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      ⚔️ Weapons
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStudioLibraryChassisFilter('armor')}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        studioLibraryChassisFilter === 'armor'
+                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🥋 Armor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStudioLibraryChassisFilter('shield')}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        studioLibraryChassisFilter === 'shield'
+                          ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🛡️ Shields
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStudioLibraryChassisFilter('supplies')}
+                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        studioLibraryChassisFilter === 'supplies'
+                          ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      🎒 Supplies
+                    </button>
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
+                    {filteredLinkedGearItems.length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                        <span className="text-2xl mb-1.5">🔗</span>
+                        <p className="font-semibold text-slate-400">No linked gear creations found</p>
+                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                          Enter a creator's email address above to link their custom creations to your forge.
+                        </p>
+                      </div>
+                    ) : (
+                      filteredLinkedGearItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-2.5 rounded-xl border border-indigo-900/40 bg-slate-950/70 hover:border-indigo-500/40 hover:bg-slate-900/80 transition flex flex-col gap-1.5 shadow-sm"
+                        >
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-sm shrink-0">
+                                {item.chassis === 'weapon' ? '⚔️' : item.chassis === 'armor' ? '🥋' : item.chassis === 'shield' ? '🛡️' : '🎒'}
+                              </span>
+                              <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 shrink-0">
+                                👤 {item.owner}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleLoadTemplateIntoForge(item.chassis, item.rawItem)}
+                              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 transition cursor-pointer shrink-0"
+                              title="Load into Forge as custom template"
+                            >
+                              + Load
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                            {item.cost && (
+                              <span className="px-1.5 py-0.2 bg-purple-950/80 border border-purple-500/30 text-purple-300 font-bold rounded">
+                                {item.cost}
+                              </span>
+                            )}
+                            <span className="text-slate-300">{item.details}</span>
+                          </div>
+                          {item.notes && (
+                            <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
+                              {item.notes}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+              ) : studioTab === 'canon' ? (
                 /* SUPABASE CANONICAL VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
                   {/* Chassis Category Filter Switch */}
@@ -3218,13 +3681,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleNewMasterEntry}
-                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer shrink-0"
-                    >
-                      + New Master Item
-                    </button>
+                    {workshopMode === 'designer' && (
+                      <button
+                        type="button"
+                        onClick={handleNewMasterEntry}
+                        className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer shrink-0"
+                      >
+                        + New Master Item
+                      </button>
+                    )}
                   </div>
 
                   {/* Dropdown Selector */}
@@ -3271,12 +3736,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           : `-- No matches for "${canonicalSearchQuery}" --`
                         : `-- Choose Canonical ${gearDatabaseChassis.charAt(0).toUpperCase() + gearDatabaseChassis.slice(1)} (${
                             gearDatabaseChassis === 'weapon'
-                              ? (weaponsCatalog || []).length
+                              ? filteredCanonicalWeapons.length
                               : gearDatabaseChassis === 'armor'
-                              ? (armorCatalog || []).length
+                              ? filteredCanonicalArmor.length
                               : gearDatabaseChassis === 'shield'
-                              ? (shieldsCatalog || []).length
-                              : (suppliesCatalog || []).length
+                              ? filteredCanonicalShields.length
+                              : filteredCanonicalSupplies.length
                           }) --`}
                     </option>
                     {gearDatabaseChassis === 'weapon' &&
@@ -3349,24 +3814,53 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </div>
 
                         <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-auto">
-                          <span className="text-[10px] text-slate-400 italic">
-                            Edit details in the right pane, then click Save.
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDeleteConfirmTarget({
-                                type: gearDatabaseChassis,
-                                id: canonicalSelectedId,
-                                name: originalCanonicalName || name,
-                              })
-                            }
-                            className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
-                            title="Delete this record from Supabase"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete from SupaBase</span>
-                          </button>
+                          {workshopMode === 'designer' ? (
+                            <>
+                              <span className="text-[10px] text-slate-400 italic">
+                                Edit details in right pane, then click Save.
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDeleteConfirmTarget({
+                                    type: gearDatabaseChassis,
+                                    id: canonicalSelectedId,
+                                    name: originalCanonicalName || name,
+                                  })
+                                }
+                                className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                                title="Delete this record from Supabase"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Delete from SupaBase</span>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-[10px] text-amber-300/80 font-medium">
+                                👑 Official Canonical Item
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const item =
+                                    gearDatabaseChassis === 'weapon'
+                                      ? (weaponsCatalog || []).find((w) => String(w.id) === String(canonicalSelectedId) || w.name === canonicalSelectedId)
+                                      : gearDatabaseChassis === 'armor'
+                                      ? (armorCatalog || []).find((a) => String(a.id) === String(canonicalSelectedId) || a.name === canonicalSelectedId)
+                                      : gearDatabaseChassis === 'shield'
+                                      ? (shieldsCatalog || []).find((s) => String(s.id) === String(canonicalSelectedId) || s.name === canonicalSelectedId)
+                                      : (suppliesCatalog || []).find((sup) => String(sup.id) === String(canonicalSelectedId) || sup.name === canonicalSelectedId);
+                                  if (item) handleLoadTemplateIntoForge(gearDatabaseChassis, item);
+                                }}
+                                className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                                title="Load as customizable template into forge"
+                              >
+                                <span>🛠️</span>
+                                <span>+ Load into Forge</span>
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -3374,7 +3868,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         <span className="text-2xl mb-1.5">👑</span>
                         <p className="font-semibold text-slate-400">No Master Item Selected</p>
                         <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          Pick an existing master item from the dropdown above to view, edit, or delete it, or click "+ New Master Item" to author a new canonical entry.
+                          {workshopMode === 'designer'
+                            ? 'Pick an existing master item from the dropdown above to view, edit, or delete it, or click "+ New Master Item" to author a new canonical entry.'
+                            : 'Pick an official canonical item from the dropdown above to view its stats or load it into your forge as a starting template.'}
                         </p>
                       </div>
                     )}
@@ -3696,16 +4192,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           ) : creationType === 'paths_abilities' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Unified Single-Row Studio Switcher: [Current | My Creations | SupaBase] & [Path | Standalone] */}
+              {/* Studio Tab Switcher: 4-Option Pill Switch */}
               <div className="shrink-0 flex items-center justify-between gap-2 flex-wrap">
-                {/* Toggle 1: Current vs My Creations vs SupaBase */}
                 <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
                     type="button"
-                    onClick={() => {
-                      setPathStudioTab('current');
-                    }}
-                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                    onClick={() => setPathStudioTab('current')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       pathStudioTab === 'current'
                         ? 'bg-blue-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -3715,81 +4208,98 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setPathStudioTab('library');
-                    }}
-                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      pathStudioTab === 'library'
+                    onClick={() => setPathStudioTab('canon')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                      pathStudioTab === 'canon'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    👑 Canon
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPathStudioTab('mine')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                      pathStudioTab === 'mine'
                         ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    🎨 My Creations ({filteredPathItems.length})
+                    🎨 My Creations ({myPathCount})
                   </button>
-                  {isMetaScapeDesigner && (
+                  <button
+                    type="button"
+                    onClick={() => setPathStudioTab('linked')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                      pathStudioTab === 'linked'
+                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🔗 Linked ({linkedPathCount})
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Toggle 2: Path vs Standalone (Only visible in Current mode) */}
+                  {pathStudioTab === 'current' && (
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPathStudioMode('path');
+                          setActivePathSelection({ type: 'path' });
+                        }}
+                        className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          pathStudioMode === 'path'
+                            ? 'bg-sky-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        🧭 Path
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPathStudioMode('standalone');
+                          setActivePathSelection({ type: 'ability', category: activeAbilityCategory });
+                        }}
+                        className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                          pathStudioMode === 'standalone'
+                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        ⚡ Standalone
+                      </button>
+                    </div>
+                  )}
+
+                  {editingItem && pathStudioTab === 'current' && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setPathStudioTab('database');
-                      }}
-                      className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                        pathStudioTab === 'database'
-                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
+                      onClick={handleResetForm}
+                      className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition cursor-pointer shrink-0"
+                      title="Start a new blank creation"
                     >
-                      👑 SupaBase
+                      + New Blank
                     </button>
                   )}
                 </div>
-
-                {/* Toggle 2: Path vs Standalone (Only visible in Current mode, hidden in My Creations / SupaBase) */}
-                {pathStudioTab === 'current' ? (
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPathStudioMode('path');
-                        setActivePathSelection({ type: 'path' });
-                      }}
-                      className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        pathStudioMode === 'path'
-                          ? 'bg-sky-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🧭 Path
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPathStudioMode('standalone');
-                        setActivePathSelection({ type: 'ability', category: activeAbilityCategory });
-                      }}
-                      className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        pathStudioMode === 'standalone'
-                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      ⚡ Standalone
-                    </button>
-                  </div>
-                ) : null}
               </div>
 
-              {pathStudioTab === 'library' ? (
-                /* LIBRARY LIST VIEW */
+              {pathStudioTab === 'mine' ? (
+                /* MY CREATIONS LIST VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
                   {/* Category Filter Switch */}
                   <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
-                    {(['all', 'path', 'power', 'skill', 'skillset', 'trait'] as const).map((filter) => {
+                    {(['all', 'path', 'power', 'skill', 'trait'] as const).map((filter) => {
                       const labels: Record<string, string> = {
                         all: '🌐 All',
                         path: '🧭 Paths',
                         power: '⚡ Powers',
                         skill: '🎯 Skills',
-                        skillset: '📚 Sets',
                         trait: '🧬 Traits',
                       };
                       return (
@@ -3810,36 +4320,54 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
 
                   <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
-                    {filteredPathItems.length === 0 ? (
-                      <div className="p-8 text-center text-slate-500 text-xs">
-                        No creations found under this filter.
+                    {filteredMyPathItems.length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
+                        <span className="text-2xl mb-1.5">🧭</span>
+                        <p className="font-semibold text-slate-400">No creations found under this filter</p>
+                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                          Click "Current" above to forge your first custom Path, Power, Trait, or Skill.
+                        </p>
                       </div>
                     ) : (
-                      filteredPathItems.map((item) => (
+                      filteredMyPathItems.map((item) => (
                         <div
                           key={item.id}
-                          className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
-                            editingItem?.id === item.id
-                              ? 'bg-blue-950/40 border-blue-500/80 shadow-md shadow-blue-950/50 ring-1 ring-blue-500'
-                              : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
-                          }`}
-                          onClick={() => handlePopulateItemForEdit(item)}
+                          className="p-3 rounded-xl border border-slate-800/80 bg-slate-900/80 hover:border-slate-700 hover:bg-slate-900 transition-all flex flex-col gap-1.5 shadow-sm"
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-base">{getCategoryEmoji(item.type)}</span>
-                              <span className="font-bold text-slate-100 text-xs">{item.name}</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-base shrink-0">
+                                {item.type === 'path' ? '🧭' : item.type === 'power' ? '⚡' : item.type === 'trait' ? '🧬' : '🎯'}
+                              </span>
+                              <span className="font-bold text-slate-100 text-xs truncate">{item.name}</span>
                             </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-blue-300 font-mono">
-                                {item.type.toUpperCase()}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-blue-300 font-mono font-bold uppercase">
+                                {item.type}
                               </span>
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteItem(item, e);
+                                onClick={() => {
+                                  if (item.type === 'path') handlePopulateOfficialPath(item.rawItem);
+                                  else if (item.type === 'power') handlePopulateCanonicalPower(item.rawItem);
+                                  else if (item.type === 'trait') handlePopulateCanonicalTrait(item.rawItem);
+                                  else if (item.type === 'skill') handlePopulateCanonicalSkill(item.rawItem);
+                                  setPathStudioTab('current');
                                 }}
+                                className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
+                                title="Edit this creation"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDeleteConfirmTarget({
+                                    type: item.type,
+                                    id: item.id,
+                                    name: item.name,
+                                  })
+                                }
                                 className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition cursor-pointer"
                                 title="Delete creation"
                               >
@@ -3848,17 +4376,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             </div>
                           </div>
 
-                          {item.type === 'path' && item.item_data?.linked_elements && (
-                            <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                              <span>Linked:</span>
-                              <span className="font-bold text-slate-300">
-                                {item.item_data.linked_elements.length} elements
-                              </span>
+                          {item.details && (
+                            <div className="text-[10px] text-slate-300">
+                              {item.details}
                             </div>
                           )}
-                          {item.item_data?.effect && (
+                          {item.notes && (
                             <div className="text-[10px] text-slate-400 font-mono line-clamp-1">
-                              {item.item_data.effect}
+                              {item.notes}
                             </div>
                           )}
                         </div>
@@ -3867,7 +4392,95 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
                 </div>
 
-              ) : pathStudioTab === 'database' ? (
+              ) : pathStudioTab === 'linked' ? (
+                /* LINKED CREATIONS VIEW */
+                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+                  {renderAuthorSubscriptionBanner()}
+
+                  {/* Category Filter Switch */}
+                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
+                    {(['all', 'path', 'power', 'skill', 'trait'] as const).map((filter) => {
+                      const labels: Record<string, string> = {
+                        all: '🌐 All',
+                        path: '🧭 Paths',
+                        power: '⚡ Powers',
+                        skill: '🎯 Skills',
+                        trait: '🧬 Traits',
+                      };
+                      return (
+                        <button
+                          key={filter}
+                          type="button"
+                          onClick={() => setPathLibraryFilter(filter)}
+                          className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            pathLibraryFilter === filter
+                              ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                          }`}
+                        >
+                          {labels[filter]}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+                    {filteredLinkedPathItems.length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
+                        <span className="text-2xl mb-1.5">🔗</span>
+                        <p className="font-semibold text-slate-400">No linked creations found</p>
+                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                          Enter a creator's email address above to link their custom creations to your forge.
+                        </p>
+                      </div>
+                    ) : (
+                      filteredLinkedPathItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-3 rounded-xl border border-indigo-900/40 bg-slate-950/70 hover:border-indigo-500/40 hover:bg-slate-900/80 transition flex flex-col gap-1.5 shadow-sm"
+                        >
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-base shrink-0">
+                                {item.type === 'path' ? '🧭' : item.type === 'power' ? '⚡' : item.type === 'trait' ? '🧬' : '🎯'}
+                              </span>
+                              <span className="font-bold text-slate-100 text-xs truncate">{item.name}</span>
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 shrink-0">
+                                👤 {item.owner}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-indigo-300 font-mono font-bold uppercase">
+                                {item.type}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleLoadTemplateIntoForge(item.type, item.rawItem)}
+                                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 transition cursor-pointer shrink-0"
+                                title="Load into Forge as custom template"
+                              >
+                                + Load
+                              </button>
+                            </div>
+                          </div>
+
+                          {item.details && (
+                            <div className="text-[10px] text-slate-300">
+                              {item.details}
+                            </div>
+                          )}
+                          {item.notes && (
+                            <div className="text-[10px] text-slate-400 font-mono line-clamp-1">
+                              {item.notes}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+              ) : pathStudioTab === 'canon' ? (
                 /* SUPABASE CANONICAL VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
                   {/* Category Filter Switch */}
@@ -4133,24 +4746,53 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </div>
 
                         <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-auto">
-                          <span className="text-[10px] text-slate-400 italic">
-                            Edit details in the right pane, then click Save.
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDeleteConfirmTarget({
-                                type: pathDatabaseCategory,
-                                id: canonicalSelectedId,
-                                name: originalCanonicalName || (pathDatabaseCategory === 'path' ? name : abilityFormName),
-                              })
-                            }
-                            className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
-                            title="Delete this record from Supabase"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete from SupaBase</span>
-                          </button>
+                          {workshopMode === 'designer' ? (
+                            <>
+                              <span className="text-[10px] text-slate-400 italic">
+                                Edit details in the right pane, then click Save.
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDeleteConfirmTarget({
+                                    type: pathDatabaseCategory,
+                                    id: canonicalSelectedId,
+                                    name: originalCanonicalName || (pathDatabaseCategory === 'path' ? name : abilityFormName),
+                                  })
+                                }
+                                className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                                title="Delete this record from Supabase"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Delete from SupaBase</span>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-[10px] text-amber-300/80 font-medium">
+                                👑 Official Canonical Item
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const item =
+                                    pathDatabaseCategory === 'path'
+                                      ? (paths || []).find((p) => String(p.id) === String(canonicalSelectedId) || p.name === canonicalSelectedId)
+                                      : pathDatabaseCategory === 'power'
+                                      ? (powers || []).find((p) => String(p.id) === String(canonicalSelectedId) || p.name === canonicalSelectedId)
+                                      : pathDatabaseCategory === 'trait'
+                                      ? (traits || []).find((t) => String(t.id) === String(canonicalSelectedId) || t.name === canonicalSelectedId)
+                                      : (skills || []).find((s) => String(s.id) === String(canonicalSelectedId) || s.name === canonicalSelectedId);
+                                  if (item) handleLoadTemplateIntoForge(pathDatabaseCategory, item);
+                                }}
+                                className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                                title="Load as customizable template into forge"
+                              >
+                                <span>🛠️</span>
+                                <span>+ Load into Forge</span>
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -4158,7 +4800,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         <span className="text-2xl mb-1.5">👑</span>
                         <p className="font-semibold text-slate-400">No Master Entry Selected</p>
                         <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          Pick an existing master entry from the dropdown above to view, edit, or delete it, or click "+ New Master Entry" to author a new canonical entry.
+                          {workshopMode === 'designer'
+                            ? 'Pick an existing master entry from the dropdown above to view, edit, or delete it, or click "+ New Master Entry" to author a new canonical entry.'
+                            : 'Pick an official canonical entry from the dropdown above to view its stats or load it into your forge as a starting template.'}
                         </p>
                       </div>
                     )}
@@ -4587,15 +5231,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           ) : creationType === 'chaos_gem' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Studio Tab Switcher: Current vs My Creations vs SupaBase */}
+              {/* Studio Tab Switcher: 4-Option Pill Switch */}
               <div className="shrink-0 flex items-center justify-between gap-2">
                 <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
                     type="button"
-                    onClick={() => {
-                      setGemStudioTab('current');
-                    }}
-                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                    onClick={() => setGemStudioTab('current')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                       gemStudioTab === 'current'
                         ? 'bg-violet-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -4605,32 +5247,37 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setGemStudioTab('library');
-                    }}
-                    className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      gemStudioTab === 'library'
+                    onClick={() => setGemStudioTab('canon')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                      gemStudioTab === 'canon'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    👑 Canon
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGemStudioTab('mine')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                      gemStudioTab === 'mine'
                         ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    🎨 My Creations ({sortedPersonalItems.filter((it) => it.type === 'chaos_gem').length})
+                    🎨 My Creations ({myGemCount})
                   </button>
-                  {isMetaScapeDesigner && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGemStudioTab('database');
-                      }}
-                      className={`w-32 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                        gemStudioTab === 'database'
-                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      👑 SupaBase
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setGemStudioTab('linked')}
+                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                      gemStudioTab === 'linked'
+                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    🔗 Linked ({linkedGemCount})
+                  </button>
                 </div>
 
                 {editingItem && gemStudioTab === 'current' && (
@@ -4645,11 +5292,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 )}
               </div>
 
-              {gemStudioTab === 'library' ? (
-                /* LIBRARY LIST VIEW */
+              {gemStudioTab === 'mine' ? (
+                /* MY CREATIONS LIST VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
                   <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
-                    {sortedPersonalItems.filter((it) => it.type === 'chaos_gem').length === 0 ? (
+                    {filteredMyGems.length === 0 ? (
                       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
                         <span className="text-2xl mb-1.5">💎</span>
                         <p className="font-semibold text-slate-400">No chaos gem creations found</p>
@@ -4658,72 +5305,136 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </p>
                       </div>
                     ) : (
-                      sortedPersonalItems
-                        .filter((it) => it.type === 'chaos_gem')
-                        .map((item) => {
-                          const isItemEditing = editingItem?.id === item.id;
-                          const itemEffect = item.item_data?.effect || '';
+                      filteredMyGems.map((item) => {
+                        const isItemEditing = editingItem?.id === item.id || canonicalSelectedId === String(item.id);
+                        const itemEffect = item.effect || '';
 
-                          return (
-                            <div
-                              key={item.id}
-                              onClick={() => handlePopulateItemForEdit(item)}
-                              className={`p-2.5 rounded-xl border transition flex flex-col gap-1.5 shadow-sm cursor-pointer ${
-                                isItemEditing
-                                  ? 'bg-violet-950/30 border-violet-500/80 ring-1 ring-violet-500/40'
-                                  : 'bg-slate-950/70 border-slate-800/80 hover:border-violet-500/40 hover:bg-slate-900/80'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between gap-1.5">
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <span className="text-sm shrink-0">💎</span>
-                                  <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
-                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
-                                    CHAOS GEM
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handlePopulateItemForEdit(item);
-                                    }}
-                                    className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
-                                    title="Edit this chaos gem"
-                                  >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleDeleteItem(item, e)}
-                                    className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
-                                    title="Delete this chaos gem"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-                                <span className="px-1.5 py-0.2 bg-violet-950/80 border border-violet-500/30 text-violet-300 font-bold rounded">
-                                  {item.item_data?.action || 'F'}
-                                </span>
-                                <span className="px-1.5 py-0.2 bg-amber-950/80 border border-amber-500/30 text-amber-300 font-bold rounded">
-                                  {item.item_data?.usage || '3 Uses'}
+                        return (
+                          <div
+                            key={item.id}
+                            className={`p-2.5 rounded-xl border transition flex flex-col gap-1.5 shadow-sm cursor-pointer ${
+                              isItemEditing
+                                ? 'bg-violet-950/30 border-violet-500/80 ring-1 ring-violet-500/40'
+                                : 'bg-slate-950/70 border-slate-800/80 hover:border-violet-500/40 hover:bg-slate-900/80'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-sm shrink-0">💎</span>
+                                <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
+                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
+                                  CHAOS GEM
                                 </span>
                               </div>
-                              {itemEffect && (
-                                <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
-                                  {itemEffect}
-                                </div>
-                              )}
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handlePopulateCanonicalChaosGem(item);
+                                    setGemStudioTab('current');
+                                  }}
+                                  className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
+                                  title="Edit this chaos gem"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setDeleteConfirmTarget({
+                                      type: 'chaos_gem',
+                                      id: item.id || item.name,
+                                      name: item.name,
+                                    })
+                                  }
+                                  className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
+                                  title="Delete this chaos gem"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
-                          );
-                        })
+                            <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                              <span className="px-1.5 py-0.2 bg-violet-950/80 border border-violet-500/30 text-violet-300 font-bold rounded">
+                                {item.action || 'F'}
+                              </span>
+                              <span className="px-1.5 py-0.2 bg-amber-950/80 border border-amber-500/30 text-amber-300 font-bold rounded">
+                                {item.usage || '3 Uses'}
+                              </span>
+                            </div>
+                            {itemEffect && (
+                              <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
+                                {itemEffect}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>
-              ) : gemStudioTab === 'database' ? (
+
+              ) : gemStudioTab === 'linked' ? (
+                /* LINKED CREATIONS VIEW */
+                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+                  {renderAuthorSubscriptionBanner()}
+
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
+                    {filteredLinkedGems.length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                        <span className="text-2xl mb-1.5">🔗</span>
+                        <p className="font-semibold text-slate-400">No linked chaos gems found</p>
+                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                          Enter a creator's email address above to link their custom creations to your forge.
+                        </p>
+                      </div>
+                    ) : (
+                      filteredLinkedGems.map((item) => {
+                        const itemEffect = item.effect || '';
+
+                        return (
+                          <div
+                            key={item.id}
+                            className="p-2.5 rounded-xl border border-indigo-900/40 bg-slate-950/70 hover:border-indigo-500/40 hover:bg-slate-900/80 transition flex flex-col gap-1.5 shadow-sm"
+                          >
+                            <div className="flex items-center justify-between gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-sm shrink-0">💎</span>
+                                <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 shrink-0">
+                                  👤 {item.owner}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleLoadTemplateIntoForge('chaos_gem', item)}
+                                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 transition cursor-pointer shrink-0"
+                                title="Load into Forge as custom template"
+                              >
+                                + Load
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                              <span className="px-1.5 py-0.2 bg-violet-950/80 border border-violet-500/30 text-violet-300 font-bold rounded">
+                                {item.action || 'F'}
+                              </span>
+                              <span className="px-1.5 py-0.2 bg-amber-950/80 border border-amber-500/30 text-amber-300 font-bold rounded">
+                                {item.usage || '3 Uses'}
+                              </span>
+                            </div>
+                            {itemEffect && (
+                              <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
+                                {itemEffect}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+              ) : gemStudioTab === 'canon' ? (
                 /* SUPABASE CANONICAL VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
                   {/* Dropdown Selector Header */}
@@ -4827,24 +5538,46 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </div>
 
                         <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-auto">
-                          <span className="text-[10px] text-slate-400 italic">
-                            Edit details in the right pane, then click Save.
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setDeleteConfirmTarget({
-                                type: 'chaos_gem',
-                                id: canonicalSelectedId,
-                                name: originalCanonicalName || name,
-                              })
-                            }
-                            className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
-                            title="Delete this record from Supabase"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete from SupaBase</span>
-                          </button>
+                          {workshopMode === 'designer' ? (
+                            <>
+                              <span className="text-[10px] text-slate-400 italic">
+                                Edit details in the right pane, then click Save.
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDeleteConfirmTarget({
+                                    type: 'chaos_gem',
+                                    id: canonicalSelectedId,
+                                    name: originalCanonicalName || name,
+                                  })
+                                }
+                                className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                                title="Delete this record from Supabase"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Delete from SupaBase</span>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-[10px] text-amber-300/80 font-medium">
+                                👑 Official Canonical Item
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const gem = (canonicalChaosGems || []).find((g) => String(g.id) === String(canonicalSelectedId) || g.name === canonicalSelectedId);
+                                  if (gem) handleLoadTemplateIntoForge('chaos_gem', gem);
+                                }}
+                                className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                                title="Load as customizable template into forge"
+                              >
+                                <span>🛠️</span>
+                                <span>+ Load into Forge</span>
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -4852,7 +5585,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         <span className="text-2xl mb-1.5">👑</span>
                         <p className="font-semibold text-slate-400">No Master Gem Selected</p>
                         <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          Pick an existing master gem from the dropdown above to view, edit, or delete it, or click "+ New Master Gem" to author a new canonical entry.
+                          {workshopMode === 'designer'
+                            ? 'Pick an existing master gem from the dropdown above to view, edit, or delete it, or click "+ New Master Gem" to author a new canonical entry.'
+                            : 'Pick an official canonical gem from the dropdown above to view its stats or load it into your forge as a starting template.'}
                         </p>
                       </div>
                     )}

@@ -33,6 +33,34 @@ import { resolveArtifactCatalog, CatalogArtifact, ArtifactTier } from '../utils/
 import { resolveExoticCatalog, CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, CanonicalPropagationParams, CanonicalEntityType } from '../utils/canonicalPropagation';
 
+export interface CatalogScope {
+  userEmail?: string;
+  subscribedEmails?: string[];
+}
+
+export function applyOwnerScope(query: any, scope?: CatalogScope): any {
+  if (!scope || (!scope.userEmail && (!scope.subscribedEmails || scope.subscribedEmails.length === 0))) {
+    return query.eq('owner', 'Designer');
+  }
+
+  const allowedOwners = ['Designer'];
+  if (scope.userEmail && scope.userEmail.trim()) {
+    allowedOwners.push(scope.userEmail.trim().toLowerCase());
+  }
+  if (Array.isArray(scope.subscribedEmails)) {
+    for (const sub of scope.subscribedEmails) {
+      if (sub && sub.trim()) {
+        const cleanSub = sub.trim().toLowerCase();
+        if (!allowedOwners.includes(cleanSub)) {
+          allowedOwners.push(cleanSub);
+        }
+      }
+    }
+  }
+
+  return query.in('owner', allowedOwners);
+}
+
 let cachedSupabaseMonsters: SupabaseMonster[] | null = null;
 
 const DEFAULT_UNARMORED_SLOT = {
@@ -339,8 +367,9 @@ export const gameApi = {
     return null;
   },
 
-  async getPowers(): Promise<Power[]> {
+  async getPowers(scope?: CatalogScope): Promise<Power[]> {
     let query = supabase.from('powers').select('*');
+    query = applyOwnerScope(query, scope);
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -354,13 +383,13 @@ export const gameApi = {
   },
 
   // --- ARTIFACTS, EXOTICS & LOADOUT CATALOG ---
-  async getArtifacts(): Promise<CatalogArtifact[]> {
+  async getArtifacts(scope?: CatalogScope): Promise<CatalogArtifact[]> {
     const isGs = isGuildSpaceUnlocked();
 
-    let suppliesQuery = supabase.from('supplies').select('*').or('category.ilike.artifact,cost.ilike.artifact');
-    let weaponsQuery = supabase.from('weapons').select('*').ilike('cost', 'artifact');
-    let armorQuery = supabase.from('armor').select('*').ilike('cost', 'artifact');
-    let shieldsQuery = supabase.from('shields').select('*').ilike('cost', 'artifact');
+    let suppliesQuery = applyOwnerScope(supabase.from('supplies').select('*').or('category.ilike.artifact,cost.ilike.artifact'), scope);
+    let weaponsQuery = applyOwnerScope(supabase.from('weapons').select('*').ilike('cost', 'artifact'), scope);
+    let armorQuery = applyOwnerScope(supabase.from('armor').select('*').ilike('cost', 'artifact'), scope);
+    let shieldsQuery = applyOwnerScope(supabase.from('shields').select('*').ilike('cost', 'artifact'), scope);
 
     if (!isGs) {
       suppliesQuery = suppliesQuery.not('name', 'ilike', '%(mso)%');
@@ -374,7 +403,7 @@ export const gameApi = {
       weaponsQuery.order('name', { ascending: true }),
       armorQuery.order('name', { ascending: true }),
       shieldsQuery.order('name', { ascending: true }),
-      this.getFunctions(),
+      this.getFunctions(scope),
     ]);
 
     const { allArtifacts } = resolveArtifactCatalog(
@@ -388,22 +417,22 @@ export const gameApi = {
     return allArtifacts;
   },
 
-  async getArtifactsByTier(tier: ArtifactTier): Promise<CatalogArtifact[]> {
-    const artifacts = await this.getArtifacts();
+  async getArtifactsByTier(tier: ArtifactTier, scope?: CatalogScope): Promise<CatalogArtifact[]> {
+    const artifacts = await this.getArtifacts(scope);
     return artifacts.filter((a) => a.artifact_tier === tier);
   },
 
-  async getRelics(): Promise<MagicItem[]> {
-    return this.getArtifacts();
+  async getRelics(scope?: CatalogScope): Promise<MagicItem[]> {
+    return this.getArtifacts(scope);
   },
 
-  async getExotics(): Promise<CatalogExotic[]> {
+  async getExotics(scope?: CatalogScope): Promise<CatalogExotic[]> {
     const isGs = isGuildSpaceUnlocked();
 
-    let suppliesQuery = supabase.from('supplies').select('*').neq('category', 'Artifact').neq('cost', 'Artifact');
-    let weaponsQuery = supabase.from('weapons').select('*').neq('cost', 'Artifact');
-    let armorQuery = supabase.from('armor').select('*').neq('cost', 'Artifact');
-    let shieldsQuery = supabase.from('shields').select('*').neq('cost', 'Artifact');
+    let suppliesQuery = applyOwnerScope(supabase.from('supplies').select('*').neq('category', 'Artifact').neq('cost', 'Artifact'), scope);
+    let weaponsQuery = applyOwnerScope(supabase.from('weapons').select('*').neq('cost', 'Artifact'), scope);
+    let armorQuery = applyOwnerScope(supabase.from('armor').select('*').neq('cost', 'Artifact'), scope);
+    let shieldsQuery = applyOwnerScope(supabase.from('shields').select('*').neq('cost', 'Artifact'), scope);
 
     if (!isGs) {
       suppliesQuery = suppliesQuery.not('name', 'ilike', '%(mso)%');
@@ -417,8 +446,8 @@ export const gameApi = {
       weaponsQuery.order('name', { ascending: true }),
       armorQuery.order('name', { ascending: true }),
       shieldsQuery.order('name', { ascending: true }),
-      this.getFunctions(),
-      this.getMods(),
+      this.getFunctions(scope),
+      this.getMods(scope),
     ]);
 
     const { allExotics } = resolveExoticCatalog(
@@ -433,13 +462,15 @@ export const gameApi = {
     return allExotics;
   },
 
-  async getExoticsByTier(tier: ExoticTier): Promise<CatalogExotic[]> {
-    const exotics = await this.getExotics();
+  async getExoticsByTier(tier: ExoticTier, scope?: CatalogScope): Promise<CatalogExotic[]> {
+    const exotics = await this.getExotics(scope);
     return exotics.filter((e) => e.exotic_tier === tier);
   },
 
-  async getGearPowers(): Promise<GearPowerItem[]> {
-    const { data, error } = await supabase.from('gear_powers').select('*').order('name', { ascending: true });
+  async getGearPowers(scope?: CatalogScope): Promise<GearPowerItem[]> {
+    let query = supabase.from('gear_powers').select('*');
+    query = applyOwnerScope(query, scope);
+    const { data, error } = await query.order('name', { ascending: true });
     if (error) {
       console.error('[gameApi] Error fetching gear powers catalog:', error);
       return [];
@@ -447,12 +478,14 @@ export const gameApi = {
     return (data || []) as GearPowerItem[];
   },
 
-  async getFunctions(): Promise<FunctionItem[]> {
-    return this.getGearPowers();
+  async getFunctions(scope?: CatalogScope): Promise<FunctionItem[]> {
+    return this.getGearPowers(scope);
   },
 
-  async getMods(): Promise<ModItem[]> {
-    const { data, error } = await supabase.from('mods').select('*').order('name', { ascending: true });
+  async getMods(scope?: CatalogScope): Promise<ModItem[]> {
+    let query = supabase.from('mods').select('*');
+    query = applyOwnerScope(query, scope);
+    const { data, error } = await query.order('name', { ascending: true });
     if (error) {
       console.error('[gameApi] Error fetching mods catalog:', error);
       return [];
@@ -460,27 +493,28 @@ export const gameApi = {
     return (data || []) as ModItem[];
   },
 
-  async getHardware(): Promise<MagicItem[]> {
-    return this.getExotics();
+  async getHardware(scope?: CatalogScope): Promise<MagicItem[]> {
+    return this.getExotics(scope);
   },
 
-  async getLoadoutCatalog(): Promise<MagicItem[]> {
+  async getLoadoutCatalog(scope?: CatalogScope): Promise<MagicItem[]> {
     const [artifacts, exotics] = await Promise.all([
-      this.getArtifacts(),
-      this.getExotics(),
+      this.getArtifacts(scope),
+      this.getExotics(scope),
     ]);
     const combined = [...artifacts, ...exotics];
     combined.sort((a, b) => a.name.localeCompare(b.name));
     return combined;
   },
 
-  async getMagicItems(): Promise<MagicItem[]> {
-    return this.getLoadoutCatalog();
+  async getMagicItems(scope?: CatalogScope): Promise<MagicItem[]> {
+    return this.getLoadoutCatalog(scope);
   },
 
   // --- SKILLS & SKILLSETS ---
-  async getSkills(): Promise<SupabaseSkill[]> {
+  async getSkills(scope?: CatalogScope): Promise<SupabaseSkill[]> {
     let query = supabase.from('skills').select('*');
+    query = applyOwnerScope(query, scope);
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -494,8 +528,9 @@ export const gameApi = {
   },
 
   // --- TRAITS & RULE MODIFIERS ---
-  async getTraits(): Promise<SupabaseTrait[]> {
+  async getTraits(scope?: CatalogScope): Promise<SupabaseTrait[]> {
     let query = supabase.from('traits').select('*');
+    query = applyOwnerScope(query, scope);
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -503,7 +538,9 @@ export const gameApi = {
 
     if (error) {
       try {
-        const fallback = await supabase.from('spec_rules').select('*');
+        let fallbackQuery = supabase.from('spec_rules').select('*');
+        fallbackQuery = applyOwnerScope(fallbackQuery, scope);
+        const fallback = await fallbackQuery;
         if (fallback.data) return fallback.data as SupabaseTrait[];
       } catch (_) {}
       console.error('[gameApi] Error fetching traits:', error);
@@ -551,8 +588,9 @@ export const gameApi = {
   },
 
   // --- PATHS CATALOG (AP Character Suites) ---
-  async getPaths(): Promise<SupabasePath[]> {
+  async getPaths(scope?: CatalogScope): Promise<SupabasePath[]> {
     let query = supabase.from('paths').select('*');
+    query = applyOwnerScope(query, scope);
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -560,6 +598,7 @@ export const gameApi = {
     if (error) {
       // Fallback for legacy schema
       let fallbackQuery = supabase.from('kits').select('*');
+      fallbackQuery = applyOwnerScope(fallbackQuery, scope);
       if (!isGuildSpaceUnlocked()) {
         fallbackQuery = fallbackQuery.not('name', 'ilike', '%(mso)%');
       }
@@ -572,14 +611,15 @@ export const gameApi = {
   },
 
   // --- KITS CATALOG (Equipment & Hardware Suites) ---
-  async getKits(): Promise<SupabasePath[]> {
+  async getKits(scope?: CatalogScope): Promise<SupabasePath[]> {
     // For backwards compatibility with existing UI stores that call getKits() for Race/Class paths
-    return this.getPaths();
+    return this.getPaths(scope);
   },
 
   // --- EQUIPMENT KITS & BUNDLES CATALOG ---
-  async getBundles(): Promise<SupabaseBundle[]> {
+  async getBundles(scope?: CatalogScope): Promise<SupabaseBundle[]> {
     let query = supabase.from('kits').select('*');
+    query = applyOwnerScope(query, scope);
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -591,13 +631,14 @@ export const gameApi = {
     return (data || []) as SupabaseBundle[];
   },
 
-  async getEquipmentKits(): Promise<SupabaseKit[]> {
-    return this.getBundles();
+  async getEquipmentKits(scope?: CatalogScope): Promise<SupabaseKit[]> {
+    return this.getBundles(scope);
   },
 
   // --- ARMOR CATALOG ---
-  async getArmor(): Promise<SupabaseArmor[]> {
+  async getArmor(scope?: CatalogScope): Promise<SupabaseArmor[]> {
     let query = supabase.from('armor').select('*');
+    query = applyOwnerScope(query, scope);
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -621,7 +662,7 @@ export const gameApi = {
 
     const { data, error } = await supabase
       .from('armor')
-      .insert({ ...newArmor, id: nextId })
+      .insert({ ...newArmor, id: nextId, owner: newArmor.owner || 'Designer' })
       .select()
       .single();
 
@@ -633,8 +674,9 @@ export const gameApi = {
   },
 
   // --- WEAPONS CATALOG ---
-  async getWeapons(): Promise<SupabaseWeapon[]> {
+  async getWeapons(scope?: CatalogScope): Promise<SupabaseWeapon[]> {
     let query = supabase.from('weapons').select('*');
+    query = applyOwnerScope(query, scope);
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -658,7 +700,7 @@ export const gameApi = {
 
     const { data, error } = await supabase
       .from('weapons')
-      .insert({ ...newWeapon, id: nextId })
+      .insert({ ...newWeapon, id: nextId, owner: newWeapon.owner || 'Designer' })
       .select()
       .single();
 
@@ -670,8 +712,9 @@ export const gameApi = {
   },
 
   // --- SHIELDS CATALOG ---
-  async getShields(): Promise<SupabaseShield[]> {
+  async getShields(scope?: CatalogScope): Promise<SupabaseShield[]> {
     let query = supabase.from('shields').select('*');
+    query = applyOwnerScope(query, scope);
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -695,7 +738,7 @@ export const gameApi = {
 
     const { data, error } = await supabase
       .from('shields')
-      .insert({ ...newShield, id: nextId })
+      .insert({ ...newShield, id: nextId, owner: newShield.owner || 'Designer' })
       .select()
       .single();
 
@@ -707,16 +750,17 @@ export const gameApi = {
   },
 
   // --- SUPPLIES & GEAR CATALOG ---
-  async getEquipment(): Promise<SupabaseSupply[]> {
-    return this.getSupplies();
+  async getEquipment(scope?: CatalogScope): Promise<SupabaseSupply[]> {
+    return this.getSupplies(scope);
   },
 
-  async getGear(): Promise<SupabaseSupply[]> {
-    return this.getSupplies();
+  async getGear(scope?: CatalogScope): Promise<SupabaseSupply[]> {
+    return this.getSupplies(scope);
   },
 
-  async getSupplies(): Promise<SupabaseSupply[]> {
+  async getSupplies(scope?: CatalogScope): Promise<SupabaseSupply[]> {
     let query = supabase.from('supplies').select('*');
+    query = applyOwnerScope(query, scope);
     if (!isGuildSpaceUnlocked()) {
       query = query.not('name', 'ilike', '%(mso)%');
     }
@@ -729,6 +773,29 @@ export const gameApi = {
       return [];
     }
     return (data || []) as SupabaseSupply[];
+  },
+
+  async getChaosGems(scope?: CatalogScope): Promise<SupabaseChaosGem[]> {
+    try {
+      let query = supabase.from('chaos_gems').select('*');
+      query = applyOwnerScope(query, scope);
+      const { data, error } = await query.order('name', { ascending: true });
+      if (error) {
+        console.error('[gameApi] Error fetching chaos gems catalog:', error);
+        return [];
+      }
+      return (data || []).map((item: any) => ({
+        ...item,
+        genres: Array.isArray(item.genres)
+          ? item.genres
+          : typeof item.genres === 'string'
+          ? JSON.parse(item.genres || '[]')
+          : ['Medieval', 'Modern', 'SciFi'],
+      }));
+    } catch (e) {
+      console.error('[gameApi] Error in getChaosGems:', e);
+      return [];
+    }
   },
 
   async createGear(newGear: Omit<SupabaseSupply, 'id' | 'created_at'>): Promise<SupabaseSupply> {
@@ -1790,32 +1857,7 @@ export const gameApi = {
     }
   },
 
-  // --- CHAOS GEMS ---
-  async getChaosGems(): Promise<SupabaseChaosGem[]> {
-    try {
-      const { data, error } = await supabase
-        .from('chaos_gems')
-        .select('*')
-        .order('name', { ascending: true });
 
-      if (error) {
-        console.warn('[gameApi] Notice fetching chaos gems table:', error.message);
-        return [];
-      }
-
-      return (data || []).map((item: any) => ({
-        ...item,
-        genres: Array.isArray(item.genres)
-          ? item.genres
-          : typeof item.genres === 'string'
-          ? JSON.parse(item.genres || '[]')
-          : ['Medieval', 'Modern', 'SciFi'],
-      }));
-    } catch (e) {
-      console.error('[gameApi] Error in getChaosGems:', e);
-      return [];
-    }
-  },
 
   async getRandomChaosGem(genre?: string): Promise<SupabaseChaosGem | null> {
     try {
@@ -1994,6 +2036,64 @@ export const gameApi = {
     } catch (e) {
       console.error('[gameApi] Error in getLootMainEntries:', e);
       return [];
+    }
+  },
+
+  // --- S-TIER LINK-ONLY SUBSCRIPTION ENGINE ---
+  async getSubscriptionsForUser(subscriberEmail: string): Promise<string[]> {
+    if (!subscriberEmail) return [];
+    try {
+      const cleanEmail = subscriberEmail.trim().toLowerCase();
+      const { data, error } = await supabase
+        .from('player_subscriptions')
+        .select('target_author_email')
+        .ilike('subscriber_email', cleanEmail);
+      if (error) {
+        console.warn('[gameApi] Notice fetching subscriptions:', error.message);
+        return [];
+      }
+      return (data || []).map((r: any) => r.target_author_email.trim().toLowerCase());
+    } catch (e) {
+      console.error('[gameApi] Error in getSubscriptionsForUser:', e);
+      return [];
+    }
+  },
+
+  async addSubscription(subscriberEmail: string, targetAuthorEmail: string): Promise<boolean> {
+    if (!subscriberEmail || !targetAuthorEmail) return false;
+    try {
+      const cleanSub = subscriberEmail.trim().toLowerCase();
+      const cleanTarget = targetAuthorEmail.trim().toLowerCase();
+      if (cleanSub === cleanTarget) return false; // Cannot subscribe to self
+      const { error } = await supabase
+        .from('player_subscriptions')
+        .upsert(
+          [{ subscriber_email: cleanSub, target_author_email: cleanTarget }],
+          { onConflict: 'subscriber_email,target_author_email' }
+        );
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error('[gameApi] Error in addSubscription:', e);
+      return false;
+    }
+  },
+
+  async removeSubscription(subscriberEmail: string, targetAuthorEmail: string): Promise<boolean> {
+    if (!subscriberEmail || !targetAuthorEmail) return false;
+    try {
+      const cleanSub = subscriberEmail.trim().toLowerCase();
+      const cleanTarget = targetAuthorEmail.trim().toLowerCase();
+      const { error } = await supabase
+        .from('player_subscriptions')
+        .delete()
+        .ilike('subscriber_email', cleanSub)
+        .ilike('target_author_email', cleanTarget);
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error('[gameApi] Error in removeSubscription:', e);
+      return false;
     }
   },
 
@@ -2448,7 +2548,7 @@ export const gameApi = {
   async saveCanonicalPath(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('paths')
-      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -2476,7 +2576,7 @@ export const gameApi = {
   async saveCanonicalPower(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('powers')
-      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -2504,7 +2604,7 @@ export const gameApi = {
   async saveCanonicalWeapon(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('weapons')
-      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -2532,7 +2632,7 @@ export const gameApi = {
   async saveCanonicalArmor(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('armor')
-      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -2560,7 +2660,7 @@ export const gameApi = {
   async saveCanonicalShield(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('shields')
-      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -2588,7 +2688,7 @@ export const gameApi = {
   async saveCanonicalGear(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('supplies')
-      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -2616,7 +2716,7 @@ export const gameApi = {
   async saveCanonicalTrait(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('traits')
-      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -2644,7 +2744,7 @@ export const gameApi = {
   async saveCanonicalChaosGem(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('chaos_gems')
-      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -2672,7 +2772,7 @@ export const gameApi = {
   async saveCanonicalSkill(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('skills')
-      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
