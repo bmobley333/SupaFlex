@@ -515,34 +515,6 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Dyslexia-Friendly KISS Multi-Option Pill Switch: Private Vault vs Allow Subscriptions */}
-            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-              <button
-                type="button"
-                onClick={() => handleToggleSubscriptions(false)}
-                className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  !allowSubscriptions
-                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-                title="Private Vault: Keep your creations private to you"
-              >
-                🔒 Private Vault
-              </button>
-              <button
-                type="button"
-                onClick={() => handleToggleSubscriptions(true)}
-                className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  allowSubscriptions
-                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-                title="Allow Subscriptions: Allow other players to subscribe to your creations"
-              >
-                🔗 Allow Subscriptions
-              </button>
-            </div>
-
             {/* Launch Forge Button */}
             {onOpenForge && (
               <button
@@ -577,15 +549,46 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
           {/* ========================================================================= */}
           <div className="flex flex-col min-h-0 bg-slate-950/30 overflow-hidden">
             {/* Header */}
-            <div className="p-3.5 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-base">🎨</span>
-                <span className="font-extrabold text-sm text-slate-200 font-outfit">My Creations</span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  {myData.totalCount}
-                </span>
+            <div className="p-3 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0 flex-wrap">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">🎨</span>
+                  <span className="font-extrabold text-sm text-slate-200 font-outfit">My Creations</span>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    {myData.totalCount}
+                  </span>
+                </div>
+
+                {/* Dyslexia-Friendly KISS Multi-Option Pill Switch: Private vs Allow Subscriptions */}
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSubscriptions(false)}
+                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      !allowSubscriptions
+                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                    title="Private: Keep your creations private to you"
+                  >
+                    🔒 Private
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSubscriptions(true)}
+                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      allowSubscriptions
+                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                    title="Allow Subscriptions: Allow other players to subscribe to your creations"
+                  >
+                    🔗 Allow Subscriptions
+                  </button>
+                </div>
               </div>
-              <div className="relative w-48">
+
+              <div className="relative w-36 sm:w-44">
                 <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   type="text"
