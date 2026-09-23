@@ -778,6 +778,7 @@ export interface PlayerRecord {
   first_name?: string | null;
   last_name?: string | null;
   allow_cloning?: boolean;
+  allow_subscriptions?: boolean;
   created_at?: string;
 }
 

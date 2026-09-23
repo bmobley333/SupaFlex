@@ -349,6 +349,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [abilityFormGenres, setAbilityFormGenres] = useState<string[]>([]);
   const abilityEffectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Authoritative Guardrail: Non-Designer accounts can NEVER enter standalone/Universal ability mode
+  useEffect(() => {
+    if (!isMetaScapeDesigner && pathStudioMode === 'standalone') {
+      setPathStudioMode('path');
+    }
+  }, [isMetaScapeDesigner, pathStudioMode]);
+
   // Skillset State (2+ selected existing skill strings)
   const [selectedSkillsetSkills, setSelectedSkillsetSkills] = useState<string[]>(['', '']);
 
@@ -3229,7 +3236,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               }`}
             >
               <span>🧭</span>
-              <span>Paths & Abilities</span>
+              <span>Paths</span>
             </button>
             <button
               type="button"
@@ -4242,8 +4249,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Toggle 2: Path vs Standalone (Only visible in Current mode) */}
-                  {pathStudioTab === 'current' && (
+                  {/* Toggle 2: Path vs Standalone (Only visible in Current mode for MetaScape Designer) */}
+                  {pathStudioTab === 'current' && isMetaScapeDesigner && (
                     <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                       <button
                         type="button"

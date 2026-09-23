@@ -879,11 +879,11 @@ export const gameApi = {
     return false;
   },
 
-  async getUserProfile(email: string, defaultFullName?: string): Promise<{ email: string; allow_cloning: boolean; player_name?: string; first_name?: string; last_name?: string }> {
+  async getUserProfile(email: string, defaultFullName?: string): Promise<{ email: string; allow_cloning: boolean; allow_subscriptions: boolean; player_name?: string; first_name?: string; last_name?: string }> {
     const cleanEmail = email.trim().toLowerCase();
     const { data, error } = await supabase
       .from('players')
-      .select('email, allow_cloning, first_name, last_name')
+      .select('email, allow_cloning, allow_subscriptions, first_name, last_name')
       .eq('email', cleanEmail)
       .maybeSingle();
 
@@ -893,12 +893,14 @@ export const gameApi = {
 
     if (data) {
       const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ').trim();
+      const allowSub = data.allow_subscriptions ?? data.allow_cloning ?? true;
       if (!fullName && defaultFullName && defaultFullName.trim()) {
         await this.updatePlayerName(cleanEmail, defaultFullName);
         const parts = defaultFullName.trim().split(/\s+/);
         return {
           email: data.email,
           allow_cloning: data.allow_cloning ?? true,
+          allow_subscriptions: allowSub,
           first_name: parts[0] || '',
           last_name: parts.slice(1).join(' ') || '',
           player_name: defaultFullName.trim(),
@@ -907,6 +909,7 @@ export const gameApi = {
       return {
         email: data.email,
         allow_cloning: data.allow_cloning ?? true,
+        allow_subscriptions: allowSub,
         first_name: data.first_name || '',
         last_name: data.last_name || '',
         player_name: fullName,
@@ -921,6 +924,7 @@ export const gameApi = {
         return {
           email: targetProf.email || cleanEmail,
           allow_cloning: targetProf.allow_cloning ?? true,
+          allow_subscriptions: targetProf.allow_subscriptions ?? targetProf.allow_cloning ?? true,
           player_name: targetProf.player_name || '',
         };
       }
@@ -933,7 +937,7 @@ export const gameApi = {
 
     const { data: created } = await supabase
       .from('players')
-      .select('email, allow_cloning, first_name, last_name')
+      .select('email, allow_cloning, allow_subscriptions, first_name, last_name')
       .eq('email', cleanEmail)
       .maybeSingle();
 
@@ -942,6 +946,7 @@ export const gameApi = {
       return {
         email: created.email,
         allow_cloning: created.allow_cloning ?? true,
+        allow_subscriptions: created.allow_subscriptions ?? created.allow_cloning ?? true,
         first_name: created.first_name || '',
         last_name: created.last_name || '',
         player_name: createdFullName,
@@ -952,17 +957,66 @@ export const gameApi = {
     return {
       email: cleanEmail,
       allow_cloning: true,
+      allow_subscriptions: true,
       first_name: parts[0] || '',
       last_name: parts.slice(1).join(' ') || '',
       player_name: defaultFullName?.trim() || '',
     };
   },
 
+  async verifyAccountExists(email: string): Promise<{ exists: boolean; allowSubscriptions: boolean; playerName?: string }> {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) return { exists: false, allowSubscriptions: false };
+
+    try {
+      // 1. Check players table directly
+      const { data: player, error } = await supabase
+        .from('players')
+        .select('email, first_name, last_name, allow_cloning, allow_subscriptions')
+        .eq('email', cleanEmail)
+        .maybeSingle();
+
+      if (!error && player) {
+        const fullName = [player.first_name, player.last_name].filter(Boolean).join(' ').trim();
+        const allowSub = player.allow_subscriptions ?? player.allow_cloning ?? true;
+        return {
+          exists: true,
+          allowSubscriptions: Boolean(allowSub),
+          playerName: fullName || cleanEmail,
+        };
+      }
+
+      // 2. Check if the author has any creations in canonical tables
+      const { count: powersCount } = await supabase
+        .from('powers')
+        .select('id', { count: 'exact', head: true })
+        .ilike('owner', cleanEmail);
+
+      if ((powersCount || 0) > 0) {
+        return { exists: true, allowSubscriptions: true, playerName: cleanEmail };
+      }
+
+      const { count: pathsCount } = await supabase
+        .from('paths')
+        .select('id', { count: 'exact', head: true })
+        .ilike('owner', cleanEmail);
+
+      if ((pathsCount || 0) > 0) {
+        return { exists: true, allowSubscriptions: true, playerName: cleanEmail };
+      }
+
+      return { exists: false, allowSubscriptions: false };
+    } catch (e) {
+      console.error('[gameApi] Error in verifyAccountExists:', e);
+      return { exists: false, allowSubscriptions: false };
+    }
+  },
+
   async updateProfilePrivacy(email: string, allowCloning: boolean): Promise<boolean> {
     const cleanEmail = email.trim().toLowerCase();
     const { error } = await supabase
       .from('players')
-      .upsert({ email: cleanEmail, allow_cloning: allowCloning }, { onConflict: 'email' });
+      .upsert({ email: cleanEmail, allow_cloning: allowCloning, allow_subscriptions: allowCloning }, { onConflict: 'email' });
 
     if (error) {
       console.error('[gameApi] Error updating profile privacy:', error);
