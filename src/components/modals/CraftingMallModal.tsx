@@ -86,8 +86,15 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // General Toast Feedback
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  // General Toast Feedback with Pane Alignment
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string; pane?: 'left' | 'right' } | null>(null);
+
+  // Auto-dismiss toast feedback after 4 seconds
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = setTimeout(() => setFeedback(null), 4000);
+    return () => clearTimeout(timer);
+  }, [feedback]);
 
   // Collapsible Section State (Default all expanded)
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -117,16 +124,18 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
         await gameApi.updateProfilePrivacy(cleanPlayerEmail, newVal);
         setFeedback({
           type: 'success',
+          pane: 'left',
           message: newVal
-            ? '🔗 Workshop creations set to Allow Subscriptions (visible to subscribed players).'
-            : '🔒 Workshop creations set to Private Vault (hidden from other players).',
+            ? '🔗 Creations set to Allow Subscriptions (visible to subscribed players).'
+            : '🔒 Creations set to Private (hidden from other players).',
         });
       }
     } catch (err: any) {
       setAllowSubscriptions(prevVal);
       setFeedback({
         type: 'error',
-        message: 'Failed to update workshop privacy setting.',
+        pane: 'left',
+        message: 'Failed to update creations privacy setting.',
       });
     }
   };
@@ -180,6 +189,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
       setTargetEmailInput('');
       setFeedback({
         type: 'success',
+        pane: 'right',
         message: `Successfully subscribed to ${verification.playerName || emailToSub}!`,
       });
     } catch (err: any) {
@@ -202,11 +212,13 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
       }
       setFeedback({
         type: 'success',
+        pane: 'right',
         message: `Unsubscribed from ${cleanAuthor}.`,
       });
     } catch (err) {
       setFeedback({
         type: 'error',
+        pane: 'right',
         message: `Failed to unsubscribe from ${cleanAuthor}.`,
       });
     }
@@ -370,12 +382,12 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
 
       if (ok) {
         await refreshCatalogs();
-        setFeedback({ type: 'success', message: `🗑️ Successfully deleted "${name}".` });
+        setFeedback({ type: 'success', pane: 'left', message: `🗑️ Successfully deleted "${name}".` });
       } else {
-        setFeedback({ type: 'error', message: `Failed to delete "${name}".` });
+        setFeedback({ type: 'error', pane: 'left', message: `Failed to delete "${name}".` });
       }
     } catch (err: any) {
-      setFeedback({ type: 'error', message: err.message || 'Error executing delete.' });
+      setFeedback({ type: 'error', pane: 'left', message: err.message || 'Error executing delete.' });
     } finally {
       setIsDeleting(false);
       setItemToDelete(null);
@@ -1415,7 +1427,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
         {/* TOAST FEEDBACK NOTIFICATION                                               */}
         {/* ========================================================================= */}
         {feedback && (
-          <div className={`absolute bottom-4 right-4 z-50 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xl border flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 ${
+          <div className={`absolute bottom-4 ${feedback.pane === 'right' ? 'right-4' : 'left-4'} z-50 px-4 py-2.5 rounded-xl text-xs font-bold shadow-xl border flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 ${
             feedback.type === 'success'
               ? 'bg-emerald-950 border-emerald-500/50 text-emerald-200'
               : 'bg-rose-950 border-rose-500/50 text-rose-200'
