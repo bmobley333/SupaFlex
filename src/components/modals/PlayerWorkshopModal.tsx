@@ -458,6 +458,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return sameCost;
   }, [exactCanonModMatch, modFormCostStr]);
 
+  const isSelfPowerEdit = useMemo(() => {
+    if (!exactCanonPowerMatch || !powerFormId) return false;
+    return String(exactCanonPowerMatch.id) === String(powerFormId);
+  }, [exactCanonPowerMatch, powerFormId]);
+
+  const isSelfModEdit = useMemo(() => {
+    if (!exactCanonModMatch || !modFormId) return false;
+    return String(exactCanonModMatch.id) === String(modFormId);
+  }, [exactCanonModMatch, modFormId]);
+
   const matchingCanonMods = useMemo(() => {
     const clean = modFormName.trim().toLowerCase();
     if (!clean || clean.length < 2) return [];
@@ -489,11 +499,36 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setActiveStudioSelection({ type: 'power', parentType: 'inherent', id: pwr.id });
   };
 
-  const handleDeleteInherentPower = (pwrId: string) => {
+  const handleDeleteInherentPower = async (pwrId: string) => {
     setInherentPowers((prev) => prev.filter((p) => p.id !== pwrId));
-    if (!pwrId.startsWith('pwr_') && !pwrId.startsWith('fn_') && !isNaN(Number(pwrId))) {
+    const isExisting = !pwrId.startsWith('pwr_') && !pwrId.startsWith('fn_') && !isNaN(Number(pwrId));
+    if (isExisting) {
       setDeletedPowerIds((prev) => [...prev, Number(pwrId)]);
     }
+
+    const isHostSavedInDb = workshopMode === 'designer' && Boolean(canonicalSelectedId);
+    const hostBelongsTo =
+      studioChassisType === 'weapon'
+        ? `Weapon: ${name.trim()}`
+        : studioChassisType === 'armor'
+        ? `Armor: ${name.trim()}`
+        : studioChassisType === 'shield'
+        ? `Shield: ${name.trim()}`
+        : `Supplies: ${name.trim()}`;
+
+    if (isHostSavedInDb && isExisting) {
+      try {
+        await gameApi.unlinkCanonicalGearPower(Number(pwrId), hostBelongsTo);
+        await refreshCatalogs();
+        setFeedback({
+          type: 'success',
+          message: `🗑️ Removed power from ${name.trim()} in Master Database!`,
+        });
+      } catch (err: any) {
+        console.error('[handleDeleteInherentPower] Error unlinking power:', err);
+      }
+    }
+
     if (activeStudioSelection.type === 'power' && activeStudioSelection.id === pwrId) {
       setActiveStudioSelection({ type: 'chassis' });
     }
@@ -518,7 +553,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setActiveStudioSelection({ type: 'mod', id: mod.id });
   };
 
-  const handleDeleteMod = (modId: string) => {
+  const handleDeleteMod = async (modId: string) => {
     const modToDelete = attachedMods.find((m) => m.id === modId);
     if (modToDelete) {
       modToDelete.powers.forEach((p) => {
@@ -527,10 +562,35 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         }
       });
     }
-    if (!modId.startsWith('mod_') && !isNaN(Number(modId))) {
+    const isExisting = !modId.startsWith('mod_') && !isNaN(Number(modId));
+    if (isExisting) {
       setDeletedModIds((prev) => [...prev, Number(modId)]);
     }
     setAttachedMods((prev) => prev.filter((m) => m.id !== modId));
+
+    const isHostSavedInDb = workshopMode === 'designer' && Boolean(canonicalSelectedId);
+    const hostBelongsTo =
+      studioChassisType === 'weapon'
+        ? `Weapon: ${name.trim()}`
+        : studioChassisType === 'armor'
+        ? `Armor: ${name.trim()}`
+        : studioChassisType === 'shield'
+        ? `Shield: ${name.trim()}`
+        : `Supplies: ${name.trim()}`;
+
+    if (isHostSavedInDb && isExisting) {
+      try {
+        await gameApi.unlinkCanonicalMod(Number(modId), hostBelongsTo);
+        await refreshCatalogs();
+        setFeedback({
+          type: 'success',
+          message: `🗑️ Removed mod from ${name.trim()} in Master Database!`,
+        });
+      } catch (err: any) {
+        console.error('[handleDeleteMod] Error unlinking mod:', err);
+      }
+    }
+
     if (
       (activeStudioSelection.type === 'mod' && activeStudioSelection.id === modId) ||
       (activeStudioSelection.type === 'power' && activeStudioSelection.parentId === modId)
@@ -574,15 +634,70 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     }
   };
 
-  const handleSaveModForm = () => {
+  const handleSaveModForm = async () => {
     if (!modFormName.trim()) return;
-    const resolvedId =
+    let resolvedId =
       exactCanonModMatch && isModFormExactMatch && exactCanonModMatch.id
         ? String(exactCanonModMatch.id)
         : modFormId || Date.now().toString();
 
+    const isHostSavedInDb = workshopMode === 'designer' && Boolean(canonicalSelectedId);
+    const hostBelongsTo =
+      studioChassisType === 'weapon'
+        ? `Weapon: ${name.trim()}`
+        : studioChassisType === 'armor'
+        ? `Armor: ${name.trim()}`
+        : studioChassisType === 'shield'
+        ? `Shield: ${name.trim()}`
+        : `Supplies: ${name.trim()}`;
+
+    if (isHostSavedInDb) {
+      try {
+        setIsSubmitting(true);
+        const modPayload = {
+          name: modFormName.trim(),
+          cost: modFormCostStr,
+          notes: modFormNotes.trim() || null,
+          belongs_to: hostBelongsTo,
+          owner: 'Designer',
+        };
+
+        const isExistingModInDb =
+          resolvedId &&
+          !resolvedId.startsWith('mod_') &&
+          !resolvedId.startsWith('new') &&
+          !isNaN(Number(resolvedId));
+
+        if (isExistingModInDb) {
+          await gameApi.updateCanonicalMod(Number(resolvedId), modPayload);
+          setFeedback({
+            type: 'success',
+            message: `👑 Updated Mod '${modPayload.name}' in Master Database!`,
+          });
+        } else {
+          const created = await gameApi.saveCanonicalMod(modPayload);
+          if (created?.id) {
+            resolvedId = String(created.id);
+          }
+          setFeedback({
+            type: 'success',
+            message: `👑 Created and attached Mod '${modPayload.name}' to ${name.trim()} in Master Database!`,
+          });
+        }
+        await refreshCatalogs();
+      } catch (err: any) {
+        console.error('[handleSaveModForm] Error saving mod to DB:', err);
+        setFeedback({
+          type: 'error',
+          message: `❌ Error saving mod: ${err.message || 'Database update failed.'}`,
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+
     setAttachedMods((prev) => {
-      const existingIdx = prev.findIndex((m) => m.id === modFormId);
+      const existingIdx = prev.findIndex((m) => m.id === modFormId || m.id === resolvedId);
       if (existingIdx >= 0) {
         const updated = [...prev];
         updated[existingIdx] = {
@@ -610,12 +725,76 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setActiveStudioSelection({ type: 'chassis' });
   };
 
-  const handleSavePowerForm = () => {
+  const handleSavePowerForm = async () => {
     if (!powerFormName.trim() || !powerFormEffect.trim()) return;
-    const resolvedId =
+    let resolvedId =
       exactCanonPowerMatch && isPowerFormExactMatch && exactCanonPowerMatch.id
         ? String(exactCanonPowerMatch.id)
         : powerFormId || Date.now().toString();
+
+    const isHostSavedInDb = workshopMode === 'designer' && Boolean(canonicalSelectedId);
+    const hostBelongsTo =
+      powerFormParentType === 'inherent'
+        ? studioChassisType === 'weapon'
+          ? `Weapon: ${name.trim()}`
+          : studioChassisType === 'armor'
+          ? `Armor: ${name.trim()}`
+          : studioChassisType === 'shield'
+          ? `Shield: ${name.trim()}`
+          : `Supplies: ${name.trim()}`
+        : `Mod: ${attachedMods.find((m) => m.id === powerFormParentId)?.name || 'Custom'}`;
+
+    if (isHostSavedInDb) {
+      try {
+        setIsSubmitting(true);
+        const pwrPayload = {
+          name: powerFormName.trim(),
+          action: powerFormAction || 'AM',
+          usage: powerFormUsage || '1-Enc',
+          effect: powerFormEffect.trim(),
+          owner: 'Designer',
+        };
+
+        const isExistingPowerInDb =
+          resolvedId &&
+          !resolvedId.startsWith('pwr_') &&
+          !resolvedId.startsWith('fn_') &&
+          !resolvedId.startsWith('new') &&
+          !isNaN(Number(resolvedId));
+
+        if (isExistingPowerInDb) {
+          await gameApi.updateCanonicalGearPower(Number(resolvedId), {
+            ...pwrPayload,
+            belongs_to: hostBelongsTo,
+          });
+          setFeedback({
+            type: 'success',
+            message: `👑 Updated '${pwrPayload.name}' in Master Database!`,
+          });
+        } else {
+          const created = await gameApi.saveCanonicalGearPower({
+            ...pwrPayload,
+            belongs_to: hostBelongsTo,
+          });
+          if (created?.id) {
+            resolvedId = String(created.id);
+          }
+          setFeedback({
+            type: 'success',
+            message: `👑 Created and linked '${pwrPayload.name}' to ${name.trim()} in Master Database!`,
+          });
+        }
+        await refreshCatalogs();
+      } catch (err: any) {
+        console.error('[handleSavePowerForm] Error saving power to DB:', err);
+        setFeedback({
+          type: 'error',
+          message: `❌ Error saving power: ${err.message || 'Database update failed.'}`,
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
 
     const pwrObj: StudioPower = {
       id: resolvedId,
@@ -627,7 +806,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
     if (powerFormParentType === 'inherent') {
       setInherentPowers((prev) => {
-        const existingIdx = prev.findIndex((p) => p.id === powerFormId);
+        const existingIdx = prev.findIndex((p) => p.id === powerFormId || p.id === resolvedId);
         if (existingIdx >= 0) {
           const updated = [...prev];
           updated[existingIdx] = pwrObj;
@@ -639,7 +818,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setAttachedMods((prev) =>
         prev.map((m) => {
           if (m.id !== powerFormParentId) return m;
-          const existingIdx = m.powers.findIndex((p) => p.id === powerFormId);
+          const existingIdx = m.powers.findIndex((p) => p.id === powerFormId || p.id === resolvedId);
           let updatedPowers = [...m.powers];
           if (existingIdx >= 0) {
             updatedPowers[existingIdx] = pwrObj;
@@ -6469,7 +6648,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       }`}
                     >
                       <AnvilIcon className="w-3.5 h-3.5" />
-                      <span>{isSubmitting ? 'Forging...' : editingItem ? 'Update Gear' : 'Forge Gear to My Creations'}</span>
+                      <span>
+                        {isSubmitting
+                          ? 'Saving...'
+                          : workshopMode === 'designer' && canonicalSelectedId
+                          ? '👑 Save Changes to Master Database'
+                          : editingItem
+                          ? '⚡ Update My Creation'
+                          : workshopMode === 'designer'
+                          ? '👑 Forge to Master Database'
+                          : '⚡ Forge to My Creations'}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -6521,7 +6710,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </span>
                       </div>
                     )}
-                    {exactCanonModMatch && !isModFormExactMatch && (
+                    {isSelfModEdit && (
+                      <div className="flex items-center gap-1.5 p-2 rounded-xl bg-purple-950/40 border border-purple-500/40 text-purple-300 text-xs">
+                        <span>👑</span>
+                        <span className="font-semibold">Editing Master Database Mod (ID: {modFormId})</span>
+                      </div>
+                    )}
+                    {exactCanonModMatch && !isModFormExactMatch && !isSelfModEdit && (
                       <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs">
                         <div className="flex items-center gap-1.5 text-amber-300 min-w-0">
                           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -6586,15 +6781,21 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     <button
                       type="button"
                       onClick={handleSaveModForm}
-                      disabled={!modFormName.trim()}
+                      disabled={!modFormName.trim() || isSubmitting}
                       className={`py-2 px-5 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-1.5 select-none shadow-md ${
-                        modFormName.trim()
+                        modFormName.trim() && !isSubmitting
                           ? 'bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white cursor-pointer'
                           : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
                       }`}
                     >
                       <Check className="w-3.5 h-3.5" />
-                      <span>💾 Done Editing Mod</span>
+                      <span>
+                        {isSubmitting
+                          ? 'Saving...'
+                          : workshopMode === 'designer' && canonicalSelectedId
+                          ? '💾 Save Mod to Master Database'
+                          : '✓ Done Editing Mod'}
+                      </span>
                     </button>
                     <button
                       type="button"
@@ -6660,7 +6861,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </span>
                       </div>
                     )}
-                    {exactCanonPowerMatch && !isPowerFormExactMatch && (
+                    {isSelfPowerEdit && (
+                      <div className="flex items-center gap-1.5 p-2 rounded-xl bg-purple-950/40 border border-purple-500/40 text-purple-300 text-xs">
+                        <span>👑</span>
+                        <span className="font-semibold">Editing Master Database Power (ID: {powerFormId})</span>
+                      </div>
+                    )}
+                    {exactCanonPowerMatch && !isPowerFormExactMatch && !isSelfPowerEdit && (
                       <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs">
                         <div className="flex items-center gap-1.5 text-amber-300 min-w-0">
                           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -6804,15 +7011,21 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     <button
                       type="button"
                       onClick={handleSavePowerForm}
-                      disabled={!powerFormName.trim() || !powerFormEffect.trim()}
+                      disabled={!powerFormName.trim() || !powerFormEffect.trim() || isSubmitting}
                       className={`py-2 px-5 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-1.5 select-none shadow-md ${
-                        powerFormName.trim() && powerFormEffect.trim()
+                        powerFormName.trim() && powerFormEffect.trim() && !isSubmitting
                           ? 'bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white cursor-pointer'
                           : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
                       }`}
                     >
                       <Check className="w-3.5 h-3.5" />
-                      <span>💾 Done Editing Power</span>
+                      <span>
+                        {isSubmitting
+                          ? 'Saving...'
+                          : workshopMode === 'designer' && canonicalSelectedId
+                          ? '💾 Save Power to Master Database'
+                          : '✓ Done Editing Power'}
+                      </span>
                     </button>
                     <button
                       type="button"
