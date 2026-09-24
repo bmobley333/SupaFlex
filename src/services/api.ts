@@ -32,6 +32,7 @@ import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { resolveArtifactCatalog, CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { resolveExoticCatalog, CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, CanonicalPropagationParams, CanonicalEntityType } from '../utils/canonicalPropagation';
+import { isBelongsToMatch, splitBelongsToTargets, cleanBelongsToName } from '../utils/gearFunctionSync';
 
 export interface CatalogScope {
   userEmail?: string;
@@ -2878,6 +2879,56 @@ export const gameApi = {
     return true;
   },
 
+  async linkCanonicalMod(id: string | number, hostBelongsTo: string): Promise<any> {
+    const { data: existing, error: fetchErr } = await supabase
+      .from('mods')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (fetchErr) throw fetchErr;
+    if (!existing) throw new Error(`Mod with ID ${id} not found.`);
+
+    if (!isBelongsToMatch(existing.belongs_to, hostBelongsTo)) {
+      const parts = splitBelongsToTargets(existing.belongs_to);
+      parts.push(hostBelongsTo);
+      const newBelongsTo = parts.join(', ');
+      const { data: updated, error: updateErr } = await supabase
+        .from('mods')
+        .update({ belongs_to: newBelongsTo })
+        .eq('id', id)
+        .select('*')
+        .single();
+      if (updateErr) throw updateErr;
+      return updated;
+    }
+    return existing;
+  },
+
+  async unlinkCanonicalMod(id: string | number, hostBelongsTo: string): Promise<boolean> {
+    const { data: existing, error: fetchErr } = await supabase
+      .from('mods')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (fetchErr || !existing) return false;
+
+    const parts = splitBelongsToTargets(existing.belongs_to);
+    const cleanHost = cleanBelongsToName(hostBelongsTo);
+    const remaining = parts.filter((p) => cleanBelongsToName(p) !== cleanHost);
+
+    if (remaining.length === 0) {
+      return this.deleteCanonicalMod(id);
+    } else {
+      const newBelongsTo = remaining.join(', ');
+      const { error: updateErr } = await supabase
+        .from('mods')
+        .update({ belongs_to: newBelongsTo })
+        .eq('id', id);
+      if (updateErr) throw updateErr;
+      return true;
+    }
+  },
+
   // 11. GEAR POWERS
   async saveCanonicalGearPower(payload: any): Promise<any> {
     const { data, error } = await supabase
@@ -2904,6 +2955,56 @@ export const gameApi = {
     const { error } = await supabase.from('gear_powers').delete().eq('id', id);
     if (error) throw error;
     return true;
+  },
+
+  async linkCanonicalGearPower(id: string | number, hostBelongsTo: string): Promise<any> {
+    const { data: existing, error: fetchErr } = await supabase
+      .from('gear_powers')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (fetchErr) throw fetchErr;
+    if (!existing) throw new Error(`Gear power with ID ${id} not found.`);
+
+    if (!isBelongsToMatch(existing.belongs_to, hostBelongsTo)) {
+      const parts = splitBelongsToTargets(existing.belongs_to);
+      parts.push(hostBelongsTo);
+      const newBelongsTo = parts.join(', ');
+      const { data: updated, error: updateErr } = await supabase
+        .from('gear_powers')
+        .update({ belongs_to: newBelongsTo })
+        .eq('id', id)
+        .select('*')
+        .single();
+      if (updateErr) throw updateErr;
+      return updated;
+    }
+    return existing;
+  },
+
+  async unlinkCanonicalGearPower(id: string | number, hostBelongsTo: string): Promise<boolean> {
+    const { data: existing, error: fetchErr } = await supabase
+      .from('gear_powers')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (fetchErr || !existing) return false;
+
+    const parts = splitBelongsToTargets(existing.belongs_to);
+    const cleanHost = cleanBelongsToName(hostBelongsTo);
+    const remaining = parts.filter((p) => cleanBelongsToName(p) !== cleanHost);
+
+    if (remaining.length === 0) {
+      return this.deleteCanonicalGearPower(id);
+    } else {
+      const newBelongsTo = remaining.join(', ');
+      const { error: updateErr } = await supabase
+        .from('gear_powers')
+        .update({ belongs_to: newBelongsTo })
+        .eq('id', id);
+      if (updateErr) throw updateErr;
+      return true;
+    }
   },
 
   // 12. ACTIVE PROPAGATION ENGINE

@@ -415,6 +415,57 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [powerFormEffect, setPowerFormEffect] = useState<string>('');
   const studioEffectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Power Form Match & Collision Status
+  const exactCanonPowerMatch = useMemo(() => {
+    const clean = powerFormName.trim().toLowerCase();
+    if (!clean) return null;
+    return (functionsCatalog || []).find((fn) => (fn.name || '').trim().toLowerCase() === clean) || null;
+  }, [functionsCatalog, powerFormName]);
+
+  const isPowerFormExactMatch = useMemo(() => {
+    if (!exactCanonPowerMatch) return false;
+    const sameAction = (exactCanonPowerMatch.action || 'AM') === (powerFormAction || 'AM');
+    const sameUsage = (exactCanonPowerMatch.usage || '1-Enc') === (powerFormUsage || '1-Enc');
+    const sameEffect = (exactCanonPowerMatch.effect || '').trim().toLowerCase() === powerFormEffect.trim().toLowerCase();
+    return sameAction && sameUsage && sameEffect;
+  }, [exactCanonPowerMatch, powerFormAction, powerFormUsage, powerFormEffect]);
+
+  const matchingCanonPowers = useMemo(() => {
+    const clean = powerFormName.trim().toLowerCase();
+    if (!clean || clean.length < 2) return [];
+    return (functionsCatalog || [])
+      .filter((fn) => (fn.name || '').trim().toLowerCase().includes(clean))
+      .slice(0, 4);
+  }, [functionsCatalog, powerFormName]);
+
+  // Mod Form Match & Collision Status
+  const modFormCostStr = useMemo(() => {
+    if (modFormGold > 0 || modFormSilver > 0) {
+      return `${modFormGold > 0 ? `${modFormGold}g` : ''}${modFormGold > 0 && modFormSilver > 0 ? ' ' : ''}${modFormSilver > 0 ? `${modFormSilver}s` : ''}`.trim();
+    }
+    return '0s';
+  }, [modFormGold, modFormSilver]);
+
+  const exactCanonModMatch = useMemo(() => {
+    const clean = modFormName.trim().toLowerCase();
+    if (!clean) return null;
+    return (modsCatalog || []).find((m) => (m.name || '').trim().toLowerCase() === clean) || null;
+  }, [modsCatalog, modFormName]);
+
+  const isModFormExactMatch = useMemo(() => {
+    if (!exactCanonModMatch) return false;
+    const sameCost = (exactCanonModMatch.cost || '0s').trim().toLowerCase() === modFormCostStr.toLowerCase();
+    return sameCost;
+  }, [exactCanonModMatch, modFormCostStr]);
+
+  const matchingCanonMods = useMemo(() => {
+    const clean = modFormName.trim().toLowerCase();
+    if (!clean || clean.length < 2) return [];
+    return (modsCatalog || [])
+      .filter((m) => (m.name || '').trim().toLowerCase().includes(clean))
+      .slice(0, 4);
+  }, [modsCatalog, modFormName]);
+
   const handleStartAddInherentPower = () => {
     if (!isChassisComplete) return;
     setPowerFormId(Date.now().toString());
@@ -525,12 +576,18 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const handleSaveModForm = () => {
     if (!modFormName.trim()) return;
+    const resolvedId =
+      exactCanonModMatch && isModFormExactMatch && exactCanonModMatch.id
+        ? String(exactCanonModMatch.id)
+        : modFormId || Date.now().toString();
+
     setAttachedMods((prev) => {
       const existingIdx = prev.findIndex((m) => m.id === modFormId);
       if (existingIdx >= 0) {
         const updated = [...prev];
         updated[existingIdx] = {
           ...updated[existingIdx],
+          id: resolvedId,
           name: modFormName.trim(),
           costGold: modFormGold,
           costSilver: modFormSilver,
@@ -541,7 +598,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       return [
         ...prev,
         {
-          id: modFormId || Date.now().toString(),
+          id: resolvedId,
           name: modFormName.trim(),
           costGold: modFormGold,
           costSilver: modFormSilver,
@@ -555,8 +612,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const handleSavePowerForm = () => {
     if (!powerFormName.trim() || !powerFormEffect.trim()) return;
+    const resolvedId =
+      exactCanonPowerMatch && isPowerFormExactMatch && exactCanonPowerMatch.id
+        ? String(exactCanonPowerMatch.id)
+        : powerFormId || Date.now().toString();
+
     const pwrObj: StudioPower = {
-      id: powerFormId || Date.now().toString(),
+      id: resolvedId,
       name: powerFormName.trim(),
       action: powerFormAction,
       usage: powerFormUsage,
@@ -2220,8 +2282,99 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     }
   };
 
+  // Active catalog for current creation type
+  const currentActiveCatalog = useMemo<any[]>(() => {
+    if (creationType === 'gear') {
+      if (studioChassisType === 'weapon') return weaponsCatalog || [];
+      if (studioChassisType === 'armor') return armorCatalog || [];
+      if (studioChassisType === 'shield') return shieldsCatalog || [];
+      if (studioChassisType === 'supplies') return suppliesCatalog || [];
+    } else if (creationType === 'paths_abilities' || creationType === 'path') {
+      return paths || [];
+    } else if (creationType === 'chaos_gem') {
+      return chaosGemsCatalog || [];
+    } else if (creationType === 'power') {
+      return powers || [];
+    } else if (creationType === 'trait') {
+      return traits || [];
+    } else if (creationType === 'skill') {
+      return skills || [];
+    }
+    return [];
+  }, [
+    creationType,
+    studioChassisType,
+    weaponsCatalog,
+    armorCatalog,
+    shieldsCatalog,
+    suppliesCatalog,
+    paths,
+    chaosGemsCatalog,
+    powers,
+    traits,
+    skills,
+  ]);
+
+  const getAutoVersionedName = (baseName: string, catalog: any[]): string => {
+    const cleanBase = baseName.replace(/\s*\(v\d+\)$/i, '').trim();
+    let v = 2;
+    let candidate = `${cleanBase} (v${v})`;
+    const exists = (cand: string) =>
+      catalog.some((it) => (it.name || '').trim().toLowerCase() === cand.toLowerCase());
+    while (exists(candidate)) {
+      v++;
+      candidate = `${cleanBase} (v${v})`;
+    }
+    return candidate;
+  };
+
+  // Real-Time Collision Status for Top-Level Name
+  const topLevelCollision = useMemo<{
+    isCollision: boolean;
+    isCanonMatch: boolean;
+    existingItemName?: string;
+  }>(() => {
+    const clean = name.trim().toLowerCase();
+    if (!clean) return { isCollision: false, isCanonMatch: false };
+
+    const match = currentActiveCatalog.find(
+      (item) => (item.name || '').trim().toLowerCase() === clean
+    );
+    if (!match) return { isCollision: false, isCanonMatch: false };
+
+    // If currently editing this exact item, not a collision
+    if (canonicalSelectedId && String(match.id) === String(canonicalSelectedId)) {
+      return { isCollision: false, isCanonMatch: false };
+    }
+
+    const itemOwner = (match.owner || 'Designer').toLowerCase();
+    const isCanon = itemOwner === 'designer';
+
+    if (workshopMode === 'designer') {
+      if (isCanon) {
+        return { isCollision: true, isCanonMatch: true, existingItemName: match.name };
+      }
+    } else {
+      const userClean = (playerEmail || 'guest@metascape.com').toLowerCase();
+      if (itemOwner === userClean) {
+        return { isCollision: true, isCanonMatch: false, existingItemName: match.name };
+      }
+      if (isCanon) {
+        return { isCollision: false, isCanonMatch: true, existingItemName: match.name };
+      }
+    }
+
+    return { isCollision: false, isCanonMatch: false };
+  }, [
+    name,
+    currentActiveCatalog,
+    canonicalSelectedId,
+    workshopMode,
+    playerEmail,
+  ]);
+
   // Real-time Guardrail Validation Flags
-  const isNameValid = name.trim().length > 0;
+  const isNameValid = name.trim().length > 0 && !topLevelCollision.isCollision;
   const isEffectValid = effect.trim().length > 0;
   const isGenresValid = selectedGenres.length > 0;
   const isSkillAttributeValid = !!skillAttribute && skillAttribute.trim().length > 0;
@@ -3186,76 +3339,160 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               ? `Shield: ${name.trim()}`
               : `Supplies: ${name.trim()}`;
 
-          // Delete staged deletions
+          // Unlink or delete staged deletions
           for (const pId of deletedPowerIds) {
             try {
-              await gameApi.deleteCanonicalGearPower(pId);
+              await gameApi.unlinkCanonicalGearPower(pId, hostBelongsTo);
             } catch (err) {
-              console.warn('[handleSubmit] Error deleting gear power:', err);
+              console.warn('[handleSubmit] Error unlinking gear power:', err);
             }
           }
           for (const mId of deletedModIds) {
             try {
-              await gameApi.deleteCanonicalMod(mId);
+              await gameApi.unlinkCanonicalMod(mId, hostBelongsTo);
             } catch (err) {
-              console.warn('[handleSubmit] Error deleting mod:', err);
+              console.warn('[handleSubmit] Error unlinking mod:', err);
             }
           }
           setDeletedPowerIds([]);
           setDeletedModIds([]);
 
-          // Sync inherent powers
+          // Sync inherent powers with Smart Deduplication
           for (const pwr of inherentPowers) {
-            const pwrPayload = {
-              name: pwr.name.trim(),
-              action: pwr.action || 'AM',
-              usage: pwr.usage || '1-Enc',
-              effect: pwr.effect.trim(),
-              belongs_to: hostBelongsTo,
-              owner: 'Designer',
-            };
             const isExisting = pwr.id && !pwr.id.startsWith('pwr_') && !pwr.id.startsWith('fn_') && !isNaN(Number(pwr.id));
             if (isExisting) {
+              await gameApi.linkCanonicalGearPower(Number(pwr.id), hostBelongsTo);
+              const pwrPayload = {
+                name: pwr.name.trim(),
+                action: pwr.action || 'AM',
+                usage: pwr.usage || '1-Enc',
+                effect: pwr.effect.trim(),
+                owner: 'Designer',
+              };
               await gameApi.updateCanonicalGearPower(Number(pwr.id), pwrPayload);
             } else {
-              await gameApi.saveCanonicalGearPower(pwrPayload);
+              // Check if exact matching canonical power exists
+              const matchingFn = (functionsCatalog || []).find(
+                (fn) =>
+                  fn.name.trim().toLowerCase() === pwr.name.trim().toLowerCase() &&
+                  (fn.action || 'AM') === (pwr.action || 'AM') &&
+                  (fn.usage || '1-Enc') === (pwr.usage || '1-Enc') &&
+                  fn.effect.trim().toLowerCase() === pwr.effect.trim().toLowerCase()
+              );
+
+              if (matchingFn && matchingFn.id) {
+                // Exact match: Auto-Link existing row without duplicate row!
+                await gameApi.linkCanonicalGearPower(matchingFn.id, hostBelongsTo);
+              } else {
+                // Disambiguate if name matches an existing power with different stats
+                let finalName = pwr.name.trim();
+                const nameCollision = (functionsCatalog || []).find(
+                  (fn) => fn.name.trim().toLowerCase() === pwr.name.trim().toLowerCase()
+                );
+                if (nameCollision && !finalName.includes(`(${name.trim()})`)) {
+                  finalName = `${finalName} (${name.trim()})`;
+                }
+                const pwrPayload = {
+                  name: finalName,
+                  action: pwr.action || 'AM',
+                  usage: pwr.usage || '1-Enc',
+                  effect: pwr.effect.trim(),
+                  belongs_to: hostBelongsTo,
+                  owner: 'Designer',
+                };
+                await gameApi.saveCanonicalGearPower(pwrPayload);
+              }
             }
           }
 
-          // Sync attached mods and their child powers
+          // Sync attached mods and their child powers with Smart Deduplication
           for (const mod of attachedMods) {
             const modCostStr =
               mod.costGold > 0 || mod.costSilver > 0
                 ? `${mod.costGold > 0 ? `${mod.costGold}g` : ''}${mod.costGold > 0 && mod.costSilver > 0 ? ' ' : ''}${mod.costSilver > 0 ? `${mod.costSilver}s` : ''}`.trim()
                 : '0s';
-            const modPayload = {
-              name: mod.name.trim(),
-              cost: modCostStr,
-              notes: mod.notes?.trim() || null,
-              belongs_to: hostBelongsTo,
-              owner: 'Designer',
-            };
             const isModExisting = mod.id && !mod.id.startsWith('mod_') && !isNaN(Number(mod.id));
+
+            let resolvedModName = mod.name.trim();
+
             if (isModExisting) {
+              await gameApi.linkCanonicalMod(Number(mod.id), hostBelongsTo);
+              const modPayload = {
+                name: mod.name.trim(),
+                cost: modCostStr,
+                notes: mod.notes?.trim() || null,
+                owner: 'Designer',
+              };
               await gameApi.updateCanonicalMod(Number(mod.id), modPayload);
             } else {
-              await gameApi.saveCanonicalMod(modPayload);
+              const matchingMod = (modsCatalog || []).find(
+                (m) =>
+                  m.name.trim().toLowerCase() === mod.name.trim().toLowerCase() &&
+                  (m.cost || '0s').trim().toLowerCase() === modCostStr.toLowerCase()
+              );
+
+              if (matchingMod && matchingMod.id) {
+                await gameApi.linkCanonicalMod(matchingMod.id, hostBelongsTo);
+              } else {
+                const nameCollision = (modsCatalog || []).find(
+                  (m) => m.name.trim().toLowerCase() === mod.name.trim().toLowerCase()
+                );
+                if (nameCollision && !resolvedModName.includes(`(${name.trim()})`)) {
+                  resolvedModName = `${resolvedModName} (${name.trim()})`;
+                }
+                const modPayload = {
+                  name: resolvedModName,
+                  cost: modCostStr,
+                  notes: mod.notes?.trim() || null,
+                  belongs_to: hostBelongsTo,
+                  owner: 'Designer',
+                };
+                await gameApi.saveCanonicalMod(modPayload);
+              }
             }
 
             for (const cPwr of mod.powers) {
-              const childPayload = {
-                name: cPwr.name.trim(),
-                action: cPwr.action || 'AM',
-                usage: cPwr.usage || '1-Enc',
-                effect: cPwr.effect.trim(),
-                belongs_to: `Mod: ${mod.name.trim()}`,
-                owner: 'Designer',
-              };
+              const childHostBelongsTo = `Mod: ${resolvedModName}`;
               const isChildExisting = cPwr.id && !cPwr.id.startsWith('pwr_') && !cPwr.id.startsWith('fn_') && !isNaN(Number(cPwr.id));
               if (isChildExisting) {
+                await gameApi.linkCanonicalGearPower(Number(cPwr.id), childHostBelongsTo);
+                const childPayload = {
+                  name: cPwr.name.trim(),
+                  action: cPwr.action || 'AM',
+                  usage: cPwr.usage || '1-Enc',
+                  effect: cPwr.effect.trim(),
+                  owner: 'Designer',
+                };
                 await gameApi.updateCanonicalGearPower(Number(cPwr.id), childPayload);
               } else {
-                await gameApi.saveCanonicalGearPower(childPayload);
+                const matchingFn = (functionsCatalog || []).find(
+                  (fn) =>
+                    fn.name.trim().toLowerCase() === cPwr.name.trim().toLowerCase() &&
+                    (fn.action || 'AM') === (cPwr.action || 'AM') &&
+                    (fn.usage || '1-Enc') === (cPwr.usage || '1-Enc') &&
+                    fn.effect.trim().toLowerCase() === cPwr.effect.trim().toLowerCase()
+                );
+
+                if (matchingFn && matchingFn.id) {
+                  await gameApi.linkCanonicalGearPower(matchingFn.id, childHostBelongsTo);
+                } else {
+                  let finalChildName = cPwr.name.trim();
+                  const nameCollision = (functionsCatalog || []).find(
+                    (fn) => fn.name.trim().toLowerCase() === cPwr.name.trim().toLowerCase()
+                  );
+                  if (nameCollision && !finalChildName.includes(`(${resolvedModName})`)) {
+                    finalChildName = `${finalChildName} (${resolvedModName})`;
+                  }
+                  const childPayload = {
+                    name: finalChildName,
+                    action: cPwr.action || 'AM',
+                    usage: cPwr.usage || '1-Enc',
+                    effect: cPwr.effect.trim(),
+                    belongs_to: childHostBelongsTo,
+                    owner: 'Designer',
+                  };
+                  await gameApi.saveCanonicalGearPower(childPayload);
+                }
               }
             }
           }
@@ -5940,6 +6177,31 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       }
                       className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-500 transition shadow-inner font-semibold"
                     />
+                    {topLevelCollision.isCollision && (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs">
+                        <div className="flex items-center gap-1.5 text-amber-300 min-w-0">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">
+                            '{topLevelCollision.existingItemName}' already exists in {workshopMode === 'designer' ? 'Master Canon' : 'My Creations'}.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setName(getAutoVersionedName(name, currentActiveCatalog))}
+                          className="px-2 py-0.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 border border-amber-500/60 text-amber-100 font-bold text-[10px] transition cursor-pointer shrink-0"
+                        >
+                          ⚡ Auto-Add (v2)
+                        </button>
+                      </div>
+                    )}
+                    {topLevelCollision.isCanonMatch && !topLevelCollision.isCollision && workshopMode === 'player' && (
+                      <div className="flex items-center gap-1.5 p-2 rounded-xl bg-blue-950/30 border border-blue-500/30 text-blue-300 text-xs">
+                        <span>ℹ️</span>
+                        <span className="truncate">
+                          Matches Canon '{topLevelCollision.existingItemName}'. Your version will be forged as a personal custom creation.
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Subtype & Baseline Stats Controls */}
@@ -6247,6 +6509,56 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       placeholder="e.g. Jet Thrusters, Psionic Dampener, Heavy Plating"
                       className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-cyan-500 transition shadow-inner font-semibold"
                     />
+                    {exactCanonModMatch && isModFormExactMatch && (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs">
+                        <div className="flex items-center gap-1.5 text-emerald-300 min-w-0">
+                          <span>⚡</span>
+                          <span className="font-bold truncate">Matches Canon Mod '{exactCanonModMatch.name}'</span>
+                          <span className="font-mono text-[10px] text-emerald-400/80">({exactCanonModMatch.cost || '0s'})</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-lg bg-emerald-900/60 border border-emerald-600/50 text-emerald-200 font-bold text-[10px] shrink-0">
+                          Auto-Link Ready (Zero Duplicate Rows)
+                        </span>
+                      </div>
+                    )}
+                    {exactCanonModMatch && !isModFormExactMatch && (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs">
+                        <div className="flex items-center gap-1.5 text-amber-300 min-w-0">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">Cost/Specs differ from canonical '{exactCanonModMatch.name}'.</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setModFormName(`${exactCanonModMatch.name} (${name.trim() || 'Custom'})`)}
+                          className="px-2 py-0.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 border border-amber-500/60 text-amber-100 font-bold text-[10px] transition cursor-pointer shrink-0"
+                        >
+                          Rename '{exactCanonModMatch.name} ({name.trim() || 'Custom'})'
+                        </button>
+                      </div>
+                    )}
+                    {matchingCanonMods.length > 0 && !exactCanonModMatch && (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        <span className="text-[10px] text-slate-400 font-bold">Existing Canon:</span>
+                        {matchingCanonMods.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              setModFormName(m.name);
+                              const parsed = parseCostToSilver(m.cost || '0s');
+                              const g = Math.floor(parsed / 10);
+                              const s = parsed % 10;
+                              setModFormGold(g);
+                              setModFormSilver(s);
+                              setModFormNotes(m.notes || '');
+                            }}
+                            className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 text-[10px] font-mono transition cursor-pointer"
+                          >
+                            ⚡ {m.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-1">
@@ -6336,6 +6648,53 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       placeholder="e.g. Fireball, Tactical Leap, Void Pulse, Healing Mist"
                       className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-rose-500 transition shadow-inner font-semibold"
                     />
+                    {exactCanonPowerMatch && isPowerFormExactMatch && (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs">
+                        <div className="flex items-center gap-1.5 text-emerald-300 min-w-0">
+                          <span>⚡</span>
+                          <span className="font-bold truncate">Matches Canon Power '{exactCanonPowerMatch.name}'</span>
+                          <span className="font-mono text-[10px] text-emerald-400/80">({exactCanonPowerMatch.action} | {exactCanonPowerMatch.usage})</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-lg bg-emerald-900/60 border border-emerald-600/50 text-emerald-200 font-bold text-[10px] shrink-0">
+                          Auto-Link Ready (Zero Duplicate Rows)
+                        </span>
+                      </div>
+                    )}
+                    {exactCanonPowerMatch && !isPowerFormExactMatch && (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs">
+                        <div className="flex items-center gap-1.5 text-amber-300 min-w-0">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">Stats differ from canonical '{exactCanonPowerMatch.name}'.</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPowerFormName(`${exactCanonPowerMatch.name} (${name.trim() || 'Custom'})`)}
+                          className="px-2 py-0.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 border border-amber-500/60 text-amber-100 font-bold text-[10px] transition cursor-pointer shrink-0"
+                        >
+                          Rename '{exactCanonPowerMatch.name} ({name.trim() || 'Custom'})'
+                        </button>
+                      </div>
+                    )}
+                    {matchingCanonPowers.length > 0 && !exactCanonPowerMatch && (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        <span className="text-[10px] text-slate-400 font-bold">Existing Canon:</span>
+                        {matchingCanonPowers.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setPowerFormName(p.name);
+                              setPowerFormAction(p.action || 'AM');
+                              setPowerFormUsage(p.usage || '1-Enc');
+                              setPowerFormEffect(p.effect || '');
+                            }}
+                            className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-rose-300 text-[10px] font-mono transition cursor-pointer"
+                          >
+                            ⚡ {p.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -6529,6 +6888,31 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner"
                       required
                     />
+                    {topLevelCollision.isCollision && (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs">
+                        <div className="flex items-center gap-1.5 text-amber-300 min-w-0">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">
+                            '{topLevelCollision.existingItemName}' already exists in {workshopMode === 'designer' ? 'Master Canon' : 'My Creations'}.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setName(getAutoVersionedName(name, currentActiveCatalog))}
+                          className="px-2 py-0.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 border border-amber-500/60 text-amber-100 font-bold text-[10px] transition cursor-pointer shrink-0"
+                        >
+                          ⚡ Auto-Add (v2)
+                        </button>
+                      </div>
+                    )}
+                    {topLevelCollision.isCanonMatch && !topLevelCollision.isCollision && workshopMode === 'player' && (
+                      <div className="flex items-center gap-1.5 p-2 rounded-xl bg-blue-950/30 border border-blue-500/30 text-blue-300 text-xs">
+                        <span>ℹ️</span>
+                        <span className="truncate">
+                          Matches Canon '{topLevelCollision.existingItemName}'. Your version will be forged as a personal custom creation.
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Path Category */}
@@ -7294,6 +7678,31 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
                 required
               />
+              {topLevelCollision.isCollision && (
+                <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs">
+                  <div className="flex items-center gap-1.5 text-amber-300 min-w-0">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">
+                      '{topLevelCollision.existingItemName}' already exists in {workshopMode === 'designer' ? 'Master Canon' : 'My Creations'}.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setName(getAutoVersionedName(name, currentActiveCatalog))}
+                    className="px-2 py-0.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 border border-amber-500/60 text-amber-100 font-bold text-[10px] transition cursor-pointer shrink-0"
+                  >
+                    ⚡ Auto-Add (v2)
+                  </button>
+                </div>
+              )}
+              {topLevelCollision.isCanonMatch && !topLevelCollision.isCollision && workshopMode === 'player' && (
+                <div className="flex items-center gap-1.5 p-2 rounded-xl bg-blue-950/30 border border-blue-500/30 text-blue-300 text-xs">
+                  <span>ℹ️</span>
+                  <span className="truncate">
+                    Matches Canon '{topLevelCollision.existingItemName}'. Your version will be forged as a personal custom creation.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* CREATION-SPECIFIC CONTROLS */}
