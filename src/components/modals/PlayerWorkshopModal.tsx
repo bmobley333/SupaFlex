@@ -299,9 +299,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   // Unified Paths & Abilities Studio State
   const [pathStudioMode, setPathStudioMode] = useState<'path' | 'standalone'>('path');
-  const [pathStudioTab, setPathStudioTab] = useState<'current' | 'canon' | 'mine'>('current');
   const [pathDatabaseCategory] = useState<'path' | 'power' | 'trait' | 'skill'>('path');
-  const [pathLibraryFilter, setPathLibraryFilter] = useState<'all' | 'path' | 'power' | 'skill' | 'skillset' | 'trait'>('all');
   const [isCreatingNewPath, setIsCreatingNewPath] = useState<boolean>(false);
   const [selectedPathId, setSelectedPathId] = useState<string>('');
   const [isPathTreeExpanded, setIsPathTreeExpanded] = useState<boolean>(true);
@@ -379,18 +377,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const effectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Unified Gear Studio State
-  const [studioTab, setStudioTab] = useState<'current' | 'canon' | 'mine'>('current');
   const [gearDatabaseChassis, setGearDatabaseChassis] = useState<'weapon' | 'armor' | 'shield' | 'supplies'>('weapon');
-  const [gemStudioTab, setGemStudioTab] = useState<'current' | 'canon' | 'mine'>('current');
 
-  // Authoritative Guardrail: Non-Designer accounts can NEVER access the Canon tab
+  // Authoritative Guardrail: Non-Master accounts can NEVER access the Canon scope
   useEffect(() => {
-    if (!isMetaScapeDesigner) {
-      if (studioTab === 'canon') setStudioTab('current');
-      if (pathStudioTab === 'canon') setPathStudioTab('current');
-      if (gemStudioTab === 'canon') setGemStudioTab('current');
+    if (!isMasterAccount && workshopMode === 'designer') {
+      setWorkshopMode('player');
     }
-  }, [isMetaScapeDesigner, studioTab, pathStudioTab, gemStudioTab]);
+  }, [isMasterAccount, workshopMode]);
   const [canonicalChaosGems, setCanonicalChaosGems] = useState<SupabaseChaosGem[]>([]);
   const [canonicalSearchQuery, setCanonicalSearchQuery] = useState<string>('');
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
@@ -400,7 +394,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   } | null>(null);
   const [isDeletingCanonical, setIsDeletingCanonical] = useState<boolean>(false);
   const [costMode, setCostMode] = useState<'standard' | 'artifact'>('standard');
-  const [studioLibraryChassisFilter, setStudioLibraryChassisFilter] = useState<'all' | 'weapon' | 'armor' | 'shield' | 'supplies'>('all');
   const [activeStudioSelection, setActiveStudioSelection] = useState<{
     type: 'chassis' | 'mod' | 'power';
     id?: string;
@@ -905,21 +898,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setGearCategoryNewText('');
     setStudioChassisType('supplies');
     setCostMode('standard');
-    setStudioLibraryChassisFilter('all');
     setInherentPowers([]);
     setAttachedMods([]);
     setActiveStudioSelection({ type: 'chassis' });
-    if (studioTab !== 'canon' && studioTab !== 'mine') {
-      setStudioTab('current');
-    }
-    if (pathStudioTab !== 'canon' && pathStudioTab !== 'mine') {
-      setPathStudioMode('path');
-      setPathStudioTab('current');
-    }
-    if (gemStudioTab !== 'canon' && gemStudioTab !== 'mine') {
-      setGemStudioTab('current');
-    }
-    setPathLibraryFilter('all');
+    setPathStudioMode('path');
     setIsCreatingNewPath(false);
     setSelectedPathId('');
     setActivePathSelection({ type: 'path' });
@@ -1006,7 +988,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         setCreationType('gear');
       } else if (isPathOrAbilityType(item.type)) {
         setCreationType('paths_abilities');
-        setPathStudioTab('current');
         if (item.type === 'path') {
           setPathStudioMode('path');
           setActivePathSelection({ type: 'path' });
@@ -1172,7 +1153,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setEffect(item.item_data?.effect || '');
 
       setActiveStudioSelection({ type: 'chassis' });
-      setStudioTab('current');
     } else if (item.type === 'chaos_gem') {
       setEffect(item.item_data?.effect || '');
     }
@@ -1280,109 +1260,39 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         rawItem: sup,
       });
     });
+    (personalItems || []).forEach((pi) => {
+      if (isGearType(pi.type) || pi.type === 'gear' || pi.type === 'exotic' || pi.type === 'artifact') {
+        const chassis = (pi.item_data?.chassis_type || 'supplies') as 'weapon' | 'armor' | 'shield' | 'supplies';
+        if (!list.some((existing) => existing.name.toLowerCase() === pi.name.toLowerCase())) {
+          list.push({
+            id: pi.id,
+            name: pi.name,
+            chassis: chassis,
+            cost: pi.item_data?.cost,
+            requirement: pi.item_data?.requirement,
+            details: pi.item_data?.category || pi.type,
+            notes: pi.item_data?.notes || pi.notes,
+            owner: cleanEmail,
+            rawItem: pi,
+          });
+        }
+      }
+    });
     return list;
-  }, [weaponsCatalog, armorCatalog, shieldsCatalog, suppliesCatalog]);
+  }, [weaponsCatalog, armorCatalog, shieldsCatalog, suppliesCatalog, personalItems, cleanEmail]);
 
   const myGearItems = useMemo(() => {
     return allGearItems.filter((it) => getItemScope(it.owner) === 'mine');
   }, [allGearItems, cleanEmail]);
 
-  const myGearCount = myGearItems.length;
-
   const filteredMyGearItems = useMemo(() => {
-    let items = myGearItems;
-    if (studioLibraryChassisFilter !== 'all') {
-      items = items.filter((it) => it.chassis === studioLibraryChassisFilter);
-    }
+    let items = myGearItems.filter((it) => it.chassis === gearDatabaseChassis);
     const q = canonicalSearchQuery.trim().toLowerCase();
     if (q) {
       items = items.filter((it) => it.name.toLowerCase().includes(q) || (it.notes && it.notes.toLowerCase().includes(q)));
     }
     return items.sort((a, b) => a.name.localeCompare(b.name));
-  }, [myGearItems, studioLibraryChassisFilter, canonicalSearchQuery]);
-
-  // Normalized Paths & Abilities for UI List Rendering
-  interface NormalizedPathItem {
-    id: string | number;
-    name: string;
-    type: 'path' | 'power' | 'skill' | 'trait';
-    category?: string;
-    details: string;
-    notes?: string;
-    owner?: string;
-    rawItem: any;
-  }
-
-  const allPathAbilityItems = useMemo<NormalizedPathItem[]>(() => {
-    const list: NormalizedPathItem[] = [];
-    (paths || []).forEach((p) => {
-      list.push({
-        id: p.id || p.name,
-        name: p.name,
-        type: 'path',
-        category: p.category || 'Path',
-        details: `${p.category || 'General'} • ${((p as any).linked_elements || []).length} Elements`,
-        notes: p.description,
-        owner: p.owner,
-        rawItem: p,
-      });
-    });
-    (powers || []).forEach((p) => {
-      list.push({
-        id: p.id || p.name,
-        name: p.name,
-        type: 'power',
-        category: p.category || 'Power',
-        details: `${p.action || 'AM'} • ${p.usage || '1-Enc'}${p.ready ? ` • ${p.ready}` : ''}`,
-        notes: p.effect || (p as any).notes,
-        owner: p.owner,
-        rawItem: p,
-      });
-    });
-    (traits || []).forEach((t) => {
-      list.push({
-        id: t.id || t.name,
-        name: t.name,
-        type: 'trait',
-        category: 'Trait',
-        details: t.effect ? t.effect.slice(0, 60) : 'Trait',
-        notes: t.notes,
-        owner: t.owner,
-        rawItem: t,
-      });
-    });
-    (skills || []).forEach((s) => {
-      list.push({
-        id: s.id || s.name,
-        name: s.name,
-        type: 'skill',
-        category: s.discipline || 'Skill',
-        details: `${s.attribute} • ${s.discipline || 'General'}`,
-        notes: s.notes,
-        owner: s.owner,
-        rawItem: s,
-      });
-    });
-    return list;
-  }, [paths, powers, traits, skills]);
-
-  const myPathItems = useMemo(() => {
-    return allPathAbilityItems.filter((it) => getItemScope(it.owner) === 'mine');
-  }, [allPathAbilityItems, cleanEmail]);
-
-  const myPathCount = myPathItems.length;
-
-  const filteredMyPathItems = useMemo(() => {
-    let items = myPathItems;
-    if (pathLibraryFilter !== 'all') {
-      items = items.filter((it) => it.type === pathLibraryFilter);
-    }
-    const q = canonicalSearchQuery.trim().toLowerCase();
-    if (q) {
-      items = items.filter((it) => it.name.toLowerCase().includes(q) || (it.notes && it.notes.toLowerCase().includes(q)));
-    }
-    return items.sort((a, b) => a.name.localeCompare(b.name));
-  }, [myPathItems, pathLibraryFilter, canonicalSearchQuery]);
+  }, [myGearItems, gearDatabaseChassis, canonicalSearchQuery]);
 
   // Active Path Component Hierarchy (Traits, Powers, SkillSets -> Skills)
   const activePathHierarchy = useMemo(() => {
@@ -1882,10 +1792,31 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   // Normalized Chaos Gems for UI List Rendering
   const myGems = useMemo(() => {
-    return (chaosGemsCatalog || []).filter((g) => getItemScope(g.owner) === 'mine');
-  }, [chaosGemsCatalog, cleanEmail]);
-
-  const myGemCount = myGems.length;
+    const list: any[] = [];
+    (chaosGemsCatalog || []).forEach((g) => {
+      if (getItemScope(g.owner) === 'mine') {
+        list.push(g);
+      }
+    });
+    (personalItems || []).forEach((pi) => {
+      if (pi.type === 'chaos_gem') {
+        if (!list.some((existing) => existing.name.toLowerCase() === pi.name.toLowerCase())) {
+          list.push({
+            id: pi.id,
+            name: pi.name,
+            action: pi.item_data?.action || 'F',
+            usage: pi.item_data?.usage || '3 Uses',
+            effect: pi.item_data?.effect || '',
+            notes: pi.item_data?.notes || pi.notes,
+            genres: pi.item_data?.genres,
+            owner: cleanEmail,
+            rawItem: pi,
+          });
+        }
+      }
+    });
+    return list;
+  }, [chaosGemsCatalog, personalItems, cleanEmail]);
 
   const filteredMyGems = useMemo(() => {
     let items = myGems;
@@ -1895,6 +1826,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     }
     return items.sort((a, b) => a.name.localeCompare(b.name));
   }, [myGems, canonicalSearchQuery]);
+
+  const handleSwitchScope = (mode: 'player' | 'designer') => {
+    setWorkshopMode(mode);
+    handleResetForm();
+    setCanonicalSearchQuery('');
+    setCanonicalSelectedId(null);
+    setSelectedPathId('');
+  };
 
   const handleLoadTemplateIntoForge = (chassisOrType: string, item: any) => {
     if (chassisOrType === 'weapon') handlePopulateCanonicalWeapon(item);
@@ -1911,13 +1850,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setCanonicalSelectedId(null);
     setOriginalCanonicalName('');
     setName(`${item.name} (Custom)`);
-    if (isGearType(chassisOrType as any) || chassisOrType === 'supplies') {
-      setStudioTab('current');
-    } else if (chassisOrType === 'chaos_gem') {
-      setGemStudioTab('current');
-    } else {
-      setPathStudioTab('current');
-    }
   };
 
   const displayList = useMemo(() => {
@@ -1927,27 +1859,39 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return sortedPersonalItems.filter((it) => it.type === creationType);
   }, [sortedPersonalItems, listFilterMode, creationType]);
 
-  // Aggregate all available paths for the Path selector dropdown
-  const allAvailablePaths = useMemo(() => {
-    const list: { id: string; name: string; category?: string; isCustom?: boolean; rawItem?: any }[] = [];
+  // Filtered custom paths created by the user for My Creations dropdown
+  const myPathsList = useMemo(() => {
+    const list: { id: string; name: string; category?: string; rawItem: any; source: 'supabase' | 'personal' }[] = [];
     (paths || []).forEach((p) => {
-      const scope = getItemScope(p.owner);
-      const isCustom = scope !== 'canon';
-      const cat = isCustom
-        ? scope === 'mine'
-          ? `${p.category || 'Path'} (Personal)`
-          : `${p.category || 'Path'} (Linked - ${p.owner})`
-        : p.category || 'Official';
-      list.push({
-        id: isCustom ? `custom_${p.id || p.name}` : `official_${p.id || p.name}`,
-        name: p.name,
-        category: cat,
-        isCustom,
-        rawItem: p,
-      });
+      if (getItemScope(p.owner) === 'mine') {
+        list.push({
+          id: `sp_${p.id || p.name}`,
+          name: p.name,
+          category: p.category || 'Path',
+          rawItem: p,
+          source: 'supabase',
+        });
+      }
     });
-    return list;
-  }, [paths, cleanEmail]);
+    (personalItems || []).forEach((it) => {
+      if (it.type === 'path') {
+        if (!list.some((existing) => existing.name.toLowerCase() === it.name.toLowerCase())) {
+          list.push({
+            id: `pi_${it.id}`,
+            name: it.name,
+            category: it.item_data?.category || 'Path',
+            rawItem: it,
+            source: 'personal',
+          });
+        }
+      }
+    });
+    const q = canonicalSearchQuery.trim().toLowerCase();
+    if (!q) return list.sort((a, b) => a.name.localeCompare(b.name));
+    return list
+      .filter((p) => p.name.toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [paths, personalItems, cleanEmail, canonicalSearchQuery]);
 
   // Canonical Search Filtered Lists (Designer Mode SupaBase)
   const filteredCanonicalWeapons = useMemo(() => {
@@ -2651,7 +2595,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     isNameValid && isGenresValid && isPathCategoryValid && pathDescription.trim().length > 0;
 
   const isPathLoaded = Boolean(
-    !isCreatingNewPath && (selectedPathId || (editingItem && editingItem.type === 'path'))
+    !isCreatingNewPath && (selectedPathId || (editingItem && editingItem.type === 'path') || canonicalSelectedId)
   );
   const isPathIdle = !isCreatingNewPath && !isPathLoaded;
 
@@ -4601,46 +4545,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isMasterAccount && (
-              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md mr-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWorkshopMode('player');
-                    handleResetForm();
-                    setCanonicalSearchQuery('');
-                    setStudioTab('current');
-                    setPathStudioTab('current');
-                    setGemStudioTab('current');
-                  }}
-                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    workshopMode === 'player'
-                      ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                  }`}
-                  title="Normal Player Forge (saves to Custom Elements)"
-                >
-                  <span>👤</span>
-                  <span>Player Forge</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWorkshopMode('designer');
-                    handleResetForm();
-                  }}
-                  className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    workshopMode === 'designer'
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
-                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                  }`}
-                  title="Master Designer Mode (edits canonical Supabase database)"
-                >
-                  <span>👑</span>
-                  <span>Designer Mode</span>
-                </button>
-              </div>
-            )}
             {onOpenWorkshop && (
               <button
                 type="button"
@@ -4666,7 +4570,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         </div>
 
         {/* S-Tier 3-Pillar Master Navigation */}
-        <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex items-center justify-between gap-2">
+        <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex items-center justify-between gap-4">
           <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
             <button
               type="button"
@@ -4705,6 +4609,38 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               <span>Gear</span>
             </button>
           </div>
+
+          {/* Right: Scope Switch (ONLY for metascapegame@gmail.com) */}
+          {isMasterAccount && (
+            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+              <button
+                type="button"
+                onClick={() => handleSwitchScope('player')}
+                className={`py-1.5 px-3.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  workshopMode === 'player'
+                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+                title="Personal Creations mode (saves to Custom Elements / personal scope)"
+              >
+                <span>🎨</span>
+                <span>My Creations</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchScope('designer')}
+                className={`py-1.5 px-3.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  workshopMode === 'designer'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+                title="Master Database Canon mode (edits canonical Supabase records)"
+              >
+                <span>👑</span>
+                <span>Canon</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 2-Pane Grid Architecture */}
@@ -4714,368 +4650,213 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           {/* ========================================================================= */}
           {creationType === 'gear' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Studio Tab Switcher */}
-              <div className="shrink-0 flex items-center justify-between gap-2">
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
-                  <button
-                    type="button"
-                    onClick={() => setStudioTab('current')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      studioTab === 'current'
-                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    🛠️ Current
-                  </button>
-                  {isMetaScapeDesigner && (
-                    <button
-                      type="button"
-                      onClick={() => setStudioTab('canon')}
-                      className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                        studioTab === 'canon'
-                          ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      👑 Canon
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setStudioTab('mine')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      studioTab === 'mine'
-                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    🎨 My Creations ({myGearCount})
-                  </button>
-                </div>
-
-                {editingItem && studioTab === 'current' && (
-                  <button
-                    type="button"
-                    onClick={handleResetForm}
-                    className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition cursor-pointer shrink-0"
-                    title="Start a new blank creation"
-                  >
-                    + New Blank
-                  </button>
-                )}
+              {/* Chassis Category Filter Switch */}
+              <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGearDatabaseChassis('weapon');
+                    setStudioChassisType('weapon');
+                    handleResetForm();
+                  }}
+                  className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                    gearDatabaseChassis === 'weapon'
+                      ? 'bg-orange-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  ⚔️ Weapons
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGearDatabaseChassis('armor');
+                    setStudioChassisType('armor');
+                    handleResetForm();
+                  }}
+                  className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                    gearDatabaseChassis === 'armor'
+                      ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  🥋 Armor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGearDatabaseChassis('shield');
+                    setStudioChassisType('shield');
+                    handleResetForm();
+                  }}
+                  className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                    gearDatabaseChassis === 'shield'
+                      ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  🛡️ Shields
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGearDatabaseChassis('supplies');
+                    setStudioChassisType('supplies');
+                    handleResetForm();
+                  }}
+                  className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                    gearDatabaseChassis === 'supplies'
+                      ? 'bg-teal-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  🎒 Supplies
+                </button>
               </div>
 
-              {studioTab === 'mine' ? (
-                /* MY CREATIONS LIST VIEW */
-                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-                  {/* Chassis Category Filter Switch */}
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setStudioLibraryChassisFilter('all')}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        studioLibraryChassisFilter === 'all'
-                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🌐 All
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStudioLibraryChassisFilter('weapon')}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        studioLibraryChassisFilter === 'weapon'
-                          ? 'bg-orange-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      ⚔️ Weapons
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStudioLibraryChassisFilter('armor')}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        studioLibraryChassisFilter === 'armor'
-                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🥋 Armor
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStudioLibraryChassisFilter('shield')}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        studioLibraryChassisFilter === 'shield'
-                          ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🛡️ Shields
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStudioLibraryChassisFilter('supplies')}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        studioLibraryChassisFilter === 'supplies'
-                          ? 'bg-teal-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🎒 Supplies
-                    </button>
-                  </div>
+              {/* Header: Title / Count, Search Bar, and + New Button */}
+              <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
+                <span className="flex items-center gap-1.5 shrink-0">
+                  <span>{workshopMode === 'designer' ? '👑' : '🎨'}</span>
+                  <span>
+                    {workshopMode === 'designer' ? 'Master ' : 'My '}
+                    {gearDatabaseChassis === 'weapon'
+                      ? 'Weapons'
+                      : gearDatabaseChassis === 'armor'
+                      ? 'Armor'
+                      : gearDatabaseChassis === 'shield'
+                      ? 'Shields'
+                      : 'Supplies'}
+                    {' '}(
+                    {workshopMode === 'designer'
+                      ? gearDatabaseChassis === 'weapon'
+                        ? filteredCanonicalWeapons.length
+                        : gearDatabaseChassis === 'armor'
+                        ? filteredCanonicalArmor.length
+                        : gearDatabaseChassis === 'shield'
+                        ? filteredCanonicalShields.length
+                        : filteredCanonicalSupplies.length
+                      : filteredMyGearItems.length}
+                    )
+                  </span>
+                </span>
 
-                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
-                    {filteredMyGearItems.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
-                        <span className="text-2xl mb-1.5">📦</span>
-                        <p className="font-semibold text-slate-400">No gear creations found</p>
-                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          Click "Current" above to forge your first weapon, armor, shield, or supply.
-                        </p>
-                      </div>
-                    ) : (
-                      filteredMyGearItems.map((item) => (
-                        <div
-                          key={item.id}
-                          onClick={() => {
-                            if (item.chassis === 'weapon') handlePopulateCanonicalWeapon(item.rawItem);
-                            else if (item.chassis === 'armor') handlePopulateCanonicalArmor(item.rawItem);
-                            else if (item.chassis === 'shield') handlePopulateCanonicalShield(item.rawItem);
-                            else if (item.chassis === 'supplies') handlePopulateCanonicalSupply(item.rawItem);
-                            setStudioTab('current');
-                          }}
-                          className="p-2.5 rounded-xl border border-slate-800/80 bg-slate-950/70 hover:border-amber-500/60 hover:bg-slate-900/90 transition flex flex-col gap-1.5 shadow-sm cursor-pointer"
-                        >
-                          <div className="flex items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="text-sm shrink-0">
-                                {item.chassis === 'weapon' ? '⚔️' : item.chassis === 'armor' ? '🥋' : item.chassis === 'shield' ? '🛡️' : '🎒'}
-                              </span>
-                              <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
-                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
-                                {item.chassis}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (item.chassis === 'weapon') handlePopulateCanonicalWeapon(item.rawItem);
-                                  else if (item.chassis === 'armor') handlePopulateCanonicalArmor(item.rawItem);
-                                  else if (item.chassis === 'shield') handlePopulateCanonicalShield(item.rawItem);
-                                  else if (item.chassis === 'supplies') handlePopulateCanonicalSupply(item.rawItem);
-                                  setStudioTab('current');
-                                }}
-                                className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
-                                title="Edit this creation"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteConfirmTarget({
-                                    type: item.chassis,
-                                    id: item.id,
-                                    name: item.name,
-                                  });
-                                }}
-                                className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
-                                title="Delete this creation"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-                            {item.cost && (
-                              <span className="px-1.5 py-0.2 bg-purple-950/80 border border-purple-500/30 text-purple-300 font-bold rounded">
-                                {item.cost}
-                              </span>
-                            )}
-                            <span className="text-slate-300">{item.details}</span>
-                          </div>
-                          {item.notes && (
-                            <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
-                              {item.notes}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
+                {/* Inline Search Bar */}
+                <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
+                  <input
+                    type="text"
+                    value={canonicalSearchQuery}
+                    onChange={(e) => setCanonicalSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCanonicalSearchEnter('gear');
+                    }}
+                    placeholder={`Search ${gearDatabaseChassis}...`}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/80 transition"
+                  />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+                  {canonicalSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setCanonicalSearchQuery('')}
+                      className="absolute right-2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                      title="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
 
-              ) : (isMetaScapeDesigner && studioTab === 'canon') ? (
-                /* SUPABASE CANONICAL VIEW */
-                <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
-                  {/* Chassis Category Filter Switch */}
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGearDatabaseChassis('weapon');
-                        handleResetForm();
-                        setStudioChassisType('weapon');
-                      }}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        gearDatabaseChassis === 'weapon'
-                          ? 'bg-orange-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      ⚔️ Weapons
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGearDatabaseChassis('armor');
-                        handleResetForm();
-                        setStudioChassisType('armor');
-                      }}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        gearDatabaseChassis === 'armor'
-                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🥋 Armor
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGearDatabaseChassis('shield');
-                        handleResetForm();
-                        setStudioChassisType('shield');
-                      }}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        gearDatabaseChassis === 'shield'
-                          ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🛡️ Shields
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGearDatabaseChassis('supplies');
-                        handleResetForm();
-                        setStudioChassisType('supplies');
-                      }}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        gearDatabaseChassis === 'supplies'
-                          ? 'bg-teal-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🎒 Supplies
-                    </button>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (workshopMode === 'designer') {
+                      handleNewMasterEntry();
+                    } else {
+                      handleResetForm();
+                    }
+                    setStudioChassisType(gearDatabaseChassis);
+                  }}
+                  className={`text-[10px] font-bold px-2 py-1 rounded-lg transition cursor-pointer shrink-0 ${
+                    workshopMode === 'designer'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+                  }`}
+                >
+                  {workshopMode === 'designer' ? '+ New Master Item' : '+ New Gear'}
+                </button>
+              </div>
 
-                  {/* Dropdown Selector Header */}
-                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
-                    <span className="flex items-center gap-1.5 shrink-0">
-                      <span>👑</span>
-                      <span>
-                        Master {gearDatabaseChassis === 'weapon' ? 'Weapons' : gearDatabaseChassis === 'armor' ? 'Armor' : gearDatabaseChassis === 'shield' ? 'Shields' : 'Supplies'}
-                      </span>
-                    </span>
-
-                    {/* Inline Search Bar */}
-                    <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
-                      <input
-                        type="text"
-                        value={canonicalSearchQuery}
-                        onChange={(e) => setCanonicalSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleCanonicalSearchEnter('gear');
-                        }}
-                        placeholder={`Search ${gearDatabaseChassis}...`}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/80 transition"
-                      />
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
-                      {canonicalSearchQuery && (
-                        <button
-                          type="button"
-                          onClick={() => setCanonicalSearchQuery('')}
-                          className="absolute right-2 text-slate-400 hover:text-slate-200 cursor-pointer"
-                          title="Clear search"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    {workshopMode === 'designer' && (
-                      <button
-                        type="button"
-                        onClick={handleNewMasterEntry}
-                        className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer shrink-0"
-                      >
-                        + New Master Item
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Dropdown Selector */}
-                  <select
-                    value={canonicalSelectedId || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (!val) {
-                        handleResetForm();
-                        return;
+              {/* Dropdown Selector */}
+              <select
+                value={canonicalSelectedId || (editingItem ? String(editingItem.id) : '')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) {
+                    handleResetForm();
+                    setStudioChassisType(gearDatabaseChassis);
+                    return;
+                  }
+                  if (workshopMode === 'designer') {
+                    if (gearDatabaseChassis === 'weapon') {
+                      const item = (weaponsCatalog || []).find((w) => String(w.id) === val || w.name === val);
+                      if (item) handlePopulateCanonicalWeapon(item);
+                    } else if (gearDatabaseChassis === 'armor') {
+                      const item = (armorCatalog || []).find((a) => String(a.id) === val || a.name === val);
+                      if (item) handlePopulateCanonicalArmor(item);
+                    } else if (gearDatabaseChassis === 'shield') {
+                      const item = (shieldsCatalog || []).find((s) => String(s.id) === val || s.name === val);
+                      if (item) handlePopulateCanonicalShield(item);
+                    } else if (gearDatabaseChassis === 'supplies') {
+                      const item = (suppliesCatalog || []).find((sup) => String(sup.id) === val || sup.name === val);
+                      if (item) handlePopulateCanonicalSupply(item);
+                    }
+                  } else {
+                    const item = filteredMyGearItems.find((it) => String(it.id) === val || it.name === val);
+                    if (item) {
+                      if (item.rawItem?.item_data) {
+                        handlePopulateItemForEdit(item.rawItem);
+                      } else {
+                        if (item.chassis === 'weapon') handlePopulateCanonicalWeapon(item.rawItem);
+                        else if (item.chassis === 'armor') handlePopulateCanonicalArmor(item.rawItem);
+                        else if (item.chassis === 'shield') handlePopulateCanonicalShield(item.rawItem);
+                        else if (item.chassis === 'supplies') handlePopulateCanonicalSupply(item.rawItem);
                       }
-                      if (gearDatabaseChassis === 'weapon') {
-                        const item = (weaponsCatalog || []).find((w) => String(w.id) === val || w.name === val);
-                        if (item) handlePopulateCanonicalWeapon(item);
-                      } else if (gearDatabaseChassis === 'armor') {
-                        const item = (armorCatalog || []).find((a) => String(a.id) === val || a.name === val);
-                        if (item) handlePopulateCanonicalArmor(item);
-                      } else if (gearDatabaseChassis === 'shield') {
-                        const item = (shieldsCatalog || []).find((s) => String(s.id) === val || s.name === val);
-                        if (item) handlePopulateCanonicalShield(item);
-                      } else if (gearDatabaseChassis === 'supplies') {
-                        const item = (suppliesCatalog || []).find((sup) => String(sup.id) === val || sup.name === val);
-                        if (item) handlePopulateCanonicalSupply(item);
-                      }
-                    }}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0"
-                  >
-                    <option value="">
-                      {canonicalSearchQuery
-                        ? gearDatabaseChassis === 'weapon'
-                          ? filteredCanonicalWeapons.length > 0
-                            ? `-- Filtered (${filteredCanonicalWeapons.length} matches) --`
-                            : `-- No matches for "${canonicalSearchQuery}" --`
-                          : gearDatabaseChassis === 'armor'
-                          ? filteredCanonicalArmor.length > 0
-                            ? `-- Filtered (${filteredCanonicalArmor.length} matches) --`
-                            : `-- No matches for "${canonicalSearchQuery}" --`
-                          : gearDatabaseChassis === 'shield'
-                          ? filteredCanonicalShields.length > 0
-                            ? `-- Filtered (${filteredCanonicalShields.length} matches) --`
-                            : `-- No matches for "${canonicalSearchQuery}" --`
-                          : filteredCanonicalSupplies.length > 0
-                          ? `-- Filtered (${filteredCanonicalSupplies.length} matches) --`
-                          : `-- No matches for "${canonicalSearchQuery}" --`
-                        : `-- Choose Canonical ${gearDatabaseChassis.charAt(0).toUpperCase() + gearDatabaseChassis.slice(1)} (${
-                            gearDatabaseChassis === 'weapon'
-                              ? filteredCanonicalWeapons.length
-                              : gearDatabaseChassis === 'armor'
-                              ? filteredCanonicalArmor.length
-                              : gearDatabaseChassis === 'shield'
-                              ? filteredCanonicalShields.length
-                              : filteredCanonicalSupplies.length
-                          }) --`}
-                    </option>
+                    }
+                  }
+                }}
+                className={`bg-slate-950 border text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0 ${
+                  workshopMode === 'designer' ? 'border-slate-700 text-amber-300' : 'border-slate-700 text-emerald-300'
+                }`}
+              >
+                <option value="">
+                  {canonicalSearchQuery
+                    ? `-- Filtered (${
+                        workshopMode === 'designer'
+                          ? gearDatabaseChassis === 'weapon'
+                            ? filteredCanonicalWeapons.length
+                            : gearDatabaseChassis === 'armor'
+                            ? filteredCanonicalArmor.length
+                            : gearDatabaseChassis === 'shield'
+                            ? filteredCanonicalShields.length
+                            : filteredCanonicalSupplies.length
+                          : filteredMyGearItems.length
+                      } matches) --`
+                    : `-- Choose ${workshopMode === 'designer' ? 'Master' : 'My'} ${
+                        gearDatabaseChassis.charAt(0).toUpperCase() + gearDatabaseChassis.slice(1)
+                      } (${
+                        workshopMode === 'designer'
+                          ? gearDatabaseChassis === 'weapon'
+                            ? filteredCanonicalWeapons.length
+                            : gearDatabaseChassis === 'armor'
+                            ? filteredCanonicalArmor.length
+                            : gearDatabaseChassis === 'shield'
+                            ? filteredCanonicalShields.length
+                            : filteredCanonicalSupplies.length
+                          : filteredMyGearItems.length
+                      }) --`}
+                </option>
+                {workshopMode === 'designer' ? (
+                  <>
                     {gearDatabaseChassis === 'weapon' &&
                       filteredCanonicalWeapons.map((w) => (
                         <option key={w.id || w.name} value={w.id || w.name}>
@@ -5104,791 +4885,455 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           </option>
                         );
                       })}
-                  </select>
+                  </>
+                ) : (
+                  filteredMyGearItems.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} ({item.details})
+                    </option>
+                  ))
+                )}
+              </select>
 
-                  {canonicalSelectedId || name.trim() || isAuthoringNewMaster ? (
-                    renderGearHierarchyTree(true)
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
-                      <span className="text-2xl mb-1.5">👑</span>
-                      <p className="font-semibold text-slate-400">No Master Item Selected</p>
-                      <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                        {workshopMode === 'designer'
-                          ? 'Pick an existing master item from the dropdown above to view, edit, or delete it, or click "+ New Master Item" to author a new canonical entry.'
-                          : 'Pick an official canonical item from the dropdown above to view its stats or load it into your forge as a starting template.'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
+              {/* Gear Hierarchy Tree or Empty State */}
+              {canonicalSelectedId || name.trim() || isAuthoringNewMaster || editingItem ? (
+                renderGearHierarchyTree(workshopMode === 'designer')
               ) : (
-                /* CURRENT ITEM HIERARCHY TREE VIEW */
-                renderGearHierarchyTree(false)
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                  <span className="text-2xl mb-1.5">{workshopMode === 'designer' ? '👑' : '⚙️'}</span>
+                  <p className="font-semibold text-slate-400">
+                    {workshopMode === 'designer' ? 'No Master Item Selected' : 'No Gear Item Selected'}
+                  </p>
+                  <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                    {workshopMode === 'designer'
+                      ? 'Pick an existing master item from the dropdown above to view, edit, or delete it, or click "+ New Master Item" to author a new canonical entry.'
+                      : 'Pick an item from your creations above or click "+ New Gear" to forge a custom weapon, armor, shield, or supply.'}
+                  </p>
+                </div>
               )}
             </div>
           ) : creationType === 'paths_abilities' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Studio Tab Switcher */}
-              <div className="shrink-0 flex items-center justify-between gap-2 flex-wrap">
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
-                  <button
-                    type="button"
-                    onClick={() => setPathStudioTab('current')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      pathStudioTab === 'current'
-                        ? 'bg-blue-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    🛠️ Current
-                  </button>
-                  {isMetaScapeDesigner && (
+              {/* Header: Title / Count, Search Bar, and + New Button */}
+              <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
+                <span className="flex items-center gap-1.5 shrink-0">
+                  <span>{workshopMode === 'designer' ? '👑' : '🎨'}</span>
+                  <span>
+                    {workshopMode === 'designer' ? 'Master Paths' : 'My Paths'} (
+                    {workshopMode === 'designer' ? filteredCanonicalPaths.length : myPathsList.length})
+                  </span>
+                </span>
+
+                {/* Inline Search Bar */}
+                <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
+                  <input
+                    type="text"
+                    value={canonicalSearchQuery}
+                    onChange={(e) => setCanonicalSearchQuery(e.target.value)}
+                    placeholder={workshopMode === 'designer' ? "Search master paths..." : "Search my paths..."}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/80 transition"
+                  />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+                  {canonicalSearchQuery && (
                     <button
                       type="button"
-                      onClick={() => setPathStudioTab('canon')}
-                      className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                        pathStudioTab === 'canon'
-                          ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
+                      onClick={() => setCanonicalSearchQuery('')}
+                      className="absolute right-2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                      title="Clear search"
                     >
-                      👑 Canon
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setPathStudioTab('mine')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      pathStudioTab === 'mine'
-                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    🎨 My Creations ({myPathCount})
-                  </button>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {editingItem && pathStudioTab === 'current' && (
-                    <button
-                      type="button"
-                      onClick={handleResetForm}
-                      className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition cursor-pointer shrink-0"
-                      title="Start a new blank creation"
-                    >
-                      + New Blank
-                    </button>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (workshopMode === 'designer') {
+                      handleNewMasterEntry();
+                    } else {
+                      handleResetForm();
+                    }
+                    setCreationType('paths_abilities');
+                    setPathStudioMode('path');
+                    setIsCreatingNewPath(true);
+                    setCanonicalSelectedId('');
+                    setSelectedPathId('');
+                    setActivePathSelection({ type: 'path' });
+                  }}
+                  className={`text-[10px] font-bold px-2 py-1 rounded-lg transition cursor-pointer shrink-0 ${
+                    workshopMode === 'designer'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+                      : 'bg-blue-500/20 text-blue-300 border border-blue-500/40 hover:bg-blue-500/30'
+                  }`}
+                  title={workshopMode === 'designer' ? "Author a new canonical Master Path in Supabase" : "Create a new custom Path"}
+                >
+                  {workshopMode === 'designer' ? '+ New Master Path' : '+ New Path'}
+                </button>
               </div>
 
-              {pathStudioTab === 'mine' ? (
-                /* MY CREATIONS LIST VIEW */
-                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-                  {/* Category Filter Switch */}
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
-                    {(['all', 'path', 'power', 'skill', 'trait'] as const).map((filter) => {
-                      const labels: Record<string, string> = {
-                        all: '🌐 All',
-                        path: '🧭 Paths',
-                        power: '⚡ Powers',
-                        skill: '🎯 Skills',
-                        trait: '🧬 Traits',
-                      };
-                      return (
-                        <button
-                          key={filter}
-                          type="button"
-                          onClick={() => setPathLibraryFilter(filter)}
-                          className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                            pathLibraryFilter === filter
-                              ? 'bg-blue-600 text-white shadow-sm font-extrabold'
-                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                          }`}
-                        >
-                          {labels[filter]}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
-                    {filteredMyPathItems.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
-                        <span className="text-2xl mb-1.5">🧭</span>
-                        <p className="font-semibold text-slate-400">No creations found under this filter</p>
-                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          Click "Current" above to forge your first custom Path, Power, Trait, or Skill.
-                        </p>
-                      </div>
-                    ) : (
-                      filteredMyPathItems.map((item) => (
-                        <div
-                          key={item.id}
-                          className="p-3 rounded-xl border border-slate-800/80 bg-slate-900/80 hover:border-slate-700 hover:bg-slate-900 transition-all flex flex-col gap-1.5 shadow-sm"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-base shrink-0">
-                                {item.type === 'path' ? '🧭' : item.type === 'power' ? '⚡' : item.type === 'trait' ? '🧬' : '🎯'}
-                              </span>
-                              <span className="font-bold text-slate-100 text-xs truncate">{item.name}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-blue-300 font-mono font-bold uppercase">
-                                {item.type}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (item.type === 'path') handlePopulateOfficialPath(item.rawItem);
-                                  else if (item.type === 'power') handlePopulateCanonicalPower(item.rawItem);
-                                  else if (item.type === 'trait') handlePopulateCanonicalTrait(item.rawItem);
-                                  else if (item.type === 'skill') handlePopulateCanonicalSkill(item.rawItem);
-                                  setPathStudioTab('current');
-                                }}
-                                className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
-                                title="Edit this creation"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setDeleteConfirmTarget({
-                                    type: item.type,
-                                    id: item.id,
-                                    name: item.name,
-                                  })
-                                }
-                                className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition cursor-pointer"
-                                title="Delete creation"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {item.details && (
-                            <div className="text-[10px] text-slate-300">
-                              {item.details}
-                            </div>
-                          )}
-                          {item.notes && (
-                            <div className="text-[10px] text-slate-400 font-mono line-clamp-1">
-                              {item.notes}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-              ) : (isMetaScapeDesigner && pathStudioTab === 'canon') ? (
-                /* SUPABASE CANONICAL VIEW */
-                <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
-                  {/* Selector & Search Header */}
-                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
-                    <span className="flex items-center gap-1.5 shrink-0">
-                      <span>👑</span>
-                      <span>Master Paths</span>
-                    </span>
-
-                    {/* Inline Search Bar */}
-                    <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
-                      <input
-                        type="text"
-                        value={canonicalSearchQuery}
-                        onChange={(e) => setCanonicalSearchQuery(e.target.value)}
-                        placeholder="Search master paths..."
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/80 transition"
-                      />
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
-                      {canonicalSearchQuery && (
-                        <button
-                          type="button"
-                          onClick={() => setCanonicalSearchQuery('')}
-                          className="absolute right-2 text-slate-400 hover:text-slate-200 cursor-pointer"
-                          title="Clear search"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleResetForm();
-                        setCreationType('paths_abilities');
-                        setPathStudioMode('path');
-                        setIsCreatingNewPath(true);
-                        setCanonicalSelectedId('');
-                        setActivePathSelection({ type: 'path' });
-                      }}
-                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer shrink-0"
-                      title="Author a new canonical Master Path in Supabase"
-                    >
-                      + New Master Path
-                    </button>
-                  </div>
-
-                  {/* Dropdown Selector for Canonical Paths */}
-                  <select
-                    value={canonicalSelectedId || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (!val) {
-                        handleResetForm();
-                        return;
+              {/* Dropdown Selector */}
+              <select
+                value={canonicalSelectedId || selectedPathId || (editingItem ? String(editingItem.id) : '')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) {
+                    handleResetForm();
+                    setCreationType('paths_abilities');
+                    setPathStudioMode('path');
+                    setIsCreatingNewPath(false);
+                    setSelectedPathId('');
+                    return;
+                  }
+                  setIsCreatingNewPath(false);
+                  setSelectedPathId(val);
+                  if (workshopMode === 'designer') {
+                    const p = (paths || []).find((item) => String(item.id) === val || item.name === val);
+                    if (p) {
+                      handlePopulateOfficialPath(p);
+                      setActivePathSelection({ type: 'path' });
+                    }
+                  } else {
+                    const found = myPathsList.find((p) => p.id === val || String(p.rawItem?.id) === val || p.name === val);
+                    if (found) {
+                      if (found.source === 'personal') {
+                        handlePopulateItemForEdit(found.rawItem);
+                      } else {
+                        handlePopulateOfficialPath(found.rawItem);
                       }
-                      const p = (paths || []).find((item) => String(item.id) === val || item.name === val);
-                      if (p) {
-                        handlePopulateOfficialPath(p);
-                        setActivePathSelection({ type: 'path' });
-                      }
-                    }}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0"
-                  >
-                    <option value="">
-                      {canonicalSearchQuery
-                        ? filteredCanonicalPaths.length > 0
-                          ? `-- Filtered (${filteredCanonicalPaths.length} matches) --`
-                          : `-- No matches for "${canonicalSearchQuery}" --`
-                        : `-- Choose Master Path (${(paths || []).length} available) --`}
-                    </option>
-                    {filteredCanonicalPaths.map((p) => (
+                      setActivePathSelection({ type: 'path' });
+                    }
+                  }
+                }}
+                className={`bg-slate-950 border text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0 ${
+                  workshopMode === 'designer' ? 'border-slate-700 text-amber-300' : 'border-slate-700 text-blue-300'
+                }`}
+              >
+                <option value="">
+                  {canonicalSearchQuery
+                    ? `-- Filtered (${
+                        workshopMode === 'designer' ? filteredCanonicalPaths.length : myPathsList.length
+                      } matches) --`
+                    : `-- Choose ${workshopMode === 'designer' ? 'Master' : 'My'} Path (${
+                        workshopMode === 'designer' ? (paths || []).length : myPathsList.length
+                      } available) --`}
+                </option>
+                {workshopMode === 'designer'
+                  ? filteredCanonicalPaths.map((p) => (
                       <option key={p.id || p.name} value={p.id || p.name}>
                         {p.name.toLowerCase() === 'universal' ? '🌐 ' : '🧭 '}
                         {p.name} ({p.category || 'General'})
                       </option>
+                    ))
+                  : myPathsList.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        🧭 {p.name} ({p.category || 'Path'})
+                      </option>
                     ))}
-                  </select>
+              </select>
 
-                  {/* Canonical Hierarchical Tree View */}
-                  {canonicalSelectedId || isCreatingNewPath ? (
-                    <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-                      {renderPathHierarchyTree(true)}
+              {/* Hierarchical Tree View or Empty State */}
+              {canonicalSelectedId || selectedPathId || isCreatingNewPath || editingItem || name.trim() ? (
+                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+                  {renderPathHierarchyTree(workshopMode === 'designer')}
 
-                      {/* Footer Actions for Canonical Path */}
-                      {canonicalSelectedId && workshopMode === 'designer' && !isUniversalPath && (
-                        <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between shrink-0">
-                          <span className="text-[10px] text-slate-500 italic">
-                            Select any node to inspect & edit on right
+                  {/* Footer Actions / Delete Master Path in Designer Mode */}
+                  {canonicalSelectedId && workshopMode === 'designer' && !isUniversalPath && (
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between shrink-0">
+                      <span className="text-[10px] text-slate-500 italic">
+                        Select any node to inspect & edit on right
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDeleteConfirmTarget({
+                            type: 'path',
+                            id: canonicalSelectedId,
+                            name: originalCanonicalName || name.trim(),
+                          })
+                        }
+                        className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                        title="Delete this canonical Path from Supabase"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete Master Path</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Bottom Forge / Update Button in Player Mode */}
+                  {workshopMode === 'player' && (
+                    <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
+                      {(editingItem || canonicalSelectedId) && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-slate-400 italic">
+                            Editing personal path
                           </span>
                           <button
                             type="button"
                             onClick={() =>
                               setDeleteConfirmTarget({
                                 type: 'path',
-                                id: canonicalSelectedId,
-                                name: originalCanonicalName || name.trim(),
+                                id: (editingItem ? editingItem.id : canonicalSelectedId) as string | number,
+                                name: editingItem ? editingItem.name : name,
                               })
                             }
                             className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
-                            title="Delete this canonical Path from Supabase"
+                            title="Delete this Path"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete Master Path</span>
+                            <span>Delete Path</span>
                           </button>
                         </div>
                       )}
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
-                      <span className="text-2xl mb-1.5">👑</span>
-                      <p className="font-semibold text-slate-400">No Master Path Selected</p>
-                      <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                        Pick a Master Path from the dropdown above to view and edit its Traits, Powers, and SkillSets in the hierarchical tree, or click "+ New Master Path" to author a new canonical path.
-                      </p>
+                      <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={!isFormValid || isSubmitting}
+                        className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                          isFormValid && !isSubmitting
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-900/40 cursor-pointer'
+                            : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                        }`}
+                      >
+                        <AnvilIcon className="w-4 h-4" />
+                        <span>
+                          {isSubmitting
+                            ? 'Forging...'
+                            : editingItem || canonicalSelectedId
+                            ? 'Update Path Archetype'
+                            : 'Forge Path to My Creations'}
+                        </span>
+                      </button>
                     </div>
                   )}
                 </div>
-
               ) : (
-                /* CURRENT ITEM VIEW */
-                <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
-                  {/* Path Selection & Action Row */}
-                  <div className="flex flex-col gap-1.5 shrink-0">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-                      <span>Select Path:</span>
-                      <span className="text-[10px] text-slate-500">Pick to edit / clone</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleResetForm();
-                          setCreationType('paths_abilities');
-                          setPathStudioMode('path');
-                          setIsCreatingNewPath(true);
-                          setSelectedPathId('');
-                          setActivePathSelection({ type: 'path' });
-                        }}
-                        className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shrink-0 cursor-pointer shadow-sm ${
-                          isCreatingNewPath
-                            ? 'bg-blue-600 text-white shadow-blue-950/50 font-extrabold border border-blue-400/50'
-                            : 'bg-slate-900/90 hover:bg-slate-800 text-blue-300 border border-slate-700 hover:border-blue-500/50'
-                        }`}
-                        title="Create a brand new Path Archetype"
-                      >
-                        <span>➕</span>
-                        <span>New Path</span>
-                      </button>
-                      <select
-                        value={selectedPathId}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (!val) {
-                            handleResetForm();
-                            setCreationType('paths_abilities');
-                            setPathStudioMode('path');
-                            setIsCreatingNewPath(false);
-                            setSelectedPathId('');
-                            return;
-                          }
-                          setIsCreatingNewPath(false);
-                          setSelectedPathId(val);
-                          if (val.startsWith('custom_')) {
-                            const id = val.replace('custom_', '');
-                            const found = personalItems.find((it) => it.id === id);
-                            if (found) handlePopulateItemForEdit(found);
-                          } else if (val.startsWith('official_')) {
-                            const pathKey = val.replace('official_', '');
-                            const found = paths.find((p) => (p.id && p.id === pathKey) || p.name === pathKey);
-                            if (found) handlePopulateOfficialPath(found);
-                          }
-                          setActivePathSelection({ type: 'path' });
-                        }}
-                        className="flex-1 min-w-0 bg-slate-950 text-slate-200 text-xs px-2.5 py-1.5 rounded-xl border border-slate-700 outline-none focus:border-blue-500 font-medium truncate"
-                      >
-                        <option value="">Select an existing path...</option>
-                        {allAvailablePaths.some((p) => p.isCustom) && (
-                          <optgroup label="Personal Custom Paths">
-                            {allAvailablePaths
-                              .filter((p) => p.isCustom)
-                              .map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  ⭐ {p.name} ({p.category})
-                                </option>
-                              ))}
-                          </optgroup>
-                        )}
-                        <optgroup label="Official Paths">
-                          {allAvailablePaths
-                            .filter((p) => !p.isCustom)
-                            .map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name.toLowerCase() === 'universal' ? '🌐 ' : '📜 '}
-                                {p.name} ({p.category})
-                              </option>
-                            ))}
-                        </optgroup>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Hierarchical Tree or Empty State */}
-                  {isPathIdle ? (
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
-                      <span className="text-2xl mb-1.5">🧭</span>
-                      <p className="font-semibold text-slate-400">No Path Selected</p>
-                      <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                        Select an existing path from the dropdown above or click "+ New Path" to forge your Path Archetype.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-                      {renderPathHierarchyTree(false)}
-
-                      {/* Bottom Forge / Update Path Button */}
-                      <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
-                        <button
-                          type="button"
-                          onClick={handleSubmit}
-                          disabled={!isFormValid || isSubmitting}
-                          className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
-                            isFormValid && !isSubmitting
-                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-900/40 cursor-pointer'
-                              : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                          }`}
-                        >
-                          <AnvilIcon className="w-4 h-4" />
-                          <span>
-                            {isSubmitting
-                              ? 'Forging...'
-                              : editingItem
-                              ? 'Update Path Archetype'
-                              : 'Forge Path to My Creations'}
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                  <span className="text-2xl mb-1.5">{workshopMode === 'designer' ? '👑' : '🧭'}</span>
+                  <p className="font-semibold text-slate-400">
+                    {workshopMode === 'designer' ? 'No Master Path Selected' : 'No Path Selected'}
+                  </p>
+                  <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                    {workshopMode === 'designer'
+                      ? 'Pick a Master Path from the dropdown above to view and edit its Traits, Powers, and SkillSets in the hierarchical tree, or click "+ New Master Path" to author a new canonical path.'
+                      : 'Pick a Path from your creations above or click "+ New Path" to forge a custom Path Archetype.'}
+                  </p>
                 </div>
               )}
             </div>
           ) : creationType === 'chaos_gem' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Studio Tab Switcher */}
-              <div className="shrink-0 flex items-center justify-between gap-2">
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
-                  <button
-                    type="button"
-                    onClick={() => setGemStudioTab('current')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      gemStudioTab === 'current'
-                        ? 'bg-violet-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    🛠️ Current
-                  </button>
-                  {isMetaScapeDesigner && (
+              {/* Header: Title / Count, Search Bar, and + New Button */}
+              <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
+                <span className="flex items-center gap-1.5 shrink-0">
+                  <span>{workshopMode === 'designer' ? '👑' : '🎨'}</span>
+                  <span>
+                    {workshopMode === 'designer' ? 'Master Chaos Gems' : 'My Chaos Gems'} (
+                    {workshopMode === 'designer' ? canonicalChaosGems.length : filteredMyGems.length})
+                  </span>
+                </span>
+
+                {/* Inline Search Bar */}
+                <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
+                  <input
+                    type="text"
+                    value={canonicalSearchQuery}
+                    onChange={(e) => setCanonicalSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCanonicalSearchEnter('chaos_gem');
+                    }}
+                    placeholder={workshopMode === 'designer' ? "Search master gems..." : "Search my gems..."}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500/80 transition"
+                  />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+                  {canonicalSearchQuery && (
                     <button
                       type="button"
-                      onClick={() => setGemStudioTab('canon')}
-                      className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                        gemStudioTab === 'canon'
-                          ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
+                      onClick={() => setCanonicalSearchQuery('')}
+                      className="absolute right-2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                      title="Clear search"
                     >
-                      👑 Canon
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setGemStudioTab('mine')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      gemStudioTab === 'mine'
-                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    🎨 My Creations ({myGemCount})
-                  </button>
                 </div>
 
-                {editingItem && gemStudioTab === 'current' && (
-                  <button
-                    type="button"
-                    onClick={handleResetForm}
-                    className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition cursor-pointer shrink-0"
-                    title="Start a new blank creation"
-                  >
-                    + New Blank
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (workshopMode === 'designer') {
+                      handleNewMasterEntry();
+                    } else {
+                      handleResetForm();
+                    }
+                    setCreationType('chaos_gem');
+                  }}
+                  className={`text-[10px] font-bold px-2 py-1 rounded-lg transition cursor-pointer shrink-0 ${
+                    workshopMode === 'designer'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+                      : 'bg-violet-500/20 text-violet-300 border border-violet-500/40 hover:bg-violet-500/30'
+                  }`}
+                >
+                  {workshopMode === 'designer' ? '+ New Master Gem' : '+ New Chaos Gem'}
+                </button>
               </div>
 
-              {gemStudioTab === 'mine' ? (
-                /* MY CREATIONS LIST VIEW */
-                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
-                    {filteredMyGems.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
-                        <span className="text-2xl mb-1.5">💎</span>
-                        <p className="font-semibold text-slate-400">No chaos gem creations found</p>
-                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          Click "Current" above to forge your first custom Chaos Gem.
-                        </p>
-                      </div>
-                    ) : (
-                      filteredMyGems.map((item) => {
-                        const isItemEditing = editingItem?.id === item.id || canonicalSelectedId === String(item.id);
-                        const itemEffect = item.effect || '';
-
-                        return (
-                          <div
-                            key={item.id}
-                            className={`p-2.5 rounded-xl border transition flex flex-col gap-1.5 shadow-sm cursor-pointer ${
-                              isItemEditing
-                                ? 'bg-violet-950/30 border-violet-500/80 ring-1 ring-violet-500/40'
-                                : 'bg-slate-950/70 border-slate-800/80 hover:border-violet-500/40 hover:bg-slate-900/80'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-1.5">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-sm shrink-0">💎</span>
-                                <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
-                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase shrink-0">
-                                  CHAOS GEM
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handlePopulateCanonicalChaosGem(item);
-                                    setGemStudioTab('current');
-                                  }}
-                                  className="p-1 rounded text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
-                                  title="Edit this chaos gem"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setDeleteConfirmTarget({
-                                      type: 'chaos_gem',
-                                      id: item.id || item.name,
-                                      name: item.name,
-                                    })
-                                  }
-                                  className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
-                                  title="Delete this chaos gem"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-                              <span className="px-1.5 py-0.2 bg-violet-950/80 border border-violet-500/30 text-violet-300 font-bold rounded">
-                                {item.action || 'F'}
-                              </span>
-                              <span className="px-1.5 py-0.2 bg-amber-950/80 border border-amber-500/30 text-amber-300 font-bold rounded">
-                                {item.usage || '3 Uses'}
-                              </span>
-                            </div>
-                            {itemEffect && (
-                              <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
-                                {itemEffect}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-
-              ) : (isMetaScapeDesigner && gemStudioTab === 'canon') ? (
-                /* SUPABASE CANONICAL VIEW */
-                <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
-                  {/* Dropdown Selector Header */}
-                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
-                    <span className="flex items-center gap-1.5 shrink-0">
-                      <span>👑</span>
-                      <span>Master Chaos Gems ({canonicalChaosGems.length})</span>
-                    </span>
-
-                    {/* Inline Search Bar */}
-                    <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
-                      <input
-                        type="text"
-                        value={canonicalSearchQuery}
-                        onChange={(e) => setCanonicalSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleCanonicalSearchEnter('chaos_gem');
-                        }}
-                        placeholder="Search chaos gems..."
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/80 transition"
-                      />
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
-                      {canonicalSearchQuery && (
-                        <button
-                          type="button"
-                          onClick={() => setCanonicalSearchQuery('')}
-                          className="absolute right-2 text-slate-400 hover:text-slate-200 cursor-pointer"
-                          title="Clear search"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleNewMasterEntry}
-                      className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer shrink-0"
-                    >
-                      + New Master Gem
-                    </button>
-                  </div>
-
-                  {/* Dropdown Selector */}
-                  <select
-                    value={canonicalSelectedId || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (!val) {
-                        handleResetForm();
-                        return;
+              {/* Dropdown Selector */}
+              <select
+                value={canonicalSelectedId || (editingItem ? String(editingItem.id) : '')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) {
+                    handleResetForm();
+                    setCreationType('chaos_gem');
+                    return;
+                  }
+                  if (workshopMode === 'designer') {
+                    const gem = (canonicalChaosGems || []).find((g) => String(g.id) === val || g.name === val);
+                    if (gem) handlePopulateCanonicalChaosGem(gem);
+                  } else {
+                    const gem = filteredMyGems.find((g) => String(g.id) === val || g.name === val);
+                    if (gem) {
+                      if (gem.rawItem?.item_data) {
+                        handlePopulateItemForEdit(gem.rawItem);
+                      } else {
+                        handlePopulateCanonicalChaosGem(gem);
                       }
-                      const gem = (canonicalChaosGems || []).find((g) => String(g.id) === val || g.name === val);
-                      if (gem) handlePopulateCanonicalChaosGem(gem);
-                    }}
-                    className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0"
-                  >
-                    <option value="">
-                      {canonicalSearchQuery
-                        ? filteredCanonicalChaosGems.length > 0
-                          ? `-- Filtered (${filteredCanonicalChaosGems.length} matches) --`
-                          : `-- No matches for "${canonicalSearchQuery}" --`
-                        : `-- Choose Canonical Chaos Gem (${canonicalChaosGems.length}) --`}
-                    </option>
-                    {filteredCanonicalChaosGems.map((g) => (
+                    }
+                  }
+                }}
+                className={`bg-slate-950 border text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0 ${
+                  workshopMode === 'designer' ? 'border-slate-700 text-amber-300' : 'border-slate-700 text-violet-300'
+                }`}
+              >
+                <option value="">
+                  {canonicalSearchQuery
+                    ? `-- Filtered (${
+                        workshopMode === 'designer'
+                          ? filteredCanonicalChaosGems.length
+                          : filteredMyGems.length
+                      } matches) --`
+                    : `-- Choose ${workshopMode === 'designer' ? 'Master' : 'My'} Chaos Gem (${
+                        workshopMode === 'designer'
+                          ? canonicalChaosGems.length
+                          : filteredMyGems.length
+                      }) --`}
+                </option>
+                {workshopMode === 'designer'
+                  ? filteredCanonicalChaosGems.map((g) => (
                       <option key={g.id || g.name} value={g.id || g.name}>
                         {g.name}
                       </option>
+                    ))
+                  : filteredMyGems.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} ({g.action || 'F'} • {g.usage || '3 Uses'})
+                      </option>
                     ))}
-                  </select>
+              </select>
 
-                  {/* Canonical Item Preview Card */}
-                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
-                    {canonicalSelectedId ? (
-                      <div className="p-3.5 rounded-xl border border-amber-500/40 bg-slate-900/90 flex flex-col gap-2.5 shadow-lg shadow-amber-950/20">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-base shrink-0">💎</span>
-                            <div className="min-w-0">
-                              <h4 className="font-bold text-slate-100 text-xs truncate">{name || 'Unnamed Chaos Gem'}</h4>
-                              <span className="text-[10px] text-amber-400 font-mono">👑 Master ID: {canonicalSelectedId}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 font-mono text-[10px] shrink-0">
-                            <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">{action || 'F'}</span>
-                            <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">{usage || '3 Uses'}</span>
-                          </div>
-                        </div>
-
-                        <div className="text-[11px] text-slate-300 flex flex-col gap-1.5">
-                          {effect && (
-                            <div className="p-2 rounded bg-slate-950/90 border border-slate-800 font-mono text-xs text-slate-200 whitespace-pre-wrap">
-                              {effect}
-                            </div>
-                          )}
-                          {notes && (
-                            <p className="text-[10px] text-slate-400 italic font-serif border-t border-slate-800/80 pt-1">
-                              "{notes}"
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-auto">
-                          {workshopMode === 'designer' ? (
-                            <>
-                              <span className="text-[10px] text-slate-400 italic">
-                                Edit details in the right pane, then click Save.
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setDeleteConfirmTarget({
-                                    type: 'chaos_gem',
-                                    id: canonicalSelectedId,
-                                    name: originalCanonicalName || name,
-                                  })
-                                }
-                                className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
-                                title="Delete this record from Supabase"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Delete from SupaBase</span>
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-[10px] text-amber-300/80 font-medium">
-                                👑 Official Canonical Item
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const gem = (canonicalChaosGems || []).find((g) => String(g.id) === String(canonicalSelectedId) || g.name === canonicalSelectedId);
-                                  if (gem) handleLoadTemplateIntoForge('chaos_gem', gem);
-                                }}
-                                className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0"
-                                title="Load as customizable template into forge"
-                              >
-                                <span>🛠️</span>
-                                <span>+ Load into Forge</span>
-                              </button>
-                            </>
-                          )}
-                        </div>
+              {/* Live Card Preview */}
+              <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
+                <div className="p-4 rounded-xl bg-slate-900 border border-violet-500/40 shadow-xl flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-base shrink-0">💎</span>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-slate-100 text-xs truncate">{name || 'Unnamed Chaos Gem'}</h4>
+                        {canonicalSelectedId && (
+                          <span className="text-[10px] text-amber-400 font-mono">
+                            {workshopMode === 'designer' ? '👑 Master ID: ' : 'ID: '}{canonicalSelectedId}
+                          </span>
+                        )}
                       </div>
-                    ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
-                        <span className="text-2xl mb-1.5">👑</span>
-                        <p className="font-semibold text-slate-400">No Master Gem Selected</p>
-                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          {workshopMode === 'designer'
-                            ? 'Pick an existing master gem from the dropdown above to view, edit, or delete it, or click "+ New Master Gem" to author a new canonical entry.'
-                            : 'Pick an official canonical gem from the dropdown above to view its stats or load it into your forge as a starting template.'}
-                        </p>
-                      </div>
-                    )}
+                    </div>
+                    <div className="flex items-center gap-1 font-mono text-[10px] shrink-0">
+                      <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">
+                        {action || 'F'}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">
+                        {usage || '3 Uses'}
+                      </span>
+                    </div>
                   </div>
+                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                    {effect || 'Socket activation effect will render here...'}
+                  </div>
+                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
                 </div>
-              ) : (
-                /* CURRENT ITEM LIVE CARD PREVIEW VIEW */
-                <>
-                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
-                    <div className="p-4 rounded-xl bg-slate-900 border border-violet-500/40 shadow-xl flex flex-col gap-2.5">
-                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                        <span className="font-bold text-violet-200 text-sm font-outfit flex items-center gap-1.5">
-                          <span>💎</span>
-                          <span>{name || 'Unnamed Chaos Gem'}</span>
-                        </span>
-                        <div className="flex items-center gap-1 font-mono text-[10px]">
-                          <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">{action || 'F'}</span>
-                          <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">{usage || '3 Uses'}</span>
-                        </div>
-                      </div>
-                      <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
-                        {effect || 'Socket activation effect will render here...'}
-                      </div>
-                      {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
-                    </div>
-                  </div>
+              </div>
 
-                  {/* Bottom Forge Button */}
-                  <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span>Status:</span>
-                      {editingItem ? (
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-violet-500/20 text-violet-300 border border-violet-500/40">
-                          Editing Creation
-                        </span>
-                      ) : canonicalSelectedId ? (
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                          Editing Master Record
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-emerald-400 font-mono font-bold">New Creation</span>
-                      )}
-                    </div>
-
+              {/* Bottom Actions Row */}
+              <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
+                {workshopMode === 'designer' && canonicalSelectedId && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-slate-400 italic">
+                      Edit details on right, then save.
+                    </span>
                     <button
                       type="button"
-                      onClick={handleSubmit}
-                      disabled={!isFormValid || isSubmitting}
-                      className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
-                        isFormValid && !isSubmitting
-                          ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-violet-900/40 cursor-pointer'
-                          : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                      }`}
+                      onClick={() =>
+                        setDeleteConfirmTarget({
+                          type: 'chaos_gem',
+                          id: canonicalSelectedId,
+                          name: originalCanonicalName || name,
+                        })
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                      title="Delete this record from Supabase"
                     >
-                      <AnvilIcon className="w-4 h-4" />
-                      <span>
-                        {isSubmitting
-                          ? 'Forging...'
-                          : isMetaScapeDesigner && canonicalSelectedId
-                          ? 'Update Canonical Master Record 👑'
-                          : isMetaScapeDesigner
-                          ? 'Forge New Canonical Master Record 👑'
-                          : editingItem
-                          ? 'Update Chaos Gem'
-                          : 'Forge Chaos Gem to My Creations'}
-                      </span>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete from SupaBase</span>
                     </button>
                   </div>
-                </>
-              )}
+                )}
+                {workshopMode === 'player' && (editingItem || canonicalSelectedId) && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-slate-400 italic">
+                      Editing personal creation
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDeleteConfirmTarget({
+                          type: 'chaos_gem',
+                          id: (editingItem ? editingItem.id : canonicalSelectedId) as string | number,
+                          name: editingItem ? editingItem.name : name,
+                        })
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                      title="Delete this Chaos Gem"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Creation</span>
+                    </button>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!isFormValid || isSubmitting}
+                  className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                    isFormValid && !isSubmitting
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-violet-900/40 cursor-pointer'
+                      : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                  }`}
+                >
+                  <AnvilIcon className="w-4 h-4" />
+                  <span>
+                    {isSubmitting
+                      ? 'Forging...'
+                      : workshopMode === 'designer'
+                      ? canonicalSelectedId
+                        ? 'Save Master Chaos Gem'
+                        : 'Create Master Chaos Gem'
+                      : editingItem || canonicalSelectedId
+                      ? 'Update Chaos Gem'
+                      : 'Forge Chaos Gem to My Creations'}
+                  </span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
