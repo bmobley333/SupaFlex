@@ -80,128 +80,69 @@ export const getPowerReadyCategory = (power: AbilitySlot | Power | null | undefi
 
 /**
  * Validates the currently readied tactical powers against the character's Tier limits.
+ * All learned powers are ALWAYS all available in SupaFlex (no artificial bucket limits or slot caps).
  */
 export const validateReadyMatrix = (
-  readiedPowers: AbilitySlot[] = [],
+  _readiedPowers: AbilitySlot[] = [],
   level: number = 1
 ): { valid: boolean; error?: string; arsenalCount: number; mobilityCount: number; config: ReadySlotConfig } => {
   const config = getReadySlotConfig(level);
-  const cleanPowers = (readiedPowers || []).filter((p) => p && p.name && p.name.trim() !== '');
-
-  const arsenalPowers = cleanPowers.filter((p) => getPowerReadyCategory(p) === 'primary_arsenal');
-  const mobilityPowers = cleanPowers.filter((p) => getPowerReadyCategory(p) === 'mobility_defense');
-  const tacticalCount = arsenalPowers.length + mobilityPowers.length;
-
-  const arsenalCount = arsenalPowers.length;
-  const mobilityCount = mobilityPowers.length;
-
-  if (tacticalCount > config.totalSlots) {
-    return {
-      valid: false,
-      error: `Ready Matrix exceeds total slot capacity (${tacticalCount}/${config.totalSlots} slots).`,
-      arsenalCount,
-      mobilityCount,
-      config,
-    };
-  }
-
-  if (arsenalCount > config.maxArsenal) {
-    return {
-      valid: false,
-      error: `Primary / Arsenal exceeds maximum of ${config.maxArsenal} slots for Tier ${config.tier}.`,
-      arsenalCount,
-      mobilityCount,
-      config,
-    };
-  }
-
-  if (mobilityCount > config.maxMobilityDefense) {
-    return {
-      valid: false,
-      error: `Mobility & Defense exceeds maximum of ${config.maxMobilityDefense} slots for Tier ${config.tier}.`,
-      arsenalCount,
-      mobilityCount,
-      config,
-    };
-  }
-
   return {
     valid: true,
-    arsenalCount,
-    mobilityCount,
+    arsenalCount: 0,
+    mobilityCount: 0,
     config,
   };
 };
 
 /**
- * Zero-Loss Migration helper: Migrates existing character sheet powers to Ready Matrix + Power Codex.
- * Keeps all contextual passives active (0 slots). Keeps tactical powers up to Tier limits.
- * Moves any excess tactical powers safely into `character_power_codex`.
+ * Zero-Loss Migration helper: Migrates existing character sheet powers to the Auto-Readied Power Architecture.
+ * In accordance with MetaScape Core Rules: "All powers that are learned (for various AP costs) are ALWAYS all available."
+ * Merges any powers previously stored in `character_power_codex` into `power_slots` (deduplicating by unique baseName, keeping highest version).
+ * Clears `character_power_codex` to empty array [].
  */
 export const migrateCharacterPowersToCodex = (sheetData: any): CharacterSheetData => {
   if (!sheetData || typeof sheetData !== 'object') return sheetData;
 
-  const level = sheetData.level || 1;
-  const config = getReadySlotConfig(level);
-
   const rawPowerSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots : [];
   const rawCodex: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex : [];
 
-  // Combine all known powers without duplicating by unique name
-  const allKnownPowers: AbilitySlot[] = [];
-  const seenNames = new Set<string>();
+  // Combine all known powers without duplicating by unique baseName
+  const allPowersMap = new Map<string, AbilitySlot>();
 
   for (const p of [...rawPowerSlots, ...rawCodex]) {
     if (!p || !p.name || p.name.trim() === '') continue;
     const cleanName = p.name.trim();
-    if (!seenNames.has(cleanName)) {
-      seenNames.add(cleanName);
-      allKnownPowers.push({
+    const versionMatch = cleanName.match(/v(\d+)$/i);
+    const version = versionMatch ? parseInt(versionMatch[1], 10) : (p.version || 1);
+    const baseName = p.base_name || cleanName.replace(/\s*v\d+$/i, '').trim();
+    const key = baseName.toLowerCase();
+
+    const existing = allPowersMap.get(key);
+    if (!existing) {
+      allPowersMap.set(key, {
         ...p,
-        ready: getPowerReadyCategory(p),
+        base_name: baseName,
+        version,
+        is_readied: true,
       });
-    }
-  }
-
-  const keptPowerSlots: AbilitySlot[] = [];
-  const keptCodexPowers: AbilitySlot[] = [];
-
-  let currentArsenal = 0;
-  let currentMobility = 0;
-
-  for (const power of allKnownPowers) {
-    const cat = getPowerReadyCategory(power);
-
-    if (cat === 'support_passive' || (cat as any) === 'contextual_passive') {
-      // 0-cost: always active on sheet
-      keptPowerSlots.push({ ...power, is_readied: true, ready: 'support_passive' });
-    } else if (cat === 'primary_arsenal') {
-      if (
-        currentArsenal < config.maxArsenal &&
-        currentArsenal + currentMobility < config.totalSlots
-      ) {
-        currentArsenal += 1;
-        keptPowerSlots.push({ ...power, is_readied: true, ready: cat });
-      } else {
-        keptCodexPowers.push({ ...power, is_readied: false, ready: cat });
-      }
-    } else if (cat === 'mobility_defense') {
-      if (
-        currentMobility < config.maxMobilityDefense &&
-        currentArsenal + currentMobility < config.totalSlots
-      ) {
-        currentMobility += 1;
-        keptPowerSlots.push({ ...power, is_readied: true, ready: cat });
-      } else {
-        keptCodexPowers.push({ ...power, is_readied: false, ready: cat });
+    } else {
+      const existingVersion = existing.version || 1;
+      if (version >= existingVersion) {
+        allPowersMap.set(key, {
+          ...p,
+          base_name: baseName,
+          version,
+          is_readied: true,
+        });
       }
     }
   }
 
   return {
     ...sheetData,
-    power_slots: keptPowerSlots,
-    character_power_codex: keptCodexPowers,
-    tactical_pivot_used_in_encounter: sheetData.tactical_pivot_used_in_encounter ?? false,
+    power_slots: Array.from(allPowersMap.values()),
+    character_power_codex: [],
+    tactical_pivot_used_in_encounter: false,
   };
 };

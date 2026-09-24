@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, SupabaseSupply, SupabaseWeapon, SupabaseArmor, SupabaseShield, SupabaseChaosGem, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, GearPowerItem, ModItem, PlayerRecord, ApLogEntry, isGearPowerLearned, cleanAbilityName, calculateAvailableAp } from '../types/game';
 import { gameApi, createDefaultSheetData, CatalogScope } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
-import { migrateCharacterPowersToCodex, validateReadyMatrix, getPowerReadyCategory } from '../utils/readyMatrixSchedule';
+import { migrateCharacterPowersToCodex } from '../utils/readyMatrixSchedule';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { reconcileCharacterVaultWithGear, cleanBelongsToName, getFunctionsForMod } from '../utils/gearFunctionSync';
 import { parseCostToSilver, deductFundsWithChange } from '../utils/moneyUtils';
@@ -962,137 +962,13 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     }));
   },
 
-  toggleReadyPower: (powerName: string) => {
-    const active = get().activeCharacter;
-    if (!active || !active.sheet_data) return { success: false, error: 'No active character.' };
-
-    const sheet = active.sheet_data;
-    const powerSlots = Array.isArray(sheet.power_slots) ? [...sheet.power_slots] : [];
-    const codex = Array.isArray(sheet.character_power_codex) ? [...sheet.character_power_codex] : [];
-
-    // Case 1: Power is currently in power_slots (Active Matrix) -> Unready to Codex
-    const readiedIndex = powerSlots.findIndex((p) => p && p.name && p.name.trim().toLowerCase() === powerName.trim().toLowerCase());
-    if (readiedIndex >= 0) {
-      const [removed] = powerSlots.splice(readiedIndex, 1);
-      const unreadied = { ...removed, is_readied: false };
-      codex.push(unreadied);
-
-      get().updateActiveSheetData((prev) => ({
-        ...prev,
-        power_slots: powerSlots,
-        character_power_codex: codex,
-      }));
-      return { success: true };
-    }
-
-    // Case 2: Power is currently in character_power_codex -> Ready into Matrix
-    const codexIndex = codex.findIndex((p) => p && p.name && p.name.trim().toLowerCase() === powerName.trim().toLowerCase());
-    if (codexIndex >= 0) {
-      const targetPower = codex[codexIndex];
-      const cat = getPowerReadyCategory(targetPower);
-
-      // Support & Passives cost 0 slots, always allowed
-      if (cat === 'support_passive' || (cat as any) === 'contextual_passive') {
-        const [removed] = codex.splice(codexIndex, 1);
-        powerSlots.push({ ...removed, is_readied: true, ready: 'support_passive' });
-
-        get().updateActiveSheetData((prev) => ({
-          ...prev,
-          power_slots: powerSlots,
-          character_power_codex: codex,
-        }));
-        return { success: true };
-      }
-
-      // Tactical power -> validate against Tier capacity and caps
-      const testSlots = [...powerSlots, { ...targetPower, is_readied: true, ready: cat }];
-      const validation = validateReadyMatrix(testSlots, sheet.level);
-      if (!validation.valid) {
-        return { success: false, error: validation.error };
-      }
-
-      const [removed] = codex.splice(codexIndex, 1);
-      powerSlots.push({ ...removed, is_readied: true, ready: cat });
-
-      get().updateActiveSheetData((prev) => ({
-        ...prev,
-        power_slots: powerSlots,
-        character_power_codex: codex,
-      }));
-      return { success: true };
-    }
-
-    return { success: false, error: `Power "${powerName}" not found in active sheet or Vault.` };
+  toggleReadyPower: (_powerName: string) => {
+    // Deprecated: In MetaScape, all learned powers are always available on the character sheet.
+    return { success: true };
   },
 
-  executeTacticalPivot: (unreadyPowerName: string, readyPowerName: string, useLuckInsteadOfBolt: boolean = false) => {
-    const active = get().activeCharacter;
-    if (!active || !active.sheet_data) return { success: false, error: 'No active character.' };
-
-    const sheet = active.sheet_data;
-    if (sheet.tactical_pivot_used_in_encounter) {
-      return { success: false, error: 'Tactical Pivot has already been used in this encounter (1 per encounter).' };
-    }
-
-    const charges = typeof sheet.charges === 'number' ? sheet.charges : (sheet.sparks || 0);
-    const isSparked = sheet.is_sparked || charges >= 5;
-
-    let spendingLuck = false;
-    if (!isSparked && charges < 5) {
-      if (useLuckInsteadOfBolt) {
-        if (sheet.luck_bolt_sub_used_in_encounter) {
-          return { success: false, error: 'Luck-for-Bolt substitution has already been used in this encounter (1 per encounter).' };
-        }
-        const currentLuck = sheet.luck ?? 0;
-        if (currentLuck <= 0) {
-          return { success: false, error: 'Insufficient Luck chits to substitute for a Bolt.' };
-        }
-        spendingLuck = true;
-      } else {
-        return { success: false, error: 'Tactical Pivot requires 1 Bolt (5 Sparks) or 1 Luck chit (1/Enc).' };
-      }
-    }
-
-    const powerSlots = Array.isArray(sheet.power_slots) ? [...sheet.power_slots] : [];
-    const codex = Array.isArray(sheet.character_power_codex) ? [...sheet.character_power_codex] : [];
-
-    const codexIdx = codex.findIndex((p) => p && p.name && p.name.trim().toLowerCase() === unreadyPowerName.trim().toLowerCase());
-    const readyIdx = powerSlots.findIndex((p) => p && p.name && p.name.trim().toLowerCase() === readyPowerName.trim().toLowerCase());
-
-    if (codexIdx < 0) return { success: false, error: `Codex power "${unreadyPowerName}" not found.` };
-    if (readyIdx < 0) return { success: false, error: `Ready power "${readyPowerName}" not found.` };
-
-    const incomingPower = codex[codexIdx];
-    const outgoingPower = powerSlots[readyIdx];
-
-    const newPowerSlots = [...powerSlots];
-    newPowerSlots[readyIdx] = { ...incomingPower, is_readied: true, ready: getPowerReadyCategory(incomingPower) };
-
-    const validation = validateReadyMatrix(newPowerSlots, sheet.level);
-    if (!validation.valid) {
-      return { success: false, error: validation.error };
-    }
-
-    const newCodex = [...codex];
-    newCodex[codexIdx] = { ...outgoingPower, is_readied: false, ready: getPowerReadyCategory(outgoingPower) };
-
-    const remainingCharges = spendingLuck ? charges : Math.max(0, charges - 5);
-    const currentLuck = sheet.luck ?? 0;
-    const newLuck = spendingLuck ? Math.max(0, currentLuck - 1) : currentLuck;
-
-    get().updateActiveSheetData((prev) => ({
-      ...prev,
-      power_slots: newPowerSlots,
-      character_power_codex: newCodex,
-      charges: remainingCharges,
-      sparks: remainingCharges,
-      is_sparked: remainingCharges >= 5,
-      is_charged: remainingCharges >= 5,
-      luck: newLuck,
-      luck_bolt_sub_used_in_encounter: spendingLuck ? true : prev.luck_bolt_sub_used_in_encounter,
-      tactical_pivot_used_in_encounter: true,
-    }));
-
+  executeTacticalPivot: (_unreadyPowerName: string, _readyPowerName: string, _useLuckInsteadOfBolt: boolean = false) => {
+    // Deprecated: All learned powers are always available, eliminating between-combat power swaps.
     return { success: true };
   },
 

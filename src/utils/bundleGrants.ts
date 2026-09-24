@@ -97,11 +97,11 @@ export const applyKitTraitGrantsToSheet = (
   const updated = { ...currentSheet };
   const kitLabel = grants.kitName || grants.tableName;
 
-  // 1. Add Trait Powers to Codex / Vault
+  // 1. Add Trait Powers to Active Power Slots
   if (grants.powers.length > 0) {
-    const existingCodex: AbilitySlot[] = updated.character_power_codex || [];
+    const existingSlots: AbilitySlot[] = updated.power_slots || [];
     const newPowerSlots: AbilitySlot[] = grants.powers
-      .filter((gp) => !existingCodex.some((vp) => vp.name.toLowerCase() === gp.name.toLowerCase()))
+      .filter((gp) => !existingSlots.some((vp) => vp.name.toLowerCase() === gp.name.toLowerCase()))
       .map((gp) => ({
         select: false,
         name: gp.name,
@@ -113,10 +113,11 @@ export const applyKitTraitGrantsToSheet = (
         table_group: gp.kit || gp.table_group || `${kitLabel} {Free}`,
         discipline: gp.discipline,
         source: `${kitLabel} {Free}`,
+        is_readied: true,
       }));
 
     if (newPowerSlots.length > 0) {
-      updated.character_power_codex = [...existingCodex, ...newPowerSlots];
+      updated.power_slots = [...existingSlots, ...newPowerSlots];
     }
   }
 
@@ -202,11 +203,11 @@ export const checkAndAutoEquipLevelUpTraits = (
     );
 
     // Filter out already equipped
-    const existingCodexNames = new Set((updated.character_power_codex || []).map((p) => p.name.toLowerCase()));
+    const existingPowerNames = new Set((updated.power_slots || []).map((p) => p.name.toLowerCase()));
     const existingSkillNames = new Set((updated.known_individual_skills || []).map((s) => s.toLowerCase()));
     const existingTraitNames = new Set((updated.traits_quirks || []).map((t) => t.name.toLowerCase()));
 
-    const freshPowers = grants.powers.filter((p) => !existingCodexNames.has(p.name.toLowerCase()));
+    const freshPowers = grants.powers.filter((p) => !existingPowerNames.has(p.name.toLowerCase()));
     const freshSkills = grants.skills.filter((s) => !existingSkillNames.has(s.name.toLowerCase()));
     const freshTraits = grants.traits.filter((t) => !existingTraitNames.has(t.name.toLowerCase()));
 

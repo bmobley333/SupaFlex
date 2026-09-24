@@ -63,12 +63,6 @@ const AOE_PRESETS = [
 // Attributes Without Labels per Directive
 const ATTRIBUTE_CHIPS = ['✨', '💪', '👁️', '🏃', '🫀', '👣'];
 
-const POWER_READY_CATEGORIES = [
-  { id: 'primary_arsenal', label: 'Primary / Arsenal', icon: '⚔️' },
-  { id: 'mobility_defense', label: 'Mobility & Defense', icon: '🛡️' },
-  { id: 'support_passive', label: 'Support & Passives', icon: '✨' },
-];
-
 const GENRE_OPTIONS = [
   { id: 'Medieval', label: 'Medieval', icon: '⚔️' },
   { id: 'Modern', label: 'Modern', icon: '🏙️' },
@@ -292,7 +286,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [usage, setUsage] = useState('1-Enc');
   const [costGold, setCostGold] = useState<number>(10);
   const [costSilver, setCostSilver] = useState<number>(0);
-  const [powerReady, setPowerReady] = useState<string>('primary_arsenal');
   const [skillAttribute, setSkillAttribute] = useState<string>('💪');
   const [skillDiscipline, setSkillDiscipline] = useState<string>('General');
   const [skillDisciplineNewText, setSkillDisciplineNewText] = useState<string>('');
@@ -334,7 +327,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [abilityFormName, setAbilityFormName] = useState<string>('');
   const [abilityFormAction, setAbilityFormAction] = useState<string>('AM');
   const [abilityFormUsage, setAbilityFormUsage] = useState<string>('1-Enc');
-  const [abilityFormPowerReady, setAbilityFormPowerReady] = useState<string>('primary_arsenal');
   const [abilityFormEffect, setAbilityFormEffect] = useState<string>('');
   const [abilityFormSkillAttribute, setAbilityFormSkillAttribute] = useState<string>('💪');
   const [abilityFormSkillDiscipline, setAbilityFormSkillDiscipline] = useState<string>('General');
@@ -890,7 +882,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setUsage('1-Enc');
     setCostGold(10);
     setCostSilver(0);
-    setPowerReady('primary_arsenal');
     setSkillAttribute('💪');
     setSkillDiscipline('General');
     setSkillDisciplineNewText('');
@@ -936,7 +927,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setAbilityFormName('');
     setAbilityFormAction('AM');
     setAbilityFormUsage('1-Enc');
-    setAbilityFormPowerReady('primary_arsenal');
     setAbilityFormEffect('');
     setAbilityFormSkillAttribute('💪');
     setAbilityFormSkillDiscipline('General');
@@ -1060,12 +1050,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setAction(item.item_data?.action || 'AM');
       setUsage(item.item_data?.usage || '1-Enc');
       setEffect(item.item_data?.effect || '');
-      setPowerReady(item.item_data?.ready_category || 'primary_arsenal');
       setAbilityFormName(item.name || '');
       setAbilityFormAction(item.item_data?.action || 'AM');
       setAbilityFormUsage(item.item_data?.usage || '1-Enc');
       setAbilityFormEffect(item.item_data?.effect || '');
-      setAbilityFormPowerReady(item.item_data?.ready_category || 'primary_arsenal');
       setAbilityFormGenres(item.item_data?.genres || []);
       setAbilityFormNotes(item.item_data?.notes || item.notes || '');
     } else if (item.type === 'path') {
@@ -1495,7 +1483,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setAbilityFormName(p.name || '');
     setAbilityFormAction(p.action || 'AM');
     setAbilityFormUsage(p.usage || '1-Enc');
-    setAbilityFormPowerReady(p.ready || 'primary_arsenal');
     setAbilityFormEffect(p.effect || '');
     setAbilityFormNotes(p.notes || '');
     setAbilityFormGenres(Array.isArray(p.genres) ? p.genres : selectedGenres);
@@ -1507,7 +1494,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setAbilityFormName('');
     setAbilityFormAction('AM');
     setAbilityFormUsage('1-Enc');
-    setAbilityFormPowerReady('primary_arsenal');
     setAbilityFormEffect('');
     setAbilityFormNotes('');
     setAbilityFormGenres(selectedGenres.length > 0 ? selectedGenres : ['Medieval']);
@@ -1730,7 +1716,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           name: abilityFormName.trim(),
           action: abilityFormAction,
           usage: abilityFormUsage,
-          ready: abilityFormPowerReady,
           effect: abilityFormEffect.trim(),
           notes: abilityFormNotes.trim() || null,
           genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
@@ -1755,13 +1740,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           name: abilityFormName.trim(),
           action: abilityFormAction,
           usage: abilityFormUsage,
-          ready: abilityFormPowerReady,
           effect: abilityFormEffect.trim(),
           notes: abilityFormNotes.trim() || null,
           genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
           path: pathValue,
-          category: 'Class',
-          table_group: pathValue,
           owner: targetOwner,
         };
         const created = await gameApi.saveCanonicalPower(payload);
@@ -2106,7 +2088,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setAbilityFormName(p.name || '');
     setAbilityFormAction(p.action || 'AM');
     setAbilityFormUsage(p.usage || '1-Enc');
-    setAbilityFormPowerReady(p.ready || 'primary_arsenal');
     setAbilityFormEffect(p.effect || '');
     setAbilityFormNotes(p.notes || '');
     setAbilityFormGenres(Array.isArray(p.genres) ? p.genres : ['Medieval']);
@@ -3003,7 +2984,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           itemDataPayload.effect = abilityFormEffect.trim();
           itemDataPayload.table = 'General';
           itemDataPayload.table_group = 'General';
-          itemDataPayload.ready_category = abilityFormPowerReady;
         } else if (activeAbilityCategory === 'trait') {
           categoryStr = 'Trait';
           itemDataPayload.effect = abilityFormEffect.trim();
@@ -3028,7 +3008,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       itemDataPayload.effect = effect.trim();
       itemDataPayload.table = 'General';
       itemDataPayload.table_group = 'General';
-      itemDataPayload.ready_category = powerReady;
     } else if (creationType === 'path') {
       itemDataPayload.category = finalPathCat;
       itemDataPayload.description = pathDescription.trim();
@@ -3157,12 +3136,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               action: abilityFormAction,
               usage: abilityFormUsage,
               effect: abilityFormEffect.trim(),
-              ready: abilityFormPowerReady,
               notes: abilityFormNotes.trim() || null,
               genres: abilityFormGenres.length > 0 ? abilityFormGenres : selectedGenres,
               path: 'General',
-              category: 'Class',
-              table_group: 'General',
               owner: targetOwner,
             };
             if (canonicalSelectedId) {
@@ -5954,9 +5930,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">{usage}</span>
                       </div>
                     </div>
-                    <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                      <span className="capitalize">{powerReady.replace('_', ' ')}</span>
-                    </div>
                     <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
                       {effect || 'Effect rules syntax will render here...'}
                     </div>
@@ -7502,32 +7475,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Ready Category */}
-                  <div className="flex flex-col gap-1">
-                    <span className="font-bold text-slate-300">Arsenal Readiness</span>
-                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                      {POWER_READY_CATEGORIES.map((cat) => {
-                        const isSelected = abilityFormPowerReady === cat.id;
-                        return (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            disabled={isUniversalPath && workshopMode !== 'designer'}
-                            onClick={() => setAbilityFormPowerReady(cat.id)}
-                            className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer disabled:cursor-not-allowed ${
-                              isSelected
-                                ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            <span>{cat.icon}</span>
-                            <span className="truncate">{cat.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
                   {/* Effect Rules */}
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between">
@@ -7922,30 +7869,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </option>
                       ))}
                     </select>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-slate-300">Ready Category</span>
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                    {POWER_READY_CATEGORIES.map((cat) => {
-                      const isSelected = powerReady === cat.id;
-                      return (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => setPowerReady(cat.id)}
-                          className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                            isSelected
-                              ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                          }`}
-                        >
-                          <span>{cat.icon}</span>
-                          <span className="truncate">{cat.label}</span>
-                        </button>
-                      );
-                    })}
                   </div>
                 </div>
               </div>

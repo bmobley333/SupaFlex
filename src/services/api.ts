@@ -2440,9 +2440,6 @@ export const gameApi = {
           masterPayload.kit = assignedKit;
           masterPayload.table_group = assignedKit;
         }
-        if (item.item_data?.ready_category || item.item_data?.ready) {
-          masterPayload.ready = item.item_data.ready_category || item.item_data.ready;
-        }
       }
       if (item.type === 'hardware' && item.item_data?.cost) {
         masterPayload.cost = item.item_data.cost;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, Zap, Trash2, AlertCircle, Check, ArrowUpDown, Cpu } from 'lucide-react';
+import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, Trash2, AlertCircle, Check, ArrowUpDown, Cpu } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -13,7 +13,6 @@ import {
   calculateTotalLoadoutSlotsUsed,
   getItemSlotWeight,
 } from '../../utils/loadoutCapacitySchedule';
-import { getPowerReadyCategory, validateReadyMatrix } from '../../utils/readyMatrixSchedule';
 import { calculatePowersKnownApCost, getPowersSoftTaxBracket } from '../../utils/powersApTaxSchedule';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 import { cleanKitName, getKitMinLevel, isMsoEntry, compareMsoOptions, compareMsoItems } from '../../utils/kitUtils';
@@ -172,7 +171,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     updateActiveSheetData,
     saveActiveCharacter,
     recordApExpenditure,
-    toggleReadyPower,
     abilitySortMode,
     abilityActionFilter,
     setAbilitySortMode,
@@ -308,9 +306,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     }
   };
   const [showManageModal, setShowManageModal] = useState(false);
-  const [readyFeedback, setReadyFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [catalogFeedback, setCatalogFeedback] = useState<{ type: 'error' | 'success' | 'info'; message: string } | null>(null);
-  const [catalogReadyFilter] = useState<'all' | 'primary_arsenal' | 'mobility_defense' | 'support_passive'>('all');
   const [activeTableName, setActiveTableName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -721,12 +717,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     }
 
     const currentSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots : [];
-    const currentVault: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex : [];
 
     const readiedIndex = currentSlots.findIndex(
-      (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-    );
-    const vaultIndex = currentVault.findIndex(
       (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
     );
 
@@ -736,56 +728,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       if (version <= oldVersion) {
         setCatalogFeedback({
           type: 'info',
-          message: `"${cleanName(item.name)}" is already learned and readied in your active powers (v${oldVersion})!`,
+          message: `"${cleanName(item.name)}" is already learned in your active powers (v${oldVersion})!`,
         });
         setTimeout(() => setCatalogFeedback(null), 4000);
         return;
-      }
-    } else if (vaultIndex >= 0) {
-      const oldVersion = parseAbilityVersion(currentVault[vaultIndex].name).version;
-      if (version <= oldVersion) {
-        // Already in Vault! Try to promote/ready it if Ready Matrix capacity allows
-        const targetVaultPower = currentVault[vaultIndex];
-        const vaultCat = getPowerReadyCategory(targetVaultPower);
-        const isSupport = vaultCat === 'support_passive' || (vaultCat as any) === 'contextual_passive';
-        const testSlots = [...currentSlots, { ...targetVaultPower, is_readied: true, ready: vaultCat }];
-        const charLevel = activeCharacter?.sheet_data?.level || 1;
-        const validation: { valid: boolean; error?: string } = isSupport
-          ? { valid: true }
-          : validateReadyMatrix(testSlots, charLevel);
-
-        if (validation.valid) {
-          updateActiveSheetData((prev) => {
-            const slots = Array.isArray(prev.power_slots) ? [...prev.power_slots] : [];
-            const vault = Array.isArray(prev.character_power_codex) ? [...prev.character_power_codex] : [];
-            const vIdx = vault.findIndex(
-              (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-            );
-            if (vIdx >= 0) {
-              const [promoted] = vault.splice(vIdx, 1);
-              slots.push({ ...promoted, is_readied: true, ready: vaultCat });
-            }
-            return {
-              ...prev,
-              power_slots: slots,
-              character_power_codex: vault,
-            };
-          });
-          saveActiveCharacter();
-          setCatalogFeedback({
-            type: 'success',
-            message: `"${cleanName(item.name)}" was in your Vault and is now Readied to your active powers! (0 AP charged)`,
-          });
-          setTimeout(() => setCatalogFeedback(null), 4000);
-          return;
-        } else {
-          setCatalogFeedback({
-            type: 'error',
-            message: `"${cleanName(item.name)}" is already in your Vault! Ready Matrix is full (${validation.error || 'Capacity reached'}). Unready an active power to equip it.`,
-          });
-          setTimeout(() => setCatalogFeedback(null), 5000);
-          return;
-        }
       }
     }
 
@@ -798,24 +744,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       return;
     }
 
-    const readyCat = getPowerReadyCategory(item);
-    const isSupport = readyCat === 'support_passive' || (readyCat as any) === 'contextual_passive';
-    const isUpgrade = readiedIndex >= 0 || vaultIndex >= 0;
-
-    let willReady = false;
-    if (readiedIndex >= 0) {
-      // Replacing an already-readied power slot -> stays readied
-      willReady = true;
-    } else if (isSupport) {
-      // Support / passive powers cost 0 slots -> always readied
-      willReady = true;
-    } else {
-      // Tactical power -> check Ready Matrix capacity
-      const testSlots = [...currentSlots, { name: cleanName(item.name), ready: readyCat } as AbilitySlot];
-      const charLevel = activeCharacter?.sheet_data?.level || 1;
-      const validation = validateReadyMatrix(testSlots, charLevel);
-      willReady = validation.valid;
-    }
+    const isUpgrade = readiedIndex >= 0;
 
     const newPower: AbilitySlot = {
       select: true,
@@ -826,8 +755,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       usage: item.usage || '1-Enc',
       effect: item.effect || '',
       checked: [false, false, false],
-      is_readied: willReady,
-      ready: readyCat,
+      is_readied: true,
       path: (item as Power).path || (item as any).kit || (item as any).table_name,
       discipline: (item as Power).discipline,
       ap_cost: evalResult.apCost,
@@ -835,39 +763,22 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
     updateActiveSheetData((prev) => {
       const prevSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
-      const prevVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
-
       let updatedSlots = [...prevSlots];
-      let updatedVault = [...prevVault];
 
       const rIdx = updatedSlots.findIndex(
-        (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-      );
-      const vIdx = updatedVault.findIndex(
         (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
       );
 
       if (rIdx >= 0) {
         updatedSlots[rIdx] = { ...newPower, is_readied: true };
-      } else if (vIdx >= 0) {
-        if (willReady) {
-          updatedVault.splice(vIdx, 1);
-          updatedSlots.push({ ...newPower, is_readied: true });
-        } else {
-          updatedVault[vIdx] = { ...newPower, is_readied: false };
-        }
       } else {
-        if (willReady) {
-          updatedSlots.push({ ...newPower, is_readied: true });
-        } else {
-          updatedVault.push({ ...newPower, is_readied: false });
-        }
+        updatedSlots.push({ ...newPower, is_readied: true });
       }
 
       return {
         ...prev,
         power_slots: updatedSlots,
-        character_power_codex: updatedVault,
+        character_power_codex: [],
       };
     });
 
@@ -883,17 +794,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
     saveActiveCharacter();
 
-    if (willReady) {
-      setCatalogFeedback({
-        type: 'success',
-        message: `${logAction} and Readied "${cleanName(item.name)}" (${evalResult.apCost} AP)!`,
-      });
-    } else {
-      setCatalogFeedback({
-        type: 'success',
-        message: `${logAction} "${cleanName(item.name)}" (${evalResult.apCost} AP) and stored in Power Vault (Ready slots full).`,
-      });
-    }
+    setCatalogFeedback({
+      type: 'success',
+      message: `${logAction} "${cleanName(item.name)}" (${evalResult.apCost} AP)!`,
+    });
     setTimeout(() => setCatalogFeedback(null), 4000);
   };
 
@@ -1061,30 +965,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         action: createAction,
         usage: createUsage,
         effect: createEffect.trim(),
-        category: 'Custom',
         created_at: new Date().toISOString(),
       };
-
-      const currentSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots : [];
-
-      const readyCat = getPowerReadyCategory(newItem);
-      const isSupport = readyCat === 'support_passive' || (readyCat as any) === 'contextual_passive';
-
-      const existingReadiedIdx = currentSlots.findIndex(
-        (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-      );
-
-      let willReady = false;
-      if (existingReadiedIdx >= 0) {
-        willReady = true;
-      } else if (isSupport) {
-        willReady = true;
-      } else {
-        const testSlots = [...currentSlots, { name: versionedName, ready: readyCat } as AbilitySlot];
-        const charLevel = activeCharacter?.sheet_data?.level || 1;
-        const validation = validateReadyMatrix(testSlots, charLevel);
-        willReady = validation.valid;
-      }
 
       const newPower: AbilitySlot = {
         select: true,
@@ -1095,8 +977,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         usage: createUsage,
         effect: createEffect.trim(),
         checked: [false, false, false],
-        is_readied: willReady,
-        ready: readyCat,
+        is_readied: true,
       };
 
       let isUpgrade = false;
@@ -1106,42 +987,24 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         const updatedCustom = [...existingCustom, newItem];
 
         const prevSlots: AbilitySlot[] = Array.isArray(prev.power_slots) ? prev.power_slots : [];
-        const prevVault: AbilitySlot[] = Array.isArray(prev.character_power_codex) ? prev.character_power_codex : [];
-
         let updatedSlots = [...prevSlots];
-        let updatedVault = [...prevVault];
 
         const rIdx = updatedSlots.findIndex(
-          (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
-        );
-        const vIdx = updatedVault.findIndex(
           (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === baseName.toLowerCase()
         );
 
         if (rIdx >= 0) {
           updatedSlots[rIdx] = { ...newPower, is_readied: true };
           isUpgrade = true;
-        } else if (vIdx >= 0) {
-          if (willReady) {
-            updatedVault.splice(vIdx, 1);
-            updatedSlots.push({ ...newPower, is_readied: true });
-          } else {
-            updatedVault[vIdx] = { ...newPower, is_readied: false };
-          }
-          isUpgrade = true;
         } else {
-          if (willReady) {
-            updatedSlots.push({ ...newPower, is_readied: true });
-          } else {
-            updatedVault.push({ ...newPower, is_readied: false });
-          }
+          updatedSlots.push({ ...newPower, is_readied: true });
         }
 
         return {
           ...prev,
           custom_powers: updatedCustom,
           power_slots: updatedSlots,
-          character_power_codex: updatedVault,
+          character_power_codex: [],
         };
       });
 
@@ -1527,10 +1390,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const filteredRoster = useMemo(() => {
     const roster = type === 'powers' ? activeDisplaySlots : slots;
     return roster.filter((s) => {
-      if (type === 'powers' && catalogReadyFilter !== 'all') {
-        const cat = getPowerReadyCategory(s);
-        if (cat !== catalogReadyFilter) return false;
-      }
       if (!leftSearchQuery.trim()) return true;
       const q = leftSearchQuery.toLowerCase().trim();
       const textMatch = cleanName(s.name).toLowerCase().includes(q) || (s.effect || '').toLowerCase().includes(q);
@@ -1540,7 +1399,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       }
       return false;
     });
-  }, [type, activeDisplaySlots, slots, leftSearchQuery, catalogReadyFilter, functionsCatalog, modsCatalog, activeCharacter]);
+  }, [type, activeDisplaySlots, slots, leftSearchQuery, functionsCatalog, modsCatalog, activeCharacter]);
 
   // Grouped active functions by parent gear (Option A: 2+ threshold)
   const groupedActiveSections = useMemo(() => {
@@ -1898,7 +1757,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                           ) : (
                             <span>
                               {type === 'powers'
-                                ? 'No powers readied yet. Select from Codex or Catalog on the right.'
+                                ? 'No powers learned yet. Select from the Catalog on the right.'
                                 : 'No active loadout items equipped. Select items from Vault (Tab 1 on right) to equip.'}
                             </span>
                           )}
@@ -1907,7 +1766,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         filteredRoster.map((item, idx) => {
                           const cleaned = cleanName(item.name);
                           const { baseName, version } = parseAbilityVersion(cleaned);
-                          const cat = type === 'powers' ? getPowerReadyCategory(item) : null;
                           const actionUpper = (item.action || '').toUpperCase();
                           const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
 
@@ -1949,17 +1807,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                         v{version}
                                       </span>
                                     )}
-                                    {cat && (
-                                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${
-                                        cat === 'primary_arsenal'
-                                          ? 'bg-rose-950/80 text-rose-300 border-rose-500/40'
-                                          : cat === 'mobility_defense'
-                                          ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
-                                          : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-                                      }`}>
-                                        {cat === 'primary_arsenal' ? '⚔️ Primary' : cat === 'mobility_defense' ? '👣 Mobility' : '🎓 Support (0)'}
-                                      </span>
-                                    )}
                                   </div>
                                 </div>
 
@@ -1984,25 +1831,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                     title={`Version edit ${baseName}`}
                                   >
                                     <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const res = toggleReadyPower(item.name);
-                                      if (res.success) {
-                                        saveActiveCharacter();
-                                        setCatalogFeedback({
-                                          type: 'info',
-                                          message: `Unreadied "${baseName}" and moved to Power Vault.`,
-                                        });
-                                        setTimeout(() => setCatalogFeedback(null), 3000);
-                                      }
-                                    }}
-                                    className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-cyan-300 transition-colors shrink-0 cursor-pointer"
-                                    title="Unready to Power Vault"
-                                  >
-                                    <RotateCcw className="w-3.5 h-3.5" />
                                   </button>
 
                                   <div className="flex items-center gap-1">
@@ -2290,20 +2118,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                         >
                           🌐 Stock Catalog
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isVersionEditMode) setIsVersionEditMode(false);
-                            setActiveRightTab('CODEX');
-                          }}
-                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'CODEX'
-                              ? 'border-amber-400 text-amber-400'
-                              : 'border-transparent text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          📜 Power Vault ({(Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex.length : 0)})
-                        </button>
+
                         {isVersionEditMode && (
                           <button
                             type="button"
@@ -2364,127 +2179,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                       </div>
                     )}
 
-                    {/* TAB: POWER CODEX VIEW (powers mode) */}
-                    {activeRightTab === 'CODEX' && type === 'powers' && (() => {
-                      const codexList: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex : [];
-                      const filteredCodex = codexList.filter((p) => {
-                        if (catalogReadyFilter !== 'all') {
-                          const cat = getPowerReadyCategory(p);
-                          if (cat !== catalogReadyFilter) return false;
-                        }
-                        if (!rightSearchQuery.trim()) return true;
-                        const q = rightSearchQuery.toLowerCase().trim();
-                        return (p.name || '').toLowerCase().includes(q) || (p.effect || '').toLowerCase().includes(q);
-                      });
-
-                      return (
-                        <div className="flex flex-col gap-2.5 flex-1 min-h-0 mt-2.5">
-                          {readyFeedback && (
-                            <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 shrink-0 ${
-                              readyFeedback.type === 'error'
-                                ? 'bg-rose-950/80 border-rose-500/50 text-rose-200'
-                                : 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200'
-                            }`}>
-                              <span>{readyFeedback.message}</span>
-                              <button onClick={() => setReadyFeedback(null)} className="text-slate-400 hover:text-slate-100">
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          )}
-
-                          <div className="px-3 py-1.5 bg-slate-900/90 border border-slate-800 rounded-xl text-xs flex items-center justify-between gap-2 shrink-0">
-                            <span className="text-slate-400">
-                              Un-readied powers stored in character Vault.
-                            </span>
-                            <span className="font-mono text-amber-300 font-bold">{filteredCodex.length} in Vault</span>
-                          </div>
-
-                          <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
-                            {filteredCodex.length === 0 ? (
-                              <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
-                                <span>No un-readied powers in Vault. Learn powers from Catalog or unready active powers on the left.</span>
-                              </div>
-                            ) : (
-                              filteredCodex.map((p, pIdx) => {
-                                const cleaned = cleanName(p.name);
-                                const { baseName, version } = parseAbilityVersion(cleaned);
-                                const cat = getPowerReadyCategory(p);
-                                const actionUpper = (p.action || '').toUpperCase();
-                                const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
-
-                                return (
-                                  <div
-                                    key={p.name + pIdx}
-                                    className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
-                                  >
-                                    <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
-                                      <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className="font-outfit font-bold text-sm text-slate-100">{baseName}</span>
-                                          {version > 1 && (
-                                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
-                                              v{version}
-                                            </span>
-                                          )}
-                                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${
-                                            cat === 'primary_arsenal'
-                                              ? 'bg-rose-950/80 text-rose-300 border-rose-500/40'
-                                              : cat === 'mobility_defense'
-                                              ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
-                                              : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-                                          }`}>
-                                            {cat === 'primary_arsenal' ? '⚔️ Primary' : cat === 'mobility_defense' ? '👣 Mobility/Def' : '🎓 Support (0)'}
-                                          </span>
-                                          {actionUpper && (
-                                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
-                                              {actionUpper}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      <div className="flex items-center gap-2 shrink-0">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleLaunchVersionEditor(p)}
-                                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 transition-colors"
-                                          title="Open Version Editor"
-                                        >
-                                          <Edit2 className="w-3.5 h-3.5" />
-                                        </button>
-
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            const res = toggleReadyPower(p.name);
-                                            if (!res.success) {
-                                              setReadyFeedback({ type: 'error', message: res.error || 'Failed to ready power.' });
-                                            } else {
-                                              setReadyFeedback({ type: 'success', message: `Readied ${p.name}!` });
-                                              setTimeout(() => setReadyFeedback(null), 2000);
-                                            }
-                                          }}
-                                          className="px-2.5 py-1 bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/50 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                                        >
-                                          <Zap className="w-3.5 h-3.5 text-amber-400" />
-                                          <span>Ready</span>
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    <div className="text-xs pt-1">
-                                      <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                                        {p.effect || 'No description'}
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
 
                     {/* TAB 1: CHARACTER VAULT VIEW (spells mode) */}
                     {activeRightTab === 'VAULT' && type === 'spells' && (() => {
