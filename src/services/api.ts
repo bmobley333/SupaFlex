@@ -33,6 +33,7 @@ import { resolveArtifactCatalog, CatalogArtifact, ArtifactTier } from '../utils/
 import { resolveExoticCatalog, CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, CanonicalPropagationParams, CanonicalEntityType } from '../utils/canonicalPropagation';
 import { isBelongsToMatch, splitBelongsToTargets, cleanBelongsToName } from '../utils/gearFunctionSync';
+import { parseItemPaths, isPathStringMatch } from '../utils/pathApUtils';
 
 export interface CatalogScope {
   userEmail?: string;
@@ -2849,6 +2850,54 @@ export const gameApi = {
     const { error } = await supabase.from('skills').delete().eq('id', id);
     if (error) throw error;
     return true;
+  },
+
+  async unlinkCanonicalPathElement(
+    entityType: 'power' | 'trait' | 'skill',
+    id: string | number,
+    pathNameToRemove: string
+  ): Promise<{ remainingPaths: string[]; wasLastPath: boolean; updatedItem?: any }> {
+    const table = entityType === 'power' ? 'powers' : entityType === 'trait' ? 'traits' : 'skills';
+    const { data: existing, error: fetchErr } = await supabase
+      .from(table)
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (fetchErr || !existing) throw fetchErr || new Error('Item not found');
+
+    const itemPaths = parseItemPaths(existing.path);
+    const remaining = itemPaths.filter((p) => !isPathStringMatch(p, pathNameToRemove));
+
+    if (remaining.length === 0) {
+      return { remainingPaths: [], wasLastPath: true, updatedItem: existing };
+    }
+
+    const newPathVal = remaining.length === 1 ? remaining[0] : JSON.stringify(remaining);
+    const { data: updated, error: updateErr } = await supabase
+      .from(table)
+      .update({ path: newPathVal })
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (updateErr) throw updateErr;
+
+    return { remainingPaths: remaining, wasLastPath: false, updatedItem: updated };
+  },
+
+  async setCanonicalElementPath(
+    entityType: 'power' | 'trait' | 'skill',
+    id: string | number,
+    newPath: string
+  ): Promise<any> {
+    const table = entityType === 'power' ? 'powers' : entityType === 'trait' ? 'traits' : 'skills';
+    const { data, error } = await supabase
+      .from(table)
+      .update({ path: newPath })
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
   },
 
   // 10. MODS
