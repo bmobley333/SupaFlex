@@ -14,7 +14,6 @@ import { GearModFunctionTree } from '../common/GearModFunctionTree';
 import { VaultItem, SupabaseChaosGem } from '../../types/game';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 import { resolveLootAbilities, ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
-import { ExoticTier } from '../../utils/exoticCatalogResolver';
 import { hasTemplateBracket } from '../../utils/templateItemResolver';
 
 export interface MoveToSheetPayload {
@@ -103,15 +102,8 @@ export const parseAndEvaluateFormula = (formula: string): { value: number; curre
 export const CATEGORY_OPTIONS = [
   { key: 'coins', label: '🪙 Coins (s/g)' },
   { key: 'chaos_gems', label: '💎 Chaos Gem (Volatile)' },
-  { key: 'hardware', label: '🧿 Random Exotic' },
-  { key: 'exotic_Minor', label: '🍺 Minor Exotic' },
-  { key: 'exotic_Lesser', label: '🪄 Lesser Exotic' },
-  { key: 'exotic_Greater', label: '🪬 Greater Exotic' },
-  { key: 'exotic_Epic', label: '💫 Epic Exotic' },
-  { key: 'magic_Minor', label: '🍺 Minor Artifact' },
-  { key: 'magic_Lesser', label: '🪄 Lesser Artifact' },
-  { key: 'magic_Greater', label: '🪬 Greater Artifact' },
-  { key: 'magic_Epic', label: '💫 Epic Artifact' },
+  { key: 'hardware', label: '🧿 Exotic' },
+  { key: 'artifact', label: '🔮 Artifact' },
   { key: 'gear_quality', label: '🧰 Gear Quality + Item' },
   { key: 'art_gems', label: '🎨 Art & Gems' },
   { key: 'curios', label: '📜 Curios & Documents' },
@@ -131,9 +123,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
   const artifactsCatalog = useCharacterStore((state) => state.artifactsCatalog);
-  const getArtifactsByTier = useCharacterStore((state) => state.getArtifactsByTier);
   const exoticsCatalog = useCharacterStore((state) => state.exoticsCatalog);
-  const getExoticsByTier = useCharacterStore((state) => state.getExoticsByTier);
   const functionsCatalog = useCharacterStore((state) => state.functionsCatalog);
   const modsCatalog = useCharacterStore((state) => state.modsCatalog);
   const suppliesCatalog = useCharacterStore((state) => state.suppliesCatalog);
@@ -153,7 +143,6 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [socketingItem, setSocketingItem] = useState<{ res: RollResult; gem: SupabaseChaosGem } | null>(null);
   const [activeRightTab, setActiveRightTab] = useState<'GENERATOR' | 'SPECIFIC' | 'VAULT'>('GENERATOR');
-  const [lastDraftTier, setLastDraftTier] = useState<'Minor' | 'Lesser' | 'Greater' | 'Epic'>('Lesser');
   const [partyVault, setPartyVault] = useState<VaultItem[]>([]);
   const [templateResolutionTarget, setTemplateResolutionTarget] = useState<{
     templateName: string;
@@ -278,42 +267,18 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     return { silver: s, gold: g };
   };
 
-  // Fetch random magic item
-  const fetchRandomMagicItem = async (rarity: string) => {
-    const rLower = rarity.toLowerCase();
-    const cleanRarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' =
-      rLower.includes('minor') || rLower.includes('🍺')
-        ? 'Minor'
-        : rLower.includes('great') || rLower.includes('🪬')
-        ? 'Greater'
-        : rLower.includes('epic') || rLower.includes('💫')
-        ? 'Epic'
-        : 'Lesser';
-    
+  // Fetch random artifact (tierless)
+  const fetchRandomArtifact = async () => {
     try {
-      // 1. Authoritative cross-table resolved artifacts catalog
-      const tierArtifacts = getArtifactsByTier ? getArtifactsByTier(cleanRarity) : [];
-      if (tierArtifacts && tierArtifacts.length > 0) {
-        const picked = tierArtifacts[Math.floor(Math.random() * tierArtifacts.length)];
+      if (artifactsCatalog && artifactsCatalog.length > 0) {
+        const picked = artifactsCatalog[Math.floor(Math.random() * artifactsCatalog.length)];
         return {
           ...picked,
-          description: picked.effect || (picked as any).notes || picked.description || `Enchanted ${cleanRarity.toLowerCase()} artifact.`,
+          category: '🔮 Artifact',
+          description: picked.effect || (picked as any).notes || picked.description || 'Mystical artifact.',
         };
       }
 
-      // 2. Secondary fallback: artifactsCatalog array filter
-      if (artifactsCatalog && artifactsCatalog.length > 0) {
-        const fallbackPool = artifactsCatalog.filter((a) => a.artifact_tier === cleanRarity);
-        if (fallbackPool.length > 0) {
-          const picked = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
-          return {
-            ...picked,
-            description: picked.effect || (picked as any).notes || picked.description || `Enchanted ${cleanRarity.toLowerCase()} artifact.`,
-          };
-        }
-      }
-
-      // 3. Direct supabase fallback
       const { data } = await supabase
         .from('supplies')
         .select('*')
@@ -322,57 +287,45 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         const picked = data[Math.floor(Math.random() * data.length)];
         return {
           ...picked,
-          category: `${cleanRarity} Artifact`,
-          artifact_tier: cleanRarity,
-          description: picked.effect || picked.notes || picked.description || `Enchanted ${cleanRarity.toLowerCase()} artifact.`,
+          category: '🔮 Artifact',
+          description: picked.effect || picked.notes || picked.description || 'Mystical artifact.',
         };
       }
-
-      return {
-        name: `${cleanRarity} Artifact`,
-        category: `${cleanRarity} Artifact`,
-        artifact_tier: cleanRarity,
-        description: `Mystical ${cleanRarity.toLowerCase()} artifact of power.`,
-      };
     } catch {
-      return {
-        name: `${cleanRarity} Artifact Focus`,
-        category: `${cleanRarity} Artifact`,
-        artifact_tier: cleanRarity,
-        description: `Enchanted ${cleanRarity.toLowerCase()} artifact focus.`,
-      };
+      // Fallback
     }
+
+    return {
+      name: 'Artifact of Power',
+      category: '🔮 Artifact',
+      description: 'Mystical artifact of power.',
+    };
   };
 
-  // Fetch random exotic item from authoritative multi-table Exotics catalog
-  const fetchRandomHardwareItem = async (tier?: 'Minor' | 'Lesser' | 'Greater' | 'Epic') => {
+  // Fetch random exotic item (tierless) from authoritative multi-table Exotics catalog
+  const fetchRandomHardwareItem = async () => {
     try {
-      // 1. Authoritative cross-table resolved exotics catalog
-      let pool = tier && getExoticsByTier ? getExoticsByTier(tier) : (exoticsCatalog || []);
-      if (!pool || pool.length === 0) {
-        pool = exoticsCatalog || [];
-      }
-      if (pool && pool.length > 0) {
+      const pool = exoticsCatalog && exoticsCatalog.length > 0 ? exoticsCatalog : [];
+      if (pool.length > 0) {
         const picked = pool[Math.floor(Math.random() * pool.length)];
         return {
           ...picked,
+          category: '🧿 Exotic',
           is_hardware: true,
           is_exotic: true,
-          description: picked.effect || (picked as any).notes || picked.description || `Exotic ${picked.exotic_tier.toLowerCase()} device.`,
+          description: picked.effect || (picked as any).notes || picked.description || 'Exotic item.',
         };
       }
 
-      // 2. Direct API fallback if store not yet hydrated
       const apiExotics = await gameApi.getExotics();
       if (apiExotics && apiExotics.length > 0) {
-        const subPool = tier ? apiExotics.filter((e) => e.exotic_tier === tier) : apiExotics;
-        const finalPool = subPool.length > 0 ? subPool : apiExotics;
-        const picked = finalPool[Math.floor(Math.random() * finalPool.length)];
+        const picked = apiExotics[Math.floor(Math.random() * apiExotics.length)];
         return {
           ...picked,
+          category: '🧿 Exotic',
           is_hardware: true,
           is_exotic: true,
-          description: picked.effect || (picked as any).notes || picked.description || `Exotic ${picked.exotic_tier.toLowerCase()} device.`,
+          description: picked.effect || (picked as any).notes || picked.description || 'Exotic item.',
         };
       }
     } catch (err) {
@@ -380,11 +333,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     }
     return {
       name: 'Communicator',
-      category: 'Minor Exotic',
+      category: '🧿 Exotic',
       cost: '1g',
       is_hardware: true,
       is_exotic: true,
-      exotic_tier: (tier || 'Minor') as ExoticTier,
       action: 'P',
       usage: '1-Enc',
       effect: 'Text, audio, and audiovisual comms within 1 mile.',
@@ -478,39 +430,27 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
           }
         } else if (rType === 'hardware') {
           const hw = await fetchRandomHardwareItem();
-          const tier = hw.exotic_tier || 'Minor';
-          const tierIcon = tier === 'Epic' ? '💫' : tier === 'Greater' ? '🪬' : tier === 'Lesser' ? '🪄' : '🍺';
           resList.push({
             id: `res-${Date.now()}`,
             tableKey: 'loot_main',
             categoryKey: 'hardware',
-            tableName: `${tierIcon} ${tier} Exotic`,
+            tableName: '🧿 Exotic',
             rollVal: d100,
             title: hw.name,
             description: hw.description || hw.effect || 'Advanced technological exotic item.',
             type: 'magic_item',
             magicItem: hw
           });
-        } else if (rType === 'magic_item') {
-          const rawKey = (entry.subtable_key || '').toLowerCase();
-          const rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' =
-            rawKey.includes('epic') || rawKey.includes('artifact')
-              ? 'Epic'
-              : rawKey.includes('great')
-              ? 'Greater'
-              : rawKey.includes('less')
-              ? 'Lesser'
-              : 'Minor';
-          const item = await fetchRandomMagicItem(rarity);
-          const iconStr = rarity === 'Minor' ? '🍺' : rarity === 'Lesser' ? '🪄' : rarity === 'Greater' ? '🪬' : '💫';
+        } else if (rType === 'artifact' || rType === 'magic_item') {
+          const item = await fetchRandomArtifact();
           resList.push({
             id: `res-${Date.now()}`,
             tableKey: 'loot_main',
-            categoryKey: entry.subtable_key || `magic_${rarity}`,
-            tableName: `${iconStr} ${rarity} Artifact`,
+            categoryKey: 'artifact',
+            tableName: '🔮 Artifact',
             rollVal: d100,
             title: `${item.name}`,
-            description: item.description || item.notes || `Mystical ${item.category} item.`,
+            description: item.description || item.notes || item.effect || 'Mystical artifact.',
             type: 'magic_item',
             magicItem: item
           });
@@ -559,30 +499,30 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         } else if (rType === 'special') {
           if (entry.range_min >= 96 && entry.range_min <= 99) {
             const r1 = await handleTargetedRoll('art_gems', false);
-            const r2 = await fetchRandomMagicItem('Lesser');
+            const r2 = await fetchRandomArtifact();
             if (r1) resList.push(r1);
             resList.push({
               id: `res-${Date.now()}-2`,
               tableKey: 'loot_main',
-              categoryKey: 'magic_Lesser',
-              tableName: '🪄 Lesser Artifact (Double Roll)',
+              categoryKey: 'artifact',
+              tableName: '🔮 Artifact (Double Roll)',
               rollVal: d100,
               title: `${r2.name}`,
-              description: r2.description || `Enchanted artifact.`,
+              description: r2.description || 'Mystical artifact.',
               type: 'magic_item',
               magicItem: r2
             });
           } else {
-            const artItem = await fetchRandomMagicItem('Epic');
+            const artItem = await fetchRandomArtifact();
             const evalC = evaluateCoins('1d100g');
             resList.push({
               id: `res-${Date.now()}-epic1`,
               tableKey: 'loot_main',
-              categoryKey: 'magic_Epic',
-              tableName: '💫 Epic Artifact',
+              categoryKey: 'artifact',
+              tableName: '🔮 Artifact',
               rollVal: 100,
               title: `${artItem.name}`,
-              description: artItem.description || 'Legendary epic item of massive power.',
+              description: artItem.description || 'Legendary artifact of massive power.',
               type: 'magic_item',
               magicItem: artItem
             });
@@ -592,7 +532,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
               tableName: '👑 Gold Hoard',
               rollVal: 100,
               title: `Gold Hoard 💰 (${evalC.gold}g)`,
-              description: 'A overflowing chest of sparkling gold coins.',
+              description: 'An overflowing chest of sparkling gold coins.',
               type: 'coins',
               coinsSilver: 0,
               coinsGold: evalC.gold
@@ -643,39 +583,31 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         };
         if (append) setResults(prev => [resObj, ...prev]);
         return resObj;
-      } else if (tableKey.startsWith('magic_')) {
-        const rawRarity = tableKey.replace('magic_', '');
-        const rarity = (rawRarity.toLowerCase() === 'artifact' || rawRarity.toLowerCase() === 'epic') ? 'Epic' : rawRarity;
-        const item = await fetchRandomMagicItem(rarity);
-        const badgeLabel = rarity === 'Minor' ? '🍺 Minor Artifact' : rarity === 'Lesser' ? '🪄 Lesser Artifact' : rarity === 'Greater' ? '🪬 Greater Artifact' : '💫 Epic Artifact';
+      } else if (tableKey === 'artifact' || tableKey.startsWith('magic_')) {
+        const item = await fetchRandomArtifact();
         const resObj: RollResult = {
           id: `res-${Date.now()}`,
-          tableKey,
-          categoryKey: tableKey,
-          tableName: badgeLabel,
+          tableKey: 'artifact',
+          categoryKey: 'artifact',
+          tableName: '🔮 Artifact',
           rollVal: 1,
           title: `${item.name}`,
-          description: item.description || `Mystical ${rarity.toLowerCase()} artifact.`,
+          description: item.description || item.effect || 'Mystical artifact.',
           type: 'magic_item',
           magicItem: item
         };
         if (append) setResults(prev => [resObj, ...prev]);
         return resObj;
       } else if (tableKey === 'hardware' || tableKey.startsWith('exotic_')) {
-        const requestedTier = tableKey.startsWith('exotic_')
-          ? (tableKey.replace('exotic_', '') as 'Minor' | 'Lesser' | 'Greater' | 'Epic')
-          : undefined;
-        const hw = await fetchRandomHardwareItem(requestedTier);
-        const resolvedTier = hw.exotic_tier || requestedTier || 'Minor';
-        const tierIcon = resolvedTier === 'Epic' ? '💫' : resolvedTier === 'Greater' ? '🪬' : resolvedTier === 'Lesser' ? '🪄' : '🍺';
+        const hw = await fetchRandomHardwareItem();
         const resObj: RollResult = {
           id: `res-${Date.now()}`,
-          tableKey,
+          tableKey: 'hardware',
           categoryKey: 'hardware',
-          tableName: `${tierIcon} ${resolvedTier} Exotic`,
+          tableName: '🧿 Exotic',
           rollVal: 1,
           title: hw.name,
-          description: hw.description || hw.effect || `Exotic ${resolvedTier.toLowerCase()} item.`,
+          description: hw.description || hw.effect || 'Exotic item.',
           type: 'magic_item',
           magicItem: hw
         };
@@ -764,13 +696,12 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         await handleTargetedRoll('junk', true);
       } else if (preset === 'boss') {
         await handleTargetedRoll('coins', true);
-        await handleTargetedRoll('art_gems', true);
         await handleTargetedRoll('chaos_gems', true);
-        await handleTargetedRoll('magic_Lesser', true);
+        await handleTargetedRoll('hardware', true);
       } else if (preset === 'dragon') {
         await handleRollMasterD100();
-        await handleTargetedRoll('magic_Greater', true);
-        await handleTargetedRoll('magic_Epic', true);
+        await handleTargetedRoll('hardware', true);
+        await handleTargetedRoll('artifact', true);
       }
     } finally {
       setIsRolling(false);
@@ -880,18 +811,15 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const handleRefineResult = (res: RollResult) => {
     if (res.claimed) return;
 
-    let fillPercentage = 8; // Default / Minor / Standard drop
-
+    let fillPercentage = 10;
     if (res.type === 'chaos_gem') {
       fillPercentage = 15;
-    } else if (res.tableName.includes('Minor') || (res.magicItem?.artifact_tier === 'Minor')) {
-      fillPercentage = 8;
-    } else if (res.tableName.includes('Greater') || (res.magicItem?.artifact_tier === 'Greater')) {
+    } else if (res.categoryKey === 'artifact' || res.tableName.includes('Artifact')) {
       fillPercentage = 25;
-    } else if (res.tableName.includes('Epic') || (res.magicItem?.artifact_tier === 'Epic')) {
-      fillPercentage = 50;
+    } else if (res.categoryKey === 'hardware' || res.tableName.includes('Exotic')) {
+      fillPercentage = 15;
     } else {
-      fillPercentage = 12; // Lesser default
+      fillPercentage = 8;
     }
 
     const currentEssence = activeCharacter?.sheet_data?.essence_core || 0;
@@ -907,13 +835,6 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     setResults([...results]);
 
     showToast(`⚡ Refined '${res.title}' into +${fillPercentage}% Essence (${newEssence}% Total)!`);
-
-    if (newEssence >= 15) {
-      if (newEssence >= 100) setLastDraftTier('Epic');
-      else if (newEssence >= 50) setLastDraftTier('Greater');
-      else if (newEssence >= 25) setLastDraftTier('Lesser');
-      else setLastDraftTier('Minor');
-    }
   };
 
   const handlePassResult = (res: RollResult) => {
@@ -924,20 +845,19 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     const existingVaultStr = localStorage.getItem(storageKey);
     const existingVault: VaultItem[] = existingVaultStr ? JSON.parse(existingVaultStr) : [];
 
-    let tierRarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' = 'Lesser';
-    const checkStr = `${res.magicItem?.artifact_tier || ''} ${res.tableName} ${res.categoryKey || ''}`.toLowerCase();
-    if (checkStr.includes('minor') || checkStr.includes('🍺')) tierRarity = 'Minor';
-    else if (checkStr.includes('greater') || checkStr.includes('🪬')) tierRarity = 'Greater';
-    else if (checkStr.includes('epic') || checkStr.includes('💫')) tierRarity = 'Epic';
-    else tierRarity = 'Lesser';
+    const itemRarity = res.categoryKey === 'artifact' || res.tableName.includes('Artifact')
+      ? 'Artifact'
+      : res.categoryKey === 'hardware' || res.tableName.includes('Exotic')
+      ? 'Exotic'
+      : 'Standard';
 
     const newItem: VaultItem = {
       id: `vlt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       title: res.title,
       description: res.description,
       type: res.type,
-      rarity: tierRarity,
-      essenceValue: tierRarity === 'Minor' ? 8 : tierRarity === 'Lesser' ? 12 : tierRarity === 'Greater' ? 25 : 50,
+      rarity: itemRarity,
+      essenceValue: itemRarity === 'Artifact' ? 25 : itemRarity === 'Exotic' ? 15 : 8,
       coinsSilver: res.coinsSilver,
       coinsGold: res.coinsGold,
       magicItem: res.magicItem,
@@ -961,13 +881,13 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     baseTemplate?: string,
     baseItemName?: string
   ) => {
-    let categoryKey = 'magic_Lesser';
+    let categoryKey = 'artifact';
     if (reward.data?.type === 'coins') {
       categoryKey = 'coins';
     } else if (reward.type === 'treasure' || reward.data?.type === 'valuable') {
       categoryKey = 'art_gems';
     } else {
-      categoryKey = lastDraftTier === 'Minor' ? 'magic_Minor' : lastDraftTier === 'Greater' ? 'magic_Greater' : lastDraftTier === 'Epic' ? 'magic_Epic' : 'magic_Lesser';
+      categoryKey = 'artifact';
     }
 
     const ok = await onMoveToSheet({
@@ -993,7 +913,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       showToast(`✅ Claimed Draft Reward '${reward.data?.name || 'Reward'}' to Sheet!`);
     }
 
-    const draftCost = lastDraftTier === 'Minor' ? 15 : lastDraftTier === 'Lesser' ? 25 : lastDraftTier === 'Greater' ? 50 : 100;
+    const draftCost = 50;
     updateActiveSheetData((prev) => ({
       ...prev,
       essence_core: Math.min(100, Math.max(0, (prev.essence_core || 0) - draftCost)),
@@ -1044,7 +964,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   ): Promise<boolean> => {
     let categoryKey = 'gear_quality';
     if (item.type === 'coins' || item.coinsSilver || item.coinsGold) categoryKey = 'coins';
-    else if (item.magicItem) categoryKey = (item.magicItem.is_hardware || item.magicItem.is_exotic) ? 'hardware' : `magic_${item.rarity || 'Lesser'}`;
+    else if (item.magicItem) categoryKey = (item.magicItem.is_hardware || item.magicItem.is_exotic) ? 'hardware' : 'artifact';
     else categoryKey = 'art_gems';
 
     const ok = await onMoveToSheet({
@@ -1161,7 +1081,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const handleSendSpecificToVault = (itemPayload: {
     title: string;
     categoryKey: string;
-    rarity?: 'Minor' | 'Lesser' | 'Greater' | 'Epic';
+    rarity?: string;
     description?: string;
     coinsSilver?: number;
     coinsGold?: number;
@@ -1180,8 +1100,8 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
     else if (itemPayload.categoryKey === 'curios') mappedType = 'document';
     else if (itemPayload.categoryKey === 'junk') mappedType = 'junk';
 
-    const rarity = itemPayload.rarity || 'Lesser';
-    const essenceVal = rarity === 'Epic' ? 100 : rarity === 'Greater' ? 50 : rarity === 'Minor' ? 15 : 25;
+    const rarity = itemPayload.rarity || (itemPayload.categoryKey === 'relics' ? 'Artifact' : itemPayload.categoryKey === 'hardware' ? 'Exotic' : 'Standard');
+    const essenceVal = rarity === 'Artifact' ? 25 : rarity === 'Exotic' ? 15 : 8;
     const targetTag = specificTargetPlayer && specificTargetPlayer !== 'Party' ? ` (for ${specificTargetPlayer})` : '';
 
     const newVaultItem: VaultItem = {
@@ -1489,18 +1409,9 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             {/* TAB 1: GENERATOR CONTROLS */}
             {activeRightTab === 'GENERATOR' && (
               <div className="space-y-4 flex-1">
-                {/* Position #2: Alchemy Essence Flask Visual Component with Tier-Threshold Craft Button */}
+                {/* Position #2: Alchemy Essence Flask Visual Component with Tierless Craft Button */}
                 {(() => {
-                  const qualifiedTier: { name: 'Minor' | 'Lesser' | 'Greater' | 'Epic'; cost: number } | null =
-                    essenceCore >= 100
-                      ? { name: 'Epic', cost: 100 }
-                      : essenceCore >= 50
-                      ? { name: 'Greater', cost: 50 }
-                      : essenceCore >= 25
-                      ? { name: 'Lesser', cost: 25 }
-                      : essenceCore >= 15
-                      ? { name: 'Minor', cost: 15 }
-                      : null;
+                  const isCraftable = essenceCore >= 50;
 
                   return (
                     <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex items-center justify-between gap-3 shadow-inner shrink-0">
@@ -1508,17 +1419,16 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                         {/* Visual Flask / Vial */}
                         <div
                           onClick={() => {
-                            if (qualifiedTier) {
-                              setLastDraftTier(qualifiedTier.name);
+                            if (isCraftable) {
                               setIsDraftOpen(true);
                             }
                           }}
                           className={`relative w-9 h-14 rounded-b-full border-2 bg-slate-900 overflow-hidden flex flex-col justify-end transition-all shadow-lg shrink-0 ${
-                            qualifiedTier
+                            isCraftable
                               ? 'border-amber-400 shadow-amber-500/50 animate-pulse cursor-pointer'
                               : 'border-slate-700'
                           }`}
-                          title={qualifiedTier ? `Click to draft a ${qualifiedTier.name} artifact!` : 'Disenchant loot drops to fill Essence Flask'}
+                          title={isCraftable ? 'Click to craft an Artifact!' : 'Disenchant loot drops to fill Essence Flask'}
                         >
                           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3.5 h-1.5 bg-slate-800 border-b border-slate-700 z-10"></div>
                           <div
@@ -1532,9 +1442,9 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                         <div>
                           <div className="flex items-center gap-1.5">
                             <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Essence</h4>
-                            {qualifiedTier && (
+                            {isCraftable && (
                               <span className="text-[9px] bg-amber-400 text-slate-950 font-extrabold px-1.5 py-0.2 rounded uppercase animate-bounce">
-                                {qualifiedTier.name} Qualified!
+                                Ready to Craft!
                               </span>
                             )}
                           </div>
@@ -1542,21 +1452,20 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                             {essenceCore}% Full
                           </p>
                           <p className="text-[10px] text-slate-500 mt-0.5">
-                            {qualifiedTier ? `Craft ${qualifiedTier.name} (${qualifiedTier.cost}% essence)` : 'Disenchant items to fill flask'}
+                            {isCraftable ? 'Craft Artifact (50% essence)' : 'Disenchant items to fill flask'}
                           </p>
                         </div>
                       </div>
 
-                      {qualifiedTier && (
+                      {isCraftable && (
                         <button
                           onClick={() => {
-                            setLastDraftTier(qualifiedTier.name);
                             setIsDraftOpen(true);
                           }}
                           className="bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl transition-all shadow-md shadow-amber-500/20 animate-pulse cursor-pointer shrink-0 flex items-center gap-1"
                         >
-                          <span>✨</span>
-                          <span>Craft {qualifiedTier.name}</span>
+                          <span>🔮</span>
+                          <span>Craft Artifact</span>
                         </button>
                       )}
                     </div>
@@ -1608,14 +1517,14 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                         onClick={() => handleGmHoardPreset('boss')}
                         className="bg-indigo-900/70 hover:bg-indigo-700/80 border border-indigo-600 text-indigo-100 py-2 px-3 rounded-lg font-semibold text-xs transition-all text-left"
                       >
-                        🛡️ Elite Boss Chest (Coins + Gem + Lesser)
+                        🛡️ Elite Boss Chest (Coins + Gem + Exotic)
                       </button>
                       <button
                         disabled={isRolling}
                         onClick={() => handleGmHoardPreset('dragon')}
                         className="bg-amber-600/30 hover:bg-amber-500/40 border border-amber-500/60 text-amber-200 py-2 px-3 rounded-lg font-semibold text-xs transition-all text-left"
                       >
-                        🐉 Dragon Vault (Master + Greater + Artifact)
+                        🐉 Dragon Vault (Master + Exotic + Artifact)
                       </button>
                     </div>
                   </div>
@@ -1967,17 +1876,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  let rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' | undefined = undefined;
-                                  if (specificCategory === 'relics') {
-                                    rarity = item.artifact_tier || ((item.category || '').toLowerCase().includes('epic') ? 'Epic' : (item.category || '').toLowerCase().includes('greater') ? 'Greater' : (item.category || '').toLowerCase().includes('minor') ? 'Minor' : 'Lesser');
-                                  } else if (specificCategory === 'hardware') {
-                                    rarity = item.exotic_tier || 'Minor';
-                                  }
-
                                   handleSendSpecificToVault({
                                     title: item.name,
                                     categoryKey: specificCategory,
-                                    rarity,
+                                    rarity: specificCategory === 'relics' ? 'Artifact' : specificCategory === 'hardware' ? 'Exotic' : undefined,
                                     description: item.effect || item.notes || item.description,
                                     magicItem: (specificCategory === 'relics' || specificCategory === 'hardware') ? item : undefined,
                                     chaosGem: specificCategory === 'chaos_gems' ? item : undefined,
@@ -2083,7 +1985,6 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         isOpen={isDraftOpen}
         onClose={() => setIsDraftOpen(false)}
         characterName={characterName}
-        draftTier={lastDraftTier}
         stockMagicItems={artifactsCatalog}
         onSelectReward={handleSelectDraftReward}
         onDeconstructDraft={handleDeconstructDraft}

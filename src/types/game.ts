@@ -1083,7 +1083,7 @@ export interface VaultItem {
   title: string;
   description: string;
   type: 'coins' | 'magic_item' | 'art_gem' | 'document' | 'junk' | 'quality' | 'special' | 'chaos_gem';
-  rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic';
+  rarity?: string;
   essenceValue: number;
   coinsSilver?: number;
   coinsGold?: number;
@@ -1118,7 +1118,7 @@ export interface MagicItem {
   version?: number;
   base_name?: string;
   slot_weight?: 0 | 1 | 2 | 3 | 4;
-  rarity?: 'Mundane' | 'Utility' | 'Minor' | 'Lesser' | 'Greater' | 'Relic' | 'Epic';
+  rarity?: string;
   checked_state?: boolean[];
   cost?: string; // Optional cost for Hardware items
   is_hardware?: boolean; // True if purchased hardware item

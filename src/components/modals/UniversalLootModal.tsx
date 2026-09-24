@@ -49,7 +49,6 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
   const activePartyId = useCharacterStore((state) => state.activePartyId);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const artifactsCatalog = useCharacterStore((state) => state.artifactsCatalog);
-  const getArtifactsByTier = useCharacterStore((state) => state.getArtifactsByTier);
   const exoticsCatalog = useCharacterStore((state) => state.exoticsCatalog);
   const suppliesCatalog = useCharacterStore((state) => state.suppliesCatalog);
   const weaponsCatalog = useCharacterStore((state) => state.weaponsCatalog);
@@ -270,11 +269,9 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
     if (rType === 'hardware' || rType === 'exotic' || subKey === 'hardware' || subKey === 'exotics') {
       const hwPool = exoticsCatalog && exoticsCatalog.length > 0 ? exoticsCatalog : await gameApi.getExotics();
       const picked = hwPool && hwPool.length > 0 ? hwPool[Math.floor(Math.random() * hwPool.length)] : null;
-      const resolvedTier = picked?.exotic_tier || 'Minor';
-      const tierIcon = resolvedTier === 'Epic' ? '💫' : resolvedTier === 'Greater' ? '🪬' : resolvedTier === 'Lesser' ? '🪄' : '🍺';
 
       items.push({
-        title: picked?.name || `${tierIcon} ${resolvedTier} Exotic`,
+        title: picked?.name || '🧿 Exotic Device',
         categoryKey: 'hardware',
         description: picked?.effect || (picked as any)?.notes || picked?.description || 'Advanced technological exotic device.',
         magicItem: picked || undefined,
@@ -283,35 +280,17 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
       return items;
     }
 
-    // 7. Magic Item / Artifact (Minor, Lesser, Greater, Epic)
-    if (rType === 'magic_item' || rType === 'artifact' || entry.result_name.toLowerCase().includes('magic') || entry.result_name.toLowerCase().includes('relic') || entry.result_name.toLowerCase().includes('artifact')) {
-      let rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' = 'Lesser';
-      const rawName = (entry.result_name + ' ' + (subKey || '')).toLowerCase();
-      if (rawName.includes('minor') || rawName.includes('🍺')) rarity = 'Minor';
-      else if (rawName.includes('greater') || rawName.includes('🪬')) rarity = 'Greater';
-      else if (rawName.includes('epic') || rawName.includes('💫')) rarity = 'Epic';
-      else rarity = 'Lesser';
-
-      let pool: any[] = getArtifactsByTier ? getArtifactsByTier(rarity) : [];
-      if (pool.length === 0 && artifactsCatalog && artifactsCatalog.length > 0) {
-        pool = artifactsCatalog.filter((a) => a.artifact_tier === rarity);
-      }
-      if (pool.length === 0) {
-        const all = await gameApi.getArtifacts();
-        pool = all.filter((a) => a.artifact_tier === rarity);
-      }
+    // 7. Artifact
+    if (rType === 'magic_item' || rType === 'artifact' || subKey === 'artifact' || entry.result_name.toLowerCase().includes('artifact') || entry.result_name.toLowerCase().includes('magic') || entry.result_name.toLowerCase().includes('relic')) {
+      const pool: any[] = artifactsCatalog && artifactsCatalog.length > 0 ? artifactsCatalog : await gameApi.getArtifacts();
       const picked = pool && pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null;
-      if (picked?.artifact_tier) {
-        rarity = picked.artifact_tier;
-      }
-      const iconStr = rarity === 'Minor' ? '🍺' : rarity === 'Lesser' ? '🪄' : rarity === 'Greater' ? '🪬' : '💫';
 
       items.push({
-        title: picked?.name || `${iconStr} ${rarity} Artifact`,
-        categoryKey: `magic_${rarity}`,
-        rarity,
-        description: picked?.effect || (picked as any)?.notes || picked?.description || `Enchanted ${rarity} artifact.`,
-        magicItem: picked ? { ...picked, category: `${rarity} Artifact`, artifact_tier: rarity } : undefined,
+        title: picked?.name || '🔮 Artifact',
+        categoryKey: 'artifact',
+        rarity: 'Artifact',
+        description: picked?.effect || (picked as any)?.notes || picked?.description || 'Enchanted artifact.',
+        magicItem: picked ? { ...picked, category: 'Artifact' } : undefined,
         targetPlayer: target,
       });
       return items;
@@ -351,32 +330,25 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
       return items;
     }
 
-    // 10. Special: Epic Hoard (100)
+    // 10. Special: Hoard (100)
     if (rType === 'special' && entry.range_min === 100) {
-      // 1 Epic Magic Item / Artifact
-      let epicPool: any[] = getArtifactsByTier ? getArtifactsByTier('Epic') : [];
-      if (epicPool.length === 0 && artifactsCatalog && artifactsCatalog.length > 0) {
-        epicPool = artifactsCatalog.filter((a) => a.artifact_tier === 'Epic');
-      }
-      if (epicPool.length === 0) {
-        const all = await gameApi.getArtifacts();
-        epicPool = all.filter((a) => a.artifact_tier === 'Epic');
-      }
-      const epicPicked = epicPool && epicPool.length > 0 ? epicPool[Math.floor(Math.random() * epicPool.length)] : null;
+      // 1 Artifact
+      const artPool: any[] = artifactsCatalog && artifactsCatalog.length > 0 ? artifactsCatalog : await gameApi.getArtifacts();
+      const artPicked = artPool && artPool.length > 0 ? artPool[Math.floor(Math.random() * artPool.length)] : null;
 
       items.push({
-        title: epicPicked?.name || 'Epic Artifact',
-        categoryKey: 'magic_Epic',
-        rarity: 'Epic',
-        description: epicPicked?.effect || (epicPicked as any)?.notes || epicPicked?.description || 'Legendary artifact of immense power.',
-        magicItem: epicPicked,
+        title: artPicked?.name || '🔮 Artifact',
+        categoryKey: 'artifact',
+        rarity: 'Artifact',
+        description: artPicked?.effect || (artPicked as any)?.notes || artPicked?.description || 'Legendary artifact of immense power.',
+        magicItem: artPicked || undefined,
         targetPlayer: target,
       });
 
       // 1d100 Gold Coins
       const goldRoll = rollDice(100);
       items.push({
-        title: `Gold Hoard 👑 (${goldRoll}g)`,
+        title: `Gold Hoard 💰 (${goldRoll}g)`,
         categoryKey: 'coins',
         coinsSilver: 0,
         coinsGold: goldRoll,
@@ -525,18 +497,12 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
   // Add Selected Catalog Item
   const handleAddCatalogItem = async (item: any) => {
     let categoryKey = activeCategoryTab as string;
-    let rarity: 'Minor' | 'Lesser' | 'Greater' | 'Epic' | undefined = undefined;
+    let rarity: string | undefined = undefined;
 
     if (activeCategoryTab === 'relics') {
-      if (item.artifact_tier) {
-        rarity = item.artifact_tier;
-      } else {
-        const cat = (item.category || item.rarity || '').toLowerCase();
-        if (cat.includes('minor') || cat.includes('🍺')) rarity = 'Minor';
-        else if (cat.includes('greater') || cat.includes('🪬')) rarity = 'Greater';
-        else if (cat.includes('epic') || cat.includes('💫')) rarity = 'Epic';
-        else rarity = 'Lesser';
-      }
+      rarity = 'Artifact';
+    } else if (activeCategoryTab === 'hardware') {
+      rarity = 'Exotic';
     }
 
     await onAddLoot({
@@ -745,8 +711,8 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
                   { key: 'chaos_gems', label: '💎 Chaos Gem' },
                   { key: 'coins', label: '🪙 Coins/Val' },
                   { key: 'gear', label: '🎒 Gear' },
-                  { key: 'hardware', label: '⚙️ Hardware' },
-                  { key: 'relics', label: '🪄 Relic' },
+                  { key: 'hardware', label: '🧿 Exotic' },
+                  { key: 'relics', label: '🔮 Artifact' },
                   { key: 'shields', label: '🛡️ Shield' },
                   { key: 'weapons', label: '⚔️ Weapon' },
                 ].map((cat) => (

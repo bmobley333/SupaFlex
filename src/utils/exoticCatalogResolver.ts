@@ -33,9 +33,9 @@ export const EXOTIC_TIER_RANK: Record<ExoticTier, number> = {
  */
 export const parseExoticTier = (raw?: string | null): ExoticTier => {
   const s = String(raw || '').toLowerCase();
-  if (s.includes('epic') || s.includes('💫')) return 'Epic';
-  if (s.includes('greater') || s.includes('🪬')) return 'Greater';
-  if (s.includes('lesser') || s.includes('🪄')) return 'Lesser';
+  if (s.includes('epic')) return 'Epic';
+  if (s.includes('greater')) return 'Greater';
+  if (s.includes('lesser')) return 'Lesser';
   return 'Minor';
 };
 
@@ -169,15 +169,15 @@ export const resolveExoticCatalog = (
       id: typeof item.id === 'number' ? item.id : Date.now() + Math.floor(Math.random() * 10000),
       name: rawName,
       cost: item.cost || '1g',
-      category: `${highestTier} Exotic`,
-      rarity: highestTier,
+      category: 'Exotic',
+      rarity: 'Exotic',
       exotic_tier: highestTier,
       source_table: item._table,
       action: primaryAction,
       usage: primaryUsage,
       effect: primaryEffect,
       notes: primaryNotes || undefined,
-      description: primaryEffect || item.description || primaryNotes || `Exotic ${highestTier.toLowerCase()} device.`,
+      description: primaryEffect || item.description || primaryNotes || 'Exotic device.',
       created_at: item.created_at || new Date().toISOString(),
       genres: item.genres || ['SciFi', 'GuildSpace'],
       slot_weight: getCategorySlotWeight(highestTier),

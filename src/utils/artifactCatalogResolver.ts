@@ -33,8 +33,8 @@ export const TIER_RANK: Record<ArtifactTier, number> = {
 export const parseArtifactTier = (raw?: string | null): ArtifactTier => {
   const s = String(raw || '').toLowerCase();
   if (s.includes('epic') || s.includes('relic')) return 'Epic';
-  if (s.includes('greater') || s.includes('🪬')) return 'Greater';
-  if (s.includes('lesser') || s.includes('🪄')) return 'Lesser';
+  if (s.includes('greater')) return 'Greater';
+  if (s.includes('lesser')) return 'Lesser';
   return 'Minor';
 };
 
@@ -110,15 +110,15 @@ export const resolveArtifactCatalog = (
       id: typeof item.id === 'number' ? item.id : Date.now() + Math.floor(Math.random() * 10000),
       name: rawName,
       cost: 'Artifact',
-      category: `${highestTier} Artifact`,
-      rarity: highestTier,
+      category: 'Artifact',
+      rarity: 'Artifact',
       artifact_tier: highestTier,
       source_table: item._table,
       action: primaryAction,
       usage: primaryUsage,
       effect: primaryEffect,
       notes: primaryNotes || undefined,
-      description: primaryEffect || item.description || primaryNotes || `Enchanted ${highestTier.toLowerCase()} artifact.`,
+      description: primaryEffect || item.description || primaryNotes || 'Enchanted artifact.',
       created_at: item.created_at || new Date().toISOString(),
       genres: item.genres || ['Fantasy', 'SciFi'],
       slot_weight: getCategorySlotWeight(highestTier),

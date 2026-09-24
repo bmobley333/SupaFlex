@@ -102,7 +102,7 @@ const parseAbilityVersion = (name: string): { baseName: string; version: number 
 };
 
 const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; icon: string; style: string; slotsText: string } => {
-  if (!itemObj) return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '1 Slot' };
+  if (!itemObj) return { label: 'Standard', icon: '🛡️', style: 'bg-slate-900/80 text-slate-300 border-slate-700/50', slotsText: '1 Slot' };
 
   let subStr = itemObj.category || itemObj.rarity || itemObj.artifact_tier || itemObj.tier || '';
 
@@ -120,43 +120,24 @@ const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; 
 
   const str = `${itemObj.rarity || ''} ${subStr} ${itemObj.name || itemObj.title || ''}`.toLowerCase();
 
-  if (str.includes('free') || str.includes('⭕') || str.includes('0 slot')) {
+  if (str.includes('free') || str.includes('⭕') || str.includes('0 slot') || itemObj.slot_weight === 0) {
     return { label: 'Free', icon: '⭕', style: 'bg-slate-900/80 text-slate-300 border-slate-700/50', slotsText: '0 Slots' };
   }
-  if (str.includes('minor') || str.includes('🍺')) {
-    return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '1 Slot' };
+  if (str.includes('artifact') || str.includes('relic') || itemObj.cost === 'Artifact') {
+    return { label: 'Artifact', icon: '🔮', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40', slotsText: '1 Slot' };
   }
-  if (str.includes('lesser') || str.includes('🪄')) {
-    return { label: 'Lesser', icon: '🪄', style: 'bg-blue-950/80 text-blue-300 border-blue-500/40', slotsText: '2 Slots' };
+  if (str.includes('exotic') || str.includes('hardware') || itemObj.is_hardware || itemObj.is_exotic) {
+    return { label: 'Exotic', icon: '🧿', style: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40', slotsText: '1 Slot' };
   }
-  if (str.includes('greater') || str.includes('🪬')) {
-    return { label: 'Greater', icon: '🪬', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40', slotsText: '3 Slots' };
-  }
-  if (str.includes('epic') || str.includes('💫')) {
-    return { label: 'Epic', icon: '💫', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40', slotsText: '4 Slots' };
-  }
-  if (typeof itemObj.slot_weight === 'number') {
-    if (itemObj.slot_weight === 0) return { label: 'Free', icon: '⭕', style: 'bg-slate-900/80 text-slate-300 border-slate-700/50', slotsText: '0 Slots' };
-    if (itemObj.slot_weight === 2) return { label: 'Lesser', icon: '🪄', style: 'bg-blue-950/80 text-blue-300 border-blue-500/40', slotsText: '2 Slots' };
-    if (itemObj.slot_weight === 3) return { label: 'Greater', icon: '🪬', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40', slotsText: '3 Slots' };
-    if (itemObj.slot_weight === 4) return { label: 'Epic', icon: '💫', style: 'bg-amber-950/80 text-amber-300 border-amber-500/40', slotsText: '4 Slots' };
-    return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '1 Slot' };
-  }
-  return { label: 'Minor', icon: '🍺', style: 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40', slotsText: '1 Slot' };
+  return { label: 'Standard', icon: '🛡️', style: 'bg-slate-900/80 text-slate-300 border-slate-700/50', slotsText: '1 Slot' };
 };
 
 const formatTableNameDisplay = (tblName: string): string => {
   if (!tblName) return '';
-  const clean = tblName
-    .replace(/Artifact🌀/g, 'Epic💫')
-    .replace(/Artifact/g, 'Epic')
-    .replace(/🌀/g, '💫');
-  if (clean === 'Free' || clean.toLowerCase() === 'free') return '⭕ Free (0 Slots)';
-  if (clean === 'Minor' || clean.toLowerCase() === 'minor') return '🍺 Minor (1 Slot)';
-  if (clean === 'Lesser' || clean.toLowerCase() === 'lesser') return '🪄 Lesser (2 Slots)';
-  if (clean === 'Greater' || clean.toLowerCase() === 'greater') return '🪬 Greater (3 Slots)';
-  if (clean === 'Epic' || clean.toLowerCase() === 'epic') return '💫 Epic (4 Slots)';
-  return clean;
+  if (/free/i.test(tblName)) return '⭕ Free (0 Slots)';
+  if (/artifact/i.test(tblName)) return '🔮 Artifact (1 Slot)';
+  if (/exotic|hardware/i.test(tblName)) return '🧿 Exotic (1 Slot)';
+  return tblName;
 };
 
 const pruneLesserPowerVersions = (abilitySlots: AbilitySlot[]): AbilitySlot[] => {

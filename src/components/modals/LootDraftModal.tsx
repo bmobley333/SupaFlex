@@ -14,8 +14,7 @@ interface LootDraftModalProps {
   isOpen: boolean;
   onClose: () => void;
   characterName: string;
-  draftTier?: 'Minor' | 'Lesser' | 'Greater' | 'Epic';
-  stockMagicItems: MagicItem[];
+  stockMagicItems?: MagicItem[];
   onSelectReward: (reward: { type: 'magic_item' | 'treasure'; data: any }) => Promise<boolean>;
   onDeconstructDraft: () => void;
 }
@@ -31,14 +30,12 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
   isOpen,
   onClose,
   characterName,
-  draftTier = 'Lesser',
   stockMagicItems,
   onSelectReward,
   onDeconstructDraft,
 }) => {
   const functionsCatalog = useCharacterStore((state) => state.functionsCatalog);
   const modsCatalog = useCharacterStore((state) => state.modsCatalog);
-  const getArtifactsByTier = useCharacterStore((state) => state.getArtifactsByTier);
   const artifactsCatalog = useCharacterStore((state) => state.artifactsCatalog);
   const [slots, setSlots] = useState<DraftSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,26 +45,14 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
     if (isOpen) {
       generateDraftSlots();
     }
-  }, [isOpen, draftTier]);
-
-  const rollDice = (sides: number) => Math.floor(Math.random() * sides) + 1;
+  }, [isOpen]);
 
   const generateDraftSlots = async () => {
     setIsLoading(true);
 
     try {
-      // 1. Resolve true Artifact pool strictly matching the draftTier
-      let pool: any[] = getArtifactsByTier ? getArtifactsByTier(draftTier) : [];
-      if (pool.length === 0 && artifactsCatalog && artifactsCatalog.length > 0) {
-        pool = artifactsCatalog.filter((a) => a.artifact_tier === draftTier);
-      }
-      if (pool.length === 0 && stockMagicItems && stockMagicItems.length > 0) {
-        pool = stockMagicItems.filter((m: any) =>
-          m.artifact_tier === draftTier ||
-          (m.category || '').toLowerCase().includes(draftTier.toLowerCase()) ||
-          (m.rarity || '').toLowerCase() === draftTier.toLowerCase()
-        );
-      }
+      // 1. Resolve true Artifact pool
+      let pool: any[] = artifactsCatalog && artifactsCatalog.length > 0 ? artifactsCatalog : (stockMagicItems || []);
 
       // 2. SLOT 1: Rnd Artifact 1
       let slot1Item: any = null;
@@ -75,9 +60,8 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
         slot1Item = pool[Math.floor(Math.random() * pool.length)];
       } else {
         slot1Item = {
-          name: `${draftTier} Focus Ring`,
-          category: `${draftTier} Artifact`,
-          artifact_tier: draftTier,
+          name: 'Focus Ring',
+          category: 'Artifact',
           effect: 'Grants +1 to all action rolls while focused.',
         };
       }
@@ -92,138 +76,59 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
         slot2Item = pool2[Math.floor(Math.random() * pool2.length)];
       } else {
         slot2Item = {
-          name: `${draftTier} Amulet of Power`,
-          category: `${draftTier} Artifact`,
-          artifact_tier: draftTier,
+          name: 'Amulet of Power',
+          category: 'Artifact',
           effect: 'Adds d6 Bonus damage to elemental spells.',
         };
       }
 
-      // 3. SLOT 3: TREASURE CACHE (Escalating Coins / Art & Gem rolls)
+      // 4. SLOT 3: TREASURE CACHE (Art & Gem roll)
       let slot3Item: any = null;
-
-      if (draftTier === 'Minor') {
-        // Best of 2 Coins rolls
-        const r1s = rollDice(20);
-        const r2s = rollDice(20);
-        const maxSilver = Math.max(r1s, r2s);
-        const maxGold = Math.max(rollDice(4), rollDice(4));
+      try {
+        const { data } = await supabase
+          .from('treasure_entries')
+          .select('*')
+          .eq('table_key', 'art_gems');
+        if (data && data.length > 0) {
+          const entry = data[Math.floor(Math.random() * data.length)];
+          slot3Item = {
+            name: entry.result_name,
+            category: 'Art & Gem',
+            type: 'valuable',
+            value: entry.val_formula || '10g',
+            description: entry.notes || 'A fine cut gem or valuable artwork.',
+          };
+        }
+      } catch {
+        // Fallback
+      }
+      if (!slot3Item) {
         slot3Item = {
-          name: `Coins Cache (${maxSilver}s, ${maxGold}g)`,
-          category: 'Coins Cache',
-          type: 'coins',
-          silver: maxSilver,
-          gold: maxGold,
-          description: `Best of 2 Coins Rolls (+${maxSilver} Silver, +${maxGold} Gold).`,
+          name: 'Engraved Silver Chalice',
+          category: 'Art & Gem',
+          type: 'valuable',
+          value: '10g',
+          description: 'Intricately crafted silver chalice.',
         };
-      } else if (draftTier === 'Lesser') {
-        // 1 Art & Gem roll
-        try {
-          const { data } = await supabase
-            .from('treasure_entries')
-            .select('*')
-            .eq('table_key', 'art_gems');
-          if (data && data.length > 0) {
-            const entry = data[Math.floor(Math.random() * data.length)];
-            slot3Item = {
-              name: entry.result_name,
-              category: '🎨 Art & Gem',
-              type: 'valuable',
-              value: entry.val_formula || '5g',
-              description: entry.notes || 'A fine cut gem or artwork.',
-            };
-          }
-        } catch {
-          // Fallback
-        }
-        if (!slot3Item) {
-          slot3Item = {
-            name: 'Engraved Silver Chalice',
-            category: '🎨 Art & Gem',
-            type: 'valuable',
-            value: '5g',
-            description: 'Intricately crafted silver chalice.',
-          };
-        }
-      } else if (draftTier === 'Greater') {
-        // Best of 2 Art & Gem rolls (take highest value)
-        try {
-          const { data } = await supabase
-            .from('treasure_entries')
-            .select('*')
-            .eq('table_key', 'art_gems');
-          if (data && data.length > 0) {
-            const e1 = data[Math.floor(Math.random() * data.length)];
-            const e2 = data[Math.floor(Math.random() * data.length)];
-            // Pick higher valuation item
-            slot3Item = {
-              name: `${e1.result_name} & ${e2.result_name}`,
-              category: '🎨 Art & Gems (Best of 2)',
-              type: 'valuable',
-              value: '15g',
-              description: `Contains ${e1.result_name} and ${e2.result_name}.`,
-            };
-          }
-        } catch {
-          // Fallback
-        }
-        if (!slot3Item) {
-          slot3Item = {
-            name: 'Flawless Ruby & Gold Statuette',
-            category: '🎨 Art & Gems',
-            type: 'valuable',
-            value: '15g',
-            description: 'Rare gemstone and heirloom.',
-          };
-        }
-      } else {
-        // Epic: Best of 3 Art & Gem rolls
-        try {
-          const { data } = await supabase
-            .from('treasure_entries')
-            .select('*')
-            .eq('table_key', 'art_gems');
-          if (data && data.length > 0) {
-            const e1 = data[Math.floor(Math.random() * data.length)];
-            slot3Item = {
-              name: `Royal Treasure: ${e1.result_name}`,
-              category: '💫 Master Art & Gem (Best of 3)',
-              type: 'valuable',
-              value: '50g',
-              description: `Priceless historical heirloom: ${e1.result_name}.`,
-            };
-          }
-        } catch {
-          // Fallback
-        }
-        if (!slot3Item) {
-          slot3Item = {
-            name: 'Crown of the Ancient Archon',
-            category: '💫 Master Art & Gem',
-            type: 'valuable',
-            value: '50g',
-            description: 'Priceless crown set with astral diamonds.',
-          };
-        }
       }
 
       setSlots([
         {
           slotType: 'artifact',
           slotTitle: 'Rnd Artifact 1',
-          slotBadge: `${draftTier} Rarity`,
+          slotBadge: '🔮 Artifact',
           item: slot1Item,
         },
         {
           slotType: 'artifact',
           slotTitle: 'Rnd Artifact 2',
-          slotBadge: `${draftTier} Rarity`,
+          slotBadge: '🔮 Artifact',
           item: slot2Item,
         },
         {
           slotType: 'treasure',
           slotTitle: 'Treasure Cache',
-          slotBadge: draftTier === 'Minor' ? 'Best of 2 Coins' : `Best of ${draftTier === 'Epic' ? 3 : draftTier === 'Greater' ? 2 : 1} Art/Gem`,
+          slotBadge: '🎨 Art & Gem',
           item: slot3Item,
         },
       ]);

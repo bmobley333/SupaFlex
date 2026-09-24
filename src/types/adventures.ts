@@ -122,7 +122,7 @@ export interface StagedLootItem {
   id: string;                      // UUID or nanoid
   title: string;                   // e.g. "Flametongue Longsword", "100 Gold Coins"
   categoryKey: string;             // 'weapons' | 'armor' | 'shields' | 'gear' | 'relics' | 'hardware' | 'chaos_gems' | 'coins' | 'art_gems' | 'curios' | 'junk'
-  rarity?: 'Minor' | 'Lesser' | 'Greater' | 'Epic';
+  rarity?: string;
   description?: string;            // Effect / Rules / Visual details
   coinsSilver?: number;            // Silver coins
   coinsGold?: number;              // Gold coins

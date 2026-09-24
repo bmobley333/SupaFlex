@@ -2033,7 +2033,7 @@ export const gameApi = {
         action: gearPower.action || 'F',
         usage: gearPower.usage || '1-Enc',
         effect: gearPower.effect,
-        tier: gearPower.tier || 'Minor',
+        tier: gearPower.tier || null,
         belongs_to: gearPower.belongs_to || '',
         genres: gearPower.genres && gearPower.genres.length > 0 ? gearPower.genres : ['Medieval', 'Modern', 'SciFi'],
         notes: gearPower.notes || null,
@@ -2424,7 +2424,7 @@ export const gameApi = {
 
       const masterPayload: any = {
         name: item.name,
-        category: item.category || (item.type === 'relic' ? '🍺 Minor' : 'Universal'),
+        category: item.category || (item.type === 'relic' ? 'Artifact' : 'Universal'),
         action: item.item_data?.action || 'A',
         usage: item.item_data?.usage || '1-Enc',
         effect: item.item_data?.effect || '',

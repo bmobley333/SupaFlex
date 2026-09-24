@@ -354,7 +354,7 @@ export const mapFunctionToVaultItem = (
     source_gear: finalGear,
     source_mod: finalMod,
     created_at: new Date().toISOString(),
-    category: fn.tier || (fn as any).category || 'Minor',
+    category: fn.tier || (fn as any).category || 'Exotic',
     slot_weight: (getCategorySlotWeight(fn.tier || (fn as any).category) ?? 1) as 0 | 1 | 2 | 3 | 4,
     is_hardware: true,
   };
@@ -485,15 +485,7 @@ export const reconcileCharacterVaultWithGear = (
         hostItem.item_type === 'exotic' ||
         hostItem.is_exotic)
     ) {
-      const s = String(hostItem.category || hostItem.notes || '').toLowerCase();
-      const tier: 'Minor' | 'Lesser' | 'Greater' | 'Epic' =
-        s.includes('minor') || s.includes('🍺')
-          ? 'Minor'
-          : s.includes('greater') || s.includes('🪬')
-          ? 'Greater'
-          : s.includes('epic') || s.includes('💫')
-          ? 'Epic'
-          : 'Lesser';
+      const tier = hostItem.cost === 'Artifact' || hostItem.category?.includes('Artifact') ? 'Artifact' : 'Exotic';
       const synFn: FunctionItem = {
         id: Date.now() + Math.floor(Math.random() * 10000),
         name: hostName,

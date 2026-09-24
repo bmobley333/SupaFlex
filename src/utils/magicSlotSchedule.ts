@@ -24,12 +24,9 @@ export interface MagicItemLike {
 const cleanName = (name: string) => name.replace(/\s*\[[A-Z]+\]$/i, '').trim();
 
 /**
- * Returns the item slot weight (1 to 4) based on item rarity, category, or sub-text.
- * Optional catalog array enables matching item base names against master catalog to extract true rarity if item instance lacks properties.
- * Minor = 1 Slot
- * Lesser = 2 Slots
- * Greater = 3 Slots
- * Epic = 4 Slots
+ * Returns the item slot weight (0 or 1) based on item category or sub-text.
+ * Free/Utility = 0 Slots
+ * Standard = 1 Slot
  */
 export const getItemSlotWeight = (item: MagicItemLike, catalog?: MagicItemLike[]): number => {
   if (!item) return 1;
@@ -63,26 +60,11 @@ export const getItemSlotWeight = (item: MagicItemLike, catalog?: MagicItemLike[]
   if (fullStr.includes('free') || fullStr.includes('⭕') || fullStr.includes('mundane') || fullStr.includes('utility') || fullStr.includes('0-slot') || fullStr.includes('zero')) {
     return 0;
   }
-  if (fullStr.includes('minor') || fullStr.includes('🍺')) {
-    return 1;
-  }
-  if (fullStr.includes('lesser') || fullStr.includes('🪄')) {
-    return 2;
-  }
-  if (fullStr.includes('greater') || fullStr.includes('🪬')) {
-    return 3;
-  }
-  if (fullStr.includes('epic') || fullStr.includes('💫')) {
-    return 4;
-  }
   if (explicitWeight !== null) {
     return explicitWeight;
   }
-  if (fullStr.includes('relic') || fullStr.includes('artifact')) {
-    return 1;
-  }
 
-  return explicitWeight !== null ? explicitWeight : 1;
+  return 1;
 };
 
 /**
