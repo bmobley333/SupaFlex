@@ -15,6 +15,7 @@ interface LootDraftModalProps {
   onClose: () => void;
   characterName: string;
   stockMagicItems?: MagicItem[];
+  craftTier?: 'basic' | 'overcharged';
   onSelectReward: (reward: { type: 'magic_item' | 'treasure'; data: any }) => Promise<boolean>;
   onDeconstructDraft: () => void;
 }
@@ -31,6 +32,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
   onClose,
   characterName,
   stockMagicItems,
+  craftTier = 'overcharged',
   onSelectReward,
   onDeconstructDraft,
 }) => {
@@ -45,7 +47,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
     if (isOpen) {
       generateDraftSlots();
     }
-  }, [isOpen]);
+  }, [isOpen, craftTier]);
 
   const generateDraftSlots = async () => {
     setIsLoading(true);
@@ -64,6 +66,18 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
           category: 'Artifact',
           effect: 'Grants +1 to all action rolls while focused.',
         };
+      }
+
+      if (craftTier === 'basic') {
+        setSlots([
+          {
+            slotType: 'artifact',
+            slotTitle: 'Synthesized Artifact',
+            slotBadge: '🔮 Artifact',
+            item: slot1Item,
+          },
+        ]);
+        return;
       }
 
       // 3. SLOT 2: Rnd Artifact 2 (distinct from Slot 1 if pool allows)
@@ -162,7 +176,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">
-      <div className="bg-slate-900 border border-amber-500/40 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden text-slate-100">
+      <div className={`bg-slate-900 border border-amber-500/40 rounded-2xl shadow-2xl w-full ${craftTier === 'basic' ? 'max-w-xl' : 'max-w-4xl'} flex flex-col overflow-hidden text-slate-100`}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -171,16 +185,18 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
             </div>
             <div>
               <h3 className="font-outfit font-bold text-lg text-amber-300 uppercase tracking-wide flex items-center gap-2">
-                ⚡ ESSENCE CRAFTING!
+                {craftTier === 'basic' ? '⚡ BASIC ESSENCE INFUSION (50%)' : '✨ MASTER OVERCHARGED DRAFT (100%)'}
               </h3>
               <p className="text-xs text-slate-400">
-                Select <strong className="text-amber-300">1 (One) crafted reward</strong> for {(characterName || 'Hero').split(' ')[0]} or Deconstruct to cut Essence in half.
+                {craftTier === 'basic'
+                  ? `Review your synthesized Artifact for ${(characterName || 'Hero').split(' ')[0]} or Deconstruct to recycle half your Essence.`
+                  : `Select 1 (One) crafted reward for ${(characterName || 'Hero').split(' ')[0]} or Deconstruct to cut Essence in half.`}
               </p>
             </div>
           </div>
         </div>
 
-        {/* 3-Card Body */}
+        {/* Card Body */}
         <div className="p-6 bg-slate-900/50 flex-1">
           {isLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-amber-400 gap-3">
@@ -188,7 +204,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
               <span className="text-sm font-bold">Synthesizing Reward Cards...</span>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className={craftTier === 'basic' ? 'max-w-md mx-auto w-full' : 'grid grid-cols-1 md:grid-cols-3 gap-5'}>
               {slots.map((s, idx) => {
                 const isTreasure = s.slotType === 'treasure';
                 const abilities = isTreasure
@@ -311,11 +327,11 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
         {/* Footer: Deconstruct Option */}
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between">
           <span className="text-xs text-slate-400">
-            Don't like any choice? <strong className="text-slate-200">Deconstruct</strong> to recycle materials (cuts current Essence in half).
+            {craftTier === 'basic' ? "Don't want this Artifact?" : "Don't like any choice?"} <strong className="text-slate-200">Deconstruct</strong> to recycle materials (cuts current Essence in half).
           </span>
           <button
             onClick={handleDeconstruct}
-            className="px-4 py-1.5 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-700/50 font-bold text-xs rounded-lg transition-all flex items-center gap-1.5"
+            className="px-4 py-1.5 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-700/50 font-bold text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Deconstruct (Cut Essence in Half)

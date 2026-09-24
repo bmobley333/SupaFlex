@@ -296,15 +296,15 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
       return items;
     }
 
-    // 8. Chaos Gem (Volatile)
+    // 8. Chaos Gem
     if (rType === 'chaos_gem' || subKey === 'chaos_gems') {
       const { data: gems } = await supabase.from('chaos_gems').select('*');
       const picked = gems && gems.length > 0 ? gems[Math.floor(Math.random() * gems.length)] : null;
 
       items.push({
-        title: picked ? `Chaos Gem: ${picked.name}` : 'Volatile Chaos Gem',
+        title: picked ? `Chaos Gem: ${picked.name}` : 'Chaos Gem',
         categoryKey: 'chaos_gems',
-        description: picked ? `Action: ${picked.action || 'F'}. ${picked.effect}` : 'Volatile primordial gem conduit.',
+        description: picked ? `Action: ${picked.action || 'F'}. ${picked.effect}` : 'Primordial gem conduit.',
         chaosGem: picked,
         targetPlayer: target,
       });

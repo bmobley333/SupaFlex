@@ -101,7 +101,7 @@ export const parseAndEvaluateFormula = (formula: string): { value: number; curre
 
 export const CATEGORY_OPTIONS = [
   { key: 'coins', label: '🪙 Coins (s/g)' },
-  { key: 'chaos_gems', label: '💎 Chaos Gem (Volatile)' },
+  { key: 'chaos_gems', label: '💎 Chaos Gem' },
   { key: 'hardware', label: '🧿 Exotic' },
   { key: 'artifact', label: '🔮 Artifact' },
   { key: 'gear_quality', label: '🧰 Gear Quality + Item' },
@@ -140,6 +140,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [isDraftOpen, setIsDraftOpen] = useState(false);
+  const [draftTier, setDraftTier] = useState<'basic' | 'overcharged'>('basic');
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [socketingItem, setSocketingItem] = useState<{ res: RollResult; gem: SupabaseChaosGem } | null>(null);
   const [activeRightTab, setActiveRightTab] = useState<'GENERATOR' | 'SPECIFIC' | 'VAULT'>('GENERATOR');
@@ -420,10 +421,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
               id: `res-${Date.now()}`,
               tableKey: 'loot_main',
               categoryKey: 'chaos_gems',
-              tableName: '💎 Chaos Gem (Volatile)',
+              tableName: '💎 Chaos Gem',
               rollVal: d100,
               title: gem.name,
-              description: gem.effect || gem.notes || 'Volatile Chaos Gem. Must be socketed into your Gauntlet upon claiming or discarded.',
+              description: gem.effect || gem.notes || 'Chaos Gem. Socket into Gauntlet conduit upon claiming or discard.',
               type: 'chaos_gem',
               chaosGem: gem,
             });
@@ -437,7 +438,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             tableName: '🧿 Exotic',
             rollVal: d100,
             title: hw.name,
-            description: hw.description || hw.effect || 'Advanced technological exotic item.',
+            description: hw.description || hw.effect || 'Advanced exotic item.',
             type: 'magic_item',
             magicItem: hw
           });
@@ -620,10 +621,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             id: `res-${Date.now()}`,
             tableKey: 'chaos_gems',
             categoryKey: 'chaos_gems',
-            tableName: '💎 Chaos Gem (Volatile)',
+            tableName: '💎 Chaos Gem',
             rollVal: rollDice(20),
             title: gem.name,
-            description: gem.effect || gem.notes || 'Volatile Chaos Gem. Must be socketed into your Gauntlet upon claiming or discarded.',
+            description: gem.effect || gem.notes || 'Chaos Gem. Socket into Gauntlet conduit upon claiming or discard.',
             type: 'chaos_gem',
             chaosGem: gem,
           };
@@ -737,7 +738,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       socketingItem.res.claimed = true;
       setResults([...results]);
       setSocketingItem(null);
-      showToast('💥 Volatile Chaos Gem was discarded and dissolved into cosmic dust.');
+      showToast('💥 Chaos Gem was discarded and dissolved into cosmic dust.');
     }
   };
 
@@ -913,7 +914,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
       showToast(`✅ Claimed Draft Reward '${reward.data?.name || 'Reward'}' to Sheet!`);
     }
 
-    const draftCost = 50;
+    const draftCost = draftTier === 'overcharged' ? 100 : 50;
     updateActiveSheetData((prev) => ({
       ...prev,
       essence_core: Math.min(100, Math.max(0, (prev.essence_core || 0) - draftCost)),
@@ -1296,7 +1297,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                             <button
                               onClick={() => handleClaimChaosGem(res)}
                               className="bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer border border-violet-400/40"
-                              title="Socket volatile Chaos Gem into Gauntlet conduit"
+                              title="Socket Chaos Gem into Gauntlet conduit"
                             >
                               <span>💎</span>
                               <span>Socket</span>
@@ -1321,7 +1322,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                             <button
                               onClick={() => handleDropResult(res)}
                               className="bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/40 text-xs font-bold px-2 py-1 rounded-lg transition-all shadow-sm flex items-center gap-1 cursor-pointer"
-                              title="Drop and destroy volatile gem"
+                              title="Drop and discard Chaos Gem"
                             >
                               💥 Drop
                             </button>
@@ -1409,9 +1410,10 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
             {/* TAB 1: GENERATOR CONTROLS */}
             {activeRightTab === 'GENERATOR' && (
               <div className="space-y-4 flex-1">
-                {/* Position #2: Alchemy Essence Flask Visual Component with Tierless Craft Button */}
+                {/* Position #2: Alchemy Essence Flask Visual Component with Graduated Overcharge Controls */}
                 {(() => {
-                  const isCraftable = essenceCore >= 50;
+                  const canOverchargeCraft = essenceCore >= 100;
+                  const canBasicCraft = essenceCore >= 50 && essenceCore < 100;
 
                   return (
                     <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex items-center justify-between gap-3 shadow-inner shrink-0">
@@ -1419,20 +1421,38 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                         {/* Visual Flask / Vial */}
                         <div
                           onClick={() => {
-                            if (isCraftable) {
+                            if (canOverchargeCraft) {
+                              setDraftTier('overcharged');
+                              setIsDraftOpen(true);
+                            } else if (canBasicCraft) {
+                              setDraftTier('basic');
                               setIsDraftOpen(true);
                             }
                           }}
                           className={`relative w-9 h-14 rounded-b-full border-2 bg-slate-900 overflow-hidden flex flex-col justify-end transition-all shadow-lg shrink-0 ${
-                            isCraftable
+                            canOverchargeCraft
                               ? 'border-amber-400 shadow-amber-500/50 animate-pulse cursor-pointer'
+                              : canBasicCraft
+                              ? 'border-amber-500/70 shadow-amber-500/20 cursor-pointer'
                               : 'border-slate-700'
                           }`}
-                          title={isCraftable ? 'Click to craft an Artifact!' : 'Disenchant loot drops to fill Essence Flask'}
+                          title={
+                            canOverchargeCraft
+                              ? 'Essence Flask 100% Full! Click for Master Overcharged 3-Card Draft.'
+                              : canBasicCraft
+                              ? 'Essence Flask 50%+ Full! Click to Infuse 1 Artifact (50%) or keep saving to 100% for 3-Card Draft.'
+                              : 'Disenchant loot drops to fill Essence Flask'
+                          }
                         >
                           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3.5 h-1.5 bg-slate-800 border-b border-slate-700 z-10"></div>
+                          {/* 50% Threshold Marker */}
+                          <div className="absolute bottom-1/2 left-0 right-0 h-px bg-amber-500/30 z-10 pointer-events-none"></div>
                           <div
-                            className="w-full bg-gradient-to-t from-amber-600 via-amber-400 to-yellow-300 transition-all duration-700 ease-out relative"
+                            className={`w-full transition-all duration-700 ease-out relative ${
+                              canOverchargeCraft
+                                ? 'bg-gradient-to-t from-amber-600 via-amber-400 to-yellow-200'
+                                : 'bg-gradient-to-t from-amber-700 via-amber-500 to-amber-300'
+                            }`}
                             style={{ height: `${Math.min(100, Math.max(0, essenceCore))}%` }}
                           >
                             <div className="absolute top-0 left-0 right-0 h-1 bg-white/40 animate-pulse"></div>
@@ -1442,32 +1462,55 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                         <div>
                           <div className="flex items-center gap-1.5">
                             <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Essence</h4>
-                            {isCraftable && (
+                            {canOverchargeCraft && (
                               <span className="text-[9px] bg-amber-400 text-slate-950 font-extrabold px-1.5 py-0.2 rounded uppercase animate-bounce">
-                                Ready to Craft!
+                                ✨ Master Ready!
+                              </span>
+                            )}
+                            {canBasicCraft && (
+                              <span className="text-[9px] bg-amber-500/80 text-slate-950 font-extrabold px-1.5 py-0.2 rounded uppercase">
+                                ⚡ Infusion Ready
                               </span>
                             )}
                           </div>
                           <p className="text-[11px] text-slate-300 mt-0.5 font-mono font-bold">
                             {essenceCore}% Full
                           </p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">
-                            {isCraftable ? 'Craft Artifact (50% essence)' : 'Disenchant items to fill flask'}
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            {canOverchargeCraft
+                              ? 'Full Master 3-Card Draft ready!'
+                              : canBasicCraft
+                              ? 'Infuse 1 Artifact (50%) or save to 100% for Draft'
+                              : 'Disenchant items to fill flask'}
                           </p>
                         </div>
                       </div>
 
-                      {isCraftable && (
+                      {canOverchargeCraft ? (
                         <button
                           onClick={() => {
+                            setDraftTier('overcharged');
                             setIsDraftOpen(true);
                           }}
-                          className="bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl transition-all shadow-md shadow-amber-500/20 animate-pulse cursor-pointer shrink-0 flex items-center gap-1"
+                          className="bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl transition-all shadow-md shadow-amber-500/30 animate-pulse cursor-pointer shrink-0 flex items-center gap-1"
+                          title="Craft from 3-Card Master Draft (Consumes 100% Essence)"
                         >
-                          <span>🔮</span>
-                          <span>Craft Artifact</span>
+                          <span>✨</span>
+                          <span>Overcharge Draft (100%)</span>
                         </button>
-                      )}
+                      ) : canBasicCraft ? (
+                        <button
+                          onClick={() => {
+                            setDraftTier('basic');
+                            setIsDraftOpen(true);
+                          }}
+                          className="bg-amber-600/90 hover:bg-amber-500 text-slate-100 hover:text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl transition-all border border-amber-500/50 shadow-sm cursor-pointer shrink-0 flex items-center gap-1"
+                          title="Infuse 1 Random Artifact (Consumes 50% Essence)"
+                        >
+                          <span>⚡</span>
+                          <span>Infuse Artifact (50%)</span>
+                        </button>
+                      ) : null}
                     </div>
                   );
                 })()}
@@ -1986,6 +2029,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
         onClose={() => setIsDraftOpen(false)}
         characterName={characterName}
         stockMagicItems={artifactsCatalog}
+        craftTier={draftTier}
         onSelectReward={handleSelectDraftReward}
         onDeconstructDraft={handleDeconstructDraft}
       />
