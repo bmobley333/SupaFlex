@@ -1381,6 +1381,19 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
         </div>
 
         {/* ========================================================================= */}
+        {/* UNIVERSAL MODAL FOOTER                                                    */}
+        {/* ========================================================================= */}
+        <div className="px-6 py-3 bg-slate-950 border-t border-slate-800 shrink-0 flex items-center justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700/80 transition-all shadow-sm cursor-pointer"
+          >
+            Done
+          </button>
+        </div>
+
+        {/* ========================================================================= */}
         {/* DELETE CONFIRMATION MODAL OVERLAY                                         */}
         {/* ========================================================================= */}
         {itemToDelete && (
