@@ -201,6 +201,23 @@ export const isPathOrAbilityType = (type?: string): boolean => {
   return ['paths_abilities', 'path', 'power', 'skill', 'skillset', 'trait'].includes(type);
 };
 
+export const isCanonicalDbId = (id: string | number | undefined | null): boolean => {
+  if (!id) return false;
+  const str = String(id).trim();
+  if (
+    str.startsWith('pwr_') ||
+    str.startsWith('fn_') ||
+    str.startsWith('mod_') ||
+    str.startsWith('new_') ||
+    str.startsWith('temp_') ||
+    str.startsWith('custom_')
+  ) {
+    return false;
+  }
+  const num = Number(str);
+  return !isNaN(num) && Number.isInteger(num) && num > 0 && num < 1000000000;
+};
+
 export const CompactCostInput: React.FC<{
   gold: number;
   silver: number;
@@ -478,7 +495,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const handleStartAddInherentPower = () => {
     if (!isChassisComplete) return;
-    setPowerFormId(Date.now().toString());
+    setPowerFormId(`new_pwr_${Date.now()}`);
     setPowerFormParentType('inherent');
     setPowerFormParentId(undefined);
     setPowerFormName('');
@@ -501,7 +518,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const handleDeleteInherentPower = async (pwrId: string) => {
     setInherentPowers((prev) => prev.filter((p) => p.id !== pwrId));
-    const isExisting = !pwrId.startsWith('pwr_') && !pwrId.startsWith('fn_') && !isNaN(Number(pwrId));
+    const isExisting = isCanonicalDbId(pwrId);
     if (isExisting) {
       setDeletedPowerIds((prev) => [...prev, Number(pwrId)]);
     }
@@ -536,7 +553,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const handleStartAddMod = () => {
     if (!isChassisComplete) return;
-    setModFormId(Date.now().toString());
+    setModFormId(`new_mod_${Date.now()}`);
     setModFormName('');
     setModFormGold(0);
     setModFormSilver(0);
@@ -557,12 +574,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     const modToDelete = attachedMods.find((m) => m.id === modId);
     if (modToDelete) {
       modToDelete.powers.forEach((p) => {
-        if (!p.id.startsWith('pwr_') && !p.id.startsWith('fn_') && !isNaN(Number(p.id))) {
+        if (isCanonicalDbId(p.id)) {
           setDeletedPowerIds((prev) => [...prev, Number(p.id)]);
         }
       });
     }
-    const isExisting = !modId.startsWith('mod_') && !isNaN(Number(modId));
+    const isExisting = isCanonicalDbId(modId);
     if (isExisting) {
       setDeletedModIds((prev) => [...prev, Number(modId)]);
     }
@@ -601,7 +618,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const handleStartAddPowerToMod = (mod: StudioMod) => {
     if (!isChassisComplete) return;
-    setPowerFormId(Date.now().toString());
+    setPowerFormId(`new_pwr_${Date.now()}`);
     setPowerFormParentType('mod');
     setPowerFormParentId(mod.id);
     setPowerFormName('');
@@ -623,7 +640,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   };
 
   const handleDeleteModPower = (modId: string, pwrId: string) => {
-    if (!pwrId.startsWith('pwr_') && !pwrId.startsWith('fn_') && !isNaN(Number(pwrId))) {
+    if (isCanonicalDbId(pwrId)) {
       setDeletedPowerIds((prev) => [...prev, Number(pwrId)]);
     }
     setAttachedMods((prev) =>
@@ -639,7 +656,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     let resolvedId =
       exactCanonModMatch && isModFormExactMatch && exactCanonModMatch.id
         ? String(exactCanonModMatch.id)
-        : modFormId || Date.now().toString();
+        : modFormId || `new_mod_${Date.now()}`;
 
     const isHostSavedInDb = workshopMode === 'designer' && Boolean(canonicalSelectedId);
     const hostBelongsTo =
@@ -662,11 +679,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           owner: 'Designer',
         };
 
-        const isExistingModInDb =
-          resolvedId &&
-          !resolvedId.startsWith('mod_') &&
-          !resolvedId.startsWith('new') &&
-          !isNaN(Number(resolvedId));
+        const isExistingModInDb = isCanonicalDbId(resolvedId);
 
         if (isExistingModInDb) {
           await gameApi.updateCanonicalMod(Number(resolvedId), modPayload);
@@ -678,6 +691,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           const created = await gameApi.saveCanonicalMod(modPayload);
           if (created?.id) {
             resolvedId = String(created.id);
+            setModFormId(String(created.id));
           }
           setFeedback({
             type: 'success',
@@ -730,7 +744,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     let resolvedId =
       exactCanonPowerMatch && isPowerFormExactMatch && exactCanonPowerMatch.id
         ? String(exactCanonPowerMatch.id)
-        : powerFormId || Date.now().toString();
+        : powerFormId || `new_pwr_${Date.now()}`;
 
     const isHostSavedInDb = workshopMode === 'designer' && Boolean(canonicalSelectedId);
     const hostBelongsTo =
@@ -755,12 +769,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           owner: 'Designer',
         };
 
-        const isExistingPowerInDb =
-          resolvedId &&
-          !resolvedId.startsWith('pwr_') &&
-          !resolvedId.startsWith('fn_') &&
-          !resolvedId.startsWith('new') &&
-          !isNaN(Number(resolvedId));
+        const isExistingPowerInDb = isCanonicalDbId(resolvedId);
 
         if (isExistingPowerInDb) {
           await gameApi.updateCanonicalGearPower(Number(resolvedId), {
@@ -778,6 +787,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           });
           if (created?.id) {
             resolvedId = String(created.id);
+            setPowerFormId(String(created.id));
           }
           setFeedback({
             type: 'success',
@@ -3538,7 +3548,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
           // Sync inherent powers with Smart Deduplication
           for (const pwr of inherentPowers) {
-            const isExisting = pwr.id && !pwr.id.startsWith('pwr_') && !pwr.id.startsWith('fn_') && !isNaN(Number(pwr.id));
+            const isExisting = isCanonicalDbId(pwr.id);
             if (isExisting) {
               await gameApi.linkCanonicalGearPower(Number(pwr.id), hostBelongsTo);
               const pwrPayload = {
@@ -3590,7 +3600,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               mod.costGold > 0 || mod.costSilver > 0
                 ? `${mod.costGold > 0 ? `${mod.costGold}g` : ''}${mod.costGold > 0 && mod.costSilver > 0 ? ' ' : ''}${mod.costSilver > 0 ? `${mod.costSilver}s` : ''}`.trim()
                 : '0s';
-            const isModExisting = mod.id && !mod.id.startsWith('mod_') && !isNaN(Number(mod.id));
+            const isModExisting = isCanonicalDbId(mod.id);
 
             let resolvedModName = mod.name.trim();
 
@@ -3632,7 +3642,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
             for (const cPwr of mod.powers) {
               const childHostBelongsTo = `Mod: ${resolvedModName}`;
-              const isChildExisting = cPwr.id && !cPwr.id.startsWith('pwr_') && !cPwr.id.startsWith('fn_') && !isNaN(Number(cPwr.id));
+              const isChildExisting = isCanonicalDbId(cPwr.id);
               if (isChildExisting) {
                 await gameApi.linkCanonicalGearPower(Number(cPwr.id), childHostBelongsTo);
                 const childPayload = {
