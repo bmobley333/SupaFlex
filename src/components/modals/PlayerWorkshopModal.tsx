@@ -2,7 +2,7 @@
 // Unified Player's Forge: Master Modal Blueprint 2-Pane Architecture (Live Preview + Forge Controls)
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw, Search } from 'lucide-react';
+import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw, Search, ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CustomCreationType, CustomCreationItem, CustomCreationData, PathElementType, PathLinkedElement, StudioPower, StudioMod, SupabaseChaosGem } from '../../types/game';
@@ -415,6 +415,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [studioChassisType, setStudioChassisType] = useState<'weapon' | 'armor' | 'shield' | 'supplies'>('supplies');
   const [inherentPowers, setInherentPowers] = useState<StudioPower[]>([]);
   const [attachedMods, setAttachedMods] = useState<StudioMod[]>([]);
+  const [isTreeExpanded, setIsTreeExpanded] = useState<boolean>(true);
 
   // Studio Mod Form Working State
   const [modFormId, setModFormId] = useState<string>('');
@@ -435,6 +436,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const studioEffectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleStartAddInherentPower = () => {
+    if (!isChassisComplete) return;
     setPowerFormId(Date.now().toString());
     setPowerFormParentType('inherent');
     setPowerFormParentId(undefined);
@@ -464,6 +466,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   };
 
   const handleStartAddMod = () => {
+    if (!isChassisComplete) return;
     setModFormId(Date.now().toString());
     setModFormName('');
     setModFormGold(0);
@@ -492,6 +495,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   };
 
   const handleStartAddPowerToMod = (mod: StudioMod) => {
+    if (!isChassisComplete) return;
     setPowerFormId(Date.now().toString());
     setPowerFormParentType('mod');
     setPowerFormParentId(mod.id);
@@ -2187,6 +2191,24 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const isShieldDomainValid =
     shieldDomain === 'CUSTOM_NEW' ? shieldDomainNewText.trim().length > 0 : shieldDomain.trim().length > 0;
   const isCostValid = costGold > 0 || costSilver > 0;
+  const isChassisComplete = useMemo(() => {
+    if (!isNameValid || !isGenresValid) return false;
+    const isCostModeValid = costMode === 'artifact' || isCostValid;
+    if (!isCostModeValid) return false;
+    if (studioChassisType === 'weapon') return isWeaponDomainValid;
+    if (studioChassisType === 'shield') return isShieldDomainValid;
+    if (studioChassisType === 'supplies') return isGearCategoryValid;
+    return true;
+  }, [
+    isNameValid,
+    isGenresValid,
+    costMode,
+    isCostValid,
+    studioChassisType,
+    isWeaponDomainValid,
+    isShieldDomainValid,
+    isGearCategoryValid,
+  ]);
   const isPathReadyForAbilities =
     isNameValid && isGenresValid && isPathCategoryValid && pathDescription.trim().length > 0;
 
@@ -2242,15 +2264,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       return isEffectValid;
     }
     if (creationType === 'gear') {
-      const isCostModeValid = costMode === 'artifact' || isCostValid;
-      if (!isCostModeValid) return false;
+      if (!isChassisComplete) return false;
       if (costMode === 'artifact') {
         const hasPowersOrMods = inherentPowers.length > 0 || attachedMods.length > 0 || effect.trim().length > 0;
         if (!hasPowersOrMods) return false;
       }
-      if (studioChassisType === 'weapon') return isWeaponDomainValid;
-      if (studioChassisType === 'shield') return isShieldDomainValid;
-      if (studioChassisType === 'supplies') return isGearCategoryValid;
       return true;
     }
     if (creationType === 'relic' || creationType === 'hardware' || creationType === 'chaos_gem') {
@@ -3888,7 +3906,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 /* CURRENT ITEM HIERARCHY TREE VIEW */
                 <>
                   <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
-                    {/* 1. CHASSIS NODE CARD */}
+                    {/* 1. CHASSIS ROOT NODE CARD */}
                     <div
                       onClick={() => setActiveStudioSelection({ type: 'chassis' })}
                       className={`p-3 rounded-xl border transition flex flex-col gap-1.5 cursor-pointer shadow-sm ${
@@ -3912,15 +3930,32 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             {name || 'Unnamed Chassis'}
                           </span>
                         </div>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            costMode === 'artifact'
-                              ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
-                              : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
-                          }`}
-                        >
-                          {costMode === 'artifact' ? 'Artifact 🔮' : costStr}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              costMode === 'artifact'
+                                ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
+                                : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+                            }`}
+                          >
+                            {costMode === 'artifact' ? 'Artifact 🔮' : costStr}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsTreeExpanded(!isTreeExpanded);
+                            }}
+                            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
+                            title={isTreeExpanded ? 'Collapse Mods & Powers' : 'Expand Mods & Powers'}
+                          >
+                            <ChevronDown
+                              className={`w-4 h-4 text-cyan-400 transition-transform ${
+                                isTreeExpanded ? 'rotate-180' : ''
+                              }`}
+                            />
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between text-[11px] text-slate-400">
                         <span className="capitalize">
@@ -3938,220 +3973,233 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       </div>
                     </div>
 
-                    {/* 2. INHERENT ABILITIES CARD */}
-                    <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col gap-2 shadow-sm">
-                      <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs">⚡</span>
-                          <span className="font-outfit font-extrabold text-xs text-slate-200">
-                            Inherent Abilities (No Mod)
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                          {inherentPowers.length}
-                        </span>
-                      </div>
+                    {/* HIERARCHICAL TREE (Matching ManageGearPowersModal) */}
+                    {isTreeExpanded && (
+                      <div className="ml-5 sm:ml-6 pl-3 sm:pl-4 border-l-2 border-cyan-500/40 flex flex-col gap-3 pt-1 pb-1">
+                        {!isChassisComplete && (
+                          <div className="px-2.5 py-1.5 rounded-lg bg-amber-950/40 border border-amber-500/40 text-[11px] text-amber-300/90 flex items-center gap-1.5 leading-snug">
+                            <span>🔒</span>
+                            <span>Complete Chassis setup (Name, Genres) above to unlock Exotic Powers & Mods.</span>
+                          </div>
+                        )}
 
-                      {inherentPowers.length > 0 ? (
-                        <div className="flex flex-col gap-1.5">
-                          {inherentPowers.map((pwr) => {
-                            const isPwrSelected =
-                              activeStudioSelection.type === 'power' &&
-                              activeStudioSelection.parentType === 'inherent' &&
-                              activeStudioSelection.id === pwr.id;
-                            return (
-                              <div
-                                key={pwr.id}
-                                onClick={() => handleStartEditInherentPower(pwr)}
-                                className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
-                                  isPwrSelected
-                                    ? 'bg-rose-950/30 border-rose-500/80 ring-1 ring-rose-500/40'
-                                    : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
-                                }`}
-                              >
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <span className="text-xs shrink-0">🔥</span>
-                                  <span className="font-bold text-slate-200 text-xs truncate">
-                                    {pwr.name || 'Unnamed Power'}
-                                  </span>
-                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
-                                    {pwr.action}
-                                  </span>
-                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
-                                    {pwr.usage}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteInherentPower(pwr.id);
-                                    }}
-                                    className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
-                                    title="Delete inherent power"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-slate-500 italic">
-                          No inherent powers attached directly to this chassis.
-                        </p>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={handleStartAddInherentPower}
-                        className="mt-1 py-1.5 px-3 rounded-lg bg-slate-950 hover:bg-slate-800 border border-dashed border-slate-700 hover:border-rose-500/50 text-slate-300 hover:text-rose-300 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add Inherent Power</span>
-                      </button>
-                    </div>
-
-                    {/* 3. MODULAR ADD-ONS (MODS) CARD */}
-                    <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col gap-2.5 shadow-sm">
-                      <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs">⚙️</span>
-                          <span className="font-outfit font-extrabold text-xs text-slate-200">
-                            Modular Add-ons (Mods)
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                          {attachedMods.length}
-                        </span>
-                      </div>
-
-                      {attachedMods.length > 0 ? (
+                        {/* BRANCH 1: Inherent Chassis Powers (No Mod) */}
                         <div className="flex flex-col gap-2">
-                          {attachedMods.map((mod) => {
-                            const isModSelected =
-                              activeStudioSelection.type === 'mod' && activeStudioSelection.id === mod.id;
-                            const modCostStr =
-                              mod.costGold > 0 || mod.costSilver > 0
-                                ? `${mod.costGold > 0 ? `${mod.costGold}g` : ''}${mod.costGold > 0 && mod.costSilver > 0 ? ' ' : ''}${mod.costSilver > 0 ? `${mod.costSilver}s` : ''}`
-                                : '0s';
+                          <div className="flex items-center gap-2 py-0.5">
+                            <span className="text-xs font-bold text-amber-300 font-mono tracking-wide">
+                              Inherent (No Mod)
+                            </span>
+                            <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
+                              Installed
+                            </span>
+                          </div>
 
-                            return (
+                          {/* Indented Inherent Power Cards */}
+                          <div className="flex flex-col gap-1.5 pl-3.5 sm:pl-4">
+                            {inherentPowers.length > 0 ? (
+                              inherentPowers.map((pwr) => {
+                                const isPwrSelected =
+                                  activeStudioSelection.type === 'power' &&
+                                  activeStudioSelection.parentType === 'inherent' &&
+                                  activeStudioSelection.id === pwr.id;
+                                return (
+                                  <div
+                                    key={pwr.id}
+                                    onClick={() => handleStartEditInherentPower(pwr)}
+                                    className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
+                                      isPwrSelected
+                                        ? 'bg-rose-950/30 border-rose-500/80 ring-1 ring-rose-500/40'
+                                        : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <span className="text-xs shrink-0">🔥</span>
+                                      <span className="font-bold text-slate-200 text-xs truncate">
+                                        {pwr.name || 'Unnamed Power'}
+                                      </span>
+                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
+                                        {pwr.action}
+                                      </span>
+                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
+                                        {pwr.usage}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteInherentPower(pwr.id);
+                                        }}
+                                        className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
+                                        title="Delete inherent power"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            ) : null}
+
+                            <button
+                              type="button"
+                              onClick={handleStartAddInherentPower}
+                              disabled={!isChassisComplete}
+                              className={`py-1 px-2.5 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 select-none ${
+                                isChassisComplete
+                                  ? 'bg-slate-950 hover:bg-slate-800 border-dashed border-slate-700 hover:border-amber-500/50 text-slate-300 hover:text-amber-300 cursor-pointer'
+                                  : 'bg-slate-950/50 border-dashed border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
+                              }`}
+                              title={
+                                isChassisComplete
+                                  ? 'Add an inherent exotic power to this chassis'
+                                  : 'Complete Chassis setup first to add exotic powers'
+                              }
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>+ Add Exotic Power</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* BRANCH 2+: Modular Add-ons (Mods) */}
+                        {attachedMods.map((mod) => {
+                          const isModSelected =
+                            activeStudioSelection.type === 'mod' && activeStudioSelection.id === mod.id;
+                          const modCostStr =
+                            mod.costGold > 0 || mod.costSilver > 0
+                              ? `${mod.costGold > 0 ? `${mod.costGold}g` : ''}${mod.costGold > 0 && mod.costSilver > 0 ? ' ' : ''}${mod.costSilver > 0 ? `${mod.costSilver}s` : ''}`
+                              : '';
+
+                          return (
+                            <div key={mod.id} className="flex flex-col gap-2">
+                              {/* Mod Header Row: Name, Cost, Installed badge, Delete */}
                               <div
-                                key={mod.id}
-                                className={`p-2.5 rounded-xl border transition flex flex-col gap-2 ${
+                                onClick={() => handleStartEditMod(mod)}
+                                className={`flex items-center justify-between gap-2 p-1.5 rounded-lg border transition cursor-pointer ${
                                   isModSelected
-                                    ? 'bg-cyan-950/20 border-cyan-500/80 ring-1 ring-cyan-500/40'
-                                    : 'bg-slate-950/80 border-slate-800/90'
+                                    ? 'bg-cyan-950/30 border-cyan-500/80 ring-1 ring-cyan-500/40'
+                                    : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
                                 }`}
                               >
-                                <div
-                                  onClick={() => handleStartEditMod(mod)}
-                                  className="flex items-center justify-between cursor-pointer"
-                                >
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="text-xs">⚙️</span>
-                                    <span className="font-bold text-cyan-200 text-xs truncate">
-                                      {mod.name || 'Unnamed Mod'}
-                                    </span>
+                                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                  <span className="text-xs">⚙️</span>
+                                  <span className="text-xs font-bold text-cyan-200 font-mono tracking-wide truncate">
+                                    {mod.name || 'Unnamed Mod'}
+                                  </span>
+                                  {modCostStr && (
                                     <span className="px-1.5 py-0.2 rounded bg-amber-950/70 border border-amber-500/30 text-amber-300 font-mono text-[9px] font-bold">
                                       {modCostStr}
                                     </span>
-                                  </div>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteMod(mod.id);
-                                      }}
-                                      className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
-                                      title="Delete mod"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </div>
-
-                                <div className="pl-2 border-l border-slate-800 flex flex-col gap-1.5">
-                                  {mod.powers.length > 0 ? (
-                                    mod.powers.map((pwr) => {
-                                      const isModPwrSelected =
-                                        activeStudioSelection.type === 'power' &&
-                                        activeStudioSelection.parentType === 'mod' &&
-                                        activeStudioSelection.parentId === mod.id &&
-                                        activeStudioSelection.id === pwr.id;
-
-                                      return (
-                                        <div
-                                          key={pwr.id}
-                                          onClick={() => handleStartEditModPower(mod, pwr)}
-                                          className={`p-1.5 rounded-lg border transition flex items-center justify-between gap-1.5 cursor-pointer ${
-                                            isModPwrSelected
-                                              ? 'bg-rose-950/30 border-rose-500/80 ring-1 ring-rose-500/40'
-                                              : 'bg-slate-900/80 border-slate-800/80 hover:border-slate-700'
-                                          }`}
-                                        >
-                                          <div className="flex items-center gap-1 min-w-0">
-                                            <span className="text-[11px] shrink-0">🔥</span>
-                                            <span className="font-semibold text-slate-200 text-[11px] truncate">
-                                              {pwr.name || 'Unnamed Power'}
-                                            </span>
-                                            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
-                                              {pwr.action}
-                                            </span>
-                                            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
-                                              {pwr.usage}
-                                            </span>
-                                          </div>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDeleteModPower(mod.id, pwr.id);
-                                            }}
-                                            className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
-                                            title="Delete power from mod"
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-                                      );
-                                    })
-                                  ) : (
-                                    <p className="text-[9px] text-slate-500 italic">No powers attached to this mod.</p>
                                   )}
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleStartAddPowerToMod(mod)}
-                                    className="py-1 px-2 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/40 text-[10px] text-slate-300 hover:text-cyan-300 font-bold transition flex items-center justify-center gap-1 cursor-pointer"
-                                  >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    <span>Add Power to Mod</span>
-                                  </button>
+                                  <span className="px-2 py-0.5 rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
+                                    Installed
+                                  </span>
                                 </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteMod(mod.id);
+                                  }}
+                                  className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 border border-transparent hover:border-rose-500/40 rounded-lg transition-all cursor-pointer shadow-sm shrink-0"
+                                  title={`Delete mod '${mod.name}'`}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-slate-500 italic">
-                          No modular add-ons attached. You can add modular hardware upgrades below.
-                        </p>
-                      )}
 
-                      <button
-                        type="button"
-                        onClick={handleStartAddMod}
-                        className="mt-1 py-1.5 px-3 rounded-lg bg-slate-950 hover:bg-slate-800 border border-dashed border-slate-700 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add Modular Mod</span>
-                      </button>
-                    </div>
+                              {/* Indented Powers under this Mod */}
+                              <div className="flex flex-col gap-1.5 pl-3.5 sm:pl-4">
+                                {mod.powers.map((pwr) => {
+                                  const isModPwrSelected =
+                                    activeStudioSelection.type === 'power' &&
+                                    activeStudioSelection.parentType === 'mod' &&
+                                    activeStudioSelection.parentId === mod.id &&
+                                    activeStudioSelection.id === pwr.id;
+
+                                  return (
+                                    <div
+                                      key={pwr.id}
+                                      onClick={() => handleStartEditModPower(mod, pwr)}
+                                      className={`p-1.5 rounded-lg border transition flex items-center justify-between gap-1.5 cursor-pointer ${
+                                        isModPwrSelected
+                                          ? 'bg-rose-950/30 border-rose-500/80 ring-1 ring-rose-500/40'
+                                          : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="text-[11px] shrink-0">🔥</span>
+                                        <span className="font-semibold text-slate-200 text-xs truncate">
+                                          {pwr.name || 'Unnamed Power'}
+                                        </span>
+                                        <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
+                                          {pwr.action}
+                                        </span>
+                                        <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
+                                          {pwr.usage}
+                                        </span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteModPower(mod.id, pwr.id);
+                                        }}
+                                        className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
+                                        title="Delete power from mod"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartAddPowerToMod(mod)}
+                                  disabled={!isChassisComplete}
+                                  className={`py-1 px-2 rounded border text-[10px] font-bold transition flex items-center justify-center gap-1 select-none ${
+                                    isChassisComplete
+                                      ? 'bg-slate-950 hover:bg-slate-800 border-dashed border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-cyan-300 cursor-pointer'
+                                      : 'bg-slate-950/50 border-dashed border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
+                                  }`}
+                                  title={
+                                    isChassisComplete
+                                      ? `Add a power to mod '${mod.name}'`
+                                      : 'Complete Chassis setup first to add powers'
+                                  }
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>+ Add Power to Mod</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* BOTTOM TREE ACTION: + Add Mod */}
+                        <button
+                          type="button"
+                          onClick={handleStartAddMod}
+                          disabled={!isChassisComplete}
+                          className={`py-1.5 px-3 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 select-none ${
+                            isChassisComplete
+                              ? 'bg-slate-950 hover:bg-slate-800 border-dashed border-slate-700 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 cursor-pointer'
+                              : 'bg-slate-950/50 border-dashed border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
+                          }`}
+                          title={
+                            isChassisComplete
+                              ? 'Add a modular hardware upgrade to this chassis'
+                              : 'Complete Chassis setup first to add mods'
+                          }
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>+ Add Mod</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* 4. FOOTER STATUS & FORGE ACTION BUTTON */}
@@ -6376,26 +6424,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
 
                   {/* Quick-Action Bar */}
-                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleStartAddInherentPower}
-                        className="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-500/30 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add Inherent Power</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleStartAddMod}
-                        className="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add Modular Mod</span>
-                      </button>
-                    </div>
-
+                  <div className="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
                     <button
                       type="button"
                       onClick={handleSubmit}
