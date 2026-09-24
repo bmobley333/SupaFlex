@@ -253,42 +253,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
   const updateCanonicalCatalogItem = useCharacterStore((state) => state.updateCanonicalCatalogItem);
   const removeCanonicalCatalogItem = useCharacterStore((state) => state.removeCanonicalCatalogItem);
-  const playerSubscriptions = useCharacterStore((state) => state.playerSubscriptions);
-  const subscribeToAuthor = useCharacterStore((state) => state.subscribeToAuthor);
-  const unsubscribeFromAuthor = useCharacterStore((state) => state.unsubscribeFromAuthor);
   const chaosGemsCatalog = useCharacterStore((state) => state.chaosGemsCatalog);
   const refreshCatalogs = useCharacterStore((state) => state.refreshCatalogs);
-
-  const [subAuthorEmailInput, setSubAuthorEmailInput] = useState('');
-  const [isSubscribing, setIsSubscribing] = useState(false);
-
-  const handleSubscribe = async () => {
-    const clean = subAuthorEmailInput.trim().toLowerCase();
-    if (!clean || !playerEmail) return;
-    if (clean === playerEmail.toLowerCase()) {
-      alert("You cannot subscribe to your own email address.");
-      return;
-    }
-    setIsSubscribing(true);
-    try {
-      await subscribeToAuthor(clean);
-      setSubAuthorEmailInput('');
-      setFeedback({ type: 'success', message: `🔗 Subscribed to ${clean}'s creations!` });
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: `Failed to subscribe: ${err.message || 'Error'}` });
-    } finally {
-      setIsSubscribing(false);
-    }
-  };
-
-  const handleUnsubscribe = async (authorEmail: string) => {
-    try {
-      await unsubscribeFromAuthor(authorEmail);
-      setFeedback({ type: 'success', message: `Removed subscription to ${authorEmail}.` });
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: `Failed to unsubscribe: ${err.message || 'Error'}` });
-    }
-  };
 
   const isMasterAccount = (playerEmail || '').toLowerCase().trim() === 'metascapegame@gmail.com';
   const [workshopMode, setWorkshopMode] = useState<'player' | 'designer'>('player');
@@ -319,7 +285,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   // Unified Paths & Abilities Studio State
   const [pathStudioMode, setPathStudioMode] = useState<'path' | 'standalone'>('path');
-  const [pathStudioTab, setPathStudioTab] = useState<'current' | 'canon' | 'mine' | 'linked'>('current');
+  const [pathStudioTab, setPathStudioTab] = useState<'current' | 'canon' | 'mine'>('current');
   const [pathDatabaseCategory, setPathDatabaseCategory] = useState<'path' | 'power' | 'trait' | 'skill'>('path');
   const [pathLibraryFilter, setPathLibraryFilter] = useState<'all' | 'path' | 'power' | 'skill' | 'skillset' | 'trait'>('all');
   const [isCreatingNewPath, setIsCreatingNewPath] = useState<boolean>(false);
@@ -392,9 +358,18 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const effectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Unified Gear Studio State
-  const [studioTab, setStudioTab] = useState<'current' | 'canon' | 'mine' | 'linked'>('current');
+  const [studioTab, setStudioTab] = useState<'current' | 'canon' | 'mine'>('current');
   const [gearDatabaseChassis, setGearDatabaseChassis] = useState<'weapon' | 'armor' | 'shield' | 'supplies'>('weapon');
-  const [gemStudioTab, setGemStudioTab] = useState<'current' | 'canon' | 'mine' | 'linked'>('current');
+  const [gemStudioTab, setGemStudioTab] = useState<'current' | 'canon' | 'mine'>('current');
+
+  // Authoritative Guardrail: Non-Designer accounts can NEVER access the Canon tab
+  useEffect(() => {
+    if (!isMetaScapeDesigner) {
+      if (studioTab === 'canon') setStudioTab('current');
+      if (pathStudioTab === 'canon') setPathStudioTab('current');
+      if (gemStudioTab === 'canon') setGemStudioTab('current');
+    }
+  }, [isMetaScapeDesigner, studioTab, pathStudioTab, gemStudioTab]);
   const [canonicalChaosGems, setCanonicalChaosGems] = useState<SupabaseChaosGem[]>([]);
   const [canonicalSearchQuery, setCanonicalSearchQuery] = useState<string>('');
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
@@ -661,14 +636,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setInherentPowers([]);
     setAttachedMods([]);
     setActiveStudioSelection({ type: 'chassis' });
-    if (studioTab !== 'canon' && studioTab !== 'mine' && studioTab !== 'linked') {
+    if (studioTab !== 'canon' && studioTab !== 'mine') {
       setStudioTab('current');
     }
-    if (pathStudioTab !== 'canon' && pathStudioTab !== 'mine' && pathStudioTab !== 'linked') {
+    if (pathStudioTab !== 'canon' && pathStudioTab !== 'mine') {
       setPathStudioMode('path');
       setPathStudioTab('current');
     }
-    if (gemStudioTab !== 'canon' && gemStudioTab !== 'mine' && gemStudioTab !== 'linked') {
+    if (gemStudioTab !== 'canon' && gemStudioTab !== 'mine') {
       setGemStudioTab('current');
     }
     setPathLibraryFilter('all');
@@ -959,14 +934,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   }, [personalItems]);
 
   const cleanEmail = (playerEmail || '').trim().toLowerCase();
-  const subEmails = useMemo(() => (playerSubscriptions || []).map((s) => s.toLowerCase()), [playerSubscriptions]);
 
-  // Helper to determine scope: canon vs mine vs linked
-  const getItemScope = (itemOwner?: string): 'canon' | 'mine' | 'linked' => {
+  // Helper to determine scope: canon vs mine
+  const getItemScope = (itemOwner?: string): 'canon' | 'mine' => {
     if (!itemOwner || itemOwner === 'Designer') return 'canon';
     const ownerClean = itemOwner.toLowerCase();
     if (cleanEmail && ownerClean === cleanEmail) return 'mine';
-    if (subEmails.includes(ownerClean)) return 'linked';
     return 'canon';
   };
 
@@ -1043,12 +1016,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return allGearItems.filter((it) => getItemScope(it.owner) === 'mine');
   }, [allGearItems, cleanEmail]);
 
-  const linkedGearItems = useMemo(() => {
-    return allGearItems.filter((it) => getItemScope(it.owner) === 'linked');
-  }, [allGearItems, subEmails]);
-
   const myGearCount = myGearItems.length;
-  const linkedGearCount = linkedGearItems.length;
 
   const filteredMyGearItems = useMemo(() => {
     let items = myGearItems;
@@ -1061,18 +1029,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     }
     return items.sort((a, b) => a.name.localeCompare(b.name));
   }, [myGearItems, studioLibraryChassisFilter, canonicalSearchQuery]);
-
-  const filteredLinkedGearItems = useMemo(() => {
-    let items = linkedGearItems;
-    if (studioLibraryChassisFilter !== 'all') {
-      items = items.filter((it) => it.chassis === studioLibraryChassisFilter);
-    }
-    const q = canonicalSearchQuery.trim().toLowerCase();
-    if (q) {
-      items = items.filter((it) => it.name.toLowerCase().includes(q) || (it.notes && it.notes.toLowerCase().includes(q)));
-    }
-    return items.sort((a, b) => a.name.localeCompare(b.name));
-  }, [linkedGearItems, studioLibraryChassisFilter, canonicalSearchQuery]);
 
   // Normalized Paths & Abilities for UI List Rendering
   interface NormalizedPathItem {
@@ -1143,12 +1099,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return allPathAbilityItems.filter((it) => getItemScope(it.owner) === 'mine');
   }, [allPathAbilityItems, cleanEmail]);
 
-  const linkedPathItems = useMemo(() => {
-    return allPathAbilityItems.filter((it) => getItemScope(it.owner) === 'linked');
-  }, [allPathAbilityItems, subEmails]);
-
   const myPathCount = myPathItems.length;
-  const linkedPathCount = linkedPathItems.length;
 
   const filteredMyPathItems = useMemo(() => {
     let items = myPathItems;
@@ -1162,29 +1113,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return items.sort((a, b) => a.name.localeCompare(b.name));
   }, [myPathItems, pathLibraryFilter, canonicalSearchQuery]);
 
-  const filteredLinkedPathItems = useMemo(() => {
-    let items = linkedPathItems;
-    if (pathLibraryFilter !== 'all') {
-      items = items.filter((it) => it.type === pathLibraryFilter);
-    }
-    const q = canonicalSearchQuery.trim().toLowerCase();
-    if (q) {
-      items = items.filter((it) => it.name.toLowerCase().includes(q) || (it.notes && it.notes.toLowerCase().includes(q)));
-    }
-    return items.sort((a, b) => a.name.localeCompare(b.name));
-  }, [linkedPathItems, pathLibraryFilter, canonicalSearchQuery]);
-
   // Normalized Chaos Gems for UI List Rendering
   const myGems = useMemo(() => {
     return (chaosGemsCatalog || []).filter((g) => getItemScope(g.owner) === 'mine');
   }, [chaosGemsCatalog, cleanEmail]);
 
-  const linkedGems = useMemo(() => {
-    return (chaosGemsCatalog || []).filter((g) => getItemScope(g.owner) === 'linked');
-  }, [chaosGemsCatalog, subEmails]);
-
   const myGemCount = myGems.length;
-  const linkedGemCount = linkedGems.length;
 
   const filteredMyGems = useMemo(() => {
     let items = myGems;
@@ -1194,15 +1128,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     }
     return items.sort((a, b) => a.name.localeCompare(b.name));
   }, [myGems, canonicalSearchQuery]);
-
-  const filteredLinkedGems = useMemo(() => {
-    let items = linkedGems;
-    const q = canonicalSearchQuery.trim().toLowerCase();
-    if (q) {
-      items = items.filter((g) => g.name.toLowerCase().includes(q) || (g.effect && g.effect.toLowerCase().includes(q)));
-    }
-    return items.sort((a, b) => a.name.localeCompare(b.name));
-  }, [linkedGems, canonicalSearchQuery]);
 
   const handleLoadTemplateIntoForge = (chassisOrType: string, item: any) => {
     if (chassisOrType === 'weapon') handlePopulateCanonicalWeapon(item);
@@ -1227,60 +1152,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setPathStudioTab('current');
     }
   };
-
-  const renderAuthorSubscriptionBanner = () => (
-    <div className="p-2.5 rounded-xl bg-slate-900/90 border border-indigo-500/30 flex flex-col gap-2 shrink-0 shadow-lg shadow-indigo-950/20">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-bold text-indigo-300 flex items-center gap-1.5">
-          <span>🔗</span>
-          <span>Author Subscriptions</span>
-        </span>
-        <span className="text-[10px] text-slate-400">
-          {playerSubscriptions.length} Linked Author{playerSubscriptions.length === 1 ? '' : 's'}
-        </span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <input
-          type="email"
-          value={subAuthorEmailInput}
-          onChange={(e) => setSubAuthorEmailInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSubscribe();
-          }}
-          placeholder="Enter creator email to link creations..."
-          className="flex-1 bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-        />
-        <button
-          type="button"
-          onClick={handleSubscribe}
-          disabled={isSubscribing || !subAuthorEmailInput.trim()}
-          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 transition cursor-pointer shrink-0"
-        >
-          {isSubscribing ? 'Linking...' : '+ Link'}
-        </button>
-      </div>
-      {playerSubscriptions.length > 0 && (
-        <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-0.5">
-          {playerSubscriptions.map((author) => (
-            <span
-              key={author}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-950/80 text-indigo-200 border border-indigo-500/30"
-            >
-              <span>👤 {author}</span>
-              <button
-                type="button"
-                onClick={() => handleUnsubscribe(author)}
-                className="hover:text-red-400 cursor-pointer ml-0.5 font-bold"
-                title={`Unlink ${author}`}
-              >
-                ✕
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 
   const displayList = useMemo(() => {
     if (listFilterMode === 'all') {
@@ -1326,7 +1197,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       });
     });
     return list;
-  }, [paths, cleanEmail, subEmails]);
+  }, [paths, cleanEmail]);
 
   // Filtered catalog items for Link Existing Ability
   const filteredPathCatalogItems = useMemo(() => {
@@ -1558,7 +1429,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         (w.requirement || '').toLowerCase().includes(q) ||
         (w.domain || '').toLowerCase().includes(q)
     );
-  }, [weaponsCatalog, canonicalSearchQuery, cleanEmail, subEmails]);
+  }, [weaponsCatalog, canonicalSearchQuery, cleanEmail]);
 
   const filteredCanonicalArmor = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
@@ -1570,7 +1441,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         (a.requirement || '').toLowerCase().includes(q) ||
         (a.ar || '').toLowerCase().includes(q)
     );
-  }, [armorCatalog, canonicalSearchQuery, cleanEmail, subEmails]);
+  }, [armorCatalog, canonicalSearchQuery, cleanEmail]);
 
   const filteredCanonicalShields = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
@@ -1582,7 +1453,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         (s.requirement || '').toLowerCase().includes(q) ||
         (s.domain || '').toLowerCase().includes(q)
     );
-  }, [shieldsCatalog, canonicalSearchQuery, cleanEmail, subEmails]);
+  }, [shieldsCatalog, canonicalSearchQuery, cleanEmail]);
 
   const filteredCanonicalSupplies = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
@@ -1594,7 +1465,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         (sup.category || '').toLowerCase().includes(q) ||
         (sup.cost || '').toLowerCase().includes(q)
     );
-  }, [suppliesCatalog, canonicalSearchQuery, cleanEmail, subEmails]);
+  }, [suppliesCatalog, canonicalSearchQuery, cleanEmail]);
 
   const filteredCanonicalPaths = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
@@ -1606,7 +1477,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         (p.category || '').toLowerCase().includes(q) ||
         (p.description || '').toLowerCase().includes(q)
     );
-  }, [paths, canonicalSearchQuery, cleanEmail, subEmails]);
+  }, [paths, canonicalSearchQuery, cleanEmail]);
 
   const filteredCanonicalPowers = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
@@ -1619,7 +1490,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         (p.usage || '').toLowerCase().includes(q) ||
         (p.effect || '').toLowerCase().includes(q)
     );
-  }, [powers, canonicalSearchQuery, cleanEmail, subEmails]);
+  }, [powers, canonicalSearchQuery, cleanEmail]);
 
   const filteredCanonicalTraits = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
@@ -1630,7 +1501,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         (t.name || '').toLowerCase().includes(q) ||
         (t.effect || '').toLowerCase().includes(q)
     );
-  }, [traits, canonicalSearchQuery, cleanEmail, subEmails]);
+  }, [traits, canonicalSearchQuery, cleanEmail]);
 
   const filteredCanonicalSkills = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
@@ -1642,7 +1513,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         (s.discipline || '').toLowerCase().includes(q) ||
         (s.attribute || '').toLowerCase().includes(q)
     );
-  }, [skills, canonicalSearchQuery, cleanEmail, subEmails]);
+  }, [skills, canonicalSearchQuery, cleanEmail]);
 
   const filteredCanonicalChaosGems = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
@@ -1655,7 +1526,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         (g.effect || '').toLowerCase().includes(q) ||
         (g.notes || '').toLowerCase().includes(q)
     );
-  }, [chaosGemsCatalog, canonicalChaosGems, canonicalSearchQuery, cleanEmail, subEmails]);
+  }, [chaosGemsCatalog, canonicalChaosGems, canonicalSearchQuery, cleanEmail]);
 
   const handleUpdateLinkedElements = async (elements: PathLinkedElement[]) => {
     setLinkedElements(elements);
@@ -3188,6 +3059,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     setWorkshopMode('player');
                     handleResetForm();
                     setCanonicalSearchQuery('');
+                    setStudioTab('current');
+                    setPathStudioTab('current');
+                    setGemStudioTab('current');
                   }}
                   className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                     workshopMode === 'player'
@@ -3290,7 +3164,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           {/* ========================================================================= */}
           {creationType === 'gear' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Studio Tab Switcher: 4-Option Pill Switch */}
+              {/* Studio Tab Switcher */}
               <div className="shrink-0 flex items-center justify-between gap-2">
                 <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
@@ -3304,17 +3178,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   >
                     🛠️ Current
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setStudioTab('canon')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      studioTab === 'canon'
-                        ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    👑 Canon
-                  </button>
+                  {isMetaScapeDesigner && (
+                    <button
+                      type="button"
+                      onClick={() => setStudioTab('canon')}
+                      className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                        studioTab === 'canon'
+                          ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      👑 Canon
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setStudioTab('mine')}
@@ -3325,17 +3201,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     }`}
                   >
                     🎨 My Creations ({myGearCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStudioTab('linked')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      studioTab === 'linked'
-                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    🔗 Linked ({linkedGearCount})
                   </button>
                 </div>
 
@@ -3488,124 +3353,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
                 </div>
 
-              ) : studioTab === 'linked' ? (
-                /* LINKED CREATIONS VIEW */
-                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-                  {renderAuthorSubscriptionBanner()}
-
-                  {/* Chassis Category Filter Switch */}
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setStudioLibraryChassisFilter('all')}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        studioLibraryChassisFilter === 'all'
-                          ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🌐 All
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStudioLibraryChassisFilter('weapon')}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        studioLibraryChassisFilter === 'weapon'
-                          ? 'bg-orange-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      ⚔️ Weapons
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStudioLibraryChassisFilter('armor')}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        studioLibraryChassisFilter === 'armor'
-                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🥋 Armor
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStudioLibraryChassisFilter('shield')}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        studioLibraryChassisFilter === 'shield'
-                          ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🛡️ Shields
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStudioLibraryChassisFilter('supplies')}
-                      className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                        studioLibraryChassisFilter === 'supplies'
-                          ? 'bg-teal-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🎒 Supplies
-                    </button>
-                  </div>
-
-                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
-                    {filteredLinkedGearItems.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
-                        <span className="text-2xl mb-1.5">🔗</span>
-                        <p className="font-semibold text-slate-400">No linked gear creations found</p>
-                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          Enter a creator's email address above to link their custom creations to your forge.
-                        </p>
-                      </div>
-                    ) : (
-                      filteredLinkedGearItems.map((item) => (
-                        <div
-                          key={item.id}
-                          className="p-2.5 rounded-xl border border-indigo-900/40 bg-slate-950/70 hover:border-indigo-500/40 hover:bg-slate-900/80 transition flex flex-col gap-1.5 shadow-sm"
-                        >
-                          <div className="flex items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="text-sm shrink-0">
-                                {item.chassis === 'weapon' ? '⚔️' : item.chassis === 'armor' ? '🥋' : item.chassis === 'shield' ? '🛡️' : '🎒'}
-                              </span>
-                              <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
-                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 shrink-0">
-                                👤 {item.owner}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleLoadTemplateIntoForge(item.chassis, item.rawItem)}
-                              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 transition cursor-pointer shrink-0"
-                              title="Load into Forge as custom template"
-                            >
-                              + Load
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-                            {item.cost && (
-                              <span className="px-1.5 py-0.2 bg-purple-950/80 border border-purple-500/30 text-purple-300 font-bold rounded">
-                                {item.cost}
-                              </span>
-                            )}
-                            <span className="text-slate-300">{item.details}</span>
-                          </div>
-                          {item.notes && (
-                            <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
-                              {item.notes}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-              ) : studioTab === 'canon' ? (
+              ) : (isMetaScapeDesigner && studioTab === 'canon') ? (
                 /* SUPABASE CANONICAL VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
                   {/* Chassis Category Filter Switch */}
@@ -4247,7 +3995,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           ) : creationType === 'paths_abilities' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Studio Tab Switcher: 4-Option Pill Switch */}
+              {/* Studio Tab Switcher */}
               <div className="shrink-0 flex items-center justify-between gap-2 flex-wrap">
                 <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
@@ -4261,17 +4009,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   >
                     🛠️ Current
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setPathStudioTab('canon')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      pathStudioTab === 'canon'
-                        ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    👑 Canon
-                  </button>
+                  {isMetaScapeDesigner && (
+                    <button
+                      type="button"
+                      onClick={() => setPathStudioTab('canon')}
+                      className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                        pathStudioTab === 'canon'
+                          ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      👑 Canon
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setPathStudioTab('mine')}
@@ -4282,17 +4032,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     }`}
                   >
                     🎨 My Creations ({myPathCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPathStudioTab('linked')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      pathStudioTab === 'linked'
-                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    🔗 Linked ({linkedPathCount})
                   </button>
                 </div>
 
@@ -4447,95 +4186,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
                 </div>
 
-              ) : pathStudioTab === 'linked' ? (
-                /* LINKED CREATIONS VIEW */
-                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-                  {renderAuthorSubscriptionBanner()}
-
-                  {/* Category Filter Switch */}
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5 shadow-inner backdrop-blur-md shrink-0">
-                    {(['all', 'path', 'power', 'skill', 'trait'] as const).map((filter) => {
-                      const labels: Record<string, string> = {
-                        all: '🌐 All',
-                        path: '🧭 Paths',
-                        power: '⚡ Powers',
-                        skill: '🎯 Skills',
-                        trait: '🧬 Traits',
-                      };
-                      return (
-                        <button
-                          key={filter}
-                          type="button"
-                          onClick={() => setPathLibraryFilter(filter)}
-                          className={`flex-1 py-1 px-1 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                            pathLibraryFilter === filter
-                              ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                              : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                          }`}
-                        >
-                          {labels[filter]}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
-                    {filteredLinkedPathItems.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
-                        <span className="text-2xl mb-1.5">🔗</span>
-                        <p className="font-semibold text-slate-400">No linked creations found</p>
-                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          Enter a creator's email address above to link their custom creations to your forge.
-                        </p>
-                      </div>
-                    ) : (
-                      filteredLinkedPathItems.map((item) => (
-                        <div
-                          key={item.id}
-                          className="p-3 rounded-xl border border-indigo-900/40 bg-slate-950/70 hover:border-indigo-500/40 hover:bg-slate-900/80 transition flex flex-col gap-1.5 shadow-sm"
-                        >
-                          <div className="flex items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-base shrink-0">
-                                {item.type === 'path' ? '🧭' : item.type === 'power' ? '⚡' : item.type === 'trait' ? '🧬' : '🎯'}
-                              </span>
-                              <span className="font-bold text-slate-100 text-xs truncate">{item.name}</span>
-                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 shrink-0">
-                                👤 {item.owner}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-indigo-300 font-mono font-bold uppercase">
-                                {item.type}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleLoadTemplateIntoForge(item.type, item.rawItem)}
-                                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 transition cursor-pointer shrink-0"
-                                title="Load into Forge as custom template"
-                              >
-                                + Load
-                              </button>
-                            </div>
-                          </div>
-
-                          {item.details && (
-                            <div className="text-[10px] text-slate-300">
-                              {item.details}
-                            </div>
-                          )}
-                          {item.notes && (
-                            <div className="text-[10px] text-slate-400 font-mono line-clamp-1">
-                              {item.notes}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-              ) : pathStudioTab === 'canon' ? (
+              ) : (isMetaScapeDesigner && pathStudioTab === 'canon') ? (
                 /* SUPABASE CANONICAL VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
                   {/* Category Filter Switch */}
@@ -5286,7 +4937,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           ) : creationType === 'chaos_gem' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Studio Tab Switcher: 4-Option Pill Switch */}
+              {/* Studio Tab Switcher */}
               <div className="shrink-0 flex items-center justify-between gap-2">
                 <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl inline-flex items-center gap-1 shadow-inner backdrop-blur-md">
                   <button
@@ -5300,17 +4951,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   >
                     🛠️ Current
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setGemStudioTab('canon')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      gemStudioTab === 'canon'
-                        ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    👑 Canon
-                  </button>
+                  {isMetaScapeDesigner && (
+                    <button
+                      type="button"
+                      onClick={() => setGemStudioTab('canon')}
+                      className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                        gemStudioTab === 'canon'
+                          ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      👑 Canon
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setGemStudioTab('mine')}
@@ -5321,17 +4974,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     }`}
                   >
                     🎨 My Creations ({myGemCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGemStudioTab('linked')}
-                    className={`py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                      gemStudioTab === 'linked'
-                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    🔗 Linked ({linkedGemCount})
                   </button>
                 </div>
 
@@ -5429,67 +5071,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
                 </div>
 
-              ) : gemStudioTab === 'linked' ? (
-                /* LINKED CREATIONS VIEW */
-                <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-                  {renderAuthorSubscriptionBanner()}
-
-                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2">
-                    {filteredLinkedGems.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
-                        <span className="text-2xl mb-1.5">🔗</span>
-                        <p className="font-semibold text-slate-400">No linked chaos gems found</p>
-                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          Enter a creator's email address above to link their custom creations to your forge.
-                        </p>
-                      </div>
-                    ) : (
-                      filteredLinkedGems.map((item) => {
-                        const itemEffect = item.effect || '';
-
-                        return (
-                          <div
-                            key={item.id}
-                            className="p-2.5 rounded-xl border border-indigo-900/40 bg-slate-950/70 hover:border-indigo-500/40 hover:bg-slate-900/80 transition flex flex-col gap-1.5 shadow-sm"
-                          >
-                            <div className="flex items-center justify-between gap-1.5">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-sm shrink-0">💎</span>
-                                <span className="font-bold text-slate-200 text-xs truncate">{item.name}</span>
-                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 shrink-0">
-                                  👤 {item.owner}
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleLoadTemplateIntoForge('chaos_gem', item)}
-                                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 transition cursor-pointer shrink-0"
-                                title="Load into Forge as custom template"
-                              >
-                                + Load
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-                              <span className="px-1.5 py-0.2 bg-violet-950/80 border border-violet-500/30 text-violet-300 font-bold rounded">
-                                {item.action || 'F'}
-                              </span>
-                              <span className="px-1.5 py-0.2 bg-amber-950/80 border border-amber-500/30 text-amber-300 font-bold rounded">
-                                {item.usage || '3 Uses'}
-                              </span>
-                            </div>
-                            {itemEffect && (
-                              <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800/80 text-[10px] text-slate-300 font-mono leading-tight line-clamp-2">
-                                {itemEffect}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-
-              ) : gemStudioTab === 'canon' ? (
+              ) : (isMetaScapeDesigner && gemStudioTab === 'canon') ? (
                 /* SUPABASE CANONICAL VIEW */
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
                   {/* Dropdown Selector Header */}
