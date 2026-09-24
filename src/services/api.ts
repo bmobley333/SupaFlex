@@ -2850,7 +2850,63 @@ export const gameApi = {
     return true;
   },
 
-  // 10. ACTIVE PROPAGATION ENGINE
+  // 10. MODS
+  async saveCanonicalMod(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('mods')
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalMod(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('mods')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalMod(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('mods').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 11. GEAR POWERS
+  async saveCanonicalGearPower(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('gear_powers')
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalGearPower(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('gear_powers')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalGearPower(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('gear_powers').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 12. ACTIVE PROPAGATION ENGINE
   async propagateCanonicalUpdateToAllCharacters(
     params: CanonicalPropagationParams
   ): Promise<{ updatedCount: number; errors: string[] }> {

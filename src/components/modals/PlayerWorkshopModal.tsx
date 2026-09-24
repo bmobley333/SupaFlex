@@ -9,6 +9,7 @@ import { CustomCreationType, CustomCreationItem, CustomCreationData, PathElement
 import { InfoTooltip } from '../common/InfoTooltip';
 import { compareMsoOptions } from '../../utils/kitUtils';
 import { parseCostToSilver } from '../../utils/moneyUtils';
+import { isBelongsToMatch } from '../../utils/gearFunctionSync';
 
 interface PlayerWorkshopModalProps {
   isOpen: boolean;
@@ -254,6 +255,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const updateCanonicalCatalogItem = useCharacterStore((state) => state.updateCanonicalCatalogItem);
   const removeCanonicalCatalogItem = useCharacterStore((state) => state.removeCanonicalCatalogItem);
   const chaosGemsCatalog = useCharacterStore((state) => state.chaosGemsCatalog);
+  const functionsCatalog = useCharacterStore((state) => state.functionsCatalog);
+  const modsCatalog = useCharacterStore((state) => state.modsCatalog);
   const refreshCatalogs = useCharacterStore((state) => state.refreshCatalogs);
 
   const isMasterAccount = (playerEmail || '').toLowerCase().trim() === 'metascapegame@gmail.com';
@@ -391,6 +394,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [inherentPowers, setInherentPowers] = useState<StudioPower[]>([]);
   const [attachedMods, setAttachedMods] = useState<StudioMod[]>([]);
   const [isTreeExpanded, setIsTreeExpanded] = useState<boolean>(true);
+  const [isAuthoringNewMaster, setIsAuthoringNewMaster] = useState<boolean>(false);
+  const [deletedPowerIds, setDeletedPowerIds] = useState<(string | number)[]>([]);
+  const [deletedModIds, setDeletedModIds] = useState<(string | number)[]>([]);
 
   // Studio Mod Form Working State
   const [modFormId, setModFormId] = useState<string>('');
@@ -407,7 +413,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [powerFormAction, setPowerFormAction] = useState<string>('AM');
   const [powerFormUsage, setPowerFormUsage] = useState<string>('1-Enc');
   const [powerFormEffect, setPowerFormEffect] = useState<string>('');
-
   const studioEffectTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleStartAddInherentPower = () => {
@@ -435,6 +440,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const handleDeleteInherentPower = (pwrId: string) => {
     setInherentPowers((prev) => prev.filter((p) => p.id !== pwrId));
+    if (!pwrId.startsWith('pwr_') && !pwrId.startsWith('fn_') && !isNaN(Number(pwrId))) {
+      setDeletedPowerIds((prev) => [...prev, Number(pwrId)]);
+    }
     if (activeStudioSelection.type === 'power' && activeStudioSelection.id === pwrId) {
       setActiveStudioSelection({ type: 'chassis' });
     }
@@ -460,6 +468,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   };
 
   const handleDeleteMod = (modId: string) => {
+    const modToDelete = attachedMods.find((m) => m.id === modId);
+    if (modToDelete) {
+      modToDelete.powers.forEach((p) => {
+        if (!p.id.startsWith('pwr_') && !p.id.startsWith('fn_') && !isNaN(Number(p.id))) {
+          setDeletedPowerIds((prev) => [...prev, Number(p.id)]);
+        }
+      });
+    }
+    if (!modId.startsWith('mod_') && !isNaN(Number(modId))) {
+      setDeletedModIds((prev) => [...prev, Number(modId)]);
+    }
     setAttachedMods((prev) => prev.filter((m) => m.id !== modId));
     if (
       (activeStudioSelection.type === 'mod' && activeStudioSelection.id === modId) ||
@@ -493,6 +512,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   };
 
   const handleDeleteModPower = (modId: string, pwrId: string) => {
+    if (!pwrId.startsWith('pwr_') && !pwrId.startsWith('fn_') && !isNaN(Number(pwrId))) {
+      setDeletedPowerIds((prev) => [...prev, Number(pwrId)]);
+    }
     setAttachedMods((prev) =>
       prev.map((m) => (m.id === modId ? { ...m, powers: m.powers.filter((p) => p.id !== pwrId) } : m))
     );
@@ -674,6 +696,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setPowerFormAction('AM');
     setPowerFormUsage('1-Enc');
     setPowerFormEffect('');
+    setIsAuthoringNewMaster(false);
+    setDeletedPowerIds([]);
+    setDeletedModIds([]);
     setFeedback(null);
   };
 
@@ -1646,74 +1671,222 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setEditingItem(null);
   };
 
+  const loadGearInherentPowersAndMods = (item: any) => {
+    // 1. If explicit powers/mods attached on custom element payload:
+    if (item?.item_data?.inherent_powers || item?.inherent_powers) {
+      const inh = (item.item_data?.inherent_powers || item.inherent_powers || []) as StudioPower[];
+      const mds = (item.item_data?.mods || item.mods || []) as StudioMod[];
+      return { inherent: inh, mods: mds };
+    }
+
+    // 2. Query functionsCatalog and modsCatalog using isBelongsToMatch:
+    const itemName = item?.name || '';
+    const inherent: StudioPower[] = [];
+    if (itemName && functionsCatalog && functionsCatalog.length > 0) {
+      functionsCatalog.forEach((fn) => {
+        if (isBelongsToMatch(fn.belongs_to, itemName, true)) {
+          inherent.push({
+            id: String(fn.id || `fn_${fn.name}`),
+            name: fn.name,
+            action: fn.action || 'F',
+            usage: fn.usage || '1-Enc',
+            effect: fn.effect || '',
+          });
+        }
+      });
+    }
+
+    const mods: StudioMod[] = [];
+    if (itemName && modsCatalog && modsCatalog.length > 0) {
+      modsCatalog.forEach((m) => {
+        if (isBelongsToMatch(m.belongs_to, itemName, true)) {
+          const modPowers: StudioPower[] = [];
+          if (functionsCatalog && functionsCatalog.length > 0) {
+            functionsCatalog.forEach((fn) => {
+              if (isBelongsToMatch(fn.belongs_to, m.name, true)) {
+                modPowers.push({
+                  id: String(fn.id || `fn_${fn.name}`),
+                  name: fn.name,
+                  action: fn.action || 'F',
+                  usage: fn.usage || '1-Enc',
+                  effect: fn.effect || '',
+                });
+              }
+            });
+          }
+
+          let gold = 0;
+          let silver = 0;
+          if (m.cost) {
+            const mg = String(m.cost).match(/(\d+)\s*g/i);
+            const ms = String(m.cost).match(/(\d+)\s*s/i);
+            if (mg) gold = parseInt(mg[1], 10);
+            if (ms) silver = parseInt(ms[1], 10);
+          }
+
+          mods.push({
+            id: String(m.id || `mod_${m.name}`),
+            name: m.name,
+            costGold: gold,
+            costSilver: silver,
+            notes: m.notes || '',
+            powers: modPowers,
+          });
+        }
+      });
+    }
+
+    return { inherent, mods };
+  };
+
   const handlePopulateCanonicalWeapon = (w: any) => {
-    setCanonicalSelectedId(w.id || w.name);
-    setOriginalCanonicalName(w.name || '');
+    const isCustom = Boolean(w.item_data || w.author_email);
+    if (isCustom) {
+      setEditingItem(w);
+      setCanonicalSelectedId(null);
+      setOriginalCanonicalName('');
+    } else {
+      setEditingItem(null);
+      setCanonicalSelectedId(w.id || w.name);
+      setOriginalCanonicalName(w.name || '');
+    }
     setName(w.name || '');
     setStudioChassisType('weapon');
     setWeaponTypeMode(w.type || 'Melee');
     setWeaponDomain(w.domain || 'Archaic');
     setNotes(w.notes || '');
-    if (w.cost) {
-      const matchG = w.cost.match(/(\d+)\s*g/i);
-      const matchS = w.cost.match(/(\d+)\s*s/i);
+
+    const isArt = (w.cost && String(w.cost).toLowerCase().includes('artifact')) || w.item_data?.cost === 'Artifact';
+    setCostMode(isArt ? 'artifact' : 'standard');
+
+    if (w.cost && !isArt) {
+      const matchG = String(w.cost).match(/(\d+)\s*g/i);
+      const matchS = String(w.cost).match(/(\d+)\s*s/i);
       setCostGold(matchG ? parseInt(matchG[1], 10) : 0);
       setCostSilver(matchS ? parseInt(matchS[1], 10) : 0);
     }
     if (w.requirement) {
-      const numMatch = w.requirement.match(/\d+/);
+      const numMatch = String(w.requirement).match(/\d+/);
       if (numMatch) setWeaponReqNum(parseInt(numMatch[0], 10));
     }
-    setEditingItem(null);
+
+    const rawGenres = w.genres || w.item_data?.genres;
+    setSelectedGenres(Array.isArray(rawGenres) && rawGenres.length > 0 ? rawGenres : ['Medieval']);
+
+    const { inherent, mods } = loadGearInherentPowersAndMods(w);
+    setInherentPowers(inherent);
+    setAttachedMods(mods);
+    setIsAuthoringNewMaster(false);
+    setActiveStudioSelection({ type: 'chassis' });
   };
 
   const handlePopulateCanonicalArmor = (a: any) => {
-    setCanonicalSelectedId(a.id || a.name);
-    setOriginalCanonicalName(a.name || '');
+    const isCustom = Boolean(a.item_data || a.author_email);
+    if (isCustom) {
+      setEditingItem(a);
+      setCanonicalSelectedId(null);
+      setOriginalCanonicalName('');
+    } else {
+      setEditingItem(null);
+      setCanonicalSelectedId(a.id || a.name);
+      setOriginalCanonicalName(a.name || '');
+    }
     setName(a.name || '');
     setStudioChassisType('armor');
     setArmorReq(a.requirement || '💪 4');
     setNotes(a.notes || '');
-    if (a.cost) {
-      const matchG = a.cost.match(/(\d+)\s*g/i);
-      const matchS = a.cost.match(/(\d+)\s*s/i);
+
+    const isArt = (a.cost && String(a.cost).toLowerCase().includes('artifact')) || a.item_data?.cost === 'Artifact';
+    setCostMode(isArt ? 'artifact' : 'standard');
+
+    if (a.cost && !isArt) {
+      const matchG = String(a.cost).match(/(\d+)\s*g/i);
+      const matchS = String(a.cost).match(/(\d+)\s*s/i);
       setCostGold(matchG ? parseInt(matchG[1], 10) : 0);
       setCostSilver(matchS ? parseInt(matchS[1], 10) : 0);
     }
-    setEditingItem(null);
+
+    const rawGenres = a.genres || a.item_data?.genres;
+    setSelectedGenres(Array.isArray(rawGenres) && rawGenres.length > 0 ? rawGenres : ['Medieval']);
+
+    const { inherent, mods } = loadGearInherentPowersAndMods(a);
+    setInherentPowers(inherent);
+    setAttachedMods(mods);
+    setIsAuthoringNewMaster(false);
+    setActiveStudioSelection({ type: 'chassis' });
   };
 
   const handlePopulateCanonicalShield = (s: any) => {
-    setCanonicalSelectedId(s.id || s.name);
-    setOriginalCanonicalName(s.name || '');
+    const isCustom = Boolean(s.item_data || s.author_email);
+    if (isCustom) {
+      setEditingItem(s);
+      setCanonicalSelectedId(null);
+      setOriginalCanonicalName('');
+    } else {
+      setEditingItem(null);
+      setCanonicalSelectedId(s.id || s.name);
+      setOriginalCanonicalName(s.name || '');
+    }
     setName(s.name || '');
     setStudioChassisType('shield');
     setShieldReq(s.requirement || '💪 4');
     setShieldDomain(s.domain || 'Archaic');
     setNotes(s.notes || '');
-    if (s.cost) {
-      const matchG = s.cost.match(/(\d+)\s*g/i);
-      const matchS = s.cost.match(/(\d+)\s*s/i);
+
+    const isArt = (s.cost && String(s.cost).toLowerCase().includes('artifact')) || s.item_data?.cost === 'Artifact';
+    setCostMode(isArt ? 'artifact' : 'standard');
+
+    if (s.cost && !isArt) {
+      const matchG = String(s.cost).match(/(\d+)\s*g/i);
+      const matchS = String(s.cost).match(/(\d+)\s*s/i);
       setCostGold(matchG ? parseInt(matchG[1], 10) : 0);
       setCostSilver(matchS ? parseInt(matchS[1], 10) : 0);
     }
-    setEditingItem(null);
+
+    const rawGenres = s.genres || s.item_data?.genres;
+    setSelectedGenres(Array.isArray(rawGenres) && rawGenres.length > 0 ? rawGenres : ['Medieval']);
+
+    const { inherent, mods } = loadGearInherentPowersAndMods(s);
+    setInherentPowers(inherent);
+    setAttachedMods(mods);
+    setIsAuthoringNewMaster(false);
+    setActiveStudioSelection({ type: 'chassis' });
   };
 
   const handlePopulateCanonicalSupply = (sup: any) => {
-    setCanonicalSelectedId(sup.id || sup.name);
-    setOriginalCanonicalName(sup.name || '');
+    const isCustom = Boolean(sup.item_data || sup.author_email);
+    if (isCustom) {
+      setEditingItem(sup);
+      setCanonicalSelectedId(null);
+      setOriginalCanonicalName('');
+    } else {
+      setEditingItem(null);
+      setCanonicalSelectedId(sup.id || sup.name);
+      setOriginalCanonicalName(sup.name || '');
+    }
     setName(sup.name || '');
     setStudioChassisType('supplies');
     setGearCategory(sup.category || 'Adventure');
     setNotes(sup.notes || '');
-    if (sup.cost) {
-      const matchG = sup.cost.match(/(\d+)\s*g/i);
-      const matchS = sup.cost.match(/(\d+)\s*s/i);
+
+    const isArt = (sup.cost && String(sup.cost).toLowerCase().includes('artifact')) || sup.item_data?.cost === 'Artifact';
+    setCostMode(isArt ? 'artifact' : 'standard');
+
+    if (sup.cost && !isArt) {
+      const matchG = String(sup.cost).match(/(\d+)\s*g/i);
+      const matchS = String(sup.cost).match(/(\d+)\s*s/i);
       setCostGold(matchG ? parseInt(matchG[1], 10) : 0);
       setCostSilver(matchS ? parseInt(matchS[1], 10) : 0);
     }
-    setEditingItem(null);
+
+    const rawGenres = sup.genres || sup.item_data?.genres;
+    setSelectedGenres(Array.isArray(rawGenres) && rawGenres.length > 0 ? rawGenres : ['Medieval']);
+
+    const { inherent, mods } = loadGearInherentPowersAndMods(sup);
+    setInherentPowers(inherent);
+    setAttachedMods(mods);
+    setIsAuthoringNewMaster(false);
+    setActiveStudioSelection({ type: 'chassis' });
   };
 
   const handlePopulateCanonicalChaosGem = (g: SupabaseChaosGem) => {
@@ -1726,12 +1899,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setNotes(g.notes || '');
     setSelectedGenres(Array.isArray(g.genres) && g.genres.length > 0 ? g.genres : ['Fantasy']);
     setEditingItem(null);
+    setIsAuthoringNewMaster(false);
   };
 
   const handleNewMasterEntry = () => {
     setCanonicalSelectedId(null);
     setOriginalCanonicalName('');
     setEditingItem(null);
+    setIsAuthoringNewMaster(true);
+    setDeletedPowerIds([]);
+    setDeletedModIds([]);
     setName('');
     setEffect('');
     setNotes('');
@@ -2997,11 +3174,95 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             setOriginalCanonicalName(savedG.name);
           }
         }
+
+        // Downstream sync for inherent powers and attached mods (Designer Mode)
+        if (workshopMode === 'designer') {
+          const hostBelongsTo =
+            studioChassisType === 'weapon'
+              ? `Weapon: ${name.trim()}`
+              : studioChassisType === 'armor'
+              ? `Armor: ${name.trim()}`
+              : studioChassisType === 'shield'
+              ? `Shield: ${name.trim()}`
+              : `Supplies: ${name.trim()}`;
+
+          // Delete staged deletions
+          for (const pId of deletedPowerIds) {
+            try {
+              await gameApi.deleteCanonicalGearPower(pId);
+            } catch (err) {
+              console.warn('[handleSubmit] Error deleting gear power:', err);
+            }
+          }
+          for (const mId of deletedModIds) {
+            try {
+              await gameApi.deleteCanonicalMod(mId);
+            } catch (err) {
+              console.warn('[handleSubmit] Error deleting mod:', err);
+            }
+          }
+          setDeletedPowerIds([]);
+          setDeletedModIds([]);
+
+          // Sync inherent powers
+          for (const pwr of inherentPowers) {
+            const pwrPayload = {
+              name: pwr.name.trim(),
+              action: pwr.action || 'AM',
+              usage: pwr.usage || '1-Enc',
+              effect: pwr.effect.trim(),
+              belongs_to: hostBelongsTo,
+              owner: 'Designer',
+            };
+            const isExisting = pwr.id && !pwr.id.startsWith('pwr_') && !pwr.id.startsWith('fn_') && !isNaN(Number(pwr.id));
+            if (isExisting) {
+              await gameApi.updateCanonicalGearPower(Number(pwr.id), pwrPayload);
+            } else {
+              await gameApi.saveCanonicalGearPower(pwrPayload);
+            }
+          }
+
+          // Sync attached mods and their child powers
+          for (const mod of attachedMods) {
+            const modCostStr =
+              mod.costGold > 0 || mod.costSilver > 0
+                ? `${mod.costGold > 0 ? `${mod.costGold}g` : ''}${mod.costGold > 0 && mod.costSilver > 0 ? ' ' : ''}${mod.costSilver > 0 ? `${mod.costSilver}s` : ''}`.trim()
+                : '0s';
+            const modPayload = {
+              name: mod.name.trim(),
+              cost: modCostStr,
+              notes: mod.notes?.trim() || null,
+              belongs_to: hostBelongsTo,
+              owner: 'Designer',
+            };
+            const isModExisting = mod.id && !mod.id.startsWith('mod_') && !isNaN(Number(mod.id));
+            if (isModExisting) {
+              await gameApi.updateCanonicalMod(Number(mod.id), modPayload);
+            } else {
+              await gameApi.saveCanonicalMod(modPayload);
+            }
+
+            for (const cPwr of mod.powers) {
+              const childPayload = {
+                name: cPwr.name.trim(),
+                action: cPwr.action || 'AM',
+                usage: cPwr.usage || '1-Enc',
+                effect: cPwr.effect.trim(),
+                belongs_to: `Mod: ${mod.name.trim()}`,
+                owner: 'Designer',
+              };
+              const isChildExisting = cPwr.id && !cPwr.id.startsWith('pwr_') && !cPwr.id.startsWith('fn_') && !isNaN(Number(cPwr.id));
+              if (isChildExisting) {
+                await gameApi.updateCanonicalGearPower(Number(cPwr.id), childPayload);
+              } else {
+                await gameApi.saveCanonicalGearPower(childPayload);
+              }
+            }
+          }
+        }
       }
 
-      if (workshopMode !== 'designer') {
-        await refreshCatalogs();
-      }
+      await refreshCatalogs();
       if (onItemSaved) onItemSaved();
     } catch (err: any) {
       console.error('[PlayerWorkshopModal] Error in save:', err);
@@ -3010,6 +3271,349 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setIsSubmitting(false);
     }
   };
+
+  const renderGearHierarchyTree = (isCanonicalTab: boolean = false) => (
+    <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
+      {/* 1. CHASSIS ROOT NODE CARD */}
+      <div
+        onClick={() => setActiveStudioSelection({ type: 'chassis' })}
+        className={`p-3 rounded-xl border transition flex flex-col gap-1.5 cursor-pointer shadow-sm ${
+          activeStudioSelection.type === 'chassis'
+            ? 'bg-amber-950/30 border-amber-500/80 ring-1 ring-amber-500/40'
+            : 'bg-slate-900/80 border-slate-800 hover:border-amber-500/40 hover:bg-slate-900'
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-base shrink-0">
+              {studioChassisType === 'weapon'
+                ? '⚔️'
+                : studioChassisType === 'armor'
+                ? '🥋'
+                : studioChassisType === 'shield'
+                ? '🛡️'
+                : '🎒'}
+            </span>
+            <span className="font-bold text-slate-100 text-xs truncate">
+              {name || 'Unnamed Chassis'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {canonicalSelectedId && (
+              <span className="text-[10px] text-amber-400 font-mono font-bold bg-amber-950/70 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                👑 ID: {canonicalSelectedId}
+              </span>
+            )}
+            <span
+              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                costMode === 'artifact'
+                  ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
+                  : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+              }`}
+            >
+              {costMode === 'artifact' ? 'Artifact 🔮' : costStr}
+            </span>
+            {canonicalSelectedId && workshopMode === 'designer' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteConfirmTarget({
+                    type: studioChassisType,
+                    id: canonicalSelectedId,
+                    name: originalCanonicalName || name,
+                  });
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 border border-transparent hover:border-rose-500/40 transition cursor-pointer"
+                title="Delete from Supabase Master Database"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {isCanonicalTab && workshopMode !== 'designer' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const item =
+                    studioChassisType === 'weapon'
+                      ? (weaponsCatalog || []).find((w) => String(w.id) === String(canonicalSelectedId) || w.name === canonicalSelectedId)
+                      : studioChassisType === 'armor'
+                      ? (armorCatalog || []).find((a) => String(a.id) === String(canonicalSelectedId) || a.name === canonicalSelectedId)
+                      : studioChassisType === 'shield'
+                      ? (shieldsCatalog || []).find((s) => String(s.id) === String(canonicalSelectedId) || s.name === canonicalSelectedId)
+                      : (suppliesCatalog || []).find((sup) => String(sup.id) === String(canonicalSelectedId) || sup.name === canonicalSelectedId);
+                  if (item) handleLoadTemplateIntoForge(studioChassisType, item);
+                }}
+                className="px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[10px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                title="Load as customizable template into forge"
+              >
+                <span>🛠️</span>
+                <span>Load into Forge</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsTreeExpanded(!isTreeExpanded);
+              }}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
+              title={isTreeExpanded ? 'Collapse Mods & Powers' : 'Expand Mods & Powers'}
+            >
+              <ChevronDown
+                className={`w-4 h-4 text-cyan-400 transition-transform ${
+                  isTreeExpanded ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center justify-between text-[11px] text-slate-400">
+          <span className="capitalize">
+            {studioChassisType === 'supplies'
+              ? `Supplies: ${finalGearCat}`
+              : studioChassisType === 'weapon'
+              ? `Weapon: ${weaponTypeMode}`
+              : studioChassisType === 'armor'
+              ? `Armor (${armorReq})`
+              : `Shield (${shieldReq})`}
+          </span>
+          <span className="text-[10px] text-amber-400/80 font-mono font-bold">
+            {activeStudioSelection.type === 'chassis' ? '● Active in Editor' : 'Click to Edit'}
+          </span>
+        </div>
+      </div>
+
+      {/* HIERARCHICAL TREE (Matching ManageGearPowersModal) */}
+      {isTreeExpanded && (
+        <div className="ml-5 sm:ml-6 pl-3 sm:pl-4 border-l-2 border-cyan-500/40 flex flex-col gap-3 pt-1 pb-1">
+          {!isChassisComplete && (
+            <div className="px-2.5 py-1.5 rounded-lg bg-amber-950/40 border border-amber-500/40 text-[11px] text-amber-300/90 flex items-center gap-1.5 leading-snug">
+              <span>🔒</span>
+              <span>Complete Chassis setup (Name, Genres) above to unlock Exotic Powers & Mods.</span>
+            </div>
+          )}
+
+          {/* BRANCH 1: Inherent Chassis Powers (No Mod) */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 py-0.5">
+              <span className="text-xs font-bold text-amber-300 font-mono tracking-wide">
+                Inherent (No Mod)
+              </span>
+              <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
+                Installed
+              </span>
+            </div>
+
+            {/* Indented Inherent Power Cards */}
+            <div className="flex flex-col gap-1.5 pl-3.5 sm:pl-4">
+              {inherentPowers.length > 0 ? (
+                inherentPowers.map((pwr) => {
+                  const isPwrSelected =
+                    activeStudioSelection.type === 'power' &&
+                    activeStudioSelection.parentType === 'inherent' &&
+                    activeStudioSelection.id === pwr.id;
+                  return (
+                    <div
+                      key={pwr.id}
+                      onClick={() => handleStartEditInherentPower(pwr)}
+                      className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
+                        isPwrSelected
+                          ? 'bg-rose-950/30 border-rose-500/80 ring-1 ring-rose-500/40'
+                          : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-xs shrink-0">🔥</span>
+                        <span className="font-bold text-slate-200 text-xs truncate">
+                          {pwr.name || 'Unnamed Power'}
+                        </span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
+                          {pwr.action}
+                        </span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
+                          {pwr.usage}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteInherentPower(pwr.id);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
+                          title="Delete inherent power"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : null}
+
+              <button
+                type="button"
+                onClick={handleStartAddInherentPower}
+                disabled={!isChassisComplete}
+                className={`py-1 px-2.5 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 select-none ${
+                  isChassisComplete
+                    ? 'bg-slate-950 hover:bg-slate-800 border-dashed border-slate-700 hover:border-amber-500/50 text-slate-300 hover:text-amber-300 cursor-pointer'
+                    : 'bg-slate-950/50 border-dashed border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
+                }`}
+                title={
+                  isChassisComplete
+                    ? 'Add an inherent exotic power to this chassis'
+                    : 'Complete Chassis setup first to add exotic powers'
+                }
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Add Exotic Power</span>
+              </button>
+            </div>
+          </div>
+
+          {/* BRANCH 2+: Modular Add-ons (Mods) */}
+          {attachedMods.map((mod) => {
+            const isModSelected =
+              activeStudioSelection.type === 'mod' && activeStudioSelection.id === mod.id;
+            const modCostStr =
+              mod.costGold > 0 || mod.costSilver > 0
+                ? `${mod.costGold > 0 ? `${mod.costGold}g` : ''}${mod.costGold > 0 && mod.costSilver > 0 ? ' ' : ''}${mod.costSilver > 0 ? `${mod.costSilver}s` : ''}`
+                : '';
+
+            return (
+              <div key={mod.id} className="flex flex-col gap-2">
+                {/* Mod Header Row: Name, Cost, Installed badge, Delete */}
+                <div
+                  onClick={() => handleStartEditMod(mod)}
+                  className={`flex items-center justify-between gap-2 p-1.5 rounded-lg border transition cursor-pointer ${
+                    isModSelected
+                      ? 'bg-cyan-950/30 border-cyan-500/80 ring-1 ring-cyan-500/40'
+                      : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <span className="text-xs">⚙️</span>
+                    <span className="text-xs font-bold text-cyan-200 font-mono tracking-wide truncate">
+                      {mod.name || 'Unnamed Mod'}
+                    </span>
+                    {modCostStr && (
+                      <span className="px-1.5 py-0.2 rounded bg-amber-950/70 border border-amber-500/30 text-amber-300 font-mono text-[9px] font-bold">
+                        {modCostStr}
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
+                      Installed
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteMod(mod.id);
+                    }}
+                    className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 border border-transparent hover:border-rose-500/40 rounded-lg transition-all cursor-pointer shadow-sm shrink-0"
+                    title={`Delete mod '${mod.name}'`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Indented Powers under this Mod */}
+                <div className="flex flex-col gap-1.5 pl-3.5 sm:pl-4">
+                  {mod.powers.map((pwr) => {
+                    const isModPwrSelected =
+                      activeStudioSelection.type === 'power' &&
+                      activeStudioSelection.parentType === 'mod' &&
+                      activeStudioSelection.parentId === mod.id &&
+                      activeStudioSelection.id === pwr.id;
+
+                    return (
+                      <div
+                        key={pwr.id}
+                        onClick={() => handleStartEditModPower(mod, pwr)}
+                        className={`p-1.5 rounded-lg border transition flex items-center justify-between gap-1.5 cursor-pointer ${
+                          isModPwrSelected
+                            ? 'bg-rose-950/30 border-rose-500/80 ring-1 ring-rose-500/40'
+                            : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[11px] shrink-0">🔥</span>
+                          <span className="font-semibold text-slate-200 text-xs truncate">
+                            {pwr.name || 'Unnamed Power'}
+                          </span>
+                          <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
+                            {pwr.action}
+                          </span>
+                          <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
+                            {pwr.usage}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteModPower(mod.id, pwr.id);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
+                          title="Delete power from mod"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => handleStartAddPowerToMod(mod)}
+                    disabled={!isChassisComplete}
+                    className={`py-1 px-2 rounded border text-[10px] font-bold transition flex items-center justify-center gap-1 select-none ${
+                      isChassisComplete
+                        ? 'bg-slate-950 hover:bg-slate-800 border-dashed border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-cyan-300 cursor-pointer'
+                        : 'bg-slate-950/50 border-dashed border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
+                    }`}
+                    title={
+                      isChassisComplete
+                        ? `Add a power to mod '${mod.name}'`
+                        : 'Complete Chassis setup first to add powers'
+                    }
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Power to Mod</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* BOTTOM TREE ACTION: + Add Mod */}
+          <button
+            type="button"
+            onClick={handleStartAddMod}
+            disabled={!isChassisComplete}
+            className={`py-1.5 px-3 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 select-none ${
+              isChassisComplete
+                ? 'bg-slate-950 hover:bg-slate-800 border-dashed border-slate-700 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 cursor-pointer'
+                : 'bg-slate-950/50 border-dashed border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
+            }`}
+            title={
+              isChassisComplete
+                ? 'Add a modular hardware upgrade to this chassis'
+                : 'Complete Chassis setup first to add mods'
+            }
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ Add Mod</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn font-outfit">
@@ -3291,7 +3895,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       filteredMyGearItems.map((item) => (
                         <div
                           key={item.id}
-                          className="p-2.5 rounded-xl border border-slate-800/80 bg-slate-950/70 hover:border-amber-500/40 hover:bg-slate-900/80 transition flex flex-col gap-1.5 shadow-sm"
+                          onClick={() => {
+                            if (item.chassis === 'weapon') handlePopulateCanonicalWeapon(item.rawItem);
+                            else if (item.chassis === 'armor') handlePopulateCanonicalArmor(item.rawItem);
+                            else if (item.chassis === 'shield') handlePopulateCanonicalShield(item.rawItem);
+                            else if (item.chassis === 'supplies') handlePopulateCanonicalSupply(item.rawItem);
+                            setStudioTab('current');
+                          }}
+                          className="p-2.5 rounded-xl border border-slate-800/80 bg-slate-950/70 hover:border-amber-500/60 hover:bg-slate-900/90 transition flex flex-col gap-1.5 shadow-sm cursor-pointer"
                         >
                           <div className="flex items-center justify-between gap-1.5">
                             <div className="flex items-center gap-1.5 min-w-0">
@@ -3306,7 +3917,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             <div className="flex items-center gap-1 shrink-0">
                               <button
                                 type="button"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   if (item.chassis === 'weapon') handlePopulateCanonicalWeapon(item.rawItem);
                                   else if (item.chassis === 'armor') handlePopulateCanonicalArmor(item.rawItem);
                                   else if (item.chassis === 'shield') handlePopulateCanonicalShield(item.rawItem);
@@ -3320,13 +3932,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               </button>
                               <button
                                 type="button"
-                                onClick={() =>
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setDeleteConfirmTarget({
                                     type: item.chassis,
                                     id: item.id,
                                     name: item.name,
-                                  })
-                                }
+                                  });
+                                }}
                                 className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
                                 title="Delete this creation"
                               >
@@ -3547,450 +4160,24 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       })}
                   </select>
 
-                  {/* Canonical Item Preview Card */}
-                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
-                    {canonicalSelectedId ? (
-                      <div className="p-3.5 rounded-xl border border-amber-500/40 bg-slate-900/90 flex flex-col gap-2.5 shadow-lg shadow-amber-950/20">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-base shrink-0">
-                              {gearDatabaseChassis === 'weapon' ? '⚔️' : gearDatabaseChassis === 'armor' ? '🥋' : gearDatabaseChassis === 'shield' ? '🛡️' : '🎒'}
-                            </span>
-                            <div className="min-w-0">
-                              <h4 className="font-bold text-slate-100 text-xs truncate">{name || 'Unnamed Item'}</h4>
-                              <span className="text-[10px] text-amber-400 font-mono">👑 Master ID: {canonicalSelectedId}</span>
-                            </div>
-                          </div>
-                          <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px] font-bold shrink-0">
-                            {costStr || 'Cost N/A'}
-                          </span>
-                        </div>
-
-                        <div className="text-[11px] text-slate-300 flex flex-col gap-1">
-                          {gearDatabaseChassis === 'weapon' && (
-                            <div>Type: <strong className="text-amber-300">{weaponTypeMode}</strong> • Domain: <strong className="text-slate-200">{finalWeaponDomain}</strong></div>
-                          )}
-                          {gearDatabaseChassis === 'armor' && (
-                            <div>Requirement: <strong className="text-amber-300">{armorReq}</strong> • AR: <strong className="text-slate-200">{getArmorArStr(armorReq)}</strong></div>
-                          )}
-                          {gearDatabaseChassis === 'shield' && (
-                            <div>Requirement: <strong className="text-amber-300">{shieldReq}</strong> • Domain: <strong className="text-slate-200">{finalShieldDomain}</strong></div>
-                          )}
-                          {gearDatabaseChassis === 'supplies' && (
-                            <div>Category: <strong className="text-amber-300">{finalGearCat}</strong></div>
-                          )}
-                          {notes && (
-                            <p className="text-[10px] text-slate-400 italic font-serif mt-1 border-t border-slate-800/80 pt-1">
-                              "{notes}"
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-auto">
-                          {workshopMode === 'designer' ? (
-                            <>
-                              <span className="text-[10px] text-slate-400 italic">
-                                Edit details in right pane, then click Save.
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setDeleteConfirmTarget({
-                                    type: gearDatabaseChassis,
-                                    id: canonicalSelectedId,
-                                    name: originalCanonicalName || name,
-                                  })
-                                }
-                                className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
-                                title="Delete this record from Supabase"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Delete from SupaBase</span>
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-[10px] text-amber-300/80 font-medium">
-                                👑 Official Canonical Item
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const item =
-                                    gearDatabaseChassis === 'weapon'
-                                      ? (weaponsCatalog || []).find((w) => String(w.id) === String(canonicalSelectedId) || w.name === canonicalSelectedId)
-                                      : gearDatabaseChassis === 'armor'
-                                      ? (armorCatalog || []).find((a) => String(a.id) === String(canonicalSelectedId) || a.name === canonicalSelectedId)
-                                      : gearDatabaseChassis === 'shield'
-                                      ? (shieldsCatalog || []).find((s) => String(s.id) === String(canonicalSelectedId) || s.name === canonicalSelectedId)
-                                      : (suppliesCatalog || []).find((sup) => String(sup.id) === String(canonicalSelectedId) || sup.name === canonicalSelectedId);
-                                  if (item) handleLoadTemplateIntoForge(gearDatabaseChassis, item);
-                                }}
-                                className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0"
-                                title="Load as customizable template into forge"
-                              >
-                                <span>🛠️</span>
-                                <span>+ Load into Forge</span>
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
-                        <span className="text-2xl mb-1.5">👑</span>
-                        <p className="font-semibold text-slate-400">No Master Item Selected</p>
-                        <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                          {workshopMode === 'designer'
-                            ? 'Pick an existing master item from the dropdown above to view, edit, or delete it, or click "+ New Master Item" to author a new canonical entry.'
-                            : 'Pick an official canonical item from the dropdown above to view its stats or load it into your forge as a starting template.'}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  {canonicalSelectedId || name.trim() || isAuthoringNewMaster ? (
+                    renderGearHierarchyTree(true)
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
+                      <span className="text-2xl mb-1.5">👑</span>
+                      <p className="font-semibold text-slate-400">No Master Item Selected</p>
+                      <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
+                        {workshopMode === 'designer'
+                          ? 'Pick an existing master item from the dropdown above to view, edit, or delete it, or click "+ New Master Item" to author a new canonical entry.'
+                          : 'Pick an official canonical item from the dropdown above to view its stats or load it into your forge as a starting template.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
               ) : (
                 /* CURRENT ITEM HIERARCHY TREE VIEW */
-                <>
-                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
-                    {/* 1. CHASSIS ROOT NODE CARD */}
-                    <div
-                      onClick={() => setActiveStudioSelection({ type: 'chassis' })}
-                      className={`p-3 rounded-xl border transition flex flex-col gap-1.5 cursor-pointer shadow-sm ${
-                        activeStudioSelection.type === 'chassis'
-                          ? 'bg-amber-950/30 border-amber-500/80 ring-1 ring-amber-500/40'
-                          : 'bg-slate-900/80 border-slate-800 hover:border-amber-500/40 hover:bg-slate-900'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-base shrink-0">
-                            {studioChassisType === 'weapon'
-                              ? '⚔️'
-                              : studioChassisType === 'armor'
-                              ? '🥋'
-                              : studioChassisType === 'shield'
-                              ? '🛡️'
-                              : '🎒'}
-                          </span>
-                          <span className="font-bold text-slate-100 text-xs truncate">
-                            {name || 'Unnamed Chassis'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              costMode === 'artifact'
-                                ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
-                                : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
-                            }`}
-                          >
-                            {costMode === 'artifact' ? 'Artifact 🔮' : costStr}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsTreeExpanded(!isTreeExpanded);
-                            }}
-                            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
-                            title={isTreeExpanded ? 'Collapse Mods & Powers' : 'Expand Mods & Powers'}
-                          >
-                            <ChevronDown
-                              className={`w-4 h-4 text-cyan-400 transition-transform ${
-                                isTreeExpanded ? 'rotate-180' : ''
-                              }`}
-                            />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span className="capitalize">
-                          {studioChassisType === 'supplies'
-                            ? `Supplies: ${finalGearCat}`
-                            : studioChassisType === 'weapon'
-                            ? `Weapon: ${weaponTypeMode}`
-                            : studioChassisType === 'armor'
-                            ? `Armor (${armorReq})`
-                            : `Shield (${shieldReq})`}
-                        </span>
-                        <span className="text-[10px] text-amber-400/80 font-mono font-bold">
-                          {activeStudioSelection.type === 'chassis' ? '● Active in Editor' : 'Click to Edit'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* HIERARCHICAL TREE (Matching ManageGearPowersModal) */}
-                    {isTreeExpanded && (
-                      <div className="ml-5 sm:ml-6 pl-3 sm:pl-4 border-l-2 border-cyan-500/40 flex flex-col gap-3 pt-1 pb-1">
-                        {!isChassisComplete && (
-                          <div className="px-2.5 py-1.5 rounded-lg bg-amber-950/40 border border-amber-500/40 text-[11px] text-amber-300/90 flex items-center gap-1.5 leading-snug">
-                            <span>🔒</span>
-                            <span>Complete Chassis setup (Name, Genres) above to unlock Exotic Powers & Mods.</span>
-                          </div>
-                        )}
-
-                        {/* BRANCH 1: Inherent Chassis Powers (No Mod) */}
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2 py-0.5">
-                            <span className="text-xs font-bold text-amber-300 font-mono tracking-wide">
-                              Inherent (No Mod)
-                            </span>
-                            <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
-                              Installed
-                            </span>
-                          </div>
-
-                          {/* Indented Inherent Power Cards */}
-                          <div className="flex flex-col gap-1.5 pl-3.5 sm:pl-4">
-                            {inherentPowers.length > 0 ? (
-                              inherentPowers.map((pwr) => {
-                                const isPwrSelected =
-                                  activeStudioSelection.type === 'power' &&
-                                  activeStudioSelection.parentType === 'inherent' &&
-                                  activeStudioSelection.id === pwr.id;
-                                return (
-                                  <div
-                                    key={pwr.id}
-                                    onClick={() => handleStartEditInherentPower(pwr)}
-                                    className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
-                                      isPwrSelected
-                                        ? 'bg-rose-950/30 border-rose-500/80 ring-1 ring-rose-500/40'
-                                        : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-1.5 min-w-0">
-                                      <span className="text-xs shrink-0">🔥</span>
-                                      <span className="font-bold text-slate-200 text-xs truncate">
-                                        {pwr.name || 'Unnamed Power'}
-                                      </span>
-                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
-                                        {pwr.action}
-                                      </span>
-                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
-                                        {pwr.usage}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteInherentPower(pwr.id);
-                                        }}
-                                        className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
-                                        title="Delete inherent power"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            ) : null}
-
-                            <button
-                              type="button"
-                              onClick={handleStartAddInherentPower}
-                              disabled={!isChassisComplete}
-                              className={`py-1 px-2.5 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 select-none ${
-                                isChassisComplete
-                                  ? 'bg-slate-950 hover:bg-slate-800 border-dashed border-slate-700 hover:border-amber-500/50 text-slate-300 hover:text-amber-300 cursor-pointer'
-                                  : 'bg-slate-950/50 border-dashed border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
-                              }`}
-                              title={
-                                isChassisComplete
-                                  ? 'Add an inherent exotic power to this chassis'
-                                  : 'Complete Chassis setup first to add exotic powers'
-                              }
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              <span>+ Add Exotic Power</span>
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* BRANCH 2+: Modular Add-ons (Mods) */}
-                        {attachedMods.map((mod) => {
-                          const isModSelected =
-                            activeStudioSelection.type === 'mod' && activeStudioSelection.id === mod.id;
-                          const modCostStr =
-                            mod.costGold > 0 || mod.costSilver > 0
-                              ? `${mod.costGold > 0 ? `${mod.costGold}g` : ''}${mod.costGold > 0 && mod.costSilver > 0 ? ' ' : ''}${mod.costSilver > 0 ? `${mod.costSilver}s` : ''}`
-                              : '';
-
-                          return (
-                            <div key={mod.id} className="flex flex-col gap-2">
-                              {/* Mod Header Row: Name, Cost, Installed badge, Delete */}
-                              <div
-                                onClick={() => handleStartEditMod(mod)}
-                                className={`flex items-center justify-between gap-2 p-1.5 rounded-lg border transition cursor-pointer ${
-                                  isModSelected
-                                    ? 'bg-cyan-950/30 border-cyan-500/80 ring-1 ring-cyan-500/40'
-                                    : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 flex-wrap min-w-0">
-                                  <span className="text-xs">⚙️</span>
-                                  <span className="text-xs font-bold text-cyan-200 font-mono tracking-wide truncate">
-                                    {mod.name || 'Unnamed Mod'}
-                                  </span>
-                                  {modCostStr && (
-                                    <span className="px-1.5 py-0.2 rounded bg-amber-950/70 border border-amber-500/30 text-amber-300 font-mono text-[9px] font-bold">
-                                      {modCostStr}
-                                    </span>
-                                  )}
-                                  <span className="px-2 py-0.5 rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
-                                    Installed
-                                  </span>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteMod(mod.id);
-                                  }}
-                                  className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 border border-transparent hover:border-rose-500/40 rounded-lg transition-all cursor-pointer shadow-sm shrink-0"
-                                  title={`Delete mod '${mod.name}'`}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-
-                              {/* Indented Powers under this Mod */}
-                              <div className="flex flex-col gap-1.5 pl-3.5 sm:pl-4">
-                                {mod.powers.map((pwr) => {
-                                  const isModPwrSelected =
-                                    activeStudioSelection.type === 'power' &&
-                                    activeStudioSelection.parentType === 'mod' &&
-                                    activeStudioSelection.parentId === mod.id &&
-                                    activeStudioSelection.id === pwr.id;
-
-                                  return (
-                                    <div
-                                      key={pwr.id}
-                                      onClick={() => handleStartEditModPower(mod, pwr)}
-                                      className={`p-1.5 rounded-lg border transition flex items-center justify-between gap-1.5 cursor-pointer ${
-                                        isModPwrSelected
-                                          ? 'bg-rose-950/30 border-rose-500/80 ring-1 ring-rose-500/40'
-                                          : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700'
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-1.5 min-w-0">
-                                        <span className="text-[11px] shrink-0">🔥</span>
-                                        <span className="font-semibold text-slate-200 text-xs truncate">
-                                          {pwr.name || 'Unnamed Power'}
-                                        </span>
-                                        <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
-                                          {pwr.action}
-                                        </span>
-                                        <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
-                                          {pwr.usage}
-                                        </span>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteModPower(mod.id, pwr.id);
-                                        }}
-                                        className="p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
-                                        title="Delete power from mod"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleStartAddPowerToMod(mod)}
-                                  disabled={!isChassisComplete}
-                                  className={`py-1 px-2 rounded border text-[10px] font-bold transition flex items-center justify-center gap-1 select-none ${
-                                    isChassisComplete
-                                      ? 'bg-slate-950 hover:bg-slate-800 border-dashed border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-cyan-300 cursor-pointer'
-                                      : 'bg-slate-950/50 border-dashed border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
-                                  }`}
-                                  title={
-                                    isChassisComplete
-                                      ? `Add a power to mod '${mod.name}'`
-                                      : 'Complete Chassis setup first to add powers'
-                                  }
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                  <span>+ Add Power to Mod</span>
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-
-                        {/* BOTTOM TREE ACTION: + Add Mod */}
-                        <button
-                          type="button"
-                          onClick={handleStartAddMod}
-                          disabled={!isChassisComplete}
-                          className={`py-1.5 px-3 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 select-none ${
-                            isChassisComplete
-                              ? 'bg-slate-950 hover:bg-slate-800 border-dashed border-slate-700 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 cursor-pointer'
-                              : 'bg-slate-950/50 border-dashed border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
-                          }`}
-                          title={
-                            isChassisComplete
-                              ? 'Add a modular hardware upgrade to this chassis'
-                              : 'Complete Chassis setup first to add mods'
-                          }
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>+ Add Mod</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 4. FOOTER STATUS & FORGE ACTION BUTTON */}
-                  <div className="pt-2 border-t border-slate-800/80 shrink-0 flex flex-col gap-2">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
-                      <span>
-                        Structure:{' '}
-                        <strong className="text-slate-200">
-                          1 Chassis • {inherentPowers.length} Inherent • {attachedMods.length} Mod(s)
-                        </strong>
-                      </span>
-                      {editingItem ? (
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                          Editing
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-emerald-400 font-mono font-bold">New Creation</span>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={!isFormValid || isSubmitting}
-                      className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
-                        isFormValid && !isSubmitting
-                          ? costMode === 'artifact'
-                            ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-purple-900/40 cursor-pointer'
-                            : 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-amber-900/40 cursor-pointer'
-                          : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                      }`}
-                    >
-                      <AnvilIcon className="w-4 h-4" />
-                      <span>
-                        {isSubmitting
-                          ? 'Forging...'
-                          : editingItem
-                          ? `Update ${costMode === 'artifact' ? 'Artifact' : (attachedMods.length > 0 || inherentPowers.length > 0) ? 'Exotic' : 'Gear'}`
-                          : `Forge ${costMode === 'artifact' ? 'Artifact' : (attachedMods.length > 0 || inherentPowers.length > 0) ? 'Exotic' : 'Gear'} to My Creations`}
-                      </span>
-                    </button>
-                  </div>
-                </>
+                renderGearHierarchyTree(false)
               )}
             </div>
           ) : creationType === 'paths_abilities' ? (
@@ -7452,7 +7639,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
                 }`}
               >
-                {editingItem ? (
+                {editingItem || canonicalSelectedId ? (
                   <>
                     <Check className="w-4 h-4" />
                     <span>{isSubmitting ? 'Saving...' : 'Save Changes'}</span>
