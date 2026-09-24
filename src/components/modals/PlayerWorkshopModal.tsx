@@ -301,6 +301,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [pathStudioMode, setPathStudioMode] = useState<'path' | 'standalone'>('path');
   const [pathDatabaseCategory] = useState<'path' | 'power' | 'trait' | 'skill'>('path');
   const [isCreatingNewPath, setIsCreatingNewPath] = useState<boolean>(false);
+  const [isCreatingNewChaosGem, setIsCreatingNewChaosGem] = useState<boolean>(false);
+  const [isCreatingNewGear, setIsCreatingNewGear] = useState<boolean>(false);
   const [selectedPathId, setSelectedPathId] = useState<string>('');
   const [isPathTreeExpanded, setIsPathTreeExpanded] = useState<boolean>(true);
   const [createdSkillSetNames, setCreatedSkillSetNames] = useState<string[]>([]);
@@ -896,13 +898,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setShieldDomainNewText('');
     setGearCategory('Adventure');
     setGearCategoryNewText('');
-    setStudioChassisType('supplies');
+    setStudioChassisType(gearDatabaseChassis);
     setCostMode('standard');
     setInherentPowers([]);
     setAttachedMods([]);
     setActiveStudioSelection({ type: 'chassis' });
     setPathStudioMode('path');
     setIsCreatingNewPath(false);
+    setIsCreatingNewChaosGem(false);
+    setIsCreatingNewGear(false);
     setSelectedPathId('');
     setActivePathSelection({ type: 'path' });
     setActiveAbilityCategory('power');
@@ -2451,14 +2455,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   // Switch tabs cleanly
   const handleSwitchTab = (newType: CustomCreationType) => {
     if (newType !== creationType) {
+      handleResetForm();
       setCreationType(newType);
-      setSelectedGenres([]);
-      setFeedback(null);
-      setEditingItem(null);
-      setCanonicalSelectedId(null);
-      setOriginalCanonicalName('');
+      setCanonicalSearchQuery('');
       if (newType === 'gear' || newType === 'exotic' || newType === 'artifact') {
         setActiveStudioSelection({ type: 'chassis' });
+        setStudioChassisType(gearDatabaseChassis);
       }
     }
   };
@@ -2598,6 +2600,21 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     !isCreatingNewPath && (selectedPathId || (editingItem && editingItem.type === 'path') || canonicalSelectedId)
   );
   const isPathIdle = !isCreatingNewPath && !isPathLoaded;
+
+  const isChaosGemActive = Boolean(
+    canonicalSelectedId ||
+    editingItem ||
+    isCreatingNewChaosGem ||
+    (workshopMode === 'designer' && isAuthoringNewMaster && creationType === 'chaos_gem')
+  );
+
+  const isGearActive = Boolean(
+    canonicalSelectedId ||
+    editingItem ||
+    isCreatingNewGear ||
+    (workshopMode === 'designer' && isAuthoringNewMaster && creationType === 'gear') ||
+    (name.trim() && creationType === 'gear')
+  );
 
   const isFormValid = useMemo(() => {
     if (creationType === 'paths_abilities') {
@@ -4775,6 +4792,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       handleResetForm();
                     }
                     setStudioChassisType(gearDatabaseChassis);
+                    setIsCreatingNewGear(true);
                   }}
                   className={`text-[10px] font-bold px-2 py-1 rounded-lg transition cursor-pointer shrink-0 ${
                     workshopMode === 'designer'
@@ -4794,8 +4812,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   if (!val) {
                     handleResetForm();
                     setStudioChassisType(gearDatabaseChassis);
+                    setIsCreatingNewGear(false);
                     return;
                   }
+                  setIsCreatingNewGear(false);
                   if (workshopMode === 'designer') {
                     if (gearDatabaseChassis === 'weapon') {
                       const item = (weaponsCatalog || []).find((w) => String(w.id) === val || w.name === val);
@@ -4895,22 +4915,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 )}
               </select>
 
-              {/* Gear Hierarchy Tree or Empty State */}
-              {canonicalSelectedId || name.trim() || isAuthoringNewMaster || editingItem ? (
+              {/* Gear Hierarchy Tree: Only rendered when an item is selected or + New Gear clicked */}
+              {isGearActive ? (
                 renderGearHierarchyTree(workshopMode === 'designer')
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
-                  <span className="text-2xl mb-1.5">{workshopMode === 'designer' ? '👑' : '⚙️'}</span>
-                  <p className="font-semibold text-slate-400">
-                    {workshopMode === 'designer' ? 'No Master Item Selected' : 'No Gear Item Selected'}
-                  </p>
-                  <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
-                    {workshopMode === 'designer'
-                      ? 'Pick an existing master item from the dropdown above to view, edit, or delete it, or click "+ New Master Item" to author a new canonical entry.'
-                      : 'Pick an item from your creations above or click "+ New Gear" to forge a custom weapon, armor, shield, or supply.'}
-                  </p>
-                </div>
-              )}
+              ) : null}
             </div>
           ) : creationType === 'paths_abilities' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
@@ -5168,6 +5176,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       handleResetForm();
                     }
                     setCreationType('chaos_gem');
+                    setIsCreatingNewChaosGem(true);
                   }}
                   className={`text-[10px] font-bold px-2 py-1 rounded-lg transition cursor-pointer shrink-0 ${
                     workshopMode === 'designer'
@@ -5187,8 +5196,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   if (!val) {
                     handleResetForm();
                     setCreationType('chaos_gem');
+                    setIsCreatingNewChaosGem(false);
                     return;
                   }
+                  setIsCreatingNewChaosGem(false);
                   if (workshopMode === 'designer') {
                     const gem = (canonicalChaosGems || []).find((g) => String(g.id) === val || g.name === val);
                     if (gem) handlePopulateCanonicalChaosGem(gem);
@@ -5233,107 +5244,111 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     ))}
               </select>
 
-              {/* Live Card Preview */}
-              <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
-                <div className="p-4 rounded-xl bg-slate-900 border border-violet-500/40 shadow-xl flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base shrink-0">💎</span>
-                      <div className="min-w-0">
-                        <h4 className="font-bold text-slate-100 text-xs truncate">{name || 'Unnamed Chaos Gem'}</h4>
-                        {canonicalSelectedId && (
-                          <span className="text-[10px] text-amber-400 font-mono">
-                            {workshopMode === 'designer' ? '👑 Master ID: ' : 'ID: '}{canonicalSelectedId}
+              {/* Live Card Preview & Actions: Rendered only when active */}
+              {isChaosGemActive ? (
+                <>
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
+                    <div className="p-4 rounded-xl bg-slate-900 border border-violet-500/40 shadow-xl flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-base shrink-0">💎</span>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-slate-100 text-xs truncate">{name || 'Unnamed Chaos Gem'}</h4>
+                            {canonicalSelectedId && (
+                              <span className="text-[10px] text-amber-400 font-mono">
+                                {workshopMode === 'designer' ? '👑 Master ID: ' : 'ID: '}{canonicalSelectedId}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 font-mono text-[10px] shrink-0">
+                          <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">
+                            {action || 'F'}
                           </span>
-                        )}
+                          <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">
+                            {usage || '3 Uses'}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1 font-mono text-[10px] shrink-0">
-                      <span className="px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-500/40 font-bold">
-                        {action || 'F'}
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">
-                        {usage || '3 Uses'}
-                      </span>
+                      <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                        {effect || 'Socket activation effect will render here...'}
+                      </div>
+                      {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
                     </div>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
-                    {effect || 'Socket activation effect will render here...'}
-                  </div>
-                  {notes && <p className="text-[10px] text-slate-500 italic font-serif">"{notes}"</p>}
-                </div>
-              </div>
 
-              {/* Bottom Actions Row */}
-              <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
-                {workshopMode === 'designer' && canonicalSelectedId && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-slate-400 italic">
-                      Edit details on right, then save.
-                    </span>
+                  {/* Bottom Actions Row */}
+                  <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
+                    {workshopMode === 'designer' && canonicalSelectedId && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-slate-400 italic">
+                          Edit details on right, then save.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDeleteConfirmTarget({
+                              type: 'chaos_gem',
+                              id: canonicalSelectedId,
+                              name: originalCanonicalName || name,
+                            })
+                          }
+                          className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                          title="Delete this record from Supabase"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete from SupaBase</span>
+                        </button>
+                      </div>
+                    )}
+                    {workshopMode === 'player' && (editingItem || canonicalSelectedId) && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-slate-400 italic">
+                          Editing personal creation
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDeleteConfirmTarget({
+                              type: 'chaos_gem',
+                              id: (editingItem ? editingItem.id : canonicalSelectedId) as string | number,
+                              name: editingItem ? editingItem.name : name,
+                            })
+                          }
+                          className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+                          title="Delete this Chaos Gem"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete Creation</span>
+                        </button>
+                      </div>
+                    )}
                     <button
                       type="button"
-                      onClick={() =>
-                        setDeleteConfirmTarget({
-                          type: 'chaos_gem',
-                          id: canonicalSelectedId,
-                          name: originalCanonicalName || name,
-                        })
-                      }
-                      className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
-                      title="Delete this record from Supabase"
+                      onClick={handleSubmit}
+                      disabled={!isFormValid || isSubmitting}
+                      className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                        isFormValid && !isSubmitting
+                          ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-violet-900/40 cursor-pointer'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                      }`}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete from SupaBase</span>
+                      <AnvilIcon className="w-4 h-4" />
+                      <span>
+                        {isSubmitting
+                          ? 'Forging...'
+                          : workshopMode === 'designer'
+                          ? canonicalSelectedId
+                            ? 'Save Master Chaos Gem'
+                            : 'Create Master Chaos Gem'
+                          : editingItem || canonicalSelectedId
+                          ? 'Update Chaos Gem'
+                          : 'Forge Chaos Gem to My Creations'}
+                      </span>
                     </button>
                   </div>
-                )}
-                {workshopMode === 'player' && (editingItem || canonicalSelectedId) && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-slate-400 italic">
-                      Editing personal creation
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDeleteConfirmTarget({
-                          type: 'chaos_gem',
-                          id: (editingItem ? editingItem.id : canonicalSelectedId) as string | number,
-                          name: editingItem ? editingItem.name : name,
-                        })
-                      }
-                      className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
-                      title="Delete this Chaos Gem"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete Creation</span>
-                    </button>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!isFormValid || isSubmitting}
-                  className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
-                    isFormValid && !isSubmitting
-                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-violet-900/40 cursor-pointer'
-                      : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                  }`}
-                >
-                  <AnvilIcon className="w-4 h-4" />
-                  <span>
-                    {isSubmitting
-                      ? 'Forging...'
-                      : workshopMode === 'designer'
-                      ? canonicalSelectedId
-                        ? 'Save Master Chaos Gem'
-                        : 'Create Master Chaos Gem'
-                      : editingItem || canonicalSelectedId
-                      ? 'Update Chaos Gem'
-                      : 'Forge Chaos Gem to My Creations'}
-                  </span>
-                </button>
-              </div>
+                </>
+              ) : null}
             </div>
           ) : (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
@@ -5693,8 +5708,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
               )}
 
+              {/* IDLE VIEW: NO GEAR CHOSEN */}
+              {!isGearActive && (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
+                  <span className="text-3xl mb-2">⚙️</span>
+                  <p className="font-bold text-slate-300 text-sm">Forge Gear Studio</p>
+                  <p className="text-[11px] mt-1 text-slate-500 max-w-sm">
+                    Select an item from the left pane or click "+ New Gear" to inspect and edit its equipment properties.
+                  </p>
+                </div>
+              )}
+
               {/* MODE 1: CHASSIS EDITOR */}
-              {activeStudioSelection.type === 'chassis' && (
+              {isGearActive && activeStudioSelection.type === 'chassis' && (
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                     <div className="flex items-center gap-2">
@@ -5711,57 +5737,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-300 font-mono text-[10px] font-bold">
                       Mode: Chassis
                     </span>
-                  </div>
-
-                  {/* Chassis Category Pill Switch */}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="font-bold text-slate-300">Chassis Category</span>
-                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                      <button
-                        type="button"
-                        onClick={() => setStudioChassisType('weapon')}
-                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          studioChassisType === 'weapon'
-                            ? 'bg-orange-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        ⚔️ Weapons
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStudioChassisType('armor')}
-                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          studioChassisType === 'armor'
-                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        🥋 Armor
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStudioChassisType('shield')}
-                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          studioChassisType === 'shield'
-                            ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        🛡️ Shields
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStudioChassisType('supplies')}
-                        className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          studioChassisType === 'supplies'
-                            ? 'bg-teal-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        🎒 Supplies
-                      </button>
-                    </div>
                   </div>
 
                   {/* Chassis Name */}
@@ -6098,7 +6073,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               )}
 
               {/* MODE 2: MOD EDITOR */}
-              {activeStudioSelection.type === 'mod' && (
+              {isGearActive && activeStudioSelection.type === 'mod' && (
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                     <div className="flex items-center gap-2">
@@ -6242,7 +6217,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               )}
 
               {/* MODE 3: EXOTIC POWER EDITOR */}
-              {activeStudioSelection.type === 'power' && (
+              {isGearActive && activeStudioSelection.type === 'power' && (
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                     <div className="flex items-center gap-2">
@@ -7236,8 +7211,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               </div>
             )}
 
-            {/* Row 1: Item Name */}
-            <div className="flex flex-col gap-1">
+            {/* IDLE VIEW: NO CHAOS GEM CHOSEN */}
+            {creationType === 'chaos_gem' && !isChaosGemActive ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
+                <span className="text-3xl mb-2">💎</span>
+                <p className="font-bold text-slate-300 text-sm">Forge Chaos Gems Studio</p>
+                <p className="text-[11px] mt-1 text-slate-500 max-w-sm">
+                  Select a Chaos Gem from the left pane or click "+ New Chaos Gem" to inspect and edit its socket properties.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Row 1: Item Name */}
+                <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-slate-300">Name</span>
@@ -7630,6 +7616,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               </button>
 
             </div>
+            </>
+            )}
           </form>
           )}
         </div>
