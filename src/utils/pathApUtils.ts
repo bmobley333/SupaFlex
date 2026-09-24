@@ -2,7 +2,7 @@
 // Universal Path & AP Cost Evaluation Engine for SupaFlex
 // Implements the 4-tier AP Cost Vector (1, 2, 3, 4 AP) and In-Path / Out-of-Path Resolution
 
-import { Character } from '../types/game';
+import { Character, SupabaseSet } from '../types/game';
 import { cleanPathName } from './kitUtils';
 
 export type ApCostCategory = 'all' | '1AP' | '2AP' | '3AP' | '3AP_Universal' | '4AP';
@@ -49,6 +49,29 @@ export const getCharacterKnownPaths = (character: Character | null | undefined):
     }
   });
 
+  return set;
+};
+
+/**
+ * Resolves all known Sets for a character based on their known Paths and the sets catalog.
+ * Returns a Set of lowercased, cleaned set names for fast O(1) lookup.
+ */
+export const getCharacterKnownSets = (
+  knownPaths: Set<string>,
+  setsCatalog: SupabaseSet[] = []
+): Set<string> => {
+  const set = new Set<string>();
+  if (!knownPaths || knownPaths.size === 0 || !setsCatalog) return set;
+  for (const s of setsCatalog) {
+    if (s.paths && Array.isArray(s.paths)) {
+      for (const p of s.paths) {
+        if (knownPaths.has(cleanPathName(p).toLowerCase().trim())) {
+          set.add(cleanPathName(s.name).toLowerCase().trim());
+          break;
+        }
+      }
+    }
+  }
   return set;
 };
 
@@ -117,17 +140,19 @@ export const isPathStringMatch = (
 };
 
 /**
- * Evaluates whether an item is within the character's known Paths.
- * Items with NO path specified (None, empty, General, Universal) are considered universally In-Path.
+ * Evaluates whether an item is within the character's known Paths or known Sets.
+ * Items with NO path specified and NO sets specified (None, empty, General, Universal) are considered universally In-Path.
  */
 export const isItemInPath = (
   rawPath: string | null | undefined,
-  knownPaths: Set<string>
+  knownPaths: Set<string>,
+  itemSets?: string[] | null,
+  knownSets?: Set<string>
 ): boolean => {
   const paths = parseItemPaths(rawPath);
 
-  // If item has no path constraints or is tagged General, it is available In-Path for all
-  if (paths.length === 0) {
+  // If item has no path constraints and no set constraints, it is available In-Path for all
+  if (paths.length === 0 && (!itemSets || itemSets.length === 0)) {
     return true;
   }
 
@@ -136,20 +161,30 @@ export const isItemInPath = (
     return true;
   }
 
-  // If character has no known paths, anything with a path constraint is out-of-path
-  if (knownPaths.size === 0) {
-    return false;
+  // Check direct whole-string match against character known paths
+  if (knownPaths.size > 0 && paths.length > 0) {
+    const directMatch = paths.some((p) => {
+      for (const kp of knownPaths) {
+        if (isPathStringMatch(p, kp)) {
+          return true;
+        }
+      }
+      return false;
+    });
+    if (directMatch) return true;
   }
 
-  // Check for strict whole-string match against character known paths
-  return paths.some((p) => {
-    for (const kp of knownPaths) {
-      if (isPathStringMatch(p, kp)) {
+  // Check set membership match against character known sets
+  if (itemSets && Array.isArray(itemSets) && knownSets && knownSets.size > 0) {
+    for (const s of itemSets) {
+      if (s && knownSets.has(cleanPathName(s).toLowerCase().trim())) {
         return true;
       }
     }
-    return false;
-  });
+  }
+
+  // If item has no path (only sets) but no sets matched
+  return false;
 };
 
 const parseAttributeNum = (dieRating?: string): number => {
@@ -216,9 +251,11 @@ export const evaluateItemAp = (
   requirementStr: string | null | undefined,
   attributeDice: Record<string, string>,
   knownPaths: Set<string>,
-  variantType?: 'Melee' | 'Hurled' | 'Shot'
+  variantType?: 'Melee' | 'Hurled' | 'Shot',
+  itemSets?: string[] | null,
+  knownSets?: Set<string>
 ): ApEvaluationResult => {
-  const inPath = isItemInPath(rawPath, knownPaths);
+  const inPath = isItemInPath(rawPath, knownPaths, itemSets, knownSets);
   const meetsReq = isItemRequirementMet(requirementStr, attributeDice, variantType);
 
   if (inPath && meetsReq) {

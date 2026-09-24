@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseBundle, SupabaseSupply, SupabaseWeapon, SupabaseArmor, SupabaseShield, SupabaseChaosGem, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, GearPowerItem, ModItem, PlayerRecord, ApLogEntry, isGearPowerLearned, cleanAbilityName, calculateAvailableAp } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseSet, SupabaseBundle, SupabaseSupply, SupabaseWeapon, SupabaseArmor, SupabaseShield, SupabaseChaosGem, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, GearPowerItem, ModItem, PlayerRecord, ApLogEntry, isGearPowerLearned, cleanAbilityName, calculateAvailableAp } from '../types/game';
 import { gameApi, createDefaultSheetData, CatalogScope } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex } from '../utils/readyMatrixSchedule';
@@ -14,7 +14,7 @@ import { CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { getTabSessionId } from '../utils/tabSession';
 import { supabase } from '../lib/supabase';
 
-const CATALOGS_CACHE_KEY = 'supaflex_catalogs_cache_v4';
+const CATALOGS_CACHE_KEY = 'supaflex_catalogs_cache_v5';
 const CATALOGS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CatalogsCachePayload {
@@ -26,6 +26,7 @@ interface CatalogsCachePayload {
     skills: SupabaseSkill[];
     traits: SupabaseTrait[];
     pathsData: SupabasePath[];
+    setsData?: SupabaseSet[];
     bundlesData: SupabaseBundle[];
     functionsData: FunctionItem[];
     modsData: ModItem[];
@@ -48,16 +49,17 @@ export function getCatalogCacheKey(email?: string): string {
 function loadCatalogsFromCache(minTimestamp?: number, email?: string): CatalogsCachePayload['data'] | null {
   if (typeof window === 'undefined') return null;
   try {
-    // Purge old v1, v2, and v3 cache if present
+    // Purge old v1, v2, v3, and v4 cache if present
     localStorage.removeItem('supaflex_catalogs_cache_v1');
     localStorage.removeItem('supaflex_catalogs_cache_v2');
     localStorage.removeItem('supaflex_catalogs_cache_v3');
+    localStorage.removeItem('supaflex_catalogs_cache_v4');
 
     const cacheKey = getCatalogCacheKey(email);
     const raw = localStorage.getItem(cacheKey);
     if (!raw) return null;
     const parsed: CatalogsCachePayload = JSON.parse(raw);
-    if (!parsed || parsed.version !== 4 || !parsed.timestamp || !parsed.data) return null;
+    if (!parsed || parsed.version !== 5 || !parsed.timestamp || !parsed.data) return null;
     // Auto-invalidate if functionsData or suppliesData is empty or missing (e.g. following database migration)
     if (!Array.isArray(parsed.data.functionsData) || parsed.data.functionsData.length === 0 || !Array.isArray(parsed.data.suppliesData)) {
       return null;
@@ -81,7 +83,7 @@ function saveCatalogsToCache(data: CatalogsCachePayload['data'], email?: string)
   if (typeof window === 'undefined') return;
   try {
     const payload: CatalogsCachePayload = {
-      version: 4,
+      version: 5,
       timestamp: Date.now(),
       data,
     };
@@ -138,6 +140,7 @@ interface CharacterStore {
   skills: SupabaseSkill[];
   traits: SupabaseTrait[];
   paths: SupabasePath[];
+  setsCatalog: SupabaseSet[];
   equipmentKits: SupabaseKit[];
   kits: SupabaseKit[];
   bundles: SupabaseBundle[];
@@ -271,6 +274,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   skills: [],
   traits: [],
   paths: [],
+  setsCatalog: [],
   equipmentKits: [],
   kits: [],
   bundles: [],
@@ -365,6 +369,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       let skills: SupabaseSkill[];
       let traits: SupabaseTrait[];
       let pathsData: SupabasePath[];
+      let setsData: SupabaseSet[];
       let bundlesData: SupabaseBundle[];
       let functionsData: FunctionItem[];
       let modsData: ModItem[];
@@ -406,6 +411,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         skills = cached.skills;
         traits = cached.traits;
         pathsData = cached.pathsData;
+        setsData = cached.setsData || [];
         bundlesData = cached.bundlesData;
         functionsData = cached.functionsData;
         modsData = cached.modsData;
@@ -428,6 +434,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           fetchedSkills,
           fetchedTraits,
           fetchedPaths,
+          fetchedSets,
           fetchedBundles,
           fetchedFunctions,
           fetchedMods,
@@ -446,6 +453,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           gameApi.getSkills(catalogScope),
           gameApi.getTraits(catalogScope),
           gameApi.getPaths(catalogScope),
+          gameApi.getSets(catalogScope),
           gameApi.getBundles(catalogScope),
           gameApi.getFunctions(catalogScope),
           gameApi.getMods(catalogScope),
@@ -465,6 +473,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         skills = fetchedSkills;
         traits = fetchedTraits;
         pathsData = fetchedPaths;
+        setsData = fetchedSets || [];
         bundlesData = fetchedBundles;
         functionsData = fetchedFunctions;
         modsData = fetchedMods;
@@ -483,6 +492,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           skills,
           traits,
           pathsData,
+          setsData,
           bundlesData,
           functionsData,
           modsData,
@@ -510,6 +520,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           skills,
           traits,
           paths: pathsData,
+          setsCatalog: setsData || [],
           equipmentKits: bundlesData,
           kits: pathsData as any,
           bundles: bundlesData,
@@ -594,6 +605,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         skills,
         traits,
         paths: pathsData,
+        setsCatalog: setsData || [],
         equipmentKits: bundlesData,
         kits: pathsData as any,
         bundles: bundlesData,

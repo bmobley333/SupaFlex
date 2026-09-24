@@ -62,6 +62,28 @@ export interface SupabasePath {
   created_at?: string;
 }
 
+export type SetCategory =
+  | 'Traits'
+  | 'Skills'
+  | 'Powers'
+  | 'Weapons'
+  | 'Armor & Shields'
+  | string;
+
+export interface SupabaseSet {
+  id: string;
+  name: string;
+  category: SetCategory;
+  description?: string;
+  paths?: string[];
+  genres?: string[];
+  owner?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type SetItem = SupabaseSet;
+
 export type KitCategory =
   | 'Armor'
   | 'Equipment'
@@ -132,6 +154,7 @@ export interface TraitItem {
   is_hidden?: boolean; // When true, hidden from main CS card view
   source?: string;
   path?: string;
+  sets?: string[];
   kit?: string;
   table_group?: string;
   stat_hook?: StatHookDefinition | null;
@@ -248,6 +271,7 @@ export interface SupabaseArmor {
   domain?: EquipmentDomain | string;
   discipline?: string;
   path?: string;
+  sets?: string[];
   kit?: string;
   bundle?: string;
   table_group?: string;
@@ -397,6 +421,7 @@ export interface SupabaseShield {
   domain?: EquipmentDomain | string;
   discipline?: string;
   path?: string;
+  sets?: string[];
   kit?: string;
   bundle?: string;
   table_group?: string;
@@ -462,6 +487,7 @@ export interface SupabaseWeapon {
   domain?: EquipmentDomain | string;
   discipline?: string;
   path?: string;
+  sets?: string[];
   kit?: string;
   bundle?: string;
   table_group?: string;
@@ -801,6 +827,7 @@ export interface Power {
   version?: number;
   base_name?: string;
   path?: string;
+  sets?: string[];
   domain?: string;
   owner?: string;
 }
@@ -1187,7 +1214,8 @@ export interface SupabaseSkill {
   id: number;
   name: string;
   attribute: SkillAttributeIcon;
-  skillset: string[];
+  skillset?: string[]; // Deprecated, replaced by sets
+  sets?: string[];
   genres: string[];
   discipline?: string;
   path?: string;

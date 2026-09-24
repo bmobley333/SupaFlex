@@ -19,6 +19,7 @@ import {
   CustomCreationItem,
   PowerTable,
   SupabasePath,
+  SupabaseSet,
   SupabaseKit,
   SupabaseBundle,
   FunctionItem,
@@ -610,6 +611,21 @@ export const gameApi = {
       return [];
     }
     return (data || []) as SupabasePath[];
+  },
+
+  // --- SETS CATALOG (Capability Suites: Traits, Skills, Powers, Weapons, Armor & Shields) ---
+  async getSets(scope?: CatalogScope): Promise<SupabaseSet[]> {
+    let query = supabase.from('sets').select('*');
+    query = applyOwnerScope(query, scope);
+    if (!isGuildSpaceUnlocked()) {
+      query = query.not('name', 'ilike', '%(mso)%');
+    }
+    const { data, error } = await query.order('name', { ascending: true });
+    if (error) {
+      console.error('[gameApi] Error fetching sets catalog:', error);
+      return [];
+    }
+    return (data || []) as SupabaseSet[];
   },
 
   // --- KITS CATALOG (Equipment & Hardware Suites) ---
@@ -2004,12 +2020,12 @@ export const gameApi = {
     }
   },
 
-  async createSkill(skill: { name: string; attribute: string; skillset?: string[]; genres?: string[]; notes?: string; discipline?: string }): Promise<any | null> {
+  async createSkill(skill: { name: string; attribute: string; sets?: string[]; skillset?: string[]; genres?: string[]; notes?: string; discipline?: string }): Promise<any | null> {
     try {
       const payload = {
         name: skill.name,
         attribute: skill.attribute,
-        skillset: skill.skillset || ['General'],
+        sets: skill.sets || skill.skillset || ['General'],
         genres: skill.genres && skill.genres.length > 0 ? skill.genres : ['Medieval', 'Modern', 'SciFi'],
         notes: skill.notes || null,
         discipline: skill.discipline || 'General',
@@ -2621,6 +2637,34 @@ export const gameApi = {
 
   async deleteCanonicalPath(id: string | number): Promise<boolean> {
     const { error } = await supabase.from('paths').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // 1b. SETS
+  async saveCanonicalSet(payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('sets')
+      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCanonicalSet(id: string | number, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('sets')
+      .update({ ...payload, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCanonicalSet(id: string | number): Promise<boolean> {
+    const { error } = await supabase.from('sets').delete().eq('id', id);
     if (error) throw error;
     return true;
   },
