@@ -2,7 +2,7 @@
 // Unified Player's Forge: Master Modal Blueprint 2-Pane Architecture (Live Preview + Forge Controls)
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw, Search, ChevronDown } from 'lucide-react';
+import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw, Search, ChevronDown, ArrowRight } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
 import { CustomCreationType, CustomCreationItem, CustomCreationData, PathElementType, PathLinkedElement, StudioPower, StudioMod, SupabaseChaosGem, SetCategory, SupabaseSet, SetMemberItem, SupabasePath } from '../../types/game';
@@ -4489,55 +4489,68 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
         {/* S-Tier 3-Pillar Master Navigation */}
         <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex items-center justify-between gap-4">
-          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('paths_abilities')}
-              className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                creationType === 'paths_abilities'
-                  ? 'bg-blue-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              <span>🧭</span>
-              <span>Paths</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('set')}
-              className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                creationType === 'set'
-                  ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              <span>🗂️</span>
-              <span>Sets</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('chaos_gem')}
-              className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                creationType === 'chaos_gem'
-                  ? 'bg-violet-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              <span>💎</span>
-              <span>Chaos Gems</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('gear')}
-              className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                creationType === 'gear'
-                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              <span>⚙️</span>
-              <span>Gear</span>
-            </button>
+          {/* Left: Sets Feeder & Pillar Navigation */}
+          <div className="flex items-center gap-2">
+            {/* Feeder Sub-Tab: Sets */}
+            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('set')}
+                className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  creationType === 'set'
+                    ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                <span>🗂️</span>
+                <span>Sets</span>
+              </button>
+            </div>
+
+            {/* Feeder Indicator Arrow: Sets feed into Paths */}
+            <div className="flex items-center text-slate-500 hover:text-indigo-400 transition-colors px-0.5" title="Sets feed into Paths">
+              <ArrowRight className="w-4 h-4 text-slate-500" />
+            </div>
+
+            {/* Core Creation Pillars: Paths, Chaos Gems, Gear */}
+            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('paths_abilities')}
+                className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  creationType === 'paths_abilities'
+                    ? 'bg-blue-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                <span>🧭</span>
+                <span>Paths</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('chaos_gem')}
+                className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  creationType === 'chaos_gem'
+                    ? 'bg-violet-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                <span>💎</span>
+                <span>Chaos Gems</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchTab('gear')}
+                className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  creationType === 'gear'
+                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                <span>⚙️</span>
+                <span>Gear</span>
+              </button>
+            </div>
           </div>
 
           {/* Right: Scope Switch (ONLY for metascapegame@gmail.com) */}
@@ -5571,13 +5584,20 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       draftSetItems.map((item, idx) => {
                         const isItemSelected =
                           activeSetSelection.type === 'set_member' && activeSetSelection.index === idx;
+                        const isNewItem = Boolean(
+                          selectedSetId && !isCreatingNewSet && !initialExistingMemberIds.has(String(item.id))
+                        );
                         return (
                           <div
                             key={`${item.id}_${idx}`}
                             onClick={() => setActiveSetSelection({ type: 'set_member', item, index: idx })}
                             className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
                               isItemSelected
-                                ? 'bg-indigo-950/40 border-indigo-500/80 ring-1 ring-indigo-500/40'
+                                ? isNewItem
+                                  ? 'bg-emerald-950/60 border-emerald-400 ring-2 ring-emerald-400/60 shadow-[0_0_16px_rgba(16,185,129,0.25)]'
+                                  : 'bg-indigo-950/40 border-indigo-500/80 ring-1 ring-indigo-500/40'
+                                : isNewItem
+                                ? 'bg-emerald-950/40 border-emerald-500/70 hover:bg-emerald-950/60 ring-1 ring-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
                                 : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
                             }`}
                           >
@@ -5593,11 +5613,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                   ? '🎯'
                                   : '🧬'}
                               </span>
-                              <span className="font-bold text-slate-200 text-xs truncate">
+                              <span className={`text-xs truncate ${isNewItem ? 'font-black text-emerald-300' : 'font-bold text-slate-200'}`}>
                                 {item.name}
                               </span>
-                              {selectedSetId && !isCreatingNewSet && !initialExistingMemberIds.has(String(item.id)) && (
-                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-extrabold flex items-center gap-0.5 shrink-0">
+                              {isNewItem && (
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black shadow-sm flex items-center gap-0.5 shrink-0">
                                   ✨ New
                                 </span>
                               )}
@@ -7842,11 +7862,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
               {!isSetActive ? null : (
                 <>
-                  {/* ROUTE 1: SET ROOT METADATA EDITOR & SAVE BUTTON */}
+                  {/* ROUTE 1: SET ROOT METADATA EDITOR */}
                   {activeSetSelection.type === 'set_root' && (
-                    <div className="flex-1 flex flex-col min-h-0">
-                      {/* Scrollable Form Body */}
-                      <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
+                    <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
                         {/* Row 1: Name & Collision Badge */}
                         <div className="flex flex-col gap-1 shrink-0">
                           <div className="flex items-center gap-3">
@@ -8085,38 +8103,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       </span>
                     </div>
                   )}
-                      </div>
-
-                      {/* SAVE SET ACTION BAR - EXCLUSIVELY IN RIGHT PANE (FROZEN FOOTER) */}
-                      <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3 shrink-0">
-                    <button
-                      type="button"
-                      onClick={handleSaveSet}
-                      disabled={!isNameValid || isDuplicateClone || isSavingSet}
-                      className={`py-2 px-6 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-2 select-none shadow-md ${
-                        isNameValid && !isDuplicateClone && !isSavingSet
-                          ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-indigo-950/50 cursor-pointer active:scale-[0.98]'
-                          : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                      }`}
-                    >
-                      {isSavingSet ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Saving Set...</span>
-                        </>
-                      ) : selectedSetId && !isCreatingNewSet ? (
-                        <>
-                          <Check className="w-4 h-4" />
-                          <span>{workshopMode === 'designer' ? '👑 Update Master Set' : 'Update Set'}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4" />
-                          <span>{workshopMode === 'designer' ? '👑 Forge Master Set' : 'Forge Set to My Creations'}</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
                 </div>
               )}
 
@@ -8942,7 +8928,36 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         )}
 
         {/* Universal Modal Footer */}
-        <div className="px-6 py-3 bg-slate-950/80 border-t border-slate-800/80 shrink-0 flex items-center justify-end">
+        <div className="px-6 py-3 bg-slate-950/80 border-t border-slate-800/80 shrink-0 flex items-center justify-end gap-3">
+          {creationType === 'set' && isSetActive && (
+            <button
+              type="button"
+              onClick={handleSaveSet}
+              disabled={!isNameValid || isDuplicateClone || isSavingSet}
+              className={`py-2 px-6 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-2 select-none shadow-md ${
+                isNameValid && !isDuplicateClone && !isSavingSet
+                  ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-indigo-950/50 cursor-pointer active:scale-[0.98]'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+              }`}
+            >
+              {isSavingSet ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Saving Set...</span>
+                </>
+              ) : selectedSetId && !isCreatingNewSet ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>{workshopMode === 'designer' ? '👑 Update Master Set' : 'Update Set'}</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  <span>{workshopMode === 'designer' ? '👑 Forge Master Set' : 'Forge Set to My Creations'}</span>
+                </>
+              )}
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
